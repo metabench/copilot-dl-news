@@ -1,0 +1,23 @@
+{
+  "name": "news_crawler",
+  "version": "1.0.0",
+  "description": "A web crawler for news articles with navigation detection",
+  "main": "src/crawl.js",
+  "scripts": {
+    "start": "node src/crawl.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "crawler",
+    "news",
+    "scraping",
+    "theguardian"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "node-fetch": "^3.3.2",
+    "robots-parser": "^3.0.1"
+  }
+}
