@@ -71,7 +71,8 @@ class NewsCrawler {
     // Configuration
     this.rateLimitMs = options.rateLimitMs || 1000; // 1 second between requests
     this.maxDepth = options.maxDepth || 3;
-  this.dataDir = options.dataDir || path.join(process.cwd(), 'data');
+        this.dataDir = options.dataDir || path.join(process.cwd(), 'data');
+        this._lastProgressEmitAt = 0;
     this.concurrency = Math.max(1, options.concurrency || 1);
     this.maxQueue = Math.max(1000, options.maxQueue || 10000);
     this.retryLimit = options.retryLimit || 3;
@@ -215,8 +216,9 @@ class NewsCrawler {
       const httpStatus = response.status;
       const finalUrl = response.url || normalizedUrl;
       const redirectChain = finalUrl !== normalizedUrl ? JSON.stringify([normalizedUrl, finalUrl]) : null;
-      this.stats.pagesVisited++;
-      this.stats.pagesDownloaded++;
+          this.stats.pagesVisited++;
+          this.stats.pagesDownloaded++;
+          this.emitProgress();
       
       return {
         url: finalUrl,
@@ -243,6 +245,21 @@ class NewsCrawler {
       console.log(`Error fetching ${normalizedUrl}: ${error.message}`);
       return { error: true, networkError: true, url: normalizedUrl };
     }
+  }
+
+  emitProgress(force = false) {
+    const now = Date.now();
+    if (!force && now - this._lastProgressEmitAt < 300) return;
+    this._lastProgressEmitAt = now;
+    const p = {
+      visited: this.stats.pagesVisited,
+      downloaded: this.stats.pagesDownloaded,
+      found: this.stats.articlesFound,
+      saved: this.stats.articlesSaved
+    };
+    try {
+      console.log(`PROGRESS ${JSON.stringify(p)}`);
+    } catch (_) {}
   }
 
   // Compute JSON file path for an article URL (same logic as saveArticle)
@@ -524,6 +541,7 @@ class NewsCrawler {
       
       this.stats.articlesSaved++;
       console.log(`Saved article: ${metadata.title}`);
+          this.emitProgress();
     } catch (error) {
       console.log(`Failed to save article ${metadata.url}: ${error.message}`);
     }
@@ -553,6 +571,7 @@ class NewsCrawler {
           // Do not count as downloaded; still count as visited for processing
           this.stats.pagesVisited++;
           fromCache = true;
+          this.emitProgress();
         }
       }
     }
@@ -580,14 +599,23 @@ class NewsCrawler {
     // Check if this looks like an article page
     if (this.looksLikeArticle(pageData.url)) {
       const metadata = this.extractArticleMetadata($, pageData.url);
-      await this.saveArticle(pageData.html, metadata, {
-        skipDb: fromCache,
-        referrerUrl: null,
-        discoveredAt: new Date().toISOString(),
-        crawlDepth: depth,
-        fetchMeta: pageData.fetchMeta
-      });
-      this.stats.articlesFound++;
+      if (fromCache) {
+        // On cache hits, do not rewrite JSON or DB; just count as found
+        this.stats.articlesFound++;
+        this.emitProgress();
+      } else {
+        // Increment 'found' before saving to avoid transient saved > found
+        this.stats.articlesFound++;
+        await this.saveArticle(pageData.html, metadata, {
+          skipDb: false,
+          referrerUrl: null,
+          discoveredAt: new Date().toISOString(),
+          crawlDepth: depth,
+          fetchMeta: pageData.fetchMeta
+        });
+        // saveArticle emits progress; an extra tick is okay
+        this.emitProgress();
+      }
     }
 
     // Find navigation and article links
@@ -672,19 +700,19 @@ class NewsCrawler {
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         return;
       }
-      // Get next eligible item
-      let item = this.queueHeap.peek();
+      // Pop next item (avoid peek/pop race with other workers)
+      let item = this.queueHeap.pop();
       const now = nowMs();
       if (!item) {
         // queue empty: worker can stop
         return;
       }
       if (item.nextEligibleAt > now) {
+        // Not yet eligible: put it back and wait a bit
+        this.queueHeap.push(item);
         await sleep(Math.min(250, item.nextEligibleAt - now));
         continue;
       }
-      // Pop it
-      item = this.queueHeap.pop();
       this.queuedUrls.delete(item.url);
       // Rate limit globally
       await this.acquireRateToken();
@@ -718,6 +746,7 @@ class NewsCrawler {
 
     console.log('\nCrawling completed!');
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
+  this.emitProgress(true);
     
     if (this.db) {
       const count = this.db.getCount();
@@ -758,6 +787,7 @@ class NewsCrawler {
 
     console.log('\nCrawling completed!');
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
+  this.emitProgress(true);
     
     if (this.db) {
       const count = this.db.getCount();

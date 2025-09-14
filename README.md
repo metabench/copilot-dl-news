@@ -49,6 +49,28 @@ node src/crawl.js https://www.theguardian.com --max-pages=50
 
 # Use cached articles if fresh (time units s/m/h/d)
 node src/crawl.js https://www.theguardian.com --max-age=6h
+### GUI (Express)
+
+A minimal web dashboard is available to run and monitor crawls locally.
+
+Quick start:
+
+1. Start the GUI server:
+
+  npm run gui
+
+2. Open in your browser:
+
+  http://localhost:3000
+
+3. Fill in options (start URL, depth, max pages, max age, concurrency, queue size), then click Start. Use Stop to terminate the current run.
+
+Notes:
+
+- The GUI streams live logs via Server-Sent Events (SSE).
+- Only one crawl can run at a time via the dashboard.
+- You can still use the CLI in parallel from another terminal if needed.
+
 
 # Enable concurrent crawling with a bounded priority queue
 node src/crawl.js https://www.theguardian.com --depth=1 --concurrency=4 --max-queue=20000

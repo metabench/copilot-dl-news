@@ -1,11 +1,12 @@
 {
   "name": "news_crawler",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "gui": "node ui/server.js"
   },
   "keywords": [
     "crawler",
@@ -21,6 +22,11 @@
     "@mozilla/readability": "^0.5.0",
     "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",
-    "robots-parser": "^3.0.1"
+    "robots-parser": "^3.0.1",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
   }
 }
