@@ -1,6 +1,6 @@
 {
   "name": "news_crawler",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
@@ -17,6 +17,9 @@
   "license": "ISC",
   "dependencies": {
     "cheerio": "^1.1.2",
+    "better-sqlite3": "^9.6.0",
+    "@mozilla/readability": "^0.5.0",
+    "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",
     "robots-parser": "^3.0.1"
   }
