@@ -63,6 +63,8 @@
       <div>
         <button id="startBtn">Start</button>
         <button id="stopBtn">Stop</button>
+  <button id="pauseBtn">Pause</button>
+  <button id="resumeBtn" disabled>Resume</button>
       </div>
     </div>
     <p>
@@ -122,6 +124,8 @@
   const mErrpm = document.getElementById('m_errpm');
   const mQsize = document.getElementById('m_qsize');
   const mErrs = document.getElementById('m_errs');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
   const domains = document.getElementById('domains');
   const inflightDiv = document.getElementById('inflight');
   const inflightList = document.getElementById('inflightList');
@@ -191,6 +195,11 @@
         try {
           const p = JSON.parse(e.data);
           progress.textContent = `visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
+          // toggle pause/resume buttons
+          if (typeof p.paused === 'boolean') {
+            pauseBtn.disabled = !!p.paused;
+            resumeBtn.disabled = !p.paused;
+          }
           // Show current in-flight downloads
           const count = p.currentDownloadsCount || (Array.isArray(p.currentDownloads) ? p.currentDownloads.length : 0) || 0;
           inflightDiv.firstChild.nodeValue = `current downloads: ${count}`;
@@ -422,6 +431,22 @@
         const r = await fetch('/api/stop', { method: 'POST' });
         const j = await r.json();
         logs.textContent += `\nStop requested: ${JSON.stringify(j)}\n`;
+      };
+      pauseBtn.onclick = async () => {
+        try {
+          const r = await fetch('/api/pause', { method: 'POST' });
+          const j = await r.json();
+          logs.textContent += `\nPause requested: ${JSON.stringify(j)}\n`;
+          if (j && j.paused === true) { pauseBtn.disabled = true; resumeBtn.disabled = false; }
+        } catch (_) {}
+      };
+      resumeBtn.onclick = async () => {
+        try {
+          const r = await fetch('/api/resume', { method: 'POST' });
+          const j = await r.json();
+          logs.textContent += `\nResume requested: ${JSON.stringify(j)}\n`;
+          if (j && j.paused === false) { pauseBtn.disabled = false; resumeBtn.disabled = true; }
+        } catch (_) {}
       };
       document.getElementById('showLogs').onchange = (e) => {
         const enabled = e.target.checked;

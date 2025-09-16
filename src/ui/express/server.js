@@ -52,6 +52,7 @@ function createApp(options = {}) {
   let stderrBuf = '';
   let lastProgressStr = '';
   let lastProgressSentAt = 0;
+  let paused = false;
   // metrics snapshot populated from PROGRESS events
   let metrics = {
     visited: 0,
@@ -108,6 +109,9 @@ function createApp(options = {}) {
       metrics.saved = obj.saved || 0;
       metrics.errors = obj.errors || 0;
       metrics.queueSize = obj.queueSize || 0;
+      if (Object.prototype.hasOwnProperty.call(obj, 'paused')) {
+        paused = !!obj.paused;
+      }
   metrics._lastProgressWall = now;
       broadcast('progress', obj);
     } catch (_) {
@@ -121,7 +125,8 @@ function createApp(options = {}) {
       running: !!child,
       pid: child?.pid || null,
       startedAt,
-      lastExit
+  lastExit,
+  paused
     });
   });
 
@@ -139,7 +144,8 @@ function createApp(options = {}) {
   metrics._lastSampleTime = Date.now();
   metrics._lastVisited = 0;
   metrics._lastDownloaded = 0;
-    lastExit = null;
+  lastExit = null;
+  paused = false;
 
     child.stdout.on('data', (chunk) => {
       stdoutBuf += chunk.toString();
@@ -197,6 +203,7 @@ function createApp(options = {}) {
       child = null;
       startedAt = null;
   metrics.running = 0;
+  paused = false;
     };
 
     if (typeof child.on === 'function') {
@@ -218,6 +225,36 @@ function createApp(options = {}) {
     }
   });
 
+  // Pause/resume endpoints: communicate via child stdin line commands
+  app.post('/api/pause', (req, res) => {
+    if (!child) return res.status(409).json({ error: 'Crawler not running' });
+    try {
+      if (child.stdin && !child.killed) {
+        child.stdin.write('PAUSE\n');
+        paused = true;
+        broadcastProgress({ ...metrics, paused: true });
+        return res.json({ ok: true, paused: true });
+      }
+      return res.status(500).json({ error: 'stdin unavailable' });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+  app.post('/api/resume', (req, res) => {
+    if (!child) return res.status(409).json({ error: 'Crawler not running' });
+    try {
+      if (child.stdin && !child.killed) {
+        child.stdin.write('RESUME\n');
+        paused = false;
+        broadcastProgress({ ...metrics, paused: false });
+        return res.json({ ok: true, paused: false });
+      }
+      return res.status(500).json({ error: 'stdin unavailable' });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
   // Prometheus metrics endpoint
   app.get('/metrics', (req, res) => {
     res.setHeader('Content-Type', 'text/plain; version=0.0.4');
@@ -225,6 +262,9 @@ function createApp(options = {}) {
     lines.push('# HELP crawler_running Whether the crawler is running (1) or not (0)');
     lines.push('# TYPE crawler_running gauge');
     lines.push(`crawler_running ${metrics.running}`);
+  lines.push('# HELP crawler_paused Whether the crawler is paused (1) or not (0)');
+  lines.push('# TYPE crawler_paused gauge');
+  lines.push(`crawler_paused ${paused ? 1 : 0}`);
     lines.push('# HELP crawler_requests_total Pages visited');
     lines.push('# TYPE crawler_requests_total counter');
     lines.push(`crawler_requests_total ${metrics.visited}`);
@@ -274,7 +314,8 @@ function createApp(options = {}) {
     res.json({
       running: !!child,
       queueSize: metrics.queueSize || 0,
-      lastProgressAt: metrics._lastProgressWall || null
+  lastProgressAt: metrics._lastProgressWall || null,
+  paused
     });
   });
 

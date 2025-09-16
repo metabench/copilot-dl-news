@@ -12,12 +12,15 @@
       .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
       .muted { color:#666; font-size:12px; }
       .copy { font-size: 12px; margin-left: 6px; }
+  .row-controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .favicon { width:16px; height:16px; vertical-align:middle; margin-right:6px; }
+  .title { font-weight: 500; margin-left: 6px; }
     </style>
   </head>
   <body>
     <h1>Article URLs</h1>
     <div class="meta" id="meta">Loading…</div>
-    <div class="meta row">
+    <div class="meta row-controls">
       <button id="prev">Prev</button>
       <button id="next">Next</button>
       <label>Page <input id="pageInput" type="number" min="1" style="width:5em" /></label>
@@ -28,6 +31,7 @@
         </select>
       </label>
       <label>Filter <input id="filterInput" type="text" placeholder="type to filter current page" style="width:18em" /></label>
+      <label>Domain <input id="domainInput" type="text" placeholder="example.com" style="width:16em" /></label>
       <span id="pageStats" class="muted"></span>
     </div>
     <ol id="list"></ol>
@@ -42,6 +46,7 @@
   const pageInput = document.getElementById('pageInput');
   const filterInput = document.getElementById('filterInput');
   const pageStats = document.getElementById('pageStats');
+  const domainInput = document.getElementById('domainInput');
   let currentItems = [];
       function updateButtons() {
         prevBtn.disabled = offset <= 0;
@@ -64,11 +69,29 @@
         const list = document.getElementById('list');
         list.innerHTML = '';
         const filter = (filterInput.value || '').toLowerCase();
+        const domainFilter = (domainInput.value || '').toLowerCase().trim();
         let shown = 0;
-        currentItems.filter(it => !filter || it.url.toLowerCase().includes(filter) || (it.title||'').toLowerCase().includes(filter)).forEach((it) => {
+        currentItems
+          .filter(it => !filter || it.url.toLowerCase().includes(filter) || (it.title||'').toLowerCase().includes(filter))
+          .filter(it => {
+            if (!domainFilter) return true;
+            try { return new URL(it.url).hostname.toLowerCase().includes(domainFilter); } catch { return false; }
+          })
+          .forEach((it) => {
           const li = document.createElement('li');
+          // favicon
+          let host = '';
+          try { host = new URL(it.url).hostname; } catch {}
+          const fav = document.createElement('img');
+          fav.className = 'favicon';
+          fav.loading = 'lazy';
+          fav.src = host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=16` : '';
+          // link with title
           const a = document.createElement('a');
           a.href = it.url; a.textContent = it.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'title';
+          if (it.title) titleSpan.textContent = it.title;
           const details = document.createElement('a');
           details.href = `/url?url=${encodeURIComponent(it.url)}`;
           details.textContent = '[details]';
@@ -84,7 +107,9 @@
           copyBtn.onclick = async () => {
             try { await navigator.clipboard.writeText(it.url); copyBtn.textContent = 'Copied'; setTimeout(()=> copyBtn.textContent = 'Copy', 1000); } catch (_) {}
           };
+          if (host) li.appendChild(fav);
           li.appendChild(a);
+          if (it.title) li.appendChild(titleSpan);
           li.appendChild(details);
           if (ts) li.appendChild(tsSpan);
           li.appendChild(copyBtn);
@@ -110,6 +135,17 @@
         if (filterTimer) clearTimeout(filterTimer);
         filterTimer = setTimeout(() => { render(); filterTimer = null; }, 120);
       };
+      domainInput.oninput = () => {
+        if (filterTimer) clearTimeout(filterTimer);
+        filterTimer = setTimeout(() => { render(); filterTimer = null; }, 120);
+        localStorage.setItem('urls_domainFilter', domainInput.value || '');
+      };
+
+      // Restore persisted domain filter
+      (function(){
+        const v = localStorage.getItem('urls_domainFilter');
+        if (v) { domainInput.value = v; }
+      })();
 
       // Keyboard navigation: left/right arrows outside inputs
       document.addEventListener('keydown', (e) => {

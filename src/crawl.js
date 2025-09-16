@@ -105,6 +105,8 @@ class NewsCrawler {
   this.currentDownloads = new Map(); // url -> { startedAt: epochMs }
   // Track active workers to coordinate idle waiting
   this.busyWorkers = 0;
+  // Pause control
+  this.paused = false;
   this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
     if (this.usePriorityQueue) {
       this.queueHeap = new MinHeap((a, b) => a.priority - b.priority);
@@ -313,12 +315,17 @@ class NewsCrawler {
       errors: this.stats.errors,
       queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length,
       currentDownloadsCount: this.currentDownloads.size,
-      currentDownloads: inflight
+      currentDownloads: inflight,
+      paused: !!this.paused
     };
     try {
       console.log(`PROGRESS ${JSON.stringify(p)}`);
     } catch (_) {}
   }
+
+  pause() { this.paused = true; this.emitProgress(true); }
+  resume() { this.paused = false; this.emitProgress(true); }
+  isPaused() { return !!this.paused; }
 
   // Compute JSON file path for an article URL (same logic as saveArticle)
   getArticleFilePathFromUrl(url) {
@@ -936,6 +943,11 @@ class NewsCrawler {
 
   async runWorker(workerId) {
     while (true) {
+      // honor pause
+      while (this.paused) {
+        await sleep(200);
+        this.emitProgress();
+      }
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         return;
       }
@@ -951,8 +963,9 @@ class NewsCrawler {
           await sleep(waitStep);
           waited += waitStep;
           if (this.queueHeap.size() > 0) break;
+          if (this.paused) break; // break early to top-level pause check
         }
-        if (this.queueHeap.size() === 0) {
+        if (this.queueHeap.size() === 0 && !this.paused) {
           return; // nothing to do; exit
         }
         continue;
@@ -1015,6 +1028,8 @@ class NewsCrawler {
     this.requestQueue.push({ url: this.startUrl, depth: 0 });
     
     while (this.requestQueue.length > 0) {
+      // honor pause
+      while (this.paused) { await sleep(200); this.emitProgress(); }
       // Stop if we've reached the download limit
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         console.log(`Reached max downloads limit: ${this.maxDownloads}`);
@@ -1049,6 +1064,7 @@ class NewsCrawler {
 
 // CLI interface
 if (require.main === module) {
+  const readline = require('readline');
   const args = process.argv.slice(2);
   const startUrl = args[0] || 'https://www.theguardian.com';
   const enableDb = !args.includes('--no-db');
@@ -1095,6 +1111,16 @@ if (require.main === module) {
   maxQueue: maxQueueArg ? parseInt(maxQueueArg.split('=')[1], 10) : undefined,
   preferCache
   });
+
+  // Accept PAUSE/RESUME commands over stdin (for GUI control)
+  try {
+    const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+    rl.on('line', (line) => {
+      const cmd = String(line || '').trim().toUpperCase();
+      if (cmd === 'PAUSE') { crawler.pause(); }
+      else if (cmd === 'RESUME') { crawler.resume(); }
+    });
+  } catch (_) {}
 
   crawler.crawl()
     .then(() => {
