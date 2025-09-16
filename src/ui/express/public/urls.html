@@ -21,6 +21,12 @@
       <button id="prev">Prev</button>
       <button id="next">Next</button>
       <label>Page <input id="pageInput" type="number" min="1" style="width:5em" /></label>
+      <label>Sort
+        <select id="sortDir">
+          <option value="desc">Newest first</option>
+          <option value="asc">Oldest first</option>
+        </select>
+      </label>
       <label>Filter <input id="filterInput" type="text" placeholder="type to filter current page" style="width:18em" /></label>
       <span id="pageStats" class="muted"></span>
     </div>
@@ -42,7 +48,8 @@
         nextBtn.disabled = offset + count >= total;
       }
       async function load() {
-        const r = await fetch(`/api/urls?limit=${limit}&offset=${offset}&details=1`);
+        const dir = document.getElementById('sortDir').value || 'desc';
+        const r = await fetch(`/api/urls?limit=${limit}&offset=${offset}&details=1&dir=${encodeURIComponent(dir)}`);
         const j = await r.json();
         total = j.total;
         count = j.count;
@@ -91,6 +98,7 @@
       });
       prevBtn.onclick = () => { const nextOffset = Math.max(0, offset - limit); if (nextOffset !== offset) { offset = nextOffset; load(); } };
       nextBtn.onclick = () => { const nextOffset = Math.min(total, offset + limit); if (nextOffset !== offset) { offset = nextOffset; load(); } };
+  document.getElementById('sortDir').onchange = () => { offset = 0; load(); };
       pageInput.onchange = () => {
         const p = Math.max(1, Math.floor(Number(pageInput.value) || 1));
         const nextOffset = Math.min(total, (p - 1) * limit);

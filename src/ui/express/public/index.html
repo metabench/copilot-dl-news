@@ -21,6 +21,7 @@
   .spark-ok { stroke: #268bd2; }
   .spark-warn { stroke: #b58900; }
   .spark-bad { stroke: #dc322f; }
+  .muted { color:#666; }
     </style>
   </head>
   <body>
@@ -92,8 +93,17 @@
       </svg>
     </span>
     <span id="m_errpm" style="margin-left:12px;">err/min: 0</span>
-    <span id="m_qsize" style="margin-left:12px;">queue: 0</span>
+    <span id="m_qsize" style="margin-left:12px; display:flex; align-items:center; gap:6px;">queue: 0
+      <svg id="q_spark" width="140" height="24" viewBox="0 0 140 24" preserveAspectRatio="none" style="border:1px solid #ddd; background:#fafafa">
+        <title id="q_title">queue sparkline</title>
+        <polyline id="q_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
+      </svg>
+    </span>
     <span id="m_errs" style="margin-left:12px;">errors: 0</span>
+  </div>
+  <div id="errorsPanel" style="margin-top:10px; font-size:13px;">
+    <strong>Recent errors</strong>
+    <div id="errorsList" class="muted">Loading…</div>
   </div>
   <h3 style="margin-top:18px;">Recent Domains</h3>
   <div id="domains" class="meta" style="font-size:13px; color:#333; margin-bottom:10px;">Loading…</div>
@@ -115,6 +125,8 @@
   const domains = document.getElementById('domains');
   const inflightDiv = document.getElementById('inflight');
   const inflightList = document.getElementById('inflightList');
+  const qPoly = document.getElementById('q_poly');
+  const qTitle = document.getElementById('q_title');
   let evt;
   let cacheHits = 0;
       // Restore saved logs height
@@ -183,11 +195,23 @@
           const count = p.currentDownloadsCount || (Array.isArray(p.currentDownloads) ? p.currentDownloads.length : 0) || 0;
           inflightDiv.firstChild.nodeValue = `current downloads: ${count}`;
           if (Array.isArray(p.currentDownloads)) {
-            inflightList.innerHTML = p.currentDownloads.map(d => {
-              const age = typeof d.ageMs === 'number' ? ` ${(Math.round(d.ageMs/100)/10).toFixed(1)}s` : '';
-              const u = String(d.url||'').replace(/^https?:\/\//,'');
-              return `<li><a href="/url?url=${encodeURIComponent(d.url)}">${u}</a><span style="color:#666;">${age}</span></li>`;
-            }).join('');
+            const groups = new Map();
+            for (const d of p.currentDownloads) {
+              let host = '';
+              try { host = new URL(d.url).hostname.toLowerCase(); } catch (_) { host = ''; }
+              if (!groups.has(host)) groups.set(host, []);
+              groups.get(host).push(d);
+            }
+            const lines = [];
+            for (const [host, arr] of groups.entries()) {
+              const items = arr.slice(0, 3).map(d => {
+                const age = typeof d.ageMs === 'number' ? ` ${(Math.round(d.ageMs/100)/10).toFixed(1)}s` : '';
+                const u = String(d.url||'').replace(/^https?:\/\//,'');
+                return `<a href="/url?url=${encodeURIComponent(d.url)}">${u}</a><span style="color:#666;">${age}</span>`;
+              }).join(' · ');
+              lines.push(`<li><strong>${host||'(unknown)'}</strong> — ${arr.length} ${items ? '· ' + items : ''}</li>`);
+            }
+            inflightList.innerHTML = lines.join('');
           }
           // simple rate calc client-side
           window.__lastProgress = window.__lastProgress || { t: now, visited: 0, downloaded: 0, errors: 0 };
@@ -199,7 +223,30 @@
           mReqpsLabel.textContent = `req/s: ${(dv/dt).toFixed(2)}`;
           mDlpsLabel.textContent = `dl/s: ${(dd/dt).toFixed(2)}`;
           mErrpm.textContent = `err/min: ${((de*(60/dt))||0).toFixed(2)}`;
-          mQsize.textContent = `queue: ${p.queueSize||0}`;
+          mQsize.firstChild.nodeValue = `queue: ${p.queueSize||0}`;
+          // update queue sparkline from progress
+          window.__q_series = window.__q_series || [];
+          const qSeries = window.__q_series;
+          qSeries.push(Math.max(0, p.queueSize||0));
+          if (qSeries.length > 70) qSeries.shift();
+          (function drawQ(){
+            const svgW = 140, svgH = 24;
+            const min = 0;
+            const max = Math.max(1, Math.max(...qSeries));
+            const n = qSeries.length;
+            const stepX = n > 1 ? (svgW - 2) / (n - 1) : 0;
+            const pts = qSeries.map((v, i) => {
+              const x = 1 + i * stepX;
+              const y = svgH - 1 - ((v - min) / (max - min)) * (svgH - 2);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            qPoly.setAttribute('points', pts);
+            const last = qSeries[qSeries.length-1] ?? 0;
+            qTitle.textContent = `queue latest=${last} samples=${qSeries.length}`;
+            qPoly.classList.toggle('spark-bad', last > 2000);
+            qPoly.classList.toggle('spark-warn', last > 500 && last <= 2000);
+            qPoly.classList.toggle('spark-ok', last <= 500);
+          })();
           mErrs.textContent = `errors: ${p.errors||0}`;
           window.__lastProgress = { t: now, visited: p.visited||0, downloaded: p.downloaded||0, errors: p.errors||0 };
         } catch (_) {}
@@ -297,6 +344,21 @@
           }).join(' · ');
         } catch { domains.textContent = 'Failed to load'; }
       })();
+      // Load recent errors panel
+      (async function loadErrors(){
+        try {
+          const r = await fetch('/api/recent-errors');
+          if (!r.ok) return;
+          const j = await r.json();
+          const el = document.getElementById('errorsList');
+          if (!Array.isArray(j.errors) || j.errors.length === 0) { el.textContent = 'No recent errors.'; return; }
+          el.innerHTML = j.errors.map(e => {
+            const host = e.host || '(unknown)';
+            const items = (e.examples||[]).map(x => `<a href="/url?url=${encodeURIComponent(x.url)}">example</a>`).join(' · ');
+            return `<div><span class="muted">${e.status}</span> ${host} — ${e.count} ${items ? '· ' + items : ''}</div>`;
+          }).join('');
+        } catch {}
+      })();
         es.addEventListener('done', (e) => {
         logs.textContent += `\nDONE: ${e.data}\n`;
       });
@@ -321,6 +383,26 @@
   const saved = localStorage.getItem('showLogs') === '1';
   document.getElementById('showLogs').checked = saved;
   openEventStream(saved);
+  // Persist key controls
+  (function persistControls(){
+    const ids = ['startUrl','depth','concurrency','preferCache'];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const key = `ctrl_${id}`;
+      const val = localStorage.getItem(key);
+      if (val != null) {
+        if (el.type === 'checkbox') el.checked = val === '1';
+        else el.value = val;
+      }
+      el.addEventListener('change', () => {
+        localStorage.setItem(key, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
+      });
+      el.addEventListener('input', () => {
+        if (el.type !== 'checkbox') localStorage.setItem(key, el.value);
+      });
+    }
+  })();
       document.getElementById('startBtn').onclick = async () => {
         const body = {
           startUrl: document.getElementById('startUrl').value,

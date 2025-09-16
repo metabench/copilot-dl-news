@@ -31,6 +31,10 @@
   <div id="urlAnalysis" style="margin:10px 0"></div>
   <div id="article"></div>
     <h3 style="margin-top:20px">Downloads</h3>
+    <div id="diffWrap" style="margin:8px 0; display:none">
+      <button id="showDiff" class="btn">Compare latest vs previous</button>
+      <div id="diffPanel" style="display:none; border:1px solid #e5e7eb; padding:8px; border-radius:6px; background:#fafafa; max-height:320px; overflow:auto"></div>
+    </div>
     <table id="tbl">
       <thead>
         <tr>
@@ -131,9 +135,9 @@
         } else {
           badges.style.display = 'none';
         }
-        const tb = document.querySelector('#tbl tbody');
+  const tb = document.querySelector('#tbl tbody');
         tb.innerHTML = '';
-        (j.fetches||[]).forEach(f => {
+  (j.fetches||[]).forEach(f => {
           const tr = document.createElement('tr');
           const enc = f.content_encoding ? 'yes' : 'no';
           const disk = f.file_size != null ? fmtBytes(f.file_size) : '';
@@ -164,7 +168,55 @@
             tb.appendChild(tr2);
           }
         });
+
+        // Enable diff if we have at least two fetches
+        if ((j.fetches||[]).length >= 2) {
+          const latest = j.fetches[0];
+          const prev = j.fetches[1];
+          const wrap = document.getElementById('diffWrap');
+          const btn = document.getElementById('showDiff');
+          const panel = document.getElementById('diffPanel');
+          wrap.style.display = '';
+          btn.onclick = async () => {
+            if (panel.style.display === 'none') {
+              panel.textContent = 'Loading…';
+              panel.style.display = '';
+              try {
+                const [a, b] = await Promise.all([
+                  fetch(`/api/fetch-body?id=${latest.id}`),
+                  fetch(`/api/fetch-body?id=${prev.id}`)
+                ]);
+                const at = a.ok ? await a.text() : '';
+                const bt = b.ok ? await b.text() : '';
+                panel.innerHTML = renderSideBySideDiff(bt, at);
+              } catch (e) {
+                panel.textContent = 'Failed to load diff: ' + e.message;
+              }
+            } else {
+              panel.style.display = 'none';
+            }
+          };
+        }
       }
+
+      function renderSideBySideDiff(oldText, newText) {
+        // Very basic line diff
+        const oldLines = String(oldText||'').split(/\r?\n/);
+        const newLines = String(newText||'').split(/\r?\n/);
+        const max = Math.max(oldLines.length, newLines.length);
+        const rows = [];
+        for (let i=0;i<max;i++) {
+          const a = oldLines[i] ?? '';
+          const b = newLines[i] ?? '';
+          const changed = a !== b;
+          rows.push(`<tr>
+            <td style="width:50%; vertical-align:top;${changed?'background:#fee2e2;':''}"><pre style="margin:0; white-space:pre-wrap">${escapeHtml(a)}</pre></td>
+            <td style="width:50%; vertical-align:top;${changed?'background:#dcfce7;':''}"><pre style="margin:0; white-space:pre-wrap">${escapeHtml(b)}</pre></td>
+          </tr>`);
+        }
+        return `<table style="width:100%; border-collapse:collapse"><tbody>${rows.join('')}</tbody></table>`;
+      }
+      function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
       load().catch(e => {
         document.getElementById('hdr').textContent = 'Failed to load: ' + e.message;
       });

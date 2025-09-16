@@ -3,6 +3,7 @@
 const express = require('express');
 const path = require('path');
 const { spawn } = require('child_process');
+const fs = require('fs');
 const { EventEmitter } = require('events');
 const { evaluateDomainFromDb } = require('../../is_this_a_news_website');
 
@@ -291,11 +292,16 @@ function createApp(options = {}) {
       const limit = Math.max(1, Math.min(parseInt(req.query.limit || '200', 10) || 200, 5000));
       const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
       const details = String(req.query.details || '0') === '1';
+      const dirRaw = String(req.query.dir || '').toLowerCase();
+      const dir = dirRaw === 'asc' ? 'ASC' : 'DESC';
       const total = db.countStmt.get().count;
       // Prefer most recent first when possible
       const rows = db.db
         .prepare(
-          'SELECT url, title, COALESCE(fetched_at, crawled_at) AS ts FROM articles ORDER BY (ts IS NULL) ASC, ts DESC LIMIT ? OFFSET ?'
+          `SELECT url, title, COALESCE(fetched_at, crawled_at) AS ts
+           FROM articles
+           ORDER BY (ts IS NULL) ASC, ts ${dir}
+           LIMIT ? OFFSET ?`
         )
         .all(limit, offset);
       const urls = rows.map(r => r.url);
@@ -305,6 +311,73 @@ function createApp(options = {}) {
         return res.json({ count: items.length, total, limit, offset, urls, items });
       }
       res.json({ count: urls.length, total, limit, offset, urls });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Recent errors grouped by status and host, with examples
+  app.get('/api/recent-errors', (req, res) => {
+    let NewsDatabase;
+    try { NewsDatabase = require('../../db'); } catch (e) {
+      return res.status(503).json({ error: 'Database unavailable', detail: e.message });
+    }
+    const limitRows = Math.max(100, Math.min(parseInt(req.query.rows || '1000', 10) || 1000, 5000));
+    try {
+      const db = new NewsDatabase(urlsDbPath);
+      const rows = db.db.prepare(`
+        SELECT url, http_status AS status, fetched_at AS ts
+        FROM fetches
+        WHERE http_status >= 400 AND fetched_at IS NOT NULL
+        ORDER BY fetched_at DESC
+        LIMIT ?
+      `).all(limitRows);
+      db.close();
+      const groups = new Map(); // key: `${status}|${host}` -> { status, host, count, examples: [] }
+      for (const r of rows) {
+        let host = '';
+        try { host = new URL(r.url).hostname.toLowerCase(); } catch (_) { host = ''; }
+        const key = `${r.status}|${host}`;
+        if (!groups.has(key)) groups.set(key, { status: r.status, host, count: 0, examples: [] });
+        const g = groups.get(key);
+        g.count += 1;
+        if (g.examples.length < 3) g.examples.push({ url: r.url, ts: r.ts });
+      }
+      const list = Array.from(groups.values()).sort((a,b) => b.count - a.count).slice(0, 50);
+      res.json({ totalGroups: list.length, totalRows: rows.length, errors: list });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Return a portion of a fetched file's body by fetch ID (text only)
+  app.get('/api/fetch-body', (req, res) => {
+    let NewsDatabase;
+    try { NewsDatabase = require('../../db'); } catch (e) {
+      return res.status(503).json({ error: 'Database unavailable', detail: e.message });
+    }
+    const id = parseInt(String(req.query.id || ''), 10);
+    if (!id || isNaN(id)) return res.status(400).json({ error: 'Missing or invalid id' });
+    try {
+      const db = new NewsDatabase(urlsDbPath);
+      const row = db.db.prepare('SELECT id, file_path, content_type, content_encoding FROM fetches WHERE id = ?').get(id);
+      db.close();
+      if (!row || !row.file_path) return res.status(404).json({ error: 'No body available for this fetch' });
+      const p = row.file_path;
+      try {
+        const stat = fs.statSync(p);
+        const max = 512 * 1024; // 512KB cap
+        const fd = fs.openSync(p, 'r');
+        const size = Math.min(stat.size, max);
+        const buf = Buffer.alloc(size);
+        fs.readSync(fd, buf, 0, size, 0);
+        fs.closeSync(fd);
+        const text = buf.toString('utf8');
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.send(text);
+      } catch (e) {
+        res.status(500).json({ error: 'Failed to read body', detail: e.message });
+      }
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
