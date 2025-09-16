@@ -141,6 +141,16 @@ class NewsCrawler {
   this.db = new NewsDatabase(this.dbPath);
   this.cache.setDb(this.db);
         console.log(`SQLite DB initialized at: ${this.dbPath}`);
+        try {
+          const stat = await fs.stat(this.dbPath).catch(() => null);
+          const bytes = stat?.size || 0;
+          const mb = bytes / (1024 * 1024);
+          const gb = bytes / (1024 * 1024 * 1024);
+          const sizeStr = gb >= 1 ? `${gb.toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+          const totalPages = this.db.getFetchCount?.() || 0;
+          const articlePages = this.db.getArticleClassifiedFetchCount?.() || 0;
+          console.log(`Database size: ${sizeStr} — stored pages: ${totalPages}, articles detected: ${articlePages}`);
+        } catch (_) { /* ignore size/count errors */ }
       } catch (e) {
         console.log(`SQLite not available, continuing without DB: ${e.message}`);
         this.db = null;

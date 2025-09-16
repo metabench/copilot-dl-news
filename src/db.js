@@ -388,6 +388,20 @@ class NewsDatabase {
     return this.db.prepare('SELECT * FROM fetches WHERE url = ? ORDER BY fetched_at DESC LIMIT ?').all(url, limit);
   }
 
+  // Aggregate counts for crawler telemetry
+  getFetchCount() {
+    try {
+      const r = this.db.prepare('SELECT COUNT(*) AS c FROM fetches').get();
+      return r?.c || 0;
+    } catch (_) { return 0; }
+  }
+  getArticleClassifiedFetchCount() {
+    try {
+      const r = this.db.prepare("SELECT COUNT(*) AS c FROM fetches WHERE classification = 'article'").get();
+      return r?.c || 0;
+    } catch (_) { return 0; }
+  }
+
   getArticleRowByUrl(url) {
     return this.db.prepare('SELECT * FROM articles WHERE url = ?').get(url);
   }
