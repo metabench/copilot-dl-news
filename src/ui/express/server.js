@@ -290,10 +290,20 @@ function createApp(options = {}) {
       const db = new NewsDatabase(urlsDbPath);
       const limit = Math.max(1, Math.min(parseInt(req.query.limit || '200', 10) || 200, 5000));
       const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
+      const details = String(req.query.details || '0') === '1';
       const total = db.countStmt.get().count;
-      const rows = db.db.prepare('SELECT url FROM articles LIMIT ? OFFSET ?').all(limit, offset);
+      // Prefer most recent first when possible
+      const rows = db.db
+        .prepare(
+          'SELECT url, title, COALESCE(fetched_at, crawled_at) AS ts FROM articles ORDER BY (ts IS NULL) ASC, ts DESC LIMIT ? OFFSET ?'
+        )
+        .all(limit, offset);
       const urls = rows.map(r => r.url);
       db.close();
+      if (details) {
+        const items = rows.map(r => ({ url: r.url, title: r.title || null, ts: r.ts || null }));
+        return res.json({ count: items.length, total, limit, offset, urls, items });
+      }
       res.json({ count: urls.length, total, limit, offset, urls });
     } catch (e) {
       res.status(500).json({ error: e.message });
