@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Domain Summary</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+      .row { display:flex; gap:12px; align-items:end; flex-wrap: wrap; }
+      label { display:block; font-size:12px; color:#555; }
+      input, button { padding:6px 8px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; text-align:left; }
+      th { background:#f7f7f7; }
+      .muted { color:#666; }
+      .stat { display:inline-block; padding:6px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc; margin-right:8px; }
+      .wrap { word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h1>Domain Summary</h1>
+    <div class="row">
+      <div>
+        <label>Domain or host</label>
+        <input id="host" placeholder="example.com" />
+      </div>
+      <div>
+        <label><input id="subs" type="checkbox" /> Include subdomains</label>
+      </div>
+      <div>
+        <button id="load">Load</button>
+        <a href="/" style="margin-left:8px">Home</a>
+  <button id="analyze" style="margin-left:8px">Analyze now</button>
+      </div>
+    </div>
+
+    <div id="summary" class="muted" style="margin-top:10px;">Enter a host and click Load.</div>
+
+  <div id="domAnalysis" style="margin-top:14px;"></div>
+
+  <h3 style="margin-top:20px;">Recent Articles</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Section</th>
+          <th>Date</th>
+          <th>Saved at</th>
+          <th>URL</th>
+        </tr>
+      </thead>
+      <tbody id="arts"></tbody>
+    </table>
+
+    <h3 style="margin-top:20px;">Fetch Classification</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Classification</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody id="classTbl"></tbody>
+    </table>
+
+    <h3 style="margin-top:20px;">Top Content Types</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody id="ctTbl"></tbody>
+    </table>
+
+    <script>
+      function fmt(v){ return v==null? '' : String(v); }
+      function fmtBytes(n){ if(n==null) return ''; const k=1024; const sizes=['B','KB','MB','GB']; let i=0; let x=n; while(x>=k && i<sizes.length-1){ x/=k; i++; } return `${x.toFixed(1)} ${sizes[i]}`; }
+      function esc(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+      function renderJson(data){
+        if(!data) return '<div class="muted">No domain analysis.</div>';
+        try { const o = typeof data==='string'? JSON.parse(data) : data; return `<pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:6px;border-radius:6px;max-height:260px;overflow:auto">${esc(JSON.stringify(o,null,2))}</pre>`; } catch {
+          return `<pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:6px;border-radius:6px;max-height:260px;overflow:auto">${esc(data)}</pre>`;
+        }
+      }
+      async function load(){
+        const host = document.getElementById('host').value.trim();
+        const subs = document.getElementById('subs').checked ? '1' : '0';
+        if(!host){ document.getElementById('summary').textContent = 'Please enter a host.'; return; }
+        const r = await fetch(`/api/domain-summary?host=${encodeURIComponent(host)}&subdomains=${subs}`);
+        const j = await r.json();
+        if(!r.ok){ document.getElementById('summary').textContent = 'Error: ' + (j.error||r.statusText); return; }
+  const a = j.articles || {}; const f = j.fetches || {};
+        const stats = [
+          `articles: ${a.total_articles||0}`,
+          `last saved: ${fmt(a.last_saved_at)}`,
+          `fetches: ${f.total_fetches||0}`,
+          `ok: ${f.ok_count||0}`,
+          `errors: ${f.err_count||0}`,
+          `bytes: ${fmtBytes(f.total_bytes||0)}`,
+          `avg total ms: ${Math.round(f.avg_total_ms||0)}`,
+          `last fetch: ${fmt(f.last_fetch_at)}`
+        ];
+        document.getElementById('summary').innerHTML = stats.map(s=>`<span class="stat">${s}</span>`).join(' ');
+
+  const domDiv = document.getElementById('domAnalysis');
+  const categories = (j.domainCategories||[]).map(c=>`<span class="stat">category: ${esc(c)}</span>`).join(' ');
+  const header = `<div>${categories || '<span class="muted">No categories</span>'}</div>`;
+  const analysis = renderJson(j.domain?.analysis || null);
+  domDiv.innerHTML = `<h3 style="margin:10px 0 6px">Domain analysis</h3>${header}${analysis}`;
+        const tb = document.getElementById('arts');
+        tb.innerHTML = '';
+        (j.recentArticles||[]).forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${fmt(r.title)}</td>
+            <td>${fmt(r.section)}</td>
+            <td>${fmt(r.date)}</td>
+            <td>${fmt(r.ts)}</td>
+            <td class="wrap"><a href="/url?u=${encodeURIComponent(r.url)}" target="_blank">${r.url}</a></td>
+          `;
+          tb.appendChild(tr);
+        });
+        const ct = document.getElementById('ctTbl');
+        ct.innerHTML = '';
+        (j.topContentTypes||[]).forEach(x => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${fmt(x.type)}</td><td>${fmt(x.c)}</td>`;
+          ct.appendChild(tr);
+        });
+        const cl = document.getElementById('classTbl');
+        cl.innerHTML = '';
+        (j.classification||[]).forEach(x => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${fmt(x.classification)}</td><td>${fmt(x.c)}</td>`;
+          cl.appendChild(tr);
+        });
+      }
+      document.getElementById('load').onclick = load;
+      document.getElementById('analyze').onclick = async () => {
+        const host = document.getElementById('host').value.trim();
+        if(!host) return;
+        const r = await fetch('/api/analyze-domain', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ host }) });
+        const j = await r.json();
+        if(!r.ok){ alert('Analyze failed: ' + (j.error||r.statusText)); return; }
+        // Refresh view
+        load().catch(()=>{});
+      };
+      // Prefill from URL
+      (function(){
+        const u = new URL(location.href);
+        const h = u.searchParams.get('host') || u.searchParams.get('domain');
+        const s = u.searchParams.get('subdomains') || u.searchParams.get('includeSubdomains');
+        if(h){ document.getElementById('host').value = h; }
+        if(s){ document.getElementById('subs').checked = s === '1'; }
+        if(h){ load().catch(()=>{}); }
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,351 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>News Crawler UI</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+  pre { background: #111; color: #0f0; padding: 10px; height: 240px; overflow: auto; }
+  /* Allow the logs area to be resized vertically */
+  #logs { resize: vertical; min-height: 120px; max-height: 75vh; }
+  /* Drag handle for reliable resizing in Chrome */
+  .resizer-h { height: 6px; cursor: row-resize; background: linear-gradient(to bottom, #e5e7eb, #cbd5e1); border:1px solid #cbd5e1; border-top: none; }
+  .resizing { user-select: none; }
+      .row { display: flex; gap: 16px; align-items: end; }
+      label { display: block; font-size: 12px; color: #555; }
+      input, select, button { padding: 6px 8px; }
+  .warn { color: #b58900; }
+  .bad { color: #dc322f; }
+  /* sparkline stroke colors */
+  .spark-ok { stroke: #268bd2; }
+  .spark-warn { stroke: #b58900; }
+  .spark-bad { stroke: #dc322f; }
+    </style>
+  </head>
+  <body>
+    <h1>News Crawler</h1>
+    <p style="margin-top:-8px; margin-bottom:14px; color:#555; font-size:13px;">
+      Quick links:
+      <a href="/urls">URLs</a> ·
+      <a href="/domain">Domain summary</a> ·
+      <a href="/health" target="_blank" rel="noopener">Health</a> ·
+      <a href="/metrics" target="_blank" rel="noopener">Metrics</a>
+    </p>
+    <div class="row">
+      <div>
+        <label>Start URL</label>
+        <input id="startUrl" value="https://www.theguardian.com" size="40" />
+      </div>
+      <div>
+        <label>Depth</label>
+        <input id="depth" type="number" value="2" />
+      </div>
+      <div>
+        <label>Max Pages</label>
+        <input id="maxPages" type="number" />
+      </div>
+      <div>
+        <label>Re-download cached pages if older than</label>
+        <input id="refetchIfOlderThan" type="text" placeholder="e.g., 30m or 6h" />
+      </div>
+      <div>
+        <label>Concurrency</label>
+        <input id="concurrency" type="number" value="1" />
+      </div>
+      <div>
+        <label><input id="slowMode" type="checkbox" /> Slow mode (1 req/s)</label>
+      </div>
+      <div>
+        <label><input id="preferCache" type="checkbox" /> Prefer cache</label>
+      </div>
+      <div>
+        <button id="startBtn">Start</button>
+        <button id="stopBtn">Stop</button>
+      </div>
+    </div>
+    <p>
+      <label><input type="checkbox" id="saveJson" /> Also save JSON files</label>
+    </p>
+    <p>
+      <label><input type="checkbox" id="showLogs" /> Show logs</label>
+    </p>
+  <h3>Progress</h3>
+  <div id="progress">visited: 0, downloaded: 0, found: 0, saved: 0</div>
+  <div id="inflight" style="font-size:13px; color:#333; margin-top:6px;">
+    current downloads: 0
+    <ul id="inflightList" style="margin:4px 0 0 14px; padding:0; list-style:disc;"></ul>
+  </div>
+  <div id="cacheInfo" style="color:#555; font-size: 13px; margin-top: 6px;">cached hits: 0</div>
+  <div id="metrics" style="font-size:13px; color: #333; margin-top:8px; display:flex; align-items:center; gap:8px;">
+    <strong>Metrics:</strong>
+    <span id="m_reqps" style="display:flex; align-items:center; gap:6px;"><span id="m_reqps_label">req/s: 0</span>
+      <svg id="reqps_spark" width="140" height="24" viewBox="0 0 140 24" preserveAspectRatio="none" style="border:1px solid #ddd; background:#fafafa">
+        <title id="reqps_title">req/s sparkline</title>
+  <polyline id="reqps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
+      </svg>
+    </span>
+    <span id="m_dlps" style="margin-left:12px; display:flex; align-items:center; gap:6px;"><span id="m_dlps_label">dl/s: 0</span>
+      <svg id="dlps_spark" width="140" height="24" viewBox="0 0 140 24" preserveAspectRatio="none" style="border:1px solid #ddd; background:#fafafa">
+        <title id="dlps_title">dl/s sparkline</title>
+  <polyline id="dlps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
+      </svg>
+    </span>
+    <span id="m_errpm" style="margin-left:12px;">err/min: 0</span>
+    <span id="m_qsize" style="margin-left:12px;">queue: 0</span>
+    <span id="m_errs" style="margin-left:12px;">errors: 0</span>
+  </div>
+  <h3 style="margin-top:18px;">Recent Domains</h3>
+  <div id="domains" class="meta" style="font-size:13px; color:#333; margin-bottom:10px;">Loading…</div>
+  <h3>Logs</h3>
+  <pre id="logs"></pre>
+  <div id="logsResizer" class="resizer-h" title="Drag to resize logs"></div>
+  <p><a href="/urls">View saved article URLs</a></p>
+    <script>
+  const logs = document.getElementById('logs');
+  const logsResizer = document.getElementById('logsResizer');
+  const progress = document.getElementById('progress');
+  const mReqps = document.getElementById('m_reqps');
+  const mDlps = document.getElementById('m_dlps');
+  const mReqpsLabel = document.getElementById('m_reqps_label');
+  const mDlpsLabel = document.getElementById('m_dlps_label');
+  const mErrpm = document.getElementById('m_errpm');
+  const mQsize = document.getElementById('m_qsize');
+  const mErrs = document.getElementById('m_errs');
+  const domains = document.getElementById('domains');
+  const inflightDiv = document.getElementById('inflight');
+  const inflightList = document.getElementById('inflightList');
+  let evt;
+  let cacheHits = 0;
+      // Restore saved logs height
+      (function(){
+        const savedH = parseInt(localStorage.getItem('logsH')||'', 10);
+        if (!isNaN(savedH) && savedH >= 120) {
+          logs.style.height = savedH + 'px';
+        }
+      })();
+      // Drag-to-resize for logs area (works even if CSS resize is ignored)
+      (function(){
+        if (!logsResizer) return;
+        let startY = 0, startH = 0, active = false;
+        const onMove = (e) => {
+          if (!active) return;
+          const dy = e.clientY - startY;
+          const maxH = Math.max(200, Math.floor(window.innerHeight * 0.75));
+          const newH = Math.min(maxH, Math.max(120, startH + dy));
+          logs.style.height = newH + 'px';
+        };
+        const onUp = () => {
+          if (!active) return;
+          active = false;
+          document.body.classList.remove('resizing');
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+          const h = parseInt(getComputedStyle(logs).height, 10);
+          if (!isNaN(h)) localStorage.setItem('logsH', String(h));
+        };
+        logsResizer.addEventListener('mousedown', (e) => {
+          startY = e.clientY;
+          startH = parseInt(getComputedStyle(logs).height, 10) || logs.clientHeight || 240;
+          active = true;
+          document.body.classList.add('resizing');
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+          e.preventDefault();
+        });
+      })();
+      // Batch log updates to avoid frequent DOM writes
+      let logBuffer = '';
+      let flushTimer = null;
+      function scheduleFlush() {
+        if (flushTimer) return;
+        flushTimer = setTimeout(() => {
+          logs.textContent += logBuffer;
+          logs.scrollTop = logs.scrollHeight;
+          logBuffer = '';
+          flushTimer = null;
+        }, 200);
+      }
+      function attachHandlers(es) {
+        es.addEventListener('log', (e) => {
+          try { logBuffer += JSON.parse(e.data).line; scheduleFlush(); } catch (_) {}
+        });
+      // Throttle progress UI to ~5 FPS
+      let lastProgressAt = 0;
+        es.addEventListener('progress', (e) => {
+        const now = Date.now();
+        if (now - lastProgressAt < 200) return;
+        lastProgressAt = now;
+        try {
+          const p = JSON.parse(e.data);
+          progress.textContent = `visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
+          // Show current in-flight downloads
+          const count = p.currentDownloadsCount || (Array.isArray(p.currentDownloads) ? p.currentDownloads.length : 0) || 0;
+          inflightDiv.firstChild.nodeValue = `current downloads: ${count}`;
+          if (Array.isArray(p.currentDownloads)) {
+            inflightList.innerHTML = p.currentDownloads.map(d => {
+              const age = typeof d.ageMs === 'number' ? ` ${(Math.round(d.ageMs/100)/10).toFixed(1)}s` : '';
+              const u = String(d.url||'').replace(/^https?:\/\//,'');
+              return `<li><a href="/url?url=${encodeURIComponent(d.url)}">${u}</a><span style="color:#666;">${age}</span></li>`;
+            }).join('');
+          }
+          // simple rate calc client-side
+          window.__lastProgress = window.__lastProgress || { t: now, visited: 0, downloaded: 0, errors: 0 };
+          const lp = window.__lastProgress;
+          const dt = Math.max(0.001, (now - lp.t) / 1000);
+          const dv = (p.visited||0) - (lp.visited||0);
+          const dd = (p.downloaded||0) - (lp.downloaded||0);
+          const de = (p.errors||0) - (lp.errors||0);
+          mReqpsLabel.textContent = `req/s: ${(dv/dt).toFixed(2)}`;
+          mDlpsLabel.textContent = `dl/s: ${(dd/dt).toFixed(2)}`;
+          mErrpm.textContent = `err/min: ${((de*(60/dt))||0).toFixed(2)}`;
+          mQsize.textContent = `queue: ${p.queueSize||0}`;
+          mErrs.textContent = `errors: ${p.errors||0}`;
+          window.__lastProgress = { t: now, visited: p.visited||0, downloaded: p.downloaded||0, errors: p.errors||0 };
+        } catch (_) {}
+      });
+
+      // Optional: poll /metrics and colorize gauges
+      async function refreshServerMetrics() {
+        try {
+          const r = await fetch('/metrics');
+          if (!r.ok) return;
+          const text = await r.text();
+          const map = {};
+          for (const line of text.split(/\n+/)) {
+            const m = line.match(/^(crawler_[a-z_]+)\s+([0-9.]+)/);
+            if (m) map[m[1]] = parseFloat(m[2]);
+          }
+          const reqps = map['crawler_requests_per_second'] ?? null;
+          const dlps = map['crawler_downloads_per_second'] ?? null;
+          const errpm = map['crawler_error_rate_per_min'] ?? null;
+          const qsize = map['crawler_queue_size'] ?? null;
+          const errs = map['crawler_errors_total'] ?? null;
+          if (reqps != null) mReqpsLabel.textContent = `req/s: ${reqps.toFixed(2)}`;
+          // Update sparkline with a rolling buffer of req/s
+          window.__reqps_series = window.__reqps_series || [];
+          if (reqps != null) {
+            const series = window.__reqps_series;
+            series.push(Math.max(0, reqps));
+            if (series.length > 70) series.shift(); // ~70 samples
+            // draw
+            const svgW = 140, svgH = 24;
+            const min = 0;
+            const max = Math.max(1, Math.max(...series));
+            const n = series.length;
+            const stepX = n > 1 ? (svgW - 2) / (n - 1) : 0;
+            const pts = series.map((v, i) => {
+              const x = 1 + i * stepX;
+              const y = svgH - 1 - ((v - min) / (max - min)) * (svgH - 2);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            document.getElementById('reqps_poly').setAttribute('points', pts);
+            const last = series[series.length-1] ?? 0;
+            document.getElementById('reqps_title').textContent = `req/s latest=${last.toFixed(2)} samples=${series.length}`;
+            const rp = document.getElementById('reqps_poly');
+            rp.classList.toggle('spark-bad', last < 0.1);
+            rp.classList.toggle('spark-warn', last >= 0.1 && last < 0.5);
+            rp.classList.toggle('spark-ok', last >= 0.5);
+          }
+          if (dlps != null) mDlpsLabel.textContent = `dl/s: ${dlps.toFixed(2)}`;
+          // Update sparkline with a rolling buffer of dl/s
+          window.__dlps_series = window.__dlps_series || [];
+          if (dlps != null) {
+            const series = window.__dlps_series;
+            series.push(Math.max(0, dlps));
+            if (series.length > 70) series.shift();
+            const svgW = 140, svgH = 24;
+            const min = 0;
+            const max = Math.max(1, Math.max(...series));
+            const n = series.length;
+            const stepX = n > 1 ? (svgW - 2) / (n - 1) : 0;
+            const pts = series.map((v, i) => {
+              const x = 1 + i * stepX;
+              const y = svgH - 1 - ((v - min) / (max - min)) * (svgH - 2);
+              return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            document.getElementById('dlps_poly').setAttribute('points', pts);
+            const last = series[series.length-1] ?? 0;
+            document.getElementById('dlps_title').textContent = `dl/s latest=${last.toFixed(2)} samples=${series.length}`;
+            const dp = document.getElementById('dlps_poly');
+            dp.classList.toggle('spark-bad', last < 0.1);
+            dp.classList.toggle('spark-warn', last >= 0.1 && last < 0.5);
+            dp.classList.toggle('spark-ok', last >= 0.5);
+          }
+          if (errpm != null) mErrpm.textContent = `err/min: ${errpm.toFixed(2)}`;
+          if (qsize != null) mQsize.textContent = `queue: ${qsize}`;
+          if (errs != null) mErrs.textContent = `errors: ${errs}`;
+          // color rules
+          mErrpm.classList.toggle('warn', (errpm ?? 0) > 1 && (errpm ?? 0) <= 5);
+          mErrpm.classList.toggle('bad', (errpm ?? 0) > 5);
+          mQsize.classList.toggle('warn', (qsize ?? 0) > 500 && (qsize ?? 0) <= 2000);
+          mQsize.classList.toggle('bad', (qsize ?? 0) > 2000);
+        } catch (_) {}
+      }
+      setInterval(refreshServerMetrics, 2000);
+      // Load recent domains for navigation
+      (async function loadDomains(){
+        try {
+          const r = await fetch('/api/recent-domains?limit=20');
+          if (!r.ok) { domains.textContent = 'Failed to load'; return; }
+          const j = await r.json();
+          if (!Array.isArray(j.domains) || j.domains.length === 0) { domains.textContent = 'No recent domains.'; return; }
+          domains.innerHTML = j.domains.map(d => {
+            const h = d.host;
+            const url = `/domain?host=${encodeURIComponent(h)}`;
+            return `<a href="${url}">${h}</a> <span class="muted">(${d.article_count} articles)</span>`;
+          }).join(' · ');
+        } catch { domains.textContent = 'Failed to load'; }
+      })();
+        es.addEventListener('done', (e) => {
+        logs.textContent += `\nDONE: ${e.data}\n`;
+      });
+        es.addEventListener('cache', (e) => {
+        try {
+          const c = JSON.parse(e.data);
+          cacheHits += 1;
+          const src = c.source || 'cache';
+          const age = typeof c.ageSeconds === 'number' ? `${c.ageSeconds}s` : 'unknown';
+          document.getElementById('cacheInfo').textContent = `cached hits: ${cacheHits} (last from ${src}, age ${age})`;
+        } catch (_) {}
+      });
+      }
+
+      function openEventStream(withLogs) {
+        if (evt) try { evt.close(); } catch (_) {}
+        evt = new EventSource(`/events?logs=${withLogs ? '1' : '0'}`);
+        attachHandlers(evt);
+      }
+
+  // Initialize logs toggle from localStorage
+  const saved = localStorage.getItem('showLogs') === '1';
+  document.getElementById('showLogs').checked = saved;
+  openEventStream(saved);
+      document.getElementById('startBtn').onclick = async () => {
+        const body = {
+          startUrl: document.getElementById('startUrl').value,
+          depth: parseInt(document.getElementById('depth').value, 10),
+          maxPages: document.getElementById('maxPages').value ? parseInt(document.getElementById('maxPages').value, 10) : undefined,
+          refetchIfOlderThan: document.getElementById('refetchIfOlderThan').value || undefined,
+          concurrency: parseInt(document.getElementById('concurrency').value, 10),
+          slow: document.getElementById('slowMode').checked,
+          preferCache: document.getElementById('preferCache').checked,
+          saveJson: document.getElementById('saveJson').checked
+        };
+        const r = await fetch('/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const j = await r.json();
+        logs.textContent += `\nStarted: ${JSON.stringify(j)}\n`;
+      };
+      document.getElementById('stopBtn').onclick = async () => {
+        const r = await fetch('/api/stop', { method: 'POST' });
+        const j = await r.json();
+        logs.textContent += `\nStop requested: ${JSON.stringify(j)}\n`;
+      };
+      document.getElementById('showLogs').onchange = (e) => {
+        const enabled = e.target.checked;
+        localStorage.setItem('showLogs', enabled ? '1' : '0');
+        openEventStream(enabled);
+      };
+    </script>
+  </body>
+  </html>

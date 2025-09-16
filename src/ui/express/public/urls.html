@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Article URLs</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+      ol { padding-left: 20px; }
+      .meta { color: #555; margin-bottom: 12px; }
+      a { word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h1>Article URLs</h1>
+    <div class="meta" id="meta">Loading…</div>
+    <div class="meta">
+      <button id="prev">Prev</button>
+      <button id="next">Next</button>
+  <label style="margin-left:12px;">Go to page <input id="pageInput" type="number" min="1" style="width:5em" /></label>
+  <label style="margin-left:12px;">Filter <input id="filterInput" type="text" placeholder="type to filter current page" style="width:16em" /></label>
+    </div>
+    <ol id="list"></ol>
+    <p><a href="/">Back to dashboard</a></p>
+    <script>
+      let offset = 0;
+      const limit = 200;
+      let total = 0;
+      let count = 0;
+      const prevBtn = document.getElementById('prev');
+      const nextBtn = document.getElementById('next');
+  const pageInput = document.getElementById('pageInput');
+  const filterInput = document.getElementById('filterInput');
+  let currentUrls = [];
+      function updateButtons() {
+        prevBtn.disabled = offset <= 0;
+        nextBtn.disabled = offset + count >= total;
+      }
+      async function load() {
+        const r = await fetch(`/api/urls?limit=${limit}&offset=${offset}`);
+        const j = await r.json();
+        total = j.total;
+        count = j.count;
+        document.getElementById('meta').textContent = `${j.total} URLs total — showing ${j.offset+1}-${Math.min(j.offset + j.count, j.total)}`;
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        currentUrls = j.urls.slice();
+        const filter = (filterInput.value || '').toLowerCase();
+        currentUrls.filter(u => !filter || u.toLowerCase().includes(filter)).forEach((u) => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = u; a.textContent = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          const sep = document.createTextNode(' ');
+          const details = document.createElement('a');
+          details.href = `/url?u=${encodeURIComponent(u)}`;
+          details.textContent = '[details]';
+          li.appendChild(a);
+          li.appendChild(sep);
+          li.appendChild(details);
+          list.appendChild(li);
+        });
+        updateButtons();
+      }
+      load().catch(err => {
+        document.getElementById('meta').textContent = 'Failed to load URLs: ' + err.message;
+      });
+      prevBtn.onclick = () => { const nextOffset = Math.max(0, offset - limit); if (nextOffset !== offset) { offset = nextOffset; load(); } };
+      nextBtn.onclick = () => { const nextOffset = Math.min(total, offset + limit); if (nextOffset !== offset) { offset = nextOffset; load(); } };
+      pageInput.onchange = () => {
+        const p = Math.max(1, Math.floor(Number(pageInput.value) || 1));
+        const nextOffset = Math.min(total, (p - 1) * limit);
+        if (nextOffset !== offset) { offset = nextOffset; load(); }
+      };
+      filterInput.oninput = () => {
+        // re-render current page with filter
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        const filter = (filterInput.value || '').toLowerCase();
+        currentUrls.filter(u => !filter || u.toLowerCase().includes(filter)).forEach((u) => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = u; a.textContent = u; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          const sep = document.createTextNode(' ');
+          const details = document.createElement('a');
+          details.href = `/url?u=${encodeURIComponent(u)}`;
+          details.textContent = '[details]';
+          li.appendChild(a);
+          li.appendChild(sep);
+          li.appendChild(details);
+          list.appendChild(li);
+        });
+      };
+
+      // Keyboard navigation: left/right arrows outside inputs
+      document.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea') return;
+        if (e.key === 'ArrowLeft' && !prevBtn.disabled) { prevBtn.click(); }
+        if (e.key === 'ArrowRight' && !nextBtn.disabled) { nextBtn.click(); }
+      });
+    </script>
+  </body>
+  </html>

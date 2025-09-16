@@ -12,6 +12,10 @@ A web crawler specifically designed for news websites with intelligent navigatio
 - **Duplicate Prevention**: Maintains a visited set to avoid crawling the same page twice
 - **Metadata Extraction**: Extracts article title, date, section, and URL
 - **Data Persistence**: Saves articles as JSON files with HTML content and metadata, and optionally into a local SQLite database for querying
+- **Analysis & Classification**:
+  - Per-URL, per-article, and per-download analysis fields
+  - Heuristics to classify pages (article/nav/other) and domains (e.g., news sites)
+  - Normalized categories for URLs, pages, and domains
 
 ## Installation
 
@@ -70,6 +74,7 @@ Notes:
 - The GUI streams live logs via Server-Sent Events (SSE).
 - Only one crawl can run at a time via the dashboard.
 - You can still use the CLI in parallel from another terminal if needed.
+ - URL details page shows analysis for the URL, the article (if present), and each download (if present).
 
 
 # Enable concurrent crawling with a bounded priority queue
@@ -84,6 +89,8 @@ node src/crawl.js https://www.theguardian.com --depth=1 --concurrency=4 --max-qu
 - `--max-age=30s|10m|2h|1d` Use cached articles if fresh within window
 - `--concurrency=N`      Number of concurrent workers (default: 1)
 - `--max-queue=N`        Max items in the bounded request queue (default: 10000)
+ - Backfill publication dates: `npm run backfill:dates` (flags: `--redo`, `--limit=N`, `--batch-size=N`, `--no-list-existing`, `--include-nav`, `--url=...`)
+ - Analyze domains (news-site heuristic): `npm run analyze:domains`
 ```
 
 ### Programmatic Usage
@@ -162,8 +169,30 @@ Schema:
   - `text` TEXT (extracted readable content)
   - `word_count` INTEGER
   - `language` TEXT (best-effort)
+  - `article_xpath` TEXT (XPath of detected article container)
+  - `analysis` TEXT (JSON or text)
 
 - `links` (links graph)
+ - `fetches` (per-download records)
+   - `id` INTEGER PRIMARY KEY
+   - `url` TEXT
+   - `request_started_at`, `fetched_at`
+   - `http_status`, `content_type`, `content_length`, `content_encoding`
+   - `bytes_downloaded`, `transfer_kbps`, `ttfb_ms`, `download_ms`, `total_ms`
+   - `saved_to_db`, `saved_to_file`, `file_path`, `file_size`
+   - `classification` TEXT ('article' | 'nav' | 'other')
+   - `nav_links_count`, `article_links_count`, `word_count`
+   - `analysis` TEXT (JSON or text)
+
+ - `urls` (normalized URL catalog)
+   - `id`, `url` (unique), `canonical_url`, `created_at`, `last_seen_at`, `analysis`
+
+ - `domains` (normalized domains)
+   - `id`, `host` (unique), `tld`, `created_at`, `last_seen_at`, `analysis`
+
+ - Category tables (normalized)
+   - `url_categories`, `page_categories`, `domain_categories`
+   - Mapping tables: `url_category_map` (url_id↔category_id), `page_category_map` (fetch_id↔category_id), `domain_category_map` (domain_id↔category_id)
   - `id` INTEGER PRIMARY KEY
   - `src_url` TEXT (source page)
   - `dst_url` TEXT (destination page)
@@ -250,8 +279,20 @@ This deletes all saved JSON articles and the SQLite database.
 ## Dependencies
 
 - `cheerio`: Server-side jQuery implementation for HTML parsing
+- `better-sqlite3`: Fast SQLite bindings used for local persistence and analysis
 - `node-fetch`: HTTP client for making requests
 - `robots-parser`: robots.txt parser for compliance checking
+- `express`: GUI server
+
+## Domain analysis (news-site heuristic)
+
+The module `src/is_this_a_news_website.js` contains a simple heuristic to determine if a domain looks like a news site based on:
+
+- Count of article-classified fetches
+- Number of distinct article sections
+- Ratio of article URLs with date patterns (/YYYY/MM/DD/)
+
+The CLI tool `npm run analyze:domains` will compute metrics per domain, write a JSON analysis to the `domains` table, and tag domains with the `news` category when above a threshold.
 
 ## License
 

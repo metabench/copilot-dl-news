@@ -1,12 +1,15 @@
 {
   "name": "news_crawler",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
     "test": "jest",
-    "gui": "node ui/server.js"
+  "gui": "node src/ui/express/server.js",
+  "backfill:dates": "node src/tools/backfill-dates.js",
+  "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
+  "analyze:domains": "node src/tools/analyze-domains.js"
   },
   "keywords": [
     "crawler",
@@ -18,7 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "cheerio": "^1.1.2",
-    "better-sqlite3": "^9.6.0",
+  "better-sqlite3": "^12.2.0",
     "@mozilla/readability": "^0.5.0",
     "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",

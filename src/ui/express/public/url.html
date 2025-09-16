@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>URL Details</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; }
+      th { background: #f7f7f7; text-align: left; }
+      .muted{ color:#666; }
+      .nowrap{ white-space: nowrap; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .badges { margin: 8px 0 12px; display:flex; gap:8px; align-items:center; }
+      .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; line-height:18px; border:1px solid rgba(0,0,0,0.1); }
+      .badge-article { background:#e6ffed; color:#065f46; border-color:#a7f3d0; }
+    .xp-wrap { margin-top:4px; display:flex; gap:8px; align-items:center; }
+    .xp-code { white-space: pre-wrap; word-break: break-all; background:#f8fafc; border:1px solid #e2e8f0; padding:2px 6px; border-radius:6px; }
+    .btn { font-size:12px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; cursor:pointer; }
+    .btn:hover { background:#f8fafc; }
+      .badge-nav { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+      .badge-other { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+      .badge-enc { background:#f1f5f9; color:#334155; border-color:#cbd5e1; }
+    </style>
+  </head>
+  <body>
+    <h1>URL Details</h1>
+    <div id="hdr" class="muted">Loading…</div>
+    <div id="badges" class="badges" style="display:none"></div>
+  <div id="urlAnalysis" style="margin:10px 0"></div>
+  <div id="article"></div>
+    <h3 style="margin-top:20px">Downloads</h3>
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th class="nowrap">Fetched at</th>
+          <th>Status</th>
+          <th>Type</th>
+          <th>Encoded</th>
+          <th>Encoding</th>
+          <th>Bytes</th>
+          <th>On disk</th>
+          <th>TTFB</th>
+          <th>DL ms</th>
+          <th>Total ms</th>
+          <th>Class</th>
+          <th>Nav links</th>
+          <th>Article links</th>
+          <th>Words</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <script>
+      function fmt(v){ return v==null? '' : String(v); }
+      function fmtBytes(n){ if(n==null) return ''; const k=1024; const sizes=['B','KB','MB','GB']; let i=0; let x=n; while(x>=k && i<sizes.length-1){ x/=k; i++; } return `${x.toFixed(1)} ${sizes[i]}`; }
+      function qs(name){ const u = new URL(location.href); return u.searchParams.get(name) || ''; }
+      function classificationBadge(cls){
+        const span = document.createElement('span');
+        span.className = `badge badge-${cls}`;
+        span.textContent = cls;
+        return span;
+      }
+      function renderJsonPreview(data){
+        if(!data) return '';
+        try {
+          const obj = typeof data === 'string' ? JSON.parse(data) : data;
+          const s = JSON.stringify(obj, null, 2);
+          return `<pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:6px;border-radius:6px;max-height:240px;overflow:auto">${s.replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</pre>`;
+        } catch {
+          const s = String(data);
+          return `<pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:6px;border-radius:6px;max-height:240px;overflow:auto">${s.replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</pre>`;
+        }
+      }
+
+      async function load(){
+        const url = qs('u') || qs('url');
+        if(!url){ document.getElementById('hdr').textContent = 'Missing url parameter'; return; }
+        document.getElementById('hdr').innerHTML = `<a href="/urls">All URLs</a> · <code>${url}</code>`;
+        const r = await fetch(`/api/url-details?u=${encodeURIComponent(url)}`);
+        const j = await r.json();
+        if(!r.ok){ document.getElementById('hdr').textContent = 'Error: ' + (j.error||r.statusText); return; }
+        const urlDiv = document.getElementById('urlAnalysis');
+        if(j.urlInfo){
+          const u = j.urlInfo;
+          const meta = `<div class="muted">first seen: ${fmt(u.created_at)} · last seen: ${fmt(u.last_seen_at)}</div>`;
+          const body = u.analysis ? renderJsonPreview(u.analysis) : '<div class="muted">No URL analysis.</div>';
+          urlDiv.innerHTML = `<h3 style="margin:0 0 6px">URL analysis</h3>${meta}${body}`;
+        } else {
+          urlDiv.innerHTML = '';
+        }
+
+        const aDiv = document.getElementById('article');
+        if(j.article){
+          const a = j.article;
+          const xp = a.article_xpath ? `<div class="muted" style="margin-top:4px">XPath: <code>${a.article_xpath}</code></div>` : '';
+          const analysisBlock = a.analysis ? `<div style="margin-top:6px"><div class="muted">Article analysis:</div>${renderJsonPreview(a.analysis)}</div>` : '';
+          aDiv.innerHTML = `<div><strong>Article:</strong> <span>${fmt(a.title)}</span> · <span class="muted">section: ${fmt(a.section)}</span> · <span class="muted">date: ${fmt(a.date)}</span></div>${xp}${analysisBlock}`;
+            if (a.article_xpath) {
+              const xp = `<div class="xp-wrap"><span class="muted">XPath:</span> <code id="xp" class="xp-code">${a.article_xpath}</code> <button class="btn" id="copy">Copy</button></div>`;
+              aDiv.innerHTML = `<div><strong>Article:</strong> <span>${fmt(a.title)}</span> · <span class="muted">section: ${fmt(a.section)}</span> · <span class="muted">date: ${fmt(a.date)}</span></div>${xp}`;
+              const btn = document.getElementById('copy');
+              btn.addEventListener('click', async () => {
+                const txt = document.getElementById('xp').textContent;
+                try { await navigator.clipboard.writeText(txt); btn.textContent = 'Copied'; setTimeout(()=>btn.textContent='Copy', 1200); } catch {}
+              });
+            }
+        } else {
+          aDiv.innerHTML = `<div class="muted">No article record found.</div>`;
+        }
+        // Badges from most recent fetch
+        const badges = document.getElementById('badges');
+        badges.innerHTML = '';
+        const latest = (j.fetches && j.fetches.length) ? j.fetches[0] : null;
+        if(latest){
+          badges.style.display = 'flex';
+          const cls = latest.classification || 'other';
+          badges.appendChild(classificationBadge(cls));
+          const enc = latest.content_encoding ? `${latest.content_encoding}` : 'none';
+          const encSpan = document.createElement('span');
+          encSpan.className = 'badge badge-enc';
+          encSpan.textContent = `encoding: ${enc}`;
+          badges.appendChild(encSpan);
+          if(latest.word_count != null){
+            const wc = document.createElement('span');
+            wc.className = 'badge';
+            wc.textContent = `words: ${latest.word_count}`;
+            badges.appendChild(wc);
+          }
+        } else {
+          badges.style.display = 'none';
+        }
+        const tb = document.querySelector('#tbl tbody');
+        tb.innerHTML = '';
+        (j.fetches||[]).forEach(f => {
+          const tr = document.createElement('tr');
+          const enc = f.content_encoding ? 'yes' : 'no';
+          const disk = f.file_size != null ? fmtBytes(f.file_size) : '';
+          const analysisHint = f.analysis ? ' • analysis' : '';
+          tr.innerHTML = `
+            <td class="nowrap">${fmt(f.fetched_at)}</td>
+            <td>${fmt(f.http_status)}</td>
+            <td>${fmt(f.content_type)}</td>
+            <td>${enc}</td>
+            <td>${fmt(f.content_encoding)}</td>
+            <td>${fmtBytes(f.bytes_downloaded ?? f.content_length)}</td>
+            <td>${disk}</td>
+            <td>${fmt(f.ttfb_ms)}</td>
+            <td>${fmt(f.download_ms)}</td>
+            <td>${fmt(f.total_ms)}</td>
+            <td>${fmt(f.classification)}</td>
+            <td>${fmt(f.nav_links_count)}</td>
+            <td>${fmt(f.article_links_count)}</td>
+            <td>${fmt(f.word_count)}${analysisHint}</td>
+          `;
+          tb.appendChild(tr);
+          if (f.analysis) {
+            const tr2 = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 14;
+            td.innerHTML = renderJsonPreview(f.analysis);
+            tr2.appendChild(td);
+            tb.appendChild(tr2);
+          }
+        });
+      }
+      load().catch(e => {
+        document.getElementById('hdr').textContent = 'Failed to load: ' + e.message;
+      });
+    </script>
+  </body>
+</html>
