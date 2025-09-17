@@ -15,6 +15,10 @@
   .row-controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
   .favicon { width:16px; height:16px; vertical-align:middle; margin-right:6px; }
   .title { font-weight: 500; margin-left: 6px; }
+  .badge { display:inline-block; padding:1px 6px; border-radius:10px; font-size:11px; margin-left:6px; background:#eee; color:#333; }
+  .badge.ok { background:#e6ffed; color:#067d1f; }
+  .badge.err { background:#ffebeb; color:#a40000; }
+  .skeleton { color:#999; }
     </style>
   </head>
   <body>
@@ -30,36 +34,116 @@
           <option value="asc">Oldest first</option>
         </select>
       </label>
+      <label>Page size
+        <select id="pageSize">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200" selected>200</option>
+          <option value="500">500</option>
+        </select>
+      </label>
       <label>Filter <input id="filterInput" type="text" placeholder="type to filter current page" style="width:18em" /></label>
-      <label>Domain <input id="domainInput" type="text" placeholder="example.com" style="width:16em" /></label>
+      <label>Host <input id="hostInput" type="text" placeholder="example.com" style="width:16em" /></label>
+      <label><input type="checkbox" id="includeSubdomains" /> include subdomains</label>
+      <label>From <input id="fromInput" type="datetime-local" style="width:16em" /></label>
+      <label>To <input id="toInput" type="datetime-local" style="width:16em" /></label>
+      <label>Min words <input id="minWordInput" type="number" min="0" style="width:7em" /></label>
+      <label>Class
+        <select id="classificationInput">
+          <option value="">Any</option>
+          <option value="article">article</option>
+          <option value="nav">nav</option>
+          <option value="other">other</option>
+        </select>
+      </label>
+      <label>Status <input id="statusInput" type="number" min="100" max="599" style="width:7em" /></label>
+      <label><input type="checkbox" id="showFavicons" checked /> show favicons</label>
+      <button id="copyPage" title="Copy current page URLs to clipboard">Copy page URLs</button>
       <span id="pageStats" class="muted"></span>
     </div>
     <ol id="list"></ol>
     <p><a href="/">Back to dashboard</a></p>
     <script>
       let offset = 0;
-      const limit = 200;
-      let total = 0;
-      let count = 0;
+      let limit = 200;
+  let total = 0;
+  let count = 0;
+  let cursorToken = null;
+  let nextCursorToken = null;
+  const prevHistory = [];
       const prevBtn = document.getElementById('prev');
       const nextBtn = document.getElementById('next');
   const pageInput = document.getElementById('pageInput');
   const filterInput = document.getElementById('filterInput');
   const pageStats = document.getElementById('pageStats');
-  const domainInput = document.getElementById('domainInput');
+  const hostInput = document.getElementById('hostInput');
+  const includeSubEl = document.getElementById('includeSubdomains');
+  const fromInput = document.getElementById('fromInput');
+  const toInput = document.getElementById('toInput');
+  const minWordInput = document.getElementById('minWordInput');
+  const classificationInput = document.getElementById('classificationInput');
+  const statusInput = document.getElementById('statusInput');
+  const pageSize = document.getElementById('pageSize');
+  const showFavicons = document.getElementById('showFavicons');
+  const copyPageBtn = document.getElementById('copyPage');
   let currentItems = [];
       function updateButtons() {
-        prevBtn.disabled = offset <= 0;
-        nextBtn.disabled = offset + count >= total;
+        const cursorMode = !!cursorToken || !!nextCursorToken || prevHistory.length > 0;
+        if (cursorMode) {
+          prevBtn.disabled = prevHistory.length === 0;
+          nextBtn.disabled = !(count >= limit && nextCursorToken);
+        } else {
+          prevBtn.disabled = offset <= 0;
+          nextBtn.disabled = offset + count >= total;
+        }
       }
       async function load() {
-        const dir = document.getElementById('sortDir').value || 'desc';
-        const r = await fetch(`/api/urls?limit=${limit}&offset=${offset}&details=1&dir=${encodeURIComponent(dir)}`);
-        const j = await r.json();
-        total = j.total;
-        count = j.count;
-        document.getElementById('meta').textContent = `${j.total} URLs total — showing ${j.offset+1}-${Math.min(j.offset + j.count, j.total)}`;
+        document.getElementById('meta').textContent = 'Loading…';
+        const skeletonCount = Math.min(10, limit);
         const list = document.getElementById('list');
+        list.innerHTML = '';
+        for (let i = 0; i < skeletonCount; i++) { const li = document.createElement('li'); li.className = 'skeleton'; li.textContent = '…'; list.appendChild(li); }
+        const dir = document.getElementById('sortDir').value || 'desc';
+        const qs = new URLSearchParams();
+        qs.set('limit', String(limit));
+        if (cursorToken) {
+          qs.set('cursor', cursorToken);
+        } else {
+          qs.set('offset', String(offset));
+        }
+        qs.set('dir', dir);
+        qs.set('details', '1');
+        const host = (hostInput.value || '').trim();
+        if (host) {
+          qs.set('host', host.toLowerCase());
+          if (includeSubEl.checked) qs.set('includeSubdomains','1');
+        }
+        const toISO = (v) => { if (!v) return null; const d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString(); };
+        const fromIso = toISO(fromInput.value);
+        const toIso = toISO(toInput.value);
+        if (fromIso) qs.set('from', fromIso);
+        if (toIso) qs.set('to', toIso);
+        const mw = parseInt(minWordInput.value || '0', 10);
+        if (mw > 0) qs.set('minWordCount', String(mw));
+        const cls = (classificationInput.value || '').trim();
+        if (cls) qs.set('classification', cls);
+        const st = parseInt(statusInput.value || '0', 10);
+        if (!isNaN(st) && st > 0) qs.set('status', String(st));
+        const r = await fetch(`/api/urls?${qs.toString()}`);
+        const j = await r.json();
+  total = j.total;
+  count = j.count;
+  nextCursorToken = j.nextCursor || null;
+        const parts = [];
+        if (host) parts.push(`host=${host}${includeSubEl.checked? ' (sub)' : ''}`);
+        if (fromIso) parts.push(`from=${new Date(fromIso).toLocaleString()}`);
+        if (toIso) parts.push(`to=${new Date(toIso).toLocaleString()}`);
+        if (mw > 0) parts.push(`min words ≥ ${mw}`);
+        if (cls) parts.push(`class=${cls}`);
+        if (!isNaN(st) && st>0) parts.push(`status=${st}`);
+  const startIdx = (j.offset || 0) + 1;
+  const endIdx = Math.min((j.offset || 0) + j.count, j.total || (startIdx - 1 + j.count));
+  document.getElementById('meta').textContent = `${j.total} URLs total — showing ${startIdx}-${endIdx}${parts.length? ' · ' + parts.join(' · ') : ''}`;
         list.innerHTML = '';
         currentItems = Array.isArray(j.items) && j.items.length ? j.items.slice() : (j.urls || []).map(u => ({ url: u, title: null, ts: null }));
         render();
@@ -69,8 +153,9 @@
         const list = document.getElementById('list');
         list.innerHTML = '';
         const filter = (filterInput.value || '').toLowerCase();
-        const domainFilter = (domainInput.value || '').toLowerCase().trim();
+        const domainFilter = (hostInput.value || '').toLowerCase().trim();
         let shown = 0;
+        const frag = document.createDocumentFragment();
         currentItems
           .filter(it => !filter || it.url.toLowerCase().includes(filter) || (it.title||'').toLowerCase().includes(filter))
           .filter(it => {
@@ -82,10 +167,13 @@
           // favicon
           let host = '';
           try { host = new URL(it.url).hostname; } catch {}
-          const fav = document.createElement('img');
-          fav.className = 'favicon';
-          fav.loading = 'lazy';
-          fav.src = host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=16` : '';
+          if (showFavicons.checked) {
+            const fav = document.createElement('img');
+            fav.className = 'favicon';
+            fav.loading = 'lazy';
+            fav.src = host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=16` : '';
+            if (host) li.appendChild(fav);
+          }
           // link with title
           const a = document.createElement('a');
           a.href = it.url; a.textContent = it.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
@@ -100,6 +188,16 @@
           const tsSpan = document.createElement('span');
           tsSpan.className = 'muted';
           tsSpan.textContent = ts ? ` – ${ts}` : '';
+          // badges
+          const st = (it.http_status != null) ? Number(it.http_status) : null;
+          const cls = (it.classification || '').toLowerCase() || null;
+          const wc = (it.word_count != null) ? Number(it.word_count) : null;
+          const badgeStatus = document.createElement('span');
+          if (st != null) { badgeStatus.className = 'badge ' + (st>=200 && st<300 ? 'ok' : (st>=400? 'err' : '')); badgeStatus.textContent = String(st); }
+          const badgeCls = document.createElement('span');
+          if (cls) { badgeCls.className = 'badge'; badgeCls.textContent = cls; }
+          const badgeWc = document.createElement('span');
+          if (wc != null) { badgeWc.className = 'badge'; badgeWc.textContent = `${wc}w`; }
           const copyBtn = document.createElement('button');
           copyBtn.className = 'copy';
           copyBtn.textContent = 'Copy';
@@ -107,45 +205,103 @@
           copyBtn.onclick = async () => {
             try { await navigator.clipboard.writeText(it.url); copyBtn.textContent = 'Copied'; setTimeout(()=> copyBtn.textContent = 'Copy', 1000); } catch (_) {}
           };
-          if (host) li.appendChild(fav);
           li.appendChild(a);
           if (it.title) li.appendChild(titleSpan);
           li.appendChild(details);
           if (ts) li.appendChild(tsSpan);
+          if (st != null) li.appendChild(badgeStatus);
+          if (cls) li.appendChild(badgeCls);
+          if (wc != null) li.appendChild(badgeWc);
           li.appendChild(copyBtn);
-          list.appendChild(li);
+          frag.appendChild(li);
           shown++;
         });
+        list.appendChild(frag);
         pageStats.textContent = `${shown} shown; page ${(offset/limit)+1} of ${Math.max(1, Math.ceil(total/limit))}`;
       }
       load().catch(err => {
         document.getElementById('meta').textContent = 'Failed to load URLs: ' + err.message;
       });
-      prevBtn.onclick = () => { const nextOffset = Math.max(0, offset - limit); if (nextOffset !== offset) { offset = nextOffset; load(); } };
-      nextBtn.onclick = () => { const nextOffset = Math.min(total, offset + limit); if (nextOffset !== offset) { offset = nextOffset; load(); } };
+      prevBtn.onclick = () => {
+        if (prevHistory.length > 0) {
+          const last = prevHistory.pop();
+          cursorToken = last.cursor;
+          offset = last.offset;
+          load();
+        } else {
+          const nextOffset = Math.max(0, offset - limit);
+          if (nextOffset !== offset) { offset = nextOffset; load(); }
+        }
+      };
+      nextBtn.onclick = () => {
+        if (nextCursorToken) {
+          prevHistory.push({ cursor: cursorToken, offset });
+          cursorToken = nextCursorToken;
+          offset = 0;
+          load();
+        } else {
+          const nextOffset = Math.min(total, offset + limit);
+          if (nextOffset !== offset) { offset = nextOffset; load(); }
+        }
+      };
   document.getElementById('sortDir').onchange = () => { offset = 0; load(); };
       pageInput.onchange = () => {
         const p = Math.max(1, Math.floor(Number(pageInput.value) || 1));
         const nextOffset = Math.min(total, (p - 1) * limit);
         if (nextOffset !== offset) { offset = nextOffset; load(); }
       };
+  pageSize.onchange = () => { const v = parseInt(pageSize.value,10) || 200; limit = v; offset = 0; cursorToken = null; prevHistory.length = 0; localStorage.setItem('urls_pageSize', String(v)); load(); };
+      showFavicons.onchange = () => { localStorage.setItem('urls_showFavicons', showFavicons.checked ? '1' : '0'); render(); };
       // Debounce filter typing
       let filterTimer = null;
       filterInput.oninput = () => {
         if (filterTimer) clearTimeout(filterTimer);
         filterTimer = setTimeout(() => { render(); filterTimer = null; }, 120);
       };
-      domainInput.oninput = () => {
+      hostInput.oninput = () => {
         if (filterTimer) clearTimeout(filterTimer);
         filterTimer = setTimeout(() => { render(); filterTimer = null; }, 120);
-        localStorage.setItem('urls_domainFilter', domainInput.value || '');
+        localStorage.setItem('urls_hostFilter', hostInput.value || '');
       };
 
-      // Restore persisted domain filter
+      // Restore persisted host filter and read query params
       (function(){
-        const v = localStorage.getItem('urls_domainFilter');
-        if (v) { domainInput.value = v; }
+        const params = new URLSearchParams(location.search);
+        const h = params.get('host');
+        const st = params.get('status');
+        const cls = params.get('classification');
+        const dir = params.get('dir');
+        const from = params.get('from');
+        const to = params.get('to');
+        const mw = params.get('minWordCount');
+        const ps = localStorage.getItem('urls_pageSize');
+        const sf = localStorage.getItem('urls_showFavicons');
+        if (h) hostInput.value = h;
+        else { const v = localStorage.getItem('urls_hostFilter'); if (v) hostInput.value = v; }
+        if (params.get('includeSubdomains') === '1') includeSubEl.checked = true;
+        if (st) statusInput.value = st;
+        if (cls) classificationInput.value = cls;
+        if (dir === 'asc' || dir === 'desc') document.getElementById('sortDir').value = dir;
+        if (from) { try { fromInput.value = new Date(from).toISOString().slice(0,16); } catch(_){} }
+        if (to) { try { toInput.value = new Date(to).toISOString().slice(0,16); } catch(_){} }
+        if (mw) minWordInput.value = String(parseInt(mw,10)||'');
+        if (ps && !isNaN(parseInt(ps,10))) { pageSize.value = String(parseInt(ps,10)); limit = parseInt(ps,10); }
+        if (sf != null) showFavicons.checked = sf === '1';
       })();
+      // Server-side filters reload on change
+      for (const id of ['hostInput','includeSubdomains','fromInput','toInput','minWordInput','classificationInput','statusInput']) {
+        const el = document.getElementById(id);
+        el?.addEventListener('change', () => { offset = 0; cursorToken = null; prevHistory.length = 0; load(); });
+      }
+
+      copyPageBtn.onclick = async () => {
+        try {
+          const urls = currentItems.map(it => it.url).join('\n');
+          await navigator.clipboard.writeText(urls);
+          copyPageBtn.textContent = 'Copied';
+          setTimeout(()=> copyPageBtn.textContent = 'Copy page URLs', 1000);
+        } catch (_) {}
+      };
 
       // Keyboard navigation: left/right arrows outside inputs
       document.addEventListener('keydown', (e) => {

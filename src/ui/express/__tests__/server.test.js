@@ -53,4 +53,18 @@ describe('GUI server API', () => {
     const start2 = await request(app).post('/api/crawl').send({});
     expect(start2.statusCode).toBe(409);
   });
+
+  test('passes sitemap flags through to crawler args (sitemap-max mirrors maxPages)', async () => {
+    const app = createApp({ runner: makeFakeRunner(['ok'], 0, 10) });
+    const res = await request(app)
+      .post('/api/crawl')
+      .send({ startUrl: 'https://example.com', useSitemap: false, sitemapOnly: true, maxPages: 123 });
+    expect(res.statusCode).toBe(202);
+    const args = res.body.args || [];
+    expect(args).toContain('src/crawl.js');
+    expect(args).toContain('https://example.com');
+    expect(args).toContain('--sitemap-only');
+    expect(args).toContain('--sitemap-max=123');
+    expect(args).not.toContain('--no-sitemap');
+  });
 });

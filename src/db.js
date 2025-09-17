@@ -28,9 +28,17 @@ class NewsDatabase {
   }
 
   _init() {
-    // Pragmas for safety/performance sensible defaults
+    // Pragmas for safety/performance sensible defaults; allow opt-out via env
+    const pragmasOff = String(process.env.SQLITE_TUNE_OFF || '0') === '1';
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
+  // Allow some time to wait on locks when multiple processes write concurrently
+  try { this.db.pragma('busy_timeout = 5000'); } catch(_) {}
+    if (!pragmasOff) {
+      try { this.db.pragma('synchronous = NORMAL'); } catch(_) {}
+      try { this.db.pragma('temp_store = MEMORY'); } catch(_) {}
+      try { this.db.pragma('cache_size = -64000'); } catch(_) {} // ~64MB page cache for faster lookups
+    }
 
   // Schema
     this.db.exec(`
@@ -119,18 +127,65 @@ class NewsDatabase {
       CREATE INDEX IF NOT EXISTS idx_fetches_time ON fetches(fetched_at);
     `);
 
-    // Normalized URLs table
+    // Errors table for HTTP/network/save failures
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS errors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT,
+        host TEXT,
+        kind TEXT,           -- 'http' | 'network' | 'save' | 'other'
+        code INTEGER,        -- http status or errno-like code
+        message TEXT,
+        details TEXT,        -- JSON or text
+        at TEXT              -- ISO timestamp
+      );
+      CREATE INDEX IF NOT EXISTS idx_errors_time ON errors(at);
+      CREATE INDEX IF NOT EXISTS idx_errors_host ON errors(host);
+      CREATE INDEX IF NOT EXISTS idx_errors_kind ON errors(kind);
+      CREATE INDEX IF NOT EXISTS idx_errors_code ON errors(code);
+    `);
+
+    // Materialized view of latest fetch per URL for fast filtering/sorting
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS latest_fetch (
+        url TEXT PRIMARY KEY,
+        ts TEXT,               -- COALESCE(fetched_at, request_started_at)
+        http_status INTEGER,
+        classification TEXT,
+        word_count INTEGER
+      );
+  CREATE INDEX IF NOT EXISTS idx_latest_fetch_ts ON latest_fetch(ts);
+  CREATE INDEX IF NOT EXISTS idx_latest_fetch_ts_url ON latest_fetch(ts, url);
+      CREATE INDEX IF NOT EXISTS idx_latest_fetch_class ON latest_fetch(classification);
+      CREATE INDEX IF NOT EXISTS idx_latest_fetch_status ON latest_fetch(http_status);
+      CREATE INDEX IF NOT EXISTS idx_latest_fetch_word ON latest_fetch(word_count);
+    `);
+
+    // Normalized URLs table (create table and minimal index first)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS urls (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url TEXT NOT NULL UNIQUE,
+        host TEXT,
         canonical_url TEXT,
         created_at TEXT,
         last_seen_at TEXT,
         analysis TEXT
       );
-      CREATE INDEX IF NOT EXISTS idx_urls_url ON urls(url);
     `);
+    // Always safe index on url
+    try { this.db.exec(`CREATE INDEX IF NOT EXISTS idx_urls_url ON urls(url);`); } catch (_) {}
+    // Ensure 'host' column exists for older DBs, then create host index
+    try {
+      let urlCols = this.db.prepare('PRAGMA table_info(urls)').all().map(r => r.name);
+      if (!urlCols.includes('host')) {
+        this.db.exec(`ALTER TABLE urls ADD COLUMN host TEXT`);
+        // refresh cols
+        urlCols = this.db.prepare('PRAGMA table_info(urls)').all().map(r => r.name);
+      }
+      // Now it's safe to create the host index
+      try { this.db.exec(`CREATE INDEX IF NOT EXISTS idx_urls_host ON urls(host);`); } catch (_) {}
+    } catch (_) { /* ignore migration errors */ }
 
     // Category tables (normalized)
     this.db.exec(`
@@ -159,6 +214,43 @@ class NewsDatabase {
         FOREIGN KEY (fetch_id) REFERENCES fetches(id) ON DELETE CASCADE,
         FOREIGN KEY (category_id) REFERENCES page_categories(id) ON DELETE CASCADE
       );
+    `);
+
+    // Optional table for "place hub" pages (location/topic hub pages)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS place_hubs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host TEXT NOT NULL,
+        url TEXT NOT NULL UNIQUE,
+        place_slug TEXT,
+        title TEXT,
+        first_seen_at TEXT,
+        last_seen_at TEXT,
+        nav_links_count INTEGER,
+        article_links_count INTEGER,
+        evidence TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host);
+      CREATE INDEX IF NOT EXISTS idx_place_hubs_place ON place_hubs(place_slug);
+    `);
+
+    // Index of places mentioned in articles (normalized for fast lookups)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS article_places (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        article_url TEXT NOT NULL,
+        place TEXT NOT NULL,
+        place_kind TEXT,      -- country | region | city | other
+        method TEXT,          -- gazetteer | heuristic | other
+        source TEXT,          -- title | text | metadata
+        offset_start INTEGER,
+        offset_end INTEGER,
+        context TEXT,
+        first_seen_at TEXT,
+        UNIQUE(article_url, place, source, offset_start, offset_end)
+      );
+      CREATE INDEX IF NOT EXISTS idx_article_places_place ON article_places(place);
+      CREATE INDEX IF NOT EXISTS idx_article_places_url ON article_places(article_url);
     `);
 
     // Idempotent migration for fetches extra columns
@@ -218,12 +310,52 @@ class NewsDatabase {
   addCol('article_xpath', 'TEXT');
   addCol('analysis', 'TEXT');
 
-    // Optional helpful indexes
+  // Optional helpful indexes
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_articles_fetched_at ON articles(fetched_at);
+      CREATE INDEX IF NOT EXISTS idx_articles_crawled_at ON articles(crawled_at);
       CREATE INDEX IF NOT EXISTS idx_articles_canonical ON articles(canonical_url);
       CREATE INDEX IF NOT EXISTS idx_articles_sha ON articles(html_sha256);
     `);
+
+    // Speed up lookups of the latest fetch per URL
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_fetches_url_fetched ON fetches(url, fetched_at);
+      CREATE INDEX IF NOT EXISTS idx_fetches_url_req_started ON fetches(url, request_started_at);
+    `);
+
+    // Trigger to maintain latest_fetch on insert
+    this.db.exec(`
+      CREATE TRIGGER IF NOT EXISTS trg_latest_fetch_upsert
+      AFTER INSERT ON fetches
+      BEGIN
+        INSERT INTO latest_fetch(url, ts, http_status, classification, word_count)
+        VALUES (NEW.url, COALESCE(NEW.fetched_at, NEW.request_started_at), NEW.http_status, NEW.classification, NEW.word_count)
+        ON CONFLICT(url) DO UPDATE SET
+          ts = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) > COALESCE(latest_fetch.ts, '') THEN COALESCE(NEW.fetched_at, NEW.request_started_at) ELSE latest_fetch.ts END,
+          http_status = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.http_status ELSE latest_fetch.http_status END,
+          classification = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.classification ELSE latest_fetch.classification END,
+          word_count = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.word_count ELSE latest_fetch.word_count END;
+      END;
+    `);
+
+    // Backfill latest_fetch from existing rows (idempotent best-effort)
+    try {
+      this.db.exec(`
+        INSERT INTO latest_fetch(url, ts, http_status, classification, word_count)
+        SELECT f.url,
+               MAX(COALESCE(f.fetched_at, f.request_started_at)) AS ts,
+               (SELECT http_status FROM fetches f2 WHERE f2.url = f.url ORDER BY COALESCE(f2.fetched_at, f2.request_started_at) DESC LIMIT 1) AS http_status,
+               (SELECT classification FROM fetches f2 WHERE f2.url = f.url ORDER BY COALESCE(f2.fetched_at, f2.request_started_at) DESC LIMIT 1) AS classification,
+               (SELECT word_count FROM fetches f2 WHERE f2.url = f.url ORDER BY COALESCE(f2.fetched_at, f2.request_started_at) DESC LIMIT 1) AS word_count
+        FROM fetches f
+        GROUP BY f.url
+        ON CONFLICT(url) DO NOTHING;
+      `);
+    } catch (_) { /* ignore backfill errors */ }
+
+  // Help planner choose indexes after schema changes
+  try { this.db.exec('ANALYZE'); } catch (_) {}
 
     // Triggers to keep urls table in sync with articles and fetches
     this.db.exec(`
@@ -312,8 +444,27 @@ class NewsDatabase {
   article_xpath=COALESCE(excluded.article_xpath, articles.article_xpath),
   analysis=COALESCE(excluded.analysis, articles.analysis)
     `);
+    // Backfill host column on urls if missing (best-effort, bounded)
+    try {
+      const rows = this.db.prepare(`SELECT url FROM urls WHERE host IS NULL OR host = '' LIMIT 100000`).all();
+      if (rows && rows.length) {
+        const upd = this.db.prepare(`UPDATE urls SET host = ? WHERE url = ?`);
+        const escHost = (h) => (h || '').toLowerCase();
+        const txn = this.db.transaction((items) => {
+          for (const r of items) {
+            try {
+              const u = new URL(r.url);
+              upd.run(escHost(u.hostname), r.url);
+            } catch (_) { /* ignore bad urls */ }
+          }
+        });
+        txn(rows);
+      }
+    } catch (_) { /* ignore backfill errors */ }
 
-    this.selectByUrlStmt = this.db.prepare(`SELECT * FROM articles WHERE url = ?`);
+  this.selectByUrlStmt = this.db.prepare(`SELECT * FROM articles WHERE url = ?`);
+  // Prepared variant for url OR canonical lookup to avoid re-prepare on hot path
+  this.selectByUrlOrCanonicalStmt = this.db.prepare('SELECT url, title, date, section, html, crawled_at FROM articles WHERE url = ? OR canonical_url = ?');
     this.countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM articles`);
 
     // Links prepared statements
@@ -335,6 +486,12 @@ class NewsDatabase {
     @saved_to_db, @saved_to_file, @file_path, @file_size, @classification, @nav_links_count, @article_links_count, @word_count, @analysis
       )
     `);
+
+    // Prepared statements for errors
+    this.insertErrorStmt = this.db.prepare(`
+      INSERT INTO errors(url, host, kind, code, message, details, at)
+      VALUES (@url, @host, @kind, @code, @message, @details, @at)
+    `);
   }
 
   upsertArticle(article) {
@@ -345,6 +502,8 @@ class NewsDatabase {
   try {
     const u = new URL(withDefaults.url);
     this.upsertDomain(u.hostname);
+  // Ensure urls.host is populated for this url
+  try { this.db.prepare(`UPDATE urls SET host = ? WHERE url = ?`).run(u.hostname.toLowerCase(), withDefaults.url); } catch (_) {}
   } catch (_) {}
   return res;
   }
@@ -355,7 +514,7 @@ class NewsDatabase {
 
   // Try to find an article row by exact URL or by canonical_url
   getArticleByUrlOrCanonical(url) {
-    return this.db.prepare('SELECT * FROM articles WHERE url = ? OR canonical_url = ?').get(url, url);
+    return this.selectByUrlOrCanonicalStmt.get(url, url);
   }
 
   getCount() {
@@ -380,6 +539,8 @@ class NewsDatabase {
     try {
       const u = new URL(withDefaults.url);
       this.upsertDomain(u.hostname);
+  // Ensure urls.host is populated for this url
+  try { this.db.prepare(`UPDATE urls SET host = ? WHERE url = ?`).run(u.hostname.toLowerCase(), withDefaults.url); } catch (_) {}
     } catch (_) {}
     return res;
   }
@@ -448,6 +609,10 @@ class NewsDatabase {
       UPDATE urls SET canonical_url=COALESCE(${canonical ? `'${canonical.replace(/'/g, "''")}'` : 'NULL'}, canonical_url) WHERE url='${url.replace(/'/g, "''")}';
       UPDATE urls SET analysis=COALESCE(${analysis ? `'${analysis.replace(/'/g, "''")}'` : 'NULL'}, analysis) WHERE url='${url.replace(/'/g, "''")}';
     `);
+    try {
+      const u = new URL(url);
+      this.db.prepare(`UPDATE urls SET host = ? WHERE url = ?`).run(u.hostname.toLowerCase(), url);
+    } catch (_) {}
   }
 
   // Domain helpers
@@ -506,6 +671,22 @@ class NewsDatabase {
     if (!cid) return null;
     this._mapPageCategoryStmt.run(fetchId, cid);
     return { fetch_id: fetchId, category_id: cid };
+  }
+
+  insertError(err) {
+    // err: { url?, kind, code?, message?, details? }
+    const at = new Date().toISOString();
+    let host = null;
+    try { if (err.url) host = new URL(err.url).hostname.toLowerCase(); } catch (_) {}
+    return this.insertErrorStmt.run({
+      url: err.url || null,
+      host: host || null,
+      kind: err.kind || 'other',
+      code: typeof err.code === 'number' ? err.code : null,
+      message: err.message || null,
+      details: err.details != null ? (typeof err.details === 'string' ? err.details : JSON.stringify(err.details)) : null,
+      at
+    });
   }
 }
 

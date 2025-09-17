@@ -15,7 +15,7 @@ async function runExample() {
     const crawler = new NewsCrawler('https://www.theguardian.com', {
         rateLimitMs: 2000,  // 2 second delay between requests
         maxDepth: 1,        // Limit to 1 level deep for demo
-        dataDir: './data'   // Save to data directory
+    dataDir: './data'   // Base directory (includes SQLite DB)
     });
     
     console.log('Configuration:');
@@ -23,7 +23,7 @@ async function runExample() {
     console.log(`- Domain: ${crawler.domain}`);
     console.log(`- Rate limit: ${crawler.rateLimitMs}ms`);
     console.log(`- Max depth: ${crawler.maxDepth}`);
-    console.log(`- Data directory: ${crawler.dataDir}\n`);
+    console.log(`- Base directory: ${crawler.dataDir}\n`);
     
     console.log('Features demonstrated:');
     console.log('✓ Navigation detection (header, nav, footer, menus, breadcrumbs, pagination)');
@@ -33,7 +33,7 @@ async function runExample() {
     console.log('✓ Domain restriction (stays on theguardian.com)');
     console.log('✓ Visited set to avoid duplicates');
     console.log('✓ Metadata extraction (title, date, section, URL)');
-    console.log('✓ Article saving as JSON with HTML content\n');
+    console.log('\n');
     
     console.log('Article detection patterns:');
     console.log('- /world/, /politics/, /business/, /sport/, /culture/, /opinion/');

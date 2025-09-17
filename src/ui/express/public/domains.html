@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>News Domains</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+      .row { display: flex; gap: 16px; align-items: flex-start; }
+      .sidebar { width: 320px; max-width: 40vw; }
+      .search { margin-bottom: 10px; }
+      .list { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; height: 70vh; overflow: auto; }
+      .item { padding: 6px 8px; border-radius: 4px; cursor: pointer; }
+      .item:hover { background: #f3f4f6; }
+      .item.active { background: #e5e7eb; font-weight: 600; }
+      .content { flex: 1; min-width: 280px; }
+      .muted { color: #666; }
+      a { color: #2563eb; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <h1>News Domains</h1>
+    <p class="muted">Alphabetical list of news websites known to the system. Click a domain to view its summary.</p>
+    <div class="row">
+      <div class="sidebar">
+        <input id="q" class="search" type="text" placeholder="Filter domains…" style="width:100%; padding:6px 8px;" />
+        <div id="list" class="list">Loading…</div>
+      </div>
+      <div class="content">
+        <div id="details" class="muted">Select a domain to view details.</div>
+      </div>
+    </div>
+    <script>
+      const listEl = document.getElementById('list');
+      const qEl = document.getElementById('q');
+      const detailsEl = document.getElementById('details');
+      let DOMAINS = [];
+      let ACTIVE = null;
+
+      function renderList(filter) {
+        const q = (filter || '').toLowerCase().trim();
+        const items = DOMAINS.filter(d => !q || d.host.includes(q));
+        if (!items.length) { listEl.textContent = 'No domains.'; return; }
+        const frag = document.createDocumentFragment();
+        for (const d of items) {
+          const div = document.createElement('div');
+          div.className = 'item' + (ACTIVE === d.host ? ' active' : '');
+          div.textContent = d.host;
+          div.onclick = () => selectDomain(d.host);
+          frag.appendChild(div);
+        }
+        listEl.innerHTML = '';
+        listEl.appendChild(frag);
+      }
+
+      async function selectDomain(host) {
+        ACTIVE = host;
+        renderList(qEl.value);
+        detailsEl.textContent = 'Loading…';
+        try {
+          const includeSub = '0';
+          const r = await fetch(`/api/domain-summary?host=${encodeURIComponent(host)}&includeSubdomains=${includeSub}`);
+          if (!r.ok) { detailsEl.textContent = `Failed to load summary for ${host} (HTTP ${r.status})`; return; }
+          const j = await r.json();
+          detailsEl.innerHTML = `
+            <h2 style="margin-top:0;">${host}</h2>
+            <div style=\"margin:6px 0 10px;\">
+              <span class=\"muted\">articles:</span> ${j.articles?.total_articles ?? 0}
+              · <span class=\"muted\">last saved:</span> ${j.articles?.last_saved_at ?? 'n/a'}
+              · <span class=\"muted\">last fetch:</span> ${j.fetches?.last_fetch_at ?? 'n/a'}
+              · <span class=\"muted\">ok/err:</span> ${(j.fetches?.ok_count ?? 0)} / ${(j.fetches?.err_count ?? 0)}
+            </div>
+            <div>${renderAnalysis(j)}</div>
+            ${render429(j)}
+            ${renderPlaceHubs(j)}
+            <div><a href=\"/urls?host=${encodeURIComponent(host)}&details=1\" target=\"_blank\" rel=\"noopener\">Open URLs for this domain →</a></div>
+            <h3>Recent articles</h3>
+            <ul>
+              ${(j.recentArticles || []).map(a => `<li><a href=\"/url?url=${encodeURIComponent(a.url)}\">${a.title || a.url}</a> <span class=\"muted\">(${a.ts || ''})</span></li>`).join('') || '<li class=\"muted\">None</li>'}
+            </ul>
+          `;
+        } catch (e) {
+          detailsEl.textContent = `Failed to load summary for ${host}`;
+        }
+      }
+
+      async function init() {
+        try {
+          const r = await fetch('/api/news-domains');
+          if (!r.ok) { listEl.textContent = 'Failed to load'; return; }
+          const j = await r.json();
+          DOMAINS = (j.domains || []).map(x => ({ host: String(x.host).toLowerCase() }));
+          renderList('');
+          if (DOMAINS.length) selectDomain(DOMAINS[0].host);
+        } catch (_) {
+          listEl.textContent = 'Failed to load';
+        }
+      }
+
+      qEl.addEventListener('input', () => renderList(qEl.value));
+      init();
+
+      function renderAnalysis(j) {
+        try {
+          const a = j.analysis || null;
+          const m = j.analysisMetrics || null;
+          if (!a) return '';
+          const pct = (a.score != null) ? (a.score * 100).toFixed(0) + '%' : 'n/a';
+          const ev = a.evidence || {};
+          const evStr = [
+            ev.articleFetches != null ? `articles=${ev.articleFetches}` : null,
+            ev.distinctSections != null ? `sections=${ev.distinctSections}` : null,
+            ev.datedUrlRatio != null ? `dated_ratio=${(ev.datedUrlRatio*100).toFixed(0)}%` : null
+          ].filter(Boolean).join(' · ');
+          return `<div style=\"margin:8px 0 12px;\"><span class=\"muted\">analysis:</span> ${a.kind || 'n/a'} · score ${pct}${evStr ? ' · ' + evStr : ''}</div>`;
+        } catch (_) { return ''; }
+      }
+
+      function render429(j) {
+        try {
+          const r = j.rate429;
+          if (!r || !r.samples) return '';
+          const fmt = (n, d=0) => (n==null?'-':Number(n).toFixed(d));
+          return `<div style=\"margin:6px 0 10px;\"><span class=\"muted\">429-trigger rates:</span> avg ${fmt(r.avgReqPerMin,1)} req/min · p95 ${fmt(r.p95ReqPerMin,1)} req/min · avg ${fmt(r.avgKBps,1)} KB/s · p95 ${fmt(r.p95KBps,1)} KB/s <span class=\"muted\">(n=${r.samples})</span></div>`;
+        } catch (_) { return ''; }
+      }
+
+      function renderPlaceHubs(j) {
+        try {
+          const p = j.placeHub;
+          if (!p || !Array.isArray(p.topPatterns) || p.topPatterns.length === 0) return '';
+          const items = p.topPatterns.map(g => `<li><code>${g.key}</code> — pages: ${g.urls}, max nav links: ${g.maxNav}${(g.examples && g.examples.length) ? ` <span class=\"muted\">e.g.</span> <a href=\"/url?url=${encodeURIComponent(g.examples[0])}\">${g.examples[0]}</a>` : ''}</li>`).join('');
+          return `<div style=\"margin:6px 0 10px;\"><span class=\"muted\">place hubs:</span> total candidates ${p.totalCandidates}. <ul>${items}</ul></div>`;
+        } catch (_) { return ''; }
+      }
+    </script>
+  </body>
+</html>

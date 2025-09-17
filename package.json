@@ -1,6 +1,6 @@
 {
   "name": "news_crawler",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
@@ -9,7 +9,8 @@
   "gui": "node src/ui/express/server.js",
   "backfill:dates": "node src/tools/backfill-dates.js",
   "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
-  "analyze:domains": "node src/tools/analyze-domains.js"
+  "analyze:domains": "node src/tools/analyze-domains.js",
+  "analyze:pages": "node src/analyse-pages.js"
   },
   "keywords": [
     "crawler",
@@ -26,10 +27,13 @@
     "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",
     "robots-parser": "^3.0.1",
-    "express": "^5.0.0"
+  "express": "^5.0.0",
+  "fast-xml-parser": "^4.3.6",
+  "compression": "^1.7.4"
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "supertest": "^6.3.4"
+  "supertest": "^6.3.4",
+  "puppeteer": "^22.11.0"
   }
 }

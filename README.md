@@ -1,21 +1,20 @@
 # News Crawler
 
-A web crawler specifically designed for news websites with intelligent navigation detection and article extraction capabilities.
+A focused crawler for news sites: detects navigation, finds articles, and saves structured data to SQLite with a live UI.
 
 ## Features
 
-- **Navigation Detection**: Automatically detects navigation elements (header, nav, footer, menus, breadcrumbs, pagination, [role=navigation]) to find section and index links
-- **Article Extraction**: Identifies and extracts article links using smart heuristics
-- **robots.txt Compliance**: Respects robots.txt rules to be a good web citizen
-- **Rate Limiting**: Built-in rate limiting to avoid overwhelming target servers
-- **Domain Restriction**: Stays within the target domain to avoid crawling the entire web
-- **Duplicate Prevention**: Maintains a visited set to avoid crawling the same page twice
-- **Metadata Extraction**: Extracts article title, date, section, and URL
-- **Data Persistence**: Saves articles as JSON files with HTML content and metadata, and optionally into a local SQLite database for querying
-- **Analysis & Classification**:
-  - Per-URL, per-article, and per-download analysis fields
-  - Heuristics to classify pages (article/nav/other) and domains (e.g., news sites)
-  - Normalized categories for URLs, pages, and domains
+- Navigation detection for menus, breadcrumbs, pagination (header/nav/footer/[role=navigation])
+- Article discovery via URL and DOM heuristics; Readability-based extraction and metadata
+- robots.txt aware; stays on-domain; duplicate-visit prevention
+- Persistence: SQLite-only (no JSON files); articles, fetches, links, domains, categories
+- Concurrency with a bounded priority queue and per-URL exponential backoff
+- Rate limiting & 429 handling:
+  - 5s blackout after 429; ramped per-domain cap: start 20/min, +10/min each minute
+  - Even token spacing across the minute; small pacer jitter (defaults 25–50ms)
+- Networking safety: request timeout (default 10s), keep-alive agents
+- Live UI (Express): streaming logs (SSE), real-time metrics (req/s, dl/s ≤15s avg, MB/s), ETA, recent errors and domains, per-host “RATE LIMITED” badges
+- Observability: Prometheus `/metrics`, health endpoints, and a system health strip (CPU/memory and SQLite WAL info)
 
 ## Installation
 
@@ -42,7 +41,7 @@ node src/crawl.js
 # Crawl a specific URL
 node src/crawl.js https://www.theguardian.com
 
-# Disable SQLite persistence (JSON files only)
+# Disable SQLite persistence (not recommended)
 node src/crawl.js https://www.theguardian.com --no-db
 
 # Set crawl depth and custom DB path
@@ -53,45 +52,62 @@ node src/crawl.js https://www.theguardian.com --max-pages=50
 
 # Use cached articles if fresh (time units s/m/h/d)
 node src/crawl.js https://www.theguardian.com --max-age=6h
-### GUI (Express)
-
-A minimal web dashboard is available to run and monitor crawls locally.
-
-Quick start:
-
-1. Start the GUI server:
-
-  npm run gui
-
-2. Open in your browser:
-
-  http://localhost:3000
-
-3. Fill in options (start URL, depth, max pages, max age, concurrency, queue size), then click Start. Use Stop to terminate the current run.
-
-Notes:
-
-- The GUI streams live logs via Server-Sent Events (SSE).
-- Only one crawl can run at a time via the dashboard.
-- You can still use the CLI in parallel from another terminal if needed.
- - URL details page shows analysis for the URL, the article (if present), and each download (if present).
-
 
 # Enable concurrent crawling with a bounded priority queue
 node src/crawl.js https://www.theguardian.com --depth=1 --concurrency=4 --max-queue=20000
+```
 
 ### CLI quick reference
 
 - `--depth=N`           Max crawl depth (default: 2 via CLI)
-- `--no-db`             Disable SQLite persistence (JSON only)
+- `--no-db`             Disable SQLite persistence (no data saved)
 - `--db=PATH`           Custom SQLite DB path
 - `--max-pages=N`       Limit number of network downloads
-- `--max-age=30s|10m|2h|1d` Use cached articles if fresh within window
-- `--concurrency=N`      Number of concurrent workers (default: 1)
-- `--max-queue=N`        Max items in the bounded request queue (default: 10000)
- - Backfill publication dates: `npm run backfill:dates` (flags: `--redo`, `--limit=N`, `--batch-size=N`, `--no-list-existing`, `--include-nav`, `--url=...`)
- - Analyze domains (news-site heuristic): `npm run analyze:domains`
+- `--max-age=30s|10m|2h|1d` Prefer cached articles when fresh within window
+- `--no-prefer-cache`   Force network fetches even when cache is fresh
+- `--concurrency=N`     Number of workers (default: 1)
+- `--max-queue=N`       Bounded queue size (default: 10000)
+- `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck “Use sitemap”)
+- `--sitemap-only`      Crawl only sitemap URLs (don’t seed start URL)
+- `--sitemap-max=N`     Cap number of sitemap URLs (default: 5000). In the GUI, this mirrors Max Pages.
+- Networking & pacing:
+  - `--request-timeout-ms=MS`  Per-request timeout (default: 10000)
+  - `--pacer-jitter-min-ms=MS` Small jitter min between paced tokens (default: 25)
+  - `--pacer-jitter-max-ms=MS` Small jitter max (default: 50)
+
+Backfill publication dates: `npm run backfill:dates` (flags: `--redo`, `--limit=N`, `--batch-size=N`, `--no-list-existing`, `--include-nav`, `--url=...`)
+
+Analyze domains (news-site heuristic): `npm run analyze:domains`
+
+### GUI (Express)
+
+A minimal dashboard to run and monitor crawls locally.
+
+1) Start the GUI server:
+
+```bash
+npm run gui
 ```
+
+2) Open http://localhost:3000
+
+What you’ll see:
+
+- Start/Stop/Pause/Resume controls; sitemap toggles
+- Live logs via Server-Sent Events (SSE), unbuffered with heartbeats
+- Metrics: req/s, dl/s (≤15s avg), MB/s; queue sparkline; ETA
+- Badges: robots/sitemap status, global and per-host rate‑limited indicators
+- Panels: Recent Errors, Recent Domains; URLs and Domain pages with details
+- Health strip: DB size, disk free, CPU %, memory (RSS), SQLite journal mode and WAL autocheckpoint
+
+#### Sitemap options
+
+- Use sitemap: When enabled, the crawler discovers and enqueues URLs from the site’s sitemap (linked from robots.txt or common paths) in addition to the Start URL. This accelerates finding articles without deep link traversal. Respects robots.txt and same‑domain rules.
+- Sitemap only: Only enqueue URLs from the sitemap and skip seeding from the Start URL/link graph. Useful with Depth=0 for a quick sample directly from the publisher’s index.
+
+Notes:
+- In the GUI, the sitemap URL cap follows Max Pages automatically (no separate field). The crawler won’t enqueue more sitemap URLs than Max Pages.
+- By default, sitemap discovery is ON. Disable it by unchecking “Use sitemap” (equivalent to `--no-sitemap`).
 
 ### Programmatic Usage
 
@@ -101,7 +117,7 @@ const NewsCrawler = require('./src/crawl.js');
 const crawler = new NewsCrawler('https://www.theguardian.com', {
   rateLimitMs: 2000,  // 2 seconds between requests
   maxDepth: 2,        // Maximum crawl depth
-  dataDir: './data'   // Directory to save articles
+  dataDir: './data'   // Base directory (DB and temp files)
 });
 
 crawler.crawl()
@@ -111,28 +127,19 @@ crawler.crawl()
 
 ## Configuration Options
 
-- `rateLimitMs`: Delay between requests in milliseconds (default: 1000)
+- `rateLimitMs`: Global spacing between requests in milliseconds (default: 1000 in slow mode; 0 otherwise)
 - `maxDepth`: Maximum depth to crawl (default: 3)
-- `dataDir`: Directory to save crawled articles (default: './data')
+- `dataDir`: Base directory used for the SQLite DB and working files (default: './data')
 - `enableDb`: Whether to persist to SQLite database (default: true)
 - `dbPath`: Path to SQLite database file (default: './data/news.db')
 - `maxDownloads` / `--max-pages`: Maximum number of pages to download over the network (default: unlimited)
-- `maxAgeMs` / `--max-age`: Freshness window to reuse cached articles without downloading again. Accepts values like `30s`, `10m`, `2h`, `1d`. When provided, the crawler will check the SQLite DB first (if enabled), then JSON files to find a cached article and use it if `crawled_at`/`crawledAt` is within the window.
+- `maxAgeMs` / `--max-age`: Freshness window to reuse cached articles without downloading again. Accepts values like `30s`, `10m`, `2h`, `1d`. When provided, the crawler will check the SQLite DB and use it if `crawled_at` is within the window.
+- `requestTimeoutMs`: Per-request timeout in ms (default: 10000)
+- `pacerJitterMinMs`/`pacerJitterMaxMs`: Small jitter added to per-domain pacing (defaults 25–50ms)
 
 ## Output Format
 
-Articles are saved as JSON files in the data directory with the following structure:
-
-```json
-{
-  "title": "Article Title",
-  "date": "2024-01-15",
-  "section": "world",
-  "url": "https://example.com/article",
-  "html": "Full HTML content of the article",
-  "crawledAt": "2024-01-15T10:30:00.000Z"
-}
-```
+Articles are stored in SQLite tables. Use the SQLite section below for schema and examples.
 
 ## SQLite Database
 
@@ -173,7 +180,7 @@ Schema:
   - `analysis` TEXT (JSON or text)
 
 - `links` (links graph)
- - `fetches` (per-download records)
+- `fetches` (per-download records)
    - `id` INTEGER PRIMARY KEY
    - `url` TEXT
    - `request_started_at`, `fetched_at`
@@ -184,13 +191,13 @@ Schema:
    - `nav_links_count`, `article_links_count`, `word_count`
    - `analysis` TEXT (JSON or text)
 
- - `urls` (normalized URL catalog)
+- `urls` (normalized URL catalog)
    - `id`, `url` (unique), `canonical_url`, `created_at`, `last_seen_at`, `analysis`
 
- - `domains` (normalized domains)
+- `domains` (normalized domains)
    - `id`, `host` (unique), `tld`, `created_at`, `last_seen_at`, `analysis`
 
- - Category tables (normalized)
+- Category tables (normalized)
    - `url_categories`, `page_categories`, `domain_categories`
    - Mapping tables: `url_category_map` (url_id↔category_id), `page_category_map` (fetch_id↔category_id), `domain_category_map` (domain_id↔category_id)
   - `id` INTEGER PRIMARY KEY
@@ -218,9 +225,9 @@ sqlite3 data/news.db "SELECT substr(src_url,1,60) AS src, '->', substr(dst_url,1
 
 ### Caching behavior
 
-- When `--max-age` is set, the crawler prefers cached articles (DB first, then JSON files) for pages that look like articles.
-- If a cached copy is used, it will NOT update the SQLite record (no resave). The JSON file also won’t be rewritten.
-- Freshness is determined from the article’s `crawledAt`/`crawled_at` timestamp.
+- When `--max-age` is set, the crawler prefers cached articles from the SQLite DB for pages that look like articles.
+- If a cached copy is used, it will NOT update the SQLite record (no resave).
+- Freshness is determined from the article’s `crawled_at` timestamp.
 
 ### Concurrency, priority and backoff
 
@@ -231,6 +238,24 @@ When `--concurrency > 1`, the crawler switches to a bounded priority queue sched
 - A global pacing token enforces `rateLimitMs` spacing across all workers.
 - On retriable failures (HTTP 429 or 5xx, or network errors), items are re-queued with exponential backoff and jitter, respecting `Retry-After` when present, up to a small retry limit.
 - For `--concurrency=1`, the original FIFO behavior is preserved.
+
+#### 429 handling and per-domain pacing
+
+- On 429, a 5s blackout is applied for that host, and a ramped limiter activates: 20/min initially, increasing by 10/min each minute.
+- Tokens are evenly spaced across the minute to avoid bursts, with a small configurable jitter to avoid alignment across workers.
+- Per-URL exponential backoff remains separate from per-domain pacing.
+
+## Observability
+
+- GUI exposes: `/urls`, `/url?url=…`, `/domain?host=…`, `/errors`
+- Health endpoints:
+  - `/health`: lightweight status
+  - `/api/system-health`: DB size, disk free, CPU, memory, SQLite journal mode and `wal_autocheckpoint`
+- Prometheus metrics at `/metrics` (text format), including:
+  - `crawler_requests_total`, `crawler_downloads_total`, `crawler_errors_total`
+  - `crawler_requests_per_second`, `crawler_downloads_per_second`, `crawler_bytes_per_second`
+  - `crawler_queue_size`, `crawler_error_rate_per_min`, `crawler_running`, `crawler_paused`
+  - `crawler_cache_hit_ratio` (placeholder; UI shows rolling 1m/5m cache gauges)
 
 ## Navigation Detection
 
@@ -274,7 +299,7 @@ To start fresh (remove cached files and DB):
 rm -rf data/
 ```
 
-This deletes all saved JSON articles and the SQLite database.
+This deletes the SQLite database and related working files.
 
 ## Dependencies
 
@@ -283,6 +308,7 @@ This deletes all saved JSON articles and the SQLite database.
 - `node-fetch`: HTTP client for making requests
 - `robots-parser`: robots.txt parser for compliance checking
 - `express`: GUI server
+ - `fast-xml-parser`: Sitemap XML parser (optional; a simple regex fallback is used if unavailable)
 
 ## Domain analysis (news-site heuristic)
 
@@ -293,6 +319,14 @@ The module `src/is_this_a_news_website.js` contains a simple heuristic to determ
 - Ratio of article URLs with date patterns (/YYYY/MM/DD/)
 
 The CLI tool `npm run analyze:domains` will compute metrics per domain, write a JSON analysis to the `domains` table, and tag domains with the `news` category when above a threshold.
+
+## Tests
+
+Run the test suite:
+
+```bash
+npm test --silent
+```
 
 ## License
 

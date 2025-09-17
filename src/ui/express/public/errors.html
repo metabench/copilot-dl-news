@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Errors - News Crawler</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+      th { background: #f3f4f6; text-align: left; }
+      .muted { color: #666; }
+      .bad { color: #dc2626; }
+    </style>
+  </head>
+  <body>
+    <h1>Recent Errors</h1>
+    <p><a href="/">Home</a> · <a href="/urls">URLs</a></p>
+    <div id="summary" class="muted">Loading…</div>
+    <table id="tbl" style="margin-top:10px; display:none;">
+      <thead>
+        <tr>
+          <th>Status/Kind</th>
+          <th>Host</th>
+          <th>Count</th>
+          <th>Examples</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <script>
+      (async function(){
+        try {
+          const r = await fetch('/api/recent-errors?rows=1000');
+          const j = await r.json();
+          const sum = document.getElementById('summary');
+          if (!Array.isArray(j.errors) || j.errors.length === 0) {
+            sum.textContent = 'No recent errors.';
+            return;
+          }
+          sum.textContent = `${j.totalRows || 0} error rows, ${j.totalGroups || j.errors.length} groups`;
+          const tb = document.getElementById('tbody');
+          const tbl = document.getElementById('tbl');
+          tbl.style.display = '';
+          tb.innerHTML = j.errors.map(e => {
+            const host = e.host || '(unknown)';
+            const label = (e.status ? String(e.status) : 'error');
+            const examples = (e.examples || []).map(x => `<a href="/url?url=${encodeURIComponent(x.url)}">example</a>`).join(' · ');
+            return `<tr>
+              <td class="bad">${label}</td>
+              <td>${host}</td>
+              <td>${e.count}</td>
+              <td>${examples}</td>
+            </tr>`;
+          }).join('');
+        } catch (e) {
+          document.getElementById('summary').textContent = 'Failed to load errors';
+        }
+      })();
+    </script>
+  </body>
+</html>
