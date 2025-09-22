@@ -55,6 +55,9 @@
     </style>
   </head>
   <body>
+    <div style="font-size:13px; color:#666; margin-bottom:8px;">
+      <a href="/">Crawler</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
+    </div>
     <h1>News Crawler</h1>
     <p style="margin-top:-8px; margin-bottom:14px; color:#555; font-size:13px;">
       Quick links:
@@ -63,7 +66,8 @@
   <a href="/domains">Domains</a> ·
   <a href="/errors">Errors</a> ·
       <a href="/health" target="_blank" rel="noopener">Health</a> ·
-      <a href="/metrics" target="_blank" rel="noopener">Metrics</a>
+      <a href="/metrics" target="_blank" rel="noopener">Metrics</a> ·
+      <a href="/gazetteer">Gazetteer</a>
     </p>
     <div class="controls-bar">
       <div class="row">
@@ -116,6 +120,10 @@
         </div>
       </div>
     </div>
+    <section id="jobsSection" style="margin:10px 0;">
+      <h3>Ongoing crawls</h3>
+      <div id="jobsList" class="muted" style="font-size:13px;">None</div>
+    </section>
     
     <p>
       <label><input type="checkbox" id="showLogs" /> Show logs</label>
@@ -325,9 +333,8 @@
           try {
             const j = JSON.parse(e.data);
             const line = String(j.line||'');
-            const isErr = j.stream === 'stderr' || /\berror\b|\bfailed\b|\bexception\b/i.test(line);
-            // Lines from server already include trailing \n
-            logEntries.push({ text: isErr ? line.replace(/$/m, '') : line, isErr });
+            // Only structured 'error' events should render in red; regular logs remain default color
+            logEntries.push({ text: line, isErr: false });
             scheduleFlush();
           } catch (_) {}
         });
@@ -340,6 +347,12 @@
             scheduleFlush();
           } catch (_) {}
         });
+        es.addEventListener('jobs', (e) => {
+          try {
+            const j = JSON.parse(e.data);
+            renderJobs(j);
+          } catch (_) {}
+        });
       // Throttle progress UI to ~5 FPS
       let lastProgressAt = 0;
   es.addEventListener('progress', (e) => {
@@ -348,6 +361,16 @@
         lastProgressAt = now;
   try {
           const p = JSON.parse(e.data);
+            // Also mirror a compact progress line into the Logs panel occasionally so users see activity
+            try {
+              const lpAt = window.__lastProgressLogAt || 0;
+              if (now - lpAt > 2000) { // ≤ once every 2s
+                const line = `[PROGRESS] visited=${p.visited||0} downloaded=${p.downloaded||0} found=${p.found||0} saved=${p.saved||0} queue=${p.queueSize||0}\n`;
+                logEntries.push({ text: line, isErr: false });
+                scheduleFlush();
+                window.__lastProgressLogAt = now;
+              }
+            } catch(_) {}
           progress.textContent = `visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
           // toggle pause/resume buttons
           if (typeof p.paused === 'boolean') {
@@ -641,7 +664,13 @@
 
       function openEventStream(withLogs) {
         if (evt) try { evt.close(); } catch (_) {}
+        try { window.__sse_open = false; } catch(_) {}
         evt = new EventSource(`/events?logs=${withLogs ? '1' : '0'}`);
+        try { window.evt = evt; } catch(_) {}
+        try {
+          evt.onopen = () => { try { window.__sse_open = true; } catch(_) {} };
+          evt.onerror = () => { try { window.__sse_open = false; } catch(_) {} };
+        } catch(_) {}
         attachHandlers(evt);
       }
 
@@ -716,9 +745,45 @@
           try { payload = await r.json(); } catch (_) { /* ignore */ }
           if (!r.ok) {
             const detail = payload?.error || `HTTP ${r.status}`;
-            logs.textContent += `\nStart failed: ${detail}\n`;
+            if (r.status === 409) {
+              logs.textContent += `\nStart: already running (409)\n`;
+              try {
+                progress.textContent = 'running (already in progress)…';
+                // Briefly poll status to reflect activity
+                const until = Date.now() + 4000;
+                (async function poll(){
+                  try { const rs = await fetch('/api/status'); if (rs.ok) { const js = await rs.json(); if (js.running) progress.textContent = 'running…'; } } catch {}
+                  if (Date.now() < until) setTimeout(poll, 300);
+                })();
+              } catch(_) {}
+            } else {
+              logs.textContent += `\nStart failed: ${detail}\n`;
+            }
           } else {
             logs.textContent += `\nStarted: ${JSON.stringify(payload)}\n`;
+            // Immediate UI feedback in Progress area so users see action even if SSE connects late
+            try {
+              progress.textContent = 'starting… (visited: 0, downloaded: 0, found: 0, saved: 0)';
+              // Kick a short status poll to reflect running state without waiting for SSE
+              window.__startPollUntil = Date.now() + 4000; // 4s window
+              (async function pollOnce(){
+                try {
+                  const now = Date.now();
+                  if (now > (window.__startPollUntil||0)) return;
+                  const rs = await fetch('/api/status');
+                  if (rs.ok) {
+                    const js = await rs.json();
+                    if (js && js.running) {
+                      // Mark UI as running if no progress yet
+                      if ((window.__lastProgress?.visited||0) === 0) {
+                        progress.textContent = 'running… (visited: 0, downloaded: 0, found: 0, saved: 0)';
+                      }
+                    }
+                  }
+                } catch(_) {}
+                setTimeout(pollOnce, 250);
+              })();
+            } catch(_) {}
           }
         } catch (e) {
           logs.textContent += `\nStart error: ${e?.message || e}\n`;
@@ -765,6 +830,34 @@
         else logs.textContent = '';
         openEventStream(enabled);
       };
+
+      function renderJobs(jobs) {
+        try {
+          const el = document.getElementById('jobsList');
+          if (!el) return;
+          if (!jobs || !Array.isArray(jobs.items) || jobs.items.length === 0) { el.textContent = 'None'; return; }
+          const rows = jobs.items.map(it => {
+            const url = it.url || '(unknown)';
+            const v = it.visited ?? 0;
+            const d = it.downloaded ?? 0;
+            const e = it.errors ?? 0;
+            const q = it.queueSize ?? 0;
+            const act = it.lastActivityAt ? ` · active ${Math.round((Date.now() - it.lastActivityAt)/1000)}s ago` : '';
+            const pid = it.pid ? ` · pid ${it.pid}` : '';
+            const st = it.status || 'running';
+            return `<div><strong>${st}</strong>${pid} — <a href="/url?url=${encodeURIComponent(url)}">${url}</a> — v:${v} d:${d} e:${e} q:${q}${act}</div>`;
+          }).join('');
+          el.innerHTML = rows;
+        } catch (_) {}
+      }
+
+      // One-time poll as a fallback in case SSE arrives late
+      (async function initialJobs(){
+        try {
+          const r = await fetch('/api/crawls');
+          if (!r.ok) return; const j = await r.json(); renderJobs(j);
+        } catch (_) {}
+      })();
 
       // Persist open/closed state of collapsible panels
       (function persistPanels(){

@@ -93,6 +93,7 @@ class NewsCrawler {
         ? options.maxAgeMs
         : undefined; // Freshness window for cached items
   this.dbPath = options.dbPath || path.join(this.dataDir, 'news.db');
+  this.fastStart = options.fastStart === true; // skip heavy startup stats
   this.enableDb = options.enableDb !== undefined ? options.enableDb : true;
   this.preferCache = options.preferCache !== false; // default to prefer cache unless explicitly disabled
   // Sitemap support
@@ -127,12 +128,7 @@ class NewsCrawler {
   this.httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
   this.httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
   // Per-domain rate limiting and telemetry
-  // host -> {
-  //   enabled, rampStartMs, last429Until, windowStart, count, nextAt,
-  //   rpmCurrent, rpmLastSafe, rpmFloorLearned, err429Streak, successStreak,
-  //   ema429, last429At, lastRampAt
-  // }
-  this.domainLimits = new Map();
+  this.domainLimits = new Map(); // host -> state object
   this._domainWindowMs = 60 * 1000;
   // Networking config
   this.requestTimeoutMs = typeof options.requestTimeoutMs === 'number' && options.requestTimeoutMs > 0 ? options.requestTimeoutMs : 10000; // default 10s
@@ -151,6 +147,34 @@ class NewsCrawler {
     };
   }
 
+  // --- Per-domain rate limiter state management ---
+
+  _getDomainState(host) {
+    let state = this.domainLimits.get(host);
+    if (!state) {
+      state = {
+        host,
+        // Core state
+        isLimited: false,       // True if any 429 has been received
+        rpm: null,              // Current requests-per-minute limit
+        nextRequestAt: 0,       // Earliest time the next request is allowed
+        backoffUntil: 0,        // A hard stop for all requests after a 429
+        // Telemetry for adaptive behavior
+        lastRequestAt: 0,
+        lastSuccessAt: 0,
+        last429At: 0,
+        successStreak: 0,
+        err429Streak: 0,
+        // Metrics for UI
+        rpmLastMinute: 0,
+        windowStartedAt: 0,
+        windowCount: 0
+      };
+      this.domainLimits.set(host, state);
+    }
+    return state;
+  }
+
 
   async init() {
     // Ensure data directory exists
@@ -166,17 +190,21 @@ class NewsCrawler {
         }
   this.db = new NewsDatabase(this.dbPath);
   this.cache.setDb(this.db);
-        console.log(`SQLite DB initialized at: ${this.dbPath}`);
-        try {
-          const stat = await fs.stat(this.dbPath).catch(() => null);
-          const bytes = stat?.size || 0;
-          const mb = bytes / (1024 * 1024);
-          const gb = bytes / (1024 * 1024 * 1024);
-          const sizeStr = gb >= 1 ? `${gb.toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
-          const totalPages = this.db.getFetchCount?.() || 0;
-          const articlePages = this.db.getArticleClassifiedFetchCount?.() || 0;
-          console.log(`Database size: ${sizeStr} — stored pages: ${totalPages}, articles detected: ${articlePages}`);
-        } catch (_) { /* ignore size/count errors */ }
+        if (this.fastStart) {
+          console.log(`SQLite DB initialized at: ${this.dbPath} (fast-start)`);
+        } else {
+          console.log(`SQLite DB initialized at: ${this.dbPath}`);
+          try {
+            const stat = await fs.stat(this.dbPath).catch(() => null);
+            const bytes = stat?.size || 0;
+            const mb = bytes / (1024 * 1024);
+            const gb = bytes / (1024 * 1024 * 1024);
+            const sizeStr = gb >= 1 ? `${gb.toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
+            const totalPages = this.db.getFetchCount?.() || 0;
+            const articlePages = this.db.getArticleClassifiedFetchCount?.() || 0;
+            console.log(`Database size: ${sizeStr} — stored pages: ${totalPages}, articles detected: ${articlePages}`);
+          } catch (_) { /* ignore size/count errors */ }
+        }
       } catch (e) {
         console.log(`SQLite not available, continuing without DB: ${e.message}`);
         this.db = null;
@@ -415,7 +443,7 @@ class NewsCrawler {
           // Remove from in-flight set on success
           this.currentDownloads.delete(normalizedUrl);
           this.emitProgress();
-          try { this.noteSuccess(u.hostname, ttfbMs, downloadMs, totalMs); } catch (_) {}
+          try { this.noteSuccess(u.hostname); } catch (_) {}
       
       return {
         url: finalUrl,
@@ -474,29 +502,20 @@ class NewsCrawler {
       const st = this.domainLimits.get(this.domain);
       const now2 = Date.now();
       if (st) {
-        const elapsed = Math.max(1, now2 - (st.windowStart || (now2 - this._domainWindowMs)));
-        // scale to per-minute based on current window fill
-        domainRpm = Math.round((st.count || 0) * (60000 / elapsed));
-        if (st.rampStartMs) {
-          const lim = (st.rpmCurrent && st.rpmCurrent > 0)
-            ? st.rpmCurrent
-            : (20 + 10 * Math.floor((now2 - st.rampStartMs) / 60000));
-          domainLimit = Math.max(1, Math.floor(lim));
-          if (domainLimit > 0) domainIntervalMs = Math.floor(60000 / domainLimit);
-        }
-        if (st.last429Until && now2 < st.last429Until) domainBackoffMs = st.last429Until - now2;
-        domainRateLimited = !!(st.rampStartMs || (st.last429Until && now2 < st.last429Until));
+        domainRpm = st.rpmLastMinute;
+        domainLimit = st.rpm;
+        domainRateLimited = st.isLimited;
+        if (st.rpm > 0) domainIntervalMs = Math.floor(60000 / st.rpm);
+        if (st.backoffUntil > now2) domainBackoffMs = st.backoffUntil - now2;
       }
       // Include per-host limiter state for UI badges
       for (const [host, s] of this.domainLimits.entries()) {
         try {
-          const mins = s.rampStartMs ? Math.floor((now2 - s.rampStartMs) / 60000) : null;
-          const lim = s.rpmCurrent && s.rpmCurrent > 0 ? Math.floor(s.rpmCurrent) : (mins != null ? (20 + 10 * mins) : null);
-          const backoff = (s.last429Until && now2 < s.last429Until) ? (s.last429Until - now2) : null;
-          const interval = lim && lim > 0 ? Math.floor(60000 / lim) : null;
+          const backoff = (s.backoffUntil > now2) ? (s.backoffUntil - now2) : null;
+          const interval = s.rpm > 0 ? Math.floor(60000 / s.rpm) : null;
           perHostLimits[host] = {
-            rateLimited: !!(s.rampStartMs || backoff),
-            limit: lim,
+            rateLimited: s.isLimited,
+            limit: s.rpm,
             intervalMs: interval,
             backoffMs: backoff
           };
@@ -1174,118 +1193,97 @@ class NewsCrawler {
   // Per-domain limiter: waits if a 429 backoff is active or if the current per-host interval requires spacing.
   async acquireDomainToken(host) {
     const now = nowMs();
-    let st = this.domainLimits.get(host);
-    if (!st) {
-      st = { enabled: false, rampStartMs: null, last429Until: 0, windowStart: Math.floor(now / this._domainWindowMs) * this._domainWindowMs, count: 0, nextAt: 0,
-        rpmCurrent: null, rpmLastSafe: null, rpmFloorLearned: null, err429Streak: 0, successStreak: 0, ema429: 0, last429At: 0, lastRampAt: 0 };
-      this.domainLimits.set(host, st);
+    const state = this._getDomainState(host);
+
+    // --- Wait for any active backoff period to pass ---
+    if (state.backoffUntil > now) {
+      await sleep(state.backoffUntil - now);
     }
-    // 5s blackout after 429
-    if (st.last429Until && now < st.last429Until) {
-      await sleep(st.last429Until - now);
-    }
-    // If not enabled (no 429 yet), no per-domain cap applies
-    if (!st.rampStartMs) {
-      // Still account window counts for RPM metric
-      const t = nowMs();
-      if (t - st.windowStart >= this._domainWindowMs) {
-        st.windowStart = Math.floor(t / this._domainWindowMs) * this._domainWindowMs;
-        st.count = 0;
-      }
-      st.count += 1;
+
+    // --- If not rate-limited, just track request time and exit ---
+    if (!state.isLimited) {
+      state.lastRequestAt = now;
       return;
     }
-    // Determine current limit (rpm)
-    let limit = st.rpmCurrent && st.rpmCurrent > 0
-      ? Math.floor(st.rpmCurrent)
-      : (20 + 10 * Math.floor((now - st.rampStartMs) / 60000));
-    if (limit < 1) limit = 1;
-    const intervalMs = Math.max(1, Math.floor(60000 / limit));
-    // Initialize nextAt with a slight random offset to avoid stampedes
-    if (!st.nextAt || st.nextAt <= 0) {
-      st.nextAt = now + Math.floor(Math.random() * Math.min(intervalMs, 1000));
+
+    // --- If rate-limited, wait until the next request slot is available ---
+    if (state.nextRequestAt > now) {
+      await sleep(state.nextRequestAt - now);
     }
-    // Enforce even spacing across the minute
-    let t = nowMs();
-  if (t < st.nextAt) {
-      await sleep(st.nextAt - t);
-      t = nowMs();
+
+    // --- Update state for the new request ---
+    const t = nowMs();
+    state.lastRequestAt = t;
+
+    // Calculate the interval for the next request based on the current RPM limit.
+    // This distributes requests evenly over a minute.
+    const intervalMs = state.rpm > 0 ? Math.floor(60000 / state.rpm) : 0;
+
+    // Add jitter to prevent all workers from firing at the exact same time
+    const jitterMin = this.pacerJitterMinMs;
+    const jitterMax = this.pacerJitterMaxMs;
+    const jitter = jitterMax > jitterMin ? (jitterMin + Math.floor(Math.random() * (jitterMax - jitterMin + 1))) : jitterMin;
+
+    // Schedule the next allowed request time
+    state.nextRequestAt = t + intervalMs + jitter;
+
+    // --- Update RPM metric for UI ---
+    if (t - state.windowStartedAt >= this._domainWindowMs) {
+      state.rpmLastMinute = state.windowCount;
+      state.windowStartedAt = t;
+      state.windowCount = 0;
     }
-    // Window accounting for RPM metric
-    if (t - st.windowStart >= this._domainWindowMs) {
-      st.windowStart = Math.floor(t / this._domainWindowMs) * this._domainWindowMs;
-      st.count = 0;
-    }
-    // Count and schedule next slot
-  st.count += 1;
-  // Add small configurable jitter to avoid alignment
-  const jitterMin = this.pacerJitterMinMs;
-  const jitterMax = this.pacerJitterMaxMs;
-  const extra = jitterMax > jitterMin ? (jitterMin + Math.floor(Math.random() * (jitterMax - jitterMin + 1))) : jitterMin;
-  st.nextAt = t + intervalMs + extra;
-    return;
+    state.windowCount++;
   }
 
   note429(host, retryAfterMs) {
     const now = nowMs();
-    let st = this.domainLimits.get(host);
-    if (!st) {
-      st = { enabled: true, rampStartMs: now, last429Until: now + 5000, windowStart: Math.floor(now / this._domainWindowMs) * this._domainWindowMs, count: 0, nextAt: 0,
-        rpmCurrent: 20, rpmLastSafe: null, rpmFloorLearned: null, err429Streak: 1, successStreak: 0, ema429: 1, last429At: now, lastRampAt: 0 };
-      this.domainLimits.set(host, st);
-      return;
-    }
-    st.enabled = true;
+    const state = this._getDomainState(host);
+
+    state.isLimited = true;
+    state.last429At = now;
+    state.successStreak = 0;
+    state.err429Streak++;
+
+    // --- Calculate backoff period ---
+    // Use server-provided Retry-After if available, otherwise use escalating backoff.
     const baseBlackout = retryAfterMs != null ? Math.max(30000, retryAfterMs) : 45000;
-    const jitterPct = 0.1; // +/-10%
-    const jitterAmt = Math.floor(baseBlackout * ((Math.random() * 2 * jitterPct) - jitterPct));
-    const blackout = baseBlackout + jitterAmt;
-    const prev429 = st.last429At || 0;
-    st.last429At = now;
-    // Escalate blackout if repeated within 10 minutes
-    if (prev429 && (now - prev429) <= 10 * 60 * 1000) {
-      st.err429Streak = (st.err429Streak || 0) + 1;
-    } else {
-      st.err429Streak = 1;
-    }
-    let escalated = blackout;
-    if (st.err429Streak >= 2) escalated = Math.max(escalated, 5 * 60 * 1000);
-    if (st.err429Streak >= 3) escalated = Math.max(escalated, 15 * 60 * 1000);
-    st.last429Until = Math.max(st.last429Until || 0, now + escalated);
-    if (!st.rampStartMs) st.rampStartMs = now;
-    // Step down aggressively; use last safe if known
-    const current = st.rpmCurrent && st.rpmCurrent > 0 ? st.rpmCurrent : 20;
-    const halfSafe = st.rpmLastSafe ? Math.floor(st.rpmLastSafe * 0.5) : current;
-    const quarter = Math.max(1, Math.floor(current * 0.25));
-    st.rpmCurrent = Math.max(1, Math.min(quarter, halfSafe));
-    st.rpmFloorLearned = st.rpmFloorLearned ? Math.min(st.rpmFloorLearned, st.rpmCurrent) : st.rpmCurrent;
-    st.successStreak = 0;
-    // Reset pacing so we don't burst immediately after a 429
-    st.nextAt = now + 500; // small grace before next try
+    const jitter = Math.floor(baseBlackout * ((Math.random() * 0.2) - 0.1)); // +/-10% jitter
+    let blackout = baseBlackout + jitter;
+
+    // Escalate blackout if we get multiple 429s in a row
+    if (state.err429Streak >= 2) blackout = Math.max(blackout, 5 * 60 * 1000);
+    if (state.err429Streak >= 3) blackout = Math.max(blackout, 15 * 60 * 1000);
+    state.backoffUntil = now + blackout;
+
+    // --- Adjust RPM limit ---
+    // Drastically reduce RPM on a 429.
+    const currentRpm = state.rpm || 60; // Start with a safe default if no limit is set
+    const newRpm = Math.max(1, Math.floor(currentRpm * 0.25)); // Cut to 25%
+    state.rpm = newRpm;
+
+    // Reset the request pacer to align with the new, slower rate.
+    state.nextRequestAt = now + Math.floor(60000 / newRpm);
   }
 
-  noteSuccess(host, ttfbMs, downloadMs, totalMs) {
+  noteSuccess(host) {
     const now = nowMs();
-    const st = this.domainLimits.get(host);
-    if (!st || !st.rampStartMs) return;
-    st.successStreak = (st.successStreak || 0) + 1;
-    // Decay 429 EMA
-    const alpha = 0.05;
-    st.ema429 = (1 - alpha) * (st.ema429 || 0) + alpha * 0;
-    // If recently had 429, be cautious
-    const recent429Window = 30 * 60 * 1000;
-    const hadRecent429 = st.last429At && (now - st.last429At) < recent429Window;
-    const cautiousCap = hadRecent429 && st.rpmLastSafe ? Math.floor(st.rpmLastSafe * 1.25) : null;
-    // Probe (ramp up) at most once per minute with conditions
-    const canProbe = (!st.lastRampAt || (now - st.lastRampAt) >= 60 * 1000);
-    if (canProbe && st.err429Streak <= 0 && (st.ema429 || 0) < 0.002) {
-      let next = Math.max(1, Math.floor((st.rpmCurrent || 10) * 1.1));
-      if (cautiousCap != null) next = Math.min(next, Math.max(1, cautiousCap));
-      // Apply and record last safe after sustained stability (no 429 for 10 min)
-      st.rpmCurrent = next;
-      st.lastRampAt = now;
-      if (st.last429At && (now - st.last429At) >= 10 * 60 * 1000) {
-        st.rpmLastSafe = Math.max(st.rpmLastSafe || 0, st.rpmCurrent);
+    const state = this._getDomainState(host);
+
+    state.lastSuccessAt = now;
+    state.successStreak++;
+    state.err429Streak = 0;
+
+    // --- Adaptive RPM increase ---
+    // If the limiter is active and we've had a long streak of successes,
+    // cautiously increase the RPM.
+    if (state.isLimited && state.successStreak > 100) {
+      const canProbe = (now - state.last429At) > 5 * 60 * 1000; // Wait 5 mins after last 429
+      if (canProbe) {
+        const currentRpm = state.rpm || 10;
+        const nextRpm = Math.max(1, Math.floor(currentRpm * 1.1)); // Increase by 10%
+        state.rpm = Math.min(nextRpm, 300); // Cap at a reasonable max
+        state.successStreak = 0; // Reset streak after probing
       }
     }
   }
@@ -1446,6 +1444,7 @@ if (require.main === module) {
   const useSitemap = !args.includes('--no-sitemap');
   const sitemapOnly = args.includes('--sitemap-only');
   const sitemapMaxArg = args.find(a => a.startsWith('--sitemap-max='));
+  const fastStart = args.includes('--fast-start');
 
   function parseMaxAgeToMs(val) {
     if (!val) return undefined;
@@ -1482,6 +1481,7 @@ if (require.main === module) {
   pacerJitterMaxMs
   , useSitemap, sitemapOnly,
   sitemapMaxUrls: sitemapMaxArg ? parseInt(sitemapMaxArg.split('=')[1], 10) : undefined
+  , fastStart
   });
 
   // Accept PAUSE/RESUME commands over stdin (for GUI control)

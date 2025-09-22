@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Gazetteer Browser</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 1rem; }
+      header { display: flex; gap: 1rem; align-items: center; }
+      input, select { padding: 0.4rem; }
+      table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+      th, td { border: 1px solid #ddd; padding: 0.5rem; font-size: 0.9rem; }
+      th { background: #f6f6f6; text-align: left; }
+      #details { white-space: pre-wrap; background: #fafafa; border: 1px solid #eee; padding: 0.5rem; margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Gazetteer</h1>
+    <div id="summary"></div>
+    <header>
+      <input id="q" placeholder="Search name..." />
+      <select id="kind">
+        <option value="">All</option>
+        <option>country</option>
+        <option>region</option>
+        <option>city</option>
+      </select>
+      <button id="go">Search</button>
+      <a href="/">Back to Home</a>
+    </header>
+    <table id="tbl"><thead><tr><th>ID</th><th>Name</th><th>Kind</th><th>Country</th><th>ADM1</th><th>Population</th></tr></thead><tbody></tbody></table>
+    <div id="details"></div>
+    <script>
+      async function loadSummary() {
+        const r = await fetch('/api/gazetteer/summary');
+        const j = await r.json();
+        const el = document.getElementById('summary');
+        el.textContent = `Countries: ${j.countries}, Regions: ${j.regions}, Cities: ${j.cities}, Names: ${j.names}, Sources: ${j.sources}`;
+      }
+      async function search() {
+        const q = document.getElementById('q').value.trim();
+        const kind = document.getElementById('kind').value;
+        const url = new URL('/api/gazetteer/places', location.origin);
+        if (q) url.searchParams.set('q', q);
+        if (kind) url.searchParams.set('kind', kind);
+        const r = await fetch(url);
+        const rows = await r.json();
+        const tb = document.querySelector('#tbl tbody');
+        tb.innerHTML = '';
+        for (const row of rows) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${row.id}</td><td><a href="#" data-id="${row.id}">${row.name || ''}</a></td><td>${row.kind}</td><td>${row.country_code||''}</td><td>${row.adm1_code||''}</td><td>${row.population??''}</td>`;
+          tb.appendChild(tr);
+        }
+      }
+      async function showDetails(id) {
+        const r = await fetch('/api/gazetteer/place/' + id);
+        const j = await r.json();
+        document.getElementById('details').textContent = JSON.stringify(j, null, 2);
+      }
+      document.getElementById('go').addEventListener('click', search);
+      document.getElementById('tbl').addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-id]');
+        if (a) { e.preventDefault(); showDetails(a.getAttribute('data-id')); }
+      });
+      loadSummary();
+      search();
+    </script>
+  </body>
+  </html>

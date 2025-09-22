@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
+const { ensureDb, ensureGazetteer } = require('./ensure_db');
 const { Readable } = require('stream');
 
 class NewsDatabase {
@@ -13,7 +14,8 @@ class NewsDatabase {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    this.db = new Database(this.dbFilePath);
+  // Use shared ensureDb to open and initialize
+  this.db = ensureDb(this.dbFilePath);
     this._init();
 
   // Prepare category helpers
@@ -252,6 +254,9 @@ class NewsDatabase {
       CREATE INDEX IF NOT EXISTS idx_article_places_place ON article_places(place);
       CREATE INDEX IF NOT EXISTS idx_article_places_url ON article_places(article_url);
     `);
+
+  // Gazetteer tables ensured via shared helper
+  try { ensureGazetteer(this.db); } catch (_) {}
 
     // Idempotent migration for fetches extra columns
     let fetchCols = this.db.prepare('PRAGMA table_info(fetches)').all().map(r => r.name);

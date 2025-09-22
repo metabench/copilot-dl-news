@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gazetteer Browser</title>
+  <style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 0; color: #1f2937; }
+    header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #fff; z-index: 1; }
+    header h1 { margin: 0; font-size: 18px; }
+  main { display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 16px; }
+  .panel { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .row label { font-size: 12px; color: #555; }
+  input[type="text"], select, input[type="number"] { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+  button { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; cursor: pointer; }
+  button:hover { background: #f1f5f9; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; }
+  th { text-align: left; color: #64748b; user-select: none; }
+  th.sortable { cursor: pointer; }
+  th.sortable .dir { font-size: 11px; color: #94a3b8; margin-left: 4px; }
+    tr:hover { background: #fafafa; }
+  .meta { color: #64748b; font-size: 12px; }
+  .pill { display: inline-block; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 999px; font-size: 12px; color: #334155; background: #f8fafc; }
+    .tabs { display: flex; gap: 8px; border-bottom: 1px solid #eee; margin-top: 8px; }
+    .tabs button { padding: 6px 10px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tabs button.active { border-bottom-color: #333; font-weight: 600; }
+    .tab-panel { display: none; padding-top: 8px; }
+    .tab-panel.active { display: block; }
+    .right-header { display: flex; gap: 8px; align-items: center; }
+  .flag { font-size: 14px; }
+  .subtle { color: #94a3b8; }
+  .muted { color: #9aa6b2; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gazetteer</h1>
+    <div class="meta" id="summary"></div>
+    <div class="right-header">
+      <a href="/">Home</a>
+    </div>
+  </header>
+  <main>
+    <section class="panel" id="searchPanel">
+      <div class="row">
+        <input id="q" type="text" placeholder="Search places..." style="flex:1" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label>Kind</label>
+        <select id="kind">
+          <option value="">Any</option>
+          <option>country</option>
+          <option>region</option>
+          <option>city</option>
+          <option>poi</option>
+          <option>supranational</option>
+        </select>
+        <label>Country</label>
+        <input id="cc" type="text" placeholder="US, GB, FR..." style="width:80px" />
+        <label>ADM1</label>
+        <input id="adm1" type="text" placeholder="CA-ON" style="width:100px" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label>Min pop</label>
+        <input id="minpop" type="number" min="0" value="0" style="width:100px" />
+        <label>Sort</label>
+        <select id="sort">
+          <option value="name">Name</option>
+          <option value="country">Country</option>
+          <option value="population">Population</option>
+        </select>
+        <select id="dir">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
+        <label>Page size</label>
+        <select id="pageSizeSel">
+          <option>25</option>
+          <option selected>50</option>
+          <option>100</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="searchBtn">Search</button>
+        <button id="resetBtn" class="muted">Reset</button>
+        <span class="meta" id="count"></span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="meta">Download:</span>
+        <a id="dlCsv" href="#">CSV</a>
+        <a id="dlNdjson" href="#">NDJSON</a>
+      </div>
+      <div class="panel" style="margin-top:10px">
+        <div class="row">
+          <b>Disambiguation tester</b>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <input id="resolvePhrase" type="text" placeholder="Place name (e.g., Paris)" style="flex:1" />
+          <input id="resolveUrl" type="text" placeholder="Context URL (optional)" style="flex:1" />
+          <button id="resolveBtn">Resolve</button>
+        </div>
+        <div id="resolveResults" class="meta" style="margin-top:6px"></div>
+      </div>
+      <div style="margin-top:10px; max-height: 65vh; overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="name">Name <span class="dir" id="sortIndicator-name"></span></th>
+              <th>Kind</th>
+              <th class="sortable" data-sort="country">CC <span class="dir" id="sortIndicator-country"></span></th>
+              <th>ADM1</th>
+              <th class="sortable" data-sort="population">Pop <span class="dir" id="sortIndicator-population"></span></th>
+            </tr>
+          </thead>
+          <tbody id="results"></tbody>
+        </table>
+        <div class="row" style="margin-top:8px">
+          <button id="prev">Prev</button>
+          <button id="next">Next</button>
+          <span class="meta" id="pageInfo"></span>
+        </div>
+      </div>
+    </section>
+    <section class="panel" id="detailPanel">
+      <div id="detail"></div>
+    </section>
+  </main>
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const resultsEl = $('#results');
+    const countEl = $('#count');
+    const pageInfoEl = $('#pageInfo');
+    const summaryEl = $('#summary');
+  let page = 1;
+  let pageSize = 50;
+    let lastQuery = null;
+  let debounceTimer = null;
+  // AbortController for cancelling in-flight list requests
+  let listAbort = null;
+  // Tiny cache for last N queries to avoid re-fetching identical results during quick toggles
+  const listCache = new Map(); // key -> { ts, data }
+  const LIST_CACHE_MAX = 5;
+  const LIST_CACHE_TTL = 5000; // ms
+
+    async function fetchSummary() {
+      try {
+        const r = await fetch('/api/gazetteer/summary');
+        if (!r.ok) return;
+        const s = await r.json();
+        summaryEl.textContent = `countries: ${s.countries}, regions: ${s.regions}, cities: ${s.cities}, names: ${s.names}`;
+      } catch {}
+    }
+
+  function buildQuery() {
+      const params = new URLSearchParams();
+      const q = $('#q').value.trim();
+      if (q) params.set('q', q);
+      const kind = $('#kind').value.trim();
+      if (kind) params.set('kind', kind);
+      const cc = $('#cc').value.trim();
+      if (cc) params.set('cc', cc);
+      const adm1 = $('#adm1').value.trim();
+      if (adm1) params.set('adm1', adm1);
+      const minpop = parseInt($('#minpop').value || '0', 10) || 0;
+      if (minpop > 0) params.set('minpop', String(minpop));
+      const sort = $('#sort').value;
+      const dir = $('#dir').value;
+      params.set('sort', sort);
+      params.set('dir', dir);
+      params.set('page', String(page));
+      params.set('pageSize', String(pageSize));
+      const qs = params.toString();
+      // Push state to URL for shareable filters
+      const u = new URL(window.location.href);
+      u.search = qs;
+      window.history.replaceState({}, '', u.toString());
+      return qs;
+    }
+
+    async function search() {
+      const query = buildQuery();
+      lastQuery = query;
+      // Cache hit?
+      const now = Date.now();
+      const cached = listCache.get(query);
+      if (cached && (now - cached.ts) < LIST_CACHE_TTL) {
+        renderList(cached.data);
+        return;
+      }
+      // Cancel previous
+      try { if (listAbort) listAbort.abort(); } catch(_) {}
+      listAbort = new AbortController();
+      let data;
+      try {
+        const r = await fetch('/api/gazetteer/places?' + query, { signal: listAbort.signal });
+        data = await r.json();
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // superseded
+        throw e;
+      } finally {
+        listAbort = null;
+      }
+      // Cache set with LRU-like trim
+      listCache.set(query, { ts: now, data });
+      if (listCache.size > LIST_CACHE_MAX) {
+        const oldestKey = [...listCache.entries()].sort((a,b)=>a[1].ts-b[1].ts)[0]?.[0];
+        if (oldestKey) listCache.delete(oldestKey);
+      }
+      renderList(data);
+    }
+
+    function renderList(data) {
+      const rows = (data && data.rows) || [];
+      countEl.textContent = `${rows.length} of ${data.total}`;
+      const start = data.total ? ((data.page - 1) * data.pageSize + 1) : 0;
+      const end = Math.min(data.page * data.pageSize, data.total || 0);
+      pageInfoEl.textContent = `page ${data.page} / ${Math.ceil((data.total||0) / (data.pageSize||1))} — showing ${start}-${end}`;
+      updateSortIndicators();
+      // Build HTML with a single join to minimize DOM writes
+      let html = '';
+      for (const r of rows) {
+        html += `
+        <tr data-id="${r.id}">
+          <td><a href="#" data-id="${r.id}" class="show">${escapeHtml(r.name||'')}</a></td>
+          <td><span class="pill">${r.kind}</span></td>
+          <td>${formatCountry(r.country_code)}</td>
+          <td>${r.adm1_code||''}</td>
+          <td>${formatNumber(r.population)||''}</td>
+        </tr>`;
+      }
+      resultsEl.innerHTML = html;
+    }
+
+    function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function formatNumber(n){ if (n == null) return ''; try{ return Number(n).toLocaleString(); }catch{ return String(n); } }
+    const __ccFlagCache = new Map();
+    function ccFlag(cc){
+      if(!cc||cc.length!==2) return '';
+      const k = cc.toUpperCase();
+      const cached = __ccFlagCache.get(k);
+      if (cached) return cached;
+      const codePoints=[...k].map(c=>127397 + c.charCodeAt());
+      const val = String.fromCodePoint(...codePoints);
+      __ccFlagCache.set(k, val);
+      if (__ccFlagCache.size > 128) { // cap memory
+        const first = __ccFlagCache.keys().next().value; if (first) __ccFlagCache.delete(first);
+      }
+      return val;
+    }
+    const __fmtCountryCache = new Map();
+    function formatCountry(cc){
+      if(!cc) return '';
+      const k = cc.toUpperCase();
+      const cached = __fmtCountryCache.get(k);
+      if (cached) return cached;
+      const val = `<span class="flag" title="${k}">${ccFlag(k)}</span> ${k}`;
+      __fmtCountryCache.set(k, val);
+      if (__fmtCountryCache.size > 128) { const first = __fmtCountryCache.keys().next().value; if (first) __fmtCountryCache.delete(first); }
+      return val;
+    }
+    function updateSortIndicators(){
+      ['name','country','population'].forEach(k=>{ const el = document.getElementById('sortIndicator-'+k); if (!el) return; el.textContent = ($('#sort').value===k) ? ($('#dir').value==='asc'?'▲':'▼') : ''; });
+    }
+
+    // Per-place detail caches
+    const detailCache = {
+      articles: new Map(), // id -> items
+      hubs: new Map(),     // id -> items
+    };
+
+    async function showDetail(id) {
+      const r = await fetch('/api/gazetteer/place/' + id);
+      if (!r.ok) { $('#detail').textContent = 'Not found'; return; }
+      const d = await r.json();
+      const place = d.place;
+      const names = d.names || [];
+      const parents = d.parents || [];
+      const children = d.children || [];
+      const ids = d.external_ids || [];
+      $('#detail').innerHTML = `
+  <h2>${escapeHtml(names.find(n=>n.id===place.canonical_name_id)?.name || names[0]?.name || '(unnamed)')}</h2>
+  <div class="meta">${place.kind} ${place.country_code? '· '+formatCountry(place.country_code): ''} ${place.adm1_code? '· '+place.adm1_code: ''} ${place.population? '· pop '+formatNumber(place.population): ''} <span class="subtle">· id ${place.id}</span> <button id="copyId" title="Copy ID">Copy</button></div>
+        <div class="tabs">
+          <button class="tab active" data-tab="names">Names</button>
+          <button class="tab" data-tab="hierarchy">Hierarchy</button>
+          <button class="tab" data-tab="ids">External IDs</button>
+          <button class="tab" data-tab="articles">Articles</button>
+          <button class="tab" data-tab="hubs">Hubs</button>
+        </div>
+        <div class="tab-panel active" id="tab-names">
+          <ul>${names.map(n => `<li>${escapeHtml(n.name)} <span class="meta">${n.lang||''} ${n.name_kind||''}</span></li>`).join('')}</ul>
+        </div>
+        <div class="tab-panel" id="tab-hierarchy">
+          <div><b>Parents</b><ul>${parents.map(p => `<li>${escapeHtml(p.name||'')} <span class="meta">${p.kind||''}</span></li>`).join('')}</ul></div>
+          <div><b>Children</b><ul>${children.map(c => `<li>${escapeHtml(c.name||'')} <span class="meta">${c.kind||''}</span></li>`).join('')}</ul></div>
+        </div>
+        <div class="tab-panel" id="tab-ids">
+          <ul>${ids.map(i => `<li>${escapeHtml(i.source)}: ${escapeHtml(i.ext_id)}</li>`).join('')}</ul>
+        </div>
+  <div class="tab-panel" id="tab-articles"><div class="meta">Select tab to load…</div></div>
+  <div class="tab-panel" id="tab-hubs"><div class="meta">Select tab to load…</div></div>
+      `;
+        const copyBtn = document.getElementById('copyId');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(String(place.id)) : Promise.reject());
+              const prev = copyBtn.textContent;
+              copyBtn.textContent = 'Copied';
+              setTimeout(() => copyBtn.textContent = prev || 'Copy', 1000);
+            } catch {}
+          });
+        }
+      bindTabsWithLazyLoad(place, names);
+    }
+
+    function bindTabsWithLazyLoad(place, names) {
+      const tabs = document.querySelectorAll('.tabs .tab');
+      tabs.forEach(btn => {
+        btn.addEventListener('click', async () => {
+          document.querySelectorAll('.tabs .tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          const tab = btn.getAttribute('data-tab');
+          const panel = document.getElementById('tab-' + tab);
+          panel.classList.add('active');
+          if (tab === 'articles') {
+            if (detailCache.articles.has(place.id)) {
+              renderArticles(panel, detailCache.articles.get(place.id));
+            } else {
+              panel.innerHTML = '<div class="meta">Loading…</div>';
+              try {
+                const r = await fetch('/api/gazetteer/articles?id=' + place.id);
+                const items = r.ok ? (await r.json()) : [];
+                detailCache.articles.set(place.id, items);
+                renderArticles(panel, items);
+              } catch { panel.innerHTML = '<div class="meta">Failed to load</div>'; }
+            }
+          } else if (tab === 'hubs') {
+            if (detailCache.hubs.has(place.id)) {
+              renderHubs(panel, detailCache.hubs.get(place.id));
+            } else {
+              panel.innerHTML = '<div class="meta">Loading…</div>';
+              try {
+                const cname = names.find(n=>n.id===place.canonical_name_id)?.name || names[0]?.name || '';
+                const slug = (cname||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+                const r = await fetch('/api/gazetteer/hubs?slug=' + encodeURIComponent(slug) + '&limit=50');
+                const items = r.ok ? (await r.json()) : [];
+                detailCache.hubs.set(place.id, items);
+                renderHubs(panel, items);
+              } catch { panel.innerHTML = '<div class="meta">Failed to load</div>'; }
+            }
+          }
+        });
+      });
+    }
+
+    function renderArticles(panel, items) {
+      if (!items || items.length === 0) { panel.innerHTML = '<div class="meta">No related articles</div>'; return; }
+      panel.innerHTML = '<ul>' + items.map(a => `<li><a href="${a.url}" target="_blank">${escapeHtml(a.title || a.url)}</a> <span class="meta">${a.date||''}</span></li>`).join('') + '</ul>';
+    }
+    function renderHubs(panel, items) {
+      if (!items || items.length === 0) { panel.innerHTML = '<div class="meta">No hubs found</div>'; return; }
+      panel.innerHTML = '<ul>' + items.map(h => `<li><a href="${h.url}" target="_blank">${escapeHtml(h.title||h.url)}</a> <span class="meta">${h.host||''}</span></li>`).join('') + '</ul>';
+    }
+
+    $('#searchBtn').addEventListener('click', () => { page = 1; search(); });
+    $('#resetBtn').addEventListener('click', () => {
+      ['q','kind','cc','adm1','minpop'].forEach(id => { const el = document.getElementById(id); if (!el) return; if (el.tagName==='SELECT') el.selectedIndex = 0; else el.value=''; });
+      document.getElementById('sort').value='name';
+      document.getElementById('dir').value='asc';
+      document.getElementById('pageSizeSel').value='50';
+      page=1; pageSize=50; search();
+    });
+    $('#prev').addEventListener('click', () => { if (page>1) { page--; search(); } });
+    $('#next').addEventListener('click', () => { page++; search(); });
+    // Debounced instant search on q/kind/cc/adm1/minpop
+    function scheduleSearch(){ clearTimeout(debounceTimer); debounceTimer = setTimeout(()=>{ page=1; search(); }, 250); }
+    $('#q').addEventListener('input', scheduleSearch);
+    $('#kind').addEventListener('change', scheduleSearch);
+    $('#cc').addEventListener('input', scheduleSearch);
+    $('#adm1').addEventListener('input', scheduleSearch);
+    $('#minpop').addEventListener('input', scheduleSearch);
+    $('#pageSizeSel').addEventListener('change', () => { pageSize = parseInt(document.getElementById('pageSizeSel').value, 10) || 50; page = 1; search(); });
+    // Clickable sort headers
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const k = th.getAttribute('data-sort');
+        const cur = document.getElementById('sort').value;
+        if (cur === k) {
+          const d = document.getElementById('dir');
+          d.value = (d.value === 'asc') ? 'desc' : 'asc';
+        } else {
+          document.getElementById('sort').value = k;
+          document.getElementById('dir').value = (k === 'name' ? 'asc' : 'desc');
+        }
+        page = 1; search();
+      });
+    });
+    $('#dlCsv').addEventListener('click', (e) => { e.preventDefault(); const q = buildQuery(); window.open('/api/gazetteer/places?' + q + '&format=csv','_blank'); });
+    $('#dlNdjson').addEventListener('click', (e) => { e.preventDefault(); const q = buildQuery(); window.open('/api/gazetteer/places?' + q + '&format=ndjson','_blank'); });
+    $('#resolveBtn').addEventListener('click', async () => {
+      const q = $('#resolvePhrase').value.trim();
+      const url = $('#resolveUrl').value.trim();
+      if (!q) { $('#resolveResults').textContent = 'Enter a phrase'; return; }
+      const r = await fetch('/api/gazetteer/resolve?q=' + encodeURIComponent(q) + (url?('&url='+encodeURIComponent(url)):'') );
+      if (!r.ok) { $('#resolveResults').textContent = 'Error'; return; }
+      const items = await r.json();
+      $('#resolveResults').innerHTML = items.map(i => `${escapeHtml(i.name)} <span class="pill">${i.kind}</span> <span class="meta">${i.country_code||''} · score ${i.score.toFixed(2)}</span>`).join('<br/>') || 'No candidates';
+    });
+    resultsEl.addEventListener('click', (e) => {
+      const a = e.target.closest('a.show');
+      if (!a) return;
+      e.preventDefault();
+      const id = a.getAttribute('data-id');
+      showDetail(id);
+    });
+
+    // Initialize from URL query if present
+    (function initFromUrl(){
+      const u = new URL(window.location.href);
+      const get = k => u.searchParams.get(k);
+      if (get('q')) $('#q').value = get('q');
+      if (get('kind')) $('#kind').value = get('kind');
+      if (get('cc')) $('#cc').value = get('cc');
+      if (get('adm1')) $('#adm1').value = get('adm1');
+      if (get('minpop')) $('#minpop').value = get('minpop');
+      if (get('sort')) $('#sort').value = get('sort');
+      if (get('dir')) $('#dir').value = get('dir');
+      if (get('page')) page = Math.max(1, parseInt(get('page'), 10) || 1);
+      if (get('pageSize')) { pageSize = Math.max(1, parseInt(get('pageSize'), 10) || 50); $('#pageSizeSel').value = String(pageSize); }
+    })();
+    fetchSummary();
+    search();
+  </script>
+</body>
+</html>
