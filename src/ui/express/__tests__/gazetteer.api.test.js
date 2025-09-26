@@ -68,7 +68,7 @@ function seedMinimalGazetteer(dbPath) {
   db.db.prepare(`INSERT OR IGNORE INTO article_places(article_url, place, place_kind, method, source, offset_start, offset_end, context, first_seen_at) VALUES (?,?,?,?,?,?,?,?,datetime('now'))`)
     .run(artUrl, 'Toronto', 'city', 'gazetteer', 'title', null, null, null);
   // Hub page
-  db.db.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?,?,?,?,datetime('now'),datetime('now'),?, ?, ?)`).run('example.com', 'https://example.com/ca/ontario/toronto/', 'toronto', 'Toronto hub', 50, 20, '{}');
+  db.db.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?,?,?,?,?,?,?, ?, datetime('now'),datetime('now'),?, ?, ?)`).run('example.com', 'https://example.com/ca/ontario/toronto/', 'toronto', 'city', null, null, null, 'Toronto hub', 50, 20, '{}');
   db.close();
 }
 

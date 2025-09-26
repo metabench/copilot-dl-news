@@ -66,5 +66,18 @@ describe('GUI server API', () => {
     expect(args).toContain('--sitemap-only');
     expect(args).toContain('--sitemap-max=123');
     expect(args).not.toContain('--no-sitemap');
+    await request(app).post('/api/stop');
+  });
+
+  test('forwards crawlType to crawler CLI', async () => {
+    const app = createApp({ runner: makeFakeRunner(['ok'], 0, 10) });
+    const res = await request(app)
+      .post('/api/crawl')
+      .send({ startUrl: 'https://example.com', crawlType: 'intelligent' });
+    expect(res.statusCode).toBe(202);
+    const args = res.body.args || [];
+    expect(args).toContain('--crawl-type=intelligent');
+    expect(args.some((a) => a.startsWith('--mode'))).toBe(false);
+    await request(app).post('/api/stop');
   });
 });

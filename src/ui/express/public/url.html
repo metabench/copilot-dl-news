@@ -28,6 +28,16 @@
     <h1>URL Details</h1>
     <div id="hdr" class="muted">Loading…</div>
     <div id="badges" class="badges" style="display:none"></div>
+    <div class="muted" id="hintLegend" style="font-size:12px; margin:4px 0 10px; display:flex; gap:8px; align-items:center">
+      <span>Hint legend:</span>
+      <span class="badge badge-article">Article</span>
+      <span class="badge badge-nav">Nav/Hub</span>
+      <span class="badge badge-other">Other</span>
+      <span>Confidence = certainty (0–100%)</span>
+    </div>
+    <div style="font-size:13px; color:#666; margin-bottom:8px;">
+      <a href="/">Crawler</a> · <a href="/queues/ssr">Queues</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
+    </div>
   <div id="urlAnalysis" style="margin:10px 0"></div>
   <div id="article"></div>
     <h3 style="margin-top:20px">Downloads</h3>
@@ -65,6 +75,18 @@
         span.className = `badge badge-${cls}`;
         span.textContent = cls;
         return span;
+      }
+      function hintBadge(hint, confidence){
+        const span = document.createElement('span');
+        const cls = (hint==='article')?'badge-article': (hint==='nav')?'badge-nav':'badge-other';
+        span.className = `badge ${cls}`;
+        const pct = (typeof confidence==='number') ? ` ${(confidence*100).toFixed(0)}%` : '';
+        span.textContent = `hint: ${hint}${pct}`;
+        return span;
+      }
+      function tryParse(obj){
+        if (!obj) return null; if (typeof obj === 'object') return obj;
+        try { return JSON.parse(obj); } catch { return null; }
       }
       function renderJsonPreview(data){
         if(!data) return '';
@@ -132,6 +154,14 @@
             wc.textContent = `words: ${latest.word_count}`;
             badges.appendChild(wc);
           }
+          // Show combined hint/confidence from article or latest fetch analysis
+          let combined = null;
+          const artCombined = tryParse(j.article?.analysis)?.combined;
+          const fetchCombined = tryParse(latest.analysis)?.combined;
+          combined = artCombined || fetchCombined || null;
+          if (combined && combined.hint) {
+            badges.appendChild(hintBadge(combined.hint, combined.confidence));
+          }
         } else {
           badges.style.display = 'none';
         }
@@ -141,7 +171,17 @@
           const tr = document.createElement('tr');
           const enc = f.content_encoding ? 'yes' : 'no';
           const disk = f.file_size != null ? fmtBytes(f.file_size) : '';
-          const analysisHint = f.analysis ? ' • analysis' : '';
+          // Inline hint from analysis if available
+          let inlineHint = '';
+          try {
+            const an = tryParse(f.analysis);
+            if (an && an.combined && an.combined.hint) {
+              const pct = (typeof an.combined.confidence==='number') ? ` ${(an.combined.confidence*100).toFixed(0)}%` : '';
+              inlineHint = ` • ${an.combined.hint}${pct}`;
+            } else if (an) {
+              inlineHint = ' • analysis';
+            }
+          } catch {}
           tr.innerHTML = `
             <td class="nowrap">${fmt(f.fetched_at)}</td>
             <td>${fmt(f.http_status)}</td>
@@ -156,7 +196,7 @@
             <td>${fmt(f.classification)}</td>
             <td>${fmt(f.nav_links_count)}</td>
             <td>${fmt(f.article_links_count)}</td>
-            <td>${fmt(f.word_count)}${analysisHint}</td>
+            <td>${fmt(f.word_count)}${inlineHint}</td>
           `;
           tb.appendChild(tr);
           if (f.analysis) {

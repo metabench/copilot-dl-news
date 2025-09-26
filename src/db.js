@@ -27,6 +27,16 @@ class NewsDatabase {
   this._ensurePageCategoryStmt = this.db.prepare(`INSERT OR IGNORE INTO page_categories(name, description) VALUES (?, NULL)`);
   this._getPageCategoryIdStmt = this.db.prepare(`SELECT id FROM page_categories WHERE name = ?`);
   this._mapPageCategoryStmt = this.db.prepare(`INSERT OR IGNORE INTO page_category_map(fetch_id, category_id) VALUES (?, ?)`);
+
+  this._getSettingStmt = this.db.prepare(`SELECT value FROM crawler_settings WHERE key = ?`);
+  this._setSettingStmt = this.db.prepare(`INSERT INTO crawler_settings(key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`);
+  this._countActiveTasksByJobStmt = this.db.prepare(`SELECT COUNT(*) AS c FROM crawl_tasks WHERE job_id = ? AND status NOT IN ('completed','failed')`);
+  this._selectOldActiveTasksStmt = this.db.prepare(`SELECT id FROM crawl_tasks WHERE job_id = ? AND status NOT IN ('completed','failed') ORDER BY created_at ASC, id ASC LIMIT ?`);
+  this._deleteTaskByIdStmt = this.db.prepare(`DELETE FROM crawl_tasks WHERE id = ?`);
+  this._insertTaskStmt = this.db.prepare(`INSERT INTO crawl_tasks (job_id, host, kind, status, url, payload, note, created_at, updated_at) VALUES (@job_id, @host, @kind, @status, @url, @payload, @note, datetime('now'), datetime('now'))`);
+  this._updateTaskStatusStmt = this.db.prepare(`UPDATE crawl_tasks SET status = @status, note = COALESCE(@note, note), updated_at = datetime('now') WHERE id = @id`);
+  this._clearTasksByJobStmt = this.db.prepare(`DELETE FROM crawl_tasks WHERE job_id = ?`);
+  this._getTaskByIdStmt = this.db.prepare(`SELECT id, job_id AS jobId, host, kind, status, url, payload, note, created_at AS createdAt, updated_at AS updatedAt FROM crawl_tasks WHERE id = ?`);
   }
 
   _init() {
@@ -85,6 +95,7 @@ class NewsDatabase {
         analysis TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_domains_host ON domains(host);
+      CREATE INDEX IF NOT EXISTS idx_domains_last_seen ON domains(last_seen_at);
 
       CREATE TABLE IF NOT EXISTS domain_categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,6 +200,22 @@ class NewsDatabase {
       try { this.db.exec(`CREATE INDEX IF NOT EXISTS idx_urls_host ON urls(host);`); } catch (_) {}
     } catch (_) { /* ignore migration errors */ }
 
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS url_aliases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        alias_url TEXT NOT NULL,
+        classification TEXT,
+        reason TEXT,
+        "exists" INTEGER,
+        checked_at TEXT NOT NULL,
+        metadata TEXT,
+        UNIQUE(url, alias_url)
+      );
+      CREATE INDEX IF NOT EXISTS idx_url_aliases_url ON url_aliases(url);
+      CREATE INDEX IF NOT EXISTS idx_url_aliases_alias ON url_aliases(alias_url);
+    `);
+
     // Category tables (normalized)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS url_categories (
@@ -225,6 +252,10 @@ class NewsDatabase {
         host TEXT NOT NULL,
         url TEXT NOT NULL UNIQUE,
         place_slug TEXT,
+        place_kind TEXT,
+        topic_slug TEXT,
+        topic_label TEXT,
+        topic_kind TEXT,
         title TEXT,
         first_seen_at TEXT,
         last_seen_at TEXT,
@@ -234,7 +265,22 @@ class NewsDatabase {
       );
       CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host);
       CREATE INDEX IF NOT EXISTS idx_place_hubs_place ON place_hubs(place_slug);
+      CREATE INDEX IF NOT EXISTS idx_place_hubs_topic ON place_hubs(topic_slug);
     `);
+
+    try {
+      const placeHubCols = this.db.prepare('PRAGMA table_info(place_hubs)').all().map(r => r.name);
+      const ensurePlaceHubCol = (name, ddl) => {
+        if (!placeHubCols.includes(name)) {
+          this.db.exec(`ALTER TABLE place_hubs ADD COLUMN ${name} ${ddl}`);
+          placeHubCols.push(name);
+        }
+      };
+      ensurePlaceHubCol('place_kind', 'TEXT');
+      ensurePlaceHubCol('topic_slug', 'TEXT');
+      ensurePlaceHubCol('topic_label', 'TEXT');
+      ensurePlaceHubCol('topic_kind', 'TEXT');
+    } catch (_) {}
 
     // Index of places mentioned in articles (normalized for fast lookups)
     this.db.exec(`
@@ -253,6 +299,78 @@ class NewsDatabase {
       );
       CREATE INDEX IF NOT EXISTS idx_article_places_place ON article_places(place);
       CREATE INDEX IF NOT EXISTS idx_article_places_url ON article_places(article_url);
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS crawl_jobs (
+        id TEXT PRIMARY KEY,
+        url TEXT,
+        args TEXT,
+        pid INTEGER,
+        started_at TEXT,
+        ended_at TEXT,
+        status TEXT
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS crawler_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS crawl_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT NOT NULL,
+        host TEXT,
+        kind TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        url TEXT,
+        payload TEXT,
+        note TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
+      );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS analysis_runs (
+        id TEXT PRIMARY KEY,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        status TEXT NOT NULL,
+        stage TEXT,
+        analysis_version INTEGER,
+        page_limit INTEGER,
+        domain_limit INTEGER,
+        skip_pages INTEGER,
+        skip_domains INTEGER,
+        dry_run INTEGER,
+        verbose INTEGER,
+        summary TEXT,
+        last_progress TEXT,
+        error TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_analysis_runs_started_at ON analysis_runs(started_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_analysis_runs_status ON analysis_runs(status, started_at DESC);
+
+      CREATE TABLE IF NOT EXISTS analysis_run_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id TEXT NOT NULL,
+        ts TEXT NOT NULL,
+        stage TEXT,
+        message TEXT,
+        details TEXT,
+        FOREIGN KEY(run_id) REFERENCES analysis_runs(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_analysis_run_events_run_ts ON analysis_run_events(run_id, ts DESC);
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_crawl_tasks_job_status ON crawl_tasks(job_id, status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_crawl_tasks_status ON crawl_tasks(status, created_at DESC);
     `);
 
   // Gazetteer tables ensured via shared helper
@@ -321,12 +439,15 @@ class NewsDatabase {
       CREATE INDEX IF NOT EXISTS idx_articles_crawled_at ON articles(crawled_at);
       CREATE INDEX IF NOT EXISTS idx_articles_canonical ON articles(canonical_url);
       CREATE INDEX IF NOT EXISTS idx_articles_sha ON articles(html_sha256);
+      CREATE INDEX IF NOT EXISTS idx_articles_analysis_progress
+        ON articles((analysis IS NULL), CAST(json_extract(analysis, '$.analysis_version') AS INTEGER));
     `);
 
     // Speed up lookups of the latest fetch per URL
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_fetches_url_fetched ON fetches(url, fetched_at);
       CREATE INDEX IF NOT EXISTS idx_fetches_url_req_started ON fetches(url, request_started_at);
+      CREATE INDEX IF NOT EXISTS idx_latest_fetch_ts_desc ON latest_fetch(ts DESC, url);
     `);
 
     // Trigger to maintain latest_fetch on insert
@@ -497,6 +618,24 @@ class NewsDatabase {
       INSERT INTO errors(url, host, kind, code, message, details, at)
       VALUES (@url, @host, @kind, @code, @message, @details, @at)
     `);
+
+    this.insertUrlMinimalStmt = this.db.prepare(`
+      INSERT OR IGNORE INTO urls (url, host, created_at, last_seen_at)
+      VALUES (?, ?, datetime('now'), datetime('now'))
+    `);
+    this.touchUrlStmt = this.db.prepare(`
+      UPDATE urls SET last_seen_at = datetime('now') WHERE url = ?
+    `);
+    this.insertUrlAliasStmt = this.db.prepare(`
+      INSERT INTO url_aliases (url, alias_url, classification, reason, "exists", checked_at, metadata)
+      VALUES (@url, @alias_url, @classification, @reason, @exists, @checked_at, @metadata)
+      ON CONFLICT(url, alias_url) DO UPDATE SET
+        classification = excluded.classification,
+        reason = excluded.reason,
+        "exists" = excluded."exists",
+        checked_at = excluded.checked_at,
+        metadata = excluded.metadata
+    `);
   }
 
   upsertArticle(article) {
@@ -548,6 +687,57 @@ class NewsDatabase {
   try { this.db.prepare(`UPDATE urls SET host = ? WHERE url = ?`).run(u.hostname.toLowerCase(), withDefaults.url); } catch (_) {}
     } catch (_) {}
     return res;
+  }
+
+  _ensureUrlRow(url) {
+    if (!url) return;
+    try {
+      const u = new URL(url);
+      const host = (u.hostname || '').toLowerCase() || null;
+      this.insertUrlMinimalStmt.run(url, host);
+    } catch (_) {
+      try { this.insertUrlMinimalStmt.run(url, null); } catch (_) {}
+    }
+    try { this.touchUrlStmt.run(url); } catch (_) {}
+  }
+
+  hasUrl(url) {
+    if (!url) return false;
+    try {
+      const row = this._getUrlIdStmt.get(url);
+      if (row && row.id != null) return true;
+    } catch (_) {}
+    try {
+      const f = this.db.prepare('SELECT 1 FROM fetches WHERE url = ? LIMIT 1').get(url);
+      if (f) return true;
+    } catch (_) {}
+    try {
+      const a = this.db.prepare('SELECT 1 FROM articles WHERE url = ? LIMIT 1').get(url);
+      if (a) return true;
+    } catch (_) {}
+    return false;
+  }
+
+  recordUrlAlias({ url, aliasUrl, classification = null, reason = null, exists = false, metadata = null }) {
+    if (!url || !aliasUrl) return false;
+    const nowIso = new Date().toISOString();
+    this._ensureUrlRow(url);
+    this._ensureUrlRow(aliasUrl);
+    try {
+      const payload = {
+        url,
+        alias_url: aliasUrl,
+        classification,
+        reason,
+        exists: exists ? 1 : 0,
+        checked_at: nowIso,
+        metadata: metadata ? JSON.stringify(metadata) : null
+      };
+      this.insertUrlAliasStmt.run(payload);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   getFetchesByUrl(url, limit = 100) {
@@ -676,6 +866,190 @@ class NewsDatabase {
     if (!cid) return null;
     this._mapPageCategoryStmt.run(fetchId, cid);
     return { fetch_id: fetchId, category_id: cid };
+  }
+
+  _safeParseJson(value) {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); } catch (_) { return value; }
+  }
+
+  _hydrateTask(row) {
+    if (!row) return null;
+    return {
+      id: row.id,
+      jobId: row.jobId,
+      host: row.host,
+      kind: row.kind,
+      status: row.status,
+      url: row.url,
+      payload: this._safeParseJson(row.payload),
+      note: row.note,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
+    };
+  }
+
+  getSetting(key, fallback = null) {
+    if (!key) return fallback;
+    try {
+      const row = this._getSettingStmt.get(key);
+      return row && row.value !== undefined ? row.value : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  setSetting(key, value) {
+    if (!key) return false;
+    try {
+      this._setSettingStmt.run(key, value != null ? String(value) : null);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  getTaskQueueLimit(defaultLimit = 100) {
+    const fallback = Math.max(10, parseInt(defaultLimit, 10) || 100);
+    try {
+      const row = this._getSettingStmt.get('taskQueueLimit');
+      if (!row || row.value == null) {
+        this._setSettingStmt.run('taskQueueLimit', String(fallback));
+        return fallback;
+      }
+      const n = parseInt(row.value, 10);
+      if (!Number.isFinite(n)) return fallback;
+      const safe = Math.max(10, n);
+      if (safe !== n) {
+        this._setSettingStmt.run('taskQueueLimit', String(safe));
+      }
+      return safe;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  setTaskQueueLimit(limit) {
+    const safe = Math.max(10, parseInt(limit, 10) || 10);
+    this._setSettingStmt.run('taskQueueLimit', String(safe));
+    return safe;
+  }
+
+  getActiveTaskCount(jobId) {
+    if (!jobId) return 0;
+    try {
+      const row = this._countActiveTasksByJobStmt.get(jobId);
+      return row?.c || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  _pruneActiveTasks(jobId, overflow) {
+    if (!jobId || !overflow || overflow <= 0) return;
+    try {
+      const victims = this._selectOldActiveTasksStmt.all(jobId, overflow);
+      for (const v of victims) {
+        try { this._deleteTaskByIdStmt.run(v.id); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  createTask(task) {
+    if (!task || !task.jobId) throw new Error('createTask requires jobId');
+    const limit = this.getTaskQueueLimit();
+    const record = {
+      job_id: task.jobId,
+      host: task.host || (() => {
+        try { if (task.url) return new URL(task.url).hostname.toLowerCase(); } catch (_) {}
+        return null;
+      })(),
+      kind: task.kind || null,
+      status: task.status || 'pending',
+      url: task.url || null,
+      payload: (() => {
+        if (task.payload === null || task.payload === undefined) return null;
+        if (typeof task.payload === 'string') return task.payload;
+        try { return JSON.stringify(task.payload); } catch (_) { return String(task.payload); }
+      })(),
+      note: task.note || null
+    };
+
+    const runInsert = this.db.transaction((data) => {
+      const activeCount = this._countActiveTasksByJobStmt.get(data.job_id)?.c || 0;
+      const overflow = Math.max(0, (activeCount + 1) - limit);
+      if (overflow > 0) {
+        this._pruneActiveTasks(data.job_id, overflow);
+      }
+      const info = this._insertTaskStmt.run(data);
+      return info.lastInsertRowid;
+    });
+
+    const id = runInsert(record);
+    return this.getTaskById(id);
+  }
+
+  getTaskById(id) {
+    if (!id) return null;
+    try {
+      const row = this._getTaskByIdStmt.get(id);
+      return this._hydrateTask(row);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  listTasks({ jobId = null, statuses = null, limit = 200 } = {}) {
+    const clauses = [];
+    const params = [];
+    if (jobId) {
+      clauses.push('job_id = ?');
+      params.push(jobId);
+    }
+    if (Array.isArray(statuses) && statuses.length) {
+      const placeholders = statuses.map(() => '?').join(',');
+      clauses.push(`status IN (${placeholders})`);
+      params.push(...statuses);
+    }
+    const safeLimit = Math.max(1, Math.min(1000, parseInt(limit, 10) || 200));
+    const sql = `
+      SELECT id, job_id AS jobId, host, kind, status, url, payload, note,
+             created_at AS createdAt, updated_at AS updatedAt
+      FROM crawl_tasks
+      ${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `;
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...params, safeLimit);
+    return rows.map((row) => this._hydrateTask(row));
+  }
+
+  getTasksForJob(jobId, options = {}) {
+    return this.listTasks({ jobId, ...options });
+  }
+
+  updateTaskStatus(id, status, note = null) {
+    if (!id || !status) return false;
+    try {
+      const info = this._updateTaskStatusStmt.run({ id, status, note });
+      return (info?.changes || 0) > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  clearTasksForJob(jobId, { statuses = null } = {}) {
+    if (!jobId) return 0;
+    if (Array.isArray(statuses) && statuses.length) {
+      const placeholders = statuses.map(() => '?').join(',');
+      const stmt = this.db.prepare(`DELETE FROM crawl_tasks WHERE job_id = ? AND status IN (${placeholders})`);
+      const info = stmt.run(jobId, ...statuses);
+      return info?.changes || 0;
+    }
+    const info = this._clearTasksByJobStmt.run(jobId);
+    return info?.changes || 0;
   }
 
   insertError(err) {

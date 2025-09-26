@@ -14,6 +14,13 @@ A focused crawler for news sites: detects navigation, finds articles, and saves 
   - Even token spacing across the minute; small pacer jitter (defaults 25–50ms)
 - Networking safety: request timeout (default 10s), keep-alive agents
 - Live UI (Express): streaming logs (SSE), real-time metrics (req/s, dl/s ≤15s avg, MB/s), ETA, recent errors and domains, per-host “RATE LIMITED” badges
+- Live UI (Express): streaming logs (SSE), real-time metrics (req/s, dl/s ≤15s avg, MB/s), ETA, recent errors and domains, per-host “RATE LIMITED” badges
+- Multi-job capable UI (opt-in via `UI_ALLOW_MULTI_JOBS=1`) with job-scoped controls and `/events?job=` filtering
+- Queue event tracking (enqueued / dequeued / retry / drop) with real-time `queue` SSE events & SSR queue pages
+- Intelligent crawl (planner) that seeds hubs, detects expectation gaps (Problems) and achievements (Milestones)
+- Problems & Milestones history pages with keyset pagination
+- Crawl type presets (basic / sitemap-only / basic-with-sitemap) via `/api/crawl-types`
+- Gazetteer-enhanced page analysis (places + hub detection) & per-place hub inference
 - Observability: Prometheus `/metrics`, health endpoints, and a system health strip (CPU/memory and SQLite WAL info)
 
 ## Installation
@@ -70,6 +77,20 @@ node src/crawl.js https://www.theguardian.com --depth=1 --concurrency=4 --max-qu
 - `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck “Use sitemap”)
 - `--sitemap-only`      Crawl only sitemap URLs (don’t seed start URL)
 - `--sitemap-max=N`     Cap number of sitemap URLs (default: 5000). In the GUI, this mirrors Max Pages.
+- `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck “Use sitemap”)
+- `--sitemap-only`      Crawl only sitemap URLs (don’t seed start URL)
+- `--sitemap-max=N`     Cap number of sitemap URLs (default: 5000). In the GUI, this mirrors Max Pages.
+- `--crawl-type=<name>`  Pick a crawl preset (`basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`). Planner features activate automatically when the type starts with `intelligent`.
+- Intelligent crawl flags (forwarded only when provided):
+  - `--hub-max-pages=N`      Limit pages considered per detected hub
+  - `--hub-max-days=N`       Limit age (days) for hub seeding
+  - `--int-max-seeds=N`      Cap initial hub seeds (default internal 50)
+  - `--int-target-hosts=host1,host2` Activate planner only if start host matches suffix
+  - `--planner-verbosity=0..3` Planner diagnostic verbosity
+- Freshness / refetch policy:
+  - `--refetch-if-older-than=1d` Global fallback freshness window
+  - `--refetch-article-if-older-than=7d` Article-specific window
+  - `--refetch-hub-if-older-than=1h` Hub/navigation page window (kept fresh more aggressively)
 - Networking & pacing:
   - `--request-timeout-ms=MS`  Per-request timeout (default: 10000)
   - `--pacer-jitter-min-ms=MS` Small jitter min between paced tokens (default: 25)
@@ -89,15 +110,17 @@ A minimal dashboard to run and monitor crawls locally.
 npm run gui
 ```
 
-2) Open http://localhost:3000
+2) Watch the console for the `GUI server listening on http://localhost:<port>` message and open that URL. The server auto-selects a high-numbered free port (defaults to the 41000+ range) unless you override it with `PORT`.
 
 What you’ll see:
 
 - Start/Stop/Pause/Resume controls; sitemap toggles
+- Start/Stop/Pause/Resume controls; sitemap toggles & crawl type selector
 - Live logs via Server-Sent Events (SSE), unbuffered with heartbeats
 - Metrics: req/s, dl/s (≤15s avg), MB/s; queue sparkline; ETA
 - Badges: robots/sitemap status, global and per-host rate‑limited indicators
 - Panels: Recent Errors, Recent Domains; URLs and Domain pages with details
+- Panels: Recent Errors, Recent Domains; URLs and Domain pages with details; Queues, Problems, Milestones, Gazetteer
 - Health strip: DB size, disk free, CPU %, memory (RSS), SQLite journal mode and WAL autocheckpoint
 
 #### Sitemap options
@@ -108,6 +131,67 @@ What you’ll see:
 Notes:
 - In the GUI, the sitemap URL cap follows Max Pages automatically (no separate field). The crawler won’t enqueue more sitemap URLs than Max Pages.
 - By default, sitemap discovery is ON. Disable it by unchecking “Use sitemap” (equivalent to `--no-sitemap`).
+- Crawl type presets auto-adjust sitemap flags; manual checkboxes still respected if you change them after selecting a preset.
+
+### Intelligent crawl & diagnostics
+
+When run with `--crawl-type=intelligent` (or selecting the Intelligent crawl type in the UI), a lightweight planner:
+
+- Seeds candidate hub pages (sections, countries, topics) early to accelerate coverage
+- Emits `problem` events (expectation gaps: missing hubs, weak classification patterns, etc.)
+- Emits `milestone` events (positive learnings: patterns learned, hubs seeded, classifier calibrated)
+
+These are streamed over SSE (`event: problem` / `event: milestone`) and persisted for SSR history pages if the DB is writable.
+
+### Problems & Milestones pages
+
+- `/problems/ssr` newest-first list with filters (`job`, `kind`, `scope`) & cursor pagination (`before`, `after`).
+- `/milestones/ssr` similar layout for achievements.
+- Both use keyset pagination (no OFFSET) for scalability.
+
+### Queue events
+
+Structured crawler output lines prefixed with `QUEUE ` are relayed as SSE `queue` events and persisted:
+
+- Actions: `enqueued`, `dequeued`, `retry`, `drop` (with reason: `max-depth`, `off-domain`, `robots-disallow`, `visited`, `duplicate`, `overflow`, `bad-url`, `retriable-error` etc.)
+- SSR pages: `/queues/ssr` (list) and `/queues/:id/ssr` (details with filters & cursors).
+
+### Freshness policy (refetch windows)
+
+Refetch logic allows different freshness for articles vs hubs/navigation pages, reducing bandwidth:
+
+- Global fallback `--refetch-if-older-than`
+- Article-specific `--refetch-article-if-older-than`
+- Hub/navigation-specific `--refetch-hub-if-older-than`
+
+Effective decision combines classification heuristics + provided windows. If no specific window matches, the global fallback (if any) is used.
+
+### Multi-job mode
+
+By default only one active crawl is allowed. Set `UI_ALLOW_MULTI_JOBS=1` before starting the UI server to permit multiple concurrent jobs. SSE `/events?job=<id>` filters events for a specific job. Control endpoints require `jobId` when multiple jobs are running.
+
+### Crawl types
+
+The server seeds a small catalog (`basic`, `sitemap-only`, `basic-with-sitemap`) exposed via `GET /api/crawl-types`. Selecting a type in the UI sets baseline flags; manual overrides (checkboxes / inputs) still apply after selection.
+
+### Page analysis & gazetteer
+
+Run the canonical analysis script (places extraction + hub detection):
+
+```bash
+node src/tools/analyse-pages.js --db=./data/news.db --analysis-version=1 --limit=5000
+```
+
+Run the combined analysis + milestone refresh (pages + domains + milestone backfill):
+
+```bash
+npm run analysis:run
+# or: node src/tools/analysis-run.js --db=./data/news.db --analysis-version=1
+```
+
+The runner keeps page/domain analysis current and inserts any missing milestone prerequisites (`downloads-1k`, `depth2-coverage`, `articles-identified-*`) under job id `analysis-run`.
+
+The legacy `src/analyse-pages.js` now prints a deprecation warning and forwards here; it will be removed in a future release.
 
 ### Programmatic Usage
 
@@ -134,6 +218,11 @@ crawler.crawl()
 - `dbPath`: Path to SQLite database file (default: './data/news.db')
 - `maxDownloads` / `--max-pages`: Maximum number of pages to download over the network (default: unlimited)
 - `maxAgeMs` / `--max-age`: Freshness window to reuse cached articles without downloading again. Accepts values like `30s`, `10m`, `2h`, `1d`. When provided, the crawler will check the SQLite DB and use it if `crawled_at` is within the window.
+- `maxAgeMs` / `--max-age`: (Legacy) Freshness window to reuse cached articles. For finer control prefer new refetch flags (`--refetch-*`).
+- Refetch windows (SSE/DB-friendly freshness policy):
+  - `refetchIfOlderThan` / `--refetch-if-older-than`
+  - `refetchArticleIfOlderThan` / `--refetch-article-if-older-than`
+  - `refetchHubIfOlderThan` / `--refetch-hub-if-older-than`
 - `requestTimeoutMs`: Per-request timeout in ms (default: 10000)
 - `pacerJitterMinMs`/`pacerJitterMaxMs`: Small jitter added to per-domain pacing (defaults 25–50ms)
 
@@ -248,14 +337,18 @@ When `--concurrency > 1`, the crawler switches to a bounded priority queue sched
 ## Observability
 
 - GUI exposes: `/urls`, `/url?url=…`, `/domain?host=…`, `/errors`
+- GUI exposes: `/urls`, `/url?url=…`, `/domain?host=…`, `/errors`, `/queues/ssr`, `/problems/ssr`, `/milestones/ssr`, `/gazetteer` (when tables present)
 - Health endpoints:
   - `/health`: lightweight status
   - `/api/system-health`: DB size, disk free, CPU, memory, SQLite journal mode and `wal_autocheckpoint`
+- Prometheus metrics at `/metrics` (text format), including:
 - Prometheus metrics at `/metrics` (text format), including:
   - `crawler_requests_total`, `crawler_downloads_total`, `crawler_errors_total`
   - `crawler_requests_per_second`, `crawler_downloads_per_second`, `crawler_bytes_per_second`
   - `crawler_queue_size`, `crawler_error_rate_per_min`, `crawler_running`, `crawler_paused`
   - `crawler_cache_hit_ratio` (placeholder; UI shows rolling 1m/5m cache gauges)
+  - Request timing logs (stdout only): `[req] METHOD URL -> STATUS D.ms`
+  - Planner diagnostics surface as problem/milestone counters (internal aggregation + SSE stream consumers)
 
 ## Navigation Detection
 
@@ -309,6 +402,9 @@ This deletes the SQLite database and related working files.
 - `robots-parser`: robots.txt parser for compliance checking
 - `express`: GUI server
  - `fast-xml-parser`: Sitemap XML parser (optional; a simple regex fallback is used if unavailable)
+- `express`: GUI server
+- `fast-xml-parser`: Sitemap XML parser (optional; a simple regex fallback is used if unavailable)
+- `jsdom` + `@mozilla/readability`: Article text & word count inference (page analysis)
 
 ## Domain analysis (news-site heuristic)
 

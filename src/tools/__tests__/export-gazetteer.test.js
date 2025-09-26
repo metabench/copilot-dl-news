@@ -5,7 +5,7 @@ const { scrubExtra } = require('../export-gazetteer');
 const { spawnSync } = require('child_process');
 
 describe('export-gazetteer CLI', () => {
-  const tmpDir = path.join(process.cwd(), 'tmp-test');
+  const tmpDir = path.join(process.cwd(), 'tmp-export-test');
   const dbPath = path.join(tmpDir, 'export.db');
   const outPath = path.join(tmpDir, 'export.ndjson');
   const script = path.join(process.cwd(), 'src', 'tools', 'export-gazetteer.js');
@@ -24,6 +24,8 @@ describe('export-gazetteer CLI', () => {
       db.close();
     }
   });
+
+  afterAll(() => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {} });
 
   it('scrubExtra removes shapes keys', () => {
     const cleaned = scrubExtra({ wkt: 'POINT(0 0)', geometry: { type: 'Point' }, notes: 'ok', arr: Array(60).fill(1) });

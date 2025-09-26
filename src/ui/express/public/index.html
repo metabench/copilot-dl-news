@@ -18,6 +18,24 @@
   .resizer-h { height: 6px; cursor: row-resize; background: linear-gradient(to bottom, #e5e7eb, #cbd5e1); border:1px solid #cbd5e1; border-top: none; }
   .resizing { user-select: none; }
   .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 1px solid rgba(0,0,0,0.08);
+        background: rgba(0,0,0,0.04);
+      }
+      @media (prefers-color-scheme: dark) {
+        .badge { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
+      }
+      .badge.badge-ok { color: #2f855a; }
+      .badge.badge-warn { color: #b7791f; }
+      .badge.badge-bad { color: #c53030; }
       .controls-bar {
         background: #f5f7fa;
         border: 1px solid #e5e7eb;
@@ -56,7 +74,7 @@
   </head>
   <body>
     <div style="font-size:13px; color:#666; margin-bottom:8px;">
-      <a href="/">Crawler</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
+  <a href="/">Crawler</a> · <a href="/queues/ssr">Queues</a> · <a href="/milestones/ssr">Milestones</a> · <a href="/problems/ssr">Problems</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
     </div>
     <h1>News Crawler</h1>
     <p style="margin-top:-8px; margin-bottom:14px; color:#555; font-size:13px;">
@@ -84,8 +102,16 @@
           <input id="maxPages" type="number" />
         </div>
         <div>
-          <label>Re-download cached pages if older than</label>
+          <label>Refetch window (global)</label>
           <input id="refetchIfOlderThan" type="text" placeholder="e.g., 30m or 6h" />
+        </div>
+        <div>
+          <label>Refetch window — articles</label>
+          <input id="refetchArticleIfOlderThan" type="text" placeholder="e.g., 28d (overrides global)" />
+        </div>
+        <div>
+          <label>Refetch window — hubs/nav</label>
+          <input id="refetchHubIfOlderThan" type="text" placeholder="e.g., 2d (overrides global)" />
         </div>
         <div>
           <label>Concurrency</label>
@@ -94,6 +120,12 @@
         <div>
           <label>Timeout (ms)</label>
           <input id="requestTimeoutMs" type="number" placeholder="10000" />
+        </div>
+        <div>
+          <label>Crawl Type</label>
+          <select id="crawlType">
+            <option value="">Loading…</option>
+          </select>
         </div>
         <div>
           <label>Pacer jitter (ms)</label>
@@ -116,6 +148,11 @@
           <button id="stopBtn">Stop</button>
           <button id="pauseBtn">Pause</button>
           <button id="resumeBtn" disabled>Resume</button>
+          <button id="analysisBtn" title="Run offline analysis pipeline">Perform Analysis</button>
+          <span style="flex:1 1 260px; display:flex; flex-direction:column; gap:2px; min-height:22px;">
+            <span id="analysisLink" class="muted" style="font-size:12px;"></span>
+            <span id="analysisStatus" class="muted" style="font-size:11px;"></span>
+          </span>
           <button id="themeBtn" title="Toggle dark mode">Dark</button>
         </div>
       </div>
@@ -169,6 +206,12 @@
       <div id="errorsList" class="muted">Loading…</div>
     </div>
   </details>
+  <details id="secProblems" open style="margin-top:10px;">
+    <summary><strong>Problems (expectations)</strong></summary>
+    <div id="problemsPanel" style="margin-top:6px; font-size:13px;">
+      <div id="problemsList" class="muted">None</div>
+    </div>
+  </details>
   <details id="secDomains" open style="margin-top:10px;">
     <summary><strong>Recent Domains</strong></summary>
     <div id="domains" class="meta" style="font-size:13px; color:#333; margin:6px 0 10px;">Loading…</div>
@@ -189,6 +232,7 @@
   <span id="badgeSitemap" class="muted" style="margin-left:12px;">sitemap: 0 / 0</span>
     <span id="badgeDb" class="muted" style="margin-left:12px;">db: …</span>
     <span id="badgeDisk" class="muted" style="margin-left:12px;">disk: …</span>
+    <span id="badgeConn" class="badge badge-warn" style="margin-left:12px;">SSE: connecting…</span>
   </div>
   <p><a href="/urls">View saved article URLs</a></p>
     <script>
@@ -214,6 +258,9 @@
   const mDomRl = document.getElementById('m_domrl');
   const pauseBtn = document.getElementById('pauseBtn');
   const resumeBtn = document.getElementById('resumeBtn');
+  const analysisBtn = document.getElementById('analysisBtn');
+  const analysisLink = document.getElementById('analysisLink');
+  const analysisStatus = document.getElementById('analysisStatus');
   const domains = document.getElementById('domains');
   const inflightDiv = document.getElementById('inflight');
   const inflightList = document.getElementById('inflightList');
@@ -226,6 +273,7 @@
   const badgeDisk = document.getElementById('badgeDisk');
   const badgeRobots = document.getElementById('badgeRobots');
   const badgeSitemap = document.getElementById('badgeSitemap');
+  const badgeConn = document.getElementById('badgeConn');
   const badgeCpu = document.createElement('span');
   const badgeMem = document.createElement('span');
   const badgeWal = document.createElement('span');
@@ -245,6 +293,7 @@
   let cacheHits = 0;
   // rolling window samples of network and cache (and bytes)
   let trafficSamples = []; // [{t, net, cache, bytes}]
+  let reconnectTimer = null;
       // Restore saved logs height
       (function(){
         const savedH = parseInt(localStorage.getItem('logsH')||'', 10);
@@ -328,6 +377,40 @@
           flushTimer = null;
         }, 200);
       }
+
+      function renderAnalysisLink(url, runId) {
+        if (!analysisLink) return;
+        analysisLink.textContent = '';
+        if (!url) return;
+        const label = document.createElement('span');
+        label.textContent = 'View analysis: ';
+        analysisLink.appendChild(label);
+        const link = document.createElement('a');
+        link.href = url;
+        link.textContent = runId ? runId : url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        analysisLink.appendChild(link);
+      }
+
+      (function initAnalysisLink(){
+        if (!analysisLink) return;
+        try {
+          const savedUrl = localStorage.getItem('analysisLastDetailUrl');
+          const savedId = localStorage.getItem('analysisLastRunId');
+          const savedAt = localStorage.getItem('analysisLastRunAt');
+          if (savedUrl) renderAnalysisLink(savedUrl, savedId);
+          if (savedAt && analysisStatus) {
+            const dt = new Date(parseInt(savedAt, 10));
+            if (!isNaN(dt.getTime())) analysisStatus.textContent = `Last run started ${dt.toLocaleString()}`;
+            else analysisStatus.textContent = 'No analysis runs yet.';
+          } else if (analysisStatus) {
+            analysisStatus.textContent = 'No analysis runs yet.';
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      })();
       function attachHandlers(es) {
         es.addEventListener('log', (e) => {
           try {
@@ -353,6 +436,33 @@
             renderJobs(j);
           } catch (_) {}
         });
+        es.addEventListener('problem', (e) => {
+          try {
+            const p = JSON.parse(e.data);
+            const list = document.getElementById('problemsList');
+            if (!list) return;
+            const ts = new Date().toLocaleTimeString();
+            const kind = p.kind || 'problem';
+            const scope = p.scope ? ` [${p.scope}]` : '';
+            const tgt = p.target ? ` — ${p.target}` : '';
+            const msg = p.message || '';
+            const det = p.details ? ` · details: ${((typeof p.details === 'string') ? p.details : JSON.stringify(p.details)).slice(0, 200)}` : '';
+            const line = `<div><span class="muted">${ts}</span> <strong>${kind}</strong>${scope}${tgt} — ${msg}${det}</div>`;
+            if (list.classList.contains('muted')) list.classList.remove('muted');
+            if (list.textContent === 'None') list.textContent = '';
+            // Prepend newest on top
+            try {
+              const div = document.createElement('div');
+              div.innerHTML = line;
+              if (list.firstChild) list.insertBefore(div.firstChild, list.firstChild);
+              else list.appendChild(div.firstChild);
+              // Cap to 200 entries to avoid runaway
+              let count = 0; const max = 200;
+              const els = Array.from(list.children);
+              for (const el of els) { count++; if (count > max) el.remove(); }
+            } catch(_) { list.innerHTML = line + (list.innerHTML||''); }
+          } catch(_) {}
+        });
       // Throttle progress UI to ~5 FPS
       let lastProgressAt = 0;
   es.addEventListener('progress', (e) => {
@@ -371,7 +481,8 @@
                 window.__lastProgressLogAt = now;
               }
             } catch(_) {}
-          progress.textContent = `visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
+          const stageLabel = p.stage ? `${p.stage} · ` : '';
+          progress.textContent = `${stageLabel}visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
           // toggle pause/resume buttons
           if (typeof p.paused === 'boolean') {
             pauseBtn.disabled = !!p.paused;
@@ -668,8 +779,34 @@
         evt = new EventSource(`/events?logs=${withLogs ? '1' : '0'}`);
         try { window.evt = evt; } catch(_) {}
         try {
-          evt.onopen = () => { try { window.__sse_open = true; } catch(_) {} };
-          evt.onerror = () => { try { window.__sse_open = false; } catch(_) {} };
+          evt.onopen = () => {
+            try { window.__sse_open = true; } catch(_) {}
+            if (badgeConn) {
+              badgeConn.textContent = 'SSE: live';
+              badgeConn.classList.remove('badge-warn', 'badge-bad');
+              badgeConn.classList.add('badge-ok');
+            }
+            if (reconnectTimer) {
+              clearTimeout(reconnectTimer);
+              reconnectTimer = null;
+            }
+          };
+          evt.onerror = () => {
+            try { window.__sse_open = false; } catch(_) {}
+            if (badgeConn) {
+              badgeConn.textContent = 'SSE: reconnecting…';
+              badgeConn.classList.remove('badge-ok');
+              badgeConn.classList.add('badge-warn');
+            }
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            reconnectTimer = setTimeout(() => {
+              if (badgeConn) {
+                badgeConn.textContent = 'SSE: offline';
+                badgeConn.classList.remove('badge-warn');
+                badgeConn.classList.add('badge-bad');
+              }
+            }, 5000);
+          };
         } catch(_) {}
         attachHandlers(evt);
       }
@@ -683,9 +820,59 @@
     if (!enabled) logs.textContent = 'Logs are disabled. Enable "Show logs" to stream stdout/stderr here.';
     openEventStream(enabled);
   })();
+      // Load crawl types and initialize the dropdown
+      (async function initCrawlTypes(){
+        const sel = document.getElementById('crawlType');
+        if (!sel) return;
+        const storedType = localStorage.getItem('ctrl_crawlType') || '';
+        const legacyMode = localStorage.getItem('ctrl_mode');
+        const saved = storedType || (legacyMode === 'intelligent' ? 'intelligent' : '');
+        try {
+          const r = await fetch('/api/crawl-types');
+          if (!r.ok) throw new Error('HTTP '+r.status);
+          const j = await r.json();
+          const items = Array.isArray(j.items) ? j.items : [];
+          sel.innerHTML = '';
+          for (const it of items) {
+            const opt = document.createElement('option');
+            opt.value = it.name;
+            opt.textContent = it.name;
+            opt.title = it.description || '';
+            sel.appendChild(opt);
+          }
+          const def = items.find(x => x.name === 'basic-with-sitemap') ? 'basic-with-sitemap' : (items[0]?.name || 'basic');
+          sel.value = saved && items.some(x => x.name === saved) ? saved : def;
+        } catch (e) {
+          sel.innerHTML = '<option value="basic-with-sitemap">basic-with-sitemap</option><option value="basic">basic</option><option value="sitemap-only">sitemap-only</option>';
+          if (saved && Array.from(sel.options).some(opt => opt.value === saved)) {
+            sel.value = saved;
+          }
+        }
+        // Apply sitemap checkboxes based on selected type
+        const applyByType = () => {
+          const v = sel.value;
+          const useEl = document.getElementById('useSitemap');
+          const soEl = document.getElementById('sitemapOnly');
+          if (!useEl || !soEl) return;
+          if (v === 'basic') {
+            useEl.checked = false; useEl.disabled = false; soEl.checked = false;
+          } else if (v === 'sitemap-only') {
+            useEl.checked = true; soEl.checked = true; useEl.disabled = true;
+          } else {
+            // basic-with-sitemap
+            useEl.checked = true; useEl.disabled = false; soEl.checked = false;
+          }
+        };
+        sel.addEventListener('change', () => {
+          localStorage.setItem('ctrl_crawlType', sel.value);
+          applyByType();
+        });
+        applyByType();
+      })();
   // Persist key controls
   (function persistControls(){
-  const ids = ['startUrl','depth','maxPages','refetchIfOlderThan','concurrency','requestTimeoutMs','pacerJitterMinMs','pacerJitterMaxMs','slowMode','useSitemap','sitemapOnly'];
+  const ids = ['startUrl','depth','maxPages','refetchIfOlderThan','refetchArticleIfOlderThan','refetchHubIfOlderThan','concurrency','requestTimeoutMs','pacerJitterMinMs','pacerJitterMaxMs','slowMode','useSitemap','sitemapOnly'];
+  try { localStorage.removeItem('ctrl_mode'); } catch (_) {}
     for (const id of ids) {
       const el = document.getElementById(id);
       if (!el) continue;
@@ -720,13 +907,61 @@
       if (so && useEl && so.checked) { useEl.checked = true; useEl.disabled = true; }
     } catch (_) {}
   })();
+      if (analysisBtn) {
+        analysisBtn.onclick = async () => {
+          const prevLabel = analysisBtn.textContent;
+          analysisBtn.disabled = true;
+          analysisBtn.textContent = 'Starting…';
+          if (analysisLink) analysisLink.textContent = 'Starting analysis…';
+          if (analysisStatus) analysisStatus.textContent = 'Analysis run is starting…';
+          try {
+            const r = await fetch('/api/analysis/start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+            });
+            let payload = null;
+            try { payload = await r.json(); } catch (_) {}
+            if (!r.ok) {
+              const detail = payload && payload.error ? payload.error : `HTTP ${r.status}`;
+              if (analysisLink) analysisLink.textContent = `Failed: ${detail}`;
+              logs.textContent += `\nAnalysis start failed: ${detail}\n`;
+            } else {
+              const runId = payload && payload.runId ? String(payload.runId) : '';
+              const detailUrl = payload && payload.detailUrl ? String(payload.detailUrl) : (runId ? `/analysis/${runId}/ssr` : '');
+              renderAnalysisLink(detailUrl, runId);
+              try {
+                if (detailUrl) localStorage.setItem('analysisLastDetailUrl', detailUrl);
+                if (runId) localStorage.setItem('analysisLastRunId', runId);
+                localStorage.setItem('analysisLastRunAt', String(Date.now()));
+              } catch (_) {}
+              if (analysisStatus) {
+                const stamp = new Date();
+                analysisStatus.textContent = `Last run started ${stamp.toLocaleString()}`;
+              }
+              logs.textContent += `\nAnalysis started: ${runId || detailUrl}\n`;
+            }
+          } catch (err) {
+            const message = err && err.message ? err.message : String(err);
+            if (analysisLink) analysisLink.textContent = `Failed: ${message}`;
+            if (analysisStatus) analysisStatus.textContent = `Last attempt failed: ${message}`;
+            logs.textContent += `\nAnalysis start error: ${message}\n`;
+          } finally {
+            analysisBtn.disabled = false;
+            analysisBtn.textContent = prevLabel;
+          }
+        };
+      }
       document.getElementById('startBtn').onclick = async () => {
         const body = {
           startUrl: document.getElementById('startUrl').value,
           depth: parseInt(document.getElementById('depth').value, 10),
           maxPages: document.getElementById('maxPages').value ? parseInt(document.getElementById('maxPages').value, 10) : undefined,
           refetchIfOlderThan: document.getElementById('refetchIfOlderThan').value || undefined,
+          refetchArticleIfOlderThan: document.getElementById('refetchArticleIfOlderThan').value || undefined,
+          refetchHubIfOlderThan: document.getElementById('refetchHubIfOlderThan').value || undefined,
           concurrency: parseInt(document.getElementById('concurrency').value, 10),
+          crawlType: document.getElementById('crawlType')?.value || undefined,
           slow: document.getElementById('slowMode').checked,
           requestTimeoutMs: document.getElementById('requestTimeoutMs').value ? parseInt(document.getElementById('requestTimeoutMs').value, 10) : undefined,
           pacerJitterMinMs: document.getElementById('pacerJitterMinMs').value ? parseInt(document.getElementById('pacerJitterMinMs').value, 10) : undefined,
@@ -844,8 +1079,10 @@
             const q = it.queueSize ?? 0;
             const act = it.lastActivityAt ? ` · active ${Math.round((Date.now() - it.lastActivityAt)/1000)}s ago` : '';
             const pid = it.pid ? ` · pid ${it.pid}` : '';
-            const st = it.status || 'running';
-            return `<div><strong>${st}</strong>${pid} — <a href="/url?url=${encodeURIComponent(url)}">${url}</a> — v:${v} d:${d} e:${e} q:${q}${act}</div>`;
+            const stage = it.stage || '';
+            const status = it.status || stage || 'running';
+            const stageHint = stage && stage !== status ? ` (${stage})` : '';
+            return `<div><strong>${status}${stageHint}</strong>${pid} — <a href="/url?url=${encodeURIComponent(url)}">${url}</a> — v:${v} d:${d} e:${e} q:${q}${act}</div>`;
           }).join('');
           el.innerHTML = rows;
         } catch (_) {}

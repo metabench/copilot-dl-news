@@ -18,12 +18,18 @@
   .badge { display:inline-block; padding:1px 6px; border-radius:10px; font-size:11px; margin-left:6px; background:#eee; color:#333; }
   .badge.ok { background:#e6ffed; color:#067d1f; }
   .badge.err { background:#ffebeb; color:#a40000; }
+      /* Hint badge colors to match URL details page */
+      .badge-hint-article { background:#e6ffed; color:#065f46; border:1px solid #a7f3d0; }
+      .badge-hint-nav { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+      .badge-hint-other { background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; }
   .skeleton { color:#999; }
+      .legend { font-size:12px; color:#666; margin: 6px 2px 10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+      .legend .chip { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid rgba(0,0,0,0.1); font-size:12px; }
     </style>
   </head>
   <body>
     <div style="font-size:13px; color:#666; margin-bottom:8px;">
-      <a href="/">Crawler</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
+  <a href="/">Crawler</a> · <a href="/queues/ssr">Queues</a> · <a href="/milestones/ssr">Milestones</a> · <a href="/problems/ssr">Problems</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
     </div>
     <h1>Article URLs</h1>
     <div class="meta" id="meta">Loading…</div>
@@ -59,10 +65,28 @@
           <option value="other">other</option>
         </select>
       </label>
+      <label>Combined
+        <select id="combinedHintInput" title="Combined URL+content hint from latest fetch analysis">
+          <option value="">Any</option>
+          <option value="article">article</option>
+          <option value="nav">nav</option>
+          <option value="other">other</option>
+        </select>
+      </label>
+      <label>Min conf <input id="minConfInput" type="number" min="0" max="100" step="1" placeholder="e.g. 70" style="width:7em" title="Minimum combined confidence (0-100)."/></label>
       <label>Status <input id="statusInput" type="number" min="100" max="599" style="width:7em" /></label>
       <label><input type="checkbox" id="showFavicons" checked /> show favicons</label>
       <button id="copyPage" title="Copy current page URLs to clipboard">Copy page URLs</button>
+  <button id="clearFilters" title="Clear all filters (Ctrl/Cmd+Backspace)">Clear filters</button>
+  <span class="muted" aria-hidden="true">(Ctrl/Cmd+Backspace)</span>
       <span id="pageStats" class="muted"></span>
+    </div>
+    <div class="legend" id="hintLegend" title="Combined URL+content hint from latest fetch analysis">
+      <span class="muted">Hint legend:</span>
+      <span class="chip badge-hint-article">Article</span>
+      <span class="chip badge-hint-nav">Nav/Hub</span>
+      <span class="chip badge-hint-other">Other</span>
+      <span class="muted">Confidence = certainty (0–100%)</span>
     </div>
     <ol id="list"></ol>
     <p><a href="/">Back to dashboard</a></p>
@@ -85,11 +109,36 @@
   const toInput = document.getElementById('toInput');
   const minWordInput = document.getElementById('minWordInput');
   const classificationInput = document.getElementById('classificationInput');
+  const combinedHintInput = document.getElementById('combinedHintInput');
+  const minConfInput = document.getElementById('minConfInput');
   const statusInput = document.getElementById('statusInput');
   const pageSize = document.getElementById('pageSize');
   const showFavicons = document.getElementById('showFavicons');
   const copyPageBtn = document.getElementById('copyPage');
+  const clearBtn = document.getElementById('clearFilters');
   let currentItems = [];
+  // Shared clear-all-filters logic
+  function clearAllFilters(){
+    // Reset input values
+    hostInput.value = '';
+    includeSubEl.checked = false;
+    fromInput.value = '';
+    toInput.value = '';
+    minWordInput.value = '';
+    classificationInput.value = '';
+    combinedHintInput.value = '';
+    minConfInput.value = '';
+    statusInput.value = '';
+    filterInput.value = '';
+    // Clear persisted host filter
+    try { localStorage.removeItem('urls_hostFilter'); } catch(_) {}
+    // Reset paging/cursor state
+    offset = 0; cursorToken = null; prevHistory.length = 0;
+    // Remove query parameters from the URL without a full navigation
+    try { window.history.replaceState({}, '', location.pathname); } catch(_) {}
+    // Reload data
+    load();
+  }
       function updateButtons() {
         const cursorMode = !!cursorToken || !!nextCursorToken || prevHistory.length > 0;
         if (cursorMode) {
@@ -130,6 +179,10 @@
         if (mw > 0) qs.set('minWordCount', String(mw));
         const cls = (classificationInput.value || '').trim();
         if (cls) qs.set('classification', cls);
+  const ch = (combinedHintInput.value || '').trim();
+  if (ch) qs.set('combinedHint', ch);
+  const mconf = parseFloat(minConfInput.value || '');
+  if (!isNaN(mconf) && mconf >= 0) qs.set('minCombinedConfidence', String(mconf));
         const st = parseInt(statusInput.value || '0', 10);
         if (!isNaN(st) && st > 0) qs.set('status', String(st));
         const r = await fetch(`/api/urls?${qs.toString()}`);
@@ -142,7 +195,9 @@
         if (fromIso) parts.push(`from=${new Date(fromIso).toLocaleString()}`);
         if (toIso) parts.push(`to=${new Date(toIso).toLocaleString()}`);
         if (mw > 0) parts.push(`min words ≥ ${mw}`);
-        if (cls) parts.push(`class=${cls}`);
+  if (cls) parts.push(`class=${cls}`);
+  if (ch) parts.push(`combined=${ch}`);
+  if (!isNaN(mconf) && mconf>=0) parts.push(`min conf ≥ ${mconf}${mconf<=1?'':'%'}`);
         if (!isNaN(st) && st>0) parts.push(`status=${st}`);
   const startIdx = (j.offset || 0) + 1;
   const endIdx = Math.min((j.offset || 0) + j.count, j.total || (startIdx - 1 + j.count));
@@ -201,6 +256,17 @@
           if (cls) { badgeCls.className = 'badge'; badgeCls.textContent = cls; }
           const badgeWc = document.createElement('span');
           if (wc != null) { badgeWc.className = 'badge'; badgeWc.textContent = `${wc}w`; }
+          // Combined hint badge
+          const hint = (it.combined_hint || '').toLowerCase();
+          const conf = (typeof it.combined_confidence === 'number') ? it.combined_confidence : (it.combined_confidence!=null?Number(it.combined_confidence):null);
+          if (hint) {
+            const badgeHint = document.createElement('span');
+            const hintCls = hint==='article' ? 'badge-hint-article' : (hint==='nav' ? 'badge-hint-nav' : 'badge-hint-other');
+            badgeHint.className = 'badge ' + hintCls;
+            const pct = (typeof conf === 'number') ? ` ${(conf<=1? (conf*100).toFixed(0) : conf.toFixed(0))}%` : '';
+            badgeHint.textContent = `${hint}${pct}`;
+            li.appendChild(badgeHint);
+          }
           const copyBtn = document.createElement('button');
           copyBtn.className = 'copy';
           copyBtn.textContent = 'Copy';
@@ -273,6 +339,8 @@
         const h = params.get('host');
         const st = params.get('status');
         const cls = params.get('classification');
+        const ch = params.get('combinedHint');
+        const mconf = params.get('minCombinedConfidence') ?? params.get('minConfidence');
         const dir = params.get('dir');
         const from = params.get('from');
         const to = params.get('to');
@@ -284,6 +352,8 @@
         if (params.get('includeSubdomains') === '1') includeSubEl.checked = true;
         if (st) statusInput.value = st;
         if (cls) classificationInput.value = cls;
+        if (ch) combinedHintInput.value = ch;
+        if (mconf) minConfInput.value = String(mconf);
         if (dir === 'asc' || dir === 'desc') document.getElementById('sortDir').value = dir;
         if (from) { try { fromInput.value = new Date(from).toISOString().slice(0,16); } catch(_){} }
         if (to) { try { toInput.value = new Date(to).toISOString().slice(0,16); } catch(_){} }
@@ -292,7 +362,7 @@
         if (sf != null) showFavicons.checked = sf === '1';
       })();
       // Server-side filters reload on change
-      for (const id of ['hostInput','includeSubdomains','fromInput','toInput','minWordInput','classificationInput','statusInput']) {
+      for (const id of ['hostInput','includeSubdomains','fromInput','toInput','minWordInput','classificationInput','combinedHintInput','minConfInput','statusInput']) {
         const el = document.getElementById(id);
         el?.addEventListener('change', () => { offset = 0; cursorToken = null; prevHistory.length = 0; load(); });
       }
@@ -306,12 +376,32 @@
         } catch (_) {}
       };
 
+          // Clear all server-side and client-side filters and reload
+          clearBtn.onclick = () => { clearAllFilters(); };
+
       // Keyboard navigation: left/right arrows outside inputs
       document.addEventListener('keydown', (e) => {
         const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
         if (tag === 'input' || tag === 'textarea') return;
         if (e.key === 'ArrowLeft' && !prevBtn.disabled) { prevBtn.click(); }
         if (e.key === 'ArrowRight' && !nextBtn.disabled) { nextBtn.click(); }
+        // Ctrl/Cmd + Backspace clears all filters when not in an input
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Backspace') {
+          e.preventDefault();
+          clearAllFilters();
+        }
+      });
+
+      // Esc clears the inline page filter (client-side) when focus is in that input
+      filterInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (filterInput.value) {
+            filterInput.value = '';
+            render();
+          }
+          // Do not propagate to avoid interfering with other handlers
+          e.stopPropagation();
+        }
       });
     </script>
   </body>

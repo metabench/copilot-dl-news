@@ -4,7 +4,7 @@ const { ensureDb } = require('../../ensure_db');
 const { spawnSync } = require('child_process');
 
 describe('maintain-db dedupes place_sources', () => {
-  const tmpDir = path.join(process.cwd(), 'tmp-test');
+  const tmpDir = path.join(process.cwd(), 'tmp-maintain-test');
   const dbPath = path.join(tmpDir, 'maintain.db');
   const script = path.join(process.cwd(), 'src', 'tools', 'maintain-db.js');
 
@@ -23,6 +23,8 @@ describe('maintain-db dedupes place_sources', () => {
       db.close();
     }
   });
+
+  afterAll(() => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {} });
 
   it('removes duplicates and enforces unique index', () => {
     const proc = spawnSync(process.execPath, [script, `--db=${dbPath}`, '--quiet=1'], { cwd: process.cwd() });

@@ -21,6 +21,7 @@ describe('health and metrics', () => {
     const res = await request(app).get('/health');
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('running', false);
+    expect(res.body).toHaveProperty('stage', 'idle');
   });
 
   test('GET /metrics exposes prometheus text', async () => {

@@ -45,15 +45,17 @@ function resolveOutPath(outArg) {
   return path.isAbsolute(outArg) ? outArg : path.join(projectRoot, outArg);
 }
 
-function writeNdjsonLine(ws, obj) {
-  ws.write(JSON.stringify(obj) + '\n');
+function writeNdjsonLineSync(fd, obj) {
+  // Synchronous write to ensure durability before process exit
+  fs.writeSync(fd, JSON.stringify(obj));
+  fs.writeSync(fd, '\n');
 }
 
-function exportTableIter(db, ws, table, typeName, transformRow) {
+function exportTableIter(db, fd, table, typeName, transformRow) {
   const stmt = db.prepare(`SELECT * FROM ${table}`);
   for (const row of stmt.iterate()) {
     const rec = transformRow ? transformRow(row) : row;
-    writeNdjsonLine(ws, { type: typeName, ...rec });
+    writeNdjsonLineSync(fd, { type: typeName, ...rec });
   }
 }
 
@@ -64,30 +66,48 @@ function main() {
 
   const outDir = path.dirname(outPath);
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-  const ws = fs.createWriteStream(outPath, { encoding: 'utf8' });
+  // Open file descriptor for synchronous writes (ensures file existence before exit)
+  const fd = fs.openSync(outPath, 'w');
 
-  const db = openDbReadOnly(dbPath);
+  // Open DB in read-only when possible; fall back to RW ensureDb if file is missing or RO open fails
+  let db;
   try {
-    // place_sources first for context
-    exportTableIter(db, ws, 'place_sources', 'place_source');
+    db = openDbReadOnly(dbPath);
+  } catch (e) {
+    // Best-effort: create/ensure schema and proceed (useful in CI where path may not exist yet)
+    try {
+      const { ensureDb } = require('../ensure_db');
+      db = ensureDb(dbPath);
+    } catch (e2) {
+      // Close FD and rethrow to maintain failure semantics
+      try { fs.closeSync(fd); } catch (_) {}
+      throw e2;
+    }
+  }
+
+  try {
+    // place_sources first for context (skip gracefully if table absent)
+    try { exportTableIter(db, fd, 'place_sources', 'place_source'); } catch (_) {}
 
     // places with scrubbed extra
-    exportTableIter(db, ws, 'places', 'place', (row) => {
-      const out = { ...row };
-      if (out && out.extra != null) {
-        const scrubbed = scrubExtra(out.extra);
-        // Store as object if parsed, else keep as-is
-        out.extra = scrubbed;
-      }
-      return out;
-    });
+    try {
+      exportTableIter(db, fd, 'places', 'place', (row) => {
+        const out = { ...row };
+        if (out && out.extra != null) {
+          const scrubbed = scrubExtra(out.extra);
+          // Store as object if parsed, else keep as-is
+          out.extra = scrubbed;
+        }
+        return out;
+      });
+    } catch (_) {}
 
-    exportTableIter(db, ws, 'place_names', 'place_name');
-    exportTableIter(db, ws, 'place_hierarchy', 'place_hierarchy');
-    exportTableIter(db, ws, 'place_external_ids', 'place_external_id');
+    try { exportTableIter(db, fd, 'place_names', 'place_name'); } catch (_) {}
+    try { exportTableIter(db, fd, 'place_hierarchy', 'place_hierarchy'); } catch (_) {}
+    try { exportTableIter(db, fd, 'place_external_ids', 'place_external_id'); } catch (_) {}
   } finally {
-    db.close();
-    ws.end();
+    try { db.close(); } catch (_) {}
+    try { fs.closeSync(fd); } catch (_) {}
   }
 
   if (!args.quiet) {

@@ -10,7 +10,7 @@ describe('server buildArgs mapping', () => {
         return { pid: 1234, stdout: { on(){} }, stderr: { on(){} }, on(){} };
       }
     };
-  const app = require('../server').createApp({ runner: fakeRunner });
+  const app = createApp({ runner: fakeRunner });
   const body = {
       startUrl: 'https://example.com',
       depth: 1,
@@ -42,5 +42,26 @@ describe('server buildArgs mapping', () => {
     ]));
     // With sitemapOnly=true, we should not pass --no-sitemap
     expect(args).not.toContain('--no-sitemap');
+  });
+
+  test('allows query URLs when explicitly requested', async () => {
+    const started = [];
+    const fakeRunner = {
+      start(args) {
+        started.push(args);
+        return { pid: 4321, stdout: { on(){} }, stderr: { on(){} }, on(){} };
+      }
+    };
+    const app = createApp({ runner: fakeRunner });
+    const body = {
+      startUrl: 'https://example.com',
+      allowQueryUrls: true
+    };
+    const res = await request(app).post('/api/crawl').send(body).set('Content-Type', 'application/json');
+    expect(res.status).toBe(202);
+    const args = started[0];
+    expect(args).toEqual(expect.arrayContaining([
+      '--allow-query-urls'
+    ]));
   });
 });

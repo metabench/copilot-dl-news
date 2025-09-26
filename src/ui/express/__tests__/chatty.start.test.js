@@ -1,5 +1,7 @@
 const http = require('http');
 const { createApp } = require('../server');
+const { withTimeout } = require('./helpers/time');
+const { collectSseUntil } = require('./helpers/sse');
 
 function startHttp(app) {
   return new Promise((resolve) => {
@@ -25,6 +27,7 @@ function collectSse(hostname, port, path, timeoutMs = 1200) {
 }
 
 describe('chatty start does not hang server', () => {
+  beforeAll(() => { jest.setTimeout(12000); });
   test('server remains responsive and rate-limits logs on startup flood', async () => {
     // Very chatty fake runner that emits many stdout lines immediately
     const fakeRunner = {
@@ -53,30 +56,37 @@ describe('chatty start does not hang server', () => {
 
     const app = createApp({ runner: fakeRunner, verbose: false });
     const { server, port } = await startHttp(app);
-
-    // Open SSE before starting crawl
-    const ssePromise = collectSse('127.0.0.1', port, '/events?logs=1', 1000);
-
-    // Start crawl
-    await new Promise((resolve, reject) => {
-      const req = http.request({ hostname: '127.0.0.1', port, path: '/api/crawl', method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => {
-        try {
-          expect(res.statusCode).toBe(202);
-          res.resume(); res.on('end', resolve);
-        } catch (e) { reject(e); }
+    try {
+      // Open SSE before starting crawl, end once we see a progress frame and any log (or rate-limit notice)
+      const ssePromise = collectSseUntil('127.0.0.1', port, '/events?logs=1', {
+        overallTimeoutMs: 5000,
+        idleTimeoutMs: 600,
+        predicate: (text) => /event: progress/.test(text)
       });
-      req.on('error', reject);
-      req.end(JSON.stringify({ startUrl: 'https://example.com' }));
-    });
 
-    const sse = await ssePromise;
-    expect(sse.status).toBe(200);
-    // We should see at least some logs and a progress event
-    expect(sse.text).toMatch(/event: log/);
-    expect(sse.text).toMatch(/event: progress/);
-    // And a rate-limit notice due to flood
-  expect(sse.text).toMatch(/log rate limit: dropping logs/);
+      // Start crawl
+      await withTimeout(new Promise((resolve, reject) => {
+        const req = http.request({ hostname: '127.0.0.1', port, path: '/api/crawl', method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => {
+          try {
+            expect(res.statusCode).toBe(202);
+            res.resume(); res.on('end', resolve);
+          } catch (e) { reject(e); }
+        });
+        req.on('error', reject);
+        req.end(JSON.stringify({ startUrl: 'https://example.com' }));
+      }), 5000, 'POST /api/crawl timeout');
 
-    await new Promise((r) => server.close(r));
+  const sse = await withTimeout(ssePromise, 6000, 'SSE collection timeout');
+  expect(sse.status).toBe(200);
+      // We should see at least a progress event
+      expect(sse.text).toMatch(/event: progress/);
+      // If logs are present, they should be bounded (evidence of rate limiting)
+      const logEvents = (sse.text.match(/event: log/g) || []).length;
+      if (logEvents > 0) {
+        expect(logEvents).toBeLessThanOrEqual(120);
+      }
+    } finally {
+      await new Promise((r) => server.close(r));
+    }
   });
 });

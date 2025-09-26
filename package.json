@@ -1,16 +1,17 @@
 {
   "name": "news_crawler",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
-    "test": "jest",
+    "test": "jest --detectOpenHandles",
   "gui": "node src/ui/express/server.js",
   "backfill:dates": "node src/tools/backfill-dates.js",
   "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
   "analyze:domains": "node src/tools/analyze-domains.js",
   "analyze:pages": "node src/analyse-pages.js",
+  "analysis:run": "node src/tools/analysis-run.js",
   "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
   "export:gazetteer": "node src/tools/export-gazetteer.js",
   "validate:gazetteer": "node src/tools/validate-gazetteer.js"
@@ -41,6 +42,7 @@
   },
   "jest": {
     "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
-    "reporters": ["default", "<rootDir>/jest-reporter-truncate.js"]
+    "reporters": ["default", "<rootDir>/jest-reporter-truncate.js"],
+    "maxWorkers": 8
   }
 }
