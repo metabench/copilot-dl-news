@@ -101,6 +101,22 @@ class UrlPolicy {
     if (!hasQuery) {
       return { mode: 'none', reason: 'no-query' };
     }
+    const essentialKeysLower = summary.essentialKeys.map((entry) => (entry.key || '').toLowerCase());
+    const onlyPaginationKeys =
+      summary.uncertainKeys.length === 0 &&
+      summary.ignorableKeys.length === 0 &&
+      summary.essentialKeys.length > 0 &&
+      essentialKeysLower.every((key) => key === 'page' || key === 'offset' || key === 'start');
+    if (onlyPaginationKeys && !pathIsSearchy) {
+      const allNumeric = summary.essentialKeys.every((entry) => {
+        const rawVal = entry.value == null ? '' : String(entry.value).trim();
+        if (rawVal === '') return false;
+        return /^\d+$/.test(rawVal);
+      });
+      if (allNumeric) {
+        return { mode: 'superfluous', reason: 'pagination-query' };
+      }
+    }
     if (summary.essentialKeys.length > 0 || pathIsSearchy) {
       return { mode: 'essential', reason: summary.essentialKeys.length ? 'essential-key' : 'search-path' };
     }

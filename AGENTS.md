@@ -60,7 +60,7 @@ Last updated: 2025-09-24
   - File: `src/crawl.js`
   - Fetches pages, parses articles, respects robots/sitemaps, writes to SQLite, and emits structured progress frames (stdout lines).
   - Implements per-domain pacing and backoff logic (429-aware) with interval token release.
-  - URL policy heuristics (`src/crawler/urlPolicy.js`) classify query strings (essential vs superfluous) and propose stripped guesses for obvious tracking parameters.
+  - URL policy heuristics (`src/crawler/urlPolicy.js`) classify query strings (essential vs superfluous) and propose stripped guesses for obvious tracking parameters. Pagination-only query strings (`page` / `offset` / `start` with numeric values on non-search paths) now classify as `superfluous`, so they are skipped when `skipQueryUrls` remains enabled.
   - Deep URL analysis (`src/crawler/deepUrlAnalysis.js`) checks guessed URLs against the database, records alias mappings, and annotates skip reasons for superfluous query URLs.
 
 - Database layer
@@ -290,6 +290,7 @@ Notes:
 
 - Engine: `better-sqlite3` with WAL enabled.
 - Core tables (not exhaustive): `articles`, `fetches`, `links`, `urls`, `domains`, `categories`.
+- URL analysis caching: the crawler now persists compact `UrlPolicy` summaries and allow/deny decisions into `urls.analysis`, so enqueue and fetch phases can reuse prior classifications without re-running expensive checks. When `skipQueryUrls` is left on, these cached decisions continue to gate pagination-style query strings before they reach the download queue.
 - `latest_fetch` materialized view; indices and triggers maintained in `src/db.js`. Expression index `idx_articles_analysis_progress` (on JSON analysis version) and descending timestamp index `idx_latest_fetch_ts_desc` keep `analyse-pages` runs from scanning/sorting entire tables, cutting memory usage for `analysis-run`.
 - The UI server opens the DB read-only for reports when possible; the crawler performs writes.
 
@@ -429,6 +430,8 @@ Next steps (recommended evolution):
   - If spawn fails: expect an early `done` event; HTTP `POST /api/crawl` still returns `202` if the process was attempted.
   - If logs are too chatty: server may drop/truncate log events; progress continues.
   - If DB is unavailable for read endpoints: most endpoints return a graceful empty payload or `503/500` with message.
+  - Fatal initialization issues (for example `db-open-failed` when SQLite cannot be opened) now emit a `problem` event and force the crawler to exit with a non-zero status so the UI can surface the failure.
+  - When a crawl finishes without downloading any pages and only accumulates errors, the process exits with code `CRAWL_NO_PROGRESS` to prevent false-positive "success" runs.
 
 
 ## Keep this doc up to date (required)
@@ -453,6 +456,9 @@ Failure to update this file makes it harder for future agents to reason about th
 
 ## Changelog
 
+- 2025-09-27
+  - Crawler now exits non-zero when fatal initialization issues are recorded (e.g., `db-open-failed`) or when no pages download and only errors occur; this prevents the CLI from reporting "finished successfully" after a failed run. Tests: `src/__tests__/crawler-outcome.test.js`.
+  - Crawler caches UrlPolicy decisions, persists compact analysis snapshots into `urls.analysis`, and reuses them to gate both enqueue and fetch phases. Pagination-only query strings (`page`/`offset`/`start` with numeric values) now classify as `superfluous`, so default crawls skip `?page=N` listings. Tests: `src/crawler/__tests__/urlPolicy.test.js`, `ui/__tests__/crawl.e2e.http.test.js`.
 - 2025-09-26
   - SSE connections now replay a terminal `done` event for in-memory jobs that have already exited so late subscribers still observe completion. Tests: `ui/__tests__/crawl.e2e.more.test.js`.
 - 2025-09-26

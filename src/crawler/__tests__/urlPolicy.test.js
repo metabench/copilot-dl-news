@@ -30,6 +30,15 @@ describe('UrlPolicy', () => {
     expect(decision.classification.mode).toBe('superfluous');
   });
 
+  test('treats plain pagination queries as superfluous', () => {
+    const policy = new UrlPolicy({ baseUrl: 'https://www.theguardian.com' });
+    const decision = policy.decide('https://www.theguardian.com/politics/keir-starmer?page=4', { phase: 'enqueue' });
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toBe('query-superfluous');
+    expect(decision.analysis.queryClassification).toEqual({ mode: 'superfluous', reason: 'pagination-query' });
+    expect(decision.analysis.guessedWithoutQuery).toBe('https://www.theguardian.com/politics/keir-starmer');
+  });
+
   test('flags invalid URLs', () => {
     const policy = new UrlPolicy();
     const decision = policy.decide('notaurl');

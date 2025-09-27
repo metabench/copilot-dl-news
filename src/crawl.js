@@ -156,6 +156,12 @@ class NewsCrawler {
   this.skipQueryUrls = options.skipQueryUrls !== undefined ? !!options.skipQueryUrls : true;
   this.urlPolicy = new UrlPolicy({ baseUrl: this.baseUrl, skipQueryUrls: this.skipQueryUrls });
   this.deepUrlAnalyzer = new DeepUrlAnalyzer({ getDb: () => this.db, policy: this.urlPolicy });
+    // Failure tracking
+    this.fatalIssues = [];
+    this.errorSamples = [];
+    this.lastError = null;
+  this.urlAnalysisCache = new Map();
+  this.urlDecisionCache = new Map();
     
     // Statistics
     this.stats = {
@@ -314,6 +320,110 @@ class NewsCrawler {
     }
   }
 
+  _recordError(sample) {
+    if (!sample || typeof sample !== 'object') return;
+    const normalized = {
+      kind: sample.kind || 'unknown',
+      code: sample.code != null ? sample.code : null,
+      message: sample.message || null,
+      url: sample.url || null
+    };
+    this.lastError = normalized;
+    if (!Array.isArray(this.errorSamples)) this.errorSamples = [];
+    if (this.errorSamples.length >= 5) return;
+    this.errorSamples.push(normalized);
+  }
+
+  _determineOutcomeError() {
+    if (Array.isArray(this.fatalIssues) && this.fatalIssues.length > 0) {
+      const summary = this.fatalIssues.map((issue) => issue && (issue.message || issue.reason || issue.kind)).filter(Boolean).join('; ');
+      const err = new Error(`Crawl failed: ${summary || 'fatal initialization error'}`);
+      err.code = 'CRAWL_FATAL';
+      err.details = { issues: this.fatalIssues.slice(0, 5) };
+      return err;
+    }
+    const noDownloads = (this.stats.pagesDownloaded || 0) === 0;
+    const hadErrors = (this.stats.errors || 0) > 0;
+    if (noDownloads && hadErrors) {
+      const sample = this.errorSamples && this.errorSamples[0];
+      const detail = sample ? `${sample.kind || 'error'}${sample.code ? ` ${sample.code}` : ''}${sample.url ? ` ${sample.url}` : ''}`.trim() : null;
+      const err = new Error(`Crawl failed: no pages downloaded after ${this.stats.errors} error${this.stats.errors === 1 ? '' : 's'}${detail ? ` (first: ${detail})` : ''}`);
+      err.code = 'CRAWL_NO_PROGRESS';
+      err.details = { stats: { ...this.stats }, sampleError: sample || null };
+      return err;
+    }
+    return null;
+  }
+
+  _compactUrlAnalysis(analysis) {
+    if (!analysis || typeof analysis !== 'object' || analysis.invalid) return null;
+    const trimEntries = (list) => Array.isArray(list) ? list.map((entry) => ({ key: entry.key, value: entry.value })) : [];
+    return {
+      raw: analysis.raw,
+      normalized: analysis.normalized,
+      host: analysis.host,
+      path: analysis.path,
+      hasQuery: !!analysis.hasQuery,
+      pathIsSearchy: !!analysis.pathIsSearchy,
+      guessedWithoutQuery: analysis.guessedWithoutQuery || null,
+      querySummary: {
+        essential: trimEntries(analysis.querySummary?.essentialKeys || []),
+        ignorable: trimEntries(analysis.querySummary?.ignorableKeys || []),
+        uncertain: trimEntries(analysis.querySummary?.uncertainKeys || [])
+      },
+      queryClassification: analysis.queryClassification || null
+    };
+  }
+
+  _persistUrlAnalysis(compactAnalysis, decision) {
+    if (!this.db || !compactAnalysis || !compactAnalysis.normalized) return;
+    try {
+      const payload = {
+        analysis: compactAnalysis,
+        decision: {
+          allow: !!(decision && decision.allow),
+          reason: decision?.reason || null,
+          classification: decision?.classification || null
+        },
+        recordedAt: new Date().toISOString()
+      };
+      this.db.upsertUrl(compactAnalysis.normalized, null, JSON.stringify(payload));
+    } catch (_) {
+      // Persisting analysis is best effort
+    }
+  }
+
+  _getUrlDecision(rawUrl, context = {}) {
+    const phase = context && typeof context === 'object' && context.phase ? String(context.phase) : 'default';
+    const cacheKey = `${phase}|${rawUrl}`;
+    if (this.urlDecisionCache.has(cacheKey)) {
+      return this.urlDecisionCache.get(cacheKey);
+    }
+    let decision = null;
+    try {
+      decision = this.urlPolicy.decide(rawUrl, context);
+    } catch (e) {
+      decision = {
+        allow: false,
+        reason: 'policy-error',
+        analysis: { raw: rawUrl, invalid: true },
+        error: e
+      };
+    }
+    const analysis = decision?.analysis;
+    if (analysis && !analysis.invalid) {
+      const compact = this._compactUrlAnalysis(analysis);
+      if (compact) {
+        const normalizedKey = compact.normalized || rawUrl;
+        this.urlAnalysisCache.set(normalizedKey, compact);
+        this.urlAnalysisCache.set(rawUrl, compact);
+        this._persistUrlAnalysis(compact, decision);
+      }
+    }
+    this.urlDecisionCache.set(cacheKey, decision);
+    return decision;
+  }
+
   // --- Per-domain rate limiter state management ---
 
   _getDomainState(host) {
@@ -376,6 +486,12 @@ class NewsCrawler {
         console.log(`SQLite not available, continuing without DB: ${e.message}`);
         this.db = null;
         this.enableDb = false;
+        try {
+          this.fatalIssues.push({ kind: 'db-open-failed', message: e?.message || String(e) });
+        } catch (_) {}
+        try {
+          this.emitProblem({ kind: 'db-open-failed', scope: this.domain, message: 'SQLite unavailable', details: { error: e?.message || String(e) } });
+        } catch (_) {}
       }
     }
     
@@ -437,8 +553,16 @@ class NewsCrawler {
     const pushed = await loadSitemaps(this.baseUrl, this.domain, this.sitemapUrls, {
       sitemapMaxUrls: this.sitemapMaxUrls,
       push: (u) => {
-        const n = this.normalizeUrl(u);
+        const decision = this._getUrlDecision(u, { phase: 'sitemap', depth: 0, source: 'sitemap' });
+        const analysis = decision?.analysis || {};
+        const n = analysis && !analysis.invalid ? analysis.normalized : null;
         if (!n) return;
+        if (!decision.allow) {
+          if (decision.reason === 'query-superfluous') {
+            this._handlePolicySkip(decision, { depth: 0, queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length });
+          }
+          return;
+        }
         if (!this.isOnDomain(n) || !this.isAllowed(n)) return;
         const type = this.looksLikeArticle(n) ? 'article' : 'nav';
         this.enqueueRequest({ url: n, depth: 0, type });
@@ -464,11 +588,17 @@ class NewsCrawler {
   }
 
   normalizeUrl(url, context = {}) {
-    return this.urlPolicy.normalize(url, context);
+    const phase = context && context.phase ? context.phase : 'normalize';
+    const decision = this._getUrlDecision(url, { ...context, phase });
+    const analysis = decision?.analysis;
+    if (!analysis || analysis.invalid) return null;
+    return analysis.normalized;
   }
 
   async fetchPage(url, context = {}) {
-    const normalizedUrl = this.normalizeUrl(url);
+    const decision = this._getUrlDecision(url, { ...context, phase: 'fetch', depth: context.depth || 0 });
+    const analysis = decision?.analysis || {};
+    const normalizedUrl = analysis && !analysis.invalid ? analysis.normalized : null;
     if (!normalizedUrl || this.visited.has(normalizedUrl)) {
       return null;
     }
@@ -478,12 +608,11 @@ class NewsCrawler {
       return null;
     }
 
-    const policyDecision = this.urlPolicy.decide(normalizedUrl, { phase: 'fetch', depth: context.depth || 0 });
-    if (!policyDecision.allow) {
-      if (policyDecision.reason === 'query-superfluous') {
-        this._handlePolicySkip(policyDecision, { depth: context.depth || 0, queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length });
+    if (!decision.allow) {
+      if (decision.reason === 'query-superfluous') {
+        this._handlePolicySkip(decision, { depth: context.depth || 0, queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length });
       } else {
-        try { console.log(`Skipping fetch due to policy: ${normalizedUrl} reason=${policyDecision.reason}`); } catch (_) {}
+        try { console.log(`Skipping fetch due to policy: ${normalizedUrl} reason=${decision.reason}`); } catch (_) {}
       }
       return { status: 'skipped-policy' };
     }
@@ -499,7 +628,7 @@ class NewsCrawler {
       const started = Date.now();
       const requestStartedIso = new Date(started).toISOString();
       // Mark as in-flight for progress reporting
-  this.currentDownloads.set(normalizedUrl, { startedAt: started, policy: policyDecision });
+  this.currentDownloads.set(normalizedUrl, { startedAt: started, policy: decision });
       this.emitProgress();
   const u = uPre;
       const ac = new AbortController();
@@ -523,6 +652,7 @@ class NewsCrawler {
         const status = response.status;
         console.log(`Failed to fetch ${normalizedUrl}: ${status}`);
         this.stats.errors++;
+        this._recordError({ kind: 'http', code: status, message: `HTTP ${status}`, url: normalizedUrl });
         if (status === 429) {
           // Trigger domain backoff and rate limit ramp
       try { this.note429(u.hostname, retryAfterMs); } catch(_) {}
@@ -584,8 +714,9 @@ class NewsCrawler {
         }
       };
   } catch (error) {
-      console.log(`Error fetching ${normalizedUrl}: ${error.message}`);
+    console.log(`Error fetching ${normalizedUrl}: ${error.message}`);
   this.stats.errors++;
+    this._recordError({ kind: 'exception', message: (error && (error.message || error.name)) || String(error), url: normalizedUrl });
       const isTimeout = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error && error.message || ''))));
       try { this.db?.insertError({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message || String(error) }); } catch(_) {}
       try { console.log(`ERROR ${JSON.stringify({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message||String(error) })}`); } catch(_) {}
@@ -1259,17 +1390,17 @@ class NewsCrawler {
 
   enqueueRequest({ url, depth, type }) {
     const currentSize = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
-    const policyDecision = this.urlPolicy.decide(url, { phase: 'enqueue', depth });
-    const analysis = policyDecision.analysis || {};
-    const normalized = analysis && !analysis.invalid ? analysis.normalized : this.normalizeUrl(url);
+    const decision = this._getUrlDecision(url, { phase: 'enqueue', depth });
+    const analysis = decision?.analysis || {};
+    const normalized = analysis && !analysis.invalid ? analysis.normalized : null;
     let host = null;
     try { if (normalized) host = new URL(normalized).hostname; } catch (_) {}
 
-    if (!policyDecision.allow) {
-      if (policyDecision.reason === 'query-superfluous') {
-        this._handlePolicySkip(policyDecision, { depth, queueSize: currentSize });
+    if (!decision.allow) {
+      if (decision.reason === 'query-superfluous') {
+        this._handlePolicySkip(decision, { depth, queueSize: currentSize });
       } else {
-        this.emitQueueEvent({ action: 'drop', url: normalized || url, depth, host, reason: policyDecision.reason || 'policy-blocked', queueSize: currentSize });
+        this.emitQueueEvent({ action: 'drop', url: normalized || url, depth, host, reason: decision.reason || 'policy-blocked', queueSize: currentSize });
       }
       return;
     }
@@ -1316,7 +1447,7 @@ class NewsCrawler {
       retries: 0,
       nextEligibleAt: 0,
       discoveredAt,
-      policyDecision
+      decision
     };
     item.priority = this.computePriority({ type: item.type, depth: item.depth, discoveredAt });
     this.queueHeap.push(item);
@@ -1477,7 +1608,12 @@ class NewsCrawler {
     }
     await Promise.all(workers);
 
-    console.log('\nCrawling completed!');
+    const outcomeErr = this._determineOutcomeError();
+    const finishedMsg = outcomeErr ? '\nCrawling ended with errors.' : '\nCrawling completed!';
+    console.log(finishedMsg);
+    if (outcomeErr) {
+      console.log(`Failure summary: ${outcomeErr.message}`);
+    }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
   this.emitProgress(true);
     
@@ -1485,6 +1621,13 @@ class NewsCrawler {
       const count = this.db.getCount();
       console.log(`Database contains ${count} article records`);
       this.db.close();
+      this.db = null;
+    }
+
+    if (outcomeErr) {
+      if (!outcomeErr.details) outcomeErr.details = {};
+      if (!outcomeErr.details.stats) outcomeErr.details.stats = { ...this.stats };
+      throw outcomeErr;
     }
   }
 
@@ -1654,7 +1797,12 @@ class NewsCrawler {
       }
     }
 
-    console.log('\nCrawling completed!');
+    const outcomeErr = this._determineOutcomeError();
+    const finishedMsg = outcomeErr ? '\nCrawling ended with errors.' : '\nCrawling completed!';
+    console.log(finishedMsg);
+    if (outcomeErr) {
+      console.log(`Failure summary: ${outcomeErr.message}`);
+    }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
   this.emitProgress(true);
     
@@ -1662,6 +1810,13 @@ class NewsCrawler {
       const count = this.db.getCount();
       console.log(`Database contains ${count} article records`);
       this.db.close();
+      this.db = null;
+    }
+
+    if (outcomeErr) {
+      if (!outcomeErr.details) outcomeErr.details = {};
+      if (!outcomeErr.details.stats) outcomeErr.details.stats = { ...this.stats };
+      throw outcomeErr;
     }
   }
 }
