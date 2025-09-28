@@ -13,6 +13,8 @@ const {
   addAnalysisRunEvent
 } = require('../services/analysisRuns');
 
+jest.setTimeout(30000);
+
 function makeFakeRunner(lines = [], exitCode = 0, delayMs = 5) {
   const { EventEmitter } = require('events');
   return {
@@ -149,7 +151,6 @@ describe('Analysis API and SSR', () => {
   });
 
   test('analysis start triggers real analysis run and updates article', async () => {
-    jest.setTimeout(20000);
     const prevFast = process.env.TEST_FAST;
     process.env.TEST_FAST = '1';
 

@@ -23,8 +23,10 @@
       .badge-other { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
       .badge-enc { background:#f1f5f9; color:#334155; border-color:#cbd5e1; }
     </style>
+    <script type="module" src="/assets/global-nav.js"></script>
   </head>
   <body>
+    <div data-global-nav data-active="urls"></div>
     <h1>URL Details</h1>
     <div id="hdr" class="muted">Loading…</div>
     <div id="badges" class="badges" style="display:none"></div>
@@ -34,9 +36,6 @@
       <span class="badge badge-nav">Nav/Hub</span>
       <span class="badge badge-other">Other</span>
       <span>Confidence = certainty (0–100%)</span>
-    </div>
-    <div style="font-size:13px; color:#666; margin-bottom:8px;">
-      <a href="/">Crawler</a> · <a href="/queues/ssr">Queues</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
     </div>
   <div id="urlAnalysis" style="margin:10px 0"></div>
   <div id="article"></div>

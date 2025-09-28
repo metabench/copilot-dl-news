@@ -26,19 +26,13 @@
     .ok{color:#16a34a}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   </style>
-</head>
-<body>
+  <script type="module" src="/assets/global-nav.js"></script>
+  </head>
+  <body>
   <div class="container">
+    <div data-global-nav data-active="queues"></div>
     <header>
       <h1>Queues <span id="job" class="pill mono"></span></h1>
-      <nav class="meta">
-        <a href="/">Crawler</a> ·
-        <a href="/queues/ssr">Queues</a> ·
-        <a href="/gazetteer">Gazetteer</a> ·
-        <a href="/domains">Domains</a> ·
-        <a href="/errors">Errors</a> ·
-        <a href="/urls">URLs</a>
-      </nav>
     </header>
 
     <section class="card">

@@ -6,8 +6,6 @@ const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
 const path = require('path');
 const { URL } = require('url');
-// Lazy-load DB to allow running without SQLite if native module isn't available
-let NewsDatabase = null;
 const { ArticleCache, shouldUseCache } = require('./cache');
 const { UrlPolicy } = require('./crawler/urlPolicy');
 const { DeepUrlAnalyzer } = require('./crawler/deepUrlAnalysis');
@@ -16,6 +14,13 @@ const https = require('https');
 const crypto = require('crypto');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
+const { createCrawlerDb } = require('./crawler/dbClient');
+// Enhanced features (optional)
+const { ConfigManager } = require('./config/ConfigManager');
+const { EnhancedDatabaseAdapter } = require('./db/EnhancedDatabaseAdapter');
+const { PriorityScorer } = require('./crawler/PriorityScorer');
+const { ProblemClusteringService } = require('./crawler/ProblemClusteringService');
+const { PlannerKnowledgeService } = require('./crawler/PlannerKnowledgeService');
 // Extracted helper modules (structure-only refactor)
 const Links = require('./crawler/links');
 const { loadSitemaps } = require('./crawler/sitemap');
@@ -122,16 +127,34 @@ class NewsCrawler {
     // State
     this.visited = new Set();
     this.queuedUrls = new Set(); // to dedupe queued items in priority mode
+    this.seededHubUrls = new Set();
+    this.historySeedUrls = new Set();
+    this.knownArticlesCache = new Map();
+    this.articleHeaderCache = new Map();
+    this.startUrlNormalized = null;
     this.robotsRules = null;
     this.requestQueue = []; // used by FIFO single-thread mode
   this.isProcessing = false;
-  this.db = null;
+  this.dbAdapter = null;
+  // Enhanced features (initialized later)
+  this.configManager = null;
+  this.enhancedDbAdapter = null;
+  this.priorityScorer = null;
+  this.problemClusteringService = null;
+  this.plannerKnowledgeService = null;
+  this.featuresEnabled = {
+    gapDrivenPrioritization: false,
+    plannerKnowledgeReuse: false,
+    realTimeCoverageAnalytics: false,
+    problemClustering: false
+  };
   // Track in-flight downloads for UI visibility
   this.currentDownloads = new Map(); // url -> { startedAt: epochMs }
   // Track active workers to coordinate idle waiting
   this.busyWorkers = 0;
   // Pause control
   this.paused = false;
+  this.abortRequested = false;
   this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
     if (this.usePriorityQueue) {
       this.queueHeap = new MinHeap((a, b) => a.priority - b.priority);
@@ -155,13 +178,24 @@ class NewsCrawler {
   this.plannerEnabled = this.crawlType.startsWith('intelligent');
   this.skipQueryUrls = options.skipQueryUrls !== undefined ? !!options.skipQueryUrls : true;
   this.urlPolicy = new UrlPolicy({ baseUrl: this.baseUrl, skipQueryUrls: this.skipQueryUrls });
-  this.deepUrlAnalyzer = new DeepUrlAnalyzer({ getDb: () => this.db, policy: this.urlPolicy });
+  this.deepUrlAnalyzer = new DeepUrlAnalyzer({ getDb: () => this.dbAdapter?.getDb(), policy: this.urlPolicy });
     // Failure tracking
     this.fatalIssues = [];
     this.errorSamples = [];
     this.lastError = null;
+    this.connectionResetState = new Map();
+    this.connectionResetWindowMs = typeof options.connectionResetWindowMs === 'number' && options.connectionResetWindowMs > 0
+      ? options.connectionResetWindowMs
+      : 2 * 60 * 1000; // 2 minutes rolling window
+    this.connectionResetThreshold = typeof options.connectionResetThreshold === 'number' && options.connectionResetThreshold > 0
+      ? options.connectionResetThreshold
+      : 3; // after 3 resets within window we pause
+    this.connectionResetProblemEmitted = false;
   this.urlAnalysisCache = new Map();
   this.urlDecisionCache = new Map();
+    this.problemCounters = new Map();
+    this.problemSamples = new Map();
+    this._intelligentPlanSummary = null;
     
     // Statistics
     this.stats = {
@@ -171,9 +205,12 @@ class NewsCrawler {
   articlesSaved: 0,
       errors: 0,
       bytesDownloaded: 0,
-      depth2PagesProcessed: 0
+      depth2PagesProcessed: 0,
+      cacheRateLimitedServed: 0,
+      cacheRateLimitedDeferred: 0
     };
     this.emittedMilestones = new Set();
+    this._plannerStageSeq = 0;
     this.depth2Visited = new Set();
   }
 
@@ -236,6 +273,158 @@ class NewsCrawler {
     return { hint, confidence, considered };
   }
 
+  _normalizeSectionSlug(value) {
+    if (!value && value !== 0) return null;
+    const slug = String(value).trim().toLowerCase();
+    if (!slug) return null;
+    const cleaned = slug
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9\/-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return cleaned || null;
+  }
+
+  _buildAbsolutePathUrl(segments) {
+    if (!Array.isArray(segments) || segments.length === 0) return null;
+    const encoded = segments
+      .map((seg) => String(seg || '').trim())
+      .filter(Boolean)
+      .map((seg) => encodeURIComponent(seg));
+    if (!encoded.length) return null;
+    return `${this.baseUrl}/${encoded.join('/')}/`;
+  }
+
+  _collectHistoryCandidatesFromSegments(segments) {
+    const out = [];
+    if (!Array.isArray(segments) || segments.length < 2) return out;
+    const yearIdx = segments.findIndex((seg) => /^(19|20)\d{2}$/.test(seg));
+    if (yearIdx <= 0) return out;
+    const baseSegments = segments.slice(0, yearIdx);
+    if (!baseSegments.length) return out;
+    const year = segments[yearIdx];
+    const baseHubUrl = this._buildAbsolutePathUrl(baseSegments);
+    if (baseHubUrl) {
+      out.push({ url: baseHubUrl, kind: 'hub-seed', reason: 'section-from-archive' });
+    }
+    const yearUrl = this._buildAbsolutePathUrl([...baseSegments, year]);
+    if (yearUrl) {
+      out.push({ url: yearUrl, kind: 'history', reason: 'year-archive' });
+    }
+    const monthIdx = yearIdx + 1;
+    if (monthIdx < segments.length) {
+      const monthSegRaw = segments[monthIdx];
+      const monthSeg = String(monthSegRaw || '').toLowerCase();
+      if (/^(0?[1-9]|1[0-2]|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)$/.test(monthSeg)) {
+        const monthUrl = this._buildAbsolutePathUrl([...baseSegments, year, monthSegRaw]);
+        if (monthUrl) {
+          out.push({ url: monthUrl, kind: 'history', reason: 'month-archive' });
+        }
+      }
+    }
+    return out;
+  }
+
+  _maybeEnqueueAdaptiveSeeds({ url, metadata, depth }) {
+    if (!this.plannerEnabled) return;
+    const candidates = [];
+    const sectionSlugFromMeta = this._normalizeSectionSlug(metadata?.section);
+    if (sectionSlugFromMeta) {
+      const hubUrl = this._buildAbsolutePathUrl([sectionSlugFromMeta]);
+      if (hubUrl) {
+        candidates.push({ url: hubUrl, kind: 'hub-seed', reason: 'section-metadata' });
+      }
+    }
+    try {
+      const u = new URL(url, this.baseUrl);
+      const segments = (u.pathname || '/').split('/').filter(Boolean);
+      if (segments.length > 0) {
+        const primarySlug = this._normalizeSectionSlug(segments[0]);
+        if (primarySlug) {
+          const primaryHub = this._buildAbsolutePathUrl([primarySlug]);
+          if (primaryHub) {
+            candidates.push({ url: primaryHub, kind: 'hub-seed', reason: 'section-from-path' });
+          }
+        }
+      }
+      candidates.push(...this._collectHistoryCandidatesFromSegments(segments));
+    } catch (_) {}
+
+    if (!candidates.length) return;
+    const seen = new Set();
+    for (const cand of candidates) {
+      if (!cand || !cand.url) continue;
+      let normalized;
+      try {
+        normalized = this.normalizeUrl(cand.url);
+      } catch (_) {
+        normalized = cand.url;
+      }
+      if (!normalized) continue;
+      const key = `${cand.kind}:${normalized}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (cand.kind === 'hub-seed') {
+        if (this.seededHubUrls.has(normalized) || this.visited.has(normalized)) continue;
+        const enqueued = this.enqueueRequest({
+          url: cand.url,
+          depth: Math.max(0, depth - 1),
+          type: { kind: 'hub-seed', reason: cand.reason }
+        });
+        if (enqueued) {
+          this.seededHubUrls.add(normalized);
+          this._emitMilestoneOnce(`adaptive-hub:${normalized}`, {
+            kind: 'adaptive-hub-seeded',
+            message: 'Queued adaptive hub for deeper coverage',
+            details: { url: normalized, reason: cand.reason }
+          });
+        }
+      } else if (cand.kind === 'history') {
+        if (this.historySeedUrls.has(normalized) || this.visited.has(normalized)) continue;
+        const enqueued = this.enqueueRequest({
+          url: cand.url,
+          depth: Math.max(0, depth - 1),
+          type: { kind: 'history', reason: cand.reason }
+        });
+        if (enqueued) {
+          this.historySeedUrls.add(normalized);
+          this._emitMilestoneOnce(`history-seed:${normalized}`, {
+            kind: 'history-path-seeded',
+            message: 'Queued archive/history path discovered from article',
+            details: { url: normalized, reason: cand.reason }
+          });
+        }
+      }
+    }
+  }
+
+  _getCachedArticleHeaders(normalizedUrl) {
+    if (!normalizedUrl) return null;
+    if (this.articleHeaderCache.has(normalizedUrl)) {
+      return this.articleHeaderCache.get(normalizedUrl);
+    }
+    if (!this.dbAdapter || !this.dbAdapter.isEnabled()) {
+      return null;
+    }
+    try {
+      const row = this.dbAdapter.getArticleHeaders(normalizedUrl);
+      if (!row) {
+        this.articleHeaderCache.set(normalizedUrl, null);
+        return null;
+      }
+      const meta = {
+        etag: row.etag || null,
+        last_modified: row.last_modified || null,
+        fetched_at: row.fetched_at || row.crawled_at || null
+      };
+      this.articleHeaderCache.set(normalizedUrl, meta);
+      this.knownArticlesCache.set(normalizedUrl, true);
+      return meta;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- Lightweight emitter for queue instrumentation ---
   emitQueueEvent(evt) {
     try {
@@ -247,9 +436,36 @@ class NewsCrawler {
   // --- Structured problems surface ---
   emitProblem(problem) {
     try {
+      if (!this.problemCounters) this.problemCounters = new Map();
+      if (!this.problemSamples) this.problemSamples = new Map();
+      const kind = (problem && problem.kind) ? String(problem.kind) : 'unknown';
+      const entry = this.problemCounters.get(kind) || { count: 0 };
+      entry.count += 1;
+      this.problemCounters.set(kind, entry);
+      if (!this.problemSamples.has(kind)) {
+        const sample = {};
+        if (problem && typeof problem === 'object') {
+          if (problem.scope) sample.scope = problem.scope;
+          if (problem.target) sample.target = problem.target;
+          if (problem.message) sample.message = problem.message;
+        }
+        this.problemSamples.set(kind, sample);
+      }
+    } catch (_) { /* ignore tracking errors */ }
+    
+    try {
       // Example: { kind: 'missing-hub', scope: 'country', target: 'France', hintUrl?, details? }
       console.log('PROBLEM ' + JSON.stringify(problem));
     } catch (_) { /* ignore */ }
+
+    // Use enhanced problem processing if enabled
+    if (this.featuresEnabled?.problemClustering && this.problemClusteringService) {
+      try {
+        this.emitEnhancedProblem(problem);
+      } catch (error) {
+        console.warn('Enhanced problem processing failed:', error.message);
+      }
+    }
   }
 
   // --- Structured milestones surface ---
@@ -265,6 +481,133 @@ class NewsCrawler {
     if (this.emittedMilestones.has(key)) return;
     this.emittedMilestones.add(key);
     this.emitMilestone(Object.assign({ scope: this.domain }, milestone));
+  }
+
+  emitPlannerStage(event) {
+    if (!this.plannerEnabled) return;
+    try {
+      const payload = Object.assign({ scope: this.domain }, event || {});
+      const replacer = (_, value) => (value === undefined ? undefined : value);
+      console.log('PLANNER_STAGE ' + JSON.stringify(payload, replacer));
+    } catch (_) { /* ignore */ }
+  }
+
+  _emitIntelligentCompletionMilestone({ outcomeErr } = {}) {
+    if (!this.plannerEnabled) return;
+    const seededUnique = this.seededHubUrls ? this.seededHubUrls.size : 0;
+    const summary = this._intelligentPlanSummary || {};
+    const sections = summary.sectionHubCount != null ? summary.sectionHubCount : 0;
+    const countryCandidates = summary.countryCandidateCount != null ? summary.countryCandidateCount : 0;
+    const requested = summary.requestedCount != null ? summary.requestedCount : sections + countryCandidates;
+    const expected = Math.max(requested || 0, sections + countryCandidates, seededUnique);
+    const coveragePct = expected > 0 ? Math.min(1, seededUnique / expected) : null;
+    const problems = [];
+    if (this.problemCounters && this.problemCounters.size) {
+      for (const [kind, entry] of this.problemCounters.entries()) {
+        if (!entry || !entry.count) continue;
+        const sample = this.problemSamples?.get(kind) || null;
+        problems.push({
+          kind,
+          count: entry.count,
+          sample: sample && Object.keys(sample).length ? sample : undefined
+        });
+      }
+    }
+    problems.sort((a, b) => b.count - a.count);
+    const details = {
+      outcome: outcomeErr ? 'failed' : 'completed',
+      seededHubs: {
+        unique: seededUnique,
+        requested: requested || 0,
+        sectionsFromPatterns: sections,
+        countryCandidates,
+        sample: Array.isArray(summary.sampleSeeded) ? summary.sampleSeeded.slice(0, 5) : undefined
+      },
+      coverage: coveragePct != null ? {
+        expected,
+        seeded: seededUnique,
+        coveragePct
+      } : undefined,
+      problems: problems.length ? problems : undefined,
+      stats: {
+        visited: this.stats?.pagesVisited || 0,
+        downloaded: this.stats?.pagesDownloaded || 0,
+        articlesFound: this.stats?.articlesFound || 0,
+        articlesSaved: this.stats?.articlesSaved || 0,
+        errors: this.stats?.errors || 0
+      }
+    };
+    this.emitMilestone({
+      kind: 'intelligent-completion',
+      scope: this.domain,
+      message: outcomeErr ? 'Intelligent crawl ended with errors' : 'Intelligent crawl completed',
+      details
+    });
+  }
+
+  async _withPlannerStage(stage, contextDetails, fn, options = {}) {
+    if (typeof fn !== 'function') {
+      return undefined;
+    }
+    if (!this.plannerEnabled) {
+      return fn();
+    }
+    const seq = (++this._plannerStageSeq) || 1;
+    const startTime = Date.now();
+    const startEvent = {
+      stage,
+      status: 'started',
+      sequence: seq,
+      ts: new Date(startTime).toISOString()
+    };
+    const context = contextDetails && typeof contextDetails === 'object' && Object.keys(contextDetails).length ? contextDetails : null;
+    if (context) {
+      startEvent.details = { context };
+    }
+    this.emitPlannerStage(startEvent);
+    try {
+      const result = await fn();
+      const durationMs = Date.now() - startTime;
+      const mapper = typeof options.mapResultForEvent === 'function' ? options.mapResultForEvent : null;
+      const mapped = mapper ? mapper(result) : result;
+      const completion = {
+        stage,
+        status: 'completed',
+        sequence: seq,
+        ts: new Date().toISOString(),
+        durationMs
+      };
+      const details = {};
+      if (context) details.context = context;
+      if (mapped !== undefined && mapped !== null) {
+        if (typeof mapped === 'object') {
+          const keys = Object.keys(mapped);
+          if (keys.length) details.result = mapped;
+        } else {
+          details.result = mapped;
+        }
+      }
+      if (Object.keys(details).length) {
+        completion.details = details;
+      }
+      this.emitPlannerStage(completion);
+      return result;
+    } catch (err) {
+      const durationMs = Date.now() - startTime;
+      const failure = {
+        stage,
+        status: 'failed',
+        sequence: seq,
+        ts: new Date().toISOString(),
+        durationMs,
+        details: {
+          ...(context ? { context } : {}),
+          error: { message: err?.message || String(err) }
+        }
+      };
+      this.emitPlannerStage(failure);
+      throw err;
+    }
   }
 
   _noteDepthVisit(normalizedUrl, depth) {
@@ -334,6 +677,49 @@ class NewsCrawler {
     this.errorSamples.push(normalized);
   }
 
+  _handleConnectionReset(url, error) {
+    if (this.connectionResetProblemEmitted) return;
+    let host = this.domain;
+    try {
+      if (url) host = new URL(url).hostname || host;
+    } catch (_) {}
+    const now = Date.now();
+    const windowMs = this.connectionResetWindowMs;
+    const threshold = this.connectionResetThreshold;
+    const entry = this.connectionResetState.get(host) || { count: 0, firstAt: now, lastAt: now };
+    if (now - entry.firstAt > windowMs) {
+      entry.count = 0;
+      entry.firstAt = now;
+    }
+    entry.count += 1;
+    entry.lastAt = now;
+    this.connectionResetState.set(host, entry);
+    if (entry.count >= threshold) {
+      this.connectionResetProblemEmitted = true;
+      const message = `Repeated connection resets detected (${entry.count} within ${Math.round(windowMs / 1000)}s)`;
+      const details = {
+        host,
+        count: entry.count,
+        windowMs,
+        firstAt: new Date(entry.firstAt).toISOString(),
+        lastAt: new Date(entry.lastAt).toISOString(),
+        sampleUrl: url || null,
+        errorCode: error && error.code ? error.code : null,
+        errorMessage: error && error.message ? error.message : null
+      };
+      try {
+        this.emitProblem({
+          kind: 'connection-reset',
+          scope: this.domain,
+          target: host,
+          message: `${message}; crawl aborted`,
+          details
+        });
+      } catch (_) {}
+      this.requestAbort('connection-reset', { ...details, message: `${message} for ${host}` });
+    }
+  }
+
   _determineOutcomeError() {
     if (Array.isArray(this.fatalIssues) && this.fatalIssues.length > 0) {
       const summary = this.fatalIssues.map((issue) => issue && (issue.message || issue.reason || issue.kind)).filter(Boolean).join('; ');
@@ -376,7 +762,7 @@ class NewsCrawler {
   }
 
   _persistUrlAnalysis(compactAnalysis, decision) {
-    if (!this.db || !compactAnalysis || !compactAnalysis.normalized) return;
+    if (!this.dbAdapter || !this.dbAdapter.isEnabled() || !compactAnalysis || !compactAnalysis.normalized) return;
     try {
       const payload = {
         analysis: compactAnalysis,
@@ -387,7 +773,7 @@ class NewsCrawler {
         },
         recordedAt: new Date().toISOString()
       };
-      this.db.upsertUrl(compactAnalysis.normalized, null, JSON.stringify(payload));
+      this.dbAdapter.upsertUrl(compactAnalysis.normalized, null, JSON.stringify(payload));
     } catch (_) {
       // Persisting analysis is best effort
     }
@@ -452,6 +838,35 @@ class NewsCrawler {
     return state;
   }
 
+  _safeHostFromUrl(url) {
+    if (!url) return null;
+    try {
+      return new URL(url).hostname;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _getHostResumeTime(host) {
+    if (!host) return null;
+    const state = this.domainLimits.get(host);
+    if (!state) return null;
+    const backoff = state.backoffUntil || 0;
+    const nextAt = state.nextRequestAt || 0;
+    const resumeAt = Math.max(backoff, nextAt);
+    return resumeAt > 0 ? resumeAt : null;
+  }
+
+  _isHostRateLimited(host) {
+    if (!host) return false;
+    const state = this.domainLimits.get(host);
+    if (!state) return false;
+    const now = nowMs();
+    if (state.backoffUntil > now) return true;
+    if (state.isLimited && state.nextRequestAt > now) return true;
+    return false;
+  }
+
 
   async init() {
     // Ensure data directory exists
@@ -459,40 +874,35 @@ class NewsCrawler {
     
     // Initialize database (optional)
     if (this.enableDb) {
-      try {
-        if (!NewsDatabase) {
-          // Defer require to runtime to avoid crashing when better-sqlite3 is unavailable
-          // (e.g., Node version mismatch). We'll run without DB in that case.
-          NewsDatabase = require('./db');
-        }
-  this.db = new NewsDatabase(this.dbPath);
-  this.cache.setDb(this.db);
-        if (this.fastStart) {
-          console.log(`SQLite DB initialized at: ${this.dbPath} (fast-start)`);
-        } else {
-          console.log(`SQLite DB initialized at: ${this.dbPath}`);
-          try {
-            const stat = await fs.stat(this.dbPath).catch(() => null);
-            const bytes = stat?.size || 0;
-            const mb = bytes / (1024 * 1024);
-            const gb = bytes / (1024 * 1024 * 1024);
-            const sizeStr = gb >= 1 ? `${gb.toFixed(2)} GB` : `${mb.toFixed(2)} MB`;
-            const totalPages = this.db.getFetchCount?.() || 0;
-            const articlePages = this.db.getArticleClassifiedFetchCount?.() || 0;
-            console.log(`Database size: ${sizeStr} — stored pages: ${totalPages}, articles detected: ${articlePages}`);
-          } catch (_) { /* ignore size/count errors */ }
-        }
-      } catch (e) {
-        console.log(`SQLite not available, continuing without DB: ${e.message}`);
-        this.db = null;
-        this.enableDb = false;
-        try {
-          this.fatalIssues.push({ kind: 'db-open-failed', message: e?.message || String(e) });
-        } catch (_) {}
-        try {
-          this.emitProblem({ kind: 'db-open-failed', scope: this.domain, message: 'SQLite unavailable', details: { error: e?.message || String(e) } });
-        } catch (_) {}
+      if (!this.dbAdapter) {
+        this.dbAdapter = createCrawlerDb({
+          dbPath: this.dbPath,
+          fastStart: this.fastStart,
+          cache: this.cache,
+          domain: this.domain,
+          emitProblem: (problem) => {
+            try { this.emitProblem(problem); } catch (_) {}
+          },
+          onFatalIssue: (issue) => {
+            try { this.fatalIssues.push(issue); } catch (_) {}
+          }
+        });
       }
+      await this.dbAdapter.init();
+      if (!this.dbAdapter.isEnabled()) {
+        this.enableDb = false;
+      }
+
+      // Initialize enhanced features if enabled
+      await this._initializeEnhancedFeatures();
+    }
+    try {
+      this.startUrlNormalized = this.normalizeUrl(this.startUrl) || this.startUrl;
+      if (this.startUrlNormalized) {
+        this.seededHubUrls.add(this.startUrlNormalized);
+      }
+    } catch (_) {
+      this.startUrlNormalized = this.startUrl;
     }
     
     // Load robots.txt
@@ -596,10 +1006,11 @@ class NewsCrawler {
   }
 
   async fetchPage(url, context = {}) {
+    const allowRevisit = !!context.allowRevisit;
     const decision = this._getUrlDecision(url, { ...context, phase: 'fetch', depth: context.depth || 0 });
     const analysis = decision?.analysis || {};
     const normalizedUrl = analysis && !analysis.invalid ? analysis.normalized : null;
-    if (!normalizedUrl || this.visited.has(normalizedUrl)) {
+    if (!normalizedUrl || (!allowRevisit && this.visited.has(normalizedUrl))) {
       return null;
     }
 
@@ -617,6 +1028,18 @@ class NewsCrawler {
       return { status: 'skipped-policy' };
     }
     
+  let conditionalHeaders = null;
+  if (this.dbAdapter && this.dbAdapter.isEnabled()) {
+      try {
+        const meta = this._getCachedArticleHeaders(normalizedUrl);
+        if (meta && (meta.etag || meta.last_modified)) {
+          conditionalHeaders = {};
+          if (meta.etag) conditionalHeaders['If-None-Match'] = meta.etag;
+          if (meta.last_modified) conditionalHeaders['If-Modified-Since'] = meta.last_modified;
+        }
+      } catch (_) {}
+    }
+
     try {
       // Apply pacing only for actual network fetches when enabled
       const uPre = new URL(normalizedUrl);
@@ -635,21 +1058,69 @@ class NewsCrawler {
       const to = setTimeout(() => {
         try { ac.abort(); } catch (_) {}
       }, this.requestTimeoutMs);
+      const fetchHeaders = {
+        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
+      };
+      if (conditionalHeaders) {
+        Object.assign(fetchHeaders, conditionalHeaders);
+      }
       const response = await fetch(normalizedUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
-        },
+        headers: fetchHeaders,
         agent: (parsedUrl => parsedUrl.protocol === 'http:' ? this.httpAgent : this.httpsAgent)(u),
         signal: ac.signal
       });
       try { clearTimeout(to); } catch (_) {}
       const headersReady = Date.now();
       const ttfbMs = headersReady - started; // time to first byte (headers received)
+      const status = response.status;
+      const etag = response.headers.get('etag') || null;
+      const lastModified = response.headers.get('last-modified') || null;
+      const contentTypeHeader = response.headers.get('content-type') || null;
+      const contentLengthHeader = parseInt(response.headers.get('content-length') || '0', 10) || null;
+      const contentEncoding = response.headers.get('content-encoding') || null;
+
+    if (status === 304) {
+        const finished = Date.now();
+        const totalMs304 = finished - started;
+        const meta304 = {
+          requestStartedIso,
+          fetchedAtIso: new Date(finished).toISOString(),
+          httpStatus: status,
+          contentType: contentTypeHeader,
+          contentLength: contentLengthHeader,
+          contentEncoding,
+          etag,
+          lastModified,
+          redirectChain: null,
+          referrerUrl: context.referrerUrl || null,
+          crawlDepth: context.depth ?? null,
+          ttfbMs,
+          downloadMs: null,
+          totalMs: totalMs304,
+          bytesDownloaded: 0,
+          transferKbps: null,
+          conditional: !!conditionalHeaders
+        };
+        this.currentDownloads.delete(normalizedUrl);
+        this.emitProgress();
+        try { this.noteSuccess(u.hostname); } catch (_) {}
+        try { console.log(`Not modified (304): ${normalizedUrl}`); } catch (_) {}
+        if (etag || lastModified) {
+          try {
+            this.articleHeaderCache.set(normalizedUrl, { etag, last_modified: lastModified, fetched_at: meta304.fetchedAtIso });
+            this.knownArticlesCache.set(normalizedUrl, true);
+          } catch (_) {}
+        }
+        return {
+          url: normalizedUrl,
+          notModified: true,
+          fetchMeta: meta304
+        };
+      }
 
     if (!response.ok) {
         const retryAfterHeader = response.headers.get('retry-after');
         const retryAfterMs = parseRetryAfter(retryAfterHeader);
-        const status = response.status;
         console.log(`Failed to fetch ${normalizedUrl}: ${status}`);
         this.stats.errors++;
         this._recordError({ kind: 'http', code: status, message: `HTTP ${status}`, url: normalizedUrl });
@@ -658,7 +1129,7 @@ class NewsCrawler {
       try { this.note429(u.hostname, retryAfterMs); } catch(_) {}
         }
         // Persist error
-        try { this.db?.insertError({ url: normalizedUrl, kind: 'http', code: status, message: `HTTP ${status}`, details: null }); } catch(_) {}
+  try { this.dbAdapter?.insertError({ url: normalizedUrl, kind: 'http', code: status, message: `HTTP ${status}`, details: null }); } catch(_) {}
         // Emit a structured error log line for UI colorization
         try { console.log(`ERROR ${JSON.stringify({ url: normalizedUrl, kind: 'http', code: status })}`); } catch(_) {}
         // Remove from in-flight set on failure
@@ -673,13 +1144,10 @@ class NewsCrawler {
       const totalMs = finished - started;
   const bytesDownloaded = Buffer.byteLength(html, 'utf8');
       const transferKbps = downloadMs > 0 ? (bytesDownloaded / 1024) / (downloadMs / 1000) : null;
-      const contentType = response.headers.get('content-type') || null;
-      const contentLength = parseInt(response.headers.get('content-length') || '0', 10) || null;
-  const contentEncoding = response.headers.get('content-encoding') || null;
-      const etag = response.headers.get('etag') || null;
-      const lastModified = response.headers.get('last-modified') || null;
-      const fetchedAtIso = new Date(finished).toISOString();
-      const httpStatus = response.status;
+    const contentType = contentTypeHeader;
+    const contentLength = contentLengthHeader;
+    const fetchedAtIso = new Date(finished).toISOString();
+    const httpStatus = status;
       const finalUrl = response.url || normalizedUrl;
       const redirectChain = finalUrl !== normalizedUrl ? JSON.stringify([normalizedUrl, finalUrl]) : null;
           this.stats.pagesVisited++;
@@ -710,15 +1178,20 @@ class NewsCrawler {
           downloadMs,
           totalMs,
           bytesDownloaded,
-          transferKbps
+          transferKbps,
+          conditional: !!conditionalHeaders
         }
       };
   } catch (error) {
     console.log(`Error fetching ${normalizedUrl}: ${error.message}`);
   this.stats.errors++;
     this._recordError({ kind: 'exception', message: (error && (error.message || error.name)) || String(error), url: normalizedUrl });
+    const isConnReset = !!(error && (error.code === 'ECONNRESET' || /ECONNRESET|socket hang up/i.test(String(error && (error.message || '')))));
+    if (isConnReset) {
+      this._handleConnectionReset(normalizedUrl, error);
+    }
       const isTimeout = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error && error.message || ''))));
-      try { this.db?.insertError({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message || String(error) }); } catch(_) {}
+  try { this.dbAdapter?.insertError({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message || String(error) }); } catch(_) {}
       try { console.log(`ERROR ${JSON.stringify({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message||String(error) })}`); } catch(_) {}
   // Ensure cleanup if fetch threw
   this.currentDownloads.delete(normalizedUrl);
@@ -789,7 +1262,9 @@ class NewsCrawler {
   domainBackoffMs,
   domainRateLimited,
   domainIntervalMs,
-  perHostLimits
+  perHostLimits,
+      cacheRateLimitedServed: this.stats.cacheRateLimitedServed || 0,
+      cacheRateLimitedDeferred: this.stats.cacheRateLimitedDeferred || 0
     };
     try {
       console.log(`PROGRESS ${JSON.stringify(p)}`);
@@ -799,6 +1274,28 @@ class NewsCrawler {
   pause() { this.paused = true; this.emitProgress(true); }
   resume() { this.paused = false; this.emitProgress(true); }
   isPaused() { return !!this.paused; }
+
+  requestAbort(reason, details = null) {
+    if (this.abortRequested) return;
+    this.abortRequested = true;
+    this.paused = false;
+    if (reason) {
+      try { console.log(`Abort requested: ${reason}`); } catch (_) {}
+    }
+    if (this.queueHeap && Array.isArray(this.queueHeap.data)) {
+      this.queueHeap.data.length = 0;
+    }
+    if (Array.isArray(this.requestQueue)) {
+      this.requestQueue.length = 0;
+    }
+    if (this.queuedUrls && typeof this.queuedUrls.clear === 'function') {
+      try { this.queuedUrls.clear(); } catch (_) {}
+    }
+    if (details && typeof details === 'object') {
+      this.fatalIssues.push({ kind: reason || 'abort', message: details.message || reason || 'abort', details });
+    }
+    this.emitProgress(true);
+  }
 
   // JSON file saving removed
 
@@ -1054,7 +1551,7 @@ class NewsCrawler {
       } catch (_) {}
 
       // Save to SQLite if enabled
-  if (this.db && !options.skipDb) {
+  if (this.dbAdapter && this.dbAdapter.isEnabled() && !options.skipDb) {
         // Build article-level analysis using URL + content signals
         let articleAnalysis = null;
         try {
@@ -1064,7 +1561,7 @@ class NewsCrawler {
           const combined = this._combineSignals(urlSig, contentSig, { wordCount: wordCount ?? undefined });
           articleAnalysis = { url: urlSig, content: { ...contentSig, wordCount: wordCount ?? null, articleXPath: articleXPath || null }, combined };
         } catch (_) {}
-        this.db.upsertArticle({
+  this.dbAdapter.upsertArticle({
           url: metadata.url,
           title: metadata.title,
           date: metadata.date || null,
@@ -1096,7 +1593,7 @@ class NewsCrawler {
           article_xpath: articleXPath,
           analysis: articleAnalysis ? JSON.stringify(articleAnalysis) : null
         });
-  } else if (this.db && options.skipDb) {
+  } else if (this.dbAdapter && this.dbAdapter.isEnabled() && options.skipDb) {
         console.log(`Skipped DB save (using cached content): ${metadata.url}`);
       }
       
@@ -1106,13 +1603,13 @@ class NewsCrawler {
   return { filePath: null, fileSize: null };
     } catch (error) {
       console.log(`Failed to save article ${metadata.url}: ${error.message}`);
-      try { this.db?.insertError({ url: metadata.url, kind: 'save', message: error.message || String(error) }); } catch(_) {}
+  try { this.dbAdapter?.insertError({ url: metadata.url, kind: 'save', message: error.message || String(error) }); } catch(_) {}
       try { console.log(`ERROR ${JSON.stringify({ url: metadata.url, kind: 'save', message: error.message||String(error) })}`); } catch(_) {}
       return { filePath: null, fileSize: null };
     }
   }
 
-  async processPage(url, depth = 0) {
+  async processPage(url, depth = 0, context = {}) {
     if (depth > this.maxDepth) return;
 
     // Respect max downloads limit
@@ -1124,28 +1621,52 @@ class NewsCrawler {
   // Try cache if requested (preferCache) or if a freshness window is set
   const looksArticle = this.looksLikeArticle(url);
     let fromCache = false;
-    // Determine effective max-age by type
+    const forcedCache = context && context.forceCache === true;
+    const preloadedCache = context && context.cachedPage ? context.cachedPage : null;
+    const rateLimitedHost = context && context.rateLimitedHost ? context.rateLimitedHost : null;
+    const allowCache = forcedCache || !context.allowRevisit;
     const effectiveMaxAgeMs = (looksArticle && this.maxAgeArticleMs != null)
       ? this.maxAgeArticleMs
       : ((!looksArticle && this.maxAgeHubMs != null) ? this.maxAgeHubMs : this.maxAgeMs);
-    if (effectiveMaxAgeMs != null || this.preferCache) {
-      const cached = await this.getCachedArticle(url);
+    if (allowCache && (effectiveMaxAgeMs != null || this.preferCache || forcedCache)) {
+      let cached = preloadedCache;
+      if (!cached) {
+        cached = await this.getCachedArticle(url);
+      }
       if (cached) {
         const decision = shouldUseCache({ preferCache: this.preferCache, maxAgeMs: effectiveMaxAgeMs, crawledAt: cached.crawledAt });
-        if (decision.use) {
+        const useCache = forcedCache || decision.use;
+        if (useCache) {
           const ageSeconds = decision.ageSeconds;
-          try { console.log(`CACHE ${JSON.stringify({ url: this.normalizeUrl(url), source: cached.source, ageSeconds })}`); } catch (_) {}
-          console.log(`Using cached page (age ${ageSeconds}s, source=${cached.source}): ${url}`);
+          let normalizedUrl = null;
+          try { normalizedUrl = this.normalizeUrl(url); } catch (_) { normalizedUrl = url; }
+          const cacheReason = forcedCache
+            ? 'rate-limit'
+            : (this.preferCache && decision.use ? 'prefer-cache' : 'fresh-cache');
+          try { console.log(`CACHE ${JSON.stringify({ url: normalizedUrl, source: cached.source, ageSeconds, reason: cacheReason })}`); } catch (_) {}
+          console.log(`Using cached page (age ${ageSeconds}s, source=${cached.source}, reason=${cacheReason}): ${url}`);
           // Fast path: mark visited and count as found if looks like article; skip heavy DOM work
-          const norm = this.normalizeUrl(url);
+          const norm = normalizedUrl;
           pageData = { url: norm, html: cached.html };
           this.visited.add(norm);
           this._noteDepthVisit(norm, depth);
           this.stats.pagesVisited++;
           fromCache = true;
+          if (forcedCache) {
+            this.stats.cacheRateLimitedServed = (this.stats.cacheRateLimitedServed || 0) + 1;
+            const milestoneUrl = norm || url;
+            const host = rateLimitedHost || this._safeHostFromUrl(milestoneUrl);
+            const milestoneDetails = { url: milestoneUrl };
+            if (host) milestoneDetails.host = host;
+            this._emitMilestoneOnce(`cache-priority:${host || milestoneUrl}`, {
+              kind: 'cache-priority-hit',
+              message: 'Served cached page while rate limited',
+              details: milestoneDetails
+            });
+          }
           // Optionally record a lightweight fetch row for visibility without re-parsing
           try {
-            if (this.db) {
+            if (this.dbAdapter && this.dbAdapter.isEnabled()) {
               // Lightweight analysis snapshot for the cache hit
               let analysis = null;
               try {
@@ -1155,7 +1676,7 @@ class NewsCrawler {
                 const combined = this._combineSignals(urlSig, contentSig);
                 analysis = { kind: 'cache-hit', url: urlSig, content: contentSig, combined };
               } catch (_) {}
-              this.db.insertFetch({
+              this.dbAdapter.insertFetch({
                 url: norm,
                 request_started_at: null,
                 fetched_at: new Date().toISOString(),
@@ -1198,11 +1719,51 @@ class NewsCrawler {
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         return { status: 'skipped' };
       }
-      pageData = await this.fetchPage(url, { referrerUrl: null, depth });
+      pageData = await this.fetchPage(url, { referrerUrl: null, depth, allowRevisit: !!context.allowRevisit, queueType: context.type });
       if (!pageData) return { status: 'failed', retriable: true };
       if (pageData.error) {
         const retriable = pageData.httpStatus ? (pageData.httpStatus === 429 || (pageData.httpStatus >= 500 && pageData.httpStatus < 600)) : true;
         return { status: 'failed', retriable, retryAfterMs: pageData.retryAfterMs };
+      }
+      if (pageData.notModified) {
+        try {
+          const normFetched = this.normalizeUrl(pageData.url);
+          if (normFetched) {
+            this.visited.add(normFetched);
+            this._noteDepthVisit(normFetched, depth);
+          }
+        } catch (_) {}
+        this.stats.pagesVisited++;
+        this.emitProgress();
+        if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta) {
+          try {
+            const existing = this.dbAdapter.getArticleRowByUrl?.(pageData.url);
+            this.dbAdapter.insertFetch({
+              url: pageData.url,
+              request_started_at: pageData.fetchMeta.requestStartedIso || null,
+              fetched_at: pageData.fetchMeta.fetchedAtIso || null,
+              http_status: pageData.fetchMeta.httpStatus ?? 304,
+              content_type: pageData.fetchMeta.contentType || null,
+              content_length: pageData.fetchMeta.contentLength ?? null,
+              content_encoding: pageData.fetchMeta.contentEncoding || null,
+              bytes_downloaded: 0,
+              transfer_kbps: null,
+              ttfb_ms: pageData.fetchMeta.ttfbMs ?? null,
+              download_ms: pageData.fetchMeta.downloadMs ?? null,
+              total_ms: pageData.fetchMeta.totalMs ?? null,
+              saved_to_db: 0,
+              saved_to_file: 0,
+              file_path: null,
+              file_size: null,
+              classification: existing ? 'article' : 'other',
+              nav_links_count: null,
+              article_links_count: null,
+              word_count: existing?.word_count ?? null,
+              analysis: JSON.stringify({ status: 'not-modified', conditional: true })
+            });
+          } catch (_) {}
+        }
+        return { status: 'not-modified' };
       }
     }
 
@@ -1235,7 +1796,7 @@ class NewsCrawler {
         // saveArticle emits progress; an extra tick is okay
         this.emitProgress();
         // Record fetch details if DB enabled
-        if (this.db && pageData.fetchMeta) {
+  if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta) {
           const navLinks = this.findNavigationLinks($).length;
           const artLinks = this.findArticleLinks($).length;
           // Estimate word count using Readability (same parse used in saveArticle)
@@ -1251,7 +1812,7 @@ class NewsCrawler {
           const contentSig = this._computeContentSignals($, pageData.html);
           const urlSig = this._computeUrlSignals(pageData.url);
           const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
-          this.db.insertFetch({
+          this.dbAdapter.insertFetch({
             url: pageData.url,
             request_started_at: pageData.fetchMeta.requestStartedIso || null,
             fetched_at: pageData.fetchMeta.fetchedAtIso || null,
@@ -1274,8 +1835,24 @@ class NewsCrawler {
             word_count: wc,
             analysis: JSON.stringify({ url: urlSig, content: { ...contentSig, wordCount: wc ?? null }, combined })
           });
+          try {
+            const normalizedArticleUrl = (() => {
+              try { return this.normalizeUrl(pageData.url); } catch (_) { return pageData.url; }
+            })();
+            if (normalizedArticleUrl) {
+              this.articleHeaderCache.set(normalizedArticleUrl, {
+                etag: pageData.fetchMeta.etag || null,
+                last_modified: pageData.fetchMeta.lastModified || null,
+                fetched_at: pageData.fetchMeta.fetchedAtIso || null
+              });
+              this.knownArticlesCache.set(normalizedArticleUrl, true);
+            }
+          } catch (_) {}
         }
       }
+      try {
+        this._maybeEnqueueAdaptiveSeeds({ url: pageData.url, metadata, depth });
+      } catch (_) {}
     }
 
     // Find navigation and article links
@@ -1287,7 +1864,7 @@ class NewsCrawler {
     this._checkAnalysisMilestones({ depth, isArticle: isArticleByUrl });
 
     // If DB enabled, record non-article fetch as well
-  if (this.db && pageData.fetchMeta && !isArticleByUrl) {
+  if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta && !isArticleByUrl) {
       // For non-article pages (by final classification), record fetch
       const navLinksCount = navigationLinks.length;
       const articleLinksCount = articleLinks.length;
@@ -1303,7 +1880,7 @@ class NewsCrawler {
       const contentSig = this._computeContentSignals($, pageData.html);
       const urlSig = this._computeUrlSignals(pageData.url);
       const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
-      this.db.insertFetch({
+  this.dbAdapter.insertFetch({
         url: pageData.url,
         request_started_at: pageData.fetchMeta.requestStartedIso || null,
         fetched_at: pageData.fetchMeta.fetchedAtIso || null,
@@ -1339,12 +1916,17 @@ class NewsCrawler {
         this.enqueueRequest({ url: urlOnly, depth: depth + 1, type: link.type });
       } else {
         if (!this.visited.has(urlOnly)) {
-          this.requestQueue.push({ url: urlOnly, depth: depth + 1 });
+          const nextItem = { url: urlOnly, depth: depth + 1, type: link.type };
+          this.requestQueue.push(nextItem);
+          try {
+            const host = this._safeHostFromUrl(urlOnly);
+            this.emitQueueEvent({ action: 'enqueued', url: urlOnly, depth: depth + 1, host, queueSize: this.requestQueue.length });
+          } catch (_) {}
         }
       }
       // Persist link edge to DB if enabled
-      if (this.db) {
-        this.db.insertLink({
+      if (this.dbAdapter && this.dbAdapter.isEnabled()) {
+        this.dbAdapter.insertLink({
           src_url: pageData.url,
           dst_url: urlOnly,
           anchor: link.anchor,
@@ -1359,11 +1941,49 @@ class NewsCrawler {
     return { status: fromCache ? 'cache' : 'success' };
   }
 
-  computePriority({ type, depth, discoveredAt }) {
-    const typeWeight = type === 'article' ? 0 : 10;
+  computePriority({ type, depth, discoveredAt, bias = 0, url = null, meta = null }) {
+    // Use enhanced priority computation if available
+    if (this.featuresEnabled?.gapDrivenPrioritization && this.priorityScorer) {
+      try {
+        const result = this.priorityScorer.computeEnhancedPriority({
+          type, depth, discoveredAt, bias, url, meta, jobId: this.jobId
+        });
+        return result.priority;
+      } catch (error) {
+        console.warn('Enhanced priority computation failed, using base priority:', error.message);
+      }
+    }
+
+    // Base priority calculation (backward compatible)
+    let kind = type;
+    if (type && typeof type === 'object') {
+      kind = type.kind || type.type || type.intent;
+    }
+    const normalizedKind = typeof kind === 'string' ? kind : 'nav';
+    let typeWeight;
+    switch (normalizedKind) {
+      case 'article':
+        typeWeight = 0;
+        break;
+      case 'hub-seed':
+        typeWeight = 4;
+        break;
+      case 'history':
+        typeWeight = 6;
+        break;
+      case 'nav':
+        typeWeight = 10;
+        break;
+      case 'refresh':
+        typeWeight = 25;
+        break;
+      default:
+        typeWeight = 12;
+        break;
+    }
     const depthPenalty = depth;
-    const tieBreaker = discoveredAt || 0; // older first
-    return typeWeight + depthPenalty + tieBreaker * 1e-9; // small influence of discovery time
+    const tieBreaker = discoveredAt || 0;
+    return typeWeight + depthPenalty + bias + tieBreaker * 1e-9;
   }
 
   _handlePolicySkip(decision, { depth, queueSize }) {
@@ -1402,44 +2022,74 @@ class NewsCrawler {
       } else {
         this.emitQueueEvent({ action: 'drop', url: normalized || url, depth, host, reason: decision.reason || 'policy-blocked', queueSize: currentSize });
       }
-      return;
+      return false;
     }
 
     if (depth > this.maxDepth) {
       this.emitQueueEvent({ action: 'drop', url: normalized || url, depth, host, reason: 'max-depth', queueSize: currentSize });
-      return;
+      return false;
     }
     if (!normalized) {
-      // Unable to normalize URL; drop silently (reason: bad-url)
       this.emitQueueEvent({ action: 'drop', url: url, depth, host: null, reason: 'bad-url', queueSize: currentSize });
-      return;
+      return false;
     }
     if (!this.isOnDomain(normalized)) {
       this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'off-domain', queueSize: currentSize });
-      return;
+      return false;
     }
     if (!this.isAllowed(normalized)) {
       this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'robots-disallow', queueSize: currentSize });
-      return;
+      return false;
     }
-    if (this.visited.has(normalized)) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'visited', queueSize: currentSize });
-      return;
-    }
-    if (this.queuedUrls.has(normalized)) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'duplicate', queueSize: currentSize });
-      return;
-    }
-    if (this.queueHeap.size() >= this.maxQueue) {
-      // bounded: drop new on overflow
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'overflow', queueSize: currentSize });
-      return;
-    }
-    const discoveredAt = Date.now();
+
+  const meta = (type && typeof type === 'object') ? type : null;
+    let kind = meta ? (meta.kind || meta.type || meta.intent) : type;
     const inferredType = this.looksLikeArticle(normalized) ? 'article' : 'nav';
-    // Allow passing an object shape for type: { kind: 'nav'|'article', reason?: string }
-    const kind = (type && typeof type === 'object') ? (type.kind || type.type || inferredType) : (type || inferredType);
-    const reason = (type && typeof type === 'object' && type.reason) ? type.reason : undefined;
+    if (!kind) {
+      kind = inferredType;
+    }
+    let reason = meta?.reason;
+    let allowRevisit = !!meta?.allowRevisit;
+
+    if (!allowRevisit && this.visited.has(normalized)) {
+      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'visited', queueSize: currentSize });
+      return false;
+    }
+
+    let isKnownArticle = false;
+    if (this.dbAdapter && this.dbAdapter.isEnabled() && kind === 'article') {
+      if (this.knownArticlesCache.has(normalized)) {
+        isKnownArticle = !!this.knownArticlesCache.get(normalized);
+      } else {
+        try {
+          const row = this.dbAdapter.getArticleRowByUrl(normalized) || this.dbAdapter.getArticleByUrlOrCanonical(normalized);
+          isKnownArticle = !!row;
+        } catch (_) {
+          isKnownArticle = false;
+        }
+        this.knownArticlesCache.set(normalized, isKnownArticle);
+      }
+    }
+    if (isKnownArticle && kind === 'article') {
+      kind = 'refresh';
+      if (!reason) reason = 'known-article';
+    }
+
+    const isRefreshLike = allowRevisit || kind === 'refresh';
+    const queueKey = isRefreshLike ? `${kind}:${normalized}` : normalized;
+
+    if (this.queuedUrls.has(queueKey)) {
+      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'duplicate', queueSize: currentSize });
+      return false;
+    }
+
+    if (this.queueHeap.size() >= this.maxQueue) {
+      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'overflow', queueSize: currentSize });
+      return false;
+    }
+
+    const discoveredAt = Date.now();
+    const priorityBias = typeof meta?.priorityBias === 'number' ? meta.priorityBias : 0;
     const item = {
       url: normalized,
       depth,
@@ -1447,14 +2097,60 @@ class NewsCrawler {
       retries: 0,
       nextEligibleAt: 0,
       discoveredAt,
-      decision
+      decision,
+      allowRevisit,
+      queueKey,
+      priorityBias
     };
-    item.priority = this.computePriority({ type: item.type, depth: item.depth, discoveredAt });
+    
+    // Compute priority with enhanced features if available
+    const priorityResult = this.computeEnhancedPriority({ 
+      type: item.type, 
+      depth: item.depth, 
+      discoveredAt, 
+      bias: priorityBias, 
+      url: normalized,
+      meta 
+    });
+    
+    item.priority = priorityResult.priority;
+    
+    // Store enhanced metadata for queue analytics
+    if (priorityResult.prioritySource !== 'base') {
+      item.priorityMetadata = {
+        source: priorityResult.prioritySource,
+        bonusApplied: priorityResult.bonusApplied,
+        clusterId: priorityResult.clusterId,
+        gapPredictionScore: priorityResult.gapPredictionScore
+      };
+    }
+    
     this.queueHeap.push(item);
-    this.queuedUrls.add(normalized);
-    // Emit enqueued event with updated size
+    this.queuedUrls.add(queueKey);
     const sizeAfter = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
-    this.emitQueueEvent({ action: 'enqueued', url: normalized, depth, host, queueSize: sizeAfter, reason });
+    
+    // Emit enhanced queue event with priority metadata
+    const queueEventData = {
+      action: 'enqueued',
+      url: normalized,
+      depth,
+      host,
+      queueSize: sizeAfter,
+      reason,
+      jobId: this.jobId
+    };
+    
+    // Add priority metadata if enhanced features are enabled
+    if (priorityResult.prioritySource !== 'base') {
+      queueEventData.priorityScore = priorityResult.priority;
+      queueEventData.prioritySource = priorityResult.prioritySource;
+      queueEventData.bonusApplied = priorityResult.bonusApplied;
+      queueEventData.clusterId = priorityResult.clusterId;
+      queueEventData.gapPredictionScore = priorityResult.gapPredictionScore;
+    }
+    
+    this.emitEnhancedQueueEvent(queueEventData);
+    return true;
   }
 
   async acquireRateToken() {
@@ -1520,50 +2216,169 @@ class NewsCrawler {
     }
   }
 
+  async _pullNextWorkItem() {
+    const now = nowMs();
+    let minWake = Infinity;
+
+    if (this.usePriorityQueue) {
+      const deferred = [];
+      let candidate = null;
+      let context = null;
+      const maxScans = Math.min(64, this.queueHeap.size() + 1);
+      for (let i = 0; i < maxScans; i++) {
+        const item = this.queueHeap.pop();
+        if (!item) break;
+        const host = this._safeHostFromUrl(item.url);
+        const resumeAt = this._getHostResumeTime(host);
+        let earliest = item.nextEligibleAt || 0;
+        if (resumeAt) earliest = Math.max(earliest, resumeAt);
+        if (earliest > now) {
+          item.nextEligibleAt = earliest;
+          minWake = Math.min(minWake, earliest);
+          deferred.push(item);
+          continue;
+        }
+
+        if (this._isHostRateLimited(host)) {
+          const cached = await this.cache.get(item.url);
+          if (cached) {
+            context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
+            candidate = item;
+            break;
+          }
+          const nextResume = this._getHostResumeTime(host);
+          if (nextResume && nextResume > now) {
+            item.nextEligibleAt = nextResume;
+            minWake = Math.min(minWake, nextResume);
+            this.stats.cacheRateLimitedDeferred = (this.stats.cacheRateLimitedDeferred || 0) + 1;
+            deferred.push(item);
+            continue;
+          }
+        }
+
+        candidate = item;
+        break;
+      }
+      for (const d of deferred) {
+        this.queueHeap.push(d);
+      }
+      if (candidate) {
+        return { item: candidate, context, wakeAt: minWake < Infinity ? minWake : null };
+      }
+    } else {
+      const deferred = [];
+      let candidate = null;
+      let context = null;
+      const limit = Math.min(64, this.requestQueue.length);
+      for (let i = 0; i < limit; i++) {
+        const item = this.requestQueue.shift();
+        if (!item) break;
+        const host = this._safeHostFromUrl(item.url);
+        const resumeAt = this._getHostResumeTime(host);
+        let earliest = item.deferredUntil || 0;
+        if (resumeAt) earliest = Math.max(earliest, resumeAt);
+        if (earliest > now) {
+          item.deferredUntil = earliest;
+          minWake = Math.min(minWake, earliest);
+          const cached = await this.cache.get(item.url);
+          if (cached) {
+            delete item.deferredUntil;
+            context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
+            candidate = item;
+            break;
+          }
+          this.stats.cacheRateLimitedDeferred = (this.stats.cacheRateLimitedDeferred || 0) + 1;
+          deferred.push(item);
+          continue;
+        }
+
+        delete item.deferredUntil;
+        candidate = item;
+        break;
+      }
+      for (const d of deferred) {
+        this.requestQueue.push(d);
+      }
+      if (candidate) {
+        return { item: candidate, context, wakeAt: minWake < Infinity ? minWake : null };
+      }
+    }
+
+    if (minWake < Infinity) {
+      return { wakeAt: minWake };
+    }
+    return null;
+  }
+
   async runWorker(workerId) {
     while (true) {
+      if (this.abortRequested) {
+        return;
+      }
       // honor pause
-      while (this.paused) {
+      while (this.paused && !this.abortRequested) {
         await sleep(200);
         this.emitProgress();
+      }
+      if (this.abortRequested) {
+        return;
       }
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         return;
       }
-      // Pop next item (avoid peek/pop race with other workers)
-  let item = this.queueHeap.pop();
+      const pick = await this._pullNextWorkItem();
+      if (this.abortRequested) {
+        return;
+      }
       const now = nowMs();
-      if (!item) {
-        // If queue is empty, wait briefly to allow other workers to enqueue new items
-        // Only exit when queue has been empty for a while and no workers are busy
+      if (!pick || !pick.item) {
+        const queueSize = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
+        const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : 0;
+        const maxWait = wakeTarget > 0 ? Math.min(wakeTarget, 1000) : 1000;
         let waited = 0;
         const waitStep = 100;
-        while (waited < 1000) { // wait up to 1s total
-          await sleep(waitStep);
+        while (waited < maxWait && !this.abortRequested) {
+          await sleep(Math.min(waitStep, maxWait - waited));
           waited += waitStep;
-          if (this.queueHeap.size() > 0) break;
-          if (this.paused) break; // break early to top-level pause check
+          if ((this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length) > 0 || this.paused) {
+            break;
+          }
         }
-        if (this.queueHeap.size() === 0 && !this.paused) {
-          return; // nothing to do; exit
+        if (this.abortRequested) {
+          return;
+        }
+        if ((this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length) === 0 && !this.paused) {
+          return;
         }
         continue;
       }
-      if (item.nextEligibleAt > now) {
-        // Not yet eligible: put it back and wait a bit
-        this.queueHeap.push(item);
-        await sleep(Math.min(250, item.nextEligibleAt - now));
-        continue;
-      }
+      const item = pick.item;
+      const extraCtx = pick.context || {};
       // Dequeue for processing
       try {
-        const host = (() => { try { return new URL(item.url).hostname; } catch (_) { return null; } })();
+        const host = this._safeHostFromUrl(item.url);
         const sizeNow = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
         this.emitQueueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: sizeNow });
       } catch (_) {}
-  this.queuedUrls.delete(item.url);
+      if (item.queueKey) {
+        this.queuedUrls.delete(item.queueKey);
+      } else {
+        this.queuedUrls.delete(item.url);
+      }
       this.busyWorkers++;
-      const res = await this.processPage(item.url, item.depth);
+      const processContext = {
+        type: item.type,
+        allowRevisit: item.allowRevisit
+      };
+      if (extraCtx && extraCtx.forceCache) {
+        processContext.forceCache = true;
+        if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
+        if (extraCtx.rateLimitedHost) processContext.rateLimitedHost = extraCtx.rateLimitedHost;
+      }
+      const res = await this.processPage(item.url, item.depth, processContext);
+      if (this.abortRequested) {
+        return;
+      }
       this.busyWorkers = Math.max(0, this.busyWorkers - 1);
       if (res && res.status === 'failed') {
         const retriable = !!res.retriable && item.retries < this.retryLimit;
@@ -1572,9 +2387,13 @@ class NewsCrawler {
           const base = res.retryAfterMs != null ? res.retryAfterMs : Math.min(this.backoffBaseMs * Math.pow(2, item.retries - 1), this.backoffMaxMs);
           item.nextEligibleAt = nowMs() + jitter(base);
           // Recompute priority to keep ordering roughly stable
-          item.priority = this.computePriority({ type: item.type, depth: item.depth, discoveredAt: item.discoveredAt });
+          item.priority = this.computePriority({ type: item.type, depth: item.depth, discoveredAt: item.discoveredAt, bias: item.priorityBias || 0 });
           this.queueHeap.push(item);
-          this.queuedUrls.add(item.url);
+          if (item.queueKey) {
+            this.queuedUrls.add(item.queueKey);
+          } else {
+            this.queuedUrls.add(item.url);
+          }
           // Emit retry event after requeue
           try {
             const host = (() => { try { return new URL(item.url).hostname; } catch (_) { return null; } })();
@@ -1616,12 +2435,12 @@ class NewsCrawler {
     }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
   this.emitProgress(true);
+    this._emitIntelligentCompletionMilestone({ outcomeErr });
     
-    if (this.db) {
-      const count = this.db.getCount();
+    if (this.dbAdapter && this.dbAdapter.isEnabled()) {
+      const count = this.dbAdapter.getArticleCount();
       console.log(`Database contains ${count} article records`);
-      this.db.close();
-      this.db = null;
+      this.dbAdapter.close();
     }
 
     if (outcomeErr) {
@@ -1633,54 +2452,173 @@ class NewsCrawler {
 
   // --- Intelligent planner ---
   async planIntelligent() {
-    // Sense: what site is this? What gazetteer do we have? What hubs have we seen before?
     const host = this.domain.toLowerCase();
-    const start = this.startUrl;
-  try { console.log(`Intelligent crawl planning for host=${host}`); } catch(_) {}
-    if (Array.isArray(this.intTargetHosts) && this.intTargetHosts.length > 0) {
-      const ok = this.intTargetHosts.some(h => host.endsWith(h));
-      if (!ok) {
-        this.emitProblem({ kind: 'planner-skipped-host', host, targetHosts: this.intTargetHosts });
-        return;
+    try { console.log(`Intelligent crawl planning for host=${host}`); } catch (_) {}
+
+    const bootstrapResult = await this._withPlannerStage('bootstrap', {
+      host,
+      targetHosts: Array.isArray(this.intTargetHosts) && this.intTargetHosts.length ? this.intTargetHosts : undefined
+    }, async () => {
+      if (Array.isArray(this.intTargetHosts) && this.intTargetHosts.length > 0) {
+        const ok = this.intTargetHosts.some((h) => host.endsWith(h));
+        if (!ok) {
+          this.emitProblem({ kind: 'planner-skipped-host', host, targetHosts: this.intTargetHosts });
+          return {
+            allowed: false,
+            skipPlan: true,
+            targetHosts: this.intTargetHosts
+          };
+        }
       }
+      return {
+        allowed: true,
+        skipPlan: false,
+        plannerVerbosity: this.plannerVerbosity,
+        targetHosts: this.intTargetHosts || null
+      };
+    }, {
+      mapResultForEvent: (res) => {
+        if (!res) return null;
+        return {
+          allowed: res.allowed !== false,
+          skipped: !!res.skipPlan,
+          plannerVerbosity: res.plannerVerbosity,
+          targetHosts: Array.isArray(res.targetHosts) && res.targetHosts.length ? res.targetHosts : undefined
+        };
+      }
+    });
+
+    if (bootstrapResult?.skipPlan) {
+      return;
     }
-    // Learn patterns from homepage: detect prominent top-level sections to use as hubs
-    let homepageHtml = null;
-    try {
-      const page = await this.fetchPage(this.startUrl, { referrerUrl: null, depth: 0 });
-      if (page && !page.error) { homepageHtml = page.html; }
-    } catch (_) {}
-  const learned = this._inferSitePatternsFromHomepage(homepageHtml);
-    if (learned && (learned.sections?.length || learned.articleHints?.length)) {
-  this.emitMilestone({ kind: 'patterns-learned', scope: host, details: learned, message: 'Homepage patterns inferred' });
-    }
-    // Seed hubs from learned sections
-    const sectionHubs = (learned.sections || []).map(s => `${this.baseUrl}/${s}/`);
-    // Fallback: Guardian-style countries when host matches
-    let candidates = [];
-    if (/guardian\.com$/.test(host)) {
-      candidates = await this._computeCountryHubCandidates(host);
-    }
-    // Merge and de-duplicate hub list (sections + guardian countries)
-    const hubSet = new Set(sectionHubs.concat(candidates.map(c => c.url)));
-    const cap = typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50;
-    const hubs = Array.from(hubSet).slice(0, cap);
-    const seeded = [];
-    for (const hubUrl of hubs) {
-  this.enqueueRequest({ url: hubUrl, depth: 0, type: { kind: 'nav', reason: 'intelligent-seed' } });
-      seeded.push(hubUrl);
+
+    const patternResult = await this._withPlannerStage('infer-patterns', { startUrl: this.startUrl }, async () => {
+      let homepageHtml = null;
+      const fetchMeta = { source: 'network', notModified: false };
       try {
-        // Record as place_hub best-effort if DB available
-        this.db?.db?.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)`)
-          .run(host, hubUrl, JSON.stringify({ by: 'intelligent-plan', reason: 'learned-section-or-country' }));
-      } catch (_) {}
+        const page = await this.fetchPage(this.startUrl, { referrerUrl: null, depth: 0 });
+        if (page && !page.error) {
+          if (page.notModified) {
+            fetchMeta.notModified = true;
+            const cached = await this.getCachedArticle(this.startUrl);
+            homepageHtml = cached?.html || null;
+            fetchMeta.source = cached?.html ? 'cache' : 'stale';
+          } else {
+            homepageHtml = page.html;
+            fetchMeta.source = 'network';
+          }
+        } else if (page?.error) {
+          fetchMeta.error = page.error?.message || String(page.error);
+        }
+      } catch (err) {
+        fetchMeta.error = err?.message || String(err);
+      }
+      const learned = this._inferSitePatternsFromHomepage(homepageHtml);
+      if (learned && (learned.sections?.length || learned.articleHints?.length)) {
+        this.emitMilestone({ kind: 'patterns-learned', scope: host, details: learned, message: 'Homepage patterns inferred' });
+      }
+      return { learned, fetchMeta };
+    }, {
+      mapResultForEvent: (res) => {
+        if (!res) return null;
+        const sections = Array.isArray(res.learned?.sections) ? res.learned.sections : [];
+        const hints = Array.isArray(res.learned?.articleHints) ? res.learned.articleHints : [];
+        return {
+          sectionCount: sections.length,
+          sectionsPreview: sections.slice(0, 6),
+          articleHintsCount: hints.length,
+          articleHintsPreview: hints.slice(0, 6),
+          homepageSource: res.fetchMeta?.source || null,
+          notModified: !!res.fetchMeta?.notModified,
+          hadError: !!res.fetchMeta?.error
+        };
+      }
+    });
+
+  const learnedSections = Array.isArray(patternResult?.learned?.sections) ? patternResult.learned.sections : [];
+
+    const countryCandidates = await this._withPlannerStage('country-hubs', { host }, async () => {
+      const results = await this._computeCountryHubCandidates(host);
+      return Array.isArray(results) ? results : [];
+    }, {
+      mapResultForEvent: (res) => {
+        if (!Array.isArray(res)) return { candidateCount: 0 };
+        return {
+          candidateCount: res.length,
+          sample: res.slice(0, 5).map((c) => c?.url).filter(Boolean)
+        };
+      }
+    });
+
+    const seedResult = await this._withPlannerStage('seed-hubs', {
+      sectionsFromPatterns: learnedSections.length,
+      candidateCount: countryCandidates.length,
+      maxSeeds: typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50
+    }, async () => {
+      const sectionHubs = learnedSections.map((s) => `${this.baseUrl}/${s}/`);
+      const hubSet = new Set(sectionHubs.concat(countryCandidates.map((c) => c.url)));
+      const cap = typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50;
+      const hubs = Array.from(hubSet).slice(0, cap);
+      const seeded = [];
+      for (const hubUrl of hubs) {
+        const enqueued = this.enqueueRequest({ url: hubUrl, depth: 0, type: { kind: 'hub-seed', reason: 'intelligent-seed' } });
+        if (enqueued) {
+          const norm = (() => { try { return this.normalizeUrl(hubUrl); } catch (_) { return hubUrl; } })();
+          if (norm) this.seededHubUrls.add(norm);
+          seeded.push(hubUrl);
+        }
+        try {
+          this.db?.db?.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)`)
+            .run(host, hubUrl, JSON.stringify({ by: 'intelligent-plan', reason: 'learned-section-or-country' }));
+        } catch (_) {}
+      }
+      try { console.log(`Intelligent plan: seeded ${seeded.length} hub(s)`); } catch (_) {}
+      if (seeded.length === 0) {
+        this.emitProblem({ kind: 'no-hubs-seeded', scope: host, message: 'No suitable hubs found from homepage or models' });
+      } else {
+        this.emitMilestone({
+          kind: 'hubs-seeded',
+          scope: host,
+          message: `Seeded ${seeded.length} hubs`,
+          details: {
+            count: seeded.length,
+            sections: sectionHubs.length,
+            countryCandidates: countryCandidates.length
+          }
+        });
+      }
+      return {
+        seededCount: seeded.length,
+        requestedCount: hubs.length,
+        sectionHubCount: sectionHubs.length,
+        countryCandidateCount: countryCandidates.length,
+        sampleSeeded: seeded.slice(0, 5)
+      };
+    }, {
+      mapResultForEvent: (res) => {
+        if (!res) return null;
+        return {
+          seededCount: res.seededCount || 0,
+          requestedCount: res.requestedCount || 0,
+          sectionHubCount: res.sectionHubCount || 0,
+          countryCandidateCount: res.countryCandidateCount || 0,
+          sampleSeeded: Array.isArray(res.sampleSeeded) ? res.sampleSeeded.slice(0, 3) : undefined
+        };
+      }
+    });
+
+    if (this.plannerEnabled) {
+      this._intelligentPlanSummary = {
+        seededCount: seedResult?.seededCount || 0,
+        requestedCount: seedResult?.requestedCount || 0,
+        sectionHubCount: seedResult?.sectionHubCount || learnedSections.length,
+        countryCandidateCount: seedResult?.countryCandidateCount || countryCandidates.length,
+        sampleSeeded: Array.isArray(seedResult?.sampleSeeded) ? seedResult.sampleSeeded.slice(0, 5) : [],
+        learnedSectionCount: learnedSections.length,
+        learnedSectionsPreview: learnedSections.slice(0, 8)
+      };
     }
-    try { console.log(`Intelligent plan: seeded ${seeded.length} hub(s)`); } catch(_) {}
-    if (seeded.length === 0) {
-      this.emitProblem({ kind: 'no-hubs-seeded', scope: host, message: 'No suitable hubs found from homepage or models' });
-    } else {
-      this.emitMilestone({ kind: 'hubs-seeded', scope: host, message: `Seeded ${candidates.length} hubs`, details: { count: candidates.length } });
-    }
+
   }
 
   _inferSitePatternsFromHomepage(html) {
@@ -1772,26 +2710,64 @@ class NewsCrawler {
     await this.init();
     
     // Start with the initial URL
-    this.requestQueue.push({ url: this.startUrl, depth: 0 });
+    this.requestQueue.push({ url: this.startUrl, depth: 0, type: 'nav' });
+    try {
+      const host = this._safeHostFromUrl(this.startUrl);
+      this.emitQueueEvent({ action: 'enqueued', url: this.startUrl, depth: 0, host, queueSize: this.requestQueue.length });
+    } catch (_) {}
     
-    while (this.requestQueue.length > 0) {
+    while (true) {
+      if (this.abortRequested) {
+        break;
+      }
       // honor pause
-      while (this.paused) { await sleep(200); this.emitProgress(); }
+      while (this.paused && !this.abortRequested) { await sleep(200); this.emitProgress(); }
+      if (this.abortRequested) {
+        break;
+      }
       // Stop if we've reached the download limit
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         console.log(`Reached max downloads limit: ${this.maxDownloads}`);
         break;
       }
-      const { url, depth } = this.requestQueue.shift();
-      
-      await this.processPage(url, depth);
-      
-      // Rate limiting
-      if (this.requestQueue.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, this.rateLimitMs));
+      const pick = await this._pullNextWorkItem();
+      if (this.abortRequested) {
+        break;
       }
-      
-      // Log progress periodically
+      const now = nowMs();
+      if (!pick || !pick.item) {
+        const queueSize = this.requestQueue.length;
+        if (queueSize === 0 && !this.paused) {
+          break;
+        }
+        const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : (this.rateLimitMs || 100);
+        const waitMs = Math.min(Math.max(wakeTarget, 50), 1000);
+        await sleep(waitMs);
+        continue;
+      }
+
+      const item = pick.item;
+      const extraCtx = pick.context || {};
+      try {
+        const host = this._safeHostFromUrl(item.url);
+        this.emitQueueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: this.requestQueue.length });
+      } catch (_) {}
+
+      const processContext = {
+        type: item.type,
+        allowRevisit: item.allowRevisit
+      };
+      if (extraCtx && extraCtx.forceCache) {
+        processContext.forceCache = true;
+        if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
+        if (extraCtx.rateLimitedHost) processContext.rateLimitedHost = extraCtx.rateLimitedHost;
+      }
+
+      await this.processPage(item.url, item.depth, processContext);
+      if (this.abortRequested) {
+        break;
+      }
+
       if (this.stats.pagesVisited % 10 === 0) {
         console.log(`Progress: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
       }
@@ -1804,19 +2780,197 @@ class NewsCrawler {
       console.log(`Failure summary: ${outcomeErr.message}`);
     }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
-  this.emitProgress(true);
+    this.emitProgress(true);
+    this._emitIntelligentCompletionMilestone({ outcomeErr });
     
-    if (this.db) {
-      const count = this.db.getCount();
+    if (this.dbAdapter && this.dbAdapter.isEnabled()) {
+      const count = this.dbAdapter.getArticleCount();
       console.log(`Database contains ${count} article records`);
-      this.db.close();
-      this.db = null;
+      this.dbAdapter.close();
     }
+
+    // Cleanup enhanced features
+    this._cleanupEnhancedFeatures();
 
     if (outcomeErr) {
       if (!outcomeErr.details) outcomeErr.details = {};
       if (!outcomeErr.details.stats) outcomeErr.details.stats = { ...this.stats };
       throw outcomeErr;
+    }
+  }
+
+  /**
+   * Initialize enhanced features (gap-driven prioritization, knowledge reuse, coverage analytics)
+   * Features are enabled based on configuration and gracefully degrade if initialization fails
+   */
+  async _initializeEnhancedFeatures() {
+    try {
+      // Initialize configuration manager
+      this.configManager = new ConfigManager();
+      const features = this.configManager.getFeatureFlags();
+      
+      console.log('Enhanced features configuration:', features);
+
+      // Initialize enhanced database adapter if features are enabled
+      if (Object.values(features).some(enabled => enabled) && this.dbAdapter?.isEnabled()) {
+        try {
+          this.enhancedDbAdapter = new EnhancedDatabaseAdapter(this.dbAdapter);
+          console.log('Enhanced database adapter initialized');
+        } catch (error) {
+          console.warn('Failed to initialize enhanced database adapter:', error.message);
+          this.enhancedDbAdapter = null;
+        }
+      }
+
+      // Initialize priority scorer if gap-driven prioritization is enabled
+      if (features.gapDrivenPrioritization) {
+        try {
+          this.priorityScorer = new PriorityScorer(this.configManager, this.enhancedDbAdapter);
+          this.featuresEnabled.gapDrivenPrioritization = true;
+          console.log('Priority scorer initialized for gap-driven prioritization');
+        } catch (error) {
+          console.warn('Failed to initialize priority scorer:', error.message);
+          this.featuresEnabled.gapDrivenPrioritization = false;
+        }
+      }
+
+      // Initialize problem clustering service if enabled
+      if (features.problemClustering && this.enhancedDbAdapter) {
+        try {
+          this.problemClusteringService = new ProblemClusteringService(this.enhancedDbAdapter, this.configManager);
+          this.featuresEnabled.problemClustering = true;
+          console.log('Problem clustering service initialized');
+        } catch (error) {
+          console.warn('Failed to initialize problem clustering service:', error.message);
+          this.featuresEnabled.problemClustering = false;
+        }
+      }
+
+      // Initialize planner knowledge service if enabled
+      if (features.plannerKnowledgeReuse && this.enhancedDbAdapter) {
+        try {
+          this.plannerKnowledgeService = new PlannerKnowledgeService(this.enhancedDbAdapter, this.configManager);
+          this.featuresEnabled.plannerKnowledgeReuse = true;
+          console.log('Planner knowledge service initialized');
+        } catch (error) {
+          console.warn('Failed to initialize planner knowledge service:', error.message);
+          this.featuresEnabled.plannerKnowledgeReuse = false;
+        }
+      }
+
+      // Enable other features based on successful initialization
+      this.featuresEnabled.realTimeCoverageAnalytics = features.realTimeCoverageAnalytics && Boolean(this.enhancedDbAdapter);
+
+      // Log final feature status
+      const enabledFeatures = Object.keys(this.featuresEnabled).filter(k => this.featuresEnabled[k]);
+      if (enabledFeatures.length > 0) {
+        console.log(`Enhanced features enabled: ${enabledFeatures.join(', ')}`);
+      } else {
+        console.log('Enhanced features disabled or unavailable');
+      }
+
+    } catch (error) {
+      console.warn('Enhanced features initialization failed:', error.message);
+      // Ensure all enhanced features are disabled on initialization failure
+      Object.keys(this.featuresEnabled).forEach(key => {
+        this.featuresEnabled[key] = false;
+      });
+    }
+  }
+
+  /**
+   * Enhanced priority computation with configurable bonuses and gap-driven logic
+   * Falls back to base priority calculation if enhanced features are disabled
+   */
+  computeEnhancedPriority({ type, depth, discoveredAt, bias = 0, url, meta = null }) {
+    if (this.featuresEnabled.gapDrivenPrioritization && this.priorityScorer) {
+      try {
+        return this.priorityScorer.computeEnhancedPriority({
+          type, depth, discoveredAt, bias, url, meta, jobId: this.jobId
+        });
+      } catch (error) {
+        console.warn('Enhanced priority computation failed, falling back to base:', error.message);
+      }
+    }
+
+    // Fallback to base priority calculation
+    const basePriority = this.computePriority({ type, depth, discoveredAt, bias });
+    return {
+      priority: basePriority,
+      prioritySource: 'base',
+      bonusApplied: 0,
+      basePriority
+    };
+  }
+
+  /**
+   * Enhanced queue event emission with priority metadata and clustering
+   */
+  emitEnhancedQueueEvent(eventData) {
+    // Emit standard queue event first (backward compatibility)
+    this.emitQueueEvent(eventData);
+
+    // Add enhanced tracking if features are enabled
+    if (this.enhancedDbAdapter && eventData.jobId) {
+      try {
+        this.enhancedDbAdapter.insertQueueEvent({
+          ...eventData,
+          priorityScore: eventData.priorityScore,
+          prioritySource: eventData.prioritySource,
+          bonusApplied: eventData.bonusApplied,
+          clusterId: eventData.clusterId,
+          gapPredictionScore: eventData.gapPredictionScore
+        });
+      } catch (error) {
+        console.warn('Failed to log enhanced queue event:', error.message);
+      }
+    }
+  }
+
+  /**
+   * Enhanced problem processing with clustering and gap prediction
+   */
+  emitEnhancedProblem(problemData) {
+    // Emit standard problem event first (backward compatibility)
+    this.emitProblem(problemData);
+
+    // Process for clustering if enabled
+    if (this.featuresEnabled.problemClustering && this.problemClusteringService) {
+      try {
+        const clusterResult = this.problemClusteringService.processProblem({
+          ...problemData,
+          jobId: this.jobId,
+          timestamp: new Date().toISOString()
+        });
+
+        if (clusterResult?.shouldBoostRelated) {
+          console.log(`Problem cluster ${clusterResult.clusterId} reached occurrence ${clusterResult.occurrenceCount}, priority boost: ${clusterResult.priorityBoost}`);
+        }
+      } catch (error) {
+        console.warn('Problem clustering failed:', error.message);
+      }
+    }
+  }
+
+  /**
+   * Cleanup enhanced features on crawler shutdown
+   */
+  _cleanupEnhancedFeatures() {
+    try {
+      if (this.problemClusteringService) {
+        this.problemClusteringService.close();
+      }
+      if (this.plannerKnowledgeService) {
+        this.plannerKnowledgeService.close();
+      }
+      if (this.priorityScorer) {
+        this.priorityScorer.close();
+      }
+      if (this.configManager) {
+        this.configManager.close();
+      }
+    } catch (error) {
+      console.warn('Error during enhanced features cleanup:', error.message);
     }
   }
 }

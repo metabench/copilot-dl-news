@@ -435,6 +435,55 @@ function ensureGazetteer(db) {
   } catch (_) {}
 }
 
+function ensurePlaceHubs(db) {
+  if (!db) throw new Error('ensurePlaceHubs requires an open better-sqlite3 Database');
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS place_hubs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      host TEXT NOT NULL,
+      url TEXT NOT NULL UNIQUE,
+      place_slug TEXT,
+      place_kind TEXT,
+      topic_slug TEXT,
+      topic_label TEXT,
+      topic_kind TEXT,
+      title TEXT,
+      first_seen_at TEXT,
+      last_seen_at TEXT,
+      nav_links_count INTEGER,
+      article_links_count INTEGER,
+      evidence TEXT
+    );
+  `);
+
+  try {
+    const cols = db.prepare('PRAGMA table_info(place_hubs)').all().map((row) => row.name);
+    const ensureCol = (name, ddl) => {
+      if (!cols.includes(name)) {
+        db.exec(`ALTER TABLE place_hubs ADD COLUMN ${name} ${ddl}`);
+        cols.push(name);
+      }
+    };
+
+    ensureCol('place_slug', 'TEXT');
+    ensureCol('place_kind', 'TEXT');
+    ensureCol('topic_slug', 'TEXT');
+    ensureCol('topic_label', 'TEXT');
+    ensureCol('topic_kind', 'TEXT');
+    ensureCol('title', 'TEXT');
+    ensureCol('first_seen_at', 'TEXT');
+    ensureCol('last_seen_at', 'TEXT');
+    ensureCol('nav_links_count', 'INTEGER');
+    ensureCol('article_links_count', 'INTEGER');
+    ensureCol('evidence', 'TEXT');
+  } catch (_) {}
+
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_place ON place_hubs(place_slug)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_topic ON place_hubs(topic_slug)'); } catch (_) {}
+}
+
 // Open (and create if needed) a SQLite DB file and ensure gazetteer tables exist.
 function ensureDb(dbFilePath) {
   const projectRoot = findProjectRoot(__dirname);
@@ -451,6 +500,7 @@ function ensureDb(dbFilePath) {
   try { db.pragma('synchronous = NORMAL'); } catch (_) {}
 
   ensureGazetteer(db);
+  ensurePlaceHubs(db);
   return db;
 }
 
@@ -489,4 +539,4 @@ function dedupePlaceSources(db) {
   return { before, after, removed, duplicateGroups: groups.length };
 }
 
-module.exports = { ensureDb, ensureGazetteer, openDbReadOnly, dedupePlaceSources };
+module.exports = { ensureDb, ensureGazetteer, ensurePlaceHubs, openDbReadOnly, dedupePlaceSources };

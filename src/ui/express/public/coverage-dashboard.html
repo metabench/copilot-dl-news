@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coverage Analytics Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h3 {
+            color: #34495e;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .metric-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar {
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #3498db, #2ecc71);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active { background-color: #2ecc71; }
+        .status-warning { background-color: #f39c12; }
+        .status-error { background-color: #e74c3c; }
+        .status-inactive { background-color: #95a5a6; }
+
+        .controls {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls h3 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group label {
+            font-weight: 500;
+            color: #555;
+            min-width: 100px;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .control-group button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .control-group button:hover {
+            background-color: #2980b9;
+        }
+
+        .gap-item {
+            padding: 10px;
+            border-left: 4px solid #e74c3c;
+            background-color: #fff5f5;
+            margin-bottom: 10px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .gap-priority-high { border-left-color: #e74c3c; background-color: #fff5f5; }
+        .gap-priority-medium { border-left-color: #f39c12; background-color: #fffbf0; }
+        .gap-priority-low { border-left-color: #95a5a6; background-color: #f8f9fa; }
+
+        .discovery-item {
+            padding: 10px;
+            border-left: 4px solid #2ecc71;
+            background-color: #f0fff4;
+            margin-bottom: 10px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .milestone-item {
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            background-color: #f0f8ff;
+            margin-bottom: 10px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .error {
+            background-color: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <script type="module" src="/assets/global-nav.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div data-global-nav data-active="coverage"></div>
+    <div class="container">
+        <h1>Coverage Analytics Dashboard</h1>
+        
+        <div class="controls">
+            <h3>Dashboard Controls</h3>
+            <div class="control-group">
+                <label>Job ID:</label>
+                <input type="text" id="jobId" placeholder="Enter job ID" value="">
+                <label>Update Interval:</label>
+                <select id="updateInterval">
+                    <option value="5000">5 seconds</option>
+                    <option value="10000" selected>10 seconds</option>
+                    <option value="30000">30 seconds</option>
+                    <option value="60000">1 minute</option>
+                </select>
+                <button onclick="startDashboard()">Start Monitoring</button>
+                <button onclick="stopDashboard()">Stop</button>
+                <button onclick="refreshDashboard()">Refresh Now</button>
+            </div>
+        </div>
+
+        <div id="error-container"></div>
+        <div id="loading" class="loading" style="display: none;">Loading coverage data...</div>
+
+        <div class="dashboard-grid">
+            <!-- Coverage Overview -->
+            <div class="card">
+                <h3>Coverage Overview</h3>
+                <div class="metric">
+                    <span class="metric-label">Coverage Percentage</span>
+                    <span class="metric-value" id="coveragePercentage">-</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="coverageProgress" style="width: 0%">0%</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hubs Discovered</span>
+                    <span class="metric-value" id="hubsDiscovered">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hubs Expected</span>
+                    <span class="metric-value" id="hubsExpected">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Active Gaps</span>
+                    <span class="metric-value" id="activeGaps">-</span>
+                </div>
+            </div>
+
+            <!-- Queue Analytics -->
+            <div class="card">
+                <h3>Queue Performance</h3>
+                <div class="metric">
+                    <span class="metric-label">Priority Bonuses Applied</span>
+                    <span class="metric-value" id="priorityBonuses">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Gap Predictions Used</span>
+                    <span class="metric-value" id="gapPredictions">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Problem Clusters</span>
+                    <span class="metric-value" id="problemClusters">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Knowledge Reuse</span>
+                    <span class="metric-value" id="knowledgeReuse">-</span>
+                </div>
+            </div>
+
+            <!-- Recent Discoveries -->
+            <div class="card">
+                <h3>Recent Hub Discoveries</h3>
+                <div id="recentDiscoveries">
+                    <div class="loading">No recent discoveries</div>
+                </div>
+            </div>
+
+            <!-- Active Gaps -->
+            <div class="card">
+                <h3>Active Coverage Gaps</h3>
+                <div id="activeGapsList">
+                    <div class="loading">No active gaps</div>
+                </div>
+            </div>
+
+            <!-- Recent Milestones -->
+            <div class="card">
+                <h3>Recent Milestones</h3>
+                <div id="recentMilestones">
+                    <div class="loading">No recent milestones</div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="card">
+                <h3>System Status</h3>
+                <div class="metric">
+                    <span class="metric-label"><span class="status-indicator" id="dbStatus"></span>Database</span>
+                    <span class="metric-value" id="dbStatusText">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label"><span class="status-indicator" id="coverageStatus"></span>Coverage Analytics</span>
+                    <span class="metric-value" id="coverageStatusText">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label"><span class="status-indicator" id="queueStatus"></span>Queue Analytics</span>
+                    <span class="metric-value" id="queueStatusText">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label"><span class="status-indicator" id="plannerStatus"></span>Knowledge System</span>
+                    <span class="metric-value" id="plannerStatusText">Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coverage Trend Chart -->
+        <div class="card">
+            <h3>Coverage Trend</h3>
+            <div class="chart-container">
+                <canvas id="coverageTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Priority Metrics Chart -->
+        <div class="card">
+            <h3>Priority Distribution</h3>
+            <div class="chart-container">
+                <canvas id="priorityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CoverageDashboard {
+            constructor() {
+                this.jobId = null;
+                this.updateInterval = 10000;
+                this.intervalId = null;
+                this.charts = {};
+                this.initializeCharts();
+            }
+
+            initializeCharts() {
+                // Coverage trend chart
+                const coverageCtx = document.getElementById('coverageTrendChart').getContext('2d');
+                this.charts.coverage = new Chart(coverageCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Coverage %',
+                            data: [],
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+
+                // Priority distribution chart
+                const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+                this.charts.priority = new Chart(priorityCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Base Priority', 'Gap Prediction', 'Adaptive Seed', 'Sitemap', 'Hub Validated'],
+                        datasets: [{
+                            data: [0, 0, 0, 0, 0],
+                            backgroundColor: [
+                                '#95a5a6',
+                                '#e74c3c',
+                                '#2ecc71',
+                                '#3498db',
+                                '#f39c12'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            async start(jobId) {
+                this.jobId = jobId;
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                }
+
+                await this.checkHealth();
+                await this.refresh();
+                
+                this.intervalId = setInterval(() => {
+                    this.refresh();
+                }, this.updateInterval);
+            }
+
+            stop() {
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+            }
+
+            async checkHealth() {
+                try {
+                    const response = await fetch('/api/coverage/health');
+                    const data = await response.json();
+                    
+                    this.updateSystemStatus(data.health || {});
+                } catch (error) {
+                    console.error('Health check failed:', error);
+                    this.showError('Health check failed: ' + error.message);
+                }
+            }
+
+            updateSystemStatus(health) {
+                const services = health.services || {};
+                
+                this.updateStatusIndicator('dbStatus', 'dbStatusText', services.enhancedDb, 'Connected', 'Disconnected');
+                this.updateStatusIndicator('coverageStatus', 'coverageStatusText', services.coverage, 'Active', 'Unavailable');
+                this.updateStatusIndicator('queueStatus', 'queueStatusText', services.queue, 'Active', 'Unavailable');
+                this.updateStatusIndicator('plannerStatus', 'plannerStatusText', services.planner, 'Active', 'Unavailable');
+            }
+
+            updateStatusIndicator(indicatorId, textId, isActive, activeText, inactiveText) {
+                const indicator = document.getElementById(indicatorId);
+                const text = document.getElementById(textId);
+                
+                if (isActive) {
+                    indicator.className = 'status-indicator status-active';
+                    text.textContent = activeText;
+                } else {
+                    indicator.className = 'status-indicator status-error';
+                    text.textContent = inactiveText;
+                }
+            }
+
+            async refresh() {
+                if (!this.jobId) return;
+
+                this.showLoading(true);
+                this.clearError();
+
+                try {
+                    await Promise.all([
+                        this.updateCoverageOverview(),
+                        this.updateQueueAnalytics(),
+                        this.updateRecentDiscoveries(),
+                        this.updateActiveGaps(),
+                        this.updateRecentMilestones(),
+                        this.updateCoverageTrend(),
+                        this.updatePriorityDistribution()
+                    ]);
+                } catch (error) {
+                    console.error('Dashboard refresh failed:', error);
+                    this.showError('Dashboard refresh failed: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async updateCoverageOverview() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/snapshot`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const snapshot = data.snapshot;
+                    
+                    document.getElementById('coveragePercentage').textContent = 
+                        (snapshot.coverage_percentage || 0).toFixed(1) + '%';
+                    document.getElementById('hubsDiscovered').textContent = snapshot.total_hubs_discovered || 0;
+                    document.getElementById('hubsExpected').textContent = snapshot.total_hubs_expected || 0;
+                    document.getElementById('activeGaps').textContent = snapshot.gap_count || 0;
+                    
+                    const percentage = snapshot.coverage_percentage || 0;
+                    const progressBar = document.getElementById('coverageProgress');
+                    progressBar.style.width = percentage + '%';
+                    progressBar.textContent = percentage.toFixed(1) + '%';
+                }
+            }
+
+            async updateQueueAnalytics() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/queue-analytics`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const priorityBonuses = data.queueAnalytics.filter(q => q.priority_source !== 'base').length;
+                    const gapPredictions = data.queueAnalytics.filter(q => q.priority_source === 'gap-prediction').length;
+                    const problemClusters = data.clusterAnalytics.length;
+                    
+                    document.getElementById('priorityBonuses').textContent = priorityBonuses;
+                    document.getElementById('gapPredictions').textContent = gapPredictions;
+                    document.getElementById('problemClusters').textContent = problemClusters;
+                }
+
+                // Knowledge reuse stats
+                const knowledgeResponse = await fetch(`/api/coverage/jobs/${this.jobId}/knowledge-stats`);
+                if (knowledgeResponse.ok) {
+                    const knowledgeData = await knowledgeResponse.json();
+                    const totalReuse = knowledgeData.knowledgeStats.reduce((sum, stat) => sum + stat.reuse_count, 0);
+                    document.getElementById('knowledgeReuse').textContent = totalReuse;
+                }
+            }
+
+            async updateRecentDiscoveries() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/discoveries?limit=5`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('recentDiscoveries');
+                    
+                    if (data.discoveries.length === 0) {
+                        container.innerHTML = '<div class="loading">No recent discoveries</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = data.discoveries.map(discovery => `
+                        <div class="discovery-item">
+                            <div><strong>${discovery.hub_url}</strong></div>
+                            <div>Method: ${discovery.discovery_method} | Confidence: ${(discovery.confidence_score * 100).toFixed(1)}%</div>
+                            <div style="font-size: 0.9em; color: #666;">${new Date(discovery.discovered_at).toLocaleTimeString()}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            async updateActiveGaps() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/gaps`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('activeGapsList');
+                    
+                    if (data.activeGaps.length === 0) {
+                        container.innerHTML = '<div class="loading">No active gaps</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = data.activeGaps.slice(0, 5).map(gap => {
+                        const priorityClass = gap.priority_score > 7 ? 'high' : gap.priority_score > 3 ? 'medium' : 'low';
+                        return `
+                            <div class="gap-item gap-priority-${priorityClass}">
+                                <div><strong>${gap.gap_type}</strong>: ${gap.gap_identifier}</div>
+                                <div>${gap.gap_description || 'No description'}</div>
+                                <div style="font-size: 0.9em; color: #666;">Priority: ${gap.priority_score.toFixed(1)} | Attempts: ${gap.attempts_count}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            async updateRecentMilestones() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/milestones?limit=5`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('recentMilestones');
+                    
+                    if (data.milestones.length === 0) {
+                        container.innerHTML = '<div class="loading">No recent milestones</div>';
+                        return;
+                    }
+                    
+                    container.innerHTML = data.milestones.map(milestone => `
+                        <div class="milestone-item">
+                            <div><strong>${milestone.milestone_type}</strong></div>
+                            <div>Target: ${milestone.threshold_value} | Achieved: ${milestone.actual_value}</div>
+                            <div style="font-size: 0.9em; color: #666;">${new Date(milestone.achieved_at).toLocaleTimeString()}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            async updateCoverageTrend() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/trend?since=1 hour`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const labels = data.trend.map(point => new Date(point.snapshot_time).toLocaleTimeString());
+                    const coverageData = data.trend.map(point => point.coverage_percentage || 0);
+                    
+                    this.charts.coverage.data.labels = labels;
+                    this.charts.coverage.data.datasets[0].data = coverageData;
+                    this.charts.coverage.update('none');
+                }
+            }
+
+            async updatePriorityDistribution() {
+                const response = await fetch(`/api/coverage/jobs/${this.jobId}/queue-analytics`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const priorityDistribution = [0, 0, 0, 0, 0]; // base, gap-prediction, adaptive-seed, sitemap, hub-validated
+                    
+                    data.queueAnalytics.forEach(item => {
+                        switch (item.priority_source) {
+                            case null:
+                            case 'base':
+                                priorityDistribution[0] += item.count;
+                                break;
+                            case 'gap-prediction':
+                                priorityDistribution[1] += item.count;
+                                break;
+                            case 'adaptive-seed':
+                                priorityDistribution[2] += item.count;
+                                break;
+                            case 'sitemap':
+                                priorityDistribution[3] += item.count;
+                                break;
+                            case 'hub-validated':
+                                priorityDistribution[4] += item.count;
+                                break;
+                        }
+                    });
+                    
+                    this.charts.priority.data.datasets[0].data = priorityDistribution;
+                    this.charts.priority.update('none');
+                }
+            }
+
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+            }
+
+            showError(message) {
+                const errorContainer = document.getElementById('error-container');
+                errorContainer.innerHTML = `<div class="error">${message}</div>`;
+            }
+
+            clearError() {
+                document.getElementById('error-container').innerHTML = '';
+            }
+        }
+
+        // Global dashboard instance
+        const dashboard = new CoverageDashboard();
+
+        // Control functions
+        function startDashboard() {
+            const jobId = document.getElementById('jobId').value.trim();
+            if (!jobId) {
+                alert('Please enter a Job ID');
+                return;
+            }
+            
+            dashboard.updateInterval = parseInt(document.getElementById('updateInterval').value);
+            dashboard.start(jobId);
+        }
+
+        function stopDashboard() {
+            dashboard.stop();
+        }
+
+        function refreshDashboard() {
+            dashboard.refresh();
+        }
+
+        // Auto-start if job ID is in URL
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const jobId = urlParams.get('job');
+            if (jobId) {
+                document.getElementById('jobId').value = jobId;
+                startDashboard();
+            }
+        });
+    </script>
+</body>
+</html>

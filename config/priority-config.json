@@ -1,0 +1,83 @@
+{
+  "queue": {
+    "description": "Queue priority configuration for crawl orchestration",
+    "version": "1.0.0",
+    "lastUpdated": "2025-09-28T00:00:00.000Z",
+    "bonuses": {
+      "adaptive-seed": {
+        "value": 20,
+        "description": "URLs discovered by intelligent planning and adaptive hub detection",
+        "category": "intelligent"
+      },
+      "gap-prediction": {
+        "value": 15,
+        "description": "URLs predicted to fill coverage gaps based on problem clustering",
+        "category": "intelligent"
+      },
+      "sitemap": {
+        "value": 10,
+        "description": "URLs from structured sitemaps (high confidence navigation)",
+        "category": "structured"
+      },
+      "hub-validated": {
+        "value": 8,
+        "description": "Hub pages validated by previous crawls or knowledge reuse",
+        "category": "validated"
+      },
+      "link": {
+        "value": 0,
+        "description": "Regular link discovery from page parsing",
+        "category": "organic"
+      }
+    },
+    "weights": {
+      "article": {
+        "value": 0,
+        "description": "Article content pages (highest priority - lowest weight)"
+      },
+      "hub-seed": {
+        "value": 4,
+        "description": "Hub pages seeded by intelligent planner"
+      },
+      "history": {
+        "value": 6,
+        "description": "Archive and historical content pages"
+      },
+      "nav": {
+        "value": 10,
+        "description": "Navigation and category pages"
+      },
+      "refresh": {
+        "value": 25,
+        "description": "Known URLs being refreshed/updated (lowest priority - highest weight)"
+      }
+    },
+    "clustering": {
+      "problemThreshold": 5,
+      "timeWindowMinutes": 30,
+      "maxClusterSize": 100,
+      "boostFactorPerCluster": 2.5
+    }
+  },
+  "coverage": {
+    "telemetryIntervalSeconds": 30,
+    "milestoneThresholds": {
+      "hubDiscoveryMinimum": 10,
+      "coveragePercentageTargets": [
+        25,
+        50,
+        75,
+        90
+      ],
+      "gapReductionSignificant": 0.15
+    }
+  },
+  "features": {
+    "gapDrivenPrioritization": true,
+    "plannerKnowledgeReuse": true,
+    "realTimeCoverageAnalytics": true,
+    "problemClustering": true,
+    "gap-driven-prioritization": false
+  },
+  "lastUpdated": "2025-09-28T09:29:04.035Z"
+}

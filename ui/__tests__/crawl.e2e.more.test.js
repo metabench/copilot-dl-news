@@ -1,11 +1,14 @@
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const Database = require('better-sqlite3');
 
 jest.setTimeout(15000);
 
 function startServerWithEnv(env = {}) {
   return new Promise((resolve, reject) => {
     const { spawn } = require('child_process');
-    const path = require('path');
     const node = process.execPath;
     const repoRoot = path.join(__dirname, '..', '..');
     const envAll = { ...process.env, ...env, PORT: '0' };
@@ -115,5 +118,38 @@ describe('e2e http: more precise coverage', () => {
       expect(sse.status).toBe(200);
       expect(sse.text).toMatch(/\[truncated \d+ chars\]/);
     } finally { try { cp.kill('SIGINT'); } catch(_){} }
+  });
+
+  test('planner stage events stream and persist', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'planner-stage-'));
+    const dbPath = path.join(tmpDir, 'news.db');
+    const { cp, port } = await startServerWithEnv({ UI_FAKE_RUNNER: '1', UI_FAKE_PLANNER: '1', UI_DB_PATH: dbPath });
+    try {
+      const sseP = collectSseUntil(
+        '127.0.0.1',
+        port,
+        '/events?logs=1',
+        (buf) => /event: planner-stage/.test(buf) && /event: milestone/.test(buf) && /intelligent-completion/.test(buf) && /event: done/.test(buf),
+        2500
+      );
+      const start = await httpJson('127.0.0.1', port, '/api/crawl', 'POST', { startUrl: 'https://example.com', depth: 0, maxPages: 1, crawlType: 'intelligent' });
+      expect(start.status).toBe(202);
+      const sse = await sseP;
+      expect(sse.status).toBe(200);
+      expect(sse.text).toMatch(/event: planner-stage/);
+      expect(sse.text).toMatch(/event: milestone/);
+      expect(sse.text).toMatch(/intelligent-completion/);
+      expect(sse.text).toMatch(/event: done/);
+    } finally {
+      try { cp.kill('SIGINT'); } catch (_) {}
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const db = new Database(dbPath, { readonly: true });
+    const rows = db.prepare('SELECT stage, status FROM planner_stage_events').all();
+    db.close();
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.some((row) => row.status === 'started')).toBe(true);
+    expect(rows.some((row) => row.status === 'completed')).toBe(true);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });

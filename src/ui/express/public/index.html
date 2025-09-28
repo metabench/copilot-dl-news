@@ -4,78 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>News Crawler UI</title>
-    <style>
-      :root { --bg:#ffffff; --fg:#111111; --muted:#666666; }
-      @media (prefers-color-scheme: dark) {
-        :root { --bg:#0b0e12; --fg:#e5e7eb; --muted:#98a2b3; }
-      }
-      .dark body { --bg:#0b0e12; --fg:#e5e7eb; --muted:#98a2b3; }
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; background: var(--bg); color: var(--fg); }
-  pre { background: #111; color: #0f0; padding: 10px; height: 240px; overflow: auto; }
-  /* Allow the logs area to be resized vertically */
-  #logs { resize: vertical; min-height: 120px; max-height: 75vh; }
-  /* Drag handle for reliable resizing in Chrome */
-  .resizer-h { height: 6px; cursor: row-resize; background: linear-gradient(to bottom, #e5e7eb, #cbd5e1); border:1px solid #cbd5e1; border-top: none; }
-  .resizing { user-select: none; }
-  .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        border-radius: 999px;
-        padding: 2px 8px;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border: 1px solid rgba(0,0,0,0.08);
-        background: rgba(0,0,0,0.04);
-      }
-      @media (prefers-color-scheme: dark) {
-        .badge { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
-      }
-      .badge.badge-ok { color: #2f855a; }
-      .badge.badge-warn { color: #b7791f; }
-      .badge.badge-bad { color: #c53030; }
-      .controls-bar {
-        background: #f5f7fa;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 10px 12px;
-        margin-bottom: 10px;
-      }
-      @media (prefers-color-scheme: dark) {
-        .controls-bar { background: #151a21; border-color: #2a3441; }
-      }
-      .row > div { display: flex; flex-direction: column; gap: 4px; }
-      /* Let controls wrap nicely on narrow screens */
-      .row > div { flex: 1 1 180px; min-width: 140px; }
-      .row > div:first-child { flex: 2 1 320px; min-width: 220px; }
-  #startUrl, #depth, #maxPages, #refetchIfOlderThan, #concurrency, #requestTimeoutMs, #pacerJitterMinMs, #pacerJitterMaxMs {
-        width: 100%;
-        box-sizing: border-box;
-      }
-  .btns { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1 1 220px; }
-      @media (max-width: 600px) {
-        .row > div { flex: 1 1 100%; min-width: 0; }
-        .btns button { flex: 1 1 auto; }
-      }
-      label { display: block; font-size: 12px; color: #555; }
-      input, select, button { padding: 6px 8px; }
-  .warn { color: #b58900; }
-  .bad { color: #dc322f; }
-  /* sparkline stroke colors */
-  .spark-ok { stroke: #268bd2; }
-  .spark-warn { stroke: #b58900; }
-  .spark-bad { stroke: #dc322f; }
-  .muted { color: var(--muted); }
-  /* error lines in logs */
-  .log-error { color: #dc322f; }
-    </style>
+    <link rel="stylesheet" href="/crawler.css" />
+    <script type="module" src="/assets/global-nav.js"></script>
   </head>
   <body>
-    <div style="font-size:13px; color:#666; margin-bottom:8px;">
-  <a href="/">Crawler</a> · <a href="/queues/ssr">Queues</a> · <a href="/milestones/ssr">Milestones</a> · <a href="/problems/ssr">Problems</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
-    </div>
+    <div data-global-nav data-active="crawler"></div>
     <h1>News Crawler</h1>
     <p style="margin-top:-8px; margin-bottom:14px; color:#555; font-size:13px;">
       Quick links:
@@ -157,6 +90,69 @@
         </div>
       </div>
     </div>
+    <section id="overviewSection" class="panel">
+      <div class="summary-head">
+        <h3>Run overview</h3>
+        <div class="summary-meta">
+          <span id="crawlTypeBadge" class="badge badge-neutral">Type: unknown</span>
+          <span id="stageBadge" class="badge badge-neutral">Stage: idle</span>
+          <span id="pausedBadge" class="badge badge-ok" style="display:none;">Running</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Visited</span>
+          <span id="metricVisited" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Downloaded</span>
+          <span id="metricDownloaded" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Saved</span>
+          <span id="metricSaved" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Found</span>
+          <span id="metricFound" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Queue size</span>
+          <span id="metricQueue" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Errors</span>
+          <span id="metricErrors" class="metric-value">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Coverage</span>
+          <span id="metricCoverage" class="metric-value">—</span>
+        </div>
+      </div>
+    </section>
+    <section id="insightsPanel" class="panel" data-has-data="0" style="display:none;">
+      <div class="summary-head">
+        <h3>Intelligent insights</h3>
+        <span id="insightsHint" class="muted" style="font-size:12px;">Insights appear once planner telemetry streams in.</span>
+      </div>
+      <div class="insight-grid">
+        <div class="insight-item">
+          <span class="insight-label">Coverage achieved</span>
+          <span id="insightCoverage" class="insight-value">—</span>
+          <span id="insightCoverageDetail" class="insight-detail muted"></span>
+        </div>
+        <div class="insight-item">
+          <span class="insight-label">Seeded hubs</span>
+          <span id="insightHubs" class="insight-value">—</span>
+          <span id="insightHubsDetail" class="insight-detail muted"></span>
+        </div>
+        <div class="insight-item">
+          <span class="insight-label">Unresolved problems</span>
+          <span id="insightProblems" class="insight-value">0</span>
+          <span id="insightProblemsDetail" class="insight-detail muted"></span>
+        </div>
+      </div>
+    </section>
     <section id="jobsSection" style="margin:10px 0;">
       <h3>Ongoing crawls</h3>
       <div id="jobsList" class="muted" style="font-size:13px;">None</div>
@@ -211,6 +207,14 @@
     <div id="problemsPanel" style="margin-top:6px; font-size:13px;">
       <div id="problemsList" class="muted">None</div>
     </div>
+  </details>
+  <details id="secMilestones" open style="margin-top:10px;">
+    <summary><strong>Milestones</strong></summary>
+    <div id="milestonesList" class="timeline-list muted">No milestones yet.</div>
+  </details>
+  <details id="secPlanner" open style="margin-top:10px;">
+    <summary><strong>Planner timeline</strong></summary>
+    <div id="plannerStagesList" class="timeline-list muted">Planner telemetry appears when intelligent crawls run.</div>
   </details>
   <details id="secDomains" open style="margin-top:10px;">
     <summary><strong>Recent Domains</strong></summary>
@@ -280,6 +284,26 @@
   badgeCpu.className = 'muted';
   badgeMem.className = 'muted';
   badgeWal.className = 'muted';
+  const crawlTypeBadge = document.getElementById('crawlTypeBadge');
+  const stageBadge = document.getElementById('stageBadge');
+  const pausedBadge = document.getElementById('pausedBadge');
+  const metricVisited = document.getElementById('metricVisited');
+  const metricDownloaded = document.getElementById('metricDownloaded');
+  const metricSaved = document.getElementById('metricSaved');
+  const metricFound = document.getElementById('metricFound');
+  const metricQueue = document.getElementById('metricQueue');
+  const metricErrors = document.getElementById('metricErrors');
+  const metricCoverage = document.getElementById('metricCoverage');
+  const insightsPanel = document.getElementById('insightsPanel');
+  const insightsHint = document.getElementById('insightsHint');
+  const insightCoverage = document.getElementById('insightCoverage');
+  const insightCoverageDetail = document.getElementById('insightCoverageDetail');
+  const insightHubs = document.getElementById('insightHubs');
+  const insightHubsDetail = document.getElementById('insightHubsDetail');
+  const insightProblems = document.getElementById('insightProblems');
+  const insightProblemsDetail = document.getElementById('insightProblemsDetail');
+  const milestonesList = document.getElementById('milestonesList');
+  const plannerStagesList = document.getElementById('plannerStagesList');
   try {
     badgeCpu.style.marginLeft = '12px';
     badgeMem.style.marginLeft = '12px';
@@ -294,6 +318,240 @@
   // rolling window samples of network and cache (and bytes)
   let trafficSamples = []; // [{t, net, cache, bytes}]
   let reconnectTimer = null;
+  let lastSseEventAt = 0;
+
+  function markSseLive() {
+    if (badgeConn) {
+      lastSseEventAt = Date.now();
+      badgeConn.textContent = 'SSE: live';
+      badgeConn.classList.remove('badge-warn', 'badge-bad');
+      badgeConn.classList.add('badge-ok');
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  }
+  function formatNumber(val) {
+    const num = Number(val);
+    if (!Number.isFinite(num)) return String(val ?? '0');
+    try { return num.toLocaleString(); } catch (_) { return String(num); }
+  }
+  function formatTimestamp(ts) {
+    if (!ts) return new Date().toLocaleTimeString();
+    const parsed = new Date(ts);
+    if (Number.isNaN(parsed.getTime())) return new Date().toLocaleTimeString();
+    return parsed.toLocaleTimeString();
+  }
+  function compactDetails(details) {
+    if (!details) return '';
+    if (typeof details === 'string') return details;
+    try {
+      const json = JSON.stringify(details, null, 2) || '';
+      return json.length > 400 ? json.slice(0, 400) + '…' : json;
+    } catch (_) {
+      return '';
+    }
+  }
+  function refreshCoverageMetric() {
+    if (!metricCoverage) return;
+    const summary = window.__coverageSummary;
+    if (summary && typeof summary.value === 'number') {
+      metricCoverage.textContent = `${summary.value.toFixed(0)}%`;
+    } else {
+      metricCoverage.textContent = '—';
+    }
+  }
+  function resetInsights() {
+    if (!insightsPanel) return;
+    insightsPanel.dataset.hasData = '0';
+    if (insightsPanel && window.__currentCrawlType !== 'intelligent') insightsPanel.style.display = 'none';
+    if (insightCoverage) insightCoverage.textContent = '—';
+    if (insightCoverageDetail) insightCoverageDetail.textContent = '';
+    if (insightHubs) insightHubs.textContent = '—';
+    if (insightHubsDetail) insightHubsDetail.textContent = '';
+    if (insightProblems) insightProblems.textContent = '0';
+    if (insightProblemsDetail) insightProblemsDetail.textContent = '';
+    if (insightsHint) insightsHint.textContent = 'Insights appear once planner telemetry streams in.';
+    window.__coverageSummary = null;
+    refreshCoverageMetric();
+  }
+  function setCrawlType(type) {
+    if (!crawlTypeBadge) return;
+    const norm = type ? String(type) : '';
+    window.__currentCrawlType = norm;
+    crawlTypeBadge.classList.remove('badge-neutral', 'badge-intelligent', 'badge-basic');
+    const pretty = norm ? norm.replace(/-/g, ' ') : 'unknown';
+    crawlTypeBadge.textContent = `Type: ${pretty}`;
+    if (!norm) {
+      crawlTypeBadge.classList.add('badge-neutral');
+      if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = 'none';
+      return;
+    }
+    if (norm === 'intelligent') {
+      crawlTypeBadge.classList.add('badge-intelligent');
+      if (insightsPanel) {
+        if (insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = '';
+        if (insightsHint && insightsPanel.dataset.hasData !== '1') insightsHint.textContent = 'Collecting planner telemetry…';
+      }
+    } else {
+      crawlTypeBadge.classList.add('badge-basic');
+      if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = 'none';
+      if (!window.__coverageSummary) refreshCoverageMetric();
+    }
+  }
+  function setStage(stage) {
+    if (!stageBadge) return;
+    const label = stage ? stage.replace(/[_-]+/g, ' ') : 'idle';
+    stageBadge.textContent = `Stage: ${label}`;
+  }
+  function setPausedBadge(paused) {
+    if (!pausedBadge) return;
+    if (paused == null) {
+      pausedBadge.style.display = 'none';
+      return;
+    }
+    pausedBadge.style.display = '';
+    if (paused) {
+      pausedBadge.textContent = 'Paused';
+      pausedBadge.classList.remove('badge-ok');
+      pausedBadge.classList.add('badge-warn');
+    } else {
+      pausedBadge.textContent = 'Running';
+      pausedBadge.classList.remove('badge-warn');
+      pausedBadge.classList.add('badge-ok');
+    }
+  }
+  function hidePausedBadge() {
+    if (pausedBadge) pausedBadge.style.display = 'none';
+  }
+  function pushTimelineEntry(container, entry, limit = 120) {
+    if (!container || !entry || !entry.title) return;
+    if (!container.dataset.hasEntries) {
+      container.dataset.hasEntries = '1';
+      container.textContent = '';
+      container.classList.remove('muted');
+    }
+    const row = document.createElement('div');
+    row.className = 'timeline-row';
+    const head = document.createElement('div');
+    head.className = 'timeline-head';
+    const tsSpan = document.createElement('span');
+    tsSpan.className = 'muted';
+    tsSpan.textContent = formatTimestamp(entry.timestamp);
+    head.appendChild(tsSpan);
+    const badge = document.createElement('span');
+    badge.className = entry.badgeClass || 'badge badge-neutral';
+    badge.textContent = entry.title;
+    head.appendChild(badge);
+    if (entry.meta) {
+      const metaSpan = document.createElement('span');
+      metaSpan.textContent = entry.meta;
+      head.appendChild(metaSpan);
+    }
+    row.appendChild(head);
+    if (entry.detail) {
+      const detailDiv = document.createElement('div');
+      detailDiv.className = 'timeline-detail';
+      detailDiv.textContent = entry.detail;
+      row.appendChild(detailDiv);
+    }
+    container.prepend(row);
+    while (container.children.length > limit) {
+      container.removeChild(container.lastChild);
+    }
+  }
+  function handleMilestone(m) {
+    if (!m) return;
+    pushTimelineEntry(milestonesList, {
+      title: m.kind || 'milestone',
+      meta: [m.scope, m.message].filter(Boolean).join(' — '),
+      detail: compactDetails(m.details),
+      timestamp: m.ts,
+      badgeClass: 'badge badge-ok'
+    });
+    if (m.kind === 'intelligent-completion') {
+      setCrawlType('intelligent');
+      updateIntelligentInsights(m.details || {});
+      if (insightsHint) insightsHint.textContent = 'Summary updated from latest intelligent completion milestone.';
+    }
+  }
+  function handlePlannerStage(ev) {
+    if (!ev) return;
+    setCrawlType('intelligent');
+    if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = '';
+    const status = ev.status || 'started';
+    const metaParts = [];
+    if (status) metaParts.push(status);
+    if (ev.durationMs != null) metaParts.push(`${ev.durationMs}ms`);
+    const detailSource = ev.details && (ev.details.result || ev.details.error || ev.details.context) ? ev.details : ev.details;
+    pushTimelineEntry(plannerStagesList, {
+      title: ev.stage || 'stage',
+      meta: metaParts.join(' · '),
+      detail: compactDetails(detailSource),
+      timestamp: ev.ts,
+      badgeClass: status === 'completed' ? 'badge badge-ok' : status === 'failed' ? 'badge badge-bad' : 'badge badge-neutral'
+    });
+  }
+  function updateIntelligentInsights(details) {
+    if (!insightsPanel) return;
+    insightsPanel.style.display = '';
+    insightsPanel.dataset.hasData = '1';
+    const coverage = details && typeof details === 'object' ? details.coverage || {} : {};
+    let pctValue = null;
+    if (coverage && typeof coverage.coveragePct === 'number') {
+      pctValue = coverage.coveragePct > 1 ? coverage.coveragePct : coverage.coveragePct * 100;
+    }
+    if (insightCoverage) insightCoverage.textContent = pctValue != null ? `${pctValue.toFixed(1)}%` : '—';
+    if (insightCoverageDetail) {
+      if (coverage && coverage.expected != null) {
+        const seeded = coverage.seeded != null ? coverage.seeded : (details && details.seededHubs && details.seededHubs.unique != null ? details.seededHubs.unique : null);
+        const seededText = seeded != null ? formatNumber(seeded) : '0';
+        insightCoverageDetail.textContent = `${seededText} of ${formatNumber(coverage.expected)} expected hubs`;
+      } else if (coverage && coverage.seeded != null) {
+        insightCoverageDetail.textContent = `${formatNumber(coverage.seeded)} hubs seeded`;
+      } else {
+        insightCoverageDetail.textContent = '';
+      }
+    }
+    if (pctValue != null) window.__coverageSummary = { value: pctValue }; else window.__coverageSummary = null;
+    refreshCoverageMetric();
+    const seeded = details && details.seededHubs ? details.seededHubs : null;
+    if (insightHubs) {
+      if (seeded && seeded.unique != null) insightHubs.textContent = formatNumber(seeded.unique);
+      else if (seeded && seeded.requested != null) insightHubs.textContent = formatNumber(seeded.requested);
+      else insightHubs.textContent = seeded ? formatNumber(seeded.count || 0) : '—';
+    }
+    if (insightHubsDetail) {
+      if (seeded) {
+        const parts = [];
+        if (seeded.requested != null) parts.push(`requested ${formatNumber(seeded.requested)}`);
+        if (seeded.sectionsFromPatterns != null) parts.push(`${formatNumber(seeded.sectionsFromPatterns)} sections inferred`);
+        if (Array.isArray(seeded.sample) && seeded.sample.length) parts.push(`sample: ${seeded.sample.slice(0, 2).join(', ')}`);
+        insightHubsDetail.textContent = parts.join(' · ');
+      } else {
+        insightHubsDetail.textContent = '';
+      }
+    }
+    const problems = Array.isArray(details?.problems) ? details.problems : [];
+    const totalProblems = problems.reduce((sum, item) => sum + (item?.count || 0), 0);
+    if (insightProblems) insightProblems.textContent = formatNumber(totalProblems);
+    if (insightProblemsDetail) {
+      if (problems.length) {
+        const top = problems.slice(0, 3).map((p) => `${p.kind}: ${formatNumber(p.count || 0)}`);
+        insightProblemsDetail.textContent = top.join(' · ');
+      } else {
+        insightProblemsDetail.textContent = 'No unresolved planner problems recorded.';
+      }
+    }
+  }
+  resetInsights();
+  refreshCoverageMetric();
+  try {
+    if (typeof window !== 'undefined') {
+      window.__currentCrawlType = window.__currentCrawlType || '';
+    }
+  } catch (_) {}
       // Restore saved logs height
       (function(){
         const savedH = parseInt(localStorage.getItem('logsH')||'', 10);
@@ -413,6 +671,7 @@
       })();
       function attachHandlers(es) {
         es.addEventListener('log', (e) => {
+          markSseLive();
           try {
             const j = JSON.parse(e.data);
             const line = String(j.line||'');
@@ -422,6 +681,7 @@
           } catch (_) {}
         });
         es.addEventListener('error', (e) => {
+          markSseLive();
           try {
             const obj = JSON.parse(e.data);
             const msg = obj.message || (obj.code ? `HTTP ${obj.code}` : 'Error');
@@ -431,12 +691,14 @@
           } catch (_) {}
         });
         es.addEventListener('jobs', (e) => {
+          markSseLive();
           try {
             const j = JSON.parse(e.data);
             renderJobs(j);
           } catch (_) {}
         });
         es.addEventListener('problem', (e) => {
+          markSseLive();
           try {
             const p = JSON.parse(e.data);
             const list = document.getElementById('problemsList');
@@ -463,14 +725,15 @@
             } catch(_) { list.innerHTML = line + (list.innerHTML||''); }
           } catch(_) {}
         });
-      // Throttle progress UI to ~5 FPS
-      let lastProgressAt = 0;
+  // Throttle progress UI to ~5 FPS
+  let lastProgressAt = 0;
   es.addEventListener('progress', (e) => {
-        const now = Date.now();
-        if (now - lastProgressAt < 200) return;
-        lastProgressAt = now;
-  try {
-          const p = JSON.parse(e.data);
+    markSseLive();
+    const now = Date.now();
+    if (now - lastProgressAt < 200) return;
+    lastProgressAt = now;
+    try {
+      const p = JSON.parse(e.data);
             // Also mirror a compact progress line into the Logs panel occasionally so users see activity
             try {
               const lpAt = window.__lastProgressLogAt || 0;
@@ -481,6 +744,22 @@
                 window.__lastProgressLogAt = now;
               }
             } catch(_) {}
+          if (p.stage) setStage(p.stage);
+          if (Object.prototype.hasOwnProperty.call(p, 'paused')) {
+            setPausedBadge(!!p.paused);
+          }
+          if (p.crawlType && (!window.__currentCrawlType || window.__currentCrawlType !== p.crawlType)) {
+            setCrawlType(p.crawlType);
+          }
+          if (!window.__currentCrawlType && p.plannerActive) {
+            setCrawlType('intelligent');
+          }
+          if (metricVisited) metricVisited.textContent = formatNumber(p.visited || 0);
+          if (metricDownloaded) metricDownloaded.textContent = formatNumber(p.downloaded || 0);
+          if (metricSaved) metricSaved.textContent = formatNumber(p.saved || 0);
+          if (metricFound) metricFound.textContent = formatNumber(p.found || 0);
+          if (metricQueue) metricQueue.textContent = formatNumber(p.queueSize || 0);
+          if (metricErrors) metricErrors.textContent = formatNumber(p.errors || 0);
           const stageLabel = p.stage ? `${p.stage} · ` : '';
           progress.textContent = `${stageLabel}visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
           // toggle pause/resume buttons
@@ -604,6 +883,20 @@
             const tot = n + c; return { ratio: tot>0 ? (c/tot) : 0 };
           };
           const r1 = sumWindow(60*1000).ratio; const r5 = sumWindow(5*60*1000).ratio;
+        es.addEventListener('milestone', (e) => {
+          markSseLive();
+          try {
+            const m = JSON.parse(e.data);
+            handleMilestone(m);
+          } catch (_) {}
+        });
+        es.addEventListener('planner-stage', (e) => {
+          markSseLive();
+          try {
+            const st = JSON.parse(e.data);
+            handlePlannerStage(st);
+          } catch (_) {}
+        });
           cacheGauge.textContent = `cache: 1m ${(r1*100).toFixed(0)}% · 5m ${(r5*100).toFixed(0)}%`;
           // Update dl/s and sparkline using a helper so we can also refresh on a timer
           window.__lastProgress = { t: now, visited: p.visited||0, downloaded: p.downloaded||0, errors: p.errors||0, bytes: p.bytes||0 };
@@ -746,6 +1039,7 @@
         } catch {}
       })();
         es.addEventListener('done', (e) => {
+          markSseLive();
         try {
           const key = `done:${e.data}`;
           if (!window.__seenDone) window.__seenDone = new Set();
@@ -755,6 +1049,7 @@
         logs.textContent += `\nDONE: ${e.data}\n`;
       });
         es.addEventListener('cache', (e) => {
+          markSseLive();
         try {
           const c = JSON.parse(e.data);
           cacheHits += 1;
@@ -781,15 +1076,7 @@
         try {
           evt.onopen = () => {
             try { window.__sse_open = true; } catch(_) {}
-            if (badgeConn) {
-              badgeConn.textContent = 'SSE: live';
-              badgeConn.classList.remove('badge-warn', 'badge-bad');
-              badgeConn.classList.add('badge-ok');
-            }
-            if (reconnectTimer) {
-              clearTimeout(reconnectTimer);
-              reconnectTimer = null;
-            }
+            markSseLive();
           };
           evt.onerror = () => {
             try { window.__sse_open = false; } catch(_) {}
@@ -799,12 +1086,18 @@
               badgeConn.classList.add('badge-warn');
             }
             if (reconnectTimer) clearTimeout(reconnectTimer);
+            const scheduledAt = Date.now();
             reconnectTimer = setTimeout(() => {
+              if (lastSseEventAt > scheduledAt) {
+                reconnectTimer = null;
+                return;
+              }
               if (badgeConn) {
                 badgeConn.textContent = 'SSE: offline';
                 badgeConn.classList.remove('badge-warn');
                 badgeConn.classList.add('badge-bad');
               }
+              reconnectTimer = null;
             }, 5000);
           };
         } catch(_) {}
@@ -953,6 +1246,10 @@
         };
       }
       document.getElementById('startBtn').onclick = async () => {
+        const selectedType = document.getElementById('crawlType')?.value || '';
+        resetInsights();
+        if (selectedType) setCrawlType(selectedType);
+        else setCrawlType('');
         const body = {
           startUrl: document.getElementById('startUrl').value,
           depth: parseInt(document.getElementById('depth').value, 10),
@@ -961,7 +1258,7 @@
           refetchArticleIfOlderThan: document.getElementById('refetchArticleIfOlderThan').value || undefined,
           refetchHubIfOlderThan: document.getElementById('refetchHubIfOlderThan').value || undefined,
           concurrency: parseInt(document.getElementById('concurrency').value, 10),
-          crawlType: document.getElementById('crawlType')?.value || undefined,
+          crawlType: selectedType || undefined,
           slow: document.getElementById('slowMode').checked,
           requestTimeoutMs: document.getElementById('requestTimeoutMs').value ? parseInt(document.getElementById('requestTimeoutMs').value, 10) : undefined,
           pacerJitterMinMs: document.getElementById('pacerJitterMinMs').value ? parseInt(document.getElementById('pacerJitterMinMs').value, 10) : undefined,
@@ -1070,7 +1367,12 @@
         try {
           const el = document.getElementById('jobsList');
           if (!el) return;
-          if (!jobs || !Array.isArray(jobs.items) || jobs.items.length === 0) { el.textContent = 'None'; return; }
+          if (!jobs || !Array.isArray(jobs.items) || jobs.items.length === 0) {
+            el.textContent = 'None';
+            setStage('idle');
+            hidePausedBadge();
+            return;
+          }
           const rows = jobs.items.map(it => {
             const url = it.url || '(unknown)';
             const v = it.visited ?? 0;
@@ -1085,6 +1387,16 @@
             return `<div><strong>${status}${stageHint}</strong>${pid} — <a href="/url?url=${encodeURIComponent(url)}">${url}</a> — v:${v} d:${d} e:${e} q:${q}${act}</div>`;
           }).join('');
           el.innerHTML = rows;
+          if (jobs.items.length === 1) {
+            const job = jobs.items[0];
+            setStage(job.stage || job.status || 'running');
+            if (job.paused != null) setPausedBadge(!!job.paused);
+            else if (job.status === 'done') hidePausedBadge();
+            if (job.stage && /intelligent/i.test(job.stage)) setCrawlType('intelligent');
+          } else {
+            setStage('multi-run');
+            setPausedBadge(null);
+          }
         } catch (_) {}
       }
 

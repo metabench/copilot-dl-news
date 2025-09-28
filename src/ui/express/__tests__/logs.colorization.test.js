@@ -25,10 +25,14 @@ describe('logs colorization CSS', () => {
     });
   }
 
-  test('index.html defines .log-error with red color', async () => {
+  test('dashboard links stylesheet and defines .log-error with red color', async () => {
     const res = await getText('/');
     expect(res.status).toBe(200);
-    // Ensure the style rule exists and specifies our red color
-    expect(res.text).toMatch(/\.log-error\s*\{[^}]*color:\s*#dc322f/i);
+    expect(res.text).toMatch(/<link[^>]+href="\/crawler\.css"/i);
+
+    const cssRes = await getText('/crawler.css');
+    expect(cssRes.status).toBe(200);
+    // Ensure the style rule exists and specifies our red color in the bundled stylesheet
+    expect(cssRes.text).toMatch(/\.log-error\s*\{[^}]*color:\s*#dc322f/i);
   });
 });

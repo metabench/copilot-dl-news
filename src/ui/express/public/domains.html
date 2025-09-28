@@ -13,16 +13,12 @@
       .item { padding: 6px 8px; border-radius: 4px; cursor: pointer; }
       .item:hover { background: #f3f4f6; }
       .item.active { background: #e5e7eb; font-weight: 600; }
-      .content { flex: 1; min-width: 280px; }
-      .muted { color: #666; }
-      a { color: #2563eb; text-decoration: none; }
       a:hover { text-decoration: underline; }
     </style>
+    <script type="module" src="/assets/global-nav.js"></script>
   </head>
   <body>
-    <div style="font-size:13px; color:#666; margin-bottom:8px;">
-  <a href="/">Crawler</a> · <a href="/queues/ssr">Queues</a> · <a href="/milestones/ssr">Milestones</a> · <a href="/problems/ssr">Problems</a> · <a href="/gazetteer">Gazetteer</a> · <a href="/domains">Domains</a> · <a href="/errors">Errors</a> · <a href="/urls">URLs</a>
-    </div>
+    <div data-global-nav data-active="domains"></div>
     <h1>News Domains</h1>
     <p class="muted">Alphabetical list of news websites known to the system. Click a domain to view its summary.</p>
     <div class="row">

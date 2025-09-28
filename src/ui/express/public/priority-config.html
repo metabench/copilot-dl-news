@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Priority Configuration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5rem;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h3 {
+            color: #34495e;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .config-group {
+            margin-bottom: 20px;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .config-item:hover {
+            background-color: #e3f2fd;
+            border-color: #3498db;
+        }
+
+        .config-label {
+            font-weight: 500;
+            color: #555;
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .config-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .config-input {
+            width: 80px;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .config-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2ecc71;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .current-values {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .current-values h4 {
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .value-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .value-item:last-child {
+            border-bottom: none;
+        }
+
+        .section-description {
+            color: #666;
+            font-size: 0.95em;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+    <script type="module" src="/assets/global-nav.js"></script>
+</head>
+<body>
+    <div data-global-nav data-active="priority"></div>
+    <div class="container">
+        <h1>Priority Configuration</h1>
+        
+        <div id="status-container"></div>
+        <div id="loading" class="loading" style="display: none;">Loading configuration...</div>
+
+        <div class="config-grid">
+            <!-- Queue Priority Bonuses -->
+            <div class="card">
+                <h3>Queue Priority Bonuses</h3>
+                <div class="section-description">
+                    Configure priority bonuses applied to different URL types in the crawl queue.
+                    Higher values mean higher priority processing.
+                </div>
+                
+                <div class="current-values" id="current-bonuses">
+                    <h4>Current Values</h4>
+                    <div id="bonuses-list">Loading...</div>
+                </div>
+
+                <div class="config-group">
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Adaptive Seed Bonus</div>
+                            <div class="config-description">URLs discovered through intelligent seeding</div>
+                        </div>
+                        <input type="number" class="config-input" id="adaptive-seed" min="0" max="100" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Gap Prediction Bonus</div>
+                            <div class="config-description">URLs predicted to fill coverage gaps</div>
+                        </div>
+                        <input type="number" class="config-input" id="gap-prediction" min="0" max="100" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Sitemap Priority</div>
+                            <div class="config-description">URLs discovered from XML sitemaps</div>
+                        </div>
+                        <input type="number" class="config-input" id="sitemap" min="0" max="100" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Hub Validated Bonus</div>
+                            <div class="config-description">URLs validated as hub pages</div>
+                        </div>
+                        <input type="number" class="config-input" id="hub-validated" min="0" max="100" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Pattern Learned Bonus</div>
+                            <div class="config-description">URLs matching learned patterns</div>
+                        </div>
+                        <input type="number" class="config-input" id="pattern-learned" min="0" max="100" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Priority Weights -->
+            <div class="card">
+                <h3>Priority Weights</h3>
+                <div class="section-description">
+                    Configure how different factors contribute to the final priority score.
+                    These weights are multiplied by the respective scores.
+                </div>
+                
+                <div class="current-values" id="current-weights">
+                    <h4>Current Values</h4>
+                    <div id="weights-list">Loading...</div>
+                </div>
+
+                <div class="config-group">
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Base Priority Weight</div>
+                            <div class="config-description">Standard crawl priority calculation</div>
+                        </div>
+                        <input type="number" class="config-input" id="base" min="0" max="10" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Discovery Method Weight</div>
+                            <div class="config-description">How the URL was discovered</div>
+                        </div>
+                        <input type="number" class="config-input" id="discovery-method" min="0" max="10" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Gap Score Weight</div>
+                            <div class="config-description">Predicted gap-filling potential</div>
+                        </div>
+                        <input type="number" class="config-input" id="gap-score" min="0" max="10" step="0.1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Problem Cluster Weight</div>
+                            <div class="config-description">Related to identified problem clusters</div>
+                        </div>
+                        <input type="number" class="config-input" id="problem-clusters" min="0" max="10" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Flags -->
+            <div class="card">
+                <h3>Feature Flags</h3>
+                <div class="section-description">
+                    Enable or disable enhanced crawler features. Changes take effect immediately.
+                </div>
+                
+                <div class="current-values" id="current-features">
+                    <h4>Current Status</h4>
+                    <div id="features-list">Loading...</div>
+                </div>
+
+                <div class="config-group">
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Gap-Driven Prioritization</div>
+                            <div class="config-description">Boost priority based on coverage gaps</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="gap-driven-prioritization">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Problem Clustering</div>
+                            <div class="config-description">Group related problems for analysis</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="problem-clustering">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Planner Knowledge Reuse</div>
+                            <div class="config-description">Learn and reuse patterns across crawls</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="planner-knowledge-reuse">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Coverage Analytics</div>
+                            <div class="config-description">Track and analyze coverage metrics</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="coverage-analytics">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Priority Debugging</div>
+                            <div class="config-description">Log detailed priority calculations</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="priority-debugging">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clustering Parameters -->
+            <div class="card">
+                <h3>Clustering Parameters</h3>
+                <div class="section-description">
+                    Configure how problems are clustered for gap prediction and priority boosting.
+                </div>
+                
+                <div class="current-values" id="current-clustering">
+                    <h4>Current Values</h4>
+                    <div id="clustering-list">Loading...</div>
+                </div>
+
+                <div class="config-group">
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Similarity Threshold</div>
+                            <div class="config-description">Minimum similarity to group problems (0-1)</div>
+                        </div>
+                        <input type="number" class="config-input" id="similarity-threshold" min="0" max="1" step="0.05">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Min Cluster Size</div>
+                            <div class="config-description">Minimum problems required to form a cluster</div>
+                        </div>
+                        <input type="number" class="config-input" id="min-cluster-size" min="1" max="20" step="1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Max Gap Predictions</div>
+                            <div class="config-description">Maximum gap predictions per cluster</div>
+                        </div>
+                        <input type="number" class="config-input" id="max-gap-predictions" min="1" max="50" step="1">
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
+                            <div class="config-label">Pattern Confidence</div>
+                            <div class="config-description">Minimum confidence for pattern learning (0-1)</div>
+                        </div>
+                        <input type="number" class="config-input" id="pattern-confidence" min="0" max="1" step="0.05">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="loadConfiguration()">
+                Reload Configuration
+            </button>
+            <button class="btn btn-success" onclick="saveConfiguration()">
+                Save Changes
+            </button>
+            <button class="btn btn-warning" onclick="resetToDefaults()">
+                Reset to Defaults
+            </button>
+            <button class="btn btn-secondary" onclick="validateConfiguration()">
+                Validate Config
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class PriorityConfigManager {
+            constructor() {
+                this.currentConfig = null;
+                this.loadConfiguration();
+            }
+
+            async loadConfiguration() {
+                this.showLoading(true);
+                this.clearStatus();
+
+                try {
+                    const response = await fetch('/api/config');
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    this.currentConfig = await response.json();
+                    this.populateForm();
+                    this.updateCurrentValues();
+                    this.showStatus('Configuration loaded successfully', 'success');
+                } catch (error) {
+                    console.error('Failed to load configuration:', error);
+                    this.showStatus('Failed to load configuration: ' + error.message, 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            populateForm() {
+                if (!this.currentConfig) return;
+
+                const config = this.currentConfig;
+
+                // Queue priority bonuses
+                const bonuses = config.queuePriorityBonuses || {};
+                this.setInputValue('adaptive-seed', bonuses['adaptive-seed']);
+                this.setInputValue('gap-prediction', bonuses['gap-prediction']);
+                this.setInputValue('sitemap', bonuses.sitemap);
+                this.setInputValue('hub-validated', bonuses['hub-validated']);
+                this.setInputValue('pattern-learned', bonuses['pattern-learned']);
+
+                // Priority weights
+                const weights = config.priorityWeights || {};
+                this.setInputValue('base', weights.base);
+                this.setInputValue('discovery-method', weights['discovery-method']);
+                this.setInputValue('gap-score', weights['gap-score']);
+                this.setInputValue('problem-clusters', weights['problem-clusters']);
+
+                // Feature flags
+                const features = config.features || {};
+                this.setCheckboxValue('gap-driven-prioritization', features['gap-driven-prioritization']);
+                this.setCheckboxValue('problem-clustering', features['problem-clustering']);
+                this.setCheckboxValue('planner-knowledge-reuse', features['planner-knowledge-reuse']);
+                this.setCheckboxValue('coverage-analytics', features['coverage-analytics']);
+                this.setCheckboxValue('priority-debugging', features['priority-debugging']);
+
+                // Clustering parameters
+                const clustering = config.clustering || {};
+                this.setInputValue('similarity-threshold', clustering.similarityThreshold);
+                this.setInputValue('min-cluster-size', clustering.minClusterSize);
+                this.setInputValue('max-gap-predictions', clustering.maxGapPredictions);
+                this.setInputValue('pattern-confidence', clustering.patternConfidence);
+            }
+
+            updateCurrentValues() {
+                if (!this.currentConfig) return;
+
+                const config = this.currentConfig;
+
+                // Update bonuses display
+                const bonusesHtml = Object.entries(config.queuePriorityBonuses || {})
+                    .map(([key, value]) => `<div class="value-item"><span>${key}:</span><span>${value}</span></div>`)
+                    .join('');
+                document.getElementById('bonuses-list').innerHTML = bonusesHtml || 'No bonuses configured';
+
+                // Update weights display
+                const weightsHtml = Object.entries(config.priorityWeights || {})
+                    .map(([key, value]) => `<div class="value-item"><span>${key}:</span><span>${value}</span></div>`)
+                    .join('');
+                document.getElementById('weights-list').innerHTML = weightsHtml || 'No weights configured';
+
+                // Update features display
+                const featuresHtml = Object.entries(config.features || {})
+                    .map(([key, value]) => `<div class="value-item"><span>${key}:</span><span>${value ? 'Enabled' : 'Disabled'}</span></div>`)
+                    .join('');
+                document.getElementById('features-list').innerHTML = featuresHtml || 'No features configured';
+
+                // Update clustering display
+                const clusteringHtml = Object.entries(config.clustering || {})
+                    .map(([key, value]) => `<div class="value-item"><span>${key}:</span><span>${value}</span></div>`)
+                    .join('');
+                document.getElementById('clustering-list').innerHTML = clusteringHtml || 'No clustering configured';
+            }
+
+            setInputValue(id, value) {
+                const element = document.getElementById(id);
+                if (element && value !== undefined) {
+                    element.value = value;
+                }
+            }
+
+            setCheckboxValue(id, value) {
+                const element = document.getElementById(id);
+                if (element && value !== undefined) {
+                    element.checked = value;
+                }
+            }
+
+            getFormData() {
+                return {
+                    queuePriorityBonuses: {
+                        'adaptive-seed': parseFloat(document.getElementById('adaptive-seed').value) || 0,
+                        'gap-prediction': parseFloat(document.getElementById('gap-prediction').value) || 0,
+                        'sitemap': parseFloat(document.getElementById('sitemap').value) || 0,
+                        'hub-validated': parseFloat(document.getElementById('hub-validated').value) || 0,
+                        'pattern-learned': parseFloat(document.getElementById('pattern-learned').value) || 0
+                    },
+                    priorityWeights: {
+                        'base': parseFloat(document.getElementById('base').value) || 0,
+                        'discovery-method': parseFloat(document.getElementById('discovery-method').value) || 0,
+                        'gap-score': parseFloat(document.getElementById('gap-score').value) || 0,
+                        'problem-clusters': parseFloat(document.getElementById('problem-clusters').value) || 0
+                    },
+                    features: {
+                        'gap-driven-prioritization': document.getElementById('gap-driven-prioritization').checked,
+                        'problem-clustering': document.getElementById('problem-clustering').checked,
+                        'planner-knowledge-reuse': document.getElementById('planner-knowledge-reuse').checked,
+                        'coverage-analytics': document.getElementById('coverage-analytics').checked,
+                        'priority-debugging': document.getElementById('priority-debugging').checked
+                    },
+                    clustering: {
+                        similarityThreshold: parseFloat(document.getElementById('similarity-threshold').value) || 0,
+                        minClusterSize: parseInt(document.getElementById('min-cluster-size').value) || 1,
+                        maxGapPredictions: parseInt(document.getElementById('max-gap-predictions').value) || 1,
+                        patternConfidence: parseFloat(document.getElementById('pattern-confidence').value) || 0
+                    }
+                };
+            }
+
+            async saveConfiguration() {
+                this.showLoading(true);
+                this.clearStatus();
+
+                try {
+                    const config = this.getFormData();
+                    
+                    const response = await fetch('/api/config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(config)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || `HTTP ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    this.currentConfig = result.config;
+                    this.updateCurrentValues();
+                    this.showStatus('Configuration saved successfully', 'success');
+                } catch (error) {
+                    console.error('Failed to save configuration:', error);
+                    this.showStatus('Failed to save configuration: ' + error.message, 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async validateConfiguration() {
+                this.showLoading(true);
+                this.clearStatus();
+
+                try {
+                    const config = this.getFormData();
+                    
+                    const response = await fetch('/api/config/validate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(config)
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.valid) {
+                        this.showStatus('Configuration is valid', 'success');
+                    } else {
+                        this.showStatus('Configuration validation failed: ' + (result.errors || []).join(', '), 'error');
+                    }
+                } catch (error) {
+                    console.error('Validation failed:', error);
+                    this.showStatus('Validation failed: ' + error.message, 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async resetToDefaults() {
+                if (!confirm('Are you sure you want to reset all configuration to defaults? This cannot be undone.')) {
+                    return;
+                }
+
+                this.showLoading(true);
+                this.clearStatus();
+
+                try {
+                    const response = await fetch('/api/config/reset', {
+                        method: 'POST'
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || `HTTP ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    this.currentConfig = result.config;
+                    this.populateForm();
+                    this.updateCurrentValues();
+                    this.showStatus('Configuration reset to defaults', 'success');
+                } catch (error) {
+                    console.error('Failed to reset configuration:', error);
+                    this.showStatus('Failed to reset configuration: ' + error.message, 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+            }
+
+            showStatus(message, type) {
+                const container = document.getElementById('status-container');
+                container.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+                
+                // Auto-hide success messages
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.clearStatus();
+                    }, 3000);
+                }
+            }
+
+            clearStatus() {
+                document.getElementById('status-container').innerHTML = '';
+            }
+        }
+
+        // Global configuration manager
+        const configManager = new PriorityConfigManager();
+
+        // Control functions
+        function loadConfiguration() {
+            configManager.loadConfiguration();
+        }
+
+        function saveConfiguration() {
+            configManager.saveConfiguration();
+        }
+
+        function validateConfiguration() {
+            configManager.validateConfiguration();
+        }
+
+        function resetToDefaults() {
+            configManager.resetToDefaults();
+        }
+    </script>
+</body>
+</html>

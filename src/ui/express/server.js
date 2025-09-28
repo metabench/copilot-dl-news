@@ -20,6 +20,11 @@ const { createProblemsApiRouter } = require('./routes/api.problems');
 const { createMiscApiRouter } = require('./routes/api.misc');
 const { createUrlsApiRouter } = require('./routes/api.urls');
 const { createAnalysisApiRouter } = require('./routes/api.analysis');
+const { createCoverageApiRouter } = require('./routes/coverage');
+const { createConfigApiRouter } = require('./routes/config');
+const { createNavigationApiRouter } = require('./routes/api.navigation');
+const { renderNav } = require('./services/navigation');
+const { ConfigManager } = require('../../config/ConfigManager');
 const {
   ensureAnalysisRunSchema,
   listAnalysisRuns,
@@ -59,7 +64,7 @@ function defaultRunner() {
   }
   if (String(process.env.UI_FAKE_RUNNER || '').toLowerCase() === '1') {
     return {
-      start() {
+      start(args = []) {
         const ee = new EventEmitter();
         // Provide stdout/stderr event emitters
         ee.stdout = new EventEmitter();
@@ -68,8 +73,13 @@ function defaultRunner() {
         ee.stdin = { write: () => true };
         ee.pid = 424242;
         ee.kill = () => { try { ee.emit('exit', null, 'SIGTERM'); } catch (_) {} };
+  const plannerFlag = String(process.env.UI_FAKE_PLANNER || '').trim().toLowerCase();
+  const envPlannerEnabled = ['1', 'true', 'yes', 'on'].includes(plannerFlag);
+  const argsPlannerEnabled = Array.isArray(args) && args.some((arg) => typeof arg === 'string' && arg.includes('--crawl-type=intelligent'));
+  const fakePlannerEnabled = envPlannerEnabled || argsPlannerEnabled;
         // Emit a quick sequence of logs and progress frames so the UI updates immediately
         setTimeout(() => {
+          try { ee.stderr.emit('data', Buffer.from(`[fake-runner] planner-enabled=${fakePlannerEnabled}\n`, 'utf8')); } catch (_) {}
           try { ee.stdout.emit('data', Buffer.from('Starting fake crawler\n', 'utf8')); } catch(_) {}
           // Optional: emit a very long log line to exercise truncation code path
           try {
@@ -123,6 +133,53 @@ function defaultRunner() {
               }
             }
           } catch (_) {}
+          // Optionally emit planner telemetry and completion milestone
+          if (fakePlannerEnabled) {
+            const emitPlanner = () => {
+              try {
+                const nowIso = () => new Date().toISOString();
+                const stageEvents = [
+                  { stage: 'bootstrap', status: 'started', sequence: 1, ts: nowIso(), details: { context: { host: 'example.com' } } },
+                  { stage: 'bootstrap', status: 'completed', sequence: 1, ts: nowIso(), durationMs: 8, details: { context: { host: 'example.com' }, result: { allowed: true } } },
+                  { stage: 'infer-patterns', status: 'started', sequence: 2, ts: nowIso(), details: { context: { startUrl: 'https://example.com' } } },
+                  { stage: 'infer-patterns', status: 'completed', sequence: 2, ts: nowIso(), durationMs: 12, details: { context: { startUrl: 'https://example.com' }, result: { sectionCount: 3, sectionsPreview: ['world','sport','culture'] } } },
+                  { stage: 'seed-hubs', status: 'started', sequence: 3, ts: nowIso(), details: { context: { sectionsFromPatterns: 3 } } },
+                  { stage: 'seed-hubs', status: 'completed', sequence: 3, ts: nowIso(), durationMs: 20, details: { context: { sectionsFromPatterns: 3 }, result: { seededCount: 2, sampleSeeded: ['https://example.com/world/', 'https://example.com/sport/'] } } }
+                ];
+                for (const ev of stageEvents) {
+                  ee.stdout.emit('data', Buffer.from('PLANNER_STAGE ' + JSON.stringify(ev) + '\n', 'utf8'));
+                }
+                const completion = {
+                  kind: 'intelligent-completion',
+                  scope: 'example.com',
+                  message: 'Intelligent crawl completed',
+                  details: {
+                    outcome: 'completed',
+                    seededHubs: {
+                      unique: 2,
+                      requested: 3,
+                      sectionsFromPatterns: 3,
+                      countryCandidates: 1,
+                      sample: ['https://example.com/world/', 'https://example.com/sport/']
+                    },
+                    coverage: { expected: 3, seeded: 2, coveragePct: 2 / 3 },
+                    problems: [{ kind: 'missing-hub', count: 1, sample: { scope: 'example.com', target: '/world/mars' } }],
+                    stats: { visited: 1, downloaded: 1, articlesFound: 0, articlesSaved: 0, errors: 0 }
+                  }
+                };
+                ee.stdout.emit('data', Buffer.from('MILESTONE ' + JSON.stringify(completion) + '\n', 'utf8'));
+              } catch (err) {
+                try { ee.stderr.emit('data', Buffer.from(`[fake-runner] planner error: ${err && err.message || err}\n`, 'utf8')); } catch (_) {}
+              }
+            };
+            const plannerDelay = Number(process.env.UI_FAKE_PLANNER_DELAY_MS || 60);
+            if (plannerDelay > 0) {
+              const timer = setTimeout(emitPlanner, plannerDelay);
+              timer.unref?.();
+            } else {
+              emitPlanner();
+            }
+          }
           try { ee.stdout.emit('data', Buffer.from('Final stats: 1 pages visited, 1 pages downloaded, 0 articles found, 0 articles saved\n', 'utf8')); } catch(_) {}
           // Give a little more time so pause/resume API broadcasts can be observed in SSE before exit
           setTimeout(() => { try { ee.emit('exit', 0, null); } catch(_) {} }, 200);
@@ -167,6 +224,14 @@ function createApp(options = {}) {
   // Verbose logging (disabled by default). Enable with options.verbose=true or UI_VERBOSE=1|true
   const verbose = options.verbose === true || String(process.env.UI_VERBOSE || '').toLowerCase() === '1' || String(process.env.UI_VERBOSE || '').toLowerCase() === 'true';
   const app = express();
+  const priorityConfigPath = options.priorityConfigPath || process.env.UI_PRIORITY_CONFIG || process.env.UI_PRIORITY_CONFIG_PATH || null;
+  const shouldWatchConfig = options.watchPriorityConfig !== undefined
+    ? !!options.watchPriorityConfig
+    : !process.env.JEST_WORKER_ID;
+  const configManager = options.configManager || new ConfigManager(priorityConfigPath, {
+    watch: shouldWatchConfig
+  });
+  app.locals.configManager = configManager;
   // Per-request timing logs (method, path, status, duration ms)
   app.use((req, res, next) => {
     const t0 = process.hrtime.bigint();
@@ -347,6 +412,17 @@ function createApp(options = {}) {
             details TEXT
           );
           CREATE INDEX IF NOT EXISTS idx_crawl_milestones_job_ts ON crawl_milestones(job_id, ts DESC);
+          CREATE TABLE IF NOT EXISTS planner_stage_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id TEXT NOT NULL,
+            ts TEXT NOT NULL,
+            stage TEXT,
+            status TEXT,
+            sequence INTEGER,
+            duration_ms INTEGER,
+            details TEXT
+          );
+          CREATE INDEX IF NOT EXISTS idx_planner_stage_events_job_ts ON planner_stage_events(job_id, ts DESC);
         `);
       } catch (_) { /* ignore index create errors */ }
       _dbRW = db;
@@ -453,26 +529,12 @@ function createApp(options = {}) {
   app.use(createAnalysisApiRouter({ getDbRW }));
   // Mount Problems APIs (read-only)
   app.use(createProblemsApiRouter({ getDbRW }));
-
-  // Unified navigation header renderer
-  function renderGlobalNav(active) {
-    const is = (k) => String(active) === k;
-    const link = (href, label, key) => {
-      const a = `<a href="${href}"${is(key)?' style="font-weight:600"':''}>${label}</a>`;
-      return a;
-    };
-    return `<nav class="meta">${[
-      link('/', 'Crawler', 'crawler'),
-      link('/queues/ssr', 'Queues', 'queues'),
-      link('/analysis/ssr', 'Analysis', 'analysis'),
-      link('/milestones/ssr', 'Milestones', 'milestones'),
-      link('/problems/ssr', 'Problems', 'problems'),
-      link('/gazetteer', 'Gazetteer', 'gazetteer'),
-      link('/domains', 'Domains', 'domains'),
-      link('/errors', 'Errors', 'errors'),
-      link('/urls', 'URLs', 'urls')
-    ].join(' · ')}</nav>`;
-  }
+  // Mount shared navigation API for clients needing link metadata
+  app.use(createNavigationApiRouter());
+  // Mount Coverage Analytics APIs
+  app.use(createCoverageApiRouter({ getDbRW }));
+  // Mount Configuration APIs
+  app.use('/api/config', createConfigApiRouter(configManager));
 
   function formatDuration(ms) {
     if (ms == null) return '';
@@ -839,6 +901,29 @@ function createApp(options = {}) {
             continue;
           } catch (_) {}
         }
+        if (line.startsWith('PLANNER_STAGE ')) {
+          try {
+            const obj = JSON.parse(line.slice('PLANNER_STAGE '.length));
+            broadcast('planner-stage', obj, jobId);
+            try {
+              const db = getDbRW();
+              if (db) {
+                const ts = obj.ts || new Date().toISOString();
+                db.prepare(`INSERT INTO planner_stage_events(job_id, ts, stage, status, sequence, duration_ms, details) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+                  .run(
+                    jobId,
+                    ts,
+                    obj.stage != null ? String(obj.stage) : null,
+                    obj.status != null ? String(obj.status) : null,
+                    obj.sequence != null ? obj.sequence : null,
+                    obj.durationMs != null ? obj.durationMs : null,
+                    obj.details != null ? (typeof obj.details === 'string' ? obj.details : JSON.stringify(obj.details)) : null
+                  );
+              }
+            } catch (_) {}
+            continue;
+          } catch (_) {}
+        }
         if (line.startsWith('MILESTONE ')) {
           try {
             const obj = JSON.parse(line.slice('MILESTONE '.length));
@@ -1099,7 +1184,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1>Problems</h1>
-      ${renderGlobalNav('problems')}
+  ${renderNav('problems')}
     </header>
     <form class="filters" method="GET" action="/problems/ssr">
       <label>Job <input type="text" name="job" value="${esc(opts.job||'')}"/></label>
@@ -1216,7 +1301,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1>Milestones</h1>
-      ${renderGlobalNav('milestones')}
+  ${renderNav('milestones')}
     </header>
     <form class="filters" method="GET" action="/milestones/ssr">
       <label>Job <input type="text" name="job" value="${esc(opts.job||'')}"/></label>
@@ -1472,7 +1557,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1>Analysis runs</h1>
-      ${renderGlobalNav('analysis')}
+  ${renderNav('analysis')}
     </header>
     <div class="top">
       <div class="muted small">${esc(items.length)} shown</div>
@@ -1587,7 +1672,7 @@ function createApp(options = {}) {
   <div class="container" data-run="${esc(run.id)}">
     <header>
       <h1>Analysis <span class="pill mono">${esc(run.id)}</span></h1>
-      ${renderGlobalNav('analysis')}
+  ${renderNav('analysis')}
     </header>
     <div class="grid">
       <div class="muted small">Started ${esc(run.startedAt || '')}</div>
@@ -1841,7 +1926,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1 class="hdr">Queues</h1>
-      ${renderGlobalNav('queues')}
+  ${renderNav('queues')}
     </header>
     <div class="top">
       <div class="muted sub">${rows.length} shown</div>
@@ -2010,7 +2095,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1>Queue <span class="pill mono">${esc(job.id)}</span></h1>
-      ${renderGlobalNav('queues')}
+  ${renderNav('queues')}
     </header>
 
     <section class="controls">
@@ -2242,7 +2327,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1>Places</h1>
-      ${renderGlobalNav('gazetteer')}
+  ${renderNav('gazetteer')}
     </header>
     <form method="GET" class="card" style="margin-bottom:10px">
       <div class="form-grid">
@@ -2348,7 +2433,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1>Gazetteer</h1>
-      ${renderGlobalNav('gazetteer')}
+  ${renderNav('gazetteer')}
     </header>
     <section class="card">
       <div class="meta">Summary</div>
@@ -2542,7 +2627,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1 class="spaced">${esc(country.name||country.country_code)} <span class="pill mono">${esc(country.country_code||'')}</span></h1>
-      ${renderGlobalNav('gazetteer')}
+  ${renderNav('gazetteer')}
     </header>
     <section class="card infobox">
       <div class="row"><div class="name">Infobox</div><div class="switch toggle">${toggleHtml}</div></div>
@@ -2712,7 +2797,7 @@ function createApp(options = {}) {
   <div class="container">
     <header>
       <h1 class="hdr">${(kind.charAt(0).toUpperCase()+kind.slice(1))}s</h1>
-      ${renderGlobalNav('gazetteer')}
+  ${renderNav('gazetteer')}
     </header>
     <form method="GET" class="card" style="margin-bottom:10px">
       <div class="form-grid">
@@ -3117,7 +3202,7 @@ SELECT (
         <h1>${esc(title)} <span class="badge">${esc(place.kind)}</span></h1>
         <div class="meta">${place.country_code?('· '+esc(place.country_code)) : ''} ${place.adm1_code?('· '+esc(place.adm1_code)) : ''} ${place.population?('· pop '+num(place.population)) : ''} · id ${place.id}</div>
       </div>
-      ${renderGlobalNav('gazetteer')}
+  ${renderNav('gazetteer')}
     </header>
 
     <div class="grid">
@@ -3225,7 +3310,7 @@ SELECT (
   <div class="container">
     <header>
       <h1>Countries</h1>
-      ${renderGlobalNav('gazetteer')}
+  ${renderNav('gazetteer')}
     </header>
     <table>
       <thead><tr><th>Name</th><th>CC</th><th style="text-align:right">Population</th></tr></thead>
@@ -3325,6 +3410,7 @@ SELECT (
     const shutdown = (signal) => {
       // Stop child crawler if running
       try { if (child && typeof child.kill === 'function') child.kill('SIGTERM'); } catch (_) {}
+      try { configManager?.close?.(); } catch (_) {}
       // End SSE clients to unblock server.close
       try {
         for (const client of sseClients) {
@@ -3390,6 +3476,10 @@ function buildPortCandidates() {
 function startServer() {
   const app = createApp();
   const server = http.createServer(app);
+  const configManager = app.locals?.configManager;
+  server.on('close', () => {
+    try { configManager?.close?.(); } catch (_) {}
+  });
   const candidates = buildPortCandidates();
 
   let attemptIndex = 0;

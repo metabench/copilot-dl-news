@@ -30,6 +30,12 @@ class NewsDatabase {
 
   this._getSettingStmt = this.db.prepare(`SELECT value FROM crawler_settings WHERE key = ?`);
   this._setSettingStmt = this.db.prepare(`INSERT INTO crawler_settings(key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`);
+  this._insertCrawlJobStmt = this.db.prepare(`INSERT OR REPLACE INTO crawl_jobs(id, url, args, pid, started_at, status) VALUES (@id, @url, @args, @pid, @startedAt, @status)`);
+  this._updateCrawlJobStmt = this.db.prepare(`UPDATE crawl_jobs SET ended_at = @endedAt, status = @status WHERE id = @id`);
+  this._insertQueueEventStmt = this.db.prepare(`INSERT INTO queue_events(job_id, ts, action, url, depth, host, reason, queue_size, alias) VALUES (@jobId, @ts, @action, @url, @depth, @host, @reason, @queueSize, @alias)`);
+  this._insertProblemStmt = this.db.prepare(`INSERT INTO crawl_problems(job_id, ts, kind, scope, target, message, details) VALUES (@jobId, @ts, @kind, @scope, @target, @message, @details)`);
+  this._insertMilestoneStmt = this.db.prepare(`INSERT INTO crawl_milestones(job_id, ts, kind, scope, target, message, details) VALUES (@jobId, @ts, @kind, @scope, @target, @message, @details)`);
+  this._insertPlannerStageStmt = this.db.prepare(`INSERT INTO planner_stage_events(job_id, ts, stage, status, sequence, duration_ms, details) VALUES (@jobId, @ts, @stage, @status, @sequence, @durationMs, @details)`);
   this._countActiveTasksByJobStmt = this.db.prepare(`SELECT COUNT(*) AS c FROM crawl_tasks WHERE job_id = ? AND status NOT IN ('completed','failed')`);
   this._selectOldActiveTasksStmt = this.db.prepare(`SELECT id FROM crawl_tasks WHERE job_id = ? AND status NOT IN ('completed','failed') ORDER BY created_at ASC, id ASC LIMIT ?`);
   this._deleteTaskByIdStmt = this.db.prepare(`DELETE FROM crawl_tasks WHERE id = ?`);
@@ -314,6 +320,91 @@ class NewsDatabase {
     `);
 
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS queue_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT NOT NULL,
+        ts TEXT NOT NULL,
+        action TEXT NOT NULL,
+        url TEXT,
+        depth INTEGER,
+        host TEXT,
+        reason TEXT,
+        queue_size INTEGER,
+        alias TEXT,
+        FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_queue_events_job_ts ON queue_events(job_id, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_queue_events_job_id_desc ON queue_events(job_id, id DESC);
+      CREATE INDEX IF NOT EXISTS idx_queue_events_job_action_id_desc ON queue_events(job_id, action, id DESC);
+      CREATE INDEX IF NOT EXISTS idx_queue_events_action ON queue_events(action);
+      CREATE INDEX IF NOT EXISTS idx_queue_events_host ON queue_events(host);
+    `);
+
+    try {
+      const queueCols = this.db.prepare('PRAGMA table_info(queue_events)').all().map((r) => r.name);
+      if (!queueCols.includes('alias')) {
+        this.db.exec('ALTER TABLE queue_events ADD COLUMN alias TEXT');
+      }
+    } catch (_) {}
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS crawl_problems (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT NOT NULL,
+        ts TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        scope TEXT,
+        target TEXT,
+        message TEXT,
+        details TEXT,
+        FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_crawl_problems_job_ts ON crawl_problems(job_id, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_crawl_problems_kind ON crawl_problems(kind);
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS crawl_milestones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT NOT NULL,
+        ts TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        scope TEXT,
+        target TEXT,
+        message TEXT,
+        details TEXT,
+        FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_crawl_milestones_job_ts ON crawl_milestones(job_id, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_crawl_milestones_kind ON crawl_milestones(kind);
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS planner_stage_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT NOT NULL,
+        ts TEXT NOT NULL,
+        stage TEXT NOT NULL,
+        status TEXT NOT NULL,
+        sequence INTEGER,
+        duration_ms INTEGER,
+        details TEXT,
+        FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_planner_stage_job_ts ON planner_stage_events(job_id, ts DESC);
+      CREATE INDEX IF NOT EXISTS idx_planner_stage_stage ON planner_stage_events(stage, status);
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS crawl_types (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        description TEXT,
+        declaration TEXT NOT NULL
+      );
+    `);
+
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS crawler_settings (
         key TEXT PRIMARY KEY,
         value TEXT,
@@ -589,6 +680,13 @@ class NewsDatabase {
     } catch (_) { /* ignore backfill errors */ }
 
   this.selectByUrlStmt = this.db.prepare(`SELECT * FROM articles WHERE url = ?`);
+  this.selectArticleHeadersStmt = this.db.prepare(`
+      SELECT url, canonical_url, etag, last_modified, fetched_at, crawled_at
+      FROM articles
+      WHERE url = ? OR canonical_url = ?
+      ORDER BY COALESCE(fetched_at, crawled_at) DESC
+      LIMIT 1
+    `);
   // Prepared variant for url OR canonical lookup to avoid re-prepare on hot path
   this.selectByUrlOrCanonicalStmt = this.db.prepare('SELECT url, title, date, section, html, crawled_at FROM articles WHERE url = ? OR canonical_url = ?');
     this.countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM articles`);
@@ -659,6 +757,10 @@ class NewsDatabase {
   // Try to find an article row by exact URL or by canonical_url
   getArticleByUrlOrCanonical(url) {
     return this.selectByUrlOrCanonicalStmt.get(url, url);
+  }
+
+  getArticleHeaders(url) {
+    return this.selectArticleHeadersStmt.get(url, url);
   }
 
   getCount() {
@@ -1066,6 +1168,290 @@ class NewsDatabase {
       details: err.details != null ? (typeof err.details === 'string' ? err.details : JSON.stringify(err.details)) : null,
       at
     });
+  }
+
+  getHandle() {
+    return this.db;
+  }
+
+  ensureCrawlTypesSeeded() {
+    if (this._crawlTypesSeeded) return;
+    const defaults = [
+      { name: 'basic', description: 'Follow links only (no sitemap)', declaration: { crawlType: 'basic', useSitemap: false, sitemapOnly: false } },
+      { name: 'sitemap-only', description: 'Use only the sitemap to discover pages', declaration: { crawlType: 'sitemap-only', useSitemap: true, sitemapOnly: true } },
+      { name: 'basic-with-sitemap', description: 'Follow links and also use the sitemap', declaration: { crawlType: 'basic-with-sitemap', useSitemap: true, sitemapOnly: false } },
+      { name: 'intelligent', description: 'Intelligent planning (hubs + sitemap + heuristics)', declaration: { crawlType: 'intelligent', useSitemap: true, sitemapOnly: false } }
+    ];
+    const stmt = this.db.prepare(`
+      INSERT INTO crawl_types(name, description, declaration)
+      VALUES (@name, @description, @declaration)
+      ON CONFLICT(name) DO UPDATE SET description = excluded.description, declaration = excluded.declaration
+    `);
+    const txn = this.db.transaction((rows) => {
+      for (const row of rows) {
+        stmt.run({
+          name: row.name,
+          description: row.description,
+          declaration: JSON.stringify(row.declaration)
+        });
+      }
+    });
+    try {
+      txn(defaults);
+      this._crawlTypesSeeded = true;
+    } catch (_) {
+      // Ignore seeding errors but avoid retry loop
+      this._crawlTypesSeeded = true;
+    }
+  }
+
+  recordCrawlJobStart({ id, url = null, args = null, pid = null, startedAt = null, status = 'running' }) {
+    if (!id) return false;
+    const payload = {
+      id,
+      url,
+      args: args != null ? (typeof args === 'string' ? args : JSON.stringify(args)) : null,
+      pid: pid != null ? pid : null,
+      startedAt: startedAt || new Date().toISOString(),
+      status: status || 'running'
+    };
+    try {
+      this._insertCrawlJobStmt.run(payload);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  markCrawlJobStatus({ id, endedAt = null, status = 'done' }) {
+    if (!id) return false;
+    const payload = {
+      id,
+      endedAt: endedAt || new Date().toISOString(),
+      status: status || 'done'
+    };
+    try {
+      const info = this._updateCrawlJobStmt.run(payload);
+      return (info?.changes || 0) > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  insertQueueEvent(event) {
+    if (!event || !event.jobId) return false;
+    const payload = {
+      jobId: event.jobId,
+      ts: event.ts || new Date().toISOString(),
+      action: event.action || 'unknown',
+      url: event.url || null,
+      depth: Number.isFinite(event.depth) ? event.depth : null,
+      host: event.host || null,
+      reason: event.reason || null,
+      queueSize: Number.isFinite(event.queueSize) ? event.queueSize : null,
+      alias: event.alias || null
+    };
+    try {
+      this._insertQueueEventStmt.run(payload);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  insertProblem(problem) {
+    if (!problem || !problem.jobId) return false;
+    const payload = {
+      jobId: problem.jobId,
+      ts: problem.ts || new Date().toISOString(),
+      kind: problem.kind || 'unknown',
+      scope: problem.scope || null,
+      target: problem.target || null,
+      message: problem.message || null,
+      details: problem.details != null ? (typeof problem.details === 'string' ? problem.details : JSON.stringify(problem.details)) : null
+    };
+    try {
+      this._insertProblemStmt.run(payload);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  insertMilestone(milestone) {
+    if (!milestone || !milestone.jobId) return false;
+    const payload = {
+      jobId: milestone.jobId,
+      ts: milestone.ts || new Date().toISOString(),
+      kind: milestone.kind || 'unknown',
+      scope: milestone.scope || null,
+      target: milestone.target || null,
+      message: milestone.message || null,
+      details: milestone.details != null ? (typeof milestone.details === 'string' ? milestone.details : JSON.stringify(milestone.details)) : null
+    };
+    try {
+      this._insertMilestoneStmt.run(payload);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  insertPlannerStageEvent(event) {
+    if (!event || !event.jobId) return false;
+    const payload = {
+      jobId: event.jobId,
+      ts: event.ts || new Date().toISOString(),
+      stage: event.stage || 'unknown',
+      status: event.status || 'unknown',
+      sequence: Number.isFinite(event.sequence) ? event.sequence : null,
+      durationMs: Number.isFinite(event.durationMs) ? event.durationMs : null,
+      details: event.details != null ? (typeof event.details === 'string' ? event.details : JSON.stringify(event.details)) : null
+    };
+    try {
+      this._insertPlannerStageStmt.run(payload);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  listQueues(limit = 50) {
+    const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+    try {
+      const rows = this.db.prepare(`
+        SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
+               (SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id) AS events,
+               (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id) AS lastEventAt
+        FROM crawl_jobs j
+        ORDER BY COALESCE(j.ended_at, j.started_at) DESC
+        LIMIT ?
+      `).all(safeLimit);
+      return rows;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  getCrawlJob(id) {
+    if (!id) return null;
+    try {
+      return this.db.prepare(`
+        SELECT id, url, pid, started_at AS startedAt, ended_at AS endedAt, status
+        FROM crawl_jobs
+        WHERE id = ?
+      `).get(id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  listQueueEvents({ jobId, action = null, limit = 200, before = null, after = null } = {}) {
+    if (!jobId) return { items: [], cursors: {}, stats: null };
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 200));
+    const clauses = ['job_id = ?'];
+    const params = [jobId];
+    if (action) {
+      clauses.push('action = ?');
+      params.push(action);
+    }
+    let order = 'DESC';
+    if (before != null) {
+      clauses.push('id < ?');
+      params.push(before);
+    } else if (after != null) {
+      clauses.push('id > ?');
+      params.push(after);
+      order = 'ASC';
+    }
+    const sql = `
+      SELECT id, ts, action, url, depth, host, reason, queue_size AS queueSize, alias
+      FROM queue_events
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY id ${order}
+      LIMIT ?
+    `;
+    try {
+      let rows = this.db.prepare(sql).all(...params, safeLimit);
+      if (order === 'ASC') rows = rows.reverse();
+      let stats = null;
+      try {
+        stats = action
+          ? this.db.prepare('SELECT MIN(id) AS minId, MAX(id) AS maxId FROM queue_events WHERE job_id = ? AND action = ?').get(jobId, action)
+          : this.db.prepare('SELECT MIN(id) AS minId, MAX(id) AS maxId FROM queue_events WHERE job_id = ?').get(jobId);
+      } catch (_) {}
+      const cursors = rows.length ? { nextBefore: rows[rows.length - 1].id, prevAfter: rows[0].id } : {};
+      return { items: rows, cursors, stats };
+    } catch (_) {
+      return { items: [], cursors: {}, stats: null };
+    }
+  }
+
+  listProblems({ job = null, kind = null, scope = null, limit = 100, before = null, after = null } = {}) {
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
+    const clauses = [];
+    const params = [];
+    if (job) { clauses.push('job_id = ?'); params.push(job); }
+    if (kind) { clauses.push('kind = ?'); params.push(kind); }
+    if (scope) { clauses.push('scope = ?'); params.push(scope); }
+    let order = 'DESC';
+    if (before != null) { clauses.push('id < ?'); params.push(before); }
+    else if (after != null) { clauses.push('id > ?'); params.push(after); order = 'ASC'; }
+    const sql = `
+      SELECT id, ts, kind, scope, target, message, details, job_id AS jobId
+      FROM crawl_problems
+      ${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''}
+      ORDER BY id ${order}
+      LIMIT ?
+    `;
+    try {
+      let rows = this.db.prepare(sql).all(...params, safeLimit);
+      if (order === 'ASC') rows = rows.reverse();
+      const cursors = rows.length ? { nextBefore: rows[rows.length - 1].id, prevAfter: rows[0].id } : {};
+      return { items: rows, cursors };
+    } catch (_) {
+      return { items: [], cursors: {} };
+    }
+  }
+
+  listMilestones({ job = null, kind = null, scope = null, limit = 100, before = null, after = null } = {}) {
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 100));
+    const clauses = [];
+    const params = [];
+    if (job) { clauses.push('job_id = ?'); params.push(job); }
+    if (kind) { clauses.push('kind = ?'); params.push(kind); }
+    if (scope) { clauses.push('scope = ?'); params.push(scope); }
+    let order = 'DESC';
+    if (before != null) { clauses.push('id < ?'); params.push(before); }
+    else if (after != null) { clauses.push('id > ?'); params.push(after); order = 'ASC'; }
+    const sql = `
+      SELECT id, ts, kind, scope, target, message, details, job_id AS jobId
+      FROM crawl_milestones
+      ${clauses.length ? 'WHERE ' + clauses.join(' AND ') : ''}
+      ORDER BY id ${order}
+      LIMIT ?
+    `;
+    try {
+      let rows = this.db.prepare(sql).all(...params, safeLimit);
+      if (order === 'ASC') rows = rows.reverse();
+      const cursors = rows.length ? { nextBefore: rows[rows.length - 1].id, prevAfter: rows[0].id } : {};
+      return { items: rows, cursors };
+    } catch (_) {
+      return { items: [], cursors: {} };
+    }
+  }
+
+  listCrawlTypes() {
+    try {
+      const rows = this.db.prepare('SELECT name, description, declaration FROM crawl_types ORDER BY name ASC').all();
+      return rows.map((row) => ({
+        name: row.name,
+        description: row.description,
+        declaration: this._safeParseJson(row.declaration)
+      }));
+    } catch (_) {
+      return [];
+    }
   }
 }
 

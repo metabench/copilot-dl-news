@@ -182,6 +182,36 @@ function awardMilestones(dbish, { dryRun = false, verbose = false, jobId = DEFAU
   }
 
   if (!dryRun && toInsert.length) {
+    const ensureJobStmt = db.prepare(`
+      INSERT OR IGNORE INTO crawl_jobs(id, url, args, pid, started_at, ended_at, status)
+      VALUES (@id, NULL, NULL, NULL, datetime('now'), datetime('now'), 'analysis-run')
+    `);
+
+    const uniqueJobIds = Array.from(new Set(toInsert.map((row) => row.jobId).filter(Boolean)));
+    for (const jobId of uniqueJobIds) {
+      try {
+        ensureJobStmt.run({ id: jobId });
+      } catch (error) {
+        if (error && /no such table/i.test(error.message)) {
+          // Fallback for older databases without crawl_jobs
+          db.exec(`
+            CREATE TABLE IF NOT EXISTS crawl_jobs (
+              id TEXT PRIMARY KEY,
+              url TEXT,
+              args TEXT,
+              pid INTEGER,
+              started_at TEXT,
+              ended_at TEXT,
+              status TEXT
+            );
+          `);
+          ensureJobStmt.run({ id: jobId });
+        } else {
+          throw error;
+        }
+      }
+    }
+
     insertMany(toInsert);
   }
 

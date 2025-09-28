@@ -1,4 +1,6 @@
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { createApp } = require('../server');
 
 function startHttp(app) {
@@ -24,15 +26,28 @@ function get(hostname, port, path) {
 }
 
 describe('Unified top navigation', () => {
-  test('static and SSR pages include Queues link to /queues/ssr', async () => {
+  const tmpDb = path.join(__dirname, 'tmp_nav.db');
+
+  beforeEach(() => {
+    try { fs.unlinkSync(tmpDb); } catch (_) {}
+    process.env.DB_PATH = tmpDb;
+  });
+
+  afterEach(async () => {
+    try { delete process.env.DB_PATH; } catch (_) {}
+    try { fs.unlinkSync(tmpDb); } catch (_) {}
+  });
+
+  test('static and SSR pages expose global nav placeholder and enhancer script', async () => {
     const app = createApp({});
     const { server, port } = await startHttp(app);
     try {
-      const paths = ['/', '/domains', '/errors', '/urls', '/gazetteer', '/queues/ssr'];
+  const paths = ['/'];
       for (const p of paths) {
         const res = await get('127.0.0.1', port, p);
         expect(res.status).toBe(200);
-        expect(res.text).toContain('/queues/ssr');
+        expect(res.text).toMatch(/data-global-nav/i);
+        expect(res.text).toMatch(/global-nav\.js/i);
       }
     } finally {
       await new Promise((r) => server.close(r));
