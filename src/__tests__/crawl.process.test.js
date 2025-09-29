@@ -6,11 +6,9 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
   const crawler = new NewsCrawler(startUrl, { enableDb: false, useSitemap: false, concurrency: 1, maxDepth: 0, maxAgeMs: 1000, preferCache: true });
     // Fake cache returns very old page
     crawler.cache.get = async () => ({ html: '<html>old</html>', crawledAt: new Date(Date.now() - 3600*1000).toISOString(), source: 'db' });
-    // Capture whether fetchPage was called
-    let fetched = false;
-    crawler.fetchPage = async (url) => {
-      fetched = true;
-      const html = `<!doctype html>
+    // Capture whether network fetch was used
+    let networkCalled = false;
+    const sampleHtml = `<!doctype html>
         <html><body>
           <nav><a href="/world">World</a><a href="/politics">Politics</a></nav>
           <article>
@@ -18,14 +16,27 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
             <a href="/world/2025/sep/16/example-article">Read more</a>
           </article>
         </body></html>`;
-      return { url, html, fetchMeta: { httpStatus: 200, fetchedAtIso: new Date().toISOString(), requestStartedIso: new Date().toISOString() } };
-    };
+    crawler.fetchPipeline.fetchFn = jest.fn(async (normalizedUrl) => {
+      networkCalled = true;
+      return {
+        ok: true,
+        status: 200,
+        headers: {
+          get: (key) => {
+            if (key.toLowerCase() === 'content-type') return 'text/html';
+            return null;
+          }
+        },
+        url: normalizedUrl,
+        text: async () => sampleHtml
+      };
+    });
     // Avoid real robots
     crawler.loadRobotsTxt = async () => { crawler.robotsRules = null; crawler.robotsTxtLoaded = true; };
     await crawler.init();
     const res = await crawler.processPage(startUrl, 0);
     expect(res.status === 'success' || res.status === 'cache').toBeTruthy();
-    expect(fetched).toBe(true);
+    expect(networkCalled).toBe(true);
   });
 
   test('respects maxDownloads limit (no extra network calls)', async () => {
@@ -35,12 +46,11 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
     await crawler.init();
     // Simulate that we've already downloaded the allowed number of pages
     crawler.stats.pagesDownloaded = 1;
-    let called = false;
-    crawler.fetchPage = async () => { called = true; return null; };
+    const fetchSpy = jest.spyOn(crawler.fetchPipeline, 'fetch');
     const res = await crawler.processPage(startUrl, 0);
     // With pagesDownloaded >= maxDownloads, processPage should skip before network fetch
     expect(res).toEqual({ status: 'skipped' });
-  expect(called).toBe(false);
+  expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   test('uses cached page when host is rate limited even if cache is stale', async () => {
@@ -50,8 +60,7 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
     await crawler.init();
     const host = new URL(startUrl).hostname;
     crawler.cache.get = async () => ({ html: '<html><body><h1>Cached</h1></body></html>', crawledAt: new Date(Date.now() - 3600 * 1000).toISOString(), source: 'db' });
-    const fetchSpy = jest.fn();
-    crawler.fetchPage = async () => { fetchSpy(); throw new Error('should not fetch during rate limit'); };
+    crawler.fetchPipeline.fetchFn = jest.fn(() => { throw new Error('should not fetch during rate limit'); });
     crawler.note429(host, 120000);
   crawler.enqueueRequest({ url: startUrl, depth: 0, type: 'article' });
     const pick = await crawler._pullNextWorkItem();
@@ -65,7 +74,7 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
       rateLimitedHost: pick.context.rateLimitedHost
     });
     expect(res.status).toBe('cache');
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(crawler.fetchPipeline.fetchFn).not.toHaveBeenCalled();
     expect(crawler.stats.cacheRateLimitedServed).toBeGreaterThan(0);
   });
 

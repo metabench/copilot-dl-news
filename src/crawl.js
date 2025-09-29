@@ -6,7 +6,7 @@ const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
 const path = require('path');
 const { URL } = require('url');
-const { ArticleCache, shouldUseCache } = require('./cache');
+const { ArticleCache } = require('./cache');
 const { UrlPolicy } = require('./crawler/urlPolicy');
 const { DeepUrlAnalyzer } = require('./crawler/deepUrlAnalysis');
 const http = require('http');
@@ -26,6 +26,7 @@ const Links = require('./crawler/links');
 const { loadSitemaps } = require('./crawler/sitemap');
 
 const QueueManager = require('./crawler/QueueManager');
+const { FetchPipeline } = require('./crawler/FetchPipeline');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function nowMs() { return Date.now(); }
@@ -197,6 +198,62 @@ class NewsCrawler {
       getHostResumeTime: (host) => this._getHostResumeTime(host),
       isHostRateLimited: (host) => this._isHostRateLimited(host),
       jobIdProvider: () => this.jobId
+    });
+
+    this.fetchPipeline = new FetchPipeline({
+      getUrlDecision: (targetUrl, ctx) => this._getUrlDecision(targetUrl, ctx),
+      normalizeUrl: (targetUrl, ctx) => this.normalizeUrl(targetUrl, ctx),
+      isOnDomain: (targetUrl) => this.isOnDomain(targetUrl),
+      isAllowed: (targetUrl) => this.isAllowed(targetUrl),
+      hasVisited: (normalized) => this.visited.has(normalized),
+      getCachedArticle: (targetUrl) => this.getCachedArticle(targetUrl),
+      looksLikeArticle: (targetUrl) => this.looksLikeArticle(targetUrl),
+      cache: this.cache,
+      preferCache: this.preferCache,
+      maxAgeMs: this.maxAgeMs,
+      maxAgeArticleMs: this.maxAgeArticleMs,
+      maxAgeHubMs: this.maxAgeHubMs,
+      acquireDomainToken: (host) => this.acquireDomainToken(host),
+      acquireRateToken: () => this.acquireRateToken(),
+      rateLimitMs: this.rateLimitMs,
+      requestTimeoutMs: this.requestTimeoutMs,
+      httpAgent: this.httpAgent,
+      httpsAgent: this.httpsAgent,
+      currentDownloads: this.currentDownloads,
+      emitProgress: () => this.emitProgress(),
+      note429: (host, retryAfterMs) => this.note429(host, retryAfterMs),
+      noteSuccess: (host) => this.noteSuccess(host),
+      recordError: (info) => this._recordError(info),
+      handleConnectionReset: (normalized, err) => this._handleConnectionReset(normalized, err),
+      articleHeaderCache: this.articleHeaderCache,
+      knownArticlesCache: this.knownArticlesCache,
+      getDbAdapter: () => this.dbAdapter,
+      parseRetryAfter,
+      handlePolicySkip: (decision, extras) => {
+        const depth = extras?.depth || 0;
+        const queueSize = this.queue?.size?.() || 0;
+        this._handlePolicySkip(decision, { depth, queueSize });
+      },
+      onCacheServed: (info) => {
+        if (!info) return;
+        if (info.forced) {
+          this.stats.cacheRateLimitedServed = (this.stats.cacheRateLimitedServed || 0) + 1;
+          const milestoneUrl = info.url;
+          const host = info.rateLimitedHost || this._safeHostFromUrl(milestoneUrl);
+          const milestoneDetails = { url: milestoneUrl };
+          if (host) milestoneDetails.host = host;
+          this._emitMilestoneOnce(`cache-priority:${host || milestoneUrl}`, {
+            kind: 'cache-priority-hit',
+            message: 'Served cached page while rate limited',
+            details: milestoneDetails
+          });
+        }
+      },
+      logger: {
+        info: (...args) => console.log(...args),
+        warn: (...args) => console.warn(...args),
+        error: (...args) => console.error(...args)
+      }
     });
   }
 
@@ -381,33 +438,6 @@ class NewsCrawler {
           });
         }
       }
-    }
-  }
-
-  _getCachedArticleHeaders(normalizedUrl) {
-    if (!normalizedUrl) return null;
-    if (this.articleHeaderCache.has(normalizedUrl)) {
-      return this.articleHeaderCache.get(normalizedUrl);
-    }
-    if (!this.dbAdapter || !this.dbAdapter.isEnabled()) {
-      return null;
-    }
-    try {
-      const row = this.dbAdapter.getArticleHeaders(normalizedUrl);
-      if (!row) {
-        this.articleHeaderCache.set(normalizedUrl, null);
-        return null;
-      }
-      const meta = {
-        etag: row.etag || null,
-        last_modified: row.last_modified || null,
-        fetched_at: row.fetched_at || row.crawled_at || null
-      };
-      this.articleHeaderCache.set(normalizedUrl, meta);
-      this.knownArticlesCache.set(normalizedUrl, true);
-      return meta;
-    } catch (_) {
-      return null;
     }
   }
 
@@ -991,201 +1021,6 @@ class NewsCrawler {
     return analysis.normalized;
   }
 
-  async fetchPage(url, context = {}) {
-    const allowRevisit = !!context.allowRevisit;
-    const decision = this._getUrlDecision(url, { ...context, phase: 'fetch', depth: context.depth || 0 });
-    const analysis = decision?.analysis || {};
-    const normalizedUrl = analysis && !analysis.invalid ? analysis.normalized : null;
-    if (!normalizedUrl || (!allowRevisit && this.visited.has(normalizedUrl))) {
-      return null;
-    }
-
-    if (!this.isOnDomain(normalizedUrl) || !this.isAllowed(normalizedUrl)) {
-      console.log(`Skipping ${normalizedUrl} (not allowed or off-domain)`);
-      return null;
-    }
-
-    if (!decision.allow) {
-      if (decision.reason === 'query-superfluous') {
-        this._handlePolicySkip(decision, { depth: context.depth || 0, queueSize: this.queue.size() });
-      } else {
-        try { console.log(`Skipping fetch due to policy: ${normalizedUrl} reason=${decision.reason}`); } catch (_) {}
-      }
-      return { status: 'skipped-policy' };
-    }
-    
-  let conditionalHeaders = null;
-  if (this.dbAdapter && this.dbAdapter.isEnabled()) {
-      try {
-        const meta = this._getCachedArticleHeaders(normalizedUrl);
-        if (meta && (meta.etag || meta.last_modified)) {
-          conditionalHeaders = {};
-          if (meta.etag) conditionalHeaders['If-None-Match'] = meta.etag;
-          if (meta.last_modified) conditionalHeaders['If-Modified-Since'] = meta.last_modified;
-        }
-      } catch (_) {}
-    }
-
-    try {
-      // Apply pacing only for actual network fetches when enabled
-      const uPre = new URL(normalizedUrl);
-      await this.acquireDomainToken(uPre.hostname);
-      if (this.rateLimitMs > 0) {
-        await this.acquireRateToken();
-      }
-      console.log(`Fetching: ${normalizedUrl}`);
-      const started = Date.now();
-      const requestStartedIso = new Date(started).toISOString();
-      // Mark as in-flight for progress reporting
-  this.currentDownloads.set(normalizedUrl, { startedAt: started, policy: decision });
-      this.emitProgress();
-  const u = uPre;
-      const ac = new AbortController();
-      const to = setTimeout(() => {
-        try { ac.abort(); } catch (_) {}
-      }, this.requestTimeoutMs);
-      const fetchHeaders = {
-        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
-      };
-      if (conditionalHeaders) {
-        Object.assign(fetchHeaders, conditionalHeaders);
-      }
-      const response = await fetch(normalizedUrl, {
-        headers: fetchHeaders,
-        agent: (parsedUrl => parsedUrl.protocol === 'http:' ? this.httpAgent : this.httpsAgent)(u),
-        signal: ac.signal
-      });
-      try { clearTimeout(to); } catch (_) {}
-      const headersReady = Date.now();
-      const ttfbMs = headersReady - started; // time to first byte (headers received)
-      const status = response.status;
-      const etag = response.headers.get('etag') || null;
-      const lastModified = response.headers.get('last-modified') || null;
-      const contentTypeHeader = response.headers.get('content-type') || null;
-      const contentLengthHeader = parseInt(response.headers.get('content-length') || '0', 10) || null;
-      const contentEncoding = response.headers.get('content-encoding') || null;
-
-    if (status === 304) {
-        const finished = Date.now();
-        const totalMs304 = finished - started;
-        const meta304 = {
-          requestStartedIso,
-          fetchedAtIso: new Date(finished).toISOString(),
-          httpStatus: status,
-          contentType: contentTypeHeader,
-          contentLength: contentLengthHeader,
-          contentEncoding,
-          etag,
-          lastModified,
-          redirectChain: null,
-          referrerUrl: context.referrerUrl || null,
-          crawlDepth: context.depth ?? null,
-          ttfbMs,
-          downloadMs: null,
-          totalMs: totalMs304,
-          bytesDownloaded: 0,
-          transferKbps: null,
-          conditional: !!conditionalHeaders
-        };
-        this.currentDownloads.delete(normalizedUrl);
-        this.emitProgress();
-        try { this.noteSuccess(u.hostname); } catch (_) {}
-        try { console.log(`Not modified (304): ${normalizedUrl}`); } catch (_) {}
-        if (etag || lastModified) {
-          try {
-            this.articleHeaderCache.set(normalizedUrl, { etag, last_modified: lastModified, fetched_at: meta304.fetchedAtIso });
-            this.knownArticlesCache.set(normalizedUrl, true);
-          } catch (_) {}
-        }
-        return {
-          url: normalizedUrl,
-          notModified: true,
-          fetchMeta: meta304
-        };
-      }
-
-    if (!response.ok) {
-        const retryAfterHeader = response.headers.get('retry-after');
-        const retryAfterMs = parseRetryAfter(retryAfterHeader);
-        console.log(`Failed to fetch ${normalizedUrl}: ${status}`);
-        this.stats.errors++;
-        this._recordError({ kind: 'http', code: status, message: `HTTP ${status}`, url: normalizedUrl });
-        if (status === 429) {
-          // Trigger domain backoff and rate limit ramp
-      try { this.note429(u.hostname, retryAfterMs); } catch(_) {}
-        }
-        // Persist error
-  try { this.dbAdapter?.insertError({ url: normalizedUrl, kind: 'http', code: status, message: `HTTP ${status}`, details: null }); } catch(_) {}
-        // Emit a structured error log line for UI colorization
-        try { console.log(`ERROR ${JSON.stringify({ url: normalizedUrl, kind: 'http', code: status })}`); } catch(_) {}
-        // Remove from in-flight set on failure
-        this.currentDownloads.delete(normalizedUrl);
-        this.emitProgress();
-        return { error: true, httpStatus: status, retryAfterMs, url: normalizedUrl };
-      }
-
-  const html = await response.text();
-      const finished = Date.now();
-      const downloadMs = finished - headersReady;
-      const totalMs = finished - started;
-  const bytesDownloaded = Buffer.byteLength(html, 'utf8');
-      const transferKbps = downloadMs > 0 ? (bytesDownloaded / 1024) / (downloadMs / 1000) : null;
-    const contentType = contentTypeHeader;
-    const contentLength = contentLengthHeader;
-    const fetchedAtIso = new Date(finished).toISOString();
-    const httpStatus = status;
-      const finalUrl = response.url || normalizedUrl;
-      const redirectChain = finalUrl !== normalizedUrl ? JSON.stringify([normalizedUrl, finalUrl]) : null;
-          this.stats.pagesVisited++;
-          this.stats.pagesDownloaded++;
-          // Accumulate total bytes downloaded (network only)
-          this.stats.bytesDownloaded += (bytesDownloaded || 0);
-          // Remove from in-flight set on success
-          this.currentDownloads.delete(normalizedUrl);
-          this.emitProgress();
-          try { this.noteSuccess(u.hostname); } catch (_) {}
-      
-      return {
-        url: finalUrl,
-        html,
-        fetchMeta: {
-          requestStartedIso,
-          fetchedAtIso,
-    httpStatus,
-          contentType,
-          contentLength,
-    contentEncoding,
-          etag,
-          lastModified,
-          redirectChain,
-          referrerUrl: context.referrerUrl || null,
-          crawlDepth: context.depth ?? null,
-          ttfbMs,
-          downloadMs,
-          totalMs,
-          bytesDownloaded,
-          transferKbps,
-          conditional: !!conditionalHeaders
-        }
-      };
-  } catch (error) {
-    console.log(`Error fetching ${normalizedUrl}: ${error.message}`);
-  this.stats.errors++;
-    this._recordError({ kind: 'exception', message: (error && (error.message || error.name)) || String(error), url: normalizedUrl });
-    const isConnReset = !!(error && (error.code === 'ECONNRESET' || /ECONNRESET|socket hang up/i.test(String(error && (error.message || '')))));
-    if (isConnReset) {
-      this._handleConnectionReset(normalizedUrl, error);
-    }
-      const isTimeout = (error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error && error.message || ''))));
-  try { this.dbAdapter?.insertError({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message || String(error) }); } catch(_) {}
-      try { console.log(`ERROR ${JSON.stringify({ url: normalizedUrl, kind: isTimeout ? 'timeout' : 'network', message: error.message||String(error) })}`); } catch(_) {}
-  // Ensure cleanup if fetch threw
-  this.currentDownloads.delete(normalizedUrl);
-  this.emitProgress();
-  return { error: true, networkError: true, url: normalizedUrl };
-    }
-  }
-
   emitProgress(force = false) {
     const now = Date.now();
     if (!force && now - this._lastProgressEmitAt < 300) return;
@@ -1234,8 +1069,8 @@ class NewsCrawler {
       found: this.stats.articlesFound,
       saved: this.stats.articlesSaved,
       errors: this.stats.errors,
-  bytes: this.stats.bytesDownloaded,
-  queueSize: this.queue.size(),
+      bytes: this.stats.bytesDownloaded,
+      queueSize: this.queue.size(),
       currentDownloadsCount: this.currentDownloads.size,
       currentDownloads: inflight,
       paused: !!this.paused,
@@ -1245,10 +1080,10 @@ class NewsCrawler {
       domain: this.domain,
       domainRpm,
       domainLimit,
-  domainBackoffMs,
-  domainRateLimited,
-  domainIntervalMs,
-  perHostLimits,
+      domainBackoffMs,
+      domainRateLimited,
+      domainIntervalMs,
+      perHostLimits,
       cacheRateLimitedServed: this.stats.cacheRateLimitedServed || 0,
       cacheRateLimitedDeferred: this.stats.cacheRateLimitedDeferred || 0
     };
@@ -1594,256 +1429,220 @@ class NewsCrawler {
     if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
       return { status: 'skipped' };
     }
-    let pageData = null;
+    const fetchResult = await this.fetchPipeline.fetch({
+      url,
+      context: {
+        ...context,
+        depth,
+        referrerUrl: null,
+        queueType: context.type
+      }
+    });
 
-  // Try cache if requested (preferCache) or if a freshness window is set
-  const looksArticle = this.looksLikeArticle(url);
-    let fromCache = false;
-    const forcedCache = context && context.forceCache === true;
-    const preloadedCache = context && context.cachedPage ? context.cachedPage : null;
-    const rateLimitedHost = context && context.rateLimitedHost ? context.rateLimitedHost : null;
-    const allowCache = forcedCache || !context.allowRevisit;
-    const effectiveMaxAgeMs = (looksArticle && this.maxAgeArticleMs != null)
-      ? this.maxAgeArticleMs
-      : ((!looksArticle && this.maxAgeHubMs != null) ? this.maxAgeHubMs : this.maxAgeMs);
-    if (allowCache && (effectiveMaxAgeMs != null || this.preferCache || forcedCache)) {
-      let cached = preloadedCache;
-      if (!cached) {
-        cached = await this.getCachedArticle(url);
-      }
-      if (cached) {
-        const decision = shouldUseCache({ preferCache: this.preferCache, maxAgeMs: effectiveMaxAgeMs, crawledAt: cached.crawledAt });
-        const useCache = forcedCache || decision.use;
-        if (useCache) {
-          const ageSeconds = decision.ageSeconds;
-          let normalizedUrl = null;
-          try { normalizedUrl = this.normalizeUrl(url); } catch (_) { normalizedUrl = url; }
-          const cacheReason = forcedCache
-            ? 'rate-limit'
-            : (this.preferCache && decision.use ? 'prefer-cache' : 'fresh-cache');
-          try { console.log(`CACHE ${JSON.stringify({ url: normalizedUrl, source: cached.source, ageSeconds, reason: cacheReason })}`); } catch (_) {}
-          console.log(`Using cached page (age ${ageSeconds}s, source=${cached.source}, reason=${cacheReason}): ${url}`);
-          // Fast path: mark visited and count as found if looks like article; skip heavy DOM work
-          const norm = normalizedUrl;
-          pageData = { url: norm, html: cached.html };
-          this.visited.add(norm);
-          this._noteDepthVisit(norm, depth);
-          this.stats.pagesVisited++;
-          fromCache = true;
-          if (forcedCache) {
-            this.stats.cacheRateLimitedServed = (this.stats.cacheRateLimitedServed || 0) + 1;
-            const milestoneUrl = norm || url;
-            const host = rateLimitedHost || this._safeHostFromUrl(milestoneUrl);
-            const milestoneDetails = { url: milestoneUrl };
-            if (host) milestoneDetails.host = host;
-            this._emitMilestoneOnce(`cache-priority:${host || milestoneUrl}`, {
-              kind: 'cache-priority-hit',
-              message: 'Served cached page while rate limited',
-              details: milestoneDetails
-            });
-          }
-          // Optionally record a lightweight fetch row for visibility without re-parsing
-          try {
-            if (this.dbAdapter && this.dbAdapter.isEnabled()) {
-              // Lightweight analysis snapshot for the cache hit
-              let analysis = null;
-              try {
-                const $c = cheerio.load(cached.html || '');
-                const contentSig = this._computeContentSignals($c, cached.html || '');
-                const urlSig = this._computeUrlSignals(norm);
-                const combined = this._combineSignals(urlSig, contentSig);
-                analysis = { kind: 'cache-hit', url: urlSig, content: contentSig, combined };
-              } catch (_) {}
-              this.dbAdapter.insertFetch({
-                url: norm,
-                request_started_at: null,
-                fetched_at: new Date().toISOString(),
-                http_status: 200,
-                content_type: 'text/html',
-                content_length: cached.html ? Buffer.byteLength(cached.html, 'utf8') : null,
-                content_encoding: null,
-                bytes_downloaded: 0,
-                transfer_kbps: null,
-                ttfb_ms: null,
-                download_ms: null,
-                total_ms: null,
-                saved_to_db: 0,
-                saved_to_file: 0,
-                file_path: null,
-                file_size: null,
-                classification: this.looksLikeArticle(norm) ? 'article' : 'other',
-                nav_links_count: null,
-                article_links_count: null,
-                word_count: null,
-                analysis: analysis ? JSON.stringify(analysis) : null
-              });
-            }
-          } catch (_) {}
-          this.emitProgress();
-          // On fast path, return early to allow rapid progression through cached URLs
-          if (this.looksLikeArticle(norm)) {
-            this.stats.articlesFound++;
-            this.emitProgress();
-          }
-          this._checkAnalysisMilestones({ depth, isArticle: this.looksLikeArticle(norm) });
-          return { status: 'cache' };
-        }
-      }
+    if (!fetchResult) {
+      return { status: 'failed', retriable: true };
     }
 
-    // If no fresh cache used, fetch normally
-    if (!pageData) {
-      // Respect max downloads again before network call
-      if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
-        return { status: 'skipped' };
+    const { meta = {}, source, html } = fetchResult;
+    const fetchMeta = meta.fetchMeta || null;
+    const resolvedUrl = meta.url || url;
+    let normalizedUrl = null;
+    try {
+      normalizedUrl = this.normalizeUrl(resolvedUrl);
+    } catch (_) {
+      normalizedUrl = resolvedUrl;
+    }
+
+    if (source === 'skipped') {
+      return { status: meta.status || 'skipped' };
+    }
+
+    if (source === 'cache') {
+      if (normalizedUrl) {
+        this.visited.add(normalizedUrl);
+        this._noteDepthVisit(normalizedUrl, depth);
       }
-      pageData = await this.fetchPage(url, { referrerUrl: null, depth, allowRevisit: !!context.allowRevisit, queueType: context.type });
-      if (!pageData) return { status: 'failed', retriable: true };
-      if (pageData.error) {
-        const retriable = pageData.httpStatus ? (pageData.httpStatus === 429 || (pageData.httpStatus >= 500 && pageData.httpStatus < 600)) : true;
-        return { status: 'failed', retriable, retryAfterMs: pageData.retryAfterMs };
+      this.stats.pagesVisited++;
+      this.emitProgress();
+      const isArticleFromCache = this.looksLikeArticle(normalizedUrl || resolvedUrl);
+      if (isArticleFromCache) {
+        this.stats.articlesFound++;
+        this.emitProgress();
       }
-      if (pageData.notModified) {
+      if (this.dbAdapter && this.dbAdapter.isEnabled()) {
         try {
-          const normFetched = this.normalizeUrl(pageData.url);
-          if (normFetched) {
-            this.visited.add(normFetched);
-            this._noteDepthVisit(normFetched, depth);
-          }
-        } catch (_) {}
-        this.stats.pagesVisited++;
-        this.emitProgress();
-        if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta) {
-          try {
-            const existing = this.dbAdapter.getArticleRowByUrl?.(pageData.url);
-            this.dbAdapter.insertFetch({
-              url: pageData.url,
-              request_started_at: pageData.fetchMeta.requestStartedIso || null,
-              fetched_at: pageData.fetchMeta.fetchedAtIso || null,
-              http_status: pageData.fetchMeta.httpStatus ?? 304,
-              content_type: pageData.fetchMeta.contentType || null,
-              content_length: pageData.fetchMeta.contentLength ?? null,
-              content_encoding: pageData.fetchMeta.contentEncoding || null,
-              bytes_downloaded: 0,
-              transfer_kbps: null,
-              ttfb_ms: pageData.fetchMeta.ttfbMs ?? null,
-              download_ms: pageData.fetchMeta.downloadMs ?? null,
-              total_ms: pageData.fetchMeta.totalMs ?? null,
-              saved_to_db: 0,
-              saved_to_file: 0,
-              file_path: null,
-              file_size: null,
-              classification: existing ? 'article' : 'other',
-              nav_links_count: null,
-              article_links_count: null,
-              word_count: existing?.word_count ?? null,
-              analysis: JSON.stringify({ status: 'not-modified', conditional: true })
-            });
-          } catch (_) {}
-        }
-        return { status: 'not-modified' };
-      }
-    }
-
-  const $ = cheerio.load(pageData.html);
-    // Mark visited after successful fetch (or cache earlier)
-    if (!fromCache && pageData.url) {
-      const normFetched = this.normalizeUrl(pageData.url);
-      this.visited.add(normFetched);
-      this._noteDepthVisit(normFetched, depth);
-    }
-    
-  // Classify page blending URL pattern + Readability word count
-  const isArticleByUrl = this.looksLikeArticle(pageData.url);
-    if (isArticleByUrl) {
-      const metadata = this.extractArticleMetadata($, pageData.url);
-      if (fromCache) {
-        // On cache hits, do not rewrite JSON or DB; just count as found
-        this.stats.articlesFound++;
-        this.emitProgress();
-      } else {
-        // Increment 'found' before saving to avoid transient saved > found
-        this.stats.articlesFound++;
-  const saveInfo = await this.saveArticle(pageData.html, metadata, {
-          skipDb: false,
-          referrerUrl: null,
-          discoveredAt: new Date().toISOString(),
-          crawlDepth: depth,
-          fetchMeta: pageData.fetchMeta
-        });
-        // saveArticle emits progress; an extra tick is okay
-        this.emitProgress();
-        // Record fetch details if DB enabled
-  if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta) {
-          const navLinks = this.findNavigationLinks($).length;
-          const artLinks = this.findArticleLinks($).length;
-          // Estimate word count using Readability (same parse used in saveArticle)
-          let wc = null;
-          try {
-            const vc = new VirtualConsole();
-            const dom = new JSDOM(pageData.html, { url: pageData.url, virtualConsole: vc });
-            const reader = new Readability(dom.window.document);
-            const article = reader.parse();
-            if (article && article.textContent) wc = article.textContent.trim().split(/\s+/).filter(Boolean).length;
-          } catch(_) {}
-          // Compute URL+content analysis for fetch row
-          const contentSig = this._computeContentSignals($, pageData.html);
-          const urlSig = this._computeUrlSignals(pageData.url);
-          const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
+          const cachedHtml = html || '';
+          const $c = cheerio.load(cachedHtml);
+          const contentSig = this._computeContentSignals($c, cachedHtml);
+          const urlSig = this._computeUrlSignals(normalizedUrl || resolvedUrl);
+          const combined = this._combineSignals(urlSig, contentSig);
           this.dbAdapter.insertFetch({
-            url: pageData.url,
-            request_started_at: pageData.fetchMeta.requestStartedIso || null,
-            fetched_at: pageData.fetchMeta.fetchedAtIso || null,
-            http_status: pageData.fetchMeta.httpStatus ?? null,
-            content_type: pageData.fetchMeta.contentType || null,
-            content_length: pageData.fetchMeta.contentLength ?? null,
-            content_encoding: pageData.fetchMeta.contentEncoding || null,
-            bytes_downloaded: pageData.fetchMeta.bytesDownloaded ?? null,
-            transfer_kbps: pageData.fetchMeta.transferKbps ?? null,
-            ttfb_ms: pageData.fetchMeta.ttfbMs ?? null,
-            download_ms: pageData.fetchMeta.downloadMs ?? null,
-            total_ms: pageData.fetchMeta.totalMs ?? null,
-            saved_to_db: 1,
+            url: normalizedUrl || resolvedUrl,
+            request_started_at: null,
+            fetched_at: new Date().toISOString(),
+            http_status: 200,
+            content_type: 'text/html',
+            content_length: cachedHtml ? Buffer.byteLength(cachedHtml, 'utf8') : null,
+            content_encoding: null,
+            bytes_downloaded: 0,
+            transfer_kbps: null,
+            ttfb_ms: null,
+            download_ms: null,
+            total_ms: null,
+            saved_to_db: 0,
             saved_to_file: 0,
             file_path: null,
             file_size: null,
-            classification: (isArticleByUrl || (wc != null && wc > 150)) ? 'article' : (navLinks > 10 ? 'nav' : 'other'),
-            nav_links_count: navLinks,
-            article_links_count: artLinks,
-            word_count: wc,
-            analysis: JSON.stringify({ url: urlSig, content: { ...contentSig, wordCount: wc ?? null }, combined })
+            classification: isArticleFromCache ? 'article' : 'other',
+            nav_links_count: null,
+            article_links_count: null,
+            word_count: null,
+            analysis: JSON.stringify({ kind: 'cache-hit', url: urlSig, content: contentSig, combined })
           });
-          try {
-            const normalizedArticleUrl = (() => {
-              try { return this.normalizeUrl(pageData.url); } catch (_) { return pageData.url; }
-            })();
-            if (normalizedArticleUrl) {
-              this.articleHeaderCache.set(normalizedArticleUrl, {
-                etag: pageData.fetchMeta.etag || null,
-                last_modified: pageData.fetchMeta.lastModified || null,
-                fetched_at: pageData.fetchMeta.fetchedAtIso || null
-              });
-              this.knownArticlesCache.set(normalizedArticleUrl, true);
-            }
-          } catch (_) {}
-        }
+        } catch (_) {}
+      }
+      this._checkAnalysisMilestones({ depth, isArticle: isArticleFromCache });
+      return { status: 'cache' };
+    }
+
+    if (source === 'not-modified') {
+      if (normalizedUrl) {
+        this.visited.add(normalizedUrl);
+        this._noteDepthVisit(normalizedUrl, depth);
+      }
+      this.stats.pagesVisited++;
+      this.emitProgress();
+      if (this.dbAdapter && this.dbAdapter.isEnabled() && fetchMeta) {
+        try {
+          const existing = this.dbAdapter.getArticleRowByUrl?.(resolvedUrl);
+          this.dbAdapter.insertFetch({
+            url: resolvedUrl,
+            request_started_at: fetchMeta.requestStartedIso || null,
+            fetched_at: fetchMeta.fetchedAtIso || null,
+            http_status: fetchMeta.httpStatus ?? 304,
+            content_type: fetchMeta.contentType || null,
+            content_length: fetchMeta.contentLength ?? null,
+            content_encoding: fetchMeta.contentEncoding || null,
+            bytes_downloaded: 0,
+            transfer_kbps: null,
+            ttfb_ms: fetchMeta.ttfbMs ?? null,
+            download_ms: fetchMeta.downloadMs ?? null,
+            total_ms: fetchMeta.totalMs ?? null,
+            saved_to_db: 0,
+            saved_to_file: 0,
+            file_path: null,
+            file_size: null,
+            classification: existing ? 'article' : 'other',
+            nav_links_count: null,
+            article_links_count: null,
+            word_count: existing?.word_count ?? null,
+            analysis: JSON.stringify({ status: 'not-modified', conditional: true })
+          });
+        } catch (_) {}
+      }
+      return { status: 'not-modified' };
+    }
+
+    if (source === 'error') {
+      this.stats.errors++;
+      const httpStatus = meta?.error?.httpStatus;
+      const retriable = typeof httpStatus === 'number'
+        ? (httpStatus === 429 || (httpStatus >= 500 && httpStatus < 600))
+        : true;
+      return { status: 'failed', retriable, retryAfterMs: meta.retryAfterMs };
+    }
+
+    if (normalizedUrl) {
+      this.visited.add(normalizedUrl);
+      this._noteDepthVisit(normalizedUrl, depth);
+    }
+    this.stats.pagesVisited++;
+    this.stats.pagesDownloaded++;
+    if (fetchMeta?.bytesDownloaded != null) {
+      this.stats.bytesDownloaded += fetchMeta.bytesDownloaded;
+    }
+    this.emitProgress();
+
+    const pageData = { url: resolvedUrl, html, fetchMeta };
+
+    const $ = cheerio.load(pageData.html);
+    const isArticleByUrl = this.looksLikeArticle(pageData.url);
+    if (isArticleByUrl) {
+      const metadata = this.extractArticleMetadata($, pageData.url);
+      this.stats.articlesFound++;
+      this.emitProgress();
+      const saveInfo = await this.saveArticle(pageData.html, metadata, {
+        skipDb: false,
+        referrerUrl: null,
+        discoveredAt: new Date().toISOString(),
+        crawlDepth: depth,
+        fetchMeta: pageData.fetchMeta
+      });
+      this.emitProgress();
+      if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta) {
+        const navLinks = this.findNavigationLinks($).length;
+        const artLinks = this.findArticleLinks($).length;
+        let wc = null;
+        try {
+          const vc = new VirtualConsole();
+          const dom = new JSDOM(pageData.html, { url: pageData.url, virtualConsole: vc });
+          const reader = new Readability(dom.window.document);
+          const article = reader.parse();
+          if (article && article.textContent) wc = article.textContent.trim().split(/\s+/).filter(Boolean).length;
+        } catch (_) {}
+        const contentSig = this._computeContentSignals($, pageData.html);
+        const urlSig = this._computeUrlSignals(pageData.url);
+        const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
+        this.dbAdapter.insertFetch({
+          url: pageData.url,
+          request_started_at: pageData.fetchMeta.requestStartedIso || null,
+          fetched_at: pageData.fetchMeta.fetchedAtIso || null,
+          http_status: pageData.fetchMeta.httpStatus ?? null,
+          content_type: pageData.fetchMeta.contentType || null,
+          content_length: pageData.fetchMeta.contentLength ?? null,
+          content_encoding: pageData.fetchMeta.contentEncoding || null,
+          bytes_downloaded: pageData.fetchMeta.bytesDownloaded ?? null,
+          transfer_kbps: pageData.fetchMeta.transferKbps ?? null,
+          ttfb_ms: pageData.fetchMeta.ttfbMs ?? null,
+          download_ms: pageData.fetchMeta.downloadMs ?? null,
+          total_ms: pageData.fetchMeta.totalMs ?? null,
+          saved_to_db: 1,
+          saved_to_file: 0,
+          file_path: null,
+          file_size: null,
+          classification: (isArticleByUrl || (wc != null && wc > 150)) ? 'article' : (navLinks > 10 ? 'nav' : 'other'),
+          nav_links_count: navLinks,
+          article_links_count: artLinks,
+          word_count: wc,
+          analysis: JSON.stringify({ url: urlSig, content: { ...contentSig, wordCount: wc ?? null }, combined })
+        });
+        try {
+          const normalizedArticleUrl = (() => {
+            try { return this.normalizeUrl(pageData.url); } catch (_) { return pageData.url; }
+          })();
+          if (normalizedArticleUrl) {
+            this.articleHeaderCache.set(normalizedArticleUrl, {
+              etag: pageData.fetchMeta.etag || null,
+              last_modified: pageData.fetchMeta.lastModified || null,
+              fetched_at: pageData.fetchMeta.fetchedAtIso || null
+            });
+            this.knownArticlesCache.set(normalizedArticleUrl, true);
+          }
+        } catch (_) {}
       }
       try {
         this._maybeEnqueueAdaptiveSeeds({ url: pageData.url, metadata, depth });
       } catch (_) {}
     }
 
-    // Find navigation and article links
-  const navigationLinks = this.findNavigationLinks($);
-  const articleLinks = this.findArticleLinks($);
-    
-  console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${pageData.url}`);
+    const navigationLinks = this.findNavigationLinks($);
+    const articleLinks = this.findArticleLinks($);
+
+    console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${pageData.url}`);
 
     this._checkAnalysisMilestones({ depth, isArticle: isArticleByUrl });
 
-    // If DB enabled, record non-article fetch as well
-  if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta && !isArticleByUrl) {
-      // For non-article pages (by final classification), record fetch
+    if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta && !isArticleByUrl) {
       const navLinksCount = navigationLinks.length;
       const articleLinksCount = articleLinks.length;
       let wc = null;
@@ -1853,12 +1652,11 @@ class NewsCrawler {
         const reader = new Readability(dom.window.document);
         const article = reader.parse();
         if (article && article.textContent) wc = article.textContent.trim().split(/\s+/).filter(Boolean).length;
-      } catch(_) {}
-      // URL+content analysis for non-article pages
+      } catch (_) {}
       const contentSig = this._computeContentSignals($, pageData.html);
       const urlSig = this._computeUrlSignals(pageData.url);
       const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
-  this.dbAdapter.insertFetch({
+      this.dbAdapter.insertFetch({
         url: pageData.url,
         request_started_at: pageData.fetchMeta.requestStartedIso || null,
         fetched_at: pageData.fetchMeta.fetchedAtIso || null,
@@ -1883,7 +1681,6 @@ class NewsCrawler {
       });
     }
 
-    // Add found links to queue for processing
     const nowIso = new Date().toISOString();
     const seen = new Set();
     const allLinks = [...navigationLinks.map(l => ({ ...l, type: 'nav' })), ...articleLinks.map(l => ({ ...l, type: 'article' }))];
@@ -1891,7 +1688,6 @@ class NewsCrawler {
       const urlOnly = link.url;
       if (!seen.has(urlOnly)) seen.add(urlOnly);
       this.enqueueRequest({ url: urlOnly, depth: depth + 1, type: link.type });
-      // Persist link edge to DB if enabled
       if (this.dbAdapter && this.dbAdapter.isEnabled()) {
         this.dbAdapter.insertLink({
           src_url: pageData.url,
@@ -1905,7 +1701,7 @@ class NewsCrawler {
         });
       }
     }
-    return { status: fromCache ? 'cache' : 'success' };
+    return { status: 'success' };
   }
 
   computePriority({ type, depth, discoveredAt, bias = 0, url = null, meta = null }) {
@@ -2222,19 +2018,25 @@ class NewsCrawler {
       let homepageHtml = null;
       const fetchMeta = { source: 'network', notModified: false };
       try {
-        const page = await this.fetchPage(this.startUrl, { referrerUrl: null, depth: 0 });
-        if (page && !page.error) {
-          if (page.notModified) {
+        const result = await this.fetchPipeline.fetch({
+          url: this.startUrl,
+          context: { depth: 0, allowRevisit: true, referrerUrl: null }
+        });
+        if (result) {
+          if (result.source === 'cache') {
+            homepageHtml = result.html || null;
+            fetchMeta.source = 'cache';
+          } else if (result.source === 'not-modified') {
             fetchMeta.notModified = true;
             const cached = await this.getCachedArticle(this.startUrl);
             homepageHtml = cached?.html || null;
             fetchMeta.source = cached?.html ? 'cache' : 'stale';
-          } else {
-            homepageHtml = page.html;
+          } else if (result.source === 'network') {
+            homepageHtml = result.html;
             fetchMeta.source = 'network';
+          } else if (result.source === 'error') {
+            fetchMeta.error = result.meta?.error?.message || result.meta?.error?.kind || 'fetch-error';
           }
-        } else if (page?.error) {
-          fetchMeta.error = page.error?.message || String(page.error);
         }
       } catch (err) {
         fetchMeta.error = err?.message || String(err);
