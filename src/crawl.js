@@ -11,9 +11,6 @@ const { UrlPolicy } = require('./crawler/urlPolicy');
 const { DeepUrlAnalyzer } = require('./crawler/deepUrlAnalysis');
 const http = require('http');
 const https = require('https');
-const crypto = require('crypto');
-const { JSDOM, VirtualConsole } = require('jsdom');
-const { Readability } = require('@mozilla/readability');
 const { createCrawlerDb } = require('./crawler/dbClient');
 // Enhanced features (optional)
 const { ConfigManager } = require('./config/ConfigManager');
@@ -21,13 +18,14 @@ const { EnhancedDatabaseAdapter } = require('./db/EnhancedDatabaseAdapter');
 const { PriorityScorer } = require('./crawler/PriorityScorer');
 const { ProblemClusteringService } = require('./crawler/ProblemClusteringService');
 const { PlannerKnowledgeService } = require('./crawler/PlannerKnowledgeService');
-// Extracted helper modules (structure-only refactor)
-const Links = require('./crawler/links');
 const { loadSitemaps } = require('./crawler/sitemap');
 
 const QueueManager = require('./crawler/QueueManager');
 const { UrlEligibilityService } = require('./crawler/UrlEligibilityService');
 const { FetchPipeline } = require('./crawler/FetchPipeline');
+const { CrawlerEvents } = require('./crawler/CrawlerEvents');
+const { LinkExtractor } = require('./crawler/LinkExtractor');
+const { ArticleProcessor } = require('./crawler/ArticleProcessor');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function nowMs() { return Date.now(); }
@@ -157,9 +155,45 @@ class NewsCrawler {
     this.connectionResetProblemEmitted = false;
   this.urlAnalysisCache = new Map();
   this.urlDecisionCache = new Map();
-    this.problemCounters = new Map();
-    this.problemSamples = new Map();
     this._intelligentPlanSummary = null;
+
+    this.linkExtractor = new LinkExtractor({
+      normalizeUrl: (url, ctx) => this.normalizeUrl(url, ctx),
+      isOnDomain: (url) => this.isOnDomain(url),
+      looksLikeArticle: (url) => this.looksLikeArticle(url)
+    });
+
+    this.events = new CrawlerEvents({
+      domain: this.domain,
+      getStats: () => this.stats,
+      getQueueSize: () => (this.queue?.size?.() || 0),
+      getCurrentDownloads: () => this.currentDownloads,
+      getDomainLimits: () => this.domainLimits,
+      getRobotsInfo: () => ({ robotsLoaded: !!this.robotsTxtLoaded }),
+      getSitemapInfo: () => ({ urls: this.sitemapUrls, discovered: this.sitemapDiscovered }),
+      getFeatures: () => this.featuresEnabled,
+      getEnhancedDbAdapter: () => this.enhancedDbAdapter,
+      getProblemClusteringService: () => this.problemClusteringService,
+      getJobId: () => this.jobId,
+      plannerScope: () => this.domain,
+      isPlannerEnabled: () => this.plannerEnabled,
+      isPaused: () => this.paused,
+      logger: console
+    });
+
+    this.articleProcessor = new ArticleProcessor({
+      linkExtractor: this.linkExtractor,
+      normalizeUrl: (url, ctx) => this.normalizeUrl(url, ctx),
+      looksLikeArticle: (url) => this.looksLikeArticle(url),
+      computeUrlSignals: (url) => this._computeUrlSignals(url),
+      computeContentSignals: ($, html) => this._computeContentSignals($, html),
+      combineSignals: (urlSignals, contentSignals, opts) => this._combineSignals(urlSignals, contentSignals, opts),
+      dbAdapter: () => this.dbAdapter,
+      articleHeaderCache: this.articleHeaderCache,
+      knownArticlesCache: this.knownArticlesCache,
+      events: this.events,
+      logger: console
+    });
     
     // Statistics
     this.stats = {
@@ -173,7 +207,6 @@ class NewsCrawler {
       cacheRateLimitedServed: 0,
       cacheRateLimitedDeferred: 0
     };
-    this.emittedMilestones = new Set();
     this._plannerStageSeq = 0;
     this.depth2Visited = new Set();
 
@@ -448,69 +481,35 @@ class NewsCrawler {
 
   // --- Lightweight emitter for queue instrumentation ---
   emitQueueEvent(evt) {
-    try {
-      // Shape example: { action: 'enqueued'|'dequeued'|'retry'|'drop', url, depth?, host?, reason?, queueSize? }
-      console.log('QUEUE ' + JSON.stringify(evt));
-    } catch (_) { /* ignore */ }
+    if (this.events && typeof this.events.emitQueueEvent === 'function') {
+      this.events.emitQueueEvent(evt);
+    }
   }
 
   // --- Structured problems surface ---
   emitProblem(problem) {
-    try {
-      if (!this.problemCounters) this.problemCounters = new Map();
-      if (!this.problemSamples) this.problemSamples = new Map();
-      const kind = (problem && problem.kind) ? String(problem.kind) : 'unknown';
-      const entry = this.problemCounters.get(kind) || { count: 0 };
-      entry.count += 1;
-      this.problemCounters.set(kind, entry);
-      if (!this.problemSamples.has(kind)) {
-        const sample = {};
-        if (problem && typeof problem === 'object') {
-          if (problem.scope) sample.scope = problem.scope;
-          if (problem.target) sample.target = problem.target;
-          if (problem.message) sample.message = problem.message;
-        }
-        this.problemSamples.set(kind, sample);
-      }
-    } catch (_) { /* ignore tracking errors */ }
-    
-    try {
-      // Example: { kind: 'missing-hub', scope: 'country', target: 'France', hintUrl?, details? }
-      console.log('PROBLEM ' + JSON.stringify(problem));
-    } catch (_) { /* ignore */ }
-
-    // Use enhanced problem processing if enabled
-    if (this.featuresEnabled?.problemClustering && this.problemClusteringService) {
-      try {
-        this.emitEnhancedProblem(problem);
-      } catch (error) {
-        console.warn('Enhanced problem processing failed:', error.message);
-      }
+    if (this.events && typeof this.events.emitProblem === 'function') {
+      this.events.emitProblem(problem);
     }
   }
 
   // --- Structured milestones surface ---
   emitMilestone(milestone) {
-    try {
-      // Example: { kind: 'patterns-learned', scope: 'guardian', message: 'Homepage sections inferred', details? }
-      console.log('MILESTONE ' + JSON.stringify(milestone));
-    } catch (_) { /* ignore */ }
+    if (this.events && typeof this.events.emitMilestone === 'function') {
+      this.events.emitMilestone(milestone);
+    }
   }
 
   _emitMilestoneOnce(key, milestone) {
-    if (!this.emittedMilestones) this.emittedMilestones = new Set();
-    if (this.emittedMilestones.has(key)) return;
-    this.emittedMilestones.add(key);
-    this.emitMilestone(Object.assign({ scope: this.domain }, milestone));
+    if (this.events && typeof this.events.emitMilestoneOnce === 'function') {
+      this.events.emitMilestoneOnce(key, milestone);
+    }
   }
 
   emitPlannerStage(event) {
-    if (!this.plannerEnabled) return;
-    try {
-      const payload = Object.assign({ scope: this.domain }, event || {});
-      const replacer = (_, value) => (value === undefined ? undefined : value);
-      console.log('PLANNER_STAGE ' + JSON.stringify(payload, replacer));
-    } catch (_) { /* ignore */ }
+    if (this.events && typeof this.events.emitPlannerStage === 'function') {
+      this.events.emitPlannerStage(event);
+    }
   }
 
   _emitIntelligentCompletionMilestone({ outcomeErr } = {}) {
@@ -523,10 +522,26 @@ class NewsCrawler {
     const expected = Math.max(requested || 0, sections + countryCandidates, seededUnique);
     const coveragePct = expected > 0 ? Math.min(1, seededUnique / expected) : null;
     const problems = [];
-    if (this.problemCounters && this.problemCounters.size) {
-      for (const [kind, entry] of this.problemCounters.entries()) {
+    if (this.events && typeof this.events.getProblemSummary === 'function') {
+      const summaryProblems = this.events.getProblemSummary();
+      const counters = summaryProblems?.counters || [];
+      const samples = summaryProblems?.samples || {};
+      for (const item of counters) {
+        if (!item || !item.kind) continue;
+        const sample = samples[item.kind];
+        problems.push({
+          kind: item.kind,
+          count: item.count || 0,
+          sample: sample && Object.keys(sample).length ? sample : undefined
+        });
+      }
+    }
+    if (!problems.length && this.problemCounters && typeof this.problemCounters[Symbol.iterator] === 'function') {
+      for (const [kind, entry] of this.problemCounters) {
         if (!entry || !entry.count) continue;
-        const sample = this.problemSamples?.get(kind) || null;
+        const sample = this.problemSamples && typeof this.problemSamples.get === 'function'
+          ? this.problemSamples.get(kind)
+          : undefined;
         problems.push({
           kind,
           count: entry.count,
@@ -1027,74 +1042,9 @@ class NewsCrawler {
   }
 
   emitProgress(force = false) {
-    const now = Date.now();
-    if (!force && now - this._lastProgressEmitAt < 300) return;
-    this._lastProgressEmitAt = now;
-    // Prepare a small snapshot of in-flight downloads (most recent up to 5)
-    const inflight = [];
-    try {
-      const entries = Array.from(this.currentDownloads.entries());
-      // sort by startedAt desc
-      entries.sort((a,b) => (b[1].startedAt||0) - (a[1].startedAt||0));
-      for (let i = 0; i < Math.min(5, entries.length); i++) {
-        const [u, info] = entries[i];
-        inflight.push({ url: u, ageMs: now - (info.startedAt||now) });
-      }
-    } catch (_) {}
-    // Domain RPM metric (for primary domain)
-    let domainRpm = null, domainLimit = null, domainBackoffMs = null, domainRateLimited = null, domainIntervalMs = null;
-    const perHostLimits = {};
-    try {
-      const st = this.domainLimits.get(this.domain);
-      const now2 = Date.now();
-      if (st) {
-        domainRpm = st.rpmLastMinute;
-        domainLimit = st.rpm;
-        domainRateLimited = st.isLimited;
-        if (st.rpm > 0) domainIntervalMs = Math.floor(60000 / st.rpm);
-        if (st.backoffUntil > now2) domainBackoffMs = st.backoffUntil - now2;
-      }
-      // Include per-host limiter state for UI badges
-      for (const [host, s] of this.domainLimits.entries()) {
-        try {
-          const backoff = (s.backoffUntil > now2) ? (s.backoffUntil - now2) : null;
-          const interval = s.rpm > 0 ? Math.floor(60000 / s.rpm) : null;
-          perHostLimits[host] = {
-            rateLimited: s.isLimited,
-            limit: s.rpm,
-            intervalMs: interval,
-            backoffMs: backoff
-          };
-        } catch (_) {}
-      }
-    } catch(_) {}
-    const p = {
-      visited: this.stats.pagesVisited,
-      downloaded: this.stats.pagesDownloaded,
-      found: this.stats.articlesFound,
-      saved: this.stats.articlesSaved,
-      errors: this.stats.errors,
-      bytes: this.stats.bytesDownloaded,
-      queueSize: this.queue.size(),
-      currentDownloadsCount: this.currentDownloads.size,
-      currentDownloads: inflight,
-      paused: !!this.paused,
-      robotsLoaded: !!this.robotsTxtLoaded,
-      sitemapCount: Array.isArray(this.sitemapUrls) ? this.sitemapUrls.length : 0,
-      sitemapEnqueued: this.sitemapDiscovered || 0,
-      domain: this.domain,
-      domainRpm,
-      domainLimit,
-      domainBackoffMs,
-      domainRateLimited,
-      domainIntervalMs,
-      perHostLimits,
-      cacheRateLimitedServed: this.stats.cacheRateLimitedServed || 0,
-      cacheRateLimitedDeferred: this.stats.cacheRateLimitedDeferred || 0
-    };
-    try {
-      console.log(`PROGRESS ${JSON.stringify(p)}`);
-    } catch (_) {}
+    if (this.events && typeof this.events.emitProgress === 'function') {
+      this.events.emitProgress({ force });
+    }
   }
 
   pause() { this.paused = true; this.emitProgress(true); }
@@ -1120,14 +1070,6 @@ class NewsCrawler {
   // Try to retrieve a cached article (DB only). Returns {html, crawledAt, source} or null.
   async getCachedArticle(url) {
     return this.cache.get(url);
-  }
-
-  findNavigationLinks($) {
-    return Links.findNavigationLinks($, (u)=>this.normalizeUrl(u), (u)=>this.isOnDomain(u));
-  }
-
-  findArticleLinks($) {
-    return Links.findArticleLinks($, (u)=>this.normalizeUrl(u), (u)=>this.looksLikeArticle(u), (u)=>this.isOnDomain(u));
   }
 
   looksLikeArticle(url) {
@@ -1159,272 +1101,6 @@ class NewsCrawler {
 
     return articlePatterns.some(pattern => urlStr.includes(pattern)) ||
            /\/\d{4}\/\d{2}\/\d{2}\//.test(urlStr); // Date pattern
-  }
-
-  extractArticleMetadata($, url) {
-    // Extract title
-    const title = $('h1').first().text().trim() || 
-                  $('title').text().trim() || 
-                  $('[property="og:title"]').attr('content') || 
-                  'Unknown Title';
-
-    // Extract date
-    let date = '';
-    const dateSelectors = [
-      '[datetime]',
-      '.date',
-      '.published',
-      '.timestamp',
-      '[property="article:published_time"]',
-      '[name="article:published_time"]'
-    ];
-
-    for (const selector of dateSelectors) {
-      const element = $(selector).first();
-      if (element.length) {
-        date = element.attr('datetime') || element.attr('content') || element.text().trim();
-        if (date) break;
-      }
-    }
-
-    // Extract section from URL or metadata
-    let section = '';
-    const urlParts = new URL(url).pathname.split('/').filter(Boolean);
-    if (urlParts.length > 0) {
-      section = urlParts[0];
-    }
-
-    // Try to get section from metadata
-    const sectionMeta = $('[property="article:section"]').attr('content') ||
-                       $('[name="section"]').attr('content') ||
-                       $('.section').first().text().trim();
-    
-    if (sectionMeta) {
-      section = sectionMeta;
-    }
-
-    return { title, date, section, url };
-  }
-
-  async saveArticle(html, metadata, options = {}) {
-    try {
-      // Prepare article data (used for optional JSON and for DB)
-      const articleData = {
-        ...metadata,
-        html,
-        crawledAt: new Date().toISOString()
-      };
-      
-  // JSON file saving removed
-      
-      // Extract canonical URL
-      const canonicalUrl = (() => {
-        try {
-          const $ = cheerio.load(html);
-          const c = $('link[rel="canonical"]').attr('href');
-          if (c) return this.normalizeUrl(c);
-        } catch (_) {}
-        return null;
-      })();
-
-      // Compute hash and Readability text
-  let htmlSha = null, text = null, wordCount = null, language = null, articleXPath = null;
-      try {
-        htmlSha = crypto.createHash('sha256').update(html).digest('hex');
-        // Mute noisy non-fatal jsdom CSS parse errors using a VirtualConsole
-        const vc = new VirtualConsole();
-        vc.on('jsdomError', (err) => {
-          const msg = (err && err.message) ? err.message : String(err);
-          if (/Could not parse CSS stylesheet/i.test(msg)) {
-            return; // ignore CSS parse noise
-          }
-          // For other jsdom errors, keep quiet by default; uncomment to debug:
-          // console.warn('jsdomError:', msg);
-        });
-        const dom = new JSDOM(html, { url: metadata.url, virtualConsole: vc });
-        const reader = new Readability(dom.window.document);
-        const article = reader.parse();
-        if (article && article.textContent) {
-          text = article.textContent.trim();
-          wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
-          language = dom.window.document.documentElement.getAttribute('lang') || null;
-          // Identify article container more accurately by scoring candidates against Readability output
-          try {
-            const { document } = dom.window;
-            const targetLen = text.length;
-            const targetParas = (() => {
-              try {
-                const contentHtml = article.content || '';
-                // Simple fast count without extra DOM parse
-                const m = contentHtml.match(/<p[\s>]/gi);
-                return m ? m.length : 0;
-              } catch { return 0; }
-            })();
-
-            const selectors = [
-              'article', '[role="article"]', '[itemprop="articleBody"]',
-              'main article', 'main [itemprop="articleBody"]',
-              '.article-body', '.content__article-body', '.story-body', '.entry-content', '.post-content', '.rich-text', '.ArticleBody', '.article__body',
-              'main', 'section', 'div[class*="article"]', 'div[id*="article"]'
-            ];
-            const candSet = new Set();
-            for (const sel of selectors) {
-              const list = document.querySelectorAll(sel);
-              for (const el of list) {
-                candSet.add(el);
-                if (candSet.size > 200) break; // keep it bounded
-              }
-              if (candSet.size > 200) break;
-            }
-            if (candSet.size === 0) {
-              const fallback = document.body.querySelectorAll('p, article, main, section');
-              for (const el of fallback) candSet.add(el);
-            }
-            const navClassRe = /(nav|menu|footer|sidebar|comment|promo|related|share|social)/i;
-            const scoreOf = (el) => {
-              const t = (el.textContent || '').trim();
-              const len = t.length;
-              if (len === 0) return Number.POSITIVE_INFINITY;
-              const paras = el.querySelectorAll('p').length;
-              let linkText = 0;
-              const anchors = el.querySelectorAll('a');
-              for (const a of anchors) linkText += ((a.textContent || '').trim()).length;
-              const density = len > 0 ? linkText / len : 0;
-              let score = Math.abs(len - targetLen);
-              score += Math.abs(paras - targetParas) * 50;
-              if (density > 0.3) score += 10000;
-              const idcl = `${el.id || ''} ${el.className || ''}`;
-              if (navClassRe.test(idcl)) score += 5000;
-              // Prefer deeper nodes slightly to avoid selecting <main> when a nested article body exists
-              let depth = 0; for (let n = el; n && n.parentNode; n = n.parentNode) depth++;
-              score -= Math.min(depth, 20) * 5;
-              return score;
-            };
-            let best = null; let bestScore = Number.POSITIVE_INFINITY;
-            for (const el of candSet) {
-              const s = scoreOf(el);
-              // ensure it's at least half the target length to avoid tiny nodes
-              const tlen = (el.textContent || '').trim().length;
-              if (tlen < targetLen * 0.5) continue;
-              if (s < bestScore) { best = el; bestScore = s; }
-            }
-            let node = best || document.body;
-            // Paragraph coverage refinement: choose the smallest ancestor that covers ~all Readability paragraphs
-            try {
-              const normalize = (s) => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-              // Build Readability paragraph set using existing DOM to avoid extra JSDOM instances
-              const tmp = document.createElement('div');
-              tmp.innerHTML = article.content || '';
-              const rbParas = Array.from(tmp.querySelectorAll('p'))
-                .map(p => normalize(p.textContent))
-                .filter(t => t && t.length >= 60);
-              const rbTotal = rbParas.length;
-              if (rbTotal >= 3) {
-                const rbSet = new Set(rbParas);
-                const getNodeParas = (el) => Array.from(el.querySelectorAll('p'))
-                  .map(p => normalize(p.textContent))
-                  .filter(t => t && t.length >= 60);
-                let curr = node;
-                const maxSteps = 25;
-                let steps = 0;
-                while (curr && curr !== document.documentElement && steps++ < maxSteps) {
-                  const paras = getNodeParas(curr);
-                  if (paras.length) {
-                    let matches = 0;
-                    for (const t of paras) { if (rbSet.has(t)) matches++; }
-                    const coverage = matches / rbTotal;
-                    if (coverage >= 0.98) { node = curr; break; }
-                  }
-                  curr = curr.parentElement;
-                }
-              }
-            } catch (_) { /* ignore refinement errors */ }
-            const getXPath = (el) => {
-              if (!el || el.nodeType !== 1) return '';
-              if (el === document.documentElement) return '/html';
-              const segs = [];
-              for (let n = el; n && n.nodeType === 1; n = n.parentNode) {
-                const name = n.localName;
-                if (!name) break;
-                let idx = 1;
-                if (n.parentNode) {
-                  const siblings = Array.from(n.parentNode.children).filter(c => c.localName === name);
-                  if (siblings.length > 1) {
-                    idx = siblings.indexOf(n) + 1;
-                    segs.unshift(`${name}[${idx}]`);
-                  } else {
-                    segs.unshift(name);
-                  }
-                } else {
-                  segs.unshift(name);
-                }
-                if (n === document.documentElement) break;
-              }
-              if (segs[0] !== 'html') segs.unshift('html');
-              return '/' + segs.join('/');
-            };
-            articleXPath = getXPath(node);
-          } catch (_) { /* ignore */ }
-        }
-      } catch (_) {}
-
-      // Save to SQLite if enabled
-  if (this.dbAdapter && this.dbAdapter.isEnabled() && !options.skipDb) {
-        // Build article-level analysis using URL + content signals
-        let articleAnalysis = null;
-        try {
-          const $a = cheerio.load(html || '');
-          const urlSig = this._computeUrlSignals(metadata.url);
-          const contentSig = this._computeContentSignals($a, html || '');
-          const combined = this._combineSignals(urlSig, contentSig, { wordCount: wordCount ?? undefined });
-          articleAnalysis = { url: urlSig, content: { ...contentSig, wordCount: wordCount ?? null, articleXPath: articleXPath || null }, combined };
-        } catch (_) {}
-  this.dbAdapter.upsertArticle({
-          url: metadata.url,
-          title: metadata.title,
-          date: metadata.date || null,
-          section: metadata.section || null,
-          html,
-          crawled_at: articleData.crawledAt,
-          canonical_url: canonicalUrl,
-          referrer_url: options.referrerUrl || null,
-          discovered_at: options.discoveredAt || null,
-          crawl_depth: options.crawlDepth ?? null,
-          fetched_at: options.fetchMeta?.fetchedAtIso || null,
-          request_started_at: options.fetchMeta?.requestStartedIso || null,
-          http_status: options.fetchMeta?.httpStatus ?? null,
-          content_type: options.fetchMeta?.contentType || null,
-          content_length: options.fetchMeta?.contentLength ?? null,
-          etag: options.fetchMeta?.etag || null,
-          last_modified: options.fetchMeta?.lastModified || null,
-          redirect_chain: options.fetchMeta?.redirectChain || null,
-          ttfb_ms: options.fetchMeta?.ttfbMs ?? null,
-          download_ms: options.fetchMeta?.downloadMs ?? null,
-          total_ms: options.fetchMeta?.totalMs ?? null,
-          bytes_downloaded: options.fetchMeta?.bytesDownloaded ?? null,
-          transfer_kbps: options.fetchMeta?.transferKbps ?? null,
-          html_sha256: htmlSha,
-          text,
-          word_count: wordCount ?? null,
-          language
-          ,
-          article_xpath: articleXPath,
-          analysis: articleAnalysis ? JSON.stringify(articleAnalysis) : null
-        });
-  } else if (this.dbAdapter && this.dbAdapter.isEnabled() && options.skipDb) {
-        console.log(`Skipped DB save (using cached content): ${metadata.url}`);
-      }
-      
-  this.stats.articlesSaved++;
-  console.log(`Saved article: ${metadata.title}`);
-          this.emitProgress();
-  return { filePath: null, fileSize: null };
-    } catch (error) {
-      console.log(`Failed to save article ${metadata.url}: ${error.message}`);
-  try { this.dbAdapter?.insertError({ url: metadata.url, kind: 'save', message: error.message || String(error) }); } catch(_) {}
-      try { console.log(`ERROR ${JSON.stringify({ url: metadata.url, kind: 'save', message: error.message||String(error) })}`); } catch(_) {}
-      return { filePath: null, fileSize: null };
-    }
   }
 
   async processPage(url, depth = 0, context = {}) {
@@ -1568,144 +1244,56 @@ class NewsCrawler {
     }
     this.emitProgress();
 
-    const pageData = { url: resolvedUrl, html, fetchMeta };
-
-    const $ = cheerio.load(pageData.html);
-    const isArticleByUrl = this.looksLikeArticle(pageData.url);
-    if (isArticleByUrl) {
-      const metadata = this.extractArticleMetadata($, pageData.url);
-      this.stats.articlesFound++;
-      this.emitProgress();
-      const saveInfo = await this.saveArticle(pageData.html, metadata, {
-        skipDb: false,
-        referrerUrl: null,
-        discoveredAt: new Date().toISOString(),
-        crawlDepth: depth,
-        fetchMeta: pageData.fetchMeta
+    const dbEnabled = this.dbAdapter && typeof this.dbAdapter.isEnabled === 'function' && this.dbAdapter.isEnabled();
+    let processorResult = null;
+    try {
+      processorResult = await this.articleProcessor.process({
+        url: resolvedUrl,
+        html,
+        fetchMeta,
+        depth,
+        normalizedUrl,
+        referrerUrl: context.referrerUrl || null,
+        discoveredAt: context.discoveredAt || new Date().toISOString(),
+        persistArticle: dbEnabled,
+        insertFetchRecord: dbEnabled,
+        insertLinkRecords: dbEnabled
       });
-      this.emitProgress();
-      if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta) {
-        const navLinks = this.findNavigationLinks($).length;
-        const artLinks = this.findArticleLinks($).length;
-        let wc = null;
-        try {
-          const vc = new VirtualConsole();
-          const dom = new JSDOM(pageData.html, { url: pageData.url, virtualConsole: vc });
-          const reader = new Readability(dom.window.document);
-          const article = reader.parse();
-          if (article && article.textContent) wc = article.textContent.trim().split(/\s+/).filter(Boolean).length;
-        } catch (_) {}
-        const contentSig = this._computeContentSignals($, pageData.html);
-        const urlSig = this._computeUrlSignals(pageData.url);
-        const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
-        this.dbAdapter.insertFetch({
-          url: pageData.url,
-          request_started_at: pageData.fetchMeta.requestStartedIso || null,
-          fetched_at: pageData.fetchMeta.fetchedAtIso || null,
-          http_status: pageData.fetchMeta.httpStatus ?? null,
-          content_type: pageData.fetchMeta.contentType || null,
-          content_length: pageData.fetchMeta.contentLength ?? null,
-          content_encoding: pageData.fetchMeta.contentEncoding || null,
-          bytes_downloaded: pageData.fetchMeta.bytesDownloaded ?? null,
-          transfer_kbps: pageData.fetchMeta.transferKbps ?? null,
-          ttfb_ms: pageData.fetchMeta.ttfbMs ?? null,
-          download_ms: pageData.fetchMeta.downloadMs ?? null,
-          total_ms: pageData.fetchMeta.totalMs ?? null,
-          saved_to_db: 1,
-          saved_to_file: 0,
-          file_path: null,
-          file_size: null,
-          classification: (isArticleByUrl || (wc != null && wc > 150)) ? 'article' : (navLinks > 10 ? 'nav' : 'other'),
-          nav_links_count: navLinks,
-          article_links_count: artLinks,
-          word_count: wc,
-          analysis: JSON.stringify({ url: urlSig, content: { ...contentSig, wordCount: wc ?? null }, combined })
-        });
-        try {
-          const normalizedArticleUrl = (() => {
-            try { return this.normalizeUrl(pageData.url); } catch (_) { return pageData.url; }
-          })();
-          if (normalizedArticleUrl) {
-            this.articleHeaderCache.set(normalizedArticleUrl, {
-              etag: pageData.fetchMeta.etag || null,
-              last_modified: pageData.fetchMeta.lastModified || null,
-              fetched_at: pageData.fetchMeta.fetchedAtIso || null
-            });
-            this.knownArticlesCache.set(normalizedArticleUrl, true);
-          }
-        } catch (_) {}
-      }
+    } catch (error) {
+      this._recordError({ url: resolvedUrl, kind: 'article-processing', message: error?.message || String(error) });
+      this.emitProblem({ kind: 'article-processing-failed', target: resolvedUrl, message: error?.message || 'ArticleProcessor failed' });
+      return { status: 'failed', retriable: false };
+    }
+
+    if (processorResult?.statsDelta) {
+      this.stats.articlesFound += processorResult.statsDelta.articlesFound || 0;
+      this.stats.articlesSaved += processorResult.statsDelta.articlesSaved || 0;
+    }
+
+    const navigationLinks = processorResult?.navigationLinks || [];
+    const articleLinks = processorResult?.articleLinks || [];
+
+    try {
+      console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${resolvedUrl}`);
+    } catch (_) {}
+
+    if (processorResult?.isArticle && processorResult.metadata) {
       try {
-        this._maybeEnqueueAdaptiveSeeds({ url: pageData.url, metadata, depth });
+        this._maybeEnqueueAdaptiveSeeds({ url: resolvedUrl, metadata: processorResult.metadata, depth });
       } catch (_) {}
     }
 
-    const navigationLinks = this.findNavigationLinks($);
-    const articleLinks = this.findArticleLinks($);
+    this._checkAnalysisMilestones({ depth, isArticle: !!processorResult?.isArticle });
 
-    console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${pageData.url}`);
-
-    this._checkAnalysisMilestones({ depth, isArticle: isArticleByUrl });
-
-    if (this.dbAdapter && this.dbAdapter.isEnabled() && pageData.fetchMeta && !isArticleByUrl) {
-      const navLinksCount = navigationLinks.length;
-      const articleLinksCount = articleLinks.length;
-      let wc = null;
-      try {
-        const vc = new VirtualConsole();
-        const dom = new JSDOM(pageData.html, { url: pageData.url, virtualConsole: vc });
-        const reader = new Readability(dom.window.document);
-        const article = reader.parse();
-        if (article && article.textContent) wc = article.textContent.trim().split(/\s+/).filter(Boolean).length;
-      } catch (_) {}
-      const contentSig = this._computeContentSignals($, pageData.html);
-      const urlSig = this._computeUrlSignals(pageData.url);
-      const combined = this._combineSignals(urlSig, contentSig, { wordCount: wc ?? undefined });
-      this.dbAdapter.insertFetch({
-        url: pageData.url,
-        request_started_at: pageData.fetchMeta.requestStartedIso || null,
-        fetched_at: pageData.fetchMeta.fetchedAtIso || null,
-        http_status: pageData.fetchMeta.httpStatus ?? null,
-        content_type: pageData.fetchMeta.contentType || null,
-        content_length: pageData.fetchMeta.contentLength ?? null,
-        content_encoding: pageData.fetchMeta.contentEncoding || null,
-        bytes_downloaded: pageData.fetchMeta.bytesDownloaded ?? null,
-        transfer_kbps: pageData.fetchMeta.transferKbps ?? null,
-        ttfb_ms: pageData.fetchMeta.ttfbMs ?? null,
-        download_ms: pageData.fetchMeta.downloadMs ?? null,
-        total_ms: pageData.fetchMeta.totalMs ?? null,
-        saved_to_db: 0,
-        saved_to_file: 0,
-        file_path: null,
-        file_size: null,
-        classification: (isArticleByUrl || (wc != null && wc > 150)) ? 'article' : (navLinksCount > 10 ? 'nav' : 'other'),
-        nav_links_count: navLinksCount,
-        article_links_count: articleLinksCount,
-        word_count: wc,
-        analysis: JSON.stringify({ url: urlSig, content: { ...contentSig, wordCount: wc ?? null }, combined })
-      });
-    }
-
-    const nowIso = new Date().toISOString();
     const seen = new Set();
-    const allLinks = [...navigationLinks.map(l => ({ ...l, type: 'nav' })), ...articleLinks.map(l => ({ ...l, type: 'article' }))];
+    const allLinks = processorResult?.allLinks || [];
     for (const link of allLinks) {
-      const urlOnly = link.url;
-      if (!seen.has(urlOnly)) seen.add(urlOnly);
-      this.enqueueRequest({ url: urlOnly, depth: depth + 1, type: link.type });
-      if (this.dbAdapter && this.dbAdapter.isEnabled()) {
-        this.dbAdapter.insertLink({
-          src_url: pageData.url,
-          dst_url: urlOnly,
-          anchor: link.anchor,
-          rel: Array.isArray(link.rel) ? link.rel.join(' ') : link.rel,
-          type: link.type,
-          depth: depth + 1,
-          on_domain: link.onDomain ? 1 : 0,
-          discovered_at: nowIso
-        });
-      }
+      if (!link || !link.url) continue;
+      if (seen.has(link.url)) continue;
+      seen.add(link.url);
+      this.enqueueRequest({ url: link.url, depth: depth + 1, type: link.type || 'nav' });
     }
+
     return { status: 'success' };
   }
 
@@ -2436,23 +2024,10 @@ class NewsCrawler {
    * Enhanced queue event emission with priority metadata and clustering
    */
   emitEnhancedQueueEvent(eventData) {
-    // Emit standard queue event first (backward compatibility)
-    this.emitQueueEvent(eventData);
-
-    // Add enhanced tracking if features are enabled
-    if (this.enhancedDbAdapter && eventData.jobId) {
-      try {
-        this.enhancedDbAdapter.insertQueueEvent({
-          ...eventData,
-          priorityScore: eventData.priorityScore,
-          prioritySource: eventData.prioritySource,
-          bonusApplied: eventData.bonusApplied,
-          clusterId: eventData.clusterId,
-          gapPredictionScore: eventData.gapPredictionScore
-        });
-      } catch (error) {
-        console.warn('Failed to log enhanced queue event:', error.message);
-      }
+    if (this.events && typeof this.events.emitEnhancedQueueEvent === 'function') {
+      this.events.emitEnhancedQueueEvent(eventData);
+    } else {
+      this.emitQueueEvent(eventData);
     }
   }
 
@@ -2460,24 +2035,10 @@ class NewsCrawler {
    * Enhanced problem processing with clustering and gap prediction
    */
   emitEnhancedProblem(problemData) {
-    // Emit standard problem event first (backward compatibility)
-    this.emitProblem(problemData);
-
-    // Process for clustering if enabled
-    if (this.featuresEnabled.problemClustering && this.problemClusteringService) {
-      try {
-        const clusterResult = this.problemClusteringService.processProblem({
-          ...problemData,
-          jobId: this.jobId,
-          timestamp: new Date().toISOString()
-        });
-
-        if (clusterResult?.shouldBoostRelated) {
-          console.log(`Problem cluster ${clusterResult.clusterId} reached occurrence ${clusterResult.occurrenceCount}, priority boost: ${clusterResult.priorityBoost}`);
-        }
-      } catch (error) {
-        console.warn('Problem clustering failed:', error.message);
-      }
+    if (this.events && typeof this.events.emitEnhancedProblem === 'function') {
+      this.events.emitEnhancedProblem(problemData);
+    } else {
+      this.emitProblem(problemData);
     }
   }
 
