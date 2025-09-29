@@ -776,13 +776,6 @@ function createApp(options = {}) {
     }
   }));
   // Static assets with cache headers
-  app.use(express.static(path.join(__dirname, 'public'), {
-    maxAge: '1h',
-    etag: true,
-    lastModified: true,
-    extensions: ['html']
-  }));
-
   // Serve shared UI assets (CSS/JS) from src/ui/public at /assets
   app.use('/assets', express.static(path.join(__dirname, '..', 'public'), {
     maxAge: '1h',
@@ -2728,6 +2721,14 @@ SELECT (
   });
 
 
+
+  // Static assets with cache headers (mounted after SSR routers so dynamic pages win)
+  app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: '1h',
+    etag: true,
+    lastModified: true,
+    extensions: ['html']
+  }));
 
   // Fallback: serve index.html (robust across legacy and new layouts) with diagnostics
   app.use((req, res) => {
