@@ -107,9 +107,21 @@ describe('Gazetteer API', () => {
     expect(Array.isArray(res.body.names)).toBe(true);
     expect(Array.isArray(res.body.parents)).toBe(true);
     expect(Array.isArray(res.body.children)).toBe(true);
-  // size metrics should be present
-  expect(typeof res.body.size_bytes).toBe('number');
-  expect(['dbstat','approx']).toContain(res.body.size_method);
+    // size metrics should be present
+    expect(typeof res.body.size_bytes).toBe('number');
+    expect(['dbstat', 'approx']).toContain(res.body.size_method);
+  });
+
+  test('place details rejects non-numeric ids', async () => {
+    const res = await request(app).get('/api/gazetteer/place/not-a-number');
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toMatch(/positive integer/i);
+  });
+
+  test('place details returns 404 when missing', async () => {
+    const res = await request(app).get('/api/gazetteer/place/999999');
+    expect(res.statusCode).toBe(404);
+    expect(res.body.error).toBe('Not found');
   });
 
   test('articles endpoint returns recent mentions', async () => {

@@ -1,74 +1,17 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[c]);
-}
-
-function formatNumber(value) {
-  if (value == null) return '';
-  try {
-    return Number(value).toLocaleString();
-  } catch (_) {
-    return String(value);
-  }
-}
-
-function formatBytes(value) {
-  if (value == null) return '';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let index = 0;
-  let current = Number(value) || 0;
-  while (current >= 1024 && index < units.length - 1) {
-    current /= 1024;
-    index += 1;
-  }
-  return (index === 0 ? String(current | 0) : current.toFixed(1)) + ' ' + units[index];
-}
-
-function toQueryString(params) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value == null || value === '') continue;
-    search.set(key, String(value));
-  }
-  const str = search.toString();
-  return str ? `?${str}` : '';
-}
-
-function safeTracePre(trace, name) {
-  if (!trace || typeof trace.pre !== 'function') return () => {};
-  try {
-    return trace.pre(name) || (() => {});
-  } catch (_) {
-    return () => {};
-  }
-}
-
-function createSizeEstimator(db) {
-  const placeStmt = db.prepare(`SELECT COALESCE(LENGTH(kind),0)+COALESCE(LENGTH(country_code),0)+COALESCE(LENGTH(adm1_code),0)+COALESCE(LENGTH(adm2_code),0)+COALESCE(LENGTH(timezone),0)+COALESCE(LENGTH(bbox),0)+COALESCE(LENGTH(source),0)+COALESCE(LENGTH(extra),0) AS total FROM places WHERE id=?`);
-  const namesStmt = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(name),0)+COALESCE(LENGTH(normalized),0)+COALESCE(LENGTH(lang),0)+COALESCE(LENGTH(script),0)+COALESCE(LENGTH(name_kind),0)+COALESCE(LENGTH(source),0)),0) AS total FROM place_names WHERE place_id=?`);
-  const externalStmt = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(source),0)+COALESCE(LENGTH(ext_id),0)),0) AS total FROM place_external_ids WHERE place_id=?`);
-  const hierarchyStmt = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(relation),0)),0) AS total FROM place_hierarchy WHERE parent_id=? OR child_id=?`);
-
-  const cache = new Map();
-  return (id) => {
-    if (cache.has(id)) return cache.get(id);
-    const base = placeStmt.get(id)?.total || 0;
-    const names = namesStmt.get(id)?.total || 0;
-    const external = externalStmt.get(id)?.total || 0;
-    const hierarchy = hierarchyStmt.get(id, id)?.total || 0;
-    const total = (base + names + external + hierarchy) | 0;
-    cache.set(id, total);
-    return total;
-  };
-}
+const {
+  escapeHtml,
+  formatNumber,
+  formatBytes,
+  toQueryString,
+  safeTracePre,
+  createSizeEstimator
+} = require('../views/gazetteer/helpers');
+const {
+  normalizeGazetteerPlacesQuery,
+  fetchGazetteerPlaces
+} = require('../data/gazetteerPlaces');
 
 function createGazetteerPlacesRouter(options = {}) {
   const { urlsDbPath, startTrace } = options;
@@ -83,16 +26,8 @@ function createGazetteerPlacesRouter(options = {}) {
       try { trace.end(); } catch (_) { /* noop */ }
     };
 
-    const q = String(req.query.q || '').trim();
-    const kind = String(req.query.kind || '').trim();
-    const cc = String(req.query.cc || '').trim().toUpperCase();
-    const adm1 = String(req.query.adm1 || '').trim();
-    const minpop = parseInt(req.query.minpop || '0', 10) || 0;
-    const sort = String(req.query.sort || 'name').trim();
-    const dir = (String(req.query.dir || 'asc').toLowerCase() === 'desc') ? 'DESC' : 'ASC';
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const pageSize = Math.max(1, Math.min(200, parseInt(req.query.pageSize || '50', 10)));
     const showStorage = String(req.query.storage || '0') === '1';
+    const normalizedQuery = normalizeGazetteerPlacesQuery(req.query || {});
 
     let openDbReadOnly;
     try {
@@ -109,63 +44,29 @@ function createGazetteerPlacesRouter(options = {}) {
       db = openDbReadOnly(urlsDbPath);
       doneOpen();
 
-      const where = [];
-      const params = [];
-      if (kind) {
-        where.push('p.kind = ?');
-        params.push(kind);
-      }
-      if (cc) {
-        where.push('UPPER(p.country_code) = ?');
-        params.push(cc);
-      }
-      if (adm1) {
-        where.push('p.adm1_code = ?');
-        params.push(adm1);
-      }
-      if (minpop > 0) {
-        where.push('COALESCE(p.population,0) >= ?');
-        params.push(minpop);
-      }
-      if (q) {
-        const like = `%${q.toLowerCase()}%`;
-        where.push(`EXISTS (SELECT 1 FROM place_names nx WHERE nx.place_id = p.id AND (LOWER(nx.normalized) LIKE ? OR LOWER(nx.name) LIKE ?))`);
-        params.push(like, like);
-      }
-      const whereSql = where.length ? ` AND ${where.join(' AND ')}` : '';
-      const sortCol = (sort === 'pop' || sort === 'population')
-        ? 'p.population'
-        : (sort === 'country' ? 'p.country_code' : 'name');
+      const doneFetch = safeTracePre(trace, 'rows');
+      const {
+        total,
+        rows: baseRows,
+        filters
+      } = fetchGazetteerPlaces(db, normalizedQuery, {
+        orderByNameExpression: 'name',
+        orderBySecondary: 'p.id ASC'
+      });
+      doneFetch();
 
-      const doneCount = safeTracePre(trace, 'count');
-      const total = db.prepare(`
-        SELECT COUNT(*) AS count
-        FROM places p
-        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-        WHERE ((p.canonical_name_id IS NOT NULL AND p.canonical_name_id IN (SELECT id FROM place_names))
-               OR EXISTS(SELECT 1 FROM place_names pn WHERE pn.place_id = p.id))
-          ${whereSql}
-      `).get(...params).count;
-      doneCount();
-
-      const doneRows = safeTracePre(trace, 'rows');
-      let rows = db.prepare(`
-        SELECT p.id,
-               p.kind,
-               p.country_code,
-               p.adm1_code,
-               p.population,
-               COALESCE(cn.name, pn.name) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.place_id = p.id
-        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-        WHERE ((p.canonical_name_id IS NOT NULL AND p.canonical_name_id IN (SELECT id FROM place_names))
-               OR EXISTS(SELECT 1 FROM place_names pn WHERE pn.place_id = p.id))
-          ${whereSql}
-        ORDER BY ${sortCol} ${dir}, p.id ASC
-        LIMIT ? OFFSET ?
-      `).all(...params, pageSize, (page - 1) * pageSize);
-      doneRows();
+      let rows = baseRows;
+      const {
+        search,
+        kind,
+        countryCode,
+        adm1,
+        minPopulation,
+        sort,
+        direction,
+        page,
+        pageSize
+      } = filters;
 
       let totalStorage = 0;
       if (showStorage) {
@@ -177,18 +78,20 @@ function createGazetteerPlacesRouter(options = {}) {
         });
       }
 
-      const baseParams = { q, kind, cc, adm1, minpop, sort, dir, page, pageSize };
+      const toggleLinkParams = {
+        q: search,
+        kind,
+        cc: countryCode,
+        adm1,
+        minpop: minPopulation || '',
+        sort,
+        dir: direction,
+        page,
+        pageSize
+      };
       const toggleLink = showStorage
-        ? `<a href="${toQueryString(baseParams)}">Hide storage</a>`
-        : `<a href="${toQueryString({ ...baseParams, storage: 1 })}">Show approx storage</a>`;
-
-      const totalPages = Math.max(1, Math.ceil(Number(total || 0) / pageSize));
-      const prevHref = page > 1
-        ? toQueryString({ ...baseParams, page: page - 1, storage: showStorage ? 1 : undefined })
-        : null;
-      const nextHref = page < totalPages
-        ? toQueryString({ ...baseParams, page: page + 1, storage: showStorage ? 1 : undefined })
-        : null;
+        ? `<a href="${toQueryString(toggleLinkParams)}">Hide storage</a>`
+        : `<a href="${toQueryString({ ...toggleLinkParams, storage: 1 })}">Show approx storage</a>`;
 
       const rowsHtml = rows.map((row) => `
         <tr>
@@ -205,11 +108,34 @@ function createGazetteerPlacesRouter(options = {}) {
       summaryBits.push(`page ${page}`);
       summaryBits.push(`page size ${pageSize}`);
 
-      if (q) summaryBits.push(`query “${escapeHtml(q)}”`);
+      if (search) summaryBits.push(`query “${escapeHtml(search)}”`);
       if (kind) summaryBits.push(`kind ${escapeHtml(kind)}`);
-      if (cc) summaryBits.push(`country ${escapeHtml(cc)}`);
+      if (countryCode) summaryBits.push(`country ${escapeHtml(countryCode)}`);
       if (adm1) summaryBits.push(`ADM1 ${escapeHtml(adm1)}`);
-      if (minpop) summaryBits.push(`min population ${escapeHtml(minpop)}`);
+      if (minPopulation) summaryBits.push(`min population ${escapeHtml(minPopulation)}`);
+
+      const basePagerParams = {
+        q: search,
+        kind,
+        cc: countryCode,
+        adm1,
+        minpop: minPopulation || '',
+        sort,
+        dir: direction,
+        pageSize
+      };
+      if (showStorage) {
+        basePagerParams.storage = 1;
+      }
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const hasPrev = page > 1;
+      const hasNext = page < totalPages;
+      const prevLink = hasPrev
+        ? `<a href="${toQueryString({ ...basePagerParams, page: page - 1 })}">← Prev</a>`
+        : `<span class="muted">← Prev</span>`;
+      const nextLink = hasNext
+        ? `<a href="${toQueryString({ ...basePagerParams, page: page + 1 })}">Next →</a>`
+        : `<span class="muted">Next →</span>`;
 
       const html = `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -234,6 +160,9 @@ function createGazetteerPlacesRouter(options = {}) {
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0;font-size:13px}
   .toolbar a{color:#2563eb;text-decoration:none}
   .toolbar a:hover{text-decoration:underline}
+  .pager{display:flex;align-items:center;justify-content:space-between;margin:10px 0;font-size:13px}
+  .pager span.muted{color:var(--muted)}
+  .pager .current{flex:1;text-align:center;color:var(--muted)}
   .tr{text-align:right}
 </style>
 </head><body>
@@ -243,18 +172,23 @@ function createGazetteerPlacesRouter(options = {}) {
       ${renderNav('gazetteer')}
     </header>
     <form class="filters" method="GET" action="/gazetteer/places">
-      <label>Search<input type="text" name="q" value="${escapeHtml(q)}" placeholder="City, region, …"/></label>
-      <label>Kind<input type="text" name="kind" value="${escapeHtml(kind)}" placeholder="city"/></label>
-      <label>Country<input type="text" name="cc" value="${escapeHtml(cc)}" placeholder="GB"/></label>
-      <label>ADM1<input type="text" name="adm1" value="${escapeHtml(adm1)}" placeholder="ENG"/></label>
-      <label>Min population<input type="number" name="minpop" value="${escapeHtml(minpop || '')}"/></label>
-      <label>Sort<input type="text" name="sort" value="${escapeHtml(sort)}"/></label>
-      <label>Direction<input type="text" name="dir" value="${escapeHtml(dir)}"/></label>
-      <label>Page<input type="number" min="1" name="page" value="${escapeHtml(page)}"/></label>
-      <label>Page size<input type="number" min="1" max="200" name="pageSize" value="${escapeHtml(pageSize)}"/></label>
+  <label>Search<input type="text" name="q" value="${escapeHtml(search)}" placeholder="City, region, …"/></label>
+  <label>Kind<input type="text" name="kind" value="${escapeHtml(kind)}" placeholder="city"/></label>
+  <label>Country<input type="text" name="cc" value="${escapeHtml(countryCode)}" placeholder="GB"/></label>
+  <label>ADM1<input type="text" name="adm1" value="${escapeHtml(adm1)}" placeholder="ENG"/></label>
+  <label>Min population<input type="number" name="minpop" value="${escapeHtml(minPopulation || '')}"/></label>
+  <label>Sort<input type="text" name="sort" value="${escapeHtml(sort)}"/></label>
+  <label>Direction<input type="text" name="dir" value="${escapeHtml(direction)}"/></label>
+  <label>Page<input type="number" min="1" name="page" value="${escapeHtml(page)}"/></label>
+  <label>Page size<input type="number" min="1" max="200" name="pageSize" value="${escapeHtml(pageSize)}"/></label>
       <button type="submit">Apply</button>
     </form>
     <div class="meta">${summaryBits.join(' · ')}</div>
+    <div class="pager">
+      <div>${prevLink}</div>
+      <div class="current">Page ${page} of ${totalPages}</div>
+      <div>${nextLink}</div>
+    </div>
     <div class="toolbar">
       ${toggleLink}
       <a href="/gazetteer">Back to summary</a>
@@ -264,10 +198,6 @@ function createGazetteerPlacesRouter(options = {}) {
       <thead><tr><th>Name</th><th>Country</th><th>ADM1</th>${showStorage ? '<th class="tr">Storage</th>' : ''}<th class="tr">Population</th></tr></thead>
       <tbody>${rowsHtml || `<tr><td colspan="${showStorage ? 5 : 4}" class="meta">No places found.</td></tr>`}</tbody>
     </table>
-    <div class="toolbar">
-      ${prevHref ? `<a href="${prevHref}">← Prev</a>` : ''}
-      ${nextHref ? `<a href="${nextHref}">Next →</a>` : ''}
-    </div>
   ${showStorage ? `<div class="meta">Total shown storage: ~ ${formatBytes(totalStorage)}</div>` : ''}
   </div>
 </body></html>`;

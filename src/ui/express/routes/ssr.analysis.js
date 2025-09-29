@@ -27,13 +27,7 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
 }
 
-function coerceLimit(value, { min = 1, max = 200, fallback = 50 } = {}) {
-  const num = Number.parseInt(value, 10);
-  if (!Number.isFinite(num)) return fallback;
-  return Math.max(min, Math.min(max, num));
-}
-
-function createAnalysisSsrRouter({ getDbRW, renderNav }) {
+function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
   if (typeof getDbRW !== 'function') {
     throw new Error('createAnalysisSsrRouter requires getDbRW');
   }
@@ -46,17 +40,26 @@ function createAnalysisSsrRouter({ getDbRW, renderNav }) {
   });
 
   router.get('/analysis/ssr', (req, res) => {
-    const limit = coerceLimit(req.query.limit, { fallback: 50 });
+    let db;
     try {
-      const db = getDbRW();
-      if (!db) {
-        res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
-        return;
-      }
+      db = getDbRW();
+    } catch (err) {
+      const message = escapeHtml(err?.message || err);
+      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis runs: ${message}</p></body></html>`);
+      return;
+    }
+
+    if (!db) {
+      res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
+      return;
+    }
+
+    try {
       ensureAnalysisRunSchema(db);
+      const limit = Math.max(1, Math.min(200, parseInt(req.query.limit || '50', 10) || 50));
       const { items, total } = listAnalysisRuns(db, { limit });
       const html = renderAnalysisListPage({
-        runs: items,
+        items,
         total,
         limit,
         renderNav: navRenderer
@@ -74,12 +77,22 @@ function createAnalysisSsrRouter({ getDbRW, renderNav }) {
       res.status(400).send('<!doctype html><title>Analysis</title><body><p>Missing analysis run id.</p></body></html>');
       return;
     }
+
+    let db;
     try {
-      const db = getDbRW();
-      if (!db) {
-        res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
-        return;
-      }
+      db = getDbRW();
+    } catch (err) {
+      const message = escapeHtml(err?.message || err);
+      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis run: ${message}</p></body></html>`);
+      return;
+    }
+
+    if (!db) {
+      res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
+      return;
+    }
+
+    try {
       ensureAnalysisRunSchema(db);
       const detail = getAnalysisRun(db, runId);
       if (!detail) {
@@ -89,7 +102,7 @@ function createAnalysisSsrRouter({ getDbRW, renderNav }) {
       const html = renderAnalysisDetailPage({
         run: detail.run,
         events: detail.events,
-        detailPayload: detail,
+        payload: detail,
         renderNav: navRenderer
       });
       res.type('html').send(html);

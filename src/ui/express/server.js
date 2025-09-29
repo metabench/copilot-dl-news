@@ -6,6 +6,7 @@ const {
   spawn
 } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const {
   EventEmitter
 } = require('events');
@@ -50,6 +51,9 @@ const {
   createAnalysisApiRouter
 } = require('./routes/api.analysis');
 const {
+  createAnalysisSsrRouter
+} = require('./routes/ssr.analysis');
+const {
   createCoverageApiRouter
 } = require('./routes/coverage');
 const {
@@ -62,8 +66,17 @@ const {
   createRecentDomainsApiRouter
 } = require('./routes/api.recent-domains');
 const {
+  createDomainSummaryApiRouter
+} = require('./routes/api.domain-summary');
+const {
   createGazetteerApiRouter
 } = require('./routes/api.gazetteer');
+const {
+  createGazetteerPlacesApiRouter
+} = require('./routes/api.gazetteer.places');
+const {
+  createGazetteerPlaceApiRouter
+} = require('./routes/api.gazetteer.place');
 const {
   createGazetteerRouter
 } = require('./routes/ssr.gazetteer');
@@ -74,11 +87,23 @@ const {
   createGazetteerPlaceRouter
 } = require('./routes/ssr.gazetteer.place');
 const {
+  createGazetteerCountriesRouter
+} = require('./routes/ssr.gazetteer.countries');
+const {
   createGazetteerCountryRouter
 } = require('./routes/ssr.gazetteer.country');
 const {
+  createGazetteerKindRouter
+} = require('./routes/ssr.gazetteer.kind');
+const {
   createQueuesSsrRouter
 } = require('./routes/ssr.queues');
+const {
+  createProblemsSsrRouter
+} = require('./routes/ssr.problems');
+const {
+  createMilestonesSsrRouter
+} = require('./routes/ssr.milestones');
 const {
   renderNav
 } = require('./services/navigation');
@@ -457,9 +482,31 @@ function createApp(options = {}) {
   const analysisRunner = options.analysisRunner || defaultAnalysisRunner();
   // Allow overriding DB path via options or environment for test isolation
   const envDb = process.env.DB_PATH || process.env.UI_DB_PATH || '';
-  const urlsDbPath = options.dbPath || (envDb ? envDb : path.join(__dirname, '..', '..', '..', 'data', 'news.db'));
+  let urlsDbPath = options.dbPath || (envDb ? envDb : path.join(__dirname, '..', '..', '..', 'data', 'news.db'));
+  let tempDbCleanup = null;
+  if (!options.dbPath && !envDb) {
+    const isFakeRunner = ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_FAKE_RUNNER || '').toLowerCase());
+    if (isFakeRunner) {
+      const tmpDir = path.join(os.tmpdir(), 'copilot-ui-tests');
+      try {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      } catch (_) {}
+      const unique = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      urlsDbPath = path.join(tmpDir, `ui-fake-${unique}.db`);
+      tempDbCleanup = () => {
+        const suffixes = ['', '-shm', '-wal'];
+        for (const suffix of suffixes) {
+          try {
+            fs.unlinkSync(urlsDbPath + suffix);
+          } catch (_) {}
+        }
+      };
+      process.once('exit', tempDbCleanup);
+    }
+  }
   // Verbose logging (disabled by default). Enable with options.verbose=true or UI_VERBOSE=1|true
   const verbose = options.verbose === true || String(process.env.UI_VERBOSE || '').toLowerCase() === '1' || String(process.env.UI_VERBOSE || '').toLowerCase() === 'true';
+  const queueDebug = verbose || isTruthyFlag(process.env.UI_QUEUE_DEBUG);
   const app = express();
   const priorityConfigPath = options.priorityConfigPath || process.env.UI_PRIORITY_CONFIG || process.env.UI_PRIORITY_CONFIG_PATH || null;
   const shouldWatchConfig = options.watchPriorityConfig !== undefined ?
@@ -469,6 +516,9 @@ function createApp(options = {}) {
     watch: shouldWatchConfig
   });
   app.locals.configManager = configManager;
+  if (tempDbCleanup) {
+    app.locals._cleanupTempDb = tempDbCleanup;
+  }
   // Per-request timing logs (method, path, status, duration ms)
   app.use((req, res, next) => {
     const t0 = process.hrtime.bigint();
@@ -492,6 +542,34 @@ function createApp(options = {}) {
   const allowMultiJobs = (options.allowMultiJobs === true) || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_ALLOW_MULTI_JOBS || '').toLowerCase());
   // Optional: detailed start-path tracing, logs timing for key steps in POST /api/crawl
   const traceStart = options.traceStart === true || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_TRACE_START || '').toLowerCase());
+
+  function startTrace(req, tag = 'gazetteer') {
+    if (!verbose) {
+      const noop = () => {};
+      return { pre: () => noop, end: noop };
+    }
+    const start = Date.now();
+    try {
+      console.log(`[${tag}] request ${req.method} ${req.originalUrl || req.url}`);
+    } catch (_) {}
+    const pre = (name) => {
+      const t = Date.now();
+      try {
+        console.log(`pre[${name}]`);
+      } catch (_) {}
+      return () => {
+        try {
+          console.log(`post[${name}] (+${Date.now() - t}ms)`);
+        } catch (_) {}
+      };
+    };
+    const end = () => {
+      try {
+        console.log(`[${tag}] done (+${Date.now() - start}ms)`);
+      } catch (_) {}
+    };
+    return { pre, end };
+  }
   // Small guard window after a start to avoid immediate double-start races in single-job mode
   let jobStartGuardUntil = 0;
   let startedAt = null;
@@ -511,6 +589,27 @@ function createApp(options = {}) {
   });
   app.locals._sseClients = sseClients;
   app.locals._broadcaster = broadcaster;
+
+  const broadcast = (event, data, forcedJobId = null) => broadcaster.broadcast(event, data, forcedJobId);
+
+  function generateAnalysisRunId(explicit) {
+    if (explicit) {
+      const trimmed = String(explicit).trim();
+      if (trimmed) return trimmed;
+    }
+    const iso = new Date().toISOString().replace(/[:.]/g, '-');
+    return `analysis-${iso}`;
+  }
+
+  function isTruthyFlag(value) {
+    if (value === true) return true;
+    if (typeof value === 'string') {
+      const v = value.trim().toLowerCase();
+      return ['1', 'true', 'yes', 'on'].includes(v);
+    }
+    return false;
+  }
+
   // Tiny in-memory TTL cache for expensive aggregates
   const summaryCache = {
     ttlMs: 60 * 1000,
@@ -684,8 +783,18 @@ function createApp(options = {}) {
       } catch (_) {
         /* ignore index create errors */ }
       _dbRW = db;
-    } catch (_) {
+      if (queueDebug) {
+        try {
+          console.log('[db] opened writable queue DB at', urlsDbPath);
+        } catch (_) {}
+      }
+    } catch (err) {
       _dbRW = null; // gracefully disable persistence if unavailable
+      try {
+        if (queueDebug || verbose || process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+          console.warn('[db] failed to open writable DB:', err?.message || err);
+        }
+      } catch (_) {}
     }
     return _dbRW;
   }
@@ -705,6 +814,7 @@ function createApp(options = {}) {
       errors: 0,
       queueSize: 0,
       running: 0,
+      stage: 'idle',
       _lastSampleTime: 0,
       _lastVisited: 0,
       _lastDownloaded: 0,
@@ -716,6 +826,7 @@ function createApp(options = {}) {
     }
   });
   const metrics = progress.metrics;
+  const broadcastProgress = progress.broadcastProgress;
   // Throttle for jobs list SSE
   let jobsLastSentAt = 0;
 
@@ -747,6 +858,12 @@ function createApp(options = {}) {
         job.metrics.stage = next;
       } catch (_) {}
     }
+    try {
+      const first = getFirstJob();
+      if (!first || first.id === job.id) {
+        metrics.stage = next;
+      }
+    } catch (_) {}
     broadcastJobs(true);
   }
 
@@ -799,7 +916,7 @@ function createApp(options = {}) {
   }));
   // Mount queues API router
   app.use(createQueuesApiRouter({
-    getDbRW
+    getDbRW: getDbRW
   }));
   // Mount misc API router (status, crawl-types, health, metrics)
   app.use(createMiscApiRouter({
@@ -810,7 +927,7 @@ function createApp(options = {}) {
       paused
     }),
     getMetrics: () => metrics,
-    getDbRW,
+    getDbRW: getDbRW,
     QUIET
   }));
   // Mount URLs APIs (list, details, fetch-body)
@@ -820,22 +937,39 @@ function createApp(options = {}) {
   app.use(createRecentDomainsApiRouter({
     urlsDbPath
   }));
+  app.use(createDomainSummaryApiRouter({
+    urlsDbPath
+  }));
   // Mount Analysis APIs (read-only history)
   app.use(createAnalysisApiRouter({
-    getDbRW
+    getDbRW: getDbRW
+  }));
+  app.use(createAnalysisSsrRouter({
+    getDbRW: getDbRW,
+    renderNav
   }));
   // Mount Problems APIs (read-only)
   app.use(createProblemsApiRouter({
-    getDbRW
+    getDbRW: getDbRW
+  }));
+  app.use(createProblemsSsrRouter({
+    getDbRW: getDbRW,
+    renderNav
   }));
   // Mount shared navigation API for clients needing link metadata
   app.use(createNavigationApiRouter());
   app.use(createGazetteerApiRouter({
     urlsDbPath
   }));
+  app.use(createGazetteerPlacesApiRouter({
+    urlsDbPath
+  }));
+  app.use(createGazetteerPlaceApiRouter({
+    urlsDbPath
+  }));
   // Queues SSR pages (list, detail, latest redirect)
   app.use(createQueuesSsrRouter({
-    getDbRW,
+    getDbRW: getDbRW,
     renderNav
   }));
   // Gazetteer SSR surface
@@ -851,123 +985,18 @@ function createApp(options = {}) {
     urlsDbPath,
     startTrace
   }));
+  app.use(createGazetteerCountriesRouter({
+    urlsDbPath,
+    startTrace,
+    renderNav
+  }));
   app.use(createGazetteerCountryRouter({
     urlsDbPath,
     startTrace
   }));
-  // Mount Coverage Analytics APIs
-  app.use(createCoverageApiRouter({
-    getDbRW
-  }));
-  // Mount Configuration APIs
-  app.use('/api/config', createConfigApiRouter(configManager));
+  app.use(createGazetteerKindRouter({ urlsDbPath, startTrace }));
 
-  function formatDuration(ms) {
-    if (ms == null) return '';
-    const num = Number(ms);
-    if (!Number.isFinite(num) || num < 0) return '';
-    const totalSeconds = Math.floor(num / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const parts = [];
-    if (hours) parts.push(`${hours}h`);
-    if (minutes) parts.push(`${minutes}m`);
-    if (!parts.length || seconds || (!hours && !minutes)) parts.push(`${seconds}s`);
-    return parts.join(' ');
-  }
-
-  function formatPagesStep(step) {
-    if (!step) return '';
-    if (step.skipped) return 'skipped';
-    const parts = [];
-    if (Number.isFinite(step.analysed)) parts.push(`${step.analysed} analysed`);
-    if (Number.isFinite(step.updated)) parts.push(`${step.updated} updated`);
-    if (Number.isFinite(step.placesInserted)) parts.push(`${step.placesInserted} places`);
-    return parts.join(', ');
-  }
-
-  function formatDomainsStep(step) {
-    if (!step) return '';
-    if (step.skipped) return 'skipped';
-    const parts = [];
-    if (step.completed) parts.push('completed');
-    if (Number.isFinite(step.limit)) parts.push(`limit ${step.limit}`);
-    return parts.join(', ');
-  }
-
-  function formatMilestonesStep(step) {
-    if (!step) return '';
-    if (step.skipped) return 'skipped';
-    if (Number.isFinite(step.count)) {
-      const suffix = step.dryRun ? ' (dry-run)' : '';
-      return `${step.count} awarded${suffix}`;
-    }
-    if (step.dryRun) return 'dry-run';
-    return '';
-  }
-
-  // Simple tracing helper for SSR pages (gated by verbose)
-  function startTrace(req, tag = 'gazetteer') {
-    if (!verbose) {
-      // No-op tracer
-      const noop = () => {};
-      return {
-        pre: () => noop,
-        end: noop
-      };
-    }
-    const start = Date.now();
-    try {
-      console.log(`[${tag}] request ${req.method} ${req.originalUrl || req.url}`);
-    } catch (_) {}
-    const pre = (name) => {
-      const t = Date.now();
-      try {
-        console.log(`pre[${name}]`);
-      } catch (_) {}
-      return () => {
-        try {
-          console.log(`post[${name}] (+${Date.now() - t}ms)`);
-        } catch (_) {}
-      };
-    };
-    const end = () => {
-      try {
-        console.log(`[${tag}] done (+${Date.now() - start}ms)`);
-      } catch (_) {}
-    };
-    return {
-      pre,
-      end
-    };
-  }
-
-  function broadcast(event, data, forcedJobId = null) {
-    return broadcaster.broadcast(event, data, forcedJobId);
-  }
-
-  function generateAnalysisRunId(explicit) {
-    if (explicit) {
-      const trimmed = String(explicit).trim();
-      if (trimmed) return trimmed;
-    }
-    const iso = new Date().toISOString().replace(/[:.]/g, '-');
-    return `analysis-${iso}`;
-  }
-
-  function isTruthyFlag(value) {
-    if (value === true) return true;
-    if (typeof value === 'string') {
-      const v = value.trim().toLowerCase();
-      return ['1', 'true', 'yes', 'on'].includes(v);
-    }
-    return false;
-  }
-
-  const broadcastProgress = progress.broadcastProgress;
-
-  // /api/crawl-types moved to routes/api.misc.js
+  app.use(createMilestonesSsrRouter({ getDbRW: getDbRW, renderNav }));
 
   app.post('/api/crawl', (req, res) => {
     const t0 = Date.now();
@@ -978,31 +1007,27 @@ function createApp(options = {}) {
     const now = Date.now();
     if (!allowMultiJobs && (jobs.size > 0 || now < jobStartGuardUntil)) {
       try {
-        console.log(`[api] POST /api/crawl -> 409 already-running`);
+        console.log('[api] POST /api/crawl -> 409 already-running');
       } catch (_) {}
-      return res.status(409).json({
-        error: 'Crawler already running'
-      });
+      return res.status(409).json({ error: 'Crawler already running' });
     }
     const t1 = Date.now();
     const args = buildArgs(req.body || {});
     const jobId = newJobId();
     const t2 = Date.now();
-    // Ensure crawler child uses the same DB as the UI server unless explicitly overridden
-    if (!args.some(a => /^--db=/.test(a))) {
+    if (!args.some((a) => /^--db=/.test(a))) {
       args.push(`--db=${urlsDbPath}`);
     }
-    if (!args.some(a => /^--job-id=/.test(a))) {
+    if (!args.some((a) => /^--job-id=/.test(a))) {
       args.push(`--job-id=${jobId}`);
     }
     const child = runner.start(args);
     const t3 = Date.now();
-    // Create job record
     const job = {
       id: jobId,
       child,
       args: [...args],
-      url: (Array.isArray(args) && args.length > 1 ? args[1] : null),
+      url: Array.isArray(args) && args.length > 1 ? args[1] : null,
       startedAt: new Date().toISOString(),
       lastExit: null,
       paused: false,
@@ -1010,7 +1035,6 @@ function createApp(options = {}) {
       stderrBuf: '',
       stage: 'preparing',
       stageChangedAt: Date.now(),
-      // Cache stdin handle so controls can still function if child reference is swapped/null briefly
       stdin: child && child.stdin && typeof child.stdin.write === 'function' ? child.stdin : null,
       metrics: {
         visited: 0,
@@ -1031,35 +1055,46 @@ function createApp(options = {}) {
       },
       watchdogTimers: []
     };
-    // Normalize interface: ensure stdout/stderr are EventEmitters that emit 'data'
     if (!child.stdout) child.stdout = new EventEmitter();
     if (!child.stderr) child.stderr = new EventEmitter();
     jobs.set(jobId, job);
     broadcastJobs(true);
-    // Set a short guard window to account for ultra-fast fake runners exiting immediately
-    // Slightly longer window (600ms) to be robust under parallel test load
     try {
       jobStartGuardUntil = Date.now() + 600;
     } catch (_) {
       jobStartGuardUntil = now + 600;
     }
 
-    // Persist job start (best-effort) — defer until after response to keep POST fast
     const persistStart = () => {
       try {
         const db = getDbRW();
         if (db) {
-          db.prepare(`INSERT OR REPLACE INTO crawl_jobs(id, url, args, pid, started_at, status) VALUES (?, ?, ?, ?, ?, 'running')`)
-            .run(jobId, job.url || null, JSON.stringify(args), child?.pid || null, job.startedAt);
+          if (queueDebug) {
+            try {
+              console.log('[db] inserting crawl_jobs row for', jobId);
+            } catch (_) {}
+          }
+          const info = db.prepare(
+            'INSERT OR REPLACE INTO crawl_jobs(id, url, args, pid, started_at, status) VALUES (?, ?, ?, ?, ?, ?)'
+          ).run(jobId, job.url || null, JSON.stringify(args), child?.pid || null, job.startedAt, 'running');
+          if (queueDebug) {
+            try {
+              console.log('[db] crawl_jobs insert changes=', info?.changes, 'rows');
+            } catch (_) {}
+          }
         }
-      } catch (_) {
-        /* ignore db errors */ }
+      } catch (err) {
+        if (queueDebug) {
+          try {
+            console.warn('[db] failed to insert crawl_jobs row:', err?.message || err);
+          } catch (_) {}
+        }
+      }
     };
 
-    // Prepare common exit handler up-front so we can attach listeners immediately
     let exitEmitted = false;
     const onExit = (code, signal, extraInfo = null) => {
-      if (exitEmitted) return; // guard against both 'exit' and 'close'
+      if (exitEmitted) return;
       exitEmitted = true;
       try {
         if (job.killTimer) {
@@ -1069,43 +1104,43 @@ function createApp(options = {}) {
         clearJobWatchdogs(job);
       } catch (_) {}
       const endedAt = new Date().toISOString();
-      const extras = (extraInfo && typeof extraInfo === 'object' && extraInfo !== null) ? extraInfo : null;
+      const extras = extraInfo && typeof extraInfo === 'object' ? extraInfo : null;
       const stageForExit = extras && extras.error ? 'failed' : 'done';
       updateJobStage(job, stageForExit);
-      job.lastExit = extras ? {
-        code,
-        signal,
-        endedAt,
-        ...extras
-      } : {
-        code,
-        signal,
-        endedAt
-      };
+      job.lastExit = extras ? { code, signal, endedAt, ...extras } : { code, signal, endedAt };
       try {
         if (!QUIET) console.log(`[child] exit code=${code} signal=${signal}`);
       } catch (_) {}
-      // Mark child as gone immediately so status becomes 'done' in detail snapshot
       try {
         job.child = null;
       } catch (_) {}
-      // Update job record (best-effort)
       try {
         const db = getDbRW();
         if (db) {
-          db.prepare(`UPDATE crawl_jobs SET ended_at = ?, status = 'done' WHERE id = ?`).run(job.lastExit.endedAt, jobId);
+          if (queueDebug) {
+            try {
+              console.log('[db] marking crawl_jobs row done for', jobId);
+            } catch (_) {}
+          }
+          const info = db.prepare('UPDATE crawl_jobs SET ended_at = ?, status = ? WHERE id = ?').run(job.lastExit.endedAt, 'done', jobId);
+          if (queueDebug) {
+            try {
+              console.log('[db] crawl_jobs update changes=', info?.changes, 'rows');
+            } catch (_) {}
+          }
         }
-      } catch (_) {}
-      // Include jobId on terminal event
+      } catch (err) {
+        if (queueDebug) {
+          try {
+            console.warn('[db] failed to update crawl_jobs row:', err?.message || err);
+          } catch (_) {}
+        }
+      }
       try {
-        broadcast('done', {
-          ...job.lastExit,
-          jobId
-        }, jobId);
+        broadcast('done', { ...job.lastExit, jobId }, jobId);
       } catch (_) {
         broadcast('done', job.lastExit, jobId);
       }
-      // Remove job after a brief delay to reduce control/status races on ultra-fast runs
       setTimeout(() => {
         try {
           jobs.delete(jobId);
@@ -1113,17 +1148,17 @@ function createApp(options = {}) {
         try {
           broadcastJobs(true);
         } catch (_) {}
-        // update legacy aggregate
         const first = getFirstJob();
         if (!first) {
           startedAt = null;
           lastExit = job.lastExit;
           metrics.running = 0;
+          try { metrics.stage = 'idle'; } catch (_) {}
           paused = false;
         }
       }, 350);
     };
-    // Attach error/exit listeners immediately to avoid missing early events
+
     if (typeof child.on === 'function') {
       child.on('exit', onExit);
       child.on('close', (code, signal) => onExit(code, signal));
@@ -1134,21 +1169,15 @@ function createApp(options = {}) {
             job.killTimer = null;
           }
         } catch (_) {}
-        const msg = (err && err.message) ? err.message : String(err);
+        const msg = err?.message || String(err);
         try {
           console.log(`[child] error: ${msg}`);
         } catch (_) {}
-        broadcast('log', {
-          stream: 'server',
-          line: `[server] crawler failed to start: ${msg}\n`
-        }, jobId);
-        onExit(null, null, {
-          error: msg
-        });
+        broadcast('log', { stream: 'server', line: `[server] crawler failed to start: ${msg}\n` }, jobId);
+        onExit(null, null, { error: msg });
       });
     }
 
-    // Update legacy aggregate for first job
     const first = getFirstJob();
     if (first && first.id === jobId) {
       startedAt = job.startedAt;
@@ -1156,31 +1185,23 @@ function createApp(options = {}) {
       metrics._lastSampleTime = Date.now();
       metrics._lastVisited = 0;
       metrics._lastDownloaded = 0;
+      try {
+        metrics.stage = job.stage || 'preparing';
+      } catch (_) {}
       lastExit = null;
       paused = false;
     }
 
-    // Respond immediately so UI/tests see fast acceptance
     const initialDurationMs = Math.max(0, performance.now() - perfStart);
     try {
-      res.status(202).json({
-        pid: child.pid || null,
-        args,
-        jobId,
-        stage: job.stage,
-        durationMs: Number(initialDurationMs.toFixed(3))
-      });
-    } catch (_) {
-      try {
-        /* ignore */ } catch (_) {}
-    }
+      res.status(202).json({ pid: child.pid || null, args, jobId, stage: job.stage, durationMs: Number(initialDurationMs.toFixed(3)) });
+    } catch (_) {}
     const t4 = Date.now();
     if (traceStart) {
       try {
-        console.log(`[trace] start handler timings job=${jobId} buildArgs=${t2-t1}ms spawn=${t3-t2}ms respond=${t4-t3}ms totalSoFar=${t4-t0}ms`);
+        console.log(`[trace] start handler timings job=${jobId} buildArgs=${t2 - t1}ms spawn=${t3 - t2}ms respond=${t4 - t3}ms totalSoFar=${t4 - t0}ms`);
       } catch (_) {}
     }
-    // Kick off best-effort persistence off the hot path
     try {
       setImmediate(persistStart);
     } catch (_) {
@@ -1189,7 +1210,6 @@ function createApp(options = {}) {
       } catch (_) {}
     }
 
-    // Defer non-critical work to next tick to avoid delaying the response under load
     const defer = (fn) => {
       try {
         setImmediate(fn);
@@ -1199,13 +1219,8 @@ function createApp(options = {}) {
     };
     defer(() => {
       const td0 = Date.now();
-      // Immediately surface that the crawler has started and seed a progress frame so the UI updates
       try {
-        broadcast('log', {
-          stream: 'server',
-          line: `[server] starting crawler pid=${child?.pid || 'n/a'}\n`
-        }, jobId);
-        // Seed initial progress and include optional domain telemetry defaults so UI/tests see the fields immediately
+        broadcast('log', { stream: 'server', line: `[server] starting crawler pid=${child?.pid || 'n/a'}\n` }, jobId);
         broadcastProgress({
           stage: job.stage,
           visited: 0,
@@ -1219,70 +1234,62 @@ function createApp(options = {}) {
           domainIntervalMs: null
         }, jobId, job.metrics);
         try {
-          console.log(`[api] crawler started pid=${child?.pid||'n/a'} jobId=${jobId} args=${JSON.stringify(args)}`);
+          console.log(`[api] crawler started pid=${child?.pid || 'n/a'} jobId=${jobId} args=${JSON.stringify(args)}`);
         } catch (_) {}
       } catch (_) {}
       const td1 = Date.now();
-      // Seed jobs list right away
       try {
         broadcastJobs(true);
       } catch (_) {}
       const td2 = Date.now();
-
-      // Startup watchdog: if no child output or progress within a short window, surface hints.
-      // In TEST_FAST mode shorten the timers drastically (or skip) to avoid prolonging test runtime or producing late logs.
       try {
         const TEST_FAST = process.env.TEST_FAST === '1' || process.env.TEST_FAST === 'true';
         const firstDelay = TEST_FAST ? 600 : 3000;
         const secondDelay = TEST_FAST ? 1500 : 10000;
         if (!TEST_FAST || firstDelay > 0) {
-          const t1 = setTimeout(() => {
+          const tWatch1 = setTimeout(() => {
             try {
               if (!job._outputSeen && job.child) {
                 const hint = '[server] waiting for crawler output… (this can be caused by large SQLite DB init or slow network)';
                 if (!QUIET) console.log(hint);
-                broadcast('log', {
-                  stream: 'server',
-                  line: hint + '\n'
-                }, jobId);
+                broadcast('log', { stream: 'server', line: `${hint}\n` }, jobId);
               }
             } catch (_) {}
           }, firstDelay);
-          t1.unref?.();
-          job.watchdogTimers?.push(t1);
+          tWatch1.unref?.();
+          job.watchdogTimers?.push(tWatch1);
         }
         if (!TEST_FAST || secondDelay > 0) {
-          const t2 = setTimeout(() => {
+          const tWatch2 = setTimeout(() => {
             try {
               if (!job._outputSeen && job.child) {
                 const hint = '[server] still waiting… check firewall/proxy and DB availability; try depth=0, maxPages=1';
                 if (!QUIET) console.log(hint);
-                broadcast('log', {
-                  stream: 'server',
-                  line: hint + '\n'
-                }, jobId);
+                broadcast('log', { stream: 'server', line: `${hint}\n` }, jobId);
               }
             } catch (_) {}
           }, secondDelay);
-          t2.unref?.();
-          job.watchdogTimers?.push(t2);
+          tWatch2.unref?.();
+          job.watchdogTimers?.push(tWatch2);
         }
       } catch (_) {}
       const td3 = Date.now();
       if (traceStart) {
         try {
-          console.log(`[trace] start defer timings job=${jobId} seed=${td1-td0}ms jobsBroadcast=${td2-td1}ms watchdogSetup=${td3-td2}ms`);
+          console.log(
+            `[trace] start defer timings job=${jobId} seed=${td1 - td0}ms jobsBroadcast=${td2 - td1}ms watchdogSetup=${td3 - td2}ms`
+          );
         } catch (_) {}
       }
     });
 
-    let _firstOutputAt = 0;
+    let firstOutputAt = 0;
     child.stdout.on('data', (chunk) => {
-      if (!_firstOutputAt) {
-        _firstOutputAt = Date.now();
+      if (!firstOutputAt) {
+        firstOutputAt = Date.now();
         if (traceStart) {
           try {
-            console.log(`[trace] first child stdout job=${jobId} after ${_firstOutputAt - t0}ms`);
+            console.log(`[trace] first child stdout job=${jobId} after ${firstOutputAt - t0}ms`);
           } catch (_) {}
         }
       }
@@ -1294,13 +1301,11 @@ function createApp(options = {}) {
         const line = job.stdoutBuf.slice(0, idx);
         job.stdoutBuf = job.stdoutBuf.slice(idx + 1);
         if (!line) continue;
-        // Mirror a few key lines to server console for live diagnostics (keep noise low)
         try {
           if (/^(Loading robots\.txt|robots\.txt loaded|Fetching:|Sitemap enqueue complete|Crawling completed|Final stats)/.test(line)) {
             if (!QUIET) console.log(`[child:stdout] ${line}`);
           }
         } catch (_) {}
-        // Prefer structured events over raw log echoes to reduce client work
         if (line.startsWith('ERROR ')) {
           try {
             const obj = JSON.parse(line.slice('ERROR '.length));
@@ -1321,7 +1326,7 @@ function createApp(options = {}) {
             if (job.stage !== 'running') updateJobStage(job, 'running');
             if (!Object.prototype.hasOwnProperty.call(obj, 'stage')) obj.stage = job.stage;
             try {
-              if (!QUIET) console.log(`[child:progress] v=${obj.visited||0} d=${obj.downloaded||0} q=${obj.queueSize||0}`);
+              if (!QUIET) console.log(`[child:progress] v=${obj.visited || 0} d=${obj.downloaded || 0} q=${obj.queueSize || 0}`);
             } catch (_) {}
             broadcastProgress(obj, jobId, job.metrics);
             broadcastJobs(false);
@@ -1331,32 +1336,67 @@ function createApp(options = {}) {
         if (line.startsWith('QUEUE ')) {
           try {
             const obj = JSON.parse(line.slice('QUEUE '.length));
-            // Expected shape (example): { action: 'enqueued'|'dequeued'|'retry'|'drop', url, depth?, host?, reason?, queueSize? }
             broadcast('queue', obj, jobId);
-            // Persist event (best-effort)
             try {
               const db = getDbRW();
               if (db) {
                 const ts = new Date().toISOString();
-                db.prepare(`INSERT INTO queue_events(job_id, ts, action, url, depth, host, reason, queue_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-                  .run(jobId, ts, String(obj.action || ''), obj.url || null, (obj.depth != null ? obj.depth : null), obj.host || null, obj.reason || null, (obj.queueSize != null ? obj.queueSize : null));
+                if (queueDebug) {
+                  try {
+                    console.log('[db] queue event', jobId, obj.action, obj.url || '');
+                  } catch (_) {}
+                }
+                const info = db.prepare(
+                  'INSERT INTO queue_events(job_id, ts, action, url, depth, host, reason, queue_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+                ).run(
+                  jobId,
+                  ts,
+                  String(obj.action || ''),
+                  obj.url || null,
+                  obj.depth != null ? obj.depth : null,
+                  obj.host || null,
+                  obj.reason || null,
+                  obj.queueSize != null ? obj.queueSize : null
+                );
+                if (queueDebug) {
+                  try {
+                    console.log('[db] queue_events insert changes=', info?.changes, 'rows');
+                  } catch (_) {}
+                }
               }
-            } catch (_) {}
+            } catch (err) {
+              if (queueDebug) {
+                try {
+                  console.warn('[db] failed to insert queue event:', err?.message || err);
+                } catch (_) {}
+              }
+            }
             continue;
           } catch (_) {}
         }
         if (line.startsWith('PROBLEM ')) {
           try {
             const obj = JSON.parse(line.slice('PROBLEM '.length));
-            // Derive severity (not stored yet; added to SSE payload)
             broadcast('problem', obj, jobId);
-            // Persist best-effort (without severity column to keep table normalized); future migrations can add it if needed
             try {
               const db = getDbRW();
               if (db) {
                 const ts = new Date().toISOString();
-                db.prepare(`INSERT INTO crawl_problems(job_id, ts, kind, scope, target, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-                  .run(jobId, ts, String(obj.kind || ''), obj.scope || null, obj.target || null, obj.message || null, obj.details != null ? (typeof obj.details === 'string' ? obj.details : JSON.stringify(obj.details)) : null);
+                db.prepare(
+                  'INSERT INTO crawl_problems(job_id, ts, kind, scope, target, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                ).run(
+                  jobId,
+                  ts,
+                  String(obj.kind || ''),
+                  obj.scope || null,
+                  obj.target || null,
+                  obj.message || null,
+                  obj.details != null
+                    ? typeof obj.details === 'string'
+                      ? obj.details
+                      : JSON.stringify(obj.details)
+                    : null
+                );
               }
             } catch (_) {}
             continue;
@@ -1370,16 +1410,21 @@ function createApp(options = {}) {
               const db = getDbRW();
               if (db) {
                 const ts = obj.ts || new Date().toISOString();
-                db.prepare(`INSERT INTO planner_stage_events(job_id, ts, stage, status, sequence, duration_ms, details) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-                  .run(
-                    jobId,
-                    ts,
-                    obj.stage != null ? String(obj.stage) : null,
-                    obj.status != null ? String(obj.status) : null,
-                    obj.sequence != null ? obj.sequence : null,
-                    obj.durationMs != null ? obj.durationMs : null,
-                    obj.details != null ? (typeof obj.details === 'string' ? obj.details : JSON.stringify(obj.details)) : null
-                  );
+                db.prepare(
+                  'INSERT INTO planner_stage_events(job_id, ts, stage, status, sequence, duration_ms, details) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                ).run(
+                  jobId,
+                  ts,
+                  obj.stage != null ? String(obj.stage) : null,
+                  obj.status != null ? String(obj.status) : null,
+                  obj.sequence != null ? obj.sequence : null,
+                  obj.durationMs != null ? obj.durationMs : null,
+                  obj.details != null
+                    ? typeof obj.details === 'string'
+                      ? obj.details
+                      : JSON.stringify(obj.details)
+                    : null
+                );
               }
             } catch (_) {}
             continue;
@@ -1389,13 +1434,25 @@ function createApp(options = {}) {
           try {
             const obj = JSON.parse(line.slice('MILESTONE '.length));
             broadcast('milestone', obj, jobId);
-            // Persist best-effort
             try {
               const db = getDbRW();
               if (db) {
                 const ts = new Date().toISOString();
-                db.prepare(`INSERT INTO crawl_milestones(job_id, ts, kind, scope, target, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-                  .run(jobId, ts, String(obj.kind || ''), obj.scope || null, obj.target || null, obj.message || null, obj.details != null ? (typeof obj.details === 'string' ? obj.details : JSON.stringify(obj.details)) : null);
+                db.prepare(
+                  'INSERT INTO crawl_milestones(job_id, ts, kind, scope, target, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                ).run(
+                  jobId,
+                  ts,
+                  String(obj.kind || ''),
+                  obj.scope || null,
+                  obj.target || null,
+                  obj.message || null,
+                  obj.details != null
+                    ? typeof obj.details === 'string'
+                      ? obj.details
+                      : JSON.stringify(obj.details)
+                    : null
+                );
               }
             } catch (_) {}
             continue;
@@ -1403,20 +1460,20 @@ function createApp(options = {}) {
         }
         const m = line.match(/Final stats: (\d+) pages visited, (\d+) pages downloaded, (\d+) articles found, (\d+) articles saved/);
         if (m) {
-          broadcastProgress({
-            stage: job.stage,
-            visited: parseInt(m[1], 10),
-            downloaded: parseInt(m[2], 10),
-            found: parseInt(m[3], 10),
-            saved: parseInt(m[4], 10)
-          }, jobId, job.metrics);
+          broadcastProgress(
+            {
+              stage: job.stage,
+              visited: parseInt(m[1], 10),
+              downloaded: parseInt(m[2], 10),
+              found: parseInt(m[3], 10),
+              saved: parseInt(m[4], 10)
+            },
+            jobId,
+            job.metrics
+          );
           continue;
         }
-        // If not a structured line, forward as log (rate-limited in broadcast)
-        broadcast('log', {
-          stream: 'stdout',
-          line: line + '\n'
-        }, jobId);
+        broadcast('log', { stream: 'stdout', line: `${line}\n` }, jobId);
       }
     });
 
@@ -1427,15 +1484,9 @@ function createApp(options = {}) {
         const line = job.stderrBuf.slice(0, idx);
         job.stderrBuf = job.stderrBuf.slice(idx + 1);
         if (!line) continue;
-        // Rate-limited in broadcast
-        broadcast('log', {
-          stream: 'stderr',
-          line: line + '\n'
-        }, jobId);
+        broadcast('log', { stream: 'stderr', line: `${line}\n` }, jobId);
       }
     });
-
-    // (exit/error handlers already attached above)
   });
 
   app.post('/api/analysis/start', (req, res) => {
@@ -1485,30 +1536,19 @@ function createApp(options = {}) {
         apiUrl: `/api/analysis/${runId}`
       });
     } catch (err) {
-      res.status(500).json({
-  error: err?.message || String(err)
-      });
+      res.status(500).json({ error: err?.message || String(err) });
     }
   });
 
-  // /api/crawls* routes are now provided by createCrawlsApiRouter
-
   app.post('/api/stop', (req, res) => {
-  const jobId = String(req.body?.jobId || req.query?.jobId || '').trim() || null;
-    if (jobs.size === 0) return res.status(200).json({
-      stopped: false
-    });
-    if (!jobId && jobs.size > 1) return res.status(400).json({
-      error: 'Multiple jobs running; specify jobId'
-    });
+    const jobId = String(req.body?.jobId || req.query?.jobId || '').trim() || null;
+    if (jobs.size === 0) return res.status(200).json({ stopped: false });
+    if (!jobId && jobs.size > 1) return res.status(400).json({ error: 'Multiple jobs running; specify jobId' });
     try {
       const job = jobId ? jobs.get(jobId) : getFirstJob();
-      if (!job) return res.status(404).json({
-        error: 'Job not found'
-      });
+      if (!job) return res.status(404).json({ error: 'Job not found' });
       const target = job.child;
-  if (typeof target?.kill === 'function') target.kill('SIGTERM');
-      // Escalate if the process does not exit promptly
+      if (typeof target?.kill === 'function') target.kill('SIGTERM');
       try {
         if (job.killTimer) {
           clearTimeout(job.killTimer);
@@ -1518,15 +1558,12 @@ function createApp(options = {}) {
       job.killTimer = setTimeout(() => {
         try {
           if (target && !target.killed) {
-            // On Windows, SIGKILL may still work via Node; additionally attempt taskkill
             try {
               target.kill('SIGKILL');
             } catch (_) {}
             if (process.platform === 'win32' && target.pid) {
               try {
-                const {
-                  exec
-                } = require('child_process');
+                const { exec } = require('child_process');
                 exec(`taskkill /PID ${target.pid} /T /F`);
               } catch (_) {}
             }
@@ -1534,1193 +1571,79 @@ function createApp(options = {}) {
         } catch (_) {}
       }, 800);
       try {
-  job.killTimer?.unref?.();
+        job.killTimer?.unref?.();
       } catch (_) {}
       try {
-        console.log(`[api] POST /api/stop -> 202 stop requested jobId=${jobId||job.id} pid=${target?.pid||'n/a'}`);
+        console.log(`[api] POST /api/stop -> 202 stop requested jobId=${jobId || job.id} pid=${target?.pid || 'n/a'}`);
       } catch (_) {}
-      res.status(202).json({
-        stopped: true,
-        escalatesInMs: 800
-      });
+      res.status(202).json({ stopped: true, escalatesInMs: 800 });
     } catch (e) {
       try {
-        console.log(`[api] POST /api/stop -> 500 ${e?.message||e}`);
+        console.log(`[api] POST /api/stop -> 500 ${e?.message || e}`);
       } catch (_) {}
-      res.status(500).json({
-        error: e.message
-      });
+      res.status(500).json({ error: e.message });
     }
   });
 
-  // Pause/resume endpoints: communicate via child stdin line commands
   app.post('/api/pause', (req, res) => {
-  const jobId = String(req.body?.jobId || req.query?.jobId || '').trim() || null;
-    // Gracefully handle not-running with 200 to simplify UI/test flows
-    if (jobs.size === 0) return res.status(200).json({
-      ok: false,
-      paused: false,
-      error: 'not-running'
-    });
-    if (!jobId && jobs.size > 1) return res.status(400).json({
-      error: 'Multiple jobs running; specify jobId'
-    });
+    const jobId = String(req.body?.jobId || req.query?.jobId || '').trim() || null;
+    if (jobs.size === 0) return res.status(200).json({ ok: false, paused: false, error: 'not-running' });
+    if (!jobId && jobs.size > 1) return res.status(400).json({ error: 'Multiple jobs running; specify jobId' });
     try {
       const job = jobId ? jobs.get(jobId) : getFirstJob();
-      if (!job) return res.status(404).json({
-        error: 'Job not found'
-      });
+      if (!job) return res.status(404).json({ error: 'Job not found' });
       const stdin = job.stdin || (job.child && job.child.stdin);
       if (stdin && typeof stdin.write === 'function' && !(job.child && job.child.killed)) {
         stdin.write('PAUSE\n');
         job.paused = true;
-        broadcastProgress({
-          ...job.metrics,
-          stage: job.stage,
-          paused: true
-        }, job.id, job.metrics);
+        broadcastProgress({ ...job.metrics, stage: job.stage, paused: true }, job.id, job.metrics);
         try {
           console.log(`[api] POST /api/pause -> paused=true jobId=${job.id}`);
         } catch (_) {}
-        return res.json({
-          ok: true,
-          paused: true
-        });
+        return res.json({ ok: true, paused: true });
       }
       try {
         console.log('[api] POST /api/pause -> stdin unavailable');
       } catch (_) {}
-      return res.status(200).json({
-        ok: false,
-        paused: false,
-        error: 'stdin unavailable'
-      });
+      return res.status(200).json({ ok: false, paused: false, error: 'stdin unavailable' });
     } catch (e) {
       try {
-        console.log(`[api] POST /api/pause -> 500 ${e?.message||e}`);
+        console.log(`[api] POST /api/pause -> 500 ${e?.message || e}`);
       } catch (_) {}
-      return res.status(500).json({
-        error: e.message
-      });
+      return res.status(500).json({ error: e.message });
     }
   });
+
   app.post('/api/resume', (req, res) => {
-  const jobId = String(req.body?.jobId || req.query?.jobId || '').trim() || null;
-    // Gracefully handle not-running with 200 to simplify UI/test flows
-    if (jobs.size === 0) return res.status(200).json({
-      ok: false,
-      paused: false,
-      error: 'not-running'
-    });
-    if (!jobId && jobs.size > 1) return res.status(400).json({
-      error: 'Multiple jobs running; specify jobId'
-    });
+    const jobId = String(req.body?.jobId || req.query?.jobId || '').trim() || null;
+    if (jobs.size === 0) return res.status(200).json({ ok: false, paused: false, error: 'not-running' });
+    if (!jobId && jobs.size > 1) return res.status(400).json({ error: 'Multiple jobs running; specify jobId' });
     try {
       const job = jobId ? jobs.get(jobId) : getFirstJob();
-      if (!job) return res.status(404).json({
-        error: 'Job not found'
-      });
+      if (!job) return res.status(404).json({ error: 'Job not found' });
       const stdin = job.stdin || (job.child && job.child.stdin);
       if (stdin && typeof stdin.write === 'function' && !(job.child && job.child.killed)) {
         stdin.write('RESUME\n');
         job.paused = false;
-        broadcastProgress({
-          ...job.metrics,
-          stage: job.stage,
-          paused: false
-        }, job.id, job.metrics);
+        broadcastProgress({ ...job.metrics, stage: job.stage, paused: false }, job.id, job.metrics);
         try {
           console.log(`[api] POST /api/resume -> paused=false jobId=${job.id}`);
         } catch (_) {}
-        return res.json({
-          ok: true,
-          paused: false
-        });
+        return res.json({ ok: true, paused: false });
       }
       try {
         console.log('[api] POST /api/resume -> stdin unavailable');
       } catch (_) {}
-      return res.status(200).json({
-        ok: false,
-        paused: false,
-        error: 'stdin unavailable'
-      });
+      return res.status(200).json({ ok: false, paused: false, error: 'stdin unavailable' });
     } catch (e) {
       try {
-        console.log(`[api] POST /api/resume -> 500 ${e?.message||e}`);
+        console.log(`[api] POST /api/resume -> 500 ${e?.message || e}`);
       } catch (_) {}
-      return res.status(500).json({
-        error: e.message
-      });
+      return res.status(500).json({ error: e.message });
     }
   });
 
-  // /metrics moved to routes/api.misc.js
-
-  // /api/queues* routes are now provided by createQueuesApiRouter
-
-  // /events route moved to routes/events.js
-
-  // /health moved to routes/api.misc.js
-
-  // Analysis SSR surfaces (list + detail)
-  app.get('/analysis', (req, res) => {
-    res.redirect('/analysis/ssr');
-  });
-
-  app.get('/analysis/ssr', (req, res) => {
-    const limit = Math.max(1, Math.min(200, parseInt(req.query.limit || '50', 10)));
-    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    }[c]));
-    const formatDuration = (ms) => {
-      if (!Number.isFinite(ms) || ms <= 0) return '—';
-      if (ms < 1000) return `${ms | 0}ms`;
-      const seconds = ms / 1000;
-      if (seconds < 60) return `${seconds.toFixed(1)}s`;
-      const minutes = Math.floor(seconds / 60);
-      const remaining = Math.round(seconds % 60);
-      return `${minutes}m ${remaining}s`;
-    };
-    try {
-      const db = getDbRW();
-      if (!db) {
-        return res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
-      }
-      ensureAnalysisRunSchema(db);
-      const { items, total } = listAnalysisRuns(db, { limit });
-      const rowsHtml = items.length ? items.map((run) => {
-        const duration = run.durationMs != null ? formatDuration(run.durationMs) : '—';
-        const status = esc(run.status || 'unknown');
-        const stage = esc(run.stage || '—');
-        const config = [
-          run.pageLimit != null ? `pages: ${run.pageLimit}` : null,
-          run.domainLimit != null ? `domains: ${run.domainLimit}` : null,
-          run.skipPages ? 'skipPages' : null,
-          run.skipDomains ? 'skipDomains' : null,
-          run.dryRun ? 'dryRun' : null
-        ].filter(Boolean).join(', ');
-        return `
-          <tr>
-            <td class="mono"><a href="/analysis/${esc(run.id)}/ssr">${esc(run.id)}</a></td>
-            <td>${status}</td>
-            <td>${stage}</td>
-            <td>${esc(run.startedAt || '—')}</td>
-            <td>${esc(run.endedAt || '—')}</td>
-            <td>${esc(duration)}</td>
-            <td>${esc(config || '—')}</td>
-          </tr>
-        `;
-      }).join('') : '<tr><td colspan="7" class="meta">No analysis runs yet.</td></tr>';
-      const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Analysis runs</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  .meta{color:var(--muted);font-size:12px}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  form.filters{margin:6px 2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  input,select{padding:6px 8px}
-  button{padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer}
-  button:hover{text-decoration:underline}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>Analysis runs</h1>
-      ${renderNav('analysis')}
-    </header>
-    <form class="filters" method="GET" action="/analysis/ssr">
-      <label>Limit <input type="number" min="1" max="200" name="limit" value="${esc(limit)}"/></label>
-      <button type="submit">Apply</button>
-      <span class="meta">Total ${esc(total)}</span>
-    </form>
-    <table>
-      <thead><tr><th>ID</th><th>Status</th><th>Stage</th><th>Started</th><th>Ended</th><th>Duration</th><th>Config</th></tr></thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
-  </div>
-</body></html>`;
-      return res.type('html').send(html);
-    } catch (err) {
-      const message = esc(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis runs: ${message}</p></body></html>`);
-    }
-  });
-
-  app.get('/analysis/:id/ssr', (req, res) => {
-    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    }[c]));
-    const safeScript = (value) => {
-      const json = JSON.stringify(value ?? {});
-      return json
-        .replace(/</g, '\\u003c')
-        .replace(/>/g, '\\u003e')
-        .replace(/\u2028/g, '\\u2028')
-        .replace(/\u2029/g, '\\u2029');
-    };
-    const runId = String(req.params.id || '').trim();
-    if (!runId) {
-      return res.status(400).send('<!doctype html><title>Analysis</title><body><p>Missing analysis run id.</p></body></html>');
-    }
-    try {
-      const db = getDbRW();
-      if (!db) {
-        return res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
-      }
-      ensureAnalysisRunSchema(db);
-      const detail = getAnalysisRun(db, runId);
-      if (!detail) {
-        return res.status(404).send('<!doctype html><title>Analysis</title><body><p>Analysis run not found.</p></body></html>');
-      }
-      const { run, events } = detail;
-  const summaryPretty = run.summary ? esc(JSON.stringify(run.summary, null, 2)) : 'No summary yet.';
-      const eventsHtml = events.length ? events.map((event) => `
-        <tr>
-          <td class="nowrap">${esc(event.ts || '')}</td>
-          <td>${esc(event.stage || '')}</td>
-          <td>${esc(event.message || '')}</td>
-        </tr>
-      `).join('') : '<tr><td colspan="3" class="meta">No events logged.</td></tr>';
-      const safePayload = safeScript(detail);
-      const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Analysis ${esc(run.id)}</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:1000px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  section{margin-bottom:24px}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  pre{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;overflow:auto}
-  .meta{color:var(--muted);font-size:12px}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  .nowrap{white-space:nowrap}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>Analysis run <span class="mono">${esc(run.id)}</span></h1>
-      ${renderNav('analysis')}
-    </header>
-    <section>
-      <h2>Overview</h2>
-      <table>
-        <tbody>
-          <tr><th>Status</th><td>${esc(run.status || 'unknown')}</td></tr>
-          <tr><th>Stage</th><td>${esc(run.stage || '—')}</td></tr>
-          <tr><th>Started</th><td>${esc(run.startedAt || '—')}</td></tr>
-          <tr><th>Ended</th><td>${esc(run.endedAt || '—')}</td></tr>
-          <tr><th>Analysis version</th><td>${run.analysisVersion != null ? esc(run.analysisVersion) : '—'}</td></tr>
-          <tr><th>Page limit</th><td>${run.pageLimit != null ? esc(run.pageLimit) : '—'}</td></tr>
-          <tr><th>Domain limit</th><td>${run.domainLimit != null ? esc(run.domainLimit) : '—'}</td></tr>
-          <tr><th>Flags</th><td>${[run.skipPages ? 'skipPages' : null, run.skipDomains ? 'skipDomains' : null, run.dryRun ? 'dryRun' : null, run.verbose ? 'verbose' : null].filter(Boolean).map(esc).join(', ') || '—'}</td></tr>
-        </tbody>
-      </table>
-    </section>
-    <section>
-      <h2>Summary</h2>
-      <pre>${summaryPretty}</pre>
-    </section>
-    <section>
-      <h2>Events</h2>
-      <table>
-        <thead><tr><th>Timestamp</th><th>Stage</th><th>Message</th></tr></thead>
-        <tbody>${eventsHtml}</tbody>
-      </table>
-    </section>
-  </div>
-  <script>window.__ANALYSIS_RUN__ = ${safePayload};</script>
-</body></html>`;
-      res.type('html').send(html);
-    } catch (err) {
-      const message = esc(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis run: ${message}</p></body></html>`);
-    }
-  });
-
-  // Problems SSR (read-only): newest-first problems with filters and simple pager
-  app.get('/problems/ssr', (req, res) => {
-    const db = getDbRW();
-    const render = (items, opts) => {
-      const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        '\'': '&#39;'
-      } [c]));
-      const rows = items.map(r => {
-        const severity = deriveProblemSeverity(r.kind);
-        const sevClass = severity === 'warn' ? 'warn' : 'info';
-        return `
-        <tr>
-          <td class="nowrap">${esc(r.ts)}</td>
-          <td class="mono">${esc(r.jobId || '')}</td>
-          <td><span class="pill ${sevClass}"><code>${esc(r.kind)}</code></span></td>
-          <td>${esc(r.scope || '')}</td>
-          <td>${esc(r.target || '')}</td>
-          <td>${esc(r.message || '')}</td>
-        </tr>`;
-      }).join('');
-      const q = (k, v) => {
-        const u = new URL('http://x');
-        if (opts.job) u.searchParams.set('job', opts.job);
-        if (opts.kind) u.searchParams.set('kind', opts.kind);
-        if (opts.scope) u.searchParams.set('scope', opts.scope);
-        if (opts.limit) u.searchParams.set('limit', String(opts.limit));
-        if (k && v != null) u.searchParams.set(k, String(v));
-        const s = u.search.toString();
-        return s ? ('?' + s.slice(1)) : '';
-      };
-      const pager = `
-        <div class="row">
-          <div class="meta">${items.length} shown</div>
-          <div class="right nav-small">
-            ${opts.prevAfter?`<a href="/problems/ssr${q('after', opts.prevAfter)}">← Newer</a>`:''}
-            ${opts.nextBefore?`<a class="space" href="/problems/ssr${q('before', opts.nextBefore)}">Older →</a>`:''}
-          </div>
-        </div>`;
-      const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Problems</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  .meta{color:var(--muted);font-size:12px}
-  form.filters{margin:6px 2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  input,select{padding:6px 8px}
-  button{padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer}
-  button:hover{text-decoration:underline}
-  .row{display:flex;justify-content:space-between;align-items:center;margin:6px 2px}
-  .right a{margin-left:8px}
-  .space{margin-left:8px}
-  .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 6px;background:#fff}
-  .pill.warn{background:#fff8e1;border-color:#facc15;color:#92400e}
-  .pill.info{background:#eef2ff;border-color:#c7d2fe;color:#3730a3}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  .nowrap{white-space:nowrap}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>Problems</h1>
-  ${renderNav('problems')}
-    </header>
-    <form class="filters" method="GET" action="/problems/ssr">
-      <label>Job <input type="text" name="job" value="${esc(opts.job||'')}"/></label>
-      <label>Kind <input type="text" name="kind" value="${esc(opts.kind||'')}"/></label>
-      <label>Scope <input type="text" name="scope" value="${esc(opts.scope||'')}"/></label>
-      <label>Limit <input type="number" min="1" max="500" name="limit" value="${esc(opts.limit||100)}"/></label>
-      <button type="submit">Apply</button>
-    </form>
-    ${pager}
-    <table>
-      <thead><tr><th>Time</th><th>Job</th><th>Kind</th><th>Scope</th><th>Target</th><th>Message</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="6" class="meta">No problems</td></tr>'}</tbody>
-    </table>
-    ${pager}
-  </div>
-</body></html>`;
-      res.type('html').send(html);
-    }
-    try {
-      if (!db) {
-        return res.status(503).send('<!doctype html><title>Problems</title><body><p>Database unavailable.</p></body></html>');
-      }
-      const {
-        items,
-        cursors,
-        appliedFilters
-      } = fetchProblems(db, {
-        job: req.query.job,
-        kind: req.query.kind,
-        scope: req.query.scope,
-        limit: req.query.limit,
-        before: req.query.before,
-        after: req.query.after
-      });
-      const opts = {
-        ...appliedFilters,
-        ...cursors
-      };
-      if (!opts.limit) opts.limit = 100;
-      render(items, opts);
-    } catch (e) {
-      try {
-        console.log(`[ssr] GET /problems/ssr -> error ${e?.message || e}`);
-      } catch (_) {}
-      if (res.headersSent) return;
-      render([], {});
-    }
-  });
-
-  // Milestones SSR (read-only): newest-first milestones with filters and simple pager
-  app.get('/milestones/ssr', (req, res) => {
-    const db = getDbRW();
-    const render = (items, opts) => {
-      const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        '\'': '&#39;'
-      } [c]));
-      const rows = items.map(r => `
-        <tr>
-          <td class="nowrap">${esc(r.ts)}</td>
-          <td class="mono">${esc(r.jobId || '')}</td>
-          <td><span class="pill good"><code>${esc(r.kind)}</code></span></td>
-          <td>${esc(r.scope || '')}</td>
-          <td>${esc(r.target || '')}</td>
-          <td>${esc(r.message || '')}</td>
-        </tr>
-      `).join('');
-      const q = (k, v) => {
-        const u = new URL('http://x');
-        if (opts.job) u.searchParams.set('job', opts.job);
-        if (opts.kind) u.searchParams.set('kind', opts.kind);
-        if (opts.scope) u.searchParams.set('scope', opts.scope);
-        if (opts.limit) u.searchParams.set('limit', String(opts.limit));
-        if (k && v != null) u.searchParams.set(k, String(v));
-        const s = u.search.toString();
-        return s ? ('?' + s.slice(1)) : '';
-      };
-      const pager = `
-        <div class="row">
-          <div class="meta">${items.length} shown</div>
-          <div class="right nav-small">
-            ${opts.prevAfter?`<a href="/milestones/ssr${q('after', opts.prevAfter)}">← Newer</a>`:''}
-            ${opts.nextBefore?`<a class="space" href="/milestones/ssr${q('before', opts.nextBefore)}">Older →</a>`:''}
-          </div>
-        </div>`;
-      const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Milestones</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff;--good:#16a34a}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  .meta{color:var(--muted);font-size:12px}
-  form.filters{margin:6px 2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  input,select{padding:6px 8px}
-  button{padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer}
-  button:hover{text-decoration:underline}
-  .row{display:flex;justify-content:space-between;align-items:center;margin:6px 2px}
-  .right a{margin-left:8px}
-  .space{margin-left:8px}
-  .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 6px;background:#fff}
-  .pill.good{border-color:#d1fae5;background:#ecfdf5;color:var(--good)}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  .nowrap{white-space:nowrap}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>Milestones</h1>
-  ${renderNav('milestones')}
-    </header>
-    <form class="filters" method="GET" action="/milestones/ssr">
-      <label>Job <input type="text" name="job" value="${esc(opts.job||'')}"/></label>
-      <label>Kind <input type="text" name="kind" value="${esc(opts.kind||'')}"/></label>
-      <label>Scope <input type="text" name="scope" value="${esc(opts.scope||'')}"/></label>
-      <label>Limit <input type="number" min="1" max="500" name="limit" value="${esc(opts.limit||100)}"/></label>
-      <button type="submit">Apply</button>
-    </form>
-    ${pager}
-    <table>
-      <thead><tr><th>Time</th><th>Job</th><th>Kind</th><th>Scope</th><th>Target</th><th>Message</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="6" class="meta">No milestones</td></tr>'}</tbody>
-    </table>
-    ${pager}
-  </div>
-</body></html>`;
-      res.type('html').send(html);
-    };
-
-    try {
-      if (!db) {
-        return res.status(503).send('<!doctype html><title>Milestones</title><body><p>Database unavailable.</p></body></html>');
-      }
-      const {
-        items,
-        cursors,
-        appliedFilters
-      } = fetchMilestones(db, {
-        job: req.query.job,
-        kind: req.query.kind,
-        scope: req.query.scope,
-        limit: req.query.limit,
-        before: req.query.before,
-        after: req.query.after
-      });
-      const opts = {
-        ...appliedFilters,
-        ...cursors
-      };
-      if (!opts.limit) opts.limit = 100;
-      render(items, opts);
-    } catch (e) {
-      try {
-        console.log(`[ssr] GET /milestones/ssr -> error ${e?.message || e}`);
-      } catch (_) {}
-      if (res.headersSent) return;
-      render([], {});
-    }
-  });
-  // Gazetteer per-kind listing (read-only SSR)
-  app.get('/gazetteer/kind/:kind', (req, res) => {
-    const trace = startTrace(req, 'gazetteer');
-    const kindParam = String(req.params.kind || '').trim();
-    const normalizedKind = kindParam.toLowerCase();
-    const showStorage = String(req.query.storage || '0') === '1';
-    const limit = Math.max(1, Math.min(500, parseInt(String(req.query.limit ?? ''), 10) || 300));
-
-    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      '\'': '&#39;'
-    } [c]));
-
-    const num = (n) => {
-      if (n == null) return '';
-      try {
-        return Number(n).toLocaleString();
-      } catch (_) {
-        return String(n);
-      }
-    };
-
-    const fmtBytes = (n) => {
-      if (n == null) return '';
-      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-      let i = 0;
-      let v = Number(n) || 0;
-      while (v >= 1024 && i < units.length - 1) {
-        v /= 1024;
-        i++;
-      }
-      return (i === 0 ? String(v | 0) : v.toFixed(1)) + ' ' + units[i];
-    };
-
-    const qs = (obj) => {
-      const params = new URLSearchParams();
-      for (const [key, value] of Object.entries(obj)) {
-        if (value != null && value !== '') params.set(key, String(value));
-      }
-      const str = params.toString();
-      return str ? `?${str}` : '';
-    };
-
-    if (!normalizedKind) {
-      trace.end();
-      return res.status(400).send('<!doctype html><title>Gazetteer</title><body><h1>Missing kind</h1></body></html>');
-    }
-
-    let openDbReadOnly;
-    try {
-      ({ openDbReadOnly } = require('../../ensure_db'));
-    } catch (err) {
-      trace.end();
-      return res.status(503).send('<!doctype html><title>Gazetteer</title><body><h1>Database unavailable.</h1></body></html>');
-    }
-
-    let db;
-    try {
-      const doneOpen = trace.pre('db-open');
-      db = openDbReadOnly(urlsDbPath);
-      doneOpen();
-
-      const doneRows = trace.pre('rows');
-      let rows = db.prepare(`
-        SELECT p.id,
-               p.country_code,
-               p.adm1_code,
-               p.population,
-               COALESCE(cn.name, (
-                 SELECT name
-                 FROM place_names pn
-                 WHERE pn.place_id = p.id
-                 ORDER BY pn.is_official DESC, pn.is_preferred DESC, pn.name
-                 LIMIT 1
-               )) AS name
-        FROM places p
-        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-        WHERE LOWER(p.kind) = ?
-        ORDER BY p.population DESC, name COLLATE NOCASE ASC
-        LIMIT ?
-      `).all(normalizedKind, limit);
-      doneRows();
-
-      let totalStorage = 0;
-      if (showStorage) {
-        const memo = new Map();
-        const sizeFor = (id) => {
-          if (memo.has(id)) return memo.get(id);
-          let val = 0;
-          try {
-            const a = db.prepare(`SELECT COALESCE(LENGTH(kind),0)+COALESCE(LENGTH(country_code),0)+COALESCE(LENGTH(adm1_code),0)+COALESCE(LENGTH(adm2_code),0)+COALESCE(LENGTH(timezone),0)+COALESCE(LENGTH(bbox),0)+COALESCE(LENGTH(source),0)+COALESCE(LENGTH(extra),0) AS b FROM places WHERE id=?`).get(id)?.b || 0;
-            const b = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(name),0)+COALESCE(LENGTH(normalized),0)+COALESCE(LENGTH(lang),0)+COALESCE(LENGTH(script),0)+COALESCE(LENGTH(name_kind),0)+COALESCE(LENGTH(source),0)),0) AS b FROM place_names WHERE place_id=?`).get(id)?.b || 0;
-            const c = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(source),0)+COALESCE(LENGTH(ext_id),0)),0) AS b FROM place_external_ids WHERE place_id=?`).get(id)?.b || 0;
-            const d = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(relation),0)),0) AS b FROM place_hierarchy WHERE parent_id=? OR child_id=?`).get(id, id)?.b || 0;
-            val = (a + b + c + d) | 0;
-          } catch (_) {
-            val = 0;
-          }
-          memo.set(id, val);
-          return val;
-        };
-        rows = rows.map((r) => {
-          const size = sizeFor(r.id);
-          totalStorage += size;
-          return { ...r, size_bytes: size };
-        });
-      }
-
-      const perCountry = new Map();
-      for (const r of rows) {
-        const code = (r.country_code || '').toUpperCase() || '—';
-        perCountry.set(code, (perCountry.get(code) || 0) + 1);
-      }
-      const countrySummary = Array.from(perCountry.entries())
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, 12)
-        .map(([code, count]) => `<span class="pill">${esc(code)}: ${count}</span>`)
-        .join(' ');
-
-      const columnCount = showStorage ? 5 : 4;
-      const rowsHtml = rows.map((r) => `
-        <tr>
-          <td><a href="/gazetteer/place/${r.id}">${esc(r.name || '(unnamed)')}</a></td>
-          <td>${esc(r.country_code || '')}</td>
-          <td>${esc(r.adm1_code || '')}</td>
-          ${showStorage ? `<td class="tr"><span title="Approximate">~ ${fmtBytes(r.size_bytes || 0)}</span></td>` : ''}
-          <td class="tr">${num(r.population)}</td>
-        </tr>
-      `).join('');
-
-      const toggleLink = showStorage
-        ? `<a href="${qs({ limit })}">Hide storage</a>`
-        : `<a href="${qs({ storage: 1, limit })}">Show approx storage</a>`;
-
-      const titleText = normalizedKind ? normalizedKind.replace(/^[a-z]/, (ch) => ch.toUpperCase()) : 'Places';
-      const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Gazetteer – ${esc(titleText)}</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff;--bg-soft:#f8fafc}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:900px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  .meta{color:var(--muted);font-size:13px;margin:6px 0}
-  .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;margin:2px;background:#fff;font-size:12px}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:12px}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}
-  .toolbar a{color:#2563eb;text-decoration:none;font-size:13px}
-  .toolbar a:hover{text-decoration:underline}
-  .tr{text-align:right}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>${esc(titleText)} places</h1>
-  ${renderNav('gazetteer')}
-    </header>
-    <div class="meta">Showing ${rows.length} place${rows.length === 1 ? '' : 's'} (limit ${limit}).</div>
-    ${countrySummary ? `<div class="meta">Top countries: ${countrySummary}</div>` : ''}
-    ${showStorage ? `<div class="meta">Total shown storage: ~ ${fmtBytes(totalStorage)}</div>` : ''}
-    <div class="toolbar">
-      ${toggleLink}
-      <a href="/gazetteer">Back to summary</a>
-      <a href="/gazetteer/places">All places</a>
-    </div>
-    <table>
-      <thead><tr><th>Name</th><th>Country</th><th>ADM1</th>${showStorage ? '<th class="tr">Storage</th>' : ''}<th class="tr">Population</th></tr></thead>
-      <tbody>${rowsHtml || `<tr><td colspan="${columnCount}" class="meta">No places found.</td></tr>`}</tbody>
-    </table>
-  </div>
-</body></html>`;
-
-      const doneRender = trace.pre('render');
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send(html);
-      doneRender();
-      trace.end();
-      db.close();
-    } catch (err) {
-      try {
-        if (db) db.close();
-        trace.end();
-      } catch (_) {}
-      res.status(500).send('<!doctype html><title>Error</title><pre>' + esc(err?.message || String(err)) + '</pre>');
-    }
-  });
-
-  // JSON: Gazetteer places search (with pagination)
-  app.get('/api/gazetteer/places', (req, res) => {
-    try {
-      let openDbReadOnly;
-      try {
-        ({
-          openDbReadOnly
-        } = require('../../ensure_db'));
-      } catch (e) {
-        return res.status(503).json({
-          error: 'Database unavailable',
-          detail: e.message
-        });
-      }
-      const db = openDbReadOnly(urlsDbPath);
-      const q = String(req.query.q || '').trim();
-      const kind = String(req.query.kind || '').trim();
-      const cc = String(req.query.cc || '').trim().toUpperCase();
-      const adm1 = String(req.query.adm1 || '').trim();
-      const minpop = parseInt(req.query.minpop || '0', 10) || 0;
-      const sort = String(req.query.sort || 'name').trim();
-      const dir = (String(req.query.dir || 'asc').toLowerCase() === 'desc') ? 'DESC' : 'ASC';
-      const page = Math.max(1, parseInt(req.query.page || '1', 10));
-      const pageSize = Math.max(1, Math.min(200, parseInt(req.query.pageSize || '50', 10)));
-      const offset = (page - 1) * pageSize;
-      const where = [];
-      const params = [];
-      if (kind) {
-        where.push('p.kind = ?');
-        params.push(kind);
-      }
-      if (cc) {
-        where.push('UPPER(p.country_code) = ?');
-        params.push(cc);
-      }
-      if (adm1) {
-        where.push('p.adm1_code = ?');
-        params.push(adm1);
-      }
-      if (minpop > 0) {
-        where.push('COALESCE(p.population,0) >= ?');
-        params.push(minpop);
-      }
-      if (q) {
-        const like = `%${q.toLowerCase()}%`;
-        where.push(`EXISTS (SELECT 1 FROM place_names nx WHERE nx.place_id = p.id AND (LOWER(nx.normalized) LIKE ? OR LOWER(nx.name) LIKE ?))`);
-        params.push(like, like);
-      }
-      const sortCol = (sort === 'pop' || sort === 'population') ? 'p.population' : (sort === 'country' ? 'p.country_code' : 'cn.name');
-      const total = db.prepare(`
-        SELECT COUNT(*) AS c
-        FROM places p
-        WHERE ((p.canonical_name_id IS NOT NULL AND p.canonical_name_id IN (SELECT id FROM place_names))
-               OR EXISTS(SELECT 1 FROM place_names pn WHERE pn.place_id = p.id))
-          ${where.length ? ' AND ' + where.join(' AND ') : ''}
-      `).get(...params).c;
-      const rows = db.prepare(`
-        SELECT p.id, p.kind, p.country_code, p.adm1_code, p.population,
-               COALESCE(cn.name, pn.name) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.place_id = p.id
-        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-        WHERE ((p.canonical_name_id IS NOT NULL AND p.canonical_name_id IN (SELECT id FROM place_names))
-               OR EXISTS(SELECT 1 FROM place_names pn WHERE pn.place_id = p.id))
-          ${where.length ? ' AND ' + where.join(' AND ') : ''}
-        ORDER BY ${sortCol} ${dir}
-        LIMIT ? OFFSET ?
-      `).all(...params, pageSize, offset);
-      db.close();
-      res.json({
-        total,
-        page,
-        pageSize,
-        rows
-      });
-    } catch (e) {
-      res.status(500).json({
-        error: e.message
-      });
-    }
-  });
-
-  // JSON: Gazetteer place details
-  app.get('/api/gazetteer/place/:id', (req, res) => {
-    try {
-      const id = parseInt(req.params.id, 10);
-      if (!id) return res.status(400).json({
-        error: 'Invalid id'
-      });
-      let openDbReadOnly;
-      try {
-        ({
-          openDbReadOnly
-        } = require('../../ensure_db'));
-      } catch (e) {
-        return res.status(503).json({
-          error: 'Database unavailable',
-          detail: e.message
-        });
-      }
-      const db = openDbReadOnly(urlsDbPath);
-      const place = db.prepare('SELECT * FROM places WHERE id = ?').get(id);
-      if (!place) {
-        db.close();
-        return res.status(404).json({
-          error: 'Not found'
-        });
-      }
-      const names = db.prepare('SELECT * FROM place_names WHERE place_id = ? ORDER BY is_official DESC, is_preferred DESC, name').all(id);
-      const parents = db.prepare('SELECT ph.parent_id, p.kind, p.country_code, p.adm1_code, COALESCE(cn.name, pn.name) AS name FROM place_hierarchy ph JOIN places p ON p.id = ph.parent_id LEFT JOIN place_names pn ON pn.place_id = p.id LEFT JOIN place_names cn ON cn.id = p.canonical_name_id WHERE ph.child_id = ?').all(id);
-      const children = db.prepare('SELECT ph.child_id, p.kind, p.country_code, p.adm1_code, COALESCE(cn.name, pn.name) AS name FROM place_hierarchy ph JOIN places p ON p.id = ph.child_id LEFT JOIN place_names pn ON pn.place_id = p.id LEFT JOIN place_names cn ON cn.id = p.canonical_name_id WHERE ph.parent_id = ? LIMIT 200').all(id);
-      // Compute size metrics similar to SSR page
-      let size_bytes = 0;
-      let size_method = 'approx';
-      try {
-        const row = db.prepare(`WITH
-  t_places(rowid) AS (SELECT id FROM places WHERE id = ?),
-  t_names(rowid) AS (SELECT rowid FROM place_names WHERE place_id = ?),
-  t_ext(rowid) AS (SELECT rowid FROM place_external_ids WHERE place_id = ?),
-  t_hier(rowid) AS (SELECT rowid FROM place_hierarchy WHERE parent_id = ? OR child_id = ?),
-  idx_places AS (SELECT name FROM pragma_index_list('places')),
-  idx_names AS (SELECT name FROM pragma_index_list('place_names')),
-  idx_ext AS (SELECT name FROM pragma_index_list('place_external_ids')),
-  idx_hier AS (SELECT name FROM pragma_index_list('place_hierarchy'))
-SELECT (
-  COALESCE((SELECT SUM(payload) FROM dbstat WHERE (name='places' AND rowid IN (SELECT rowid FROM t_places)) OR (name IN (SELECT name FROM idx_places) AND rowid IN (SELECT rowid FROM t_places))),0)
-  + COALESCE((SELECT SUM(payload) FROM dbstat WHERE (name='place_names' AND rowid IN (SELECT rowid FROM t_names)) OR (name IN (SELECT name FROM idx_names) AND rowid IN (SELECT rowid FROM t_names))),0)
-  + COALESCE((SELECT SUM(payload) FROM dbstat WHERE (name='place_external_ids' AND rowid IN (SELECT rowid FROM t_ext)) OR (name IN (SELECT name FROM idx_ext) AND rowid IN (SELECT rowid FROM t_ext))),0)
-  + COALESCE((SELECT SUM(payload) FROM dbstat WHERE (name='place_hierarchy' AND rowid IN (SELECT rowid FROM t_hier)) OR (name IN (SELECT name FROM idx_hier) AND rowid IN (SELECT rowid FROM t_hier))),0)
-) AS bytes`).get(id, id, id, id, id);
-        if (row && typeof row.bytes === 'number') {
-          size_bytes = row.bytes | 0;
-          size_method = 'dbstat';
-        }
-      } catch (_) {
-        try {
-          const a = db.prepare(`SELECT COALESCE(LENGTH(kind),0)+COALESCE(LENGTH(country_code),0)+COALESCE(LENGTH(adm1_code),0)+COALESCE(LENGTH(adm2_code),0)+COALESCE(LENGTH(timezone),0)+COALESCE(LENGTH(bbox),0)+COALESCE(LENGTH(source),0)+COALESCE(LENGTH(extra),0) AS b FROM places WHERE id=?`).get(id)?.b || 0;
-          const b = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(name),0)+COALESCE(LENGTH(normalized),0)+COALESCE(LENGTH(lang),0)+COALESCE(LENGTH(script),0)+COALESCE(LENGTH(name_kind),0)+COALESCE(LENGTH(source),0)),0) AS b FROM place_names WHERE place_id=?`).get(id)?.b || 0;
-          const c = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(source),0)+COALESCE(LENGTH(ext_id),0)),0) AS b FROM place_external_ids WHERE place_id=?`).get(id)?.b || 0;
-          const d = db.prepare(`SELECT COALESCE(SUM(COALESCE(LENGTH(relation),0)),0) AS b FROM place_hierarchy WHERE parent_id=? OR child_id=?`).get(id, id)?.b || 0;
-          size_bytes = (a + b + c + d) | 0;
-          size_method = 'approx';
-        } catch (_) {
-          size_bytes = 0;
-          size_method = 'approx';
-        }
-      }
-      db.close();
-      res.json({
-        place,
-        names,
-        parents,
-        children,
-        size_bytes,
-        size_method
-      });
-    } catch (e) {
-      res.status(500).json({
-        error: e.message
-      });
-    }
-  });
-
-  // JSON: Gazetteer recent articles mentioning a place (by id)
-  app.get('/api/gazetteer/articles', (req, res) => {
-    try {
-      const id = parseInt(String(req.query.id || ''), 10);
-      if (!id) return res.status(400).json({
-        error: 'Missing id'
-      });
-      let openDbReadOnly;
-      try {
-        ({
-          openDbReadOnly
-        } = require('../../ensure_db'));
-      } catch (e) {
-        return res.status(503).json({
-          error: 'Database unavailable',
-          detail: e.message
-        });
-      }
-      const db = openDbReadOnly(urlsDbPath);
-      const cname = db.prepare('SELECT name FROM place_names WHERE id = (SELECT canonical_name_id FROM places WHERE id = ?)').get(id)?.name || null;
-      let rows = [];
-      if (cname) {
-        rows = db.prepare(`
-          SELECT a.url, a.title, a.date
-          FROM article_places ap JOIN articles a ON a.url = ap.article_url
-          WHERE ap.place = ?
-          ORDER BY (a.date IS NULL) ASC, a.date DESC
-          LIMIT 20
-        `).all(cname);
-      }
-      db.close();
-      res.json(rows);
-    } catch (e) {
-      res.status(500).json({
-        error: e.message
-      });
-    }
-  });
-
-  // JSON: Gazetteer hubs for a host
-  app.get('/api/gazetteer/hubs', (req, res) => {
-    try {
-      const host = String(req.query.host || '').trim().toLowerCase();
-      let openDbReadOnly;
-      try {
-        ({
-          openDbReadOnly
-        } = require('../../ensure_db'));
-      } catch (e) {
-        return res.status(200).json([]);
-      }
-      const db = openDbReadOnly(urlsDbPath);
-      let rows = [];
-      try {
-        if (host) rows = db.prepare('SELECT * FROM place_hubs WHERE LOWER(host) = ? ORDER BY last_seen_at DESC LIMIT 50').all(host);
-        else rows = db.prepare('SELECT * FROM place_hubs ORDER BY last_seen_at DESC LIMIT 50').all();
-      } catch (_) {
-        rows = [];
-      }
-      db.close();
-      res.json(rows);
-    } catch (_) {
-      res.status(200).json([]);
-    }
-  });
-
-  // JSON: Gazetteer resolve helper
-  app.get('/api/gazetteer/resolve', (req, res) => {
-    try {
-      const q = String(req.query.q || '').trim();
-      if (!q) return res.status(200).json([]);
-      let openDbReadOnly;
-      try {
-        ({
-          openDbReadOnly
-        } = require('../../ensure_db'));
-      } catch (e) {
-        return res.status(200).json([]);
-      }
-      const db = openDbReadOnly(urlsDbPath);
-      const like = `%${q.toLowerCase()}%`;
-      const rows = db.prepare(`
-        SELECT p.id, p.kind, p.country_code, p.adm1_code,
-               COALESCE(cn.name, pn.name) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.place_id = p.id
-        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-        WHERE EXISTS (SELECT 1 FROM place_names nx WHERE nx.place_id = p.id AND (LOWER(nx.normalized) LIKE ? OR LOWER(nx.name) LIKE ?))
-        ORDER BY (p.kind!='city') ASC, (p.kind!='region') ASC, (p.population IS NULL) ASC, p.population DESC
-        LIMIT 10
-      `).all(like, like);
-      db.close();
-      res.json(rows);
-    } catch (e) {
-      res.status(200).json([]);
-    }
-  });
-
-  // Domain summary API
-  app.get('/api/domain-summary', (req, res) => {
-    try {
-      const host = String(req.query.host || '').trim().toLowerCase();
-      if (!host) return res.status(400).json({
-        error: 'Missing host'
-      });
-      let NewsDatabase;
-      try {
-        NewsDatabase = require('../../db');
-      } catch (e) {
-        return res.status(503).json({
-          error: 'Database unavailable',
-          detail: e.message
-        });
-      }
-      const db = new NewsDatabase(urlsDbPath);
-      // Articles by host
-      const art = db.db.prepare(`
-        SELECT COUNT(*) AS c FROM articles a
-        JOIN urls u ON u.url = a.url
-        WHERE LOWER(u.host) = ?
-  `).get(host)?.c || 0;
-      // Fetches by host
-      let fetches = 0;
-      try {
-  fetches = db.db.prepare(`SELECT COUNT(*) AS c FROM fetches WHERE LOWER(host) = ?`).get(host)?.c || 0;
-      } catch (_) {
-        // fallback via urls join
-        try {
-          fetches = db.db.prepare(`SELECT COUNT(*) AS c FROM fetches f JOIN urls u ON u.url=f.url WHERE LOWER(u.host) = ?`).get(host)?.c || 0;
-        } catch (_) {
-          fetches = 0;
-        }
-      }
-      db.close();
-      res.json({
-        host,
-        articles: art,
-        fetches
-      });
-    } catch (e) {
-      res.status(500).json({
-        error: e.message
-      });
-    }
-  });
-
-  // Server-rendered list of all countries
-  app.get('/gazetteer/countries', (req, res) => {
-    const trace = startTrace(req, 'gazetteer');
-
-    function esc(s) {
-      return String(s).replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        '\'': '&#39;'
-      } [c]));
-    }
-
-    function num(n) {
-      if (n == null) return '';
-      try {
-        return Number(n).toLocaleString();
-      } catch {
-        return String(n);
-      }
-    }
-    try {
-      let openDbReadOnly;
-      try {
-        ({
-          openDbReadOnly
-        } = require('../../ensure_db'));
-      } catch (e) {
-        res.status(503).send('<!doctype html><title>Countries</title><h1>Countries</h1><p>Database unavailable.</p>');
-        return;
-      }
-      const doneOpen = trace.pre('db-open');
-      const db = openDbReadOnly(urlsDbPath);
-      doneOpen();
-      const doneList = trace.pre('list-countries');
-      const rows = db.prepare(`
-        SELECT p.id, p.country_code, p.population, COALESCE(cn.name, pn.name) AS name
-        FROM places p
-        LEFT JOIN place_names pn ON pn.place_id = p.id
-        LEFT JOIN place_names cn ON cn.id = p.canonical_name_id
-        WHERE p.kind = 'country'
-        GROUP BY p.id
-        ORDER BY name ASC
-      `).all();
-      doneList();
-      const doneClose = trace.pre('db-close');
-      db.close();
-      doneClose();
-      const htmlRows = rows.map(r => `
-        <tr>
-          <td><a href="/gazetteer/place/${r.id}">${esc(r.name||'')}</a></td>
-          <td>${esc(r.country_code||'')}</td>
-          <td style="text-align:right">${num(r.population)}</td>
-        </tr>
-      `).join('') || '<tr><td colspan="3" class="meta">No countries</td></tr>';
-      const page = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Countries — Gazetteer</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:900px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  .meta{color:var(--muted);font-size:12px}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>Countries</h1>
-  ${renderNav('gazetteer')}
-    </header>
-    <table>
-      <thead><tr><th>Name</th><th>CC</th><th style="text-align:right">Population</th></tr></thead>
-      <tbody>${htmlRows || '<tr><td colspan="3" class="meta">No countries</td></tr>'}</tbody>
-    </table>
-  </div>
-</body></html>`;
-      const doneRender = trace.pre('render');
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send(page);
-      doneRender();
-      trace.end();
-    } catch (e) {
-      try {
-        trace.end();
-      } catch (_) {}
-      res.status(500).send('<!doctype html><title>Error</title><pre>' + esc(e.message || String(e)) + '</pre>');
-    }
-  });
-
-
+  // /api/evaluate: now in createMiscApiRouter
 
   // Static assets with cache headers (mounted after SSR routers so dynamic pages win)
   app.use(express.static(path.join(__dirname, 'public'), {
@@ -2767,6 +1690,9 @@ SELECT (
       } catch (_) {}
       try {
   configManager?.close?.();
+      } catch (_) {}
+      try {
+        app.locals?._cleanupTempDb?.();
       } catch (_) {}
       // End SSE clients to unblock server.close
       try {
@@ -2849,7 +1775,10 @@ function startServer() {
   const configManager = app.locals?.configManager;
   server.on('close', () => {
     try {
-  configManager?.close?.();
+      configManager?.close?.();
+    } catch (_) {}
+    try {
+      app.locals?._cleanupTempDb?.();
     } catch (_) {}
   });
   const candidates = buildPortCandidates();

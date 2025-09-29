@@ -4,7 +4,8 @@ function createProgressBroadcaster({ broadcast, getPaused, setPaused, legacyMetr
   if (typeof broadcast !== 'function') throw new Error('broadcast function required');
   const globalMetrics = legacyMetrics || {
     visited: 0, downloaded: 0, found: 0, saved: 0, errors: 0, queueSize: 0,
-    running: 0, _lastSampleTime: 0, _lastVisited: 0, _lastDownloaded: 0,
+    running: 0, stage: 'idle',
+    _lastSampleTime: 0, _lastVisited: 0, _lastDownloaded: 0,
     requestsPerSec: 0, downloadsPerSec: 0, errorRatePerMin: 0, bytesPerSec: 0,
     cacheHitRatio1m: 0
   };

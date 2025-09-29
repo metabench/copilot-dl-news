@@ -1,152 +1,122 @@
 const express = require('express');
 
-// Misc APIs: status, crawl-types, health, metrics
-// Dependencies are injected to avoid tight coupling with server globals.
-function createMiscApiRouter({ jobs, getLegacy, getMetrics, getDbRW, QUIET }) {
-  if (!jobs || typeof jobs.get !== 'function') throw new Error('createMiscApiRouter: jobs Map required');
-  if (typeof getLegacy !== 'function') throw new Error('createMiscApiRouter: getLegacy() required');
-  if (typeof getMetrics !== 'function') throw new Error('createMiscApiRouter: getMetrics() required');
-  if (typeof getDbRW !== 'function') throw new Error('createMiscApiRouter: getDbRW() required');
-
+function createMiscApiRouter(options = {}) {
+  const {
+    getLegacy,
+    getMetrics,
+    getDbRW
+  } = options;
   const router = express.Router();
 
-  // Status: minimal legacy snapshot
+  if (typeof getLegacy !== 'function' || typeof getMetrics !== 'function' || typeof getDbRW !== 'function') {
+    throw new Error('createMiscApiRouter requires getLegacy, getMetrics, and getDbRW');
+  }
+
+  function buildStatus() {
+    const legacy = getLegacy() || {};
+    const metrics = getMetrics() || {};
+    const running = !!(metrics.running > 0);
+    const stage = metrics.stage || (running ? 'running' : 'idle');
+    return {
+      running,
+      paused: !!legacy.paused,
+      stage,
+      startedAt: legacy.startedAt || null,
+      lastExit: legacy.lastExit || null,
+      queueSize: metrics.queueSize || 0,
+      lastProgressAt: metrics._lastSampleTime || 0
+    };
+  }
+
   router.get('/api/status', (req, res) => {
-    try {
-      const first = (jobs.size ? jobs.values().next().value : null);
-      const { startedAt, lastExit, paused } = getLegacy();
-      const running = !!first;
-      try { console.log(`[api] GET /api/status -> running=${running}`); } catch (_) {}
-      res.json({ running, pid: first?.child?.pid || null, startedAt, lastExit, paused });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
+    res.json(buildStatus());
   });
 
-  // Crawl types catalog (best-effort DB; falls back to defaults)
-  router.get('/api/crawl-types', (req, res) => {
-    try {
-      let items = [];
-      try {
-        const db = getDbRW();
-        if (db) {
-          items = db.prepare('SELECT name, description, declaration FROM crawl_types ORDER BY id').all().map(r => ({
-            name: r.name,
-            description: r.description,
-            declaration: (() => { try { return JSON.parse(r.declaration); } catch (_) { return { crawlType: r.name }; } })()
-          }));
-        }
-      } catch (_) {}
-      if (!items || items.length === 0) {
-        items = [
-          { name: 'basic', description: 'Follow links only (no sitemap)', declaration: { crawlType: 'basic', useSitemap: false, sitemapOnly: false } },
-          { name: 'sitemap-only', description: 'Use only the sitemap to discover pages', declaration: { crawlType: 'sitemap-only', useSitemap: true, sitemapOnly: true } },
-          { name: 'basic-with-sitemap', description: 'Follow links and also use the sitemap', declaration: { crawlType: 'basic-with-sitemap', useSitemap: true, sitemapOnly: false } }
-        ];
-      }
-      res.json({ items });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // Lightweight health
   router.get('/health', (req, res) => {
-    try {
-      const m = getMetrics();
-      const running = jobs.size > 0;
-      let stage = 'idle';
-      if (running) {
-        try {
-          const first = jobs.values().next().value;
-          stage = first?.stage || 'running';
-        } catch (_) {
-          stage = 'running';
-        }
-      }
-      res.json({ running, stage, queueSize: m.queueSize || 0, lastProgressAt: m._lastProgressWall || null, paused: !!getLegacy().paused });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
+    res.json(buildStatus());
   });
 
-  // Prometheus metrics
   router.get('/metrics', (req, res) => {
-    try {
-      const m = getMetrics();
-      const { paused } = getLegacy();
-      res.setHeader('Content-Type', 'text/plain; version=0.0.4');
-      const lines = [];
-      lines.push('# HELP crawler_running Whether the crawler is running (1) or not (0)');
-      lines.push('# TYPE crawler_running gauge');
-      lines.push(`crawler_running ${m.running}`);
-      lines.push('# HELP crawler_paused Whether the crawler is paused (1) or not (0)');
-      lines.push('# TYPE crawler_paused gauge');
-      lines.push(`crawler_paused ${paused ? 1 : 0}`);
-      lines.push('# HELP crawler_requests_total Pages visited');
-      lines.push('# TYPE crawler_requests_total counter');
-      lines.push(`crawler_requests_total ${m.visited}`);
-      lines.push('# HELP crawler_downloads_total Pages downloaded');
-      lines.push('# TYPE crawler_downloads_total counter');
-      lines.push(`crawler_downloads_total ${m.downloaded}`);
-      lines.push('# HELP crawler_articles_found_total Articles detected');
-      lines.push('# TYPE crawler_articles_found_total counter');
-      lines.push(`crawler_articles_found_total ${m.found}`);
-      lines.push('# HELP crawler_articles_saved_total Articles saved');
-      lines.push('# TYPE crawler_articles_saved_total counter');
-      lines.push(`crawler_articles_saved_total ${m.saved}`);
-      lines.push('# HELP crawler_errors_total Errors encountered');
-      lines.push('# TYPE crawler_errors_total counter');
-      lines.push(`crawler_errors_total ${m.errors}`);
-      lines.push('# HELP crawler_queue_size Items currently in the queue');
-      lines.push('# TYPE crawler_queue_size gauge');
-      lines.push(`crawler_queue_size ${m.queueSize}`);
-      lines.push('# HELP crawler_requests_per_second Recent request rate');
-      lines.push('# TYPE crawler_requests_per_second gauge');
-      lines.push(`crawler_requests_per_second ${m.requestsPerSec || 0}`);
-      lines.push('# HELP crawler_downloads_per_second Recent download rate');
-      lines.push('# TYPE crawler_downloads_per_second gauge');
-      lines.push(`crawler_downloads_per_second ${m.downloadsPerSec || 0}`);
-      lines.push('# HELP crawler_bytes_per_second Recent network bytes per second');
-      lines.push('# TYPE crawler_bytes_per_second gauge');
-      lines.push(`crawler_bytes_per_second ${m.bytesPerSec || 0}`);
-      lines.push('# HELP crawler_cache_hit_ratio Cache hit ratio (0..1) over recent window');
-      lines.push('# TYPE crawler_cache_hit_ratio gauge');
-      lines.push(`crawler_cache_hit_ratio ${m.cacheHitRatio1m || 0}`);
-      lines.push('# HELP crawler_error_rate_per_min Errors per minute (recent)');
-      lines.push('# TYPE crawler_error_rate_per_min gauge');
-      lines.push(`crawler_error_rate_per_min ${m.errorRatePerMin || 0}`);
-      res.send(lines.join('\n') + '\n');
-    } catch (e) {
-      res.status(500).send('');
-    }
+    const metrics = getMetrics();
+    const legacy = getLegacy();
+    const lines = [];
+    const text = (name, value, type = 'gauge') => {
+      if (value == null) return;
+      lines.push(`# TYPE ${name} ${type}`);
+      lines.push(`${name} ${value}`);
+    };
+
+    text('crawler_running', metrics.running);
+    text('crawler_paused', legacy.paused ? 1 : 0);
+    text('crawler_visited_total', metrics.visited, 'counter');
+    text('crawler_downloaded_total', metrics.downloaded, 'counter');
+    text('crawler_found_total', metrics.found, 'counter');
+    text('crawler_saved_total', metrics.saved, 'counter');
+    text('crawler_errors_total', metrics.errors, 'counter');
+    text('crawler_queue_size', metrics.queueSize);
+    text('crawler_requests_per_sec', metrics.requestsPerSec.toFixed(2));
+    text('crawler_downloads_per_sec', metrics.downloadsPerSec.toFixed(2));
+    text('crawler_bytes_per_sec', metrics.bytesPerSec.toFixed(0));
+
+    res.type('text/plain').send(lines.join('\n'));
   });
 
   router.get('/api/recent-errors', (req, res) => {
     try {
       const db = getDbRW();
-      if (!db) {
+      if (!db) return res.json({ errors: [] });
+      try {
+        const rows = db.prepare(`
+          SELECT url, message, kind, scope, target, ts
+          FROM crawl_problems
+          WHERE kind IS NOT NULL
+          ORDER BY ts DESC
+          LIMIT 50
+        `).all();
+        return res.json({ errors: rows });
+      } catch (_) {
+        // Fall back to empty payload if table is absent
         return res.json({ errors: [] });
       }
-      const rowsParam = req.query.rows ?? req.query.limit ?? 100;
-      const limit = (() => {
-        const parsed = parseInt(String(rowsParam || ''), 10);
-        if (Number.isFinite(parsed)) return Math.max(1, Math.min(1000, parsed));
-        return 100;
-      })();
-      const rows = db.prepare(`
-        SELECT id, url, host, kind, code, message, details, at
-        FROM errors
-        ORDER BY at DESC, id DESC
-        LIMIT ?
-      `).all(limit);
-      res.json({ errors: rows });
-    } catch (e) {
-      res.status(500).json({ errors: [], error: e?.message || String(e) });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/api/crawl-types', (req, res) => {
+    try {
+      const db = getDbRW();
+      if (!db) {
+        return res.status(503).json({
+          error: 'Database unavailable'
+        });
+      }
+      const rows = db.prepare('SELECT name, description, declaration FROM crawl_types ORDER BY id').all();
+      const items = rows.map(row => {
+        try {
+          return { ...row,
+            declaration: JSON.parse(row.declaration)
+          };
+        } catch (e) {
+          return { ...row,
+            declaration: {},
+            error: 'invalid JSON'
+          };
+        }
+      });
+      res.json({
+        items
+      });
+    } catch (err) {
+      res.status(500).json({
+        error: err.message
+      });
     }
   });
 
   return router;
 }
 
-module.exports = { createMiscApiRouter };
+module.exports = {
+  createMiscApiRouter
+};
