@@ -53,7 +53,7 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
     const fetchSpy = jest.fn();
     crawler.fetchPage = async () => { fetchSpy(); throw new Error('should not fetch during rate limit'); };
     crawler.note429(host, 120000);
-    crawler.requestQueue.push({ url: startUrl, depth: 0, type: 'article' });
+  crawler.enqueueRequest({ url: startUrl, depth: 0, type: 'article' });
     const pick = await crawler._pullNextWorkItem();
     expect(pick && pick.item).toBeTruthy();
     expect(pick.context && pick.context.forceCache).toBe(true);
@@ -77,12 +77,12 @@ describe('NewsCrawler processPage cache/refetch behavior', () => {
     const host = new URL(startUrl).hostname;
     crawler.cache.get = async () => null;
     crawler.note429(host, 60000);
-    crawler.requestQueue.push({ url: startUrl, depth: 0, type: 'nav' });
+  crawler.enqueueRequest({ url: startUrl, depth: 0, type: 'nav' });
     const pick = await crawler._pullNextWorkItem();
     expect(!pick || !pick.item).toBe(true);
     expect(pick && pick.wakeAt).toBeTruthy();
     expect(crawler.stats.cacheRateLimitedDeferred).toBeGreaterThan(0);
-    expect(crawler.requestQueue.length).toBe(1);
-    expect(crawler.requestQueue[0].deferredUntil).toBeDefined();
+  expect(crawler.queue.size()).toBe(1);
+  expect(crawler.queue.peek().deferredUntil).toBeDefined();
   });
 });

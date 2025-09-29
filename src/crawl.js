@@ -25,40 +25,7 @@ const { PlannerKnowledgeService } = require('./crawler/PlannerKnowledgeService')
 const Links = require('./crawler/links');
 const { loadSitemaps } = require('./crawler/sitemap');
 
-// Scheduling helpers (min-heap and small utilities)
-class MinHeap {
-  constructor(compare) {
-    this.data = [];
-    this.compare = compare;
-  }
-  size() { return this.data.length; }
-  peek() { return this.data[0]; }
-  push(item) { this.data.push(item); this._siftUp(this.data.length - 1); }
-  pop() {
-    const n = this.data.length;
-    if (n === 0) return undefined;
-    const top = this.data[0];
-    const last = this.data.pop();
-    if (n > 1) { this.data[0] = last; this._siftDown(0); }
-    return top;
-  }
-  _siftUp(i) {
-    const d = this.data; const cmp = this.compare; let idx = i;
-    while (idx > 0) {
-      const p = Math.floor((idx - 1) / 2);
-      if (cmp(d[idx], d[p]) < 0) { [d[idx], d[p]] = [d[p], d[idx]]; idx = p; } else break;
-    }
-  }
-  _siftDown(i) {
-    const d = this.data; const cmp = this.compare; let idx = i; const n = d.length;
-    while (true) {
-      let left = 2 * idx + 1, right = 2 * idx + 2, smallest = idx;
-      if (left < n && cmp(d[left], d[smallest]) < 0) smallest = left;
-      if (right < n && cmp(d[right], d[smallest]) < 0) smallest = right;
-      if (smallest !== idx) { [d[idx], d[smallest]] = [d[smallest], d[idx]]; idx = smallest; } else break;
-    }
-  }
-}
+const QueueManager = require('./crawler/QueueManager');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function nowMs() { return Date.now(); }
@@ -126,14 +93,12 @@ class NewsCrawler {
     
     // State
     this.visited = new Set();
-    this.queuedUrls = new Set(); // to dedupe queued items in priority mode
     this.seededHubUrls = new Set();
     this.historySeedUrls = new Set();
     this.knownArticlesCache = new Map();
     this.articleHeaderCache = new Map();
     this.startUrlNormalized = null;
     this.robotsRules = null;
-    this.requestQueue = []; // used by FIFO single-thread mode
   this.isProcessing = false;
   this.dbAdapter = null;
   // Enhanced features (initialized later)
@@ -156,9 +121,6 @@ class NewsCrawler {
   this.paused = false;
   this.abortRequested = false;
   this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
-    if (this.usePriorityQueue) {
-      this.queueHeap = new MinHeap((a, b) => a.priority - b.priority);
-    }
   // Cache facade
   this.cache = new ArticleCache({ db: null, dataDir: this.dataDir, normalizeUrl: (u) => this.normalizeUrl(u) });
     this.lastRequestTime = 0; // for global spacing
@@ -212,6 +174,30 @@ class NewsCrawler {
     this.emittedMilestones = new Set();
     this._plannerStageSeq = 0;
     this.depth2Visited = new Set();
+
+    this.queue = new QueueManager({
+      usePriorityQueue: this.usePriorityQueue,
+      maxQueue: this.maxQueue,
+      maxDepth: this.maxDepth,
+      stats: this.stats,
+      visited: this.visited,
+      knownArticlesCache: this.knownArticlesCache,
+      getUrlDecision: (url, ctx) => this._getUrlDecision(url, ctx),
+      handlePolicySkip: (decision, info) => this._handlePolicySkip(decision, info),
+      isOnDomain: (normalized) => this.isOnDomain(normalized),
+      isAllowed: (normalized) => this.isAllowed(normalized),
+      looksLikeArticle: (normalized) => this.looksLikeArticle(normalized),
+      safeHostFromUrl: (u) => this._safeHostFromUrl(u),
+      emitQueueEvent: (evt) => this.emitQueueEvent(evt),
+      emitEnhancedQueueEvent: (evt) => this.emitEnhancedQueueEvent(evt),
+      computeEnhancedPriority: (args) => this.computeEnhancedPriority(args),
+      computePriority: (args) => this.computePriority(args),
+      getDbAdapter: () => this.dbAdapter,
+      cache: this.cache,
+      getHostResumeTime: (host) => this._getHostResumeTime(host),
+      isHostRateLimited: (host) => this._isHostRateLimited(host),
+      jobIdProvider: () => this.jobId
+    });
   }
 
   // --- Analysis helpers: use both URL and content signals ---
@@ -969,7 +955,7 @@ class NewsCrawler {
         if (!n) return;
         if (!decision.allow) {
           if (decision.reason === 'query-superfluous') {
-            this._handlePolicySkip(decision, { depth: 0, queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length });
+            this._handlePolicySkip(decision, { depth: 0, queueSize: this.queue.size() });
           }
           return;
         }
@@ -1021,7 +1007,7 @@ class NewsCrawler {
 
     if (!decision.allow) {
       if (decision.reason === 'query-superfluous') {
-        this._handlePolicySkip(decision, { depth: context.depth || 0, queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length });
+        this._handlePolicySkip(decision, { depth: context.depth || 0, queueSize: this.queue.size() });
       } else {
         try { console.log(`Skipping fetch due to policy: ${normalizedUrl} reason=${decision.reason}`); } catch (_) {}
       }
@@ -1249,7 +1235,7 @@ class NewsCrawler {
       saved: this.stats.articlesSaved,
       errors: this.stats.errors,
   bytes: this.stats.bytesDownloaded,
-      queueSize: this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length,
+  queueSize: this.queue.size(),
       currentDownloadsCount: this.currentDownloads.size,
       currentDownloads: inflight,
       paused: !!this.paused,
@@ -1282,15 +1268,7 @@ class NewsCrawler {
     if (reason) {
       try { console.log(`Abort requested: ${reason}`); } catch (_) {}
     }
-    if (this.queueHeap && Array.isArray(this.queueHeap.data)) {
-      this.queueHeap.data.length = 0;
-    }
-    if (Array.isArray(this.requestQueue)) {
-      this.requestQueue.length = 0;
-    }
-    if (this.queuedUrls && typeof this.queuedUrls.clear === 'function') {
-      try { this.queuedUrls.clear(); } catch (_) {}
-    }
+    try { this.queue?.clear?.(); } catch (_) {}
     if (details && typeof details === 'object') {
       this.fatalIssues.push({ kind: reason || 'abort', message: details.message || reason || 'abort', details });
     }
@@ -1912,18 +1890,7 @@ class NewsCrawler {
     for (const link of allLinks) {
       const urlOnly = link.url;
       if (!seen.has(urlOnly)) seen.add(urlOnly);
-      if (this.usePriorityQueue) {
-        this.enqueueRequest({ url: urlOnly, depth: depth + 1, type: link.type });
-      } else {
-        if (!this.visited.has(urlOnly)) {
-          const nextItem = { url: urlOnly, depth: depth + 1, type: link.type };
-          this.requestQueue.push(nextItem);
-          try {
-            const host = this._safeHostFromUrl(urlOnly);
-            this.emitQueueEvent({ action: 'enqueued', url: urlOnly, depth: depth + 1, host, queueSize: this.requestQueue.length });
-          } catch (_) {}
-        }
-      }
+      this.enqueueRequest({ url: urlOnly, depth: depth + 1, type: link.type });
       // Persist link edge to DB if enabled
       if (this.dbAdapter && this.dbAdapter.isEnabled()) {
         this.dbAdapter.insertLink({
@@ -2009,148 +1976,7 @@ class NewsCrawler {
   }
 
   enqueueRequest({ url, depth, type }) {
-    const currentSize = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
-    const decision = this._getUrlDecision(url, { phase: 'enqueue', depth });
-    const analysis = decision?.analysis || {};
-    const normalized = analysis && !analysis.invalid ? analysis.normalized : null;
-    let host = null;
-    try { if (normalized) host = new URL(normalized).hostname; } catch (_) {}
-
-    if (!decision.allow) {
-      if (decision.reason === 'query-superfluous') {
-        this._handlePolicySkip(decision, { depth, queueSize: currentSize });
-      } else {
-        this.emitQueueEvent({ action: 'drop', url: normalized || url, depth, host, reason: decision.reason || 'policy-blocked', queueSize: currentSize });
-      }
-      return false;
-    }
-
-    if (depth > this.maxDepth) {
-      this.emitQueueEvent({ action: 'drop', url: normalized || url, depth, host, reason: 'max-depth', queueSize: currentSize });
-      return false;
-    }
-    if (!normalized) {
-      this.emitQueueEvent({ action: 'drop', url: url, depth, host: null, reason: 'bad-url', queueSize: currentSize });
-      return false;
-    }
-    if (!this.isOnDomain(normalized)) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'off-domain', queueSize: currentSize });
-      return false;
-    }
-    if (!this.isAllowed(normalized)) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'robots-disallow', queueSize: currentSize });
-      return false;
-    }
-
-  const meta = (type && typeof type === 'object') ? type : null;
-    let kind = meta ? (meta.kind || meta.type || meta.intent) : type;
-    const inferredType = this.looksLikeArticle(normalized) ? 'article' : 'nav';
-    if (!kind) {
-      kind = inferredType;
-    }
-    let reason = meta?.reason;
-    let allowRevisit = !!meta?.allowRevisit;
-
-    if (!allowRevisit && this.visited.has(normalized)) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'visited', queueSize: currentSize });
-      return false;
-    }
-
-    let isKnownArticle = false;
-    if (this.dbAdapter && this.dbAdapter.isEnabled() && kind === 'article') {
-      if (this.knownArticlesCache.has(normalized)) {
-        isKnownArticle = !!this.knownArticlesCache.get(normalized);
-      } else {
-        try {
-          const row = this.dbAdapter.getArticleRowByUrl(normalized) || this.dbAdapter.getArticleByUrlOrCanonical(normalized);
-          isKnownArticle = !!row;
-        } catch (_) {
-          isKnownArticle = false;
-        }
-        this.knownArticlesCache.set(normalized, isKnownArticle);
-      }
-    }
-    if (isKnownArticle && kind === 'article') {
-      kind = 'refresh';
-      if (!reason) reason = 'known-article';
-    }
-
-    const isRefreshLike = allowRevisit || kind === 'refresh';
-    const queueKey = isRefreshLike ? `${kind}:${normalized}` : normalized;
-
-    if (this.queuedUrls.has(queueKey)) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'duplicate', queueSize: currentSize });
-      return false;
-    }
-
-    if (this.queueHeap.size() >= this.maxQueue) {
-      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'overflow', queueSize: currentSize });
-      return false;
-    }
-
-    const discoveredAt = Date.now();
-    const priorityBias = typeof meta?.priorityBias === 'number' ? meta.priorityBias : 0;
-    const item = {
-      url: normalized,
-      depth,
-      type: kind,
-      retries: 0,
-      nextEligibleAt: 0,
-      discoveredAt,
-      decision,
-      allowRevisit,
-      queueKey,
-      priorityBias
-    };
-    
-    // Compute priority with enhanced features if available
-    const priorityResult = this.computeEnhancedPriority({ 
-      type: item.type, 
-      depth: item.depth, 
-      discoveredAt, 
-      bias: priorityBias, 
-      url: normalized,
-      meta 
-    });
-    
-    item.priority = priorityResult.priority;
-    
-    // Store enhanced metadata for queue analytics
-    if (priorityResult.prioritySource !== 'base') {
-      item.priorityMetadata = {
-        source: priorityResult.prioritySource,
-        bonusApplied: priorityResult.bonusApplied,
-        clusterId: priorityResult.clusterId,
-        gapPredictionScore: priorityResult.gapPredictionScore
-      };
-    }
-    
-    this.queueHeap.push(item);
-    this.queuedUrls.add(queueKey);
-    const sizeAfter = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
-    
-    // Emit enhanced queue event with priority metadata
-    const queueEventData = {
-      action: 'enqueued',
-      url: normalized,
-      depth,
-      host,
-      queueSize: sizeAfter,
-      reason,
-      jobId: this.jobId
-    };
-    
-    // Add priority metadata if enhanced features are enabled
-    if (priorityResult.prioritySource !== 'base') {
-      queueEventData.priorityScore = priorityResult.priority;
-      queueEventData.prioritySource = priorityResult.prioritySource;
-      queueEventData.bonusApplied = priorityResult.bonusApplied;
-      queueEventData.clusterId = priorityResult.clusterId;
-      queueEventData.gapPredictionScore = priorityResult.gapPredictionScore;
-    }
-    
-    this.emitEnhancedQueueEvent(queueEventData);
-    return true;
+    return this.queue.enqueue({ url, depth, type });
   }
 
   async acquireRateToken() {
@@ -2216,98 +2042,8 @@ class NewsCrawler {
     }
   }
 
-  async _pullNextWorkItem() {
-    const now = nowMs();
-    let minWake = Infinity;
-
-    if (this.usePriorityQueue) {
-      const deferred = [];
-      let candidate = null;
-      let context = null;
-      const maxScans = Math.min(64, this.queueHeap.size() + 1);
-      for (let i = 0; i < maxScans; i++) {
-        const item = this.queueHeap.pop();
-        if (!item) break;
-        const host = this._safeHostFromUrl(item.url);
-        const resumeAt = this._getHostResumeTime(host);
-        let earliest = item.nextEligibleAt || 0;
-        if (resumeAt) earliest = Math.max(earliest, resumeAt);
-        if (earliest > now) {
-          item.nextEligibleAt = earliest;
-          minWake = Math.min(minWake, earliest);
-          deferred.push(item);
-          continue;
-        }
-
-        if (this._isHostRateLimited(host)) {
-          const cached = await this.cache.get(item.url);
-          if (cached) {
-            context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
-            candidate = item;
-            break;
-          }
-          const nextResume = this._getHostResumeTime(host);
-          if (nextResume && nextResume > now) {
-            item.nextEligibleAt = nextResume;
-            minWake = Math.min(minWake, nextResume);
-            this.stats.cacheRateLimitedDeferred = (this.stats.cacheRateLimitedDeferred || 0) + 1;
-            deferred.push(item);
-            continue;
-          }
-        }
-
-        candidate = item;
-        break;
-      }
-      for (const d of deferred) {
-        this.queueHeap.push(d);
-      }
-      if (candidate) {
-        return { item: candidate, context, wakeAt: minWake < Infinity ? minWake : null };
-      }
-    } else {
-      const deferred = [];
-      let candidate = null;
-      let context = null;
-      const limit = Math.min(64, this.requestQueue.length);
-      for (let i = 0; i < limit; i++) {
-        const item = this.requestQueue.shift();
-        if (!item) break;
-        const host = this._safeHostFromUrl(item.url);
-        const resumeAt = this._getHostResumeTime(host);
-        let earliest = item.deferredUntil || 0;
-        if (resumeAt) earliest = Math.max(earliest, resumeAt);
-        if (earliest > now) {
-          item.deferredUntil = earliest;
-          minWake = Math.min(minWake, earliest);
-          const cached = await this.cache.get(item.url);
-          if (cached) {
-            delete item.deferredUntil;
-            context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
-            candidate = item;
-            break;
-          }
-          this.stats.cacheRateLimitedDeferred = (this.stats.cacheRateLimitedDeferred || 0) + 1;
-          deferred.push(item);
-          continue;
-        }
-
-        delete item.deferredUntil;
-        candidate = item;
-        break;
-      }
-      for (const d of deferred) {
-        this.requestQueue.push(d);
-      }
-      if (candidate) {
-        return { item: candidate, context, wakeAt: minWake < Infinity ? minWake : null };
-      }
-    }
-
-    if (minWake < Infinity) {
-      return { wakeAt: minWake };
-    }
-    return null;
+  _pullNextWorkItem() {
+    return this.queue.pullNext();
   }
 
   async runWorker(workerId) {
@@ -2332,7 +2068,7 @@ class NewsCrawler {
       }
       const now = nowMs();
       if (!pick || !pick.item) {
-        const queueSize = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
+        const queueSize = this.queue.size();
         const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : 0;
         const maxWait = wakeTarget > 0 ? Math.min(wakeTarget, 1000) : 1000;
         let waited = 0;
@@ -2340,14 +2076,14 @@ class NewsCrawler {
         while (waited < maxWait && !this.abortRequested) {
           await sleep(Math.min(waitStep, maxWait - waited));
           waited += waitStep;
-          if ((this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length) > 0 || this.paused) {
+          if (this.queue.size() > 0 || this.paused) {
             break;
           }
         }
         if (this.abortRequested) {
           return;
         }
-        if ((this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length) === 0 && !this.paused) {
+        if (this.queue.size() === 0 && !this.paused) {
           return;
         }
         continue;
@@ -2357,14 +2093,9 @@ class NewsCrawler {
       // Dequeue for processing
       try {
         const host = this._safeHostFromUrl(item.url);
-        const sizeNow = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
+        const sizeNow = this.queue.size();
         this.emitQueueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: sizeNow });
       } catch (_) {}
-      if (item.queueKey) {
-        this.queuedUrls.delete(item.queueKey);
-      } else {
-        this.queuedUrls.delete(item.url);
-      }
       this.busyWorkers++;
       const processContext = {
         type: item.type,
@@ -2388,16 +2119,11 @@ class NewsCrawler {
           item.nextEligibleAt = nowMs() + jitter(base);
           // Recompute priority to keep ordering roughly stable
           item.priority = this.computePriority({ type: item.type, depth: item.depth, discoveredAt: item.discoveredAt, bias: item.priorityBias || 0 });
-          this.queueHeap.push(item);
-          if (item.queueKey) {
-            this.queuedUrls.add(item.queueKey);
-          } else {
-            this.queuedUrls.add(item.url);
-          }
+          this.queue.reschedule(item);
           // Emit retry event after requeue
           try {
             const host = (() => { try { return new URL(item.url).hostname; } catch (_) { return null; } })();
-            const sizeNow = this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
+            const sizeNow = this.queue.size();
             this.emitQueueEvent({ action: 'retry', url: item.url, depth: item.depth, host, reason: 'retriable-error', queueSize: sizeNow });
           } catch (_) {}
         }
@@ -2710,11 +2436,7 @@ class NewsCrawler {
     await this.init();
     
     // Start with the initial URL
-    this.requestQueue.push({ url: this.startUrl, depth: 0, type: 'nav' });
-    try {
-      const host = this._safeHostFromUrl(this.startUrl);
-      this.emitQueueEvent({ action: 'enqueued', url: this.startUrl, depth: 0, host, queueSize: this.requestQueue.length });
-    } catch (_) {}
+    this.enqueueRequest({ url: this.startUrl, depth: 0, type: 'nav' });
     
     while (true) {
       if (this.abortRequested) {
@@ -2736,7 +2458,7 @@ class NewsCrawler {
       }
       const now = nowMs();
       if (!pick || !pick.item) {
-        const queueSize = this.requestQueue.length;
+        const queueSize = this.queue.size();
         if (queueSize === 0 && !this.paused) {
           break;
         }
@@ -2750,7 +2472,7 @@ class NewsCrawler {
       const extraCtx = pick.context || {};
       try {
         const host = this._safeHostFromUrl(item.url);
-        this.emitQueueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: this.requestQueue.length });
+        this.emitQueueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: this.queue.size() });
       } catch (_) {}
 
       const processContext = {
