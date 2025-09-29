@@ -55,4 +55,11 @@ describe('/api/recent-domains', () => {
     const hosts = (res.body.domains || []).map(d => d.host);
     expect(hosts).toEqual(expect.arrayContaining(['sitea.example.com', 'siteb.example.com']));
   });
+
+  test('data helper returns empty on DB failure', () => {
+    jest.doMock(DB_ABS, () => { throw new Error('mock db failure'); }, { virtual: false });
+    const { getRecentDomains } = require('../data/recentDomains');
+    const result = getRecentDomains('/fake/path', 10);
+    expect(result).toEqual({ count: 0, totalSeen: 0, limit: 10, domains: [] });
+  });
 });

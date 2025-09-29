@@ -122,6 +122,30 @@ function createMiscApiRouter({ jobs, getLegacy, getMetrics, getDbRW, QUIET }) {
     }
   });
 
+  router.get('/api/recent-errors', (req, res) => {
+    try {
+      const db = getDbRW();
+      if (!db) {
+        return res.json({ errors: [] });
+      }
+      const rowsParam = req.query.rows ?? req.query.limit ?? 100;
+      const limit = (() => {
+        const parsed = parseInt(String(rowsParam || ''), 10);
+        if (Number.isFinite(parsed)) return Math.max(1, Math.min(1000, parsed));
+        return 100;
+      })();
+      const rows = db.prepare(`
+        SELECT id, url, host, kind, code, message, details, at
+        FROM errors
+        ORDER BY at DESC, id DESC
+        LIMIT ?
+      `).all(limit);
+      res.json({ errors: rows });
+    } catch (e) {
+      res.status(500).json({ errors: [], error: e?.message || String(e) });
+    }
+  });
+
   return router;
 }
 

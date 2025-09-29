@@ -2,26 +2,39 @@
 
 This document is the authoritative, AI-friendly map of the system. It describes components, data flows, public contracts (HTTP and SSE), storage, rate limiting, observability, and testing patterns.
 
-If you implement features that change any contract or behavior described here, you must update this file in the same pull request. See “Keep this doc up to date” at the end.
+If you implement features that change any contract or behavior described here, you must update this file in the same pull request. See “Maintaining this document” at the end.
 
-Last updated: 2025-09-30
+Last updated: 2025-09-29
 
+> Operational quick-start steps, guardrails, and testing checklists now live in `RUNBOOK.md`. Roadmap priorities have moved to `ROADMAP.md`. Change history is tracked exclusively in `CHANGELOG.md`.
 
-- **Current focus:** Keep crawl orchestration centered on named `crawlType` presets (especially `intelligent`) while deepening place-hub detection/telemetry and upgrading live analysis UX.
-- **If blocked:** Leave a short note in the roadmap table below with a link to your branch or draft PR so the next agent can pick it up.
-- **Definition of done this week:** Docs and tests match the crawler CLI flags; run a fast smoke test with `UI_FAKE_RUNNER=1` before handing off.
+## Layout: `src/ui/express/server.js`
 
+- **Boot scaffolding (imports & factories).** Sets up child-process runners (`defaultRunner`, `defaultAnalysisRunner`), domain heuristics, and shared utilities before anything touches Express APIs.
+- **`createApp(options = {})`.** Central assembly point that:
+  - Reads configuration (DB paths, multi-job flag, trace toggles) and installs per-request timing logs.
+  - Initializes SSE broadcasters plus in-memory registries for jobs and analysis runs.
+  - Provides lazy database helpers (`getDbRW`, `getDbRO`) that ensure schema availability and cache handles.
+  - Exposes instrumentation helpers (`startTrace`, `recordJobEvent`, `broadcastProgress`) reused by API and SSR surfaces.
+- **Router composition and middleware.** API routers from `src/ui/express/routes/*` are mounted first, followed by SSE endpoints, analysis controls, and legacy inline SSR handlers. Static assets and the 404 page close the stack.
+- **Recent domains API extraction.** `createRecentDomainsApiRouter` (in `routes/api.recent-domains.js`) now delegates to `data/recentDomains.js`, replacing the inline `/api/recent-domains` handler with a reusable data helper.
+- **Queues SSR router.** `createQueuesSsrRouter` (in `routes/ssr.queues.js`) handles `/queues`, `/queues/ssr`, `/queues/latest`, and `/queues/:id/ssr` using `data/queues.js` plus the queue list/detail view helpers.
+- **Crawler lifecycle management.** Helper closures inside `createApp` supervise spawned crawlers: guarding concurrent starts, wiring stdout/stderr to SSE, persisting queue/problem/milestone rows, and handling graceful stop/pause/resume.
+- **Module exports & CLI shim.** The file exports `createApp` and, when executed directly, boots an HTTP server that chooses an available port unless `PORT` is provided.
 
-## Quick start for agents
+> **Refactor objective:** keep `server.js` focused on wiring and orchestration. All HTML generation belongs in `src/ui/express/views/*`, and DB access/SQL belongs in `src/ui/express/data/*` (or service helpers). New code should never embed raw SQL or template strings inside `server.js`; instead, add a data helper + view module and import them here.
 
-- Install dependencies once per checkout: `npm install`.
-- Start the UI server from the project root when needed: `node src/ui/express/server.js`.
-- The server auto-selects an available high-numbered port (41000+ range by default); watch the `GUI server listening ...` log or set `PORT` to override.
-- Trigger a deterministic crawl preview (no network) by posting to `POST /api/crawl` with `UI_FAKE_RUNNER=1`.
-- Run a focused Jest suite: `npm test -- --runTestsByPath ui/__tests__/server.test.js`. For the full suite, drop the `--runTestsByPath` flag.
-- Refresh analysis + milestone prerequisites: `npm run analysis:run` (reuses `analysis-run.js`).
-- Golden rule: if you change an HTTP, SSE, or CLI contract, update the relevant section in this file and add a single-line changelog entry.
+## Incremental refactor guidance
 
+To shrink `server.js`, refactor one route or feature at a time:
+
+1. **Extract data helpers.** Move inline SQL into modules under `src/ui/express/data/`, accepting explicit DB handles supplied by `getDbRO`/`getDbRW`. These helpers should be the only place a feature performs reads/writes.
+2. **Create focused routers.** Build router factories in `src/ui/express/routes/` that accept dependencies (such as `{ urlsDbPath, startTrace, renderNav }`) and encapsulate request handling. Routers should delegate persistence to data helpers and rendering to view helpers.
+3. **Relocate HTML generation.** Replace raw template strings with view helpers collocated with the new routers (for example `src/ui/express/views/`), keeping the output deterministic for SSR tests.
+4. **Wire the router in `server.js`.** Import the new factory, mount it alongside related routes, and remove the legacy handler after parity tests pass. After each extraction, ensure `server.js` no longer contains SQL snippets or HTML markup for that surface.
+5. **Add or extend tests.** Cover the new data helpers and routers via Jest suites (`ui/__tests__/` or `src/ui/express/__tests__/`) before deleting the inlined code.
+
+Repeat this cycle for each SSR surface (queues, problems, milestones, gazetteer pages, URL inspectors) to steadily migrate HTML and SQL out of the main server module.
 
 ## Key files & roles
 
@@ -30,6 +43,8 @@ Last updated: 2025-09-30
 | `src/ui/express/server.js` | Canonical Express server: spawns crawls, serves APIs/SSE, renders SSR pages. |
 | `src/ui/express/services/navigation.js` | Central registry for global nav links plus `renderNav` HTML helper. |
 | `src/ui/express/routes/api.navigation.js` | Express router exposing `/api/navigation/*` endpoints for nav metadata/markup. |
+| `src/ui/express/routes/api.recent-domains.js` | Express router providing `/api/recent-domains`, wired for graceful fallbacks when SQLite modules are unavailable. |
+| `src/ui/express/data/recentDomains.js` | Data helper that executes the windowed recent-domain query and returns the structured payload reused by tests/UI. |
 | `src/ui/public/global-nav.js` | Client-side enhancer that replaces `[data-global-nav]` placeholders with rendered nav markup. |
 | `src/ui/express/services/buildArgs.js` | Translates `POST /api/crawl` bodies into crawler CLI args (crawl type, planner flags, pacing). |
 | `src/crawl.js` | Crawler core: fetches, parses, respects pacing/backoff, emits structured stdout frames. |
@@ -40,50 +55,6 @@ Last updated: 2025-09-30
 | `AGENTS.md` | Living contract for architecture, APIs, events, persistence, and observability. |
 
 
-## Guardrails & gotchas
-
-- Deterministic tests expect `UI_FAKE_RUNNER=1`; without it, suites may hang waiting for real network traffic.
-- `ui/server.js` is a legacy shim; keep all new Express logic in `src/ui/express/server.js`.
-- Keep the changelog lean: fold related edits into a single dated bullet instead of adding multiple entries per day.
-- SQLite writes happen in the crawler; when running locally, avoid deleting the DB while a job is active to prevent `SQLITE_BUSY` issues.
-
-## Intelligent crawl & analysis priorities (Q4 2025)
-
-### Near-term planner milestones (R-02, R-04, R-05, R-06)
-
-- ✅ Ship structured planner stage logging (`planner-stage` SSE + persistence) so we can diagnose hub-seeding behaviour without overloading problem events.
-- ✅ Finish the intelligent crawl completion milestone that summarises seeded hubs, unresolved problems, and coverage deltas for dashboards.
-- Cluster repetitive planner problems before persistence so high-volume gaps (for example, repeated `missing-hub` notices) stay actionable.
-- Persist planner knowledge shards (successful hubs, failed attempts, inferred patterns) for reuse across runs, with clear gating so basic crawl types remain untouched.
-
-### Place-hub coverage & knowledge reuse (R-08 – R-16)
-
-- Emit periodic coverage-score telemetry `{ hubs: { expected, discovered, coveragePct } }` and milestone thresholds so we can watch progress during long intelligent runs.
-- Prototype the gap-driven prioritisation queue tier, guarded behind the intelligent crawl flag and backed by clustered `missing-hub` problems.
-- Persist planner-learned regexes and sitemap inferences, replaying them on new runs and emitting a `patterns-reused` milestone when they activate.
-- Explore predictive hub URL generation for partially covered taxonomies while respecting configurable 404 budgets.
-- Adapt hub refetch windows using observed churn, with a `hub-refresh-accelerated` milestone when the scheduler tightens refreshes.
-- Extend the problem taxonomy with `hub-stale`, `coverage-plateau`, `error-spike`, and `conflicting-classification` so the UI can filter intelligently.
-- Draft the crawl budget heuristic (`crawlBudgetPages`) that scores work items by estimated coverage lift without regressing basic crawl pacing.
-- Store multi-run coverage stats so milestone `coverage-improved` can quantify progress between executions.
-
-### Analysis UI experience (design targets)
-
-- Live run dashboard: stage timeline with heartbeat, aggregated metrics (coverage trend, topic-specific hubs, unresolved problems), and an event feed filtered to place-hub signals.
-- Coverage inspector: drill-down cards for regions/topics showing discovered hubs, confidence bands, gaps, and supporting evidence.
-- Topic-specific matrix: host × topic grid highlighting coverage density and linking to detailed hub cards.
-- Gap inspector: dedicated view for unresolved hubs with remediation hints, linked planner stages, and prioritisation toggles.
-- Knowledge reuse banner: badges for reused vs. newly discovered patterns, with links to prior runs contributing the cache.
-- Historical comparison tools: side-by-side run diff, coverage progression charts, and export/share options for stakeholders.
-- Accessibility and ops polish: keyboard navigation for filters, high-contrast palettes, toast notifications when coverage thresholds are reached, and responsive layouts for control-room displays.
-
-### Action plan (next 2 sprints)
-
-1. **Instrument coverage facts before heuristics change.** Extend the fake/intelligent runners to emit sampled coverage snapshots (`coveragePct`, `expectedHubs`, `seededHubs`) every N progress frames so we can baseline trends. Persist these snapshots alongside planner milestones to unblock dashboards without waiting for schema migrations.
-2. **Schedule planner experiments behind feature flags.** Add planner toggles (`plannerReuseEnabled`, `predictiveHubEnabled`) that gate: (a) replaying persisted hub patterns, (b) generating candidate hubs from gazetteer gaps. Surface activation as milestones so we can A/B via configuration rather than branches.
-3. **Close the loop on problem clustering.** Build a lightweight aggregation in the UI server that groups `missing-hub` problems by host + section before persistence. This feeds both the queues UI and the coverage inspector while reducing noise in SSE streams.
-4. **Prototype two visual affordances.** (a) A sparkline or histogram for `coveragePct` on the dashboard header fed by the new snapshots. (b) An interactive table on `/gazetteer` that overlays coverage deltas per place using cached planner outputs.
-5. **Automate regression detection.** Add Jest smoke tests that assert `/api/navigation/bar` + `/api/navigation/links` stay in sync with the nav helper, and extend the fake runner to confirm coverage snapshots remain monotonic during deterministic runs so planner tweaks can't silently regress coverage graphs.
 
 ## Components at a glance
 
@@ -94,159 +65,6 @@ Last updated: 2025-09-30
   - Provides a “Perform Analysis” control on the crawler homepage that posts to `/api/analysis/start` and surfaces the run link inline for quick navigation.
   - Hosts the navigation service (`renderNav`) and exposes `/api/navigation/*` endpoints for shared nav markup.
   - Exposes observability endpoints and read-only DB-backed pages/APIs.
-
-- Crawler core
-  - File: `src/crawl.js`
-  - Fetches pages, parses articles, respects robots/sitemaps, writes to SQLite, and emits structured progress frames (stdout lines).
-  - Implements per-domain pacing and backoff logic (429-aware) with interval token release.
-  - URL policy heuristics (`src/crawler/urlPolicy.js`) classify query strings (essential vs superfluous) and propose stripped guesses for obvious tracking parameters. Pagination-only query strings (`page` / `offset` / `start` with numeric values on non-search paths) now classify as `superfluous`, so they are skipped when `skipQueryUrls` remains enabled.
-  - Deep URL analysis (`src/crawler/deepUrlAnalysis.js`) checks guessed URLs against the database, records alias mappings, and annotates skip reasons for superfluous query URLs.
-  - Article refetches reuse stored `etag`/`last-modified` metadata; conditional GETs emit `If-None-Match`/`If-Modified-Since` headers and short-circuit on `304 Not Modified` without re-downloading bodies.
-  - Intelligent crawls adaptively enqueue new hubs and history/archive paths when articles expose unseen sections or year/month segments, keeping milestone telemetry in sync while prioritising fresh discoveries ahead of update checks.
-  - Known article URLs detected during enqueue are tagged as `refresh` work: they stay in the queue with lower priority so new discoveries run first, but still issue conditional requests to pick up updates when time allows.
-  - When a domain enters rate-limit backoff, the crawler reprioritizes queued work toward cached pages and defers network-bound items, emitting cache-priority telemetry and milestones so basic crawl types keep progressing during throttling.
-  - Network hard-failure guard aborts the crawl when repeated `ECONNRESET` errors hit the same host within a short window, emits a `problem` event with `kind:"connection-reset"`, and marks the run fatal so the CLI exits non-zero.
-
-- Database layer
-  - File: `src/db.js`
-  - SQLite (better-sqlite3) schema, migrations, triggers, and helpers for articles, fetches, links, urls, domains, categories; `latest_fetch` view.
-
-- Analysis modules
-  - File: `src/analysis/*`
-  - Pure analysis orchestrators and helpers for page/article analysis, place extraction, and deep analysis heuristics.
-
-- Analysis pipeline
-  - Files: `src/tools/analyse-pages.js` (runner), `src/analysis/page-analyzer.js` (core logic), `src/analysis/place-extraction.js`, `src/analysis/deep-analyzer.js`.
-  - Purpose: iterate pending articles, compute analysis findings, run deep heuristics, and persist hubs/places via the orchestrator.
-  - Notes: `analysis.meta.deepAnalysis` now carries optional key-phrase/sentiment scaffolding for downstream enrichment; consumers should treat it as best-effort metadata.
-
-- GUI (static)
-  - Served from: `src/ui/express/public/` (HTML/JS/CSS) via the Express server.
-  - Subscribes to SSE channels to render logs, progress, jobs, and health.
-  - Each static page hydrates a `<div data-global-nav data-active="…">` placeholder via `src/ui/public/global-nav.js`, fetching shared nav HTML from `/api/navigation/bar`.
-  - The crawler home now includes a run overview panel (metrics cards + crawl type/stage badges), an intelligent insights summary fed by milestone data (coverage, seeded hubs, unresolved problems), and live timelines for `milestone` and `planner-stage` SSE events so intelligent crawls surface planner telemetry in real time.
-
-- Tests (Jest + raw HTTP)
-  - Folder: `ui/__tests__/` (spawns the UI server on a random port and asserts HTTP/SSE behavior).
-
-
-## How things talk (data flow)
-
-1) A crawl is started via `POST /api/crawl` (on the UI server). The server spawns a child process (`node src/crawl.js ...`).
-2) The crawler prints structured lines (e.g., `PROGRESS {json}`) and other logs. The server parses/relays these as SSE events.
-3) Clients connect to `GET /events` for a unified SSE stream. The UI renders progress, logs, and a minimal jobs list.
-4) Persistence uses SQLite via `src/db.js`. The crawler writes; the server offers read-only APIs and pages over the same DB file.
-
-
-## Public HTTP API
-
-- GET `/api/navigation/links`
-  - Returns the current global navigation link metadata so clients can build their own UI.
-  - Response: `{ links: [{ key, label, href }] }` where `key` identifies the active route.
-
-- GET `/api/navigation/bar`
-  - Returns pre-rendered HTML for the global navigation bar using the shared `renderNav` helper.
-  - Query params: `active` (optional key to highlight the current page).
-  - Response: `{ html }` with sanitized `<nav>` markup styled inline by default for static pages.
-
-- POST `/api/crawl`
-  - Starts a crawl. By default only a single active run is allowed; set env `UI_ALLOW_MULTI_JOBS=1` to enable multiple concurrent runs.
-  - Body (JSON) — key fields (see `src/ui/express/services/buildArgs.js` for the full mapping):
-
-    | Field | Type | Required | Notes |
-    | :--- | :--- | :--- | :--- |
-    | `startUrl` | string | Yes | Seed URL for the crawl. Defaults to the Guardian homepage when omitted. |
-    | `crawlType` | string | No | One of `basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`. Drives derived CLI flags (sitemap + planner). |
-    | `depth`, `maxPages` | integer | No | Crawl depth/page caps (`--depth`, `--max-pages`). `maxPages` also sets `--sitemap-max`. |
-    | `useSitemap`, `sitemapOnly` | boolean | No | Back-compat toggles. Overridden by `crawlType` presets. |
-    | `concurrency`, `maxQueue` | integer | No | Worker parallelism and in-memory queue cap. |
-    | `requestTimeoutMs` | integer | No | Per-request timeout forwarded as `--request-timeout-ms`. |
-    | `fastStart`, `preferCache`, `slow` | boolean | No | Feature flags: skip heavy DB sampling, bias toward cached fetches, throttle pacing respectively. |
-  | `allowQueryUrls` | boolean | No | When true, forwards `--allow-query-urls` to the crawler to permit query-string URLs. Default (omitted) keeps the query-skip policy enabled while investigation logic is built out. |
-    | `pacerJitterMinMs`, `pacerJitterMaxMs` | integer | No | Low/high jitter bounds for token pacing. |
-    | `dbPath` | string | No | Override SQLite path (`--db`). |
-    | `refetchIfOlderThan` / `maxAge` | string | No | Global freshness window (e.g., `6h`, `7d`). |
-    | `refetchArticleIfOlderThan`, `refetchHubIfOlderThan` | string | No | Type-specific freshness windows for articles vs. hub/navigation pages. |
-    | `hubMaxPages`, `hubMaxDays`, `intMaxSeeds`, `intTargetHosts`, `plannerVerbosity` | mixed | No | Intelligent planner extras; forwarded only when the crawl type resolves to `intelligent`. |
-
-  - Field `mode` is no longer part of the public request schema. Use `crawlType: "intelligent"` to activate planner features; any `mode` key in the body is ignored.
-  - Response: `202 Accepted` with `{ pid, args, jobId, stage, durationMs }`.
-    - `stage` starts as `'preparing'` and flips to `'running'` after the first `PROGRESS` frame.
-    - `durationMs` is a server-measured float (milliseconds) covering argument building and child spawn up to the HTTP response; useful for latency assertions.
-  - Error: `409 Conflict` if a crawl is already running and multi-jobs are disabled.
-
-- POST `/api/stop`
-  - Attempts graceful stop; escalates if child doesn’t exit quickly.
-  - Params: `jobId` (JSON body or query). Required when multiple jobs are running; optional otherwise.
-  - Response: `{ stopped: boolean, escalatesInMs? }`.
-
-- POST `/api/pause` and `/api/resume`
-  - Sends `PAUSE`/`RESUME` commands to the crawler via stdin. Progress frames include `paused` state.
-  - Params: `jobId` (JSON body or query). Required when multiple jobs are running; optional otherwise.
-
-- POST `/api/crawls/:id/stop`, `/api/crawls/:id/pause`, `/api/crawls/:id/resume`
-  - Job-scoped control endpoints equivalent to the legacy routes above, but with the job id in the path.
-  - `stop` response: typically `202 Accepted` with `{ stopped: true, escalatesInMs }` (escalates to SIGKILL after ~800ms if needed).
-  - `pause`/`resume` response: `200 OK` with `{ ok: true, paused: boolean }` when stdin is available; `500` if stdin unavailable.
-  - Errors: `400` for invalid id; `404` when the job is not found.
-  - Examples:
-    - `POST /api/crawls/job-123/stop` → `202 { "stopped": true, "escalatesInMs": 800 }`
-    - `POST /api/crawls/job-123/pause` → `200 { "ok": true, "paused": true }`
-    - `POST /api/crawls/job-123/resume` → `200 { "ok": true, "paused": false }`
-
-- GET `/api/crawls`
-  - Returns a minimal snapshot of ongoing crawls (currently a single active job):
-  - `{ count, items: [{ id, pid, url, startedAt, paused, visited, downloaded, errors, queueSize, lastActivityAt, status }] }`.
-
-- GET `/api/crawls/:id`
-  - Returns a detailed snapshot of a specific crawl job (in-memory; history persistence TBD):
-  - Success: `200 OK` with
-    - `{ id, pid, args, startUrl, startedAt, endedAt, status, paused, lastActivityAt, metrics: { visited, downloaded, found, saved, errors, queueSize, requestsPerSec, downloadsPerSec, errorRatePerMin, bytesPerSec }, lastProgress }`
-  - Errors:
-    - `400 Bad Request` for invalid id
-    - `404 Not Found` if the job is not in memory (e.g., finished and evicted)
-  - Example:
-    - `{ "id": "job-123", "pid": 4242, "args": ["src/crawl.js","https://example.com"], "startUrl": "https://example.com", "startedAt": "2025-09-22T10:00:00.000Z", "endedAt": null, "status": "running", "paused": false, "lastActivityAt": "2025-09-22T10:00:03.500Z", "metrics": { "visited": 10, "downloaded": 2, "found": 7, "saved": 2, "errors": 0, "queueSize": 5, "requestsPerSec": 3.1, "downloadsPerSec": 0.6, "errorRatePerMin": 0, "bytesPerSec": 125000 }, "lastProgress": { "visited": 10, "downloaded": 2, "found": 7, "saved": 2, "errors": 0, "queueSize": 5, "paused": false } }`
-
-- GET `/events`
-  - Server-Sent Events stream (see “SSE event schema” below).
-  - Query params:
-    - `logs=0|1` (default 1) — include log events or not.
-    - `job=<id>` — when provided, only events tagged with this job id are delivered; untagged events (e.g., `jobs`) are still broadcast to all.
-  - On connect, the server emits a seeded log line and also seeds one snapshot `progress` frame per currently running job so the UI shows immediate activity. When a job has already exited but is still cached in memory, the server now also replays a single `done` event to the new client so terminal state isn’t missed.
-
-- GET `/api/queues`
-  - Returns a list of recent/active crawl jobs with queue event counts (best-effort; requires SQLite available):
-  - Query: `limit` (default 50, max 200)
-  - Response: `{ total, items: [{ id, url, pid, startedAt, endedAt, status, events, lastEventAt }] }`
-
-- GET `/api/queues/:id/events`
-  - Returns recent queue events for a given job id; supports simple filtering:
-  - Query: `limit` (default 200, max 500), `action` (optional: enqueued|dequeued|retry|drop), `before` (optional event id for keyset pagination to older events), `after` (optional event id to page to newer events).
-  - Response: `{ job: { id, url, pid, startedAt, endedAt, status }, items: [{ id, ts, action, url, depth, host, reason, queueSize }], cursors?: { nextBefore, prevAfter } }`
-  - Notes: For very large queues, use `before` and `limit` to walk older pages efficiently. Results are always returned newest-first.
-  - Errors: `400` invalid id; `404` not found.
-
-- GET `/api/analysis`
-  - Returns recent analysis runs tracked by the offline analysis pipeline (`analysis-run.js`).
-  - Query params: `limit` (default 50, max 200), `offset` (default 0).
-  - Response: `{ total, items: [{ id, status, stage, startedAt, endedAt, durationMs, analysisVersion, pageLimit, domainLimit, skipPages, skipDomains, dryRun, verbose, summary, lastProgress, error }] }`.
-  - Behavior when SQLite is read-only/unavailable: returns `{ total: 0, items: [] }`.
-
-- GET `/api/analysis/:id`
-  - Returns detailed information for a specific analysis run, including recent log events.
-  - Query params: `eventsLimit` (alias `limit`) caps returned events (default 100, max 500).
-  - Response: `{ run: { ...same fields as list }, events: [{ id, runId, ts, stage, message, details }] }` newest-first.
-  - Errors: `400` invalid id; `404` not found (including when DB access is unavailable).
-
-- POST `/api/analysis/start`
-  - Triggers the offline analysis pipeline (`analysis-run.js`) and returns the run identifier immediately.
-  - Body (JSON, optional): accepts CLI-aligned flags (`analysisVersion`, `pageLimit`, `domainLimit`, `skipPages`, `skipDomains`, `dryRun`, `verbose`). All fields are optional; defaults match running the CLI without extra flags.
-  - Response: `202 Accepted` with `{ runId, detailUrl, apiUrl }`, where `detailUrl` is the SSR view `/analysis/:id/ssr`.
-  - Errors: `500` if the analysis runner fails to spawn.
-
-- Server-rendered queues pages (SSR)
-  - GET `/queues/ssr` — Lists recent queues from `crawl_jobs` with event counts. Read-only; useful for quick inspection without the static client.
   - GET `/queues/latest` — Redirects to the most recent queue (by `ended_at` or `started_at` when running). This supports a default “latest queue first” navigation.
   - GET `/queues/:id/ssr` — Shows a single queue’s `queue_events` with filters and cursor-based pagination: `action` (enqueued|dequeued|retry|drop), `limit` (max 500), `before` (older), `after` (newer). Always renders newest-first and includes inline pager controls (Latest, ← Newer, Older →) plus navigation links to newer/older queues.
 
@@ -262,6 +80,7 @@ Last updated: 2025-09-30
     - Query params (subset): `combinedHint` (`article|nav|other`), `minCombinedConfidence` (0–1 or 0–100). Back-compat alias `minConfidence` is also accepted.
     - Response items (when `details=1`): include `combined_hint` and `combined_confidence` (0–1).
   - GET `/api/url-details` — URL row + latest article/fetches.
+  - GET `/api/gazetteer/summary` — Returns counts of gazetteer entities `{ countries, regions, cities, names, sources }` for dashboards and readiness checks.
   - GET `/api/recent-errors` — Aggregated recent errors.
   - Gazetteer SSR pages/APIs under `/gazetteer` and `/api/gazetteer/*`.
   - GET `/api/problems` — Read-only list of persisted problems with filters and keyset pagination.
@@ -449,50 +268,6 @@ Place hubs (site + topic navigation pages):
  - UI: Adds a "Crawl Type" dropdown; selection sets `crawlType` in `POST /api/crawl` and drives sitemap checkboxes. Back-compat checkbox controls still sent. The legacy UI "Mode" dropdown has been removed in favor of choosing the `intelligent` preset directly.
 
 
-## Roadmap & open problems
-
-| ID | Theme | Next step | Status |
-| :--- | :--- | :--- | :--- |
-| `R-01` | Multi-job readiness | Persist finished crawl history so `/api/crawls` can list prior jobs (see `src/db.js`). | Not started |
-| `R-02` | Planner UX | Emit a `milestone` summary at the end of intelligent crawls for quick post-run diagnostics (`src/crawl.js`). | Not started |
-| `R-03` | Rate limiting | Share per-host pacing across concurrent jobs once `UI_ALLOW_MULTI_JOBS` is enabled. | Researching |
-| `R-04` | Planner telemetry | Stream structured `planner-stage` timeline events (seeded, validated, backtracked) instead of overloading `/api/problems`. | Not started |
-| `R-05` | Planner noise control | Cluster repeated problem events (same kind/scope/target) and surface aggregated counts to the UI. | Not started |
-| `R-06` | Planner knowledge base | Persist successful/failed hub URLs per domain and reuse them on subsequent runs. | Not started |
-| `R-07` | UI DB adapter | Route Express UI queries through `src/db.js` helpers (no direct SQL in UI layer). | Not started |
-| `R-08` | Coverage telemetry | Investigate periodic coverage snapshots (e.g., hubs discovered vs. expected) and decide how to surface them without regressing non-intelligent crawls. | Proposed |
-| `R-09` | Gap-driven prioritisation | Investigate priority queue tiers informed by unresolved `missing-hub` problems; draft plan before altering scheduler. | Proposed |
-| `R-10` | Pattern cache reuse | Investigate persisting planner-learned hub patterns/regexes and emitting a `patterns-reused` milestone on subsequent runs. | Proposed |
-| `R-11` | Predictive hub guesses | Investigate guarded hub URL prediction for partially-covered taxonomies (respecting 404 budgets) before planning implementation. | Proposed |
-| `R-12` | Dynamic hub refetching | Investigate adaptive refresh windows for hubs based on observed churn; outline milestones/telemetry before code changes. | Proposed |
-| `R-13` | Planner summary milestone | Investigate enhancements to the end-of-run planner milestone (coverage totals, unresolved issues) building on `R-02`. | Proposed |
-| `R-14` | Expanded problem taxonomy | Investigate new planner problem kinds (`hub-stale`, `coverage-plateau`, `error-spike`, `conflicting-classification`) and downstream handling. | Proposed |
-| `R-15` | Planner budget mode | Investigate a crawl budget heuristic that prioritises estimated coverage lift, ensuring basic crawl types remain unaffected. | Proposed |
-| `R-16` | Multi-run coverage analytics | Investigate storing historical coverage metrics to emit `coverage-improved` milestones between runs. | Proposed |
-
-**`R-07` implementation notes:**
-- Inventory all UI touch points (`server.js`, `/routes`, `/services`) that call `better-sqlite3` directly and group them by domain (jobs/queues, problems/milestones, analysis runs, gazetteer, health).
-- Introduce a UI-facing adapter built on `NewsDatabase` so the Express layer depends on stable helpers instead of inline SQL; seed crawl-type presets from that adapter.
-- Migrate write paths first (crawl job lifecycle, queue/problem/milestone persistence), then port read APIs/SSR pages, updating tests as each surface is converted.
-- Once migration is complete, add lightweight guards (lint/tests) to prevent new direct DB access from creeping back into the UI.
-
-If you pick up an item, add yourself to the table (or link a draft PR) so the next agent has context.
-
-
-## Testing approach
-
-- Framework: Jest; tests live in `ui/__tests__/`.
-- Cheat sheet:
-  - **Fast cycle (PowerShell):** `$env:UI_FAKE_RUNNER=1; $env:TEST_FAST=1; npm test -- --runTestsByPath ui/__tests__/server.test.js`
-  - **Full suite:** `npm test`
-- Pattern: Spawn `src/ui/express/server.js` on a random port (via `PORT=0`) and exercise HTTP/SSE with the Node `http` module.
-- Fake runner:
-  - Set `UI_FAKE_RUNNER=1` to use a built-in fake child runner that emits realistic progress quickly for tests.
-  - Set `UI_FORCE_SPAWN_FAIL=1` to simulate immediate spawn failure (`done` should appear fast).
-- Timing:
-  - Tests read seeded progress/log frames shortly after `/api/crawl` returns 202 to ensure the UI shows immediate activity.
-
-
 ## Request timing logs (observability)
 
 - The UI server logs duration for every HTTP request after the response finishes, formatted as:
@@ -534,158 +309,8 @@ Next steps (recommended evolution):
   - When a crawl finishes without downloading any pages and only accumulates errors, the process exits with code `CRAWL_NO_PROGRESS` to prevent false-positive "success" runs.
 
 
-## Keep this doc up to date (required)
+## Maintaining this document
 
-When you change any of the following, you must update AGENTS.md in the same PR:
-
-- SSE event shapes, field names, or meanings.
-- HTTP endpoints, query/body params, or response schemas.
-- Crawler rate limiting/backoff semantics or emitted telemetry fields.
-- Database schema, triggers, or important query shapes relied on by the UI.
-- Process orchestration (startup/shutdown/PAUSE/RESUME) or logging/seeded events.
-
-Minimum update checklist:
-
-1) Reflect the change in the relevant section(s) above.
-2) Add a short entry to the Changelog with the date and a one-liner summary.
-3) If you added/changed events or APIs, include an example payload.
-4) If you changed timing/flow guarantees (e.g., seeded progress), call this out.
-5) If tests were added/updated, reference the test file(s).
-
-Failure to update this file makes it harder for future agents to reason about the system. Treat this file as a contract.
-
-## Changelog
-
-- 2025-09-30
-  - Unified UI navigation: added `renderNav` helper (`src/ui/express/services/navigation.js`), `/api/navigation/links|bar` endpoints, and the client enhancer (`src/ui/public/global-nav.js`). All static HTML pages now render a shared nav bar via `<div data-global-nav>` instead of duplicating link markup. Smoke-tested with the Express UI server.
-
-- 2025-09-28
-  - Crawl dashboard refresh: the crawler homepage now surfaces run overview metrics, live crawl type/stage badges, milestone and planner timelines, and an intelligent insights panel that summarizes coverage, seeded hubs, and unresolved problems directly from `milestone` / `planner-stage` SSE events. Tests: `src/ui/express/__tests__/chatty.start.test.js`.
-
-- 2025-09-28
-  - Intelligent completion milestone: fake runner now emits a comprehensive `intelligent-completion` milestone at the end of intelligent crawls, summarizing seeded hubs (count, sample URLs), coverage percentages, unresolved problems (kind counts and samples), and basic statistics. Tests: `ui/__tests__/crawl.e2e.more.test.js` confirms SSE stream includes planner-stage events and completion milestone.
-
-- 2025-09-29
-  - Rate-limit handling now reprioritises cached pages, emitting `cacheRateLimitedServed` / `cacheRateLimitedDeferred` progress counters and a `cache-priority-hit` milestone so throttled basic crawls keep advancing. Tests: `src/__tests__/crawl.process.test.js`.
-
-- 2025-09-28
-  - Intelligent planner now discovers new section hubs and year/month archive paths during the crawl, enqueueing them immediately and emitting `adaptive-hub-seeded` / `history-path-seeded` milestones.
-  - Known article URLs reuse stored `etag` / `last-modified` metadata for conditional GETs, issuing `If-None-Match` / `If-Modified-Since` headers and downgrading refresh checks so new discoveries stay ahead of update probes. Tests: `ui/__tests__/crawl.e2e.http.test.js`.
-
-- 2025-09-27
-  - Implemented planner stage logging: crawler now emits `PLANNER_STAGE` lines for bootstrap/pattern/seed phases, SSE streams them as `planner-stage`, and the UI persists rows in `planner_stage_events`. Tests: `ui/__tests__/crawl.e2e.more.test.js`.
-
-- 2025-09-27
-  - Re-centered AGENTS.md around intelligent place-hub coverage priorities, enumerated analysis UI targets, and documented upcoming planner milestones to guide implementation focus.
-
-- 2025-09-27
-  - Repeated `ECONNRESET` responses now emit a `problem` event with `kind:"connection-reset"`, trigger an immediate crawl abort, and force the CLI to exit fatal. Tests: manual verification (no new automated coverage per request).
-  - Crawler now exits non-zero when fatal initialization issues are recorded (e.g., `db-open-failed`) or when no pages download and only errors occur; this prevents the CLI from reporting "finished successfully" after a failed run. Tests: `src/__tests__/crawler-outcome.test.js`.
-  - Crawler caches UrlPolicy decisions, persists compact analysis snapshots into `urls.analysis`, and reuses them to gate both enqueue and fetch phases. Pagination-only query strings (`page`/`offset`/`start` with numeric values) now classify as `superfluous`, so default crawls skip `?page=N` listings. Tests: `src/crawler/__tests__/urlPolicy.test.js`, `ui/__tests__/crawl.e2e.http.test.js`.
-- 2025-09-26
-  - SSE connections now replay a terminal `done` event for in-memory jobs that have already exited so late subscribers still observe completion. Tests: `ui/__tests__/crawl.e2e.more.test.js`.
-- 2025-09-26
-  - Refactored analyse-pages into a modular pipeline (`src/analysis/page-analyzer.js`, `place-extraction.js`, `deep-analyzer.js`), exposing deep analysis metadata under `analysis.meta.deepAnalysis`. Tests: `src/analysis/__tests__/page-analyzer.test.js`.
-- 2025-09-26
-  - Place hub detection now captures topical context: `place_hubs` stores `place_kind`, `topic_slug`, `topic_label`, and `topic_kind`, and `analyse-pages` records Guardian-style `/sport/<place>` pages as place-specific topic hubs. Tests: `src/tools/__tests__/analyse-pages.place-hubs.test.js`.
-- 2025-09-26
-  - Added URL policy scaffolding (`src/crawler/urlPolicy.js`) and plumbed the new `allowQueryUrls` / `--allow-query-urls` option (defaulting to query skipping) so future query analysis can plug in without changing the CLI contract yet.
-
-- 2025-09-26
-  - Added SQLite indexes `idx_articles_analysis_progress` and `idx_latest_fetch_ts_desc` to accelerate `analyse-pages` filtering/ordering, trimming analysis-run runtime and Node heap usage.
-  - `analysis-run` now performs an explicit database setup pass (stage `db-setup`) and logs when schema ensure begins and ends before page analysis starts.
-
-- 2025-09-26
-  - GUI server now attempts high-numbered ports on startup and falls back automatically if the requested port is busy; documentation reflects the new behavior.
-
-- 2025-09-25
-  - Added POST `/api/analysis/start`, introduced the homepage “Perform Analysis” button that surfaces run links, and covered the API with integration tests.
-
-- 2025-09-25
-  - Analysis run tracking: added SQLite tables `analysis_runs`/`analysis_run_events`, wired `src/tools/analysis-run.js` to record stages, exposed `/api/analysis` + `/api/analysis/:id`, and shipped SSR pages `/analysis/ssr` + `/analysis/:id/ssr` with auto-refresh. Tests: `src/ui/express/__tests__/analysis.api.ssr.test.js`.
-
-- 2025-09-25
-  - Removed the legacy crawl `mode` flag end-to-end: UI selector deleted, `/api/crawl` now ignores a `mode` key, and the crawler CLI accepts `--crawl-type` (planner activates when the type starts with `intelligent`).
-- 2025-09-25
-  - POST /api/crawl response now includes `stage` and `durationMs` so tests and clients can assert startup latency without timing their own sockets. No breaking change for consumers that ignore extra properties.
-
-- 2025-09-24
-  - Agent onboarding refresh: added TL;DR, quick-start checklist, roadmap table, and testing cheat sheet to speed up handoffs while keeping the file concise.
-
-- 2025-09-24
-  - Milestones guidance: documented `full-understanding` as a milestone goal for intelligent crawls, including current country-hub validation criteria and reminders that crawl completion alone is not a milestone.
-
-- 2025-09-25
-  - Analysis milestones: crawler now emits `downloads-1k`, `depth2-coverage`, `articles-identified-1k`, and `articles-identified-10k` from the analysis pipeline; wide history jobs are gated on these checkpoints.
-- 2025-09-25
-  - Offline analysis runner: added `src/tools/analysis-run.js` + `npm run analysis:run` to batch page/domain analysis and award pending milestone rows (`downloads-1k`, `depth2-coverage`, `articles-identified-*`) under job id `analysis-run`.
-
-- 2025-09-24
-  - Intelligent crawl consolidation: Added `intelligent` as a first-class `crawlType` preset. (Superseded by 2025-09-25 entry which removed the legacy `mode` flag entirely.) Example request body: `{ "startUrl": "https://example.com", "crawlType": "intelligent" }`.
-
-- 2025-09-24
-  - Problem event severity: SSE `problem` events now include a derived `severity` field (`warn` for `missing-hub`, `info` otherwise). No DB schema change; field is computed on the fly for normalization. Problems SSR page styles severity with colored pills. Backward-compatible (clients ignoring `severity` continue to function).
-
-- 2025-09-24
-  - Consolidated page analysis script: canonical script is now `src/tools/analyse-pages.js` (gazetteer + hub detection). Legacy `src/analyse-pages.js` replaced with a deprecation shim that forwards to the tools version and will be removed in a future release. Non-breaking; existing invocations continue to function with a console warning.
-  - UI server consolidation & styling: legacy `ui/server.js` now delegates to `src/ui/express/server.js` (single authoritative implementation). Problems and Milestones SSR pages restyled to match Queues layout (containers, pagination row) with no API/HTML semantics changes. Tests unaffected.
-
-- 2025-09-24
-  - New SSE event `milestone` and persistence: server parses `MILESTONE {json}` lines, broadcasts as `milestone` SSE with `jobId`, and writes to new `crawl_milestones` table. Added SSR page `/milestones/ssr` with filters and cursors. Problems table remains for `PROBLEM` diagnostics only.
-  
- - 2025-09-24
-  - Intelligent planner flags: Accepts optional `hubMaxPages`, `hubMaxDays`, `intMaxSeeds`, `intTargetHosts`, and `plannerVerbosity` in `POST /api/crawl` and forwards them to the crawler. No breaking changes; defaults preserve behavior when omitted.
-  - SSE passthrough: Server now relays structured `QUEUE {}` and `PROBLEM {}` lines from the crawler as `queue` and `problem` SSE events respectively (schema unchanged from prior docs).
-
-- 2025-09-24
-  - Intelligent planner wiring: `POST /api/crawl` with `crawlType: "intelligent"` forwards planner flags to the crawler (`--crawl-type=intelligent`). Planner runs seed site/topic hubs (e.g., Guardian country pages) and reports expectation gaps.
-  - New SSE event `problem`: server parses `PROBLEM {json}` crawler lines, broadcasts as `event: problem` with `jobId`, and persists to SQLite when available.
-  - Persistence: added `crawl_problems` table with indices; rows inserted on each `PROBLEM` line with a server timestamp.
-  - No breaking changes: existing APIs/events remain unchanged; `crawlType` drives planner behavior.
-
-- 2025-09-24
-  - Gazetteer SSR robustness: The landing page `/gazetteer` now returns 200 with zeroed counts when gazetteer tables are missing instead of 500. No API shape changes; improves stability for empty/uninitialized DBs.
-
-- 2025-09-24
-  - Problems history: Added read API `GET /api/problems` with filters/cursors and SSR page `/problems/ssr`. Tests in `src/ui/express/__tests__/problems.api.ssr.test.js`.
-  
- - 2025-09-24
-  - URLs list filters: Added combined URL+content analysis filters and badges. `/api/urls` now accepts `combinedHint` and `minCombinedConfidence` (0–1 or 0–100). When `details=1`, response items include `combined_hint` and `combined_confidence`. The `URLs` page adds filter controls and shows hint badges with confidence.
-
-- 2025-09-24
-  - Smarter refetch policy: Added per-type refetch windows so cached articles and hub/nav pages can have different freshness. New UI controls “Refetch window — articles” and “Refetch window — hubs/nav” post `refetchArticleIfOlderThan` and `refetchHubIfOlderThan`, which translate to crawler flags `--refetch-article-if-older-than` and `--refetch-hub-if-older-than`. Global `refetchIfOlderThan` remains as a fallback. Crawler now computes an effective window by classification heuristics before fetching, reducing bandwidth by avoiding re-downloading older articles while keeping hubs fresh. No breaking changes; defaults preserve previous behavior if new fields are omitted.
-
-- 2025-09-23
-  - Large queues UX/API: Added cursor-based pagination to `GET /api/queues/:id/events` via `before` (older) and `after` (newer); response now includes cursors `{ nextBefore, prevAfter }`. `GET /queues/:id/ssr` now supports the same params with inline pager controls while maintaining newest-first rendering. Created composite SQLite indices `idx_queue_events_job_id_desc` and `idx_queue_events_job_action_id_desc` for efficient keyset scans on large datasets. No breaking changes; existing calls without cursors behave the same.
-
-- 2025-09-23
-  - Queues UX: added server-rendered queues pages — `/queues/ssr` for the list, `/queues/:id/ssr` for details with filters, and `/queues/latest` to jump to the most recent queue. Default navigation now encourages reviewing the latest queue first, with inline links to newer/older queues. No API shape changes.
-- 2025-09-23
-  - Backend performance: enabled gzip compression for GET responses while continuing to skip compression for SSE streams and all POST /api/* routes. Added cache headers for static assets under the UI public folder. Read-only SQLite connection is now reused across GET endpoints to avoid per-request initialization/migrations. No API shape changes; latency improvements only.
-  - Observability: added per-request timing logs emitted after responses complete (format: `[req] METHOD URL -> STATUS N.ms`).
-
-- 2025-09-22
-  - Start-path performance: POST /api/crawl now responds immediately, with non-critical work (seeded events, jobs broadcast, watchdog scheduling) deferred to the next tick; compression is skipped for all POST /api/* routes for lower latency.
-  - Added optional start-path timing trace logs gated by `UI_TRACE_START=1` (or `options.traceStart` in `createApp`). Logs step timings for arg building, spawn, response, deferred seeding, jobs broadcast, watchdog setup, and time-to-first child output.
-  - No public API changes; observability only. Example trace lines: `[trace] start handler timings job=abc buildArgs=1ms spawn=3ms respond=0ms totalSoFar=5ms` and `[trace] first child stdout job=abc after 42ms`.
-  - Tests: existing health/chatty-start/e2e tests cover the fast acceptance and visible activity. No changes needed.
-
- - 2025-09-22
-  - Added crawl types catalog: new table `crawl_types` with seed rows (`basic`, `sitemap-only`, `basic-with-sitemap`).
-  - New endpoint `GET /api/crawl-types` for the UI to populate a dropdown. UI posts `crawlType` and maps it to sitemap flags. Server-side `buildArgs` now honors `crawlType` (still back-compatible with `useSitemap`/`sitemapOnly`).
-  - No breaking changes: existing UI checkboxes remain functional; dropdown simply standardizes presets.
-  
-  - Crawler now emits structured `QUEUE` lines on enqueue/dequeue/retry/drop; the UI server passes these through as SSE `queue` events. This enables a real-time queues page and downstream persistence of queue events.
-  - Optional multi-job support behind `UI_ALLOW_MULTI_JOBS=1`: concurrent crawls with unique `jobId`s; control endpoints accept `jobId` and require it when multiple jobs are active.
-  - `/events?job=` now filters events by job id; on connect, the server seeds a `progress` snapshot per running job for immediate UI feedback.
-  - Updated docs for `/api/crawl` 409 behavior when multi-jobs are disabled.
-  - Added `GET /api/crawls/:id` to retrieve a detailed snapshot of a specific job (in-memory for now).
-  - Added job-scoped control endpoints: `POST /api/crawls/:id/stop|pause|resume` mirroring legacy controls.
-  - Tests: see `src/ui/express/__tests__/crawls.controls.api.test.js`.
-  - Added SSE `queue` event pass-through for structured `QUEUE {json}` lines; added simple `/queues` page.
-  - Queue persistence: UI server now writes `crawl_jobs` and `queue_events`; new read APIs `GET /api/queues` and `GET /api/queues/:id/events` with basic filters. Tests: `ui/__tests__/queues.api.test.js`.
-  
- - 2025-09-22
-  - Added initial AGENTS.md.
-  - Documented SSE `jobId` tagging on `progress`/`done` and `/api/crawl` response.
-  - Documented acceptance of `/events?job=` (no-op for now) and jobs list snapshot.
+- Update the sections above whenever you change HTTP endpoints, SSE payloads, database schema, or crawler lifecycle guarantees.
+- Record release history in `CHANGELOG.md`; keep `AGENTS.md` focused on contracts and architecture, not historical notes.
+- When extracting inline SSR routes from `server.js`, add a short bullet under “Layout” summarising the new module to help future refactors.
