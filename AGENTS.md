@@ -18,20 +18,19 @@ Last updated: 2025-09-29
   - Exposes instrumentation helpers (`startTrace`, `recordJobEvent`, `broadcastProgress`) reused by API and SSR surfaces.
 - **Router composition and middleware.** API routers from `src/ui/express/routes/*` are mounted first, followed by SSE endpoints, analysis controls, and legacy inline SSR handlers. Static assets and the 404 page close the stack.
 - **Recent domains API extraction.** `createRecentDomainsApiRouter` (in `routes/api.recent-domains.js`) now delegates to `data/recentDomains.js`, replacing the inline `/api/recent-domains` handler with a reusable data helper.
-- **Queues SSR router.** `createQueuesSsrRouter` (in `routes/ssr.queues.js`) handles `/queues`, `/queues/ssr`, `/queues/latest`, and `/queues/:id/ssr` using `data/queues.js` plus the queue list/detail view helpers.
+- **Queues SSR router.** `createQueuesSsrRouter` (in `routes/ssr.queues.js`) renders `/queues`, `/queues/ssr`, `/queues/latest`, and `/queues/:id/ssr` via `data/queues.js` plus the view helpers under `views/`. Pagination links, filters, and navigation are handled entirely within the router/view pair.
+- **Gazetteer summary API extraction.** `createGazetteerApiRouter` (in `routes/api.gazetteer.js`) exposes `/api/gazetteer/summary` using a read-only DB handle, returning counts for countries, regions, cities, names, and sources.
 - **Crawler lifecycle management.** Helper closures inside `createApp` supervise spawned crawlers: guarding concurrent starts, wiring stdout/stderr to SSE, persisting queue/problem/milestone rows, and handling graceful stop/pause/resume.
 - **Module exports & CLI shim.** The file exports `createApp` and, when executed directly, boots an HTTP server that chooses an available port unless `PORT` is provided.
-
-> **Refactor objective:** keep `server.js` focused on wiring and orchestration. All HTML generation belongs in `src/ui/express/views/*`, and DB access/SQL belongs in `src/ui/express/data/*` (or service helpers). New code should never embed raw SQL or template strings inside `server.js`; instead, add a data helper + view module and import them here.
 
 ## Incremental refactor guidance
 
 To shrink `server.js`, refactor one route or feature at a time:
 
-1. **Extract data helpers.** Move inline SQL into modules under `src/ui/express/data/`, accepting explicit DB handles supplied by `getDbRO`/`getDbRW`. These helpers should be the only place a feature performs reads/writes.
-2. **Create focused routers.** Build router factories in `src/ui/express/routes/` that accept dependencies (such as `{ urlsDbPath, startTrace, renderNav }`) and encapsulate request handling. Routers should delegate persistence to data helpers and rendering to view helpers.
+1. **Extract data helpers.** Move inline SQL into modules under `src/ui/express/data/`, accepting explicit DB handles supplied by `getDbRO`/`getDbRW`.
+2. **Create focused routers.** Build router factories in `src/ui/express/routes/` that accept dependencies (such as `{ urlsDbPath, startTrace, renderNav }`) and encapsulate request handling.
 3. **Relocate HTML generation.** Replace raw template strings with view helpers collocated with the new routers (for example `src/ui/express/views/`), keeping the output deterministic for SSR tests.
-4. **Wire the router in `server.js`.** Import the new factory, mount it alongside related routes, and remove the legacy handler after parity tests pass. After each extraction, ensure `server.js` no longer contains SQL snippets or HTML markup for that surface.
+4. **Wire the router in `server.js`.** Import the new factory, mount it alongside related routes, and remove the legacy handler after parity tests pass.
 5. **Add or extend tests.** Cover the new data helpers and routers via Jest suites (`ui/__tests__/` or `src/ui/express/__tests__/`) before deleting the inlined code.
 
 Repeat this cycle for each SSR surface (queues, problems, milestones, gazetteer pages, URL inspectors) to steadily migrate HTML and SQL out of the main server module.
@@ -80,7 +79,6 @@ Repeat this cycle for each SSR surface (queues, problems, milestones, gazetteer 
     - Query params (subset): `combinedHint` (`article|nav|other`), `minCombinedConfidence` (0–1 or 0–100). Back-compat alias `minConfidence` is also accepted.
     - Response items (when `details=1`): include `combined_hint` and `combined_confidence` (0–1).
   - GET `/api/url-details` — URL row + latest article/fetches.
-  - GET `/api/gazetteer/summary` — Returns counts of gazetteer entities `{ countries, regions, cities, names, sources }` for dashboards and readiness checks.
   - GET `/api/recent-errors` — Aggregated recent errors.
   - Gazetteer SSR pages/APIs under `/gazetteer` and `/api/gazetteer/*`.
   - GET `/api/problems` — Read-only list of persisted problems with filters and keyset pagination.

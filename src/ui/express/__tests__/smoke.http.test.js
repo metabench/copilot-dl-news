@@ -1,6 +1,12 @@
 const http = require('http');
 const { startServer } = require('../server');
 
+function expectHtmlMatch(html, pattern, label) {
+  if (pattern.test(html)) return;
+  const snippet = html.length > 400 ? `${html.slice(0, 400)}…` : html;
+  throw new Error(`Expected ${label} to match ${pattern}, but it was missing. Snippet:\n${snippet}`);
+}
+
 function getText(hostname, port, path) {
   return new Promise((resolve, reject) => {
     http.get({ hostname, port, path }, (res) => {
@@ -31,19 +37,19 @@ describe('UI smoke over real HTTP', () => {
   test('serves index and basic pages', async () => {
     const root = await getText('127.0.0.1', port, '/');
     expect(root.status).toBe(200);
-    expect(root.text).toMatch(/<html/i);
+    expectHtmlMatch(root.text, /<html/i, 'root html shell');
 
     const index = await getText('127.0.0.1', port, '/index.html');
     expect(index.status).toBe(200);
-    expect(index.text).toMatch(/Use sitemap|Start crawl/i);
+    expectHtmlMatch(index.text, /Use sitemap|Start crawl/i, 'index page content');
 
     const domain = await getText('127.0.0.1', port, '/domain');
     expect(domain.status).toBe(200);
-    expect(domain.text).toMatch(/Domain Summary|Recent Articles/i);
+    expectHtmlMatch(domain.text, /Domain Summary|Recent Articles/i, 'domain page content');
 
     const url = await getText('127.0.0.1', port, '/url');
     expect(url.status).toBe(200);
-    expect(url.text).toMatch(/URL Details|Fetches/i);
+    expectHtmlMatch(url.text, /URL Details|Fetches/i, 'url page content');
   });
 
   test('SSE emits seed message', async () => {

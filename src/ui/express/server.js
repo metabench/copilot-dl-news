@@ -62,6 +62,9 @@ const {
   createRecentDomainsApiRouter
 } = require('./routes/api.recent-domains');
 const {
+  createGazetteerApiRouter
+} = require('./routes/api.gazetteer');
+const {
   createGazetteerRouter
 } = require('./routes/ssr.gazetteer');
 const {
@@ -73,6 +76,9 @@ const {
 const {
   createGazetteerCountryRouter
 } = require('./routes/ssr.gazetteer.country');
+const {
+  createQueuesSsrRouter
+} = require('./routes/ssr.queues');
 const {
   renderNav
 } = require('./services/navigation');
@@ -773,7 +779,8 @@ function createApp(options = {}) {
   app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: '1h',
     etag: true,
-    lastModified: true
+    lastModified: true,
+    extensions: ['html']
   }));
 
   // Serve shared UI assets (CSS/JS) from src/ui/public at /assets
@@ -830,6 +837,14 @@ function createApp(options = {}) {
   }));
   // Mount shared navigation API for clients needing link metadata
   app.use(createNavigationApiRouter());
+  app.use(createGazetteerApiRouter({
+    urlsDbPath
+  }));
+  // Queues SSR pages (list, detail, latest redirect)
+  app.use(createQueuesSsrRouter({
+    getDbRW,
+    renderNav
+  }));
   // Gazetteer SSR surface
   app.use(createGazetteerRouter({
     urlsDbPath,
