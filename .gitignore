@@ -33,3 +33,7 @@ build/
 
 # Data directory (crawled content)
 data/
+
+*.db-shm
+*.db-wal
+*.db
