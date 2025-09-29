@@ -114,8 +114,14 @@ const {
   fetchMilestones
 } = require('./data/milestones');
 const {
+  createWritableDbAccessor
+} = require('./db/writableDb');
+const {
   ConfigManager
 } = require('../../config/ConfigManager');
+const {
+  ensureDb
+} = require('../../ensure_db');
 const {
   ensureAnalysisRunSchema,
   listAnalysisRuns,
@@ -507,6 +513,7 @@ function createApp(options = {}) {
   // Verbose logging (disabled by default). Enable with options.verbose=true or UI_VERBOSE=1|true
   const verbose = options.verbose === true || String(process.env.UI_VERBOSE || '').toLowerCase() === '1' || String(process.env.UI_VERBOSE || '').toLowerCase() === 'true';
   const queueDebug = verbose || isTruthyFlag(process.env.UI_QUEUE_DEBUG);
+  const ensureDbFactory = typeof options.ensureDb === 'function' ? options.ensureDb : ensureDb;
   const app = express();
   const priorityConfigPath = options.priorityConfigPath || process.env.UI_PRIORITY_CONFIG || process.env.UI_PRIORITY_CONFIG_PATH || null;
   const shouldWatchConfig = options.watchPriorityConfig !== undefined ?
@@ -618,188 +625,13 @@ function createApp(options = {}) {
     at: 0,
     data: null
   };
-  // Writable DB handle (lazy). Used for queue/job persistence and read APIs.
-  let _dbRW = null;
-
-  function getDbRW() {
-    if (_dbRW) return _dbRW;
-    try {
-      const {
-        ensureDb
-      } = require('../../ensure_db');
-      const db = ensureDb(urlsDbPath);
-      // Ensure minimal queue persistence schema (idempotent)
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS crawl_jobs (
-          id TEXT PRIMARY KEY,
-          url TEXT,
-          args TEXT,
-          pid INTEGER,
-          started_at TEXT,
-          ended_at TEXT,
-          status TEXT
-        );
-        CREATE TABLE IF NOT EXISTS queue_events (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          job_id TEXT NOT NULL,
-          ts TEXT NOT NULL,
-          action TEXT NOT NULL,
-          url TEXT,
-          depth INTEGER,
-          host TEXT,
-          reason TEXT,
-          queue_size INTEGER,
-          FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_queue_events_job_ts ON queue_events(job_id, ts DESC);
-        CREATE INDEX IF NOT EXISTS idx_queue_events_action ON queue_events(action);
-        CREATE INDEX IF NOT EXISTS idx_queue_events_host ON queue_events(host);
-        -- Crawl types catalog (name, description, json declaration)
-        CREATE TABLE IF NOT EXISTS crawl_types (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          description TEXT,
-          declaration TEXT NOT NULL -- JSON string describing flags/behavior
-        );
-        CREATE TABLE IF NOT EXISTS crawler_settings (
-          key TEXT PRIMARY KEY,
-          value TEXT,
-          updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        );
-        CREATE TABLE IF NOT EXISTS crawl_tasks (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          job_id TEXT NOT NULL,
-          host TEXT,
-          kind TEXT,
-          status TEXT NOT NULL DEFAULT 'pending',
-          url TEXT,
-          payload TEXT,
-          note TEXT,
-          created_at TEXT NOT NULL DEFAULT (datetime('now')),
-          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-          FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_crawl_tasks_job_status ON crawl_tasks(job_id, status, created_at DESC);
-        CREATE INDEX IF NOT EXISTS idx_crawl_tasks_status ON crawl_tasks(status, created_at DESC);
-
-        CREATE TABLE IF NOT EXISTS analysis_runs (
-          id TEXT PRIMARY KEY,
-          started_at TEXT NOT NULL,
-          ended_at TEXT,
-          status TEXT NOT NULL,
-          stage TEXT,
-          analysis_version INTEGER,
-          page_limit INTEGER,
-          domain_limit INTEGER,
-          skip_pages INTEGER,
-          skip_domains INTEGER,
-          dry_run INTEGER,
-          verbose INTEGER,
-          summary TEXT,
-          last_progress TEXT,
-          error TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_analysis_runs_started_at ON analysis_runs(started_at DESC);
-        CREATE INDEX IF NOT EXISTS idx_analysis_runs_status ON analysis_runs(status, started_at DESC);
-
-        CREATE TABLE IF NOT EXISTS analysis_run_events (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          run_id TEXT NOT NULL,
-          ts TEXT NOT NULL,
-          stage TEXT,
-          message TEXT,
-          details TEXT,
-          FOREIGN KEY(run_id) REFERENCES analysis_runs(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_analysis_run_events_run_ts ON analysis_run_events(run_id, ts DESC);
-      `);
-      // Seed default crawl types if table is empty
-      try {
-        const count = db.prepare('SELECT COUNT(*) AS c FROM crawl_types').get().c;
-        if (!count) {
-          const ins = db.prepare('INSERT INTO crawl_types(name, description, declaration) VALUES (?, ?, ?)');
-          ins.run('basic', 'Follow links only (no sitemap)', JSON.stringify({
-            crawlType: 'basic',
-            useSitemap: false,
-            sitemapOnly: false
-          }));
-          ins.run('sitemap-only', 'Use only the sitemap to discover pages', JSON.stringify({
-            crawlType: 'sitemap-only',
-            useSitemap: true,
-            sitemapOnly: true
-          }));
-          ins.run('basic-with-sitemap', 'Follow links and also use the sitemap', JSON.stringify({
-            crawlType: 'basic-with-sitemap',
-            useSitemap: true,
-            sitemapOnly: false
-          }));
-          // Intelligent variant (planner-enabled) – inherits sitemap behavior of basic-with-sitemap
-          ins.run('intelligent', 'Intelligent planning (hubs + sitemap + heuristics)', JSON.stringify({
-            crawlType: 'intelligent',
-            useSitemap: true,
-            sitemapOnly: false
-          }));
-        }
-      } catch (_) {}
-      // Indexes to keep large queue scans fast (keyset pagination by id)
-      try {
-        db.exec(`
-          CREATE INDEX IF NOT EXISTS idx_queue_events_job_id_desc ON queue_events(job_id, id DESC);
-          CREATE INDEX IF NOT EXISTS idx_queue_events_job_action_id_desc ON queue_events(job_id, action, id DESC);
-          -- Problems raised by intelligent mode or heuristics
-          CREATE TABLE IF NOT EXISTS crawl_problems (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_id TEXT NOT NULL,
-            ts TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            scope TEXT,
-            target TEXT,
-            message TEXT,
-            details TEXT
-          );
-          CREATE INDEX IF NOT EXISTS idx_crawl_problems_job_ts ON crawl_problems(job_id, ts DESC);
-          -- Milestones (positive achievements/learned patterns)
-          CREATE TABLE IF NOT EXISTS crawl_milestones (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_id TEXT NOT NULL,
-            ts TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            scope TEXT,
-            target TEXT,
-            message TEXT,
-            details TEXT
-          );
-          CREATE INDEX IF NOT EXISTS idx_crawl_milestones_job_ts ON crawl_milestones(job_id, ts DESC);
-          CREATE TABLE IF NOT EXISTS planner_stage_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_id TEXT NOT NULL,
-            ts TEXT NOT NULL,
-            stage TEXT,
-            status TEXT,
-            sequence INTEGER,
-            duration_ms INTEGER,
-            details TEXT
-          );
-          CREATE INDEX IF NOT EXISTS idx_planner_stage_events_job_ts ON planner_stage_events(job_id, ts DESC);
-        `);
-      } catch (_) {
-        /* ignore index create errors */ }
-      _dbRW = db;
-      if (queueDebug) {
-        try {
-          console.log('[db] opened writable queue DB at', urlsDbPath);
-        } catch (_) {}
-      }
-    } catch (err) {
-      _dbRW = null; // gracefully disable persistence if unavailable
-      try {
-        if (queueDebug || verbose || process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
-          console.warn('[db] failed to open writable DB:', err?.message || err);
-        }
-      } catch (_) {}
-    }
-    return _dbRW;
-  }
+  const getDbRW = createWritableDbAccessor({
+    ensureDb: ensureDbFactory,
+    urlsDbPath,
+    queueDebug,
+    verbose,
+    logger: console
+  });
 
   // metrics snapshot populated from PROGRESS events (legacy aggregate)
   const progress = createProgressBroadcaster({
