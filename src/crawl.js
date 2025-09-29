@@ -26,6 +26,7 @@ const Links = require('./crawler/links');
 const { loadSitemaps } = require('./crawler/sitemap');
 
 const QueueManager = require('./crawler/QueueManager');
+const { UrlEligibilityService } = require('./crawler/UrlEligibilityService');
 const { FetchPipeline } = require('./crawler/FetchPipeline');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -176,24 +177,28 @@ class NewsCrawler {
     this._plannerStageSeq = 0;
     this.depth2Visited = new Set();
 
+    this.urlEligibilityService = new UrlEligibilityService({
+      getUrlDecision: (url, ctx) => this._getUrlDecision(url, ctx),
+      handlePolicySkip: (decision, info) => this._handlePolicySkip(decision, info),
+      isOnDomain: (normalized) => this.isOnDomain(normalized),
+      isAllowed: (normalized) => this.isAllowed(normalized),
+      hasVisited: (normalized) => this.visited.has(normalized),
+      looksLikeArticle: (normalized) => this.looksLikeArticle(normalized),
+      knownArticlesCache: this.knownArticlesCache,
+      getDbAdapter: () => this.dbAdapter
+    });
+
     this.queue = new QueueManager({
       usePriorityQueue: this.usePriorityQueue,
       maxQueue: this.maxQueue,
       maxDepth: this.maxDepth,
       stats: this.stats,
-      visited: this.visited,
-      knownArticlesCache: this.knownArticlesCache,
-      getUrlDecision: (url, ctx) => this._getUrlDecision(url, ctx),
-      handlePolicySkip: (decision, info) => this._handlePolicySkip(decision, info),
-      isOnDomain: (normalized) => this.isOnDomain(normalized),
-      isAllowed: (normalized) => this.isAllowed(normalized),
-      looksLikeArticle: (normalized) => this.looksLikeArticle(normalized),
       safeHostFromUrl: (u) => this._safeHostFromUrl(u),
       emitQueueEvent: (evt) => this.emitQueueEvent(evt),
       emitEnhancedQueueEvent: (evt) => this.emitEnhancedQueueEvent(evt),
       computeEnhancedPriority: (args) => this.computeEnhancedPriority(args),
       computePriority: (args) => this.computePriority(args),
-      getDbAdapter: () => this.dbAdapter,
+      urlEligibilityService: this.urlEligibilityService,
       cache: this.cache,
       getHostResumeTime: (host) => this._getHostResumeTime(host),
       isHostRateLimited: (host) => this._isHostRateLimited(host),

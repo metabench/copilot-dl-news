@@ -17,6 +17,7 @@ This document exists solely to keep every change aligned with the ongoing refact
 - Crawler helpers already exist under `src/crawler/` (limiter, sitemap, urlPolicy, etc.); remaining inline logic in `crawl.js` should migrate into that directory.
 - Queue orchestration extracted to `src/crawler/QueueManager.js`, with `crawl.js` delegating enqueue/dequeue behaviour.
 - Fetch execution extracted to `src/crawler/FetchPipeline.js`, with `crawl.js` delegating cache checks, network fetches, and retry metadata.
+- URL eligibility rules extracted to `src/crawler/UrlEligibilityService.js`, with `QueueManager` delegating normalization, robots checks, and known-article promotion.
 
 If you touch a route or crawler pathway that is still inline, schedule an extraction before expanding its behaviour.
 

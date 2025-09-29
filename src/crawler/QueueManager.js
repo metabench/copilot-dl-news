@@ -73,19 +73,12 @@ class QueueManager {
     this.maxQueue = options.maxQueue;
     this.maxDepth = options.maxDepth;
     this.stats = options.stats;
-    this.visited = options.visited;
-    this.knownArticlesCache = options.knownArticlesCache;
-    this.getUrlDecision = options.getUrlDecision;
-    this.handlePolicySkip = options.handlePolicySkip;
-    this.isOnDomain = options.isOnDomain;
-    this.isAllowed = options.isAllowed;
-    this.looksLikeArticle = options.looksLikeArticle;
+  this.urlEligibilityService = options.urlEligibilityService;
     this.safeHostFromUrl = options.safeHostFromUrl;
     this.emitQueueEvent = options.emitQueueEvent;
     this.emitEnhancedQueueEvent = options.emitEnhancedQueueEvent;
     this.computeEnhancedPriority = options.computeEnhancedPriority;
-    this.computePriority = options.computePriority;
-    this.getDbAdapter = options.getDbAdapter;
+  this.computePriority = options.computePriority;
     this.cache = options.cache;
     this.getHostResumeTime = options.getHostResumeTime;
     this.isHostRateLimited = options.isHostRateLimited;
@@ -115,120 +108,50 @@ class QueueManager {
 
   enqueue({ url, depth, type }) {
     const currentSize = this.size();
-    const decision = this.getUrlDecision(url, {
-      phase: 'enqueue',
-      depth
-    });
-    const analysis = decision?.analysis || {};
-    const normalized = analysis && !analysis.invalid ? analysis.normalized : null;
-    let host = null;
-    try {
-      if (normalized) host = new URL(normalized).hostname;
-    } catch (_) {}
+    const meta = type && typeof type === 'object' ? type : null;
 
-    if (!decision.allow) {
-      if (decision.reason === 'query-superfluous') {
-        this.handlePolicySkip(decision, {
-          depth,
-          queueSize: currentSize
-        });
-      } else {
-        this.emitQueueEvent({
-          action: 'drop',
-          url: normalized || url,
-          depth,
-          host,
-          reason: decision.reason || 'policy-blocked',
-          queueSize: currentSize
-        });
+    if (!this.urlEligibilityService || typeof this.urlEligibilityService.evaluate !== 'function') {
+      throw new Error('QueueManager requires a urlEligibilityService with an evaluate method');
+    }
+
+    const evaluation = this.urlEligibilityService.evaluate({
+      url,
+      depth,
+      type,
+      queueSize: currentSize,
+      isDuplicate: (queueKey) => this.queuedUrls.has(queueKey)
+    });
+
+    if (!evaluation || evaluation.status !== 'allow') {
+      if (evaluation?.handled) {
+        return false;
       }
+      const normalizedDrop = evaluation?.normalized || url;
+      const hostDrop = evaluation?.host || this.safeHostFromUrl(normalizedDrop);
+      this.emitQueueEvent({
+        action: 'drop',
+        url: normalizedDrop,
+        depth,
+        host: hostDrop,
+        reason: evaluation?.reason || 'policy-blocked',
+        queueSize: currentSize
+      });
       return false;
+    }
+
+    const { normalized, host, decision, kind, allowRevisit, queueKey } = evaluation;
+    let reason = evaluation.reason;
+    if (!reason && meta?.reason) {
+      reason = meta.reason;
     }
 
     if (depth > this.maxDepth) {
       this.emitQueueEvent({
         action: 'drop',
-        url: normalized || url,
+        url: normalized,
         depth,
         host,
         reason: 'max-depth',
-        queueSize: currentSize
-      });
-      return false;
-    }
-
-    if (!normalized) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url,
-        depth,
-        host: null,
-        reason: 'bad-url',
-        queueSize: currentSize
-      });
-      return false;
-    }
-
-    if (!this.isOnDomain(normalized)) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url: normalized,
-        depth,
-        host,
-        reason: 'off-domain',
-        queueSize: currentSize
-      });
-      return false;
-    }
-
-    if (!this.isAllowed(normalized)) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url: normalized,
-        depth,
-        host,
-        reason: 'robots-disallow',
-        queueSize: currentSize
-      });
-      return false;
-    }
-
-    const meta = type && typeof type === 'object' ? type : null;
-    let kind = meta ? (meta.kind || meta.type || meta.intent) : type;
-    const inferredType = this.looksLikeArticle(normalized) ? 'article' : 'nav';
-    if (!kind) {
-      kind = inferredType;
-    }
-    let reason = meta?.reason;
-    let allowRevisit = !!meta?.allowRevisit;
-
-    if (!allowRevisit && this.visited.has(normalized)) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url: normalized,
-        depth,
-        host,
-        reason: 'visited',
-        queueSize: currentSize
-      });
-      return false;
-    }
-
-    if (kind === 'article' && this._checkKnownArticle(normalized)) {
-      kind = 'refresh';
-      if (!reason) reason = 'known-article';
-    }
-
-    const isRefreshLike = allowRevisit || kind === 'refresh';
-    const queueKey = isRefreshLike ? `${kind}:${normalized}` : normalized;
-
-    if (this.queuedUrls.has(queueKey)) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url: normalized,
-        depth,
-        host,
-        reason: 'duplicate',
         queueSize: currentSize
       });
       return false;
@@ -293,7 +216,7 @@ class QueueManager {
       depth,
       host,
       queueSize: this.size(),
-      reason,
+  reason,
       jobId: this.jobIdProvider()
     };
 
@@ -307,27 +230,6 @@ class QueueManager {
 
     this.emitEnhancedQueueEvent(queueEventData);
     return true;
-  }
-
-  _checkKnownArticle(normalized) {
-    if (!normalized) return false;
-    if (this.knownArticlesCache.has(normalized)) {
-      return !!this.knownArticlesCache.get(normalized);
-    }
-
-    let isKnown = false;
-    const adapter = typeof this.getDbAdapter === 'function' ? this.getDbAdapter() : null;
-    if (adapter && adapter.isEnabled && adapter.isEnabled()) {
-      try {
-        const row = (adapter.getArticleRowByUrl?.(normalized)) || (adapter.getArticleByUrlOrCanonical?.(normalized));
-        isKnown = !!row;
-      } catch (_) {
-        isKnown = false;
-      }
-    }
-
-    this.knownArticlesCache.set(normalized, isKnown);
-    return isKnown;
   }
 
   _releaseQueueKey(item) {
