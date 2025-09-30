@@ -69,6 +69,7 @@ const {
 const {
   ArticleProcessor
 } = require('./crawler/ArticleProcessor');
+const ArticleSignalsService = require('./crawler/ArticleSignalsService');
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -159,6 +160,11 @@ class NewsCrawler {
     this.problemClusteringService = null;
     this.plannerKnowledgeService = null;
     this.completionReporter = null;
+    this.adaptiveSeedPlanner = null;
+    this.articleSignals = new ArticleSignalsService({
+      baseUrl: this.baseUrl,
+      logger: console
+    });
     this.featuresEnabled = {
       gapDrivenPrioritization: false,
       plannerKnowledgeReuse: false,
@@ -413,121 +419,15 @@ class NewsCrawler {
 
   // --- Analysis helpers: use both URL and content signals ---
   _computeUrlSignals(rawUrl) {
-    try {
-      const u = new URL(rawUrl, this.baseUrl);
-      const host = u.hostname;
-      const path = u.pathname || '/';
-      const segments = path.split('/').filter(Boolean);
-      const section = segments[0] || null;
-      const pathDepth = segments.length;
-      const slug = segments[pathDepth - 1] || '';
-      const slugLen = slug.length;
-      const lower = path.toLowerCase();
-      const hasDatePath = /\/\d{4}\/\d{2}\/\d{2}\//.test(lower);
-      const hasArticleWords = /(article|story|news|post|opinion|uk-news|us-news|world|politics|business|sport|culture|technology)/.test(lower);
-      const queryCount = Array.from(new URLSearchParams(u.search)).length;
-      const hostParts = host.split('.');
-      const tld = hostParts[hostParts.length - 1] || null;
-      return {
-        host,
-        tld,
-        section,
-        pathDepth,
-        slugLen,
-        hasDatePath,
-        hasArticleWords,
-        queryCount
-      };
-    } catch (_) {
-      return null;
-    }
+    return this.articleSignals.computeUrlSignals(rawUrl);
   }
 
   _computeContentSignals($, html) {
-    let linkDensity = null,
-      h2 = null,
-      h3 = null,
-      aCount = null,
-      pCount = null;
-    try {
-      const bodyText = ($('body').text() || '').replace(/\s+/g, ' ').trim();
-      let aTextLen = 0;
-      $('a').each((_, el) => {
-        const t = $(el).text();
-        aTextLen += (t || '').trim().length;
-      });
-      const len = bodyText.length || 1;
-      linkDensity = Math.min(1, Math.max(0, aTextLen / len));
-      h2 = $('h2').length;
-      h3 = $('h3').length;
-      aCount = $('a').length;
-      pCount = $('p').length;
-    } catch (_) {}
-    return {
-      linkDensity,
-      h2,
-      h3,
-      a: aCount,
-      p: pCount
-    };
+    return this.articleSignals.computeContentSignals($, html);
   }
 
   _combineSignals(urlSignals, contentSignals, opts = {}) {
-    const votes = {
-      article: 0,
-      nav: 0,
-      other: 0
-    };
-    const consider = [];
-    // URL-based votes
-    if (urlSignals) {
-      if (urlSignals.hasDatePath || urlSignals.hasArticleWords) {
-        votes.article++;
-        consider.push('url-article');
-      }
-      if (urlSignals.pathDepth <= 2 && !urlSignals.hasDatePath) {
-        votes.nav++;
-        consider.push('url-shallow');
-      }
-    }
-    // Content-based votes
-    const cs = contentSignals || {};
-    if (typeof cs.linkDensity === 'number') {
-      if (cs.linkDensity > 0.25 && (cs.a || 0) > 40) {
-        votes.nav++;
-        consider.push('content-link-dense');
-      }
-      if (cs.linkDensity < 0.08 && (cs.p || 0) >= 3) {
-        votes.article++;
-        consider.push('content-text-heavy');
-      }
-    }
-    if (typeof opts.wordCount === 'number') {
-      if (opts.wordCount > 150) {
-        votes.article++;
-        consider.push('wc>150');
-      }
-      if (opts.wordCount < 60 && (cs.a || 0) > 20) {
-        votes.nav++;
-        consider.push('wc<60');
-      }
-    }
-    // Decide
-    let hint = 'other';
-    let maxVotes = -1;
-    for (const k of Object.keys(votes)) {
-      if (votes[k] > maxVotes) {
-        maxVotes = votes[k];
-        hint = k;
-      }
-    }
-    const considered = consider.length || 1;
-    const confidence = Math.min(1, Math.max(0, maxVotes / Math.max(2, considered))); // crude but bounded
-    return {
-      hint,
-      confidence,
-      considered
-    };
+    return this.articleSignals.combineSignals(urlSignals, contentSignals, opts);
   }
 
   _normalizeSectionSlug(value) {
@@ -1280,34 +1180,7 @@ class NewsCrawler {
   }
 
   looksLikeArticle(url) {
-    // Heuristics to determine if URL looks like an article
-    const urlStr = url.toLowerCase();
-
-    // Skip certain patterns that are unlikely to be articles
-    const skipPatterns = [
-      '/search', '/login', '/register', '/subscribe', '/newsletter',
-      '/contact', '/about', '/privacy', '/terms', '/cookies',
-      '/rss', '/feed', '.xml', '.json', '/api/', '/admin/',
-      '/profile', '/account', '/settings', '/user/',
-      '/tag/', '/tags/', '/category/', '/categories/',
-      '/page/', '/index', '/sitemap', '/archive',
-      '.pdf', '.jpg', '.png', '.gif', '.css', '.js'
-    ];
-
-    if (skipPatterns.some(pattern => urlStr.includes(pattern))) {
-      return false;
-    }
-
-    // Positive indicators for articles
-    const articlePatterns = [
-      '/article', '/story', '/news', '/post',
-      '/world', '/politics', '/business', '/sport',
-      '/culture', '/opinion', '/lifestyle', '/technology',
-      '/commentisfree', '/uk-news', '/us-news'
-    ];
-
-    return articlePatterns.some(pattern => urlStr.includes(pattern)) ||
-      /\/\d{4}\/\d{2}\/\d{2}\//.test(urlStr); // Date pattern
+    return this.articleSignals.looksLikeArticle(url);
   }
 
   async processPage(url, depth = 0, context = {}) {
