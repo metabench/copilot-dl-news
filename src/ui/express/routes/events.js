@@ -1,10 +1,14 @@
 const express = require('express');
 
 // Factory to create the SSE router. We pass dependencies to avoid changing global behavior.
-function createEventsRouter({ sseClients, jobs, broadcaster, progress, QUIET }) {
-  if (!sseClients || !jobs || !broadcaster || !progress) throw new Error('events router requires sseClients, jobs, broadcaster, progress');
+function createEventsRouter({ realtime, jobRegistry, QUIET }) {
+  if (!realtime) throw new Error('events router requires realtime broadcaster');
+  if (!jobRegistry) throw new Error('events router requires jobRegistry');
+  const sseClients = realtime.getSseClients();
+  const jobs = jobRegistry.getJobs();
   const router = express.Router();
-  const broadcast = (event, data, forcedJobId = null) => broadcaster.broadcast(event, data, forcedJobId);
+  const broadcast = (event, data, forcedJobId = null) => realtime.broadcast(event, data, forcedJobId);
+  const progress = realtime.getProgress();
 
   router.get('/events', (req, res) => {
     // Strong SSE headers to avoid proxy buffering and enable streaming
@@ -24,8 +28,8 @@ function createEventsRouter({ sseClients, jobs, broadcaster, progress, QUIET }) 
     }, 10000);
     try { heartbeat.unref?.(); } catch (_) {}
 
-    const client = { res, logsEnabled, heartbeat, jobFilter };
-    sseClients.add(client);
+  const client = { res, logsEnabled, heartbeat, jobFilter };
+  realtime.registerClient(client);
     try { console.log(`[sse] connect logs=${logsEnabled} clients=${sseClients.size}`); } catch (_) {}
 
     // Seed a one-time log line for immediate feedback
@@ -84,7 +88,7 @@ function createEventsRouter({ sseClients, jobs, broadcaster, progress, QUIET }) 
     const cleanup = () => {
       try { clearInterval(heartbeat); } catch (_) {}
       try { client.heartbeat && client.heartbeat.unref?.(); } catch (_) {}
-      sseClients.delete(client);
+      realtime.removeClient(client);
       try { if (!QUIET) console.log(`[sse] disconnect clients=${sseClients.size}`); } catch (_) {}
     };
     req.on('close', cleanup);

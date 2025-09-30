@@ -17,7 +17,14 @@ This document exists solely to keep every change aligned with the ongoing refact
 - Crawler helpers already exist under `src/crawler/` (limiter, sitemap, urlPolicy, etc.); remaining inline logic in `crawl.js` should migrate into that directory.
 - Queue orchestration extracted to `src/crawler/QueueManager.js`, with `crawl.js` delegating enqueue/dequeue behaviour.
 - Fetch execution extracted to `src/crawler/FetchPipeline.js`, with `crawl.js` delegating cache checks, network fetches, and retry metadata.
+- Page execution pipeline extracted to `src/crawler/PageExecutionService.js`, with `crawl.js` delegating fetch results, article processing, and link scheduling.
 - URL eligibility rules extracted to `src/crawler/UrlEligibilityService.js`, with `QueueManager` delegating normalization, robots checks, and known-article promotion.
+- URL decision persistence, error/outcome tracking, and domain throttling now live in `src/crawler/UrlDecisionService.js`, `src/crawler/ErrorTracker.js`, and `src/crawler/DomainThrottleManager.js`, each covered by dedicated tests.
+- Worker loop orchestration extracted to `src/crawler/WorkerRunner.js`, with `crawl.js` delegating worker lifecycle management.
+- Robots and sitemap ingestion extracted to `src/crawler/RobotsAndSitemapCoordinator.js`, keeping startup loading logic out of `crawl.js`.
+- Enhanced features lifecycle managed by `src/crawler/EnhancedFeaturesManager.js`, handling optional services and priority scoring.
+- Intelligent planner pipeline extracted to `src/crawler/IntelligentPlanRunner.js`, with `crawl.js` delegating intelligent planning stages.
+- Seeded hub lifecycle now tracked via metadata: `CrawlerState` records seeded and visited hubs, `HubSeeder` annotates country candidates with priority boosts, and `PageExecutionService` emits milestones when country hubs are successfully fetched.
 
 If you touch a route or crawler pathway that is still inline, schedule an extraction before expanding its behaviour.
 

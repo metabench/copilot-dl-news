@@ -2,9 +2,12 @@ const express = require('express');
 
 // Router for crawl jobs list/detail and per-job controls
 // Expects injected dependencies to preserve behavior without global coupling.
-function createCrawlsApiRouter({ jobs, broadcastProgress, QUIET }) {
-  if (!jobs || typeof jobs.get !== 'function') throw new Error('createCrawlsApiRouter: jobs Map required');
+function createCrawlsApiRouter({ jobRegistry, broadcastProgress, broadcastJobs, QUIET }) {
+  if (!jobRegistry) throw new Error('createCrawlsApiRouter: jobRegistry required');
+  if (typeof broadcastProgress !== 'function') throw new Error('createCrawlsApiRouter: broadcastProgress required');
+  if (typeof broadcastJobs !== 'function') throw new Error('createCrawlsApiRouter: broadcastJobs required');
   const router = express.Router();
+  const jobs = jobRegistry.getJobs();
 
   // List ongoing crawls (single or multi-job)
   router.get('/api/crawls', (req, res) => {
@@ -43,22 +46,11 @@ function createCrawlsApiRouter({ jobs, broadcastProgress, QUIET }) {
     const job = jobs.get(id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
     try {
-      const target = job.child;
-      if (typeof target?.kill === 'function') target.kill('SIGTERM');
-      // Escalate if the process does not exit promptly
-      try { if (job.killTimer) { clearTimeout(job.killTimer); job.killTimer = null; } } catch (_) {}
-      job.killTimer = setTimeout(() => {
-        try {
-          if (target && !target.killed) {
-            try { target.kill('SIGKILL'); } catch (_) {}
-            if (process.platform === 'win32' && target.pid) {
-              try { const { exec } = require('child_process'); exec(`taskkill /PID ${target.pid} /T /F`); } catch (_) {}
-            }
-          }
-        } catch (_) {}
-      }, 800);
-      try { job.killTimer?.unref?.(); } catch (_) {}
+      const result = jobRegistry.stopJob(id);
+      if (!result.ok || !result.job) return res.status(404).json({ error: 'Job not found' });
+      const target = result.job.child;
       try { console.log(`[api] POST /api/crawls/${id}/stop -> 202 stop requested pid=${target?.pid||'n/a'}`); } catch (_) {}
+      broadcastJobs(true);
       return res.status(202).json({ stopped: true, escalatesInMs: 800 });
     } catch (e) {
       try { console.log(`[api] POST /api/crawls/${id}/stop -> 500 ${e?.message||e}`); } catch (_) {}
@@ -73,16 +65,19 @@ function createCrawlsApiRouter({ jobs, broadcastProgress, QUIET }) {
     const job = jobs.get(id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
     try {
-      const stdin = job.stdin || (job.child && job.child.stdin);
-      if (stdin && typeof stdin.write === 'function' && !(job.child && job.child.killed)) {
-        stdin.write('PAUSE\n');
-        job.paused = true;
-  broadcastProgress({ ...job.metrics, stage: job.stage, paused: true }, job.id, job.metrics);
-        try { console.log(`[api] POST /api/crawls/${id}/pause -> paused=true`); } catch (_) {}
-        return res.json({ ok: true, paused: true });
+      const result = jobRegistry.pauseJob(id);
+      if (!result.ok) {
+        if (result.error === 'stdin-unavailable') {
+          try { console.log(`[api] POST /api/crawls/${id}/pause -> stdin unavailable`); } catch (_) {}
+          return res.status(200).json({ ok: false, paused: false, error: 'stdin unavailable' });
+        }
+        return res.status(404).json({ error: 'Job not found' });
       }
-      try { console.log(`[api] POST /api/crawls/${id}/pause -> stdin unavailable`); } catch (_) {}
-      return res.status(200).json({ ok: false, paused: false, error: 'stdin unavailable' });
+      const pausedJob = result.job;
+      broadcastProgress({ ...pausedJob.metrics, stage: pausedJob.stage, paused: true }, pausedJob.id, pausedJob.metrics);
+      broadcastJobs(true);
+      try { console.log(`[api] POST /api/crawls/${id}/pause -> paused=true`); } catch (_) {}
+      return res.json({ ok: true, paused: true });
     } catch (e) {
       try { console.log(`[api] POST /api/crawls/${id}/pause -> 500 ${e?.message||e}`); } catch (_) {}
       return res.status(500).json({ error: e.message });
@@ -96,16 +91,19 @@ function createCrawlsApiRouter({ jobs, broadcastProgress, QUIET }) {
     const job = jobs.get(id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
     try {
-      const stdin = job.stdin || (job.child && job.child.stdin);
-      if (stdin && typeof stdin.write === 'function' && !(job.child && job.child.killed)) {
-        stdin.write('RESUME\n');
-        job.paused = false;
-  broadcastProgress({ ...job.metrics, stage: job.stage, paused: false }, job.id, job.metrics);
-        try { console.log(`[api] POST /api/crawls/${id}/resume -> paused=false`); } catch (_) {}
-        return res.json({ ok: true, paused: false });
+      const result = jobRegistry.resumeJob(id);
+      if (!result.ok) {
+        if (result.error === 'stdin-unavailable') {
+          try { console.log(`[api] POST /api/crawls/${id}/resume -> stdin unavailable`); } catch (_) {}
+          return res.status(200).json({ ok: false, paused: false, error: 'stdin unavailable' });
+        }
+        return res.status(404).json({ error: 'Job not found' });
       }
-      try { console.log(`[api] POST /api/crawls/${id}/resume -> stdin unavailable`); } catch (_) {}
-      return res.status(200).json({ ok: false, paused: false, error: 'stdin unavailable' });
+      const resumedJob = result.job;
+      broadcastProgress({ ...resumedJob.metrics, stage: resumedJob.stage, paused: false }, resumedJob.id, resumedJob.metrics);
+      broadcastJobs(true);
+      try { console.log(`[api] POST /api/crawls/${id}/resume -> paused=false`); } catch (_) {}
+      return res.json({ ok: true, paused: false });
     } catch (e) {
       try { console.log(`[api] POST /api/crawls/${id}/resume -> 500 ${e?.message||e}`); } catch (_) {}
       return res.status(500).json({ error: e.message });

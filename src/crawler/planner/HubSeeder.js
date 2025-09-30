@@ -31,29 +31,37 @@ class HubSeeder {
     }
 
     const sectionHubs = sectionSlugs.map((slug) => this._buildAbsolutePathUrl([slug])).filter(Boolean);
-    const candidateUrls = countryCandidates.map((c) => c?.url).filter(Boolean);
-    const hubSet = new Set([...sectionHubs, ...candidateUrls]);
+    const entries = this._buildHubEntries({ sectionSlugs, countryCandidates });
     const cap = typeof maxSeeds === 'number' && maxSeeds > 0 ? maxSeeds : 50;
-    const hubs = Array.from(hubSet).slice(0, cap);
+    const hubs = entries.slice(0, cap);
 
     const seeded = [];
-    for (const hubUrl of hubs) {
+    for (const entry of hubs) {
       const enqueued = this.enqueueRequest({
-        url: hubUrl,
+        url: entry.url,
         depth: 0,
         type: {
           kind: 'hub-seed',
-          reason: 'intelligent-seed'
+          reason: entry.meta.reason,
+          hubKind: entry.meta.kind,
+          source: entry.meta.source,
+          priorityBias: entry.meta.priorityBias
         }
       });
       if (enqueued) {
-        const normalized = this._safeNormalize(hubUrl);
+        const normalized = this._safeNormalize(entry.url);
         if (normalized && this.state?.addSeededHub) {
-          this.state.addSeededHub(normalized);
+          this.state.addSeededHub(normalized, {
+            kind: entry.meta.kind,
+            source: entry.meta.source,
+            reason: entry.meta.reason,
+            slug: entry.meta.slug || null,
+            seededAt: new Date().toISOString()
+          });
         }
-        seeded.push(hubUrl);
+        seeded.push(entry.url);
       }
-      this._recordSeedInDatabase(host, hubUrl);
+      this._recordSeedInDatabase(host, entry.url, entry.meta);
     }
 
     this._log(`Intelligent plan: seeded ${seeded.length} hub(s)`);
@@ -109,7 +117,14 @@ class HubSeeder {
           }
         });
         if (enqueued) {
-          if (this.state?.addSeededHub) this.state.addSeededHub(normalized);
+          if (this.state?.addSeededHub) {
+            this.state.addSeededHub(normalized, {
+              kind: 'adaptive-section',
+              source: 'adaptive-seed',
+              reason: cand.reason,
+              seededAt: new Date().toISOString()
+            });
+          }
           this._emitMilestoneOnce(`adaptive-hub:${normalized}`, {
             kind: 'adaptive-hub-seeded',
             message: 'Queued adaptive hub for deeper coverage',
@@ -255,16 +270,70 @@ class HubSeeder {
     return false;
   }
 
-  _recordSeedInDatabase(host, hubUrl) {
+  _recordSeedInDatabase(host, hubUrl, meta = null) {
     if (!this.db || !this.db.db || typeof this.db.db.prepare !== 'function') {
       return;
     }
     try {
       this.db.db.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)`)
-        .run(host, hubUrl, JSON.stringify({ by: 'intelligent-plan', reason: 'learned-section-or-country' }));
+        .run(host, hubUrl, JSON.stringify({
+          by: 'intelligent-plan',
+          reason: meta?.reason || 'learned-section-or-country',
+          kind: meta?.kind || null,
+          source: meta?.source || null
+        }));
     } catch (_) {
       // ignore DB errors
     }
+  }
+
+  _buildHubEntries({ sectionSlugs = [], countryCandidates = [] }) {
+    const entries = [];
+    const seen = new Set();
+
+    const pushEntry = (url, meta) => {
+      if (!url) return;
+      if (seen.has(url)) {
+        const existing = entries.find((entry) => entry.url === url);
+        if (existing) {
+          existing.meta = {
+            ...existing.meta,
+            ...meta
+          };
+        }
+        return;
+      }
+      seen.add(url);
+      entries.push({
+        url,
+        meta
+      });
+    };
+
+  for (const slug of (Array.isArray(sectionSlugs) ? sectionSlugs : [])) {
+      const url = this._buildAbsolutePathUrl([slug]);
+      if (!url) continue;
+      pushEntry(url, {
+        kind: 'section',
+        source: 'pattern-inference',
+        reason: 'pattern-section',
+        slug,
+        priorityBias: 0
+      });
+    }
+
+  for (const candidate of (Array.isArray(countryCandidates) ? countryCandidates : [])) {
+      if (!candidate || !candidate.url) continue;
+      pushEntry(candidate.url, {
+        kind: 'country',
+        source: candidate.source || 'country-planner',
+        reason: candidate.reason || 'country-candidate',
+        slug: candidate.slug || null,
+        priorityBias: -5
+      });
+    }
+
+    return entries;
   }
 
   _emitMilestone(payload, scope) {

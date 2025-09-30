@@ -4,31 +4,23 @@ const { performance } = require('perf_hooks');
 
 function createCrawlStartRouter(options = {}) {
   const {
+    jobRegistry,
     allowMultiJobs = false,
-    jobs,
-    crawlState,
     urlsDbPath,
     runner,
     buildArgs,
-    newJobId,
     broadcast,
     broadcastJobs,
     broadcastProgress,
     getDbRW,
     queueDebug = false,
-    updateJobStage,
-    clearJobWatchdogs,
-    getFirstJob,
     metrics,
     QUIET = false,
     traceStart = false
   } = options;
 
-  if (!jobs || typeof jobs.set !== 'function') {
-    throw new Error('createCrawlStartRouter requires a jobs Map');
-  }
-  if (!crawlState || typeof crawlState !== 'object') {
-    throw new Error('createCrawlStartRouter requires crawlState');
+  if (!jobRegistry) {
+    throw new Error('createCrawlStartRouter requires jobRegistry');
   }
   if (typeof urlsDbPath !== 'string' || !urlsDbPath) {
     throw new Error('createCrawlStartRouter requires urlsDbPath');
@@ -38,9 +30,6 @@ function createCrawlStartRouter(options = {}) {
   }
   if (typeof buildArgs !== 'function') {
     throw new Error('createCrawlStartRouter requires buildArgs(requestBody)');
-  }
-  if (typeof newJobId !== 'function') {
-    throw new Error('createCrawlStartRouter requires newJobId()');
   }
   if (typeof broadcast !== 'function') {
     throw new Error('createCrawlStartRouter requires broadcast(event, data, jobId)');
@@ -54,18 +43,12 @@ function createCrawlStartRouter(options = {}) {
   if (typeof getDbRW !== 'function') {
     throw new Error('createCrawlStartRouter requires getDbRW()');
   }
-  if (typeof updateJobStage !== 'function') {
-    throw new Error('createCrawlStartRouter requires updateJobStage(job, stage)');
-  }
-  if (typeof clearJobWatchdogs !== 'function') {
-    throw new Error('createCrawlStartRouter requires clearJobWatchdogs(job)');
-  }
-  if (typeof getFirstJob !== 'function') {
-    throw new Error('createCrawlStartRouter requires getFirstJob()');
-  }
   if (!metrics || typeof metrics !== 'object') {
     throw new Error('createCrawlStartRouter requires metrics object');
   }
+
+  const jobs = jobRegistry.getJobs();
+  const crawlState = jobRegistry.getCrawlState();
 
   const router = express.Router();
 
@@ -75,16 +58,16 @@ function createCrawlStartRouter(options = {}) {
     try {
       console.log(`[api] POST /api/crawl received (runningJobs=${jobs.size})`);
     } catch (_) {}
-    const now = Date.now();
-    if (!allowMultiJobs && (jobs.size > 0 || now < crawlState.jobStartGuardUntil)) {
+    const status = jobRegistry.checkStartAllowed();
+    if (!status.ok) {
       try {
         console.log('[api] POST /api/crawl -> 409 already-running');
       } catch (_) {}
       return res.status(409).json({ error: 'Crawler already running' });
     }
     const t1 = Date.now();
-    const args = buildArgs(req.body || {});
-    const jobId = newJobId();
+  const args = buildArgs(req.body || {});
+  const jobId = jobRegistry.reserveJobId();
     const t2 = Date.now();
     if (!args.some((a) => /^--db=/.test(a))) {
       args.push(`--db=${urlsDbPath}`);
@@ -128,13 +111,8 @@ function createCrawlStartRouter(options = {}) {
     };
     if (!child.stdout) child.stdout = new EventEmitter();
     if (!child.stderr) child.stderr = new EventEmitter();
-    jobs.set(jobId, job);
+    jobRegistry.registerJob(job);
     broadcastJobs(true);
-    try {
-      crawlState.jobStartGuardUntil = Date.now() + 600;
-    } catch (_) {
-      crawlState.jobStartGuardUntil = now + 600;
-    }
 
     const persistStart = () => {
       try {
@@ -172,12 +150,12 @@ function createCrawlStartRouter(options = {}) {
           clearTimeout(job.killTimer);
           job.killTimer = null;
         }
-        clearJobWatchdogs(job);
+          jobRegistry.clearJobWatchdogs(job);
       } catch (_) {}
       const endedAt = new Date().toISOString();
       const extras = extraInfo && typeof extraInfo === 'object' ? extraInfo : null;
       const stageForExit = extras && extras.error ? 'failed' : 'done';
-      updateJobStage(job, stageForExit);
+        jobRegistry.updateJobStage(job, stageForExit);
       job.lastExit = extras ? { code, signal, endedAt, ...extras } : { code, signal, endedAt };
       try {
         if (!QUIET) console.log(`[child] exit code=${code} signal=${signal}`);
@@ -214,20 +192,13 @@ function createCrawlStartRouter(options = {}) {
       }
       setTimeout(() => {
         try {
-          jobs.delete(jobId);
+          jobRegistry.removeJob(jobId);
         } catch (_) {}
         try {
           broadcastJobs(true);
         } catch (_) {}
-        const first = getFirstJob();
-        if (!first) {
-          crawlState.startedAt = null;
-          crawlState.lastExit = job.lastExit;
-          metrics.running = 0;
-          try { metrics.stage = 'idle'; } catch (_) {}
-          crawlState.paused = false;
-        }
       }, 350);
+  jobRegistry.markJobExit(job, job.lastExit);
     };
 
     if (typeof child.on === 'function') {
@@ -247,20 +218,6 @@ function createCrawlStartRouter(options = {}) {
         broadcast('log', { stream: 'server', line: `[server] crawler failed to start: ${msg}\n` }, jobId);
         onExit(null, null, { error: msg });
       });
-    }
-
-    const first = getFirstJob();
-    if (first && first.id === jobId) {
-      crawlState.startedAt = job.startedAt;
-      metrics.running = 1;
-      metrics._lastSampleTime = Date.now();
-      metrics._lastVisited = 0;
-      metrics._lastDownloaded = 0;
-      try {
-        metrics.stage = job.stage || 'preparing';
-      } catch (_) {}
-      crawlState.lastExit = null;
-      crawlState.paused = false;
     }
 
     const initialDurationMs = Math.max(0, performance.now() - perfStart);
@@ -365,7 +322,7 @@ function createCrawlStartRouter(options = {}) {
         }
       }
       job._outputSeen = true;
-      clearJobWatchdogs(job);
+  jobRegistry.clearJobWatchdogs(job);
       job.stdoutBuf += chunk.toString();
       let idx;
       while ((idx = job.stdoutBuf.indexOf('\n')) !== -1) {
@@ -394,7 +351,7 @@ function createCrawlStartRouter(options = {}) {
         if (line.startsWith('PROGRESS ')) {
           try {
             const obj = JSON.parse(line.slice('PROGRESS '.length));
-            if (job.stage !== 'running') updateJobStage(job, 'running');
+            if (job.stage !== 'running') jobRegistry.updateJobStage(job, 'running');
             if (!Object.prototype.hasOwnProperty.call(obj, 'stage')) obj.stage = job.stage;
             try {
               if (!QUIET) console.log(`[child:progress] v=${obj.visited || 0} d=${obj.downloaded || 0} q=${obj.queueSize || 0}`);

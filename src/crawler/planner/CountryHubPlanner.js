@@ -20,7 +20,8 @@ class CountryHubPlanner {
         candidates.push({
           url,
           slug,
-          reason: 'guardian-world-country'
+          reason: 'guardian-world-country',
+          source: 'guardian-heuristic'
         });
       }
     }
@@ -35,7 +36,8 @@ class CountryHubPlanner {
             candidates.push({
               url: item.url,
               slug: item.slug || null,
-              reason: item.reason || 'knowledge-service'
+              reason: item.reason || 'knowledge-service',
+              source: item.source || 'knowledge-service'
             });
           }
         }

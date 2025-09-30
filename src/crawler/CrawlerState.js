@@ -2,6 +2,9 @@ class CrawlerState {
   constructor() {
     this.visited = new Set();
     this.seededHubUrls = new Set();
+    this.seededHubMetadata = new Map();
+    this.visitedSeededHubUrls = new Set();
+    this.visitedHubMetadata = new Map();
     this.historySeedUrls = new Set();
     this.knownArticlesCache = new Map();
     this.articleHeaderCache = new Map();
@@ -132,11 +135,34 @@ class CrawlerState {
   }
 
   replaceSeededHubs(iterable) {
+    this.seededHubUrls = new Set();
+    this.seededHubMetadata = new Map();
+    this.visitedSeededHubUrls = new Set();
+    this.visitedHubMetadata = new Map();
+
     if (!iterable || typeof iterable[Symbol.iterator] !== 'function') {
-      this.seededHubUrls = new Set();
       return;
     }
-    this.seededHubUrls = new Set(iterable);
+
+    for (const entry of iterable) {
+      if (!entry) continue;
+      if (typeof entry === 'string') {
+        this.seededHubUrls.add(entry);
+        if (!this.seededHubMetadata.has(entry)) {
+          this.seededHubMetadata.set(entry, {});
+        }
+        continue;
+      }
+      if (typeof entry === 'object') {
+        const url = entry.url || entry.normalized || entry.href;
+        if (!url) continue;
+        this.seededHubUrls.add(url);
+        const meta = { ...(entry.meta || entry.metadata || {}) };
+        if (entry.reason && meta.reason == null) meta.reason = entry.reason;
+        if (entry.kind && meta.kind == null) meta.kind = entry.kind;
+        this.seededHubMetadata.set(url, meta);
+      }
+    }
   }
 
   // --- Stats replacement helper ---
@@ -162,9 +188,18 @@ class CrawlerState {
     return this.seededHubUrls.has(normalizedUrl);
   }
 
-  addSeededHub(normalizedUrl) {
-    if (normalizedUrl) {
-      this.seededHubUrls.add(normalizedUrl);
+  addSeededHub(normalizedUrl, meta = null) {
+    if (!normalizedUrl) return;
+    this.seededHubUrls.add(normalizedUrl);
+    if (!this.seededHubMetadata.has(normalizedUrl)) {
+      this.seededHubMetadata.set(normalizedUrl, {});
+    }
+    if (meta && typeof meta === 'object') {
+      const existing = this.seededHubMetadata.get(normalizedUrl) || {};
+      this.seededHubMetadata.set(normalizedUrl, {
+        ...existing,
+        ...meta
+      });
     }
   }
 
@@ -174,6 +209,64 @@ class CrawlerState {
 
   getSeededHubSample(limit = 5) {
     return Array.from(this.seededHubUrls).slice(0, limit);
+  }
+
+  getSeededHubMeta(normalizedUrl) {
+    if (!normalizedUrl) return null;
+    return this.seededHubMetadata.get(normalizedUrl) || null;
+  }
+
+  markSeededHubVisited(normalizedUrl, info = null) {
+    if (!normalizedUrl || !this.seededHubUrls.has(normalizedUrl)) {
+      return;
+    }
+    this.visitedSeededHubUrls.add(normalizedUrl);
+    const existing = this.seededHubMetadata.get(normalizedUrl) || {};
+    const visitMeta = {
+      ...existing,
+      visitedAt: existing.visitedAt || new Date().toISOString(),
+      ...(info && typeof info === 'object' ? info : {})
+    };
+    this.seededHubMetadata.set(normalizedUrl, visitMeta);
+    this.visitedHubMetadata.set(normalizedUrl, visitMeta);
+  }
+
+  hasVisitedHub(normalizedUrl) {
+    if (!normalizedUrl) return false;
+    return this.visitedSeededHubUrls.has(normalizedUrl);
+  }
+
+  getVisitedHubCount() {
+    return this.visitedSeededHubUrls.size;
+  }
+
+  getVisitedHubSample(limit = 5) {
+    return Array.from(this.visitedSeededHubUrls).slice(0, limit);
+  }
+
+  getHubVisitStats() {
+    const summary = {
+      seeded: this.getSeededHubCount(),
+      visited: this.getVisitedHubCount(),
+      perKind: {}
+    };
+    for (const url of this.seededHubUrls) {
+      const meta = this.seededHubMetadata.get(url) || {};
+      const kind = meta.kind || 'unknown';
+      if (!summary.perKind[kind]) {
+        summary.perKind[kind] = {
+          seeded: 0,
+          visited: 0
+        };
+      }
+      summary.perKind[kind].seeded += 1;
+      if (this.visitedSeededHubUrls.has(url)) {
+        summary.perKind[kind].visited += 1;
+      }
+    }
+    summary.seededSample = this.getSeededHubSample();
+    summary.visitedSample = this.getVisitedHubSample();
+    return summary;
   }
 
   hasHistorySeed(normalizedUrl) {

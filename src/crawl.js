@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-const fetch = (...args) => import('node-fetch').then(({
-  default: fetch
+const fetch = (...args) => import('node-fetch').then(({ 
+  default: fetch 
 }) => fetch(...args));
-const cheerio = require('cheerio');
 const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
 const path = require('path');
@@ -19,6 +18,15 @@ const {
 const {
   DeepUrlAnalyzer
 } = require('./crawler/deepUrlAnalysis');
+const {
+  UrlDecisionService
+} = require('./crawler/UrlDecisionService');
+const {
+  ErrorTracker
+} = require('./crawler/ErrorTracker');
+const {
+  DomainThrottleManager
+} = require('./crawler/DomainThrottleManager');
 const http = require('http');
 const https = require('https');
 const {
@@ -41,14 +49,24 @@ const {
   PlannerKnowledgeService
 } = require('./crawler/PlannerKnowledgeService');
 const {
-  CompletionReporter
-} = require('./crawler/planner/CompletionReporter');
+  EnhancedFeaturesManager
+} = require('./crawler/EnhancedFeaturesManager');
+
+const DEFAULT_FEATURE_FLAGS = Object.freeze({
+  gapDrivenPrioritization: false,
+  plannerKnowledgeReuse: false,
+  realTimeCoverageAnalytics: false,
+  problemClustering: false
+});
 const {
   loadSitemaps
 } = require('./crawler/sitemap');
 const {
   CrawlerState
 } = require('./crawler/CrawlerState');
+const {
+  RobotsAndSitemapCoordinator
+} = require('./crawler/RobotsAndSitemapCoordinator');
 
 const QueueManager = require('./crawler/QueueManager');
 const {
@@ -97,6 +115,18 @@ const {
 const {
   PlannerOrchestrator
 } = require('./crawler/planner/PlannerOrchestrator');
+const {
+  MilestoneTracker
+} = require('./crawler/MilestoneTracker');
+const {
+  PageExecutionService
+} = require('./crawler/PageExecutionService');
+const {
+  IntelligentPlanRunner
+} = require('./crawler/IntelligentPlanRunner');
+const {
+  WorkerRunner
+} = require('./crawler/WorkerRunner');
 
 class NewsCrawler {
   constructor(startUrl, options = {}) {
@@ -136,9 +166,6 @@ class NewsCrawler {
     this.useSitemap = options.useSitemap !== false; // default true
     this.sitemapOnly = options.sitemapOnly === true; // only crawl URLs from sitemaps
     this.sitemapMaxUrls = Math.max(0, options.sitemapMaxUrls || 5000);
-    this.sitemapUrls = [];
-    this.sitemapDiscovered = 0;
-    this.robotsTxtLoaded = false;
     // Intelligent planner options
     this.hubMaxPages = typeof options.hubMaxPages === 'number' ? options.hubMaxPages : undefined;
     this.hubMaxDays = typeof options.hubMaxDays === 'number' ? options.hubMaxDays : undefined;
@@ -152,29 +179,26 @@ class NewsCrawler {
     this.urlDecisionCache = this.state.getUrlDecisionCache();
     this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
     this.startUrlNormalized = null;
-    this.robotsRules = null;
     this.isProcessing = false;
     this.dbAdapter = null;
-    // Enhanced features (initialized later)
-    this.configManager = null;
-    this.enhancedDbAdapter = null;
-    this.priorityScorer = null;
-    this.problemClusteringService = null;
-    this.plannerKnowledgeService = null;
-    this.completionReporter = null;
-    this.adaptiveSeedPlanner = null;
+  // Enhanced features (initialized later)
+  this.adaptiveSeedPlanner = null;
     this.articleSignals = new ArticleSignalsService({
       baseUrl: this.baseUrl,
       logger: console
     });
-    this.featuresEnabled = {
-      gapDrivenPrioritization: false,
-      plannerKnowledgeReuse: false,
-      realTimeCoverageAnalytics: false,
-      problemClustering: false
-    };
+    this.enhancedFeatures = new EnhancedFeaturesManager({
+      ConfigManager,
+      EnhancedDatabaseAdapter,
+      PriorityScorer,
+      ProblemClusteringService,
+      PlannerKnowledgeService,
+      logger: console
+    });
     // Track active workers to coordinate idle waiting
     this.busyWorkers = 0;
+    this.workerRunner = null;
+  this.intelligentPlanRunner = null;
     // Cache facade
     this.cache = new ArticleCache({
       db: null,
@@ -210,6 +234,12 @@ class NewsCrawler {
       getDb: () => this.dbAdapter?.getDb(),
       policy: this.urlPolicy
     });
+    this.urlDecisionService = new UrlDecisionService({
+      urlPolicy: this.urlPolicy,
+      urlDecisionCache: this.urlDecisionCache,
+      urlAnalysisCache: this.urlAnalysisCache,
+      getDbAdapter: () => this.dbAdapter
+    });
     // Failure tracking configuration
     this.connectionResetWindowMs = typeof options.connectionResetWindowMs === 'number' && options.connectionResetWindowMs > 0 ?
       options.connectionResetWindowMs :
@@ -230,13 +260,13 @@ class NewsCrawler {
       getQueueSize: () => (this.queue?.size?.() || 0),
       getCurrentDownloads: () => this.state.currentDownloads,
       getDomainLimits: () => this.state.getDomainLimitsSnapshot(),
-      getRobotsInfo: () => ({
-        robotsLoaded: !!this.robotsTxtLoaded
-      }),
-      getSitemapInfo: () => ({
-        urls: this.sitemapUrls,
-        discovered: this.sitemapDiscovered
-      }),
+      getRobotsInfo: () => this.robotsCoordinator?.getRobotsInfo() || {
+        robotsLoaded: false
+      },
+      getSitemapInfo: () => this.robotsCoordinator?.getSitemapInfo() || {
+        urls: [],
+        discovered: 0
+      },
       getFeatures: () => this.featuresEnabled,
       getEnhancedDbAdapter: () => this.enhancedDbAdapter,
       getProblemClusteringService: () => this.problemClusteringService,
@@ -249,6 +279,39 @@ class NewsCrawler {
 
     this.telemetry = new CrawlerTelemetry({
       events: this.events
+    });
+
+    this.milestoneTracker = new MilestoneTracker({
+      telemetry: this.telemetry,
+      state: this.state,
+      domain: this.domain,
+      getStats: () => this.stats,
+      getPlanSummary: () => ({
+        ...(this._plannerSummary || {}),
+        ...(this._intelligentPlanSummary || {})
+      }),
+      plannerEnabled: this.plannerEnabled,
+      scheduleWideHistoryCheck: (payload) => {
+        if (typeof this.scheduleWideHistoryCheck === 'function') {
+          this.scheduleWideHistoryCheck(payload);
+        }
+      }
+    });
+
+    this.errorTracker = new ErrorTracker({
+      state: this.state,
+      telemetry: this.telemetry,
+      domain: this.domain,
+      connectionResetWindowMs: this.connectionResetWindowMs,
+      connectionResetThreshold: this.connectionResetThreshold,
+      requestAbort: (reason, details) => this.requestAbort(reason, details)
+    });
+
+    this.domainThrottle = new DomainThrottleManager({
+      state: this.state,
+      pacerJitterMinMs: this.pacerJitterMinMs,
+      pacerJitterMaxMs: this.pacerJitterMaxMs,
+      getDbAdapter: () => this.dbAdapter
     });
 
     this.articleProcessor = new ArticleProcessor({
@@ -300,6 +363,24 @@ class NewsCrawler {
       getHostResumeTime: (host) => this._getHostResumeTime(host),
       isHostRateLimited: (host) => this._isHostRateLimited(host),
       jobIdProvider: () => this.jobId
+    });
+
+    this.robotsCoordinator = new RobotsAndSitemapCoordinator({
+      baseUrl: this.baseUrl,
+      domain: this.domain,
+      fetchImpl: fetch,
+      robotsParser,
+      loadSitemaps,
+      useSitemap: this.useSitemap,
+      sitemapMaxUrls: this.sitemapMaxUrls,
+      getUrlDecision: (url, ctx) => this._getUrlDecision(url, ctx),
+      handlePolicySkip: (decision, info) => this._handlePolicySkip(decision, info),
+      isOnDomain: (url) => this.isOnDomain(url),
+      looksLikeArticle: (url) => this.looksLikeArticle(url),
+      enqueueRequest: (request) => this.enqueueRequest(request),
+      emitProgress: () => this.emitProgress(),
+      getQueueSize: () => this.queue.size(),
+      logger: console
     });
 
     this.fetchPipeline = new FetchPipeline({
@@ -362,6 +443,28 @@ class NewsCrawler {
         error: (...args) => console.error(...args)
       }
     });
+
+    this.pageExecutionService = new PageExecutionService({
+      maxDepth: this.maxDepth,
+      maxDownloads: this.maxDownloads,
+      getStats: () => this.stats,
+      state: this.state,
+      fetchPipeline: this.fetchPipeline,
+      articleProcessor: this.articleProcessor,
+      milestoneTracker: this.milestoneTracker,
+      adaptiveSeedPlanner: this.adaptiveSeedPlanner,
+      enqueueRequest: (request) => this.enqueueRequest(request),
+      telemetry: this.telemetry,
+      recordError: (info) => this._recordError(info),
+      normalizeUrl: (targetUrl) => this.normalizeUrl(targetUrl),
+      looksLikeArticle: (targetUrl) => this.looksLikeArticle(targetUrl),
+      noteDepthVisit: (normalized, depth) => this._noteDepthVisit(normalized, depth),
+      emitProgress: () => this.emitProgress(),
+      getDbAdapter: () => this.dbAdapter,
+      computeContentSignals: ($, html) => this._computeContentSignals($, html),
+      computeUrlSignals: (rawUrl) => this._computeUrlSignals(rawUrl),
+      combineSignals: (urlSignals, contentSignals, opts) => this._combineSignals(urlSignals, contentSignals, opts)
+    });
   }
 
   get stats() {
@@ -370,6 +473,62 @@ class NewsCrawler {
 
   set stats(nextStats) {
     this.state.replaceStats(nextStats);
+  }
+
+  get robotsRules() {
+    return this.robotsCoordinator?.robotsRules || null;
+  }
+
+  set robotsRules(rules) {
+    if (this.robotsCoordinator) {
+      this.robotsCoordinator.robotsRules = rules;
+    }
+  }
+
+  get robotsTxtLoaded() {
+    return !!(this.robotsCoordinator?.robotsTxtLoaded);
+  }
+
+  set robotsTxtLoaded(flag) {
+    if (this.robotsCoordinator) {
+      this.robotsCoordinator.robotsTxtLoaded = !!flag;
+    }
+  }
+
+  get sitemapUrls() {
+    return this.robotsCoordinator?.sitemapUrls || [];
+  }
+
+  set sitemapUrls(urls) {
+    if (this.robotsCoordinator) {
+      this.robotsCoordinator.sitemapUrls = Array.isArray(urls) ? urls : [];
+    }
+  }
+
+  get sitemapDiscovered() {
+    return this.robotsCoordinator?.sitemapDiscovered || 0;
+  }
+
+  set sitemapDiscovered(count) {
+    if (this.robotsCoordinator) {
+      this.robotsCoordinator.sitemapDiscovered = typeof count === 'number' ? count : 0;
+    }
+  }
+
+  get featuresEnabled() {
+    return this.enhancedFeatures?.getEnabledFeatures() || DEFAULT_FEATURE_FLAGS;
+  }
+
+  get enhancedDbAdapter() {
+    return this.enhancedFeatures?.getEnhancedDbAdapter() || null;
+  }
+
+  get problemClusteringService() {
+    return this.enhancedFeatures?.getProblemClusteringService() || null;
+  }
+
+  get plannerKnowledgeService() {
+    return this.enhancedFeatures?.getPlannerKnowledgeService() || null;
   }
 
   get seededHubUrls() {
@@ -441,319 +600,42 @@ class NewsCrawler {
     return this.articleSignals.combineSignals(urlSignals, contentSignals, opts);
   }
 
-  _emitIntelligentCompletionMilestone({
-    outcomeErr
-  } = {}) {
-    if (!this.plannerEnabled) return;
-
-    const dependencyPayload = {
-      state: this.state,
-      telemetry: this.telemetry,
-      domain: this.domain,
-      getPlanSummary: () => ({
-        ...(this._plannerSummary || {}),
-        ...(this._intelligentPlanSummary || {})
-      }),
-      getStats: () => this.stats
-    };
-
-    if (!this.completionReporter) {
-      this.completionReporter = new CompletionReporter(dependencyPayload);
-    } else {
-      this.completionReporter.updateDependencies(dependencyPayload);
-    }
-
-    this.completionReporter.emit({
-      outcomeErr
-    });
-  }
-
   _noteDepthVisit(normalizedUrl, depth) {
     this.state.noteDepthVisit(normalizedUrl, depth);
   }
 
-  _checkAnalysisMilestones({
-    depth,
-    isArticle
-  }) {
-    // depth milestones
-    if ((this.stats.depth2PagesProcessed || 0) >= 10) {
-      this.telemetry.milestoneOnce('depth2-coverage-10', {
-        kind: 'depth2-coverage',
-        message: 'Completed analysis of 10 depth-2 pages from the front page',
-        details: {
-          depth: 2,
-          pages: this.stats.depth2PagesProcessed
-        }
-      });
-    }
-
-    // downloads milestone
-    if (this.stats.pagesDownloaded >= 1000) {
-      this.telemetry.milestoneOnce('downloads-1k', {
-        kind: 'downloads-1k',
-        message: 'Downloaded 1,000 documents',
-        details: {
-          count: this.stats.pagesDownloaded
-        }
-      });
-    }
-
-    // article identification milestones (analysis-driven)
-    if (this.stats.articlesFound >= 1000) {
-      this.telemetry.milestoneOnce('articles-found-1k', {
-        kind: 'articles-identified-1k',
-        message: 'Identified 1,000 articles during analysis',
-        details: {
-          count: this.stats.articlesFound
-        }
-      });
-    }
-    if (this.stats.articlesFound >= 10000) {
-      this.telemetry.milestoneOnce('articles-found-10k', {
-        kind: 'articles-identified-10k',
-        message: 'Identified 10,000 articles during analysis',
-        details: {
-          count: this.stats.articlesFound
-        }
-      });
-    }
-
-    // Provide a hook for intelligent crawls to optionally schedule deeper analysis
-    if (this.plannerEnabled && isArticle && typeof this.scheduleWideHistoryCheck === 'function') {
-      try {
-        this.scheduleWideHistoryCheck({
-          depth,
-          articlesFound: this.stats.articlesFound
-        });
-      } catch (_) {
-        // Analysis scheduling is best-effort; ignore errors
-      }
-    }
-  }
-
   _recordError(sample) {
-    if (!sample || typeof sample !== 'object') return;
-    const normalized = {
-      kind: sample.kind || 'unknown',
-      code: sample.code != null ? sample.code : null,
-      message: sample.message || null,
-      url: sample.url || null
-    };
-    this.state.setLastError(normalized);
-    this.state.addErrorSample(normalized);
+    this.errorTracker?.record(sample);
   }
 
   _handleConnectionReset(url, error) {
-    if (this.state.hasEmittedConnectionResetProblem()) return;
-    let host = this.domain;
-    try {
-      if (url) host = new URL(url).hostname || host;
-    } catch (_) {}
-    const now = Date.now();
-    const windowMs = this.connectionResetWindowMs;
-    const threshold = this.connectionResetThreshold;
-    const entry = this.state.getConnectionResetState(host) || {
-      count: 0,
-      firstAt: now,
-      lastAt: now
-    };
-    if (now - entry.firstAt > windowMs) {
-      entry.count = 0;
-      entry.firstAt = now;
-    }
-    entry.count += 1;
-    entry.lastAt = now;
-    this.state.setConnectionResetState(host, entry);
-    if (entry.count >= threshold) {
-      this.state.markConnectionResetProblemEmitted();
-      const message = `Repeated connection resets detected (${entry.count} within ${Math.round(windowMs / 1000)}s)`;
-      const details = {
-        host,
-        count: entry.count,
-        windowMs,
-        firstAt: new Date(entry.firstAt).toISOString(),
-        lastAt: new Date(entry.lastAt).toISOString(),
-        sampleUrl: url || null,
-        errorCode: error && error.code ? error.code : null,
-        errorMessage: error && error.message ? error.message : null
-      };
-      try {
-        this.telemetry.problem({
-          kind: 'connection-reset',
-          scope: this.domain,
-          target: host,
-          message: `${message}; crawl aborted`,
-          details
-        });
-      } catch (_) {}
-      this.requestAbort('connection-reset', {
-        ...details,
-        message: `${message} for ${host}`
-      });
-    }
+    this.errorTracker?.handleConnectionReset(url, error);
   }
 
   _determineOutcomeError() {
-    const fatalIssues = this.state.getFatalIssues();
-    if (Array.isArray(fatalIssues) && fatalIssues.length > 0) {
-      const summary = fatalIssues.map((issue) => issue && (issue.message || issue.reason || issue.kind)).filter(Boolean).join('; ');
-      const err = new Error(`Crawl failed: ${summary || 'fatal initialization error'}`);
-      err.code = 'CRAWL_FATAL';
-      err.details = {
-        issues: fatalIssues.slice(0, 5)
-      };
-      return err;
-    }
-    const noDownloads = (this.stats.pagesDownloaded || 0) === 0;
-    const hadErrors = (this.stats.errors || 0) > 0;
-    if (noDownloads && hadErrors) {
-      const errorSamples = this.state.getErrorSamples();
-      const sample = Array.isArray(errorSamples) ? errorSamples[0] : null;
-      const detail = sample ? `${sample.kind || 'error'}${sample.code ? ` ${sample.code}` : ''}${sample.url ? ` ${sample.url}` : ''}`.trim() : null;
-      const err = new Error(`Crawl failed: no pages downloaded after ${this.stats.errors} error${this.stats.errors === 1 ? '' : 's'}${detail ? ` (first: ${detail})` : ''}`);
-      err.code = 'CRAWL_NO_PROGRESS';
-      err.details = {
-        stats: {
-          ...this.stats
-        },
-        sampleError: sample || null
-      };
-      return err;
-    }
-    return null;
-  }
-
-  _compactUrlAnalysis(analysis) {
-    if (!analysis || typeof analysis !== 'object' || analysis.invalid) return null;
-    const trimEntries = (list) => Array.isArray(list) ? list.map((entry) => ({
-      key: entry.key,
-      value: entry.value
-    })) : [];
-    return {
-      raw: analysis.raw,
-      normalized: analysis.normalized,
-      host: analysis.host,
-      path: analysis.path,
-      hasQuery: !!analysis.hasQuery,
-      pathIsSearchy: !!analysis.pathIsSearchy,
-      guessedWithoutQuery: analysis.guessedWithoutQuery || null,
-      querySummary: {
-        essential: trimEntries(analysis.querySummary?.essentialKeys || []),
-        ignorable: trimEntries(analysis.querySummary?.ignorableKeys || []),
-        uncertain: trimEntries(analysis.querySummary?.uncertainKeys || [])
-      },
-      queryClassification: analysis.queryClassification || null
-    };
-  }
-
-  _persistUrlAnalysis(compactAnalysis, decision) {
-    if (!this.dbAdapter || !this.dbAdapter.isEnabled() || !compactAnalysis || !compactAnalysis.normalized) return;
-    try {
-      const payload = {
-        analysis: compactAnalysis,
-        decision: {
-          allow: !!(decision && decision.allow),
-          reason: decision?.reason || null,
-          classification: decision?.classification || null
-        },
-        recordedAt: new Date().toISOString()
-      };
-      this.dbAdapter.upsertUrl(compactAnalysis.normalized, null, JSON.stringify(payload));
-    } catch (_) {
-      // Persisting analysis is best effort
-    }
+    return this.errorTracker?.determineOutcomeError(this.stats) || null;
   }
 
   _getUrlDecision(rawUrl, context = {}) {
-    const phase = context && typeof context === 'object' && context.phase ? String(context.phase) : 'default';
-    const cacheKey = `${phase}|${rawUrl}`;
-    if (this.urlDecisionCache.has(cacheKey)) {
-      return this.urlDecisionCache.get(cacheKey);
-    }
-    let decision = null;
-    try {
-      decision = this.urlPolicy.decide(rawUrl, context);
-    } catch (e) {
-      decision = {
-        allow: false,
-        reason: 'policy-error',
-        analysis: {
-          raw: rawUrl,
-          invalid: true
-        },
-        error: e
-      };
-    }
-    const analysis = decision?.analysis;
-    if (analysis && !analysis.invalid) {
-      const compact = this._compactUrlAnalysis(analysis);
-      if (compact) {
-        const normalizedKey = compact.normalized || rawUrl;
-        this.urlAnalysisCache.set(normalizedKey, compact);
-        this.urlAnalysisCache.set(rawUrl, compact);
-        this._persistUrlAnalysis(compact, decision);
-      }
-    }
-    this.urlDecisionCache.set(cacheKey, decision);
-    return decision;
+    return this.urlDecisionService.getDecision(rawUrl, context);
   }
 
   // --- Per-domain rate limiter state management ---
 
   _getDomainState(host) {
-    let state = this.state.getDomainLimitState(host);
-    if (!state) {
-      state = {
-        host,
-        // Core state
-        isLimited: false, // True if any 429 has been received
-        rpm: null, // Current requests-per-minute limit
-        nextRequestAt: 0, // Earliest time the next request is allowed
-        backoffUntil: 0, // A hard stop for all requests after a 429
-        // Telemetry for adaptive behavior
-        lastRequestAt: 0,
-        lastSuccessAt: 0,
-        last429At: 0,
-        successStreak: 0,
-        err429Streak: 0,
-        // Metrics for UI
-        rpmLastMinute: 0,
-        windowStartedAt: 0,
-        windowCount: 0
-      };
-      this.state.setDomainLimitState(host, state);
-    }
-    return state;
+    return this.domainThrottle.getDomainState(host);
   }
 
   _safeHostFromUrl(url) {
-    if (!url) return null;
-    try {
-      return new URL(url).hostname;
-    } catch (_) {
-      return null;
-    }
+    return this.domainThrottle.safeHostFromUrl(url);
   }
 
   _getHostResumeTime(host) {
-    if (!host) return null;
-    const state = this.state.getDomainLimitState(host);
-    if (!state) return null;
-    const backoff = state.backoffUntil || 0;
-    const nextAt = state.nextRequestAt || 0;
-    const resumeAt = Math.max(backoff, nextAt);
-    return resumeAt > 0 ? resumeAt : null;
+    return this.domainThrottle.getHostResumeTime(host);
   }
 
   _isHostRateLimited(host) {
-    if (!host) return false;
-    const state = this.state.getDomainLimitState(host);
-    if (!state) return false;
-    const now = nowMs();
-    if (state.backoffUntil > now) return true;
-    if (state.isLimited && state.nextRequestAt > now) return true;
-    return false;
+    return this.domainThrottle.isHostRateLimited(host);
   }
 
 
@@ -808,90 +690,18 @@ class NewsCrawler {
   }
 
   async loadRobotsTxt() {
-    try {
-      const robotsUrl = `${this.baseUrl}/robots.txt`;
-      console.log(`Loading robots.txt from: ${robotsUrl}`);
-
-      const response = await fetch(robotsUrl);
-      if (response.ok) {
-        const robotsTxt = await response.text();
-        this.robotsRules = robotsParser(robotsUrl, robotsTxt);
-        console.log('robots.txt loaded successfully');
-        this.robotsTxtLoaded = true;
-        // Discover sitemap declarations
-        try {
-          // Prefer parser method when available
-          let sm = [];
-          if (typeof this.robotsRules.getSitemaps === 'function') {
-            sm = this.robotsRules.getSitemaps() || [];
-          } else {
-            // Fallback: scan lines
-            sm = robotsTxt.split(/\r?\n/)
-              .map(l => l.trim())
-              .filter(l => /^sitemap\s*:/i.test(l))
-              .map(l => l.split(/:/i).slice(1).join(':').trim())
-              .filter(Boolean);
-          }
-          // Normalize and keep on-domain first
-          const norm = [];
-          for (const u of sm) {
-            try {
-              const abs = new URL(u, this.baseUrl).href;
-              norm.push(abs);
-            } catch (_) {}
-          }
-          this.sitemapUrls = Array.from(new Set(norm));
-          if (this.sitemapUrls.length) {
-            console.log(`Found ${this.sitemapUrls.length} sitemap URL(s)`);
-          }
-        } catch (_) {}
-      } else {
-        console.log('No robots.txt found, proceeding without restrictions');
-      }
-    } catch (error) {
-      console.log('Failed to load robots.txt, proceeding without restrictions');
-    }
+    if (!this.robotsCoordinator) return;
+    await this.robotsCoordinator.loadRobotsTxt();
   }
 
   async loadSitemapsAndEnqueue() {
-    if (!this.useSitemap) return;
-    const pushed = await loadSitemaps(this.baseUrl, this.domain, this.sitemapUrls, {
-      sitemapMaxUrls: this.sitemapMaxUrls,
-      push: (u) => {
-        const decision = this._getUrlDecision(u, {
-          phase: 'sitemap',
-          depth: 0,
-          source: 'sitemap'
-        });
-        const analysis = decision?.analysis || {};
-        const n = analysis && !analysis.invalid ? analysis.normalized : null;
-        if (!n) return;
-        if (!decision.allow) {
-          if (decision.reason === 'query-superfluous') {
-            this._handlePolicySkip(decision, {
-              depth: 0,
-              queueSize: this.queue.size()
-            });
-          }
-          return;
-        }
-        if (!this.isOnDomain(n) || !this.isAllowed(n)) return;
-        const type = this.looksLikeArticle(n) ? 'article' : 'nav';
-        this.enqueueRequest({
-          url: n,
-          depth: 0,
-          type
-        });
-        this.sitemapDiscovered = (this.sitemapDiscovered || 0) + 1;
-        this.emitProgress();
-      }
-    });
-    console.log(`Sitemap enqueue complete: ${pushed} URL(s)`);
+    if (!this.robotsCoordinator) return;
+    await this.robotsCoordinator.loadSitemapsAndEnqueue();
   }
 
   isAllowed(url) {
-    if (!this.robotsRules) return true;
-    return this.robotsRules.isAllowed(url, '*');
+    if (!this.robotsCoordinator) return true;
+    return this.robotsCoordinator.isAllowed(url);
   }
 
   isOnDomain(url) {
@@ -966,251 +776,14 @@ class NewsCrawler {
   }
 
   async processPage(url, depth = 0, context = {}) {
-    if (depth > this.maxDepth) return;
-
-    // Respect max downloads limit
-    if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
-      return {
-        status: 'skipped'
-      };
+    if (!this.pageExecutionService) {
+      throw new Error('PageExecutionService is not initialized');
     }
-    const fetchResult = await this.fetchPipeline.fetch({
+    return this.pageExecutionService.processPage({
       url,
-      context: {
-        ...context,
-        depth,
-        referrerUrl: null,
-        queueType: context.type
-      }
-    });
-
-    if (!fetchResult) {
-      return {
-        status: 'failed',
-        retriable: true
-      };
-    }
-
-    const {
-      meta = {}, source, html
-    } = fetchResult;
-    const fetchMeta = meta.fetchMeta || null;
-    const resolvedUrl = meta.url || url;
-    let normalizedUrl = null;
-    try {
-      normalizedUrl = this.normalizeUrl(resolvedUrl);
-    } catch (_) {
-      normalizedUrl = resolvedUrl;
-    }
-
-    if (source === 'skipped') {
-      return {
-        status: meta.status || 'skipped'
-      };
-    }
-
-    if (source === 'cache') {
-      if (normalizedUrl) {
-        this.state.addVisited(normalizedUrl);
-        this._noteDepthVisit(normalizedUrl, depth);
-      }
-      this.state.incrementPagesVisited();
-      this.emitProgress();
-      const isArticleFromCache = this.looksLikeArticle(normalizedUrl || resolvedUrl);
-      if (isArticleFromCache) {
-        this.state.incrementArticlesFound();
-        this.emitProgress();
-      }
-      if (this.dbAdapter && this.dbAdapter.isEnabled()) {
-        try {
-          const cachedHtml = html || '';
-          const $c = cheerio.load(cachedHtml);
-          const contentSig = this._computeContentSignals($c, cachedHtml);
-          const urlSig = this._computeUrlSignals(normalizedUrl || resolvedUrl);
-          const combined = this._combineSignals(urlSig, contentSig);
-          this.dbAdapter.insertFetch({
-            url: normalizedUrl || resolvedUrl,
-            request_started_at: null,
-            fetched_at: new Date().toISOString(),
-            http_status: 200,
-            content_type: 'text/html',
-            content_length: cachedHtml ? Buffer.byteLength(cachedHtml, 'utf8') : null,
-            content_encoding: null,
-            bytes_downloaded: 0,
-            transfer_kbps: null,
-            ttfb_ms: null,
-            download_ms: null,
-            total_ms: null,
-            saved_to_db: 0,
-            saved_to_file: 0,
-            file_path: null,
-            file_size: null,
-            classification: isArticleFromCache ? 'article' : 'other',
-            nav_links_count: null,
-            article_links_count: null,
-            word_count: null,
-            analysis: JSON.stringify({
-              kind: 'cache-hit',
-              url: urlSig,
-              content: contentSig,
-              combined
-            })
-          });
-        } catch (_) {}
-      }
-      this._checkAnalysisMilestones({
-        depth,
-        isArticle: isArticleFromCache
-      });
-      return {
-        status: 'cache'
-      };
-    }
-
-    if (source === 'not-modified') {
-      if (normalizedUrl) {
-        this.state.addVisited(normalizedUrl);
-        this._noteDepthVisit(normalizedUrl, depth);
-      }
-      this.state.incrementPagesVisited();
-      this.emitProgress();
-      if (this.dbAdapter && this.dbAdapter.isEnabled() && fetchMeta) {
-        try {
-          const existing = this.dbAdapter.getArticleRowByUrl?.(resolvedUrl);
-          this.dbAdapter.insertFetch({
-            url: resolvedUrl,
-            request_started_at: fetchMeta.requestStartedIso || null,
-            fetched_at: fetchMeta.fetchedAtIso || null,
-            http_status: fetchMeta.httpStatus ?? 304,
-            content_type: fetchMeta.contentType || null,
-            content_length: fetchMeta.contentLength ?? null,
-            content_encoding: fetchMeta.contentEncoding || null,
-            bytes_downloaded: 0,
-            transfer_kbps: null,
-            ttfb_ms: fetchMeta.ttfbMs ?? null,
-            download_ms: fetchMeta.downloadMs ?? null,
-            total_ms: fetchMeta.totalMs ?? null,
-            saved_to_db: 0,
-            saved_to_file: 0,
-            file_path: null,
-            file_size: null,
-            classification: existing ? 'article' : 'other',
-            nav_links_count: null,
-            article_links_count: null,
-            word_count: existing?.word_count ?? null,
-            analysis: JSON.stringify({
-              status: 'not-modified',
-              conditional: true
-            })
-          });
-        } catch (_) {}
-      }
-      return {
-        status: 'not-modified'
-      };
-    }
-
-    if (source === 'error') {
-      this.state.incrementErrors();
-      const httpStatus = meta?.error?.httpStatus;
-      const retriable = typeof httpStatus === 'number' ?
-        (httpStatus === 429 || (httpStatus >= 500 && httpStatus < 600)) :
-        true;
-      return {
-        status: 'failed',
-        retriable,
-        retryAfterMs: meta.retryAfterMs
-      };
-    }
-
-    if (normalizedUrl) {
-      this.state.addVisited(normalizedUrl);
-      this._noteDepthVisit(normalizedUrl, depth);
-    }
-    this.state.incrementPagesVisited();
-    this.state.incrementPagesDownloaded();
-    if (fetchMeta?.bytesDownloaded != null) {
-      this.state.incrementBytesDownloaded(fetchMeta.bytesDownloaded);
-    }
-    this.emitProgress();
-
-    const dbEnabled = this.dbAdapter && typeof this.dbAdapter.isEnabled === 'function' && this.dbAdapter.isEnabled();
-    let processorResult = null;
-    try {
-      processorResult = await this.articleProcessor.process({
-        url: resolvedUrl,
-        html,
-        fetchMeta,
-        depth,
-        normalizedUrl,
-        referrerUrl: context.referrerUrl || null,
-        discoveredAt: context.discoveredAt || new Date().toISOString(),
-        persistArticle: dbEnabled,
-        insertFetchRecord: dbEnabled,
-        insertLinkRecords: dbEnabled
-      });
-    } catch (error) {
-      this._recordError({
-        url: resolvedUrl,
-        kind: 'article-processing',
-        message: error?.message || String(error)
-      });
-      this.telemetry.problem({
-        kind: 'article-processing-failed',
-        target: resolvedUrl,
-        message: error?.message || 'ArticleProcessor failed'
-      });
-      return {
-        status: 'failed',
-        retriable: false
-      };
-    }
-
-    if (processorResult?.statsDelta) {
-      const foundDelta = processorResult.statsDelta.articlesFound || 0;
-      const savedDelta = processorResult.statsDelta.articlesSaved || 0;
-      if (foundDelta) this.state.incrementArticlesFound(foundDelta);
-      if (savedDelta) this.state.incrementArticlesSaved(savedDelta);
-    }
-
-    const navigationLinks = processorResult?.navigationLinks || [];
-    const articleLinks = processorResult?.articleLinks || [];
-
-    try {
-      console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${resolvedUrl}`);
-    } catch (_) {}
-
-    if (processorResult?.isArticle && processorResult.metadata) {
-      try {
-        this.adaptiveSeedPlanner?.seedFromArticle({
-          url: resolvedUrl,
-          metadata: processorResult.metadata,
-          depth
-        });
-      } catch (_) {}
-    }
-
-    this._checkAnalysisMilestones({
       depth,
-      isArticle: !!processorResult?.isArticle
+      context
     });
-
-    const seen = new Set();
-    const allLinks = processorResult?.allLinks || [];
-    for (const link of allLinks) {
-      if (!link || !link.url) continue;
-      if (seen.has(link.url)) continue;
-      seen.add(link.url);
-      this.enqueueRequest({
-        url: link.url,
-        depth: depth + 1,
-        type: link.type || 'nav'
-      });
-    }
-
-    return {
-      status: 'success'
-    };
   }
 
   computePriority({
@@ -1221,24 +794,6 @@ class NewsCrawler {
     url = null,
     meta = null
   }) {
-    // Use enhanced priority computation if available
-    if (this.featuresEnabled?.gapDrivenPrioritization && this.priorityScorer) {
-      try {
-        const result = this.priorityScorer.computeEnhancedPriority({
-          type,
-          depth,
-          discoveredAt,
-          bias,
-          url,
-          meta,
-          jobId: this.jobId
-        });
-        return result.priority;
-      } catch (error) {
-        console.warn('Enhanced priority computation failed, using base priority:', error.message);
-      }
-    }
-
     // Base priority calculation (backward compatible)
     let kind = type;
     if (type && typeof type === 'object') {
@@ -1322,215 +877,77 @@ class NewsCrawler {
 
   // Per-domain limiter: waits if a 429 backoff is active or if the current per-host interval requires spacing.
   async acquireDomainToken(host) {
-    // Delegate to limiter for timing; mirror state to legacy map for UI telemetry
-    const before = this._getDomainState(host);
-    await (async () => {
-      try {
-        // Lazy require to avoid circular timing
-        const {
-          DomainLimiter
-        } = require('./crawler/limiter');
-        if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({
-          pacerJitterMinMs: this.pacerJitterMinMs,
-          pacerJitterMaxMs: this.pacerJitterMaxMs
-        });
-        await this._domainLimiter.acquire(host);
-        const s = this._domainLimiter._get(host);
-        if (s) Object.assign(before, {
-          isLimited: s.isLimited,
-          rpm: s.rpm,
-          nextRequestAt: s.nextRequestAt,
-          backoffUntil: s.backoffUntil,
-          lastRequestAt: s.lastRequestAt,
-          rpmLastMinute: s.rpmLastMinute,
-          windowStartedAt: s.windowStartedAt,
-          windowCount: s.windowCount
-        });
-      } catch (_) {
-        // Fall back to old behavior if helper unavailable
-        const now = nowMs();
-        if (before.backoffUntil > now) await sleep(before.backoffUntil - now);
-        before.lastRequestAt = now;
-      }
-    })();
+    await this.domainThrottle.acquireToken(host);
   }
 
   note429(host, retryAfterMs) {
-    try {
-      const {
-        DomainLimiter
-      } = require('./crawler/limiter');
-      if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({
-        pacerJitterMinMs: this.pacerJitterMinMs,
-        pacerJitterMaxMs: this.pacerJitterMaxMs
-      });
-      this._domainLimiter.note429(host, retryAfterMs);
-      const s = this._domainLimiter._get(host);
-      const st = this._getDomainState(host);
-      if (s && st) Object.assign(st, s);
-    } catch (_) {
-      const now = nowMs();
-      const state = this._getDomainState(host);
-      state.isLimited = true;
-      state.last429At = now;
-      state.successStreak = 0;
-      state.err429Streak++;
-      const baseBlackout = retryAfterMs != null ? Math.max(30000, retryAfterMs) : 45000;
-      const jitterV = Math.floor(baseBlackout * ((Math.random() * 0.2) - 0.1));
-      let blackout = baseBlackout + jitterV;
-      if (state.err429Streak >= 2) blackout = Math.max(blackout, 5 * 60 * 1000);
-      if (state.err429Streak >= 3) blackout = Math.max(blackout, 15 * 60 * 1000);
-      state.backoffUntil = now + blackout;
-      const currentRpm = state.rpm || 60;
-      const newRpm = Math.max(1, Math.floor(currentRpm * 0.25));
-      state.rpm = newRpm;
-      state.nextRequestAt = now + Math.floor(60000 / newRpm);
-    }
+    this.domainThrottle.note429(host, retryAfterMs);
   }
 
   noteSuccess(host) {
-    try {
-      const {
-        DomainLimiter
-      } = require('./crawler/limiter');
-      if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({
-        pacerJitterMinMs: this.pacerJitterMinMs,
-        pacerJitterMaxMs: this.pacerJitterMaxMs
-      });
-      this._domainLimiter.noteSuccess(host);
-      const s = this._domainLimiter._get(host);
-      const st = this._getDomainState(host);
-      if (s && st) Object.assign(st, s);
-    } catch (_) {
-      const now = nowMs();
-      const state = this._getDomainState(host);
-      state.lastSuccessAt = now;
-      state.successStreak++;
-      state.err429Streak = 0;
-      if (state.isLimited && state.successStreak > 100) {
-        const canProbe = (now - state.last429At) > 5 * 60 * 1000;
-        if (canProbe) {
-          const currentRpm = state.rpm || 10;
-          const nextRpm = Math.max(1, Math.floor(currentRpm * 1.1));
-          state.rpm = Math.min(nextRpm, 300);
-          state.successStreak = 0;
-        }
-      }
-    }
+    this.domainThrottle.noteSuccess(host);
   }
 
   _pullNextWorkItem() {
     return this.queue.pullNext();
   }
 
-  async runWorker(workerId) {
-    while (true) {
-      if (this.isAbortRequested()) {
-        return;
-      }
-      // honor pause
-      while (this.isPaused() && !this.isAbortRequested()) {
-        await sleep(200);
-        this.emitProgress();
-      }
-      if (this.isAbortRequested()) {
-        return;
-      }
-      if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
-        return;
-      }
-      const pick = await this._pullNextWorkItem();
-      if (this.isAbortRequested()) {
-        return;
-      }
-      const now = nowMs();
-      if (!pick || !pick.item) {
-        const queueSize = this.queue.size();
-        const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : 0;
-        const maxWait = wakeTarget > 0 ? Math.min(wakeTarget, 1000) : 1000;
-        let waited = 0;
-        const waitStep = 100;
-        while (waited < maxWait && !this.isAbortRequested()) {
-          await sleep(Math.min(waitStep, maxWait - waited));
-          waited += waitStep;
-          if (this.queue.size() > 0 || this.isPaused()) {
-            break;
-          }
+  _ensureWorkerRunner() {
+    if (!this.workerRunner) {
+      this.workerRunner = new WorkerRunner({
+        queue: this.queue,
+        processPage: (url, depth, context) => this.processPage(url, depth, context),
+        computePriority: (args) => this.computePriority(args),
+        retryLimit: this.retryLimit,
+        backoffBaseMs: this.backoffBaseMs,
+        backoffMaxMs: this.backoffMaxMs,
+        getStats: () => this.stats,
+        getMaxDownloads: () => this.maxDownloads,
+        telemetry: this.telemetry,
+        sleep,
+        nowMs,
+        jitter,
+        isPaused: () => this.isPaused(),
+        isAbortRequested: () => this.isAbortRequested(),
+        emitProgress: () => this.emitProgress(),
+        safeHostFromUrl: (url) => this._safeHostFromUrl(url),
+        getQueueSize: () => this.queue.size(),
+        onBusyChange: (delta) => {
+          this.busyWorkers = Math.max(0, this.busyWorkers + delta);
         }
-        if (this.isAbortRequested()) {
-          return;
-        }
-        if (this.queue.size() === 0 && !this.isPaused()) {
-          return;
-        }
-        continue;
-      }
-      const item = pick.item;
-      const extraCtx = pick.context || {};
-      // Dequeue for processing
-      try {
-        const host = this._safeHostFromUrl(item.url);
-        const sizeNow = this.queue.size();
-        this.telemetry.queueEvent({
-          action: 'dequeued',
-          url: item.url,
-          depth: item.depth,
-          host,
-          queueSize: sizeNow
-        });
-      } catch (_) {}
-      this.busyWorkers++;
-      const processContext = {
-        type: item.type,
-        allowRevisit: item.allowRevisit
-      };
-      if (extraCtx && extraCtx.forceCache) {
-        processContext.forceCache = true;
-        if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
-        if (extraCtx.rateLimitedHost) processContext.rateLimitedHost = extraCtx.rateLimitedHost;
-      }
-      const res = await this.processPage(item.url, item.depth, processContext);
-      if (this.isAbortRequested()) {
-        return;
-      }
-      this.busyWorkers = Math.max(0, this.busyWorkers - 1);
-      if (res && res.status === 'failed') {
-        const retriable = !!res.retriable && item.retries < this.retryLimit;
-        if (retriable) {
-          item.retries += 1;
-          const base = res.retryAfterMs != null ? res.retryAfterMs : Math.min(this.backoffBaseMs * Math.pow(2, item.retries - 1), this.backoffMaxMs);
-          item.nextEligibleAt = nowMs() + jitter(base);
-          // Recompute priority to keep ordering roughly stable
-          item.priority = this.computePriority({
-            type: item.type,
-            depth: item.depth,
-            discoveredAt: item.discoveredAt,
-            bias: item.priorityBias || 0
-          });
-          this.queue.reschedule(item);
-          // Emit retry event after requeue
-          try {
-            const host = (() => {
-              try {
-                return new URL(item.url).hostname;
-              } catch (_) {
-                return null;
-              }
-            })();
-            const sizeNow = this.queue.size();
-            this.telemetry.queueEvent({
-              action: 'retry',
-              url: item.url,
-              depth: item.depth,
-              host,
-              reason: 'retriable-error',
-              queueSize: sizeNow
-            });
-          } catch (_) {}
-        }
-      }
-      // loop continues
+      });
     }
+    return this.workerRunner;
+  }
+
+  _ensureIntelligentPlanRunner() {
+    if (!this.intelligentPlanRunner) {
+      this.intelligentPlanRunner = new IntelligentPlanRunner({
+        telemetry: this.telemetry,
+        domain: this.domain,
+        baseUrl: this.baseUrl,
+        startUrl: this.startUrl,
+        plannerEnabled: this.plannerEnabled,
+        plannerVerbosity: this.plannerVerbosity,
+        intTargetHosts: this.intTargetHosts,
+        fetchPage: ({ url, context }) => this.fetchPipeline.fetch({ url, context }),
+        getCachedArticle: (url) => this.getCachedArticle(url),
+        dbAdapter: this.dbAdapter,
+        plannerKnowledgeService: this.plannerKnowledgeService,
+        enqueueRequest: (request) => this.enqueueRequest(request),
+        normalizeUrl: (url) => this.normalizeUrl(url),
+        state: this.state,
+        intMaxSeeds: this.intMaxSeeds,
+        logger: console,
+        PlannerTelemetryBridge,
+        PlannerOrchestrator,
+        PlannerBootstrap,
+        PatternInference,
+        CountryHubPlanner,
+        HubSeeder
+      });
+    }
+    return this.intelligentPlanRunner;
   }
 
   async crawlConcurrent() {
@@ -1564,8 +981,9 @@ class NewsCrawler {
     }
     const workers = [];
     const n = this.concurrency;
+    const workerRunner = this._ensureWorkerRunner();
     for (let i = 0; i < n; i++) {
-      workers.push(this.runWorker(i));
+      workers.push(workerRunner.run(i));
     }
     await Promise.all(workers);
 
@@ -1577,7 +995,7 @@ class NewsCrawler {
     }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
     this.emitProgress(true);
-    this._emitIntelligentCompletionMilestone({
+    this.milestoneTracker.emitCompletionMilestone({
       outcomeErr
     });
 
@@ -1598,184 +1016,15 @@ class NewsCrawler {
 
   // --- Intelligent planner ---
   async planIntelligent() {
-    const host = this.domain.toLowerCase();
-    try {
-      console.log(`Intelligent crawl planning for host=${host}`);
-    } catch (_) {}
-    const telemetryBridge = new PlannerTelemetryBridge({
-      telemetry: this.telemetry,
-      domain: host,
-      logger: console
-    });
-    const orchestrator = new PlannerOrchestrator({
-      telemetryBridge,
-      logger: console,
-      enabled: this.plannerEnabled
-    });
-
-    const plannerBootstrap = new PlannerBootstrap({
-      telemetry: telemetryBridge,
-      plannerVerbosity: this.plannerVerbosity
-    });
-
-    const bootstrapResult = await orchestrator.runStage('bootstrap', {
-      host,
-      targetHosts: Array.isArray(this.intTargetHosts) && this.intTargetHosts.length ? this.intTargetHosts : undefined
-    }, () => plannerBootstrap.run({
-      host,
-      targetHosts: this.intTargetHosts
-    }), {
-      mapResultForEvent: (res) => {
-        if (!res) return null;
-        return {
-          allowed: res.allowed !== false,
-          skipped: !!res.skipPlan,
-          plannerVerbosity: res.plannerVerbosity,
-          targetHosts: Array.isArray(res.targetHosts) && res.targetHosts.length ? res.targetHosts : undefined
-        };
-      },
-      updateSummaryWithResult: (summary = {}, res) => ({
-        ...summary,
-        bootstrap: {
-          allowed: res?.allowed !== false,
-          skipPlan: !!res?.skipPlan,
-          targetHosts: Array.isArray(res?.targetHosts) && res.targetHosts.length ? res.targetHosts : null,
-          plannerVerbosity: res?.plannerVerbosity ?? this.plannerVerbosity
-        }
-      })
-    });
-
-    if (bootstrapResult?.skipPlan) {
-      const summary = orchestrator.buildSummary({
-        seededCount: 0,
-        requestedCount: 0,
-        sectionHubCount: 0,
-        countryCandidateCount: 0,
-        sampleSeeded: [],
-        learnedSectionCount: 0,
-        learnedSectionsPreview: []
-      });
-      this._plannerSummary = summary;
-      this._intelligentPlanSummary = summary;
-      return;
+    const runner = this._ensureIntelligentPlanRunner();
+    const result = await runner.run();
+    if (!result) return;
+    if (result.plannerSummary) {
+      this._plannerSummary = result.plannerSummary;
     }
-
-    const patternInference = new PatternInference({
-      fetchPage: ({ url, context }) => this.fetchPipeline.fetch({ url, context }),
-      getCachedArticle: (url) => this.getCachedArticle(url),
-      telemetry: telemetryBridge,
-      baseUrl: this.baseUrl,
-      domain: this.domain,
-      logger: console
-    });
-
-    const patternResult = await orchestrator.runStage('infer-patterns', {
-      startUrl: this.startUrl
-    }, () => patternInference.run({
-      startUrl: this.startUrl
-    }), {
-      mapResultForEvent: (res) => {
-        if (!res) return null;
-        const sections = Array.isArray(res.learned?.sections) ? res.learned.sections : [];
-        const hints = Array.isArray(res.learned?.articleHints) ? res.learned.articleHints : [];
-        return {
-          sectionCount: sections.length,
-          sectionsPreview: sections.slice(0, 6),
-          articleHintsCount: hints.length,
-          articleHintsPreview: hints.slice(0, 6),
-          homepageSource: res.fetchMeta?.source || null,
-          notModified: !!res.fetchMeta?.notModified,
-          hadError: !!res.fetchMeta?.error
-        };
-      },
-      updateSummaryWithResult: (summary = {}, res) => ({
-        ...summary,
-        learnedSections: Array.isArray(res?.learned?.sections) ? res.learned.sections : [],
-        articleHints: Array.isArray(res?.learned?.articleHints) ? res.learned.articleHints : []
-      })
-    });
-
-    const learnedSections = Array.isArray(patternResult?.learned?.sections) ? patternResult.learned.sections : [];
-
-    const countryHubPlanner = new CountryHubPlanner({
-      baseUrl: this.baseUrl,
-      db: this.dbAdapter,
-      knowledgeService: this.plannerKnowledgeService
-    });
-
-    const countryCandidates = await orchestrator.runStage('country-hubs', {
-      host
-    }, () => countryHubPlanner.computeCandidates(host), {
-      mapResultForEvent: (res) => {
-        if (!Array.isArray(res)) {
-          return {
-            candidateCount: 0
-          };
-        }
-        return {
-          candidateCount: res.length,
-          sample: res.slice(0, 5).map((c) => c?.url).filter(Boolean)
-        };
-      },
-      updateSummaryWithResult: (summary = {}, res) => ({
-        ...summary,
-        countryCandidates: Array.isArray(res) ? res : []
-      })
-    }) || [];
-
-    const maxSeeds = typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50;
-    const hubSeeder = new HubSeeder({
-      enqueueRequest: (request) => this.enqueueRequest(request),
-      normalizeUrl: (url) => this.normalizeUrl(url),
-      state: this.state,
-      telemetry: telemetryBridge,
-      db: this.dbAdapter,
-      baseUrl: this.baseUrl,
-      logger: console
-    });
-
-    const seedResult = await orchestrator.runStage('seed-hubs', {
-      sectionsFromPatterns: learnedSections.length,
-      candidateCount: countryCandidates.length,
-      maxSeeds
-    }, () => hubSeeder.seedPlan({
-      host,
-      sectionSlugs: learnedSections,
-      countryCandidates,
-      maxSeeds
-    }), {
-      mapResultForEvent: (res) => {
-        if (!res) return null;
-        return {
-          seededCount: res.seededCount || 0,
-          requestedCount: res.requestedCount || 0,
-          sectionHubCount: res.sectionHubCount || 0,
-          countryCandidateCount: res.countryCandidateCount || 0,
-          sampleSeeded: Array.isArray(res.sampleSeeded) ? res.sampleSeeded.slice(0, 3) : undefined
-        };
-      },
-      updateSummaryWithResult: (summary = {}, res) => ({
-        ...summary,
-        seedResult: res || null
-      })
-    });
-
-    const plannerSummary = orchestrator.buildSummary({
-      learnedSectionCount: learnedSections.length,
-      learnedSectionsPreview: learnedSections.slice(0, 8)
-    });
-
-    this._plannerSummary = plannerSummary;
-    this._intelligentPlanSummary = {
-      seededCount: seedResult?.seededCount || 0,
-      requestedCount: seedResult?.requestedCount || 0,
-      sectionHubCount: seedResult?.sectionHubCount || learnedSections.length,
-      countryCandidateCount: seedResult?.countryCandidateCount || countryCandidates.length,
-      sampleSeeded: Array.isArray(seedResult?.sampleSeeded) ? seedResult.sampleSeeded.slice(0, 5) : [],
-      learnedSectionCount: learnedSections.length,
-      learnedSectionsPreview: learnedSections.slice(0, 8),
-      ...plannerSummary
-    };
+    if (result.intelligentSummary) {
+      this._intelligentPlanSummary = result.intelligentSummary;
+    }
   }
 
   async crawl() {
@@ -1865,7 +1114,7 @@ class NewsCrawler {
     }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
     this.emitProgress(true);
-    this._emitIntelligentCompletionMilestone({
+    this.milestoneTracker.emitCompletionMilestone({
       outcomeErr
     });
 
@@ -1892,78 +1141,11 @@ class NewsCrawler {
    * Features are enabled based on configuration and gracefully degrade if initialization fails
    */
   async _initializeEnhancedFeatures() {
-    try {
-      // Initialize configuration manager
-      this.configManager = new ConfigManager();
-      const features = this.configManager.getFeatureFlags();
-
-      console.log('Enhanced features configuration:', features);
-
-      // Initialize enhanced database adapter if features are enabled
-      if (Object.values(features).some(enabled => enabled) && this.dbAdapter?.isEnabled()) {
-        try {
-          this.enhancedDbAdapter = new EnhancedDatabaseAdapter(this.dbAdapter);
-          console.log('Enhanced database adapter initialized');
-        } catch (error) {
-          console.warn('Failed to initialize enhanced database adapter:', error.message);
-          this.enhancedDbAdapter = null;
-        }
-      }
-
-      // Initialize priority scorer if gap-driven prioritization is enabled
-      if (features.gapDrivenPrioritization) {
-        try {
-          this.priorityScorer = new PriorityScorer(this.configManager, this.enhancedDbAdapter);
-          this.featuresEnabled.gapDrivenPrioritization = true;
-          console.log('Priority scorer initialized for gap-driven prioritization');
-        } catch (error) {
-          console.warn('Failed to initialize priority scorer:', error.message);
-          this.featuresEnabled.gapDrivenPrioritization = false;
-        }
-      }
-
-      // Initialize problem clustering service if enabled
-      if (features.problemClustering && this.enhancedDbAdapter) {
-        try {
-          this.problemClusteringService = new ProblemClusteringService(this.enhancedDbAdapter, this.configManager);
-          this.featuresEnabled.problemClustering = true;
-          console.log('Problem clustering service initialized');
-        } catch (error) {
-          console.warn('Failed to initialize problem clustering service:', error.message);
-          this.featuresEnabled.problemClustering = false;
-        }
-      }
-
-      // Initialize planner knowledge service if enabled
-      if (features.plannerKnowledgeReuse && this.enhancedDbAdapter) {
-        try {
-          this.plannerKnowledgeService = new PlannerKnowledgeService(this.enhancedDbAdapter, this.configManager);
-          this.featuresEnabled.plannerKnowledgeReuse = true;
-          console.log('Planner knowledge service initialized');
-        } catch (error) {
-          console.warn('Failed to initialize planner knowledge service:', error.message);
-          this.featuresEnabled.plannerKnowledgeReuse = false;
-        }
-      }
-
-      // Enable other features based on successful initialization
-      this.featuresEnabled.realTimeCoverageAnalytics = features.realTimeCoverageAnalytics && Boolean(this.enhancedDbAdapter);
-
-      // Log final feature status
-      const enabledFeatures = Object.keys(this.featuresEnabled).filter(k => this.featuresEnabled[k]);
-      if (enabledFeatures.length > 0) {
-        console.log(`Enhanced features enabled: ${enabledFeatures.join(', ')}`);
-      } else {
-        console.log('Enhanced features disabled or unavailable');
-      }
-
-    } catch (error) {
-      console.warn('Enhanced features initialization failed:', error.message);
-      // Ensure all enhanced features are disabled on initialization failure
-      Object.keys(this.featuresEnabled).forEach(key => {
-        this.featuresEnabled[key] = false;
-      });
-    }
+    if (!this.enhancedFeatures) return;
+    await this.enhancedFeatures.initialize({
+      dbAdapter: this.dbAdapter,
+      jobId: this.jobId
+    });
   }
 
   /**
@@ -1978,57 +1160,39 @@ class NewsCrawler {
     url,
     meta = null
   }) {
-    if (this.featuresEnabled.gapDrivenPrioritization && this.priorityScorer) {
-      try {
-        return this.priorityScorer.computeEnhancedPriority({
-          type,
-          depth,
-          discoveredAt,
-          bias,
-          url,
-          meta,
-          jobId: this.jobId
-        });
-      } catch (error) {
-        console.warn('Enhanced priority computation failed, falling back to base:', error.message);
-      }
+    if (!this.enhancedFeatures) {
+      const basePriority = this.computePriority({
+        type,
+        depth,
+        discoveredAt,
+        bias
+      });
+      return {
+        priority: basePriority,
+        prioritySource: 'base',
+        bonusApplied: 0,
+        basePriority
+      };
     }
 
-    // Fallback to base priority calculation
-    const basePriority = this.computePriority({
+    return this.enhancedFeatures.computePriority({
       type,
       depth,
       discoveredAt,
-      bias
+      bias,
+      url,
+      meta
+    }, {
+      computeBasePriority: (input) => this.computePriority(input),
+      jobId: this.jobId
     });
-    return {
-      priority: basePriority,
-      prioritySource: 'base',
-      bonusApplied: 0,
-      basePriority
-    };
   }
 
   /**
    * Cleanup enhanced features on crawler shutdown
    */
   _cleanupEnhancedFeatures() {
-    try {
-      if (this.problemClusteringService) {
-        this.problemClusteringService.close();
-      }
-      if (this.plannerKnowledgeService) {
-        this.plannerKnowledgeService.close();
-      }
-      if (this.priorityScorer) {
-        this.priorityScorer.close();
-      }
-      if (this.configManager) {
-        this.configManager.close();
-      }
-    } catch (error) {
-      console.warn('Error during enhanced features cleanup:', error.message);
-    }
+    this.enhancedFeatures?.cleanup();
   }
 }
 

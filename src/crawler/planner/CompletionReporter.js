@@ -34,12 +34,23 @@ class CompletionReporter {
     }
 
     const seededUnique = this._getSeededHubCount();
+    const visitedUnique = this._getVisitedHubCount();
+    const hubStats = this._coerceObject(this._getHubVisitStats());
     const summary = this._coerceObject(this.getPlanSummary());
     const sections = this._numeric(summary.sectionHubCount);
     const countryCandidates = this._numeric(summary.countryCandidateCount);
     const requested = summary.requestedCount != null ? summary.requestedCount : sections + countryCandidates;
     const expected = Math.max(requested || 0, sections + countryCandidates, seededUnique);
     const coveragePct = expected > 0 ? Math.min(1, seededUnique / expected) : null;
+    const visitedCoveragePct = expected > 0 ? Math.min(1, visitedUnique / expected) : null;
+    const countryKindStats = this._coerceObject(hubStats.perKind?.country);
+    const countryCoverage = countryKindStats && countryKindStats.seeded > 0 ? {
+      seeded: this._numeric(countryKindStats.seeded),
+      visited: this._numeric(countryKindStats.visited),
+      coveragePct: countryKindStats.seeded > 0
+        ? Math.min(1, this._numeric(countryKindStats.visited) / Math.max(1, this._numeric(countryKindStats.seeded)))
+        : 0
+    } : undefined;
 
     const problems = this._collectProblems();
     problems.sort((a, b) => (b.count || 0) - (a.count || 0));
@@ -53,12 +64,17 @@ class CompletionReporter {
         requested: requested || 0,
         sectionsFromPatterns: sections,
         countryCandidates,
-        sample: Array.isArray(summary.sampleSeeded) ? summary.sampleSeeded.slice(0, 5) : undefined
+        sample: Array.isArray(summary.sampleSeeded) ? summary.sampleSeeded.slice(0, 5) : undefined,
+        visited: visitedUnique,
+        visitedSample: Array.isArray(hubStats.visitedSample) ? hubStats.visitedSample.slice(0, 5) : undefined,
+        countryCoverage
       },
       coverage: coveragePct != null ? {
         expected,
         seeded: seededUnique,
-        coveragePct
+        coveragePct,
+        visited: visitedUnique,
+        visitedCoveragePct
       } : undefined,
       problems: problems.length ? problems : undefined,
       stats: {
@@ -128,6 +144,28 @@ class CompletionReporter {
       return this._numeric(this.state.getSeededHubCount());
     } catch (_) {
       return 0;
+    }
+  }
+
+  _getVisitedHubCount() {
+    if (!this.state || typeof this.state.getVisitedHubCount !== 'function') {
+      return 0;
+    }
+    try {
+      return this._numeric(this.state.getVisitedHubCount());
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  _getHubVisitStats() {
+    if (!this.state || typeof this.state.getHubVisitStats !== 'function') {
+      return {};
+    }
+    try {
+      return this.state.getHubVisitStats() || {};
+    } catch (_) {
+      return {};
     }
   }
 

@@ -33,7 +33,7 @@ describe('NewsCrawler intelligent completion milestone', () => {
       errors: 1
     };
 
-  crawler._emitIntelligentCompletionMilestone({ outcomeErr: null });
+  crawler.milestoneTracker.emitCompletionMilestone({ outcomeErr: null });
 
   expect(milestoneSpy).toHaveBeenCalledTimes(1);
   const milestone = milestoneSpy.mock.calls[0][0];
@@ -53,12 +53,15 @@ describe('NewsCrawler intelligent completion milestone', () => {
       unique: 2,
       requested: 5,
       sectionsFromPatterns: 3,
-      countryCandidates: 1
+      countryCandidates: 1,
+      visited: 0
     });
     expect(milestone.details.coverage).toMatchObject({
       expected: 5,
       seeded: 2,
-      coveragePct: 2 / 5
+      visited: 0,
+      coveragePct: 2 / 5,
+      visitedCoveragePct: 0
     });
     expect(milestone.details.problems).toEqual([
       {
