@@ -209,6 +209,22 @@ crawler.crawl()
   .catch(err => console.error('Crawling failed:', err));
 ```
 
+### Telemetry API
+
+`NewsCrawler` exposes structured events through a `telemetry` facade. To observe queue drops, problems, or milestones in your own tooling or tests, spy on or override the telemetry methods instead of relying on previous `crawler.emit*` helpers:
+
+```javascript
+const queueSpy = jest.spyOn(crawler.telemetry, 'queueEvent');
+const milestoneSpy = jest.spyOn(crawler.telemetry, 'milestone');
+
+crawler._emitIntelligentCompletionMilestone({ outcomeErr: null });
+
+expect(queueSpy).toHaveBeenCalled();
+expect(milestoneSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'intelligent-completion' }));
+```
+
+Available methods include `progress`, `queueEvent`, `enhancedQueueEvent`, `problem`, `milestone`, `milestoneOnce`, and `plannerStage`. Each forwards to the underlying `CrawlerEvents` instance. The legacy `crawler.emitQueueEvent`, `crawler.emitProblem`, and `crawler.emitMilestone` instance methods have been removed.
+
 ## Configuration Options
 
 - `rateLimitMs`: Global spacing between requests in milliseconds (default: 1000 in slow mode; 0 otherwise)

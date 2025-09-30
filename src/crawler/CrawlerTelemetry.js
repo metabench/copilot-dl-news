@@ -2,7 +2,9 @@
 
 class CrawlerTelemetry {
   constructor(options = {}) {
-    const { events } = options;
+    const {
+      events
+    } = options;
 
     this.events = events || null;
   }
@@ -10,21 +12,27 @@ class CrawlerTelemetry {
   progress(options = {}) {
     const force = typeof options === 'boolean' ? options : !!options.force;
     if (this.events && typeof this.events.emitProgress === 'function') {
-      this.events.emitProgress({ force });
+      this.events.emitProgress({
+        force
+      });
     }
   }
 
   queueEvent(eventData = {}) {
     if (!eventData || typeof eventData !== 'object') return;
     if (this.events && typeof this.events.emitQueueEvent === 'function') {
-      this.events.emitQueueEvent({ ...eventData });
+      this.events.emitQueueEvent({
+        ...eventData
+      });
     }
   }
 
   enhancedQueueEvent(eventData = {}) {
     if (!eventData || typeof eventData !== 'object') return;
     if (this.events && typeof this.events.emitEnhancedQueueEvent === 'function') {
-      this.events.emitEnhancedQueueEvent({ ...eventData });
+      this.events.emitEnhancedQueueEvent({
+        ...eventData
+      });
       return;
     }
     this.queueEvent(eventData);
@@ -40,14 +48,18 @@ class CrawlerTelemetry {
   milestone(milestone = {}) {
     if (!milestone || typeof milestone !== 'object') return;
     if (this.events && typeof this.events.emitMilestone === 'function') {
-      this.events.emitMilestone({ ...milestone });
+      this.events.emitMilestone({
+        ...milestone
+      });
     }
   }
 
   milestoneOnce(key, milestone = {}) {
     if (!key) return;
     if (this.events && typeof this.events.emitMilestoneOnce === 'function') {
-      this.events.emitMilestoneOnce(key, { ...milestone });
+      this.events.emitMilestoneOnce(key, {
+        ...milestone
+      });
       return;
     }
     this.milestone(milestone);
@@ -74,4 +86,6 @@ class CrawlerTelemetry {
   }
 }
 
-module.exports = { CrawlerTelemetry };
+module.exports = {
+  CrawlerTelemetry
+};

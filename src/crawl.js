@@ -1,37 +1,84 @@
 #!/usr/bin/env node
 
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = (...args) => import('node-fetch').then(({
+  default: fetch
+}) => fetch(...args));
 const cheerio = require('cheerio');
 const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
 const path = require('path');
-const { URL } = require('url');
-const { ArticleCache } = require('./cache');
-const { UrlPolicy } = require('./crawler/urlPolicy');
-const { DeepUrlAnalyzer } = require('./crawler/deepUrlAnalysis');
+const {
+  URL
+} = require('url');
+const {
+  ArticleCache
+} = require('./cache');
+const {
+  UrlPolicy
+} = require('./crawler/urlPolicy');
+const {
+  DeepUrlAnalyzer
+} = require('./crawler/deepUrlAnalysis');
 const http = require('http');
 const https = require('https');
-const { createCrawlerDb } = require('./crawler/dbClient');
+const {
+  createCrawlerDb
+} = require('./crawler/dbClient');
 // Enhanced features (optional)
-const { ConfigManager } = require('./config/ConfigManager');
-const { EnhancedDatabaseAdapter } = require('./db/EnhancedDatabaseAdapter');
-const { PriorityScorer } = require('./crawler/PriorityScorer');
-const { ProblemClusteringService } = require('./crawler/ProblemClusteringService');
-const { PlannerKnowledgeService } = require('./crawler/PlannerKnowledgeService');
-const { loadSitemaps } = require('./crawler/sitemap');
-const { CrawlerState } = require('./crawler/CrawlerState');
+const {
+  ConfigManager
+} = require('./config/ConfigManager');
+const {
+  EnhancedDatabaseAdapter
+} = require('./db/EnhancedDatabaseAdapter');
+const {
+  PriorityScorer
+} = require('./crawler/PriorityScorer');
+const {
+  ProblemClusteringService
+} = require('./crawler/ProblemClusteringService');
+const {
+  PlannerKnowledgeService
+} = require('./crawler/PlannerKnowledgeService');
+const {
+  loadSitemaps
+} = require('./crawler/sitemap');
+const {
+  CrawlerState
+} = require('./crawler/CrawlerState');
 
 const QueueManager = require('./crawler/QueueManager');
-const { UrlEligibilityService } = require('./crawler/UrlEligibilityService');
-const { FetchPipeline } = require('./crawler/FetchPipeline');
-const { CrawlerEvents } = require('./crawler/CrawlerEvents');
-const { CrawlerTelemetry } = require('./crawler/CrawlerTelemetry');
-const { LinkExtractor } = require('./crawler/LinkExtractor');
-const { ArticleProcessor } = require('./crawler/ArticleProcessor');
+const {
+  UrlEligibilityService
+} = require('./crawler/UrlEligibilityService');
+const {
+  FetchPipeline
+} = require('./crawler/FetchPipeline');
+const {
+  CrawlerEvents
+} = require('./crawler/CrawlerEvents');
+const {
+  CrawlerTelemetry
+} = require('./crawler/CrawlerTelemetry');
+const {
+  LinkExtractor
+} = require('./crawler/LinkExtractor');
+const {
+  ArticleProcessor
+} = require('./crawler/ArticleProcessor');
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function nowMs() { return Date.now(); }
-function jitter(ms, maxJitter = 250) { return ms + Math.floor(Math.random() * maxJitter); }
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function nowMs() {
+  return Date.now();
+}
+
+function jitter(ms, maxJitter = 250) {
+  return ms + Math.floor(Math.random() * maxJitter);
+}
+
 function parseRetryAfter(headerVal) {
   if (!headerVal) return null;
   const s = String(headerVal).trim();
@@ -51,53 +98,53 @@ class NewsCrawler {
     this.domain = new URL(startUrl).hostname;
     this.baseUrl = `${new URL(startUrl).protocol}//${this.domain}`;
     this.jobId = options.jobId || null;
-    
-  // Configuration
-  this.slowMode = options.slowMode === true;
-  this.rateLimitMs = typeof options.rateLimitMs === 'number' ? options.rateLimitMs : (this.slowMode ? 1000 : 0); // default: no pacing
+
+    // Configuration
+    this.slowMode = options.slowMode === true;
+    this.rateLimitMs = typeof options.rateLimitMs === 'number' ? options.rateLimitMs : (this.slowMode ? 1000 : 0); // default: no pacing
     this.maxDepth = options.maxDepth || 3;
-  this.dataDir = options.dataDir || path.join(process.cwd(), 'data');
-        this._lastProgressEmitAt = 0;
+    this.dataDir = options.dataDir || path.join(process.cwd(), 'data');
+    this._lastProgressEmitAt = 0;
     this.concurrency = Math.max(1, options.concurrency || 1);
     this.maxQueue = Math.max(1000, options.maxQueue || 10000);
     this.retryLimit = options.retryLimit || 3;
     this.backoffBaseMs = options.backoffBaseMs || 500;
     this.backoffMaxMs = options.backoffMaxMs || 5 * 60 * 1000;
-  this.maxDownloads =
-      typeof options.maxDownloads === 'number' && options.maxDownloads > 0
-        ? options.maxDownloads
-        : undefined; // Limit number of network downloads
+    this.maxDownloads =
+      typeof options.maxDownloads === 'number' && options.maxDownloads > 0 ?
+      options.maxDownloads :
+      undefined; // Limit number of network downloads
     // Preserve 0 to mean "always refetch" (never accept cache)
     this.maxAgeMs =
-      typeof options.maxAgeMs === 'number' && options.maxAgeMs >= 0
-        ? options.maxAgeMs
-        : undefined; // Freshness window for cached items
-  // Optional per-type freshness windows (override maxAgeMs when provided)
-  this.maxAgeArticleMs = typeof options.maxAgeArticleMs === 'number' && options.maxAgeArticleMs >= 0 ? options.maxAgeArticleMs : undefined;
-  this.maxAgeHubMs = typeof options.maxAgeHubMs === 'number' && options.maxAgeHubMs >= 0 ? options.maxAgeHubMs : undefined;
-  this.dbPath = options.dbPath || path.join(this.dataDir, 'news.db');
-  this.fastStart = options.fastStart === true; // skip heavy startup stats
-  this.enableDb = options.enableDb !== undefined ? options.enableDb : true;
-  this.preferCache = options.preferCache !== false; // default to prefer cache unless explicitly disabled
-  // Sitemap support
-  this.useSitemap = options.useSitemap !== false; // default true
-  this.sitemapOnly = options.sitemapOnly === true; // only crawl URLs from sitemaps
-  this.sitemapMaxUrls = Math.max(0, options.sitemapMaxUrls || 5000);
-  this.sitemapUrls = [];
-  this.sitemapDiscovered = 0;
-  this.robotsTxtLoaded = false;
-  // Intelligent planner options
-  this.hubMaxPages = typeof options.hubMaxPages === 'number' ? options.hubMaxPages : undefined;
-  this.hubMaxDays = typeof options.hubMaxDays === 'number' ? options.hubMaxDays : undefined;
-  this.intMaxSeeds = typeof options.intMaxSeeds === 'number' ? options.intMaxSeeds : 50;
-  this.intTargetHosts = Array.isArray(options.intTargetHosts) ? options.intTargetHosts.map(s => String(s||'').toLowerCase()) : null;
-  this.plannerVerbosity = typeof options.plannerVerbosity === 'number' ? options.plannerVerbosity : 0;
-    
-  // State containers
-  this.state = new CrawlerState();
-  this.urlAnalysisCache = this.state.getUrlAnalysisCache();
-  this.urlDecisionCache = this.state.getUrlDecisionCache();
-  this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
+      typeof options.maxAgeMs === 'number' && options.maxAgeMs >= 0 ?
+      options.maxAgeMs :
+      undefined; // Freshness window for cached items
+    // Optional per-type freshness windows (override maxAgeMs when provided)
+    this.maxAgeArticleMs = typeof options.maxAgeArticleMs === 'number' && options.maxAgeArticleMs >= 0 ? options.maxAgeArticleMs : undefined;
+    this.maxAgeHubMs = typeof options.maxAgeHubMs === 'number' && options.maxAgeHubMs >= 0 ? options.maxAgeHubMs : undefined;
+    this.dbPath = options.dbPath || path.join(this.dataDir, 'news.db');
+    this.fastStart = options.fastStart === true; // skip heavy startup stats
+    this.enableDb = options.enableDb !== undefined ? options.enableDb : true;
+    this.preferCache = options.preferCache !== false; // default to prefer cache unless explicitly disabled
+    // Sitemap support
+    this.useSitemap = options.useSitemap !== false; // default true
+    this.sitemapOnly = options.sitemapOnly === true; // only crawl URLs from sitemaps
+    this.sitemapMaxUrls = Math.max(0, options.sitemapMaxUrls || 5000);
+    this.sitemapUrls = [];
+    this.sitemapDiscovered = 0;
+    this.robotsTxtLoaded = false;
+    // Intelligent planner options
+    this.hubMaxPages = typeof options.hubMaxPages === 'number' ? options.hubMaxPages : undefined;
+    this.hubMaxDays = typeof options.hubMaxDays === 'number' ? options.hubMaxDays : undefined;
+    this.intMaxSeeds = typeof options.intMaxSeeds === 'number' ? options.intMaxSeeds : 50;
+    this.intTargetHosts = Array.isArray(options.intTargetHosts) ? options.intTargetHosts.map(s => String(s || '').toLowerCase()) : null;
+    this.plannerVerbosity = typeof options.plannerVerbosity === 'number' ? options.plannerVerbosity : 0;
+
+    // State containers
+    this.state = new CrawlerState();
+    this.urlAnalysisCache = this.state.getUrlAnalysisCache();
+    this.urlDecisionCache = this.state.getUrlDecisionCache();
+    this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
     this.startUrlNormalized = null;
     this.robotsRules = null;
     this.isProcessing = false;
@@ -117,11 +164,21 @@ class NewsCrawler {
     // Track active workers to coordinate idle waiting
     this.busyWorkers = 0;
     // Cache facade
-    this.cache = new ArticleCache({ db: null, dataDir: this.dataDir, normalizeUrl: (u) => this.normalizeUrl(u) });
+    this.cache = new ArticleCache({
+      db: null,
+      dataDir: this.dataDir,
+      normalizeUrl: (u) => this.normalizeUrl(u)
+    });
     this.lastRequestTime = 0; // for global spacing
     // Keep-alive agents for connection reuse
-    this.httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
-    this.httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
+    this.httpAgent = new http.Agent({
+      keepAlive: true,
+      maxSockets: 50
+    });
+    this.httpsAgent = new https.Agent({
+      keepAlive: true,
+      maxSockets: 50
+    });
     // Per-domain rate limiting and telemetry
     this._domainWindowMs = 60 * 1000;
     // Networking config
@@ -133,15 +190,21 @@ class NewsCrawler {
     this.crawlType = (options.crawlType || 'basic').toLowerCase();
     this.plannerEnabled = this.crawlType.startsWith('intelligent');
     this.skipQueryUrls = options.skipQueryUrls !== undefined ? !!options.skipQueryUrls : true;
-    this.urlPolicy = new UrlPolicy({ baseUrl: this.baseUrl, skipQueryUrls: this.skipQueryUrls });
-    this.deepUrlAnalyzer = new DeepUrlAnalyzer({ getDb: () => this.dbAdapter?.getDb(), policy: this.urlPolicy });
+    this.urlPolicy = new UrlPolicy({
+      baseUrl: this.baseUrl,
+      skipQueryUrls: this.skipQueryUrls
+    });
+    this.deepUrlAnalyzer = new DeepUrlAnalyzer({
+      getDb: () => this.dbAdapter?.getDb(),
+      policy: this.urlPolicy
+    });
     // Failure tracking configuration
-    this.connectionResetWindowMs = typeof options.connectionResetWindowMs === 'number' && options.connectionResetWindowMs > 0
-      ? options.connectionResetWindowMs
-      : 2 * 60 * 1000; // 2 minutes rolling window
-    this.connectionResetThreshold = typeof options.connectionResetThreshold === 'number' && options.connectionResetThreshold > 0
-      ? options.connectionResetThreshold
-      : 3; // after 3 resets within window we pause
+    this.connectionResetWindowMs = typeof options.connectionResetWindowMs === 'number' && options.connectionResetWindowMs > 0 ?
+      options.connectionResetWindowMs :
+      2 * 60 * 1000; // 2 minutes rolling window
+    this.connectionResetThreshold = typeof options.connectionResetThreshold === 'number' && options.connectionResetThreshold > 0 ?
+      options.connectionResetThreshold :
+      3; // after 3 resets within window we pause
 
     this.linkExtractor = new LinkExtractor({
       normalizeUrl: (url, ctx) => this.normalizeUrl(url, ctx),
@@ -154,9 +217,14 @@ class NewsCrawler {
       getStats: () => this.state.getStats(),
       getQueueSize: () => (this.queue?.size?.() || 0),
       getCurrentDownloads: () => this.state.currentDownloads,
-  getDomainLimits: () => this.state.getDomainLimitsSnapshot(),
-      getRobotsInfo: () => ({ robotsLoaded: !!this.robotsTxtLoaded }),
-      getSitemapInfo: () => ({ urls: this.sitemapUrls, discovered: this.sitemapDiscovered }),
+      getDomainLimits: () => this.state.getDomainLimitsSnapshot(),
+      getRobotsInfo: () => ({
+        robotsLoaded: !!this.robotsTxtLoaded
+      }),
+      getSitemapInfo: () => ({
+        urls: this.sitemapUrls,
+        discovered: this.sitemapDiscovered
+      }),
       getFeatures: () => this.featuresEnabled,
       getEnhancedDbAdapter: () => this.enhancedDbAdapter,
       getProblemClusteringService: () => this.problemClusteringService,
@@ -184,7 +252,7 @@ class NewsCrawler {
       events: this.events,
       logger: console
     });
-    
+
     this.urlEligibilityService = new UrlEligibilityService({
       getUrlDecision: (url, ctx) => this._getUrlDecision(url, ctx),
       handlePolicySkip: (decision, info) => this._handlePolicySkip(decision, info),
@@ -202,8 +270,8 @@ class NewsCrawler {
       maxDepth: this.maxDepth,
       stats: this.state.getStats(),
       safeHostFromUrl: (u) => this._safeHostFromUrl(u),
-  emitQueueEvent: (evt) => this.telemetry.queueEvent(evt),
-  emitEnhancedQueueEvent: (evt) => this.telemetry.enhancedQueueEvent(evt),
+      emitQueueEvent: (evt) => this.telemetry.queueEvent(evt),
+      emitEnhancedQueueEvent: (evt) => this.telemetry.enhancedQueueEvent(evt),
       computeEnhancedPriority: (args) => this.computeEnhancedPriority(args),
       computePriority: (args) => this.computePriority(args),
       urlEligibilityService: this.urlEligibilityService,
@@ -218,7 +286,7 @@ class NewsCrawler {
       normalizeUrl: (targetUrl, ctx) => this.normalizeUrl(targetUrl, ctx),
       isOnDomain: (targetUrl) => this.isOnDomain(targetUrl),
       isAllowed: (targetUrl) => this.isAllowed(targetUrl),
-  hasVisited: (normalized) => this.state.hasVisited(normalized),
+      hasVisited: (normalized) => this.state.hasVisited(normalized),
       getCachedArticle: (targetUrl) => this.getCachedArticle(targetUrl),
       looksLikeArticle: (targetUrl) => this.looksLikeArticle(targetUrl),
       cache: this.cache,
@@ -232,20 +300,23 @@ class NewsCrawler {
       requestTimeoutMs: this.requestTimeoutMs,
       httpAgent: this.httpAgent,
       httpsAgent: this.httpsAgent,
-  currentDownloads: this.state.currentDownloads,
-    emitProgress: () => this.telemetry.progress(),
+      currentDownloads: this.state.currentDownloads,
+      emitProgress: () => this.telemetry.progress(),
       note429: (host, retryAfterMs) => this.note429(host, retryAfterMs),
       noteSuccess: (host) => this.noteSuccess(host),
       recordError: (info) => this._recordError(info),
       handleConnectionReset: (normalized, err) => this._handleConnectionReset(normalized, err),
-  articleHeaderCache: this.state.getArticleHeaderCache(),
-  knownArticlesCache: this.state.getKnownArticlesCache(),
+      articleHeaderCache: this.state.getArticleHeaderCache(),
+      knownArticlesCache: this.state.getKnownArticlesCache(),
       getDbAdapter: () => this.dbAdapter,
       parseRetryAfter,
       handlePolicySkip: (decision, extras) => {
         const depth = extras?.depth || 0;
         const queueSize = this.queue?.size?.() || 0;
-        this._handlePolicySkip(decision, { depth, queueSize });
+        this._handlePolicySkip(decision, {
+          depth,
+          queueSize
+        });
       },
       onCacheServed: (info) => {
         if (!info) return;
@@ -253,7 +324,9 @@ class NewsCrawler {
           this.state.incrementCacheRateLimitedServed();
           const milestoneUrl = info.url;
           const host = info.rateLimitedHost || this._safeHostFromUrl(milestoneUrl);
-          const milestoneDetails = { url: milestoneUrl };
+          const milestoneDetails = {
+            url: milestoneUrl
+          };
           if (host) milestoneDetails.host = host;
           this.telemetry.milestoneOnce(`cache-priority:${host || milestoneUrl}`, {
             kind: 'cache-priority-hit',
@@ -351,46 +424,106 @@ class NewsCrawler {
       const queryCount = Array.from(new URLSearchParams(u.search)).length;
       const hostParts = host.split('.');
       const tld = hostParts[hostParts.length - 1] || null;
-      return { host, tld, section, pathDepth, slugLen, hasDatePath, hasArticleWords, queryCount };
-    } catch (_) { return null; }
+      return {
+        host,
+        tld,
+        section,
+        pathDepth,
+        slugLen,
+        hasDatePath,
+        hasArticleWords,
+        queryCount
+      };
+    } catch (_) {
+      return null;
+    }
   }
 
   _computeContentSignals($, html) {
-    let linkDensity = null, h2 = null, h3 = null, aCount = null, pCount = null;
+    let linkDensity = null,
+      h2 = null,
+      h3 = null,
+      aCount = null,
+      pCount = null;
     try {
       const bodyText = ($('body').text() || '').replace(/\s+/g, ' ').trim();
-      let aTextLen = 0; $('a').each((_, el) => { const t = $(el).text(); aTextLen += (t||'').trim().length; });
-      const len = bodyText.length || 1; linkDensity = Math.min(1, Math.max(0, aTextLen / len));
-      h2 = $('h2').length; h3 = $('h3').length; aCount = $('a').length; pCount = $('p').length;
+      let aTextLen = 0;
+      $('a').each((_, el) => {
+        const t = $(el).text();
+        aTextLen += (t || '').trim().length;
+      });
+      const len = bodyText.length || 1;
+      linkDensity = Math.min(1, Math.max(0, aTextLen / len));
+      h2 = $('h2').length;
+      h3 = $('h3').length;
+      aCount = $('a').length;
+      pCount = $('p').length;
     } catch (_) {}
-    return { linkDensity, h2, h3, a: aCount, p: pCount };
+    return {
+      linkDensity,
+      h2,
+      h3,
+      a: aCount,
+      p: pCount
+    };
   }
 
   _combineSignals(urlSignals, contentSignals, opts = {}) {
-    const votes = { article: 0, nav: 0, other: 0 };
+    const votes = {
+      article: 0,
+      nav: 0,
+      other: 0
+    };
     const consider = [];
     // URL-based votes
     if (urlSignals) {
-      if (urlSignals.hasDatePath || urlSignals.hasArticleWords) { votes.article++; consider.push('url-article'); }
-      if (urlSignals.pathDepth <= 2 && !urlSignals.hasDatePath) { votes.nav++; consider.push('url-shallow'); }
+      if (urlSignals.hasDatePath || urlSignals.hasArticleWords) {
+        votes.article++;
+        consider.push('url-article');
+      }
+      if (urlSignals.pathDepth <= 2 && !urlSignals.hasDatePath) {
+        votes.nav++;
+        consider.push('url-shallow');
+      }
     }
     // Content-based votes
     const cs = contentSignals || {};
     if (typeof cs.linkDensity === 'number') {
-      if (cs.linkDensity > 0.25 && (cs.a || 0) > 40) { votes.nav++; consider.push('content-link-dense'); }
-      if (cs.linkDensity < 0.08 && (cs.p || 0) >= 3) { votes.article++; consider.push('content-text-heavy'); }
+      if (cs.linkDensity > 0.25 && (cs.a || 0) > 40) {
+        votes.nav++;
+        consider.push('content-link-dense');
+      }
+      if (cs.linkDensity < 0.08 && (cs.p || 0) >= 3) {
+        votes.article++;
+        consider.push('content-text-heavy');
+      }
     }
     if (typeof opts.wordCount === 'number') {
-      if (opts.wordCount > 150) { votes.article++; consider.push('wc>150'); }
-      if (opts.wordCount < 60 && (cs.a || 0) > 20) { votes.nav++; consider.push('wc<60'); }
+      if (opts.wordCount > 150) {
+        votes.article++;
+        consider.push('wc>150');
+      }
+      if (opts.wordCount < 60 && (cs.a || 0) > 20) {
+        votes.nav++;
+        consider.push('wc<60');
+      }
     }
     // Decide
     let hint = 'other';
     let maxVotes = -1;
-    for (const k of Object.keys(votes)) { if (votes[k] > maxVotes) { maxVotes = votes[k]; hint = k; } }
+    for (const k of Object.keys(votes)) {
+      if (votes[k] > maxVotes) {
+        maxVotes = votes[k];
+        hint = k;
+      }
+    }
     const considered = consider.length || 1;
     const confidence = Math.min(1, Math.max(0, maxVotes / Math.max(2, considered))); // crude but bounded
-    return { hint, confidence, considered };
+    return {
+      hint,
+      confidence,
+      considered
+    };
   }
 
   _normalizeSectionSlug(value) {
@@ -425,11 +558,19 @@ class NewsCrawler {
     const year = segments[yearIdx];
     const baseHubUrl = this._buildAbsolutePathUrl(baseSegments);
     if (baseHubUrl) {
-      out.push({ url: baseHubUrl, kind: 'hub-seed', reason: 'section-from-archive' });
+      out.push({
+        url: baseHubUrl,
+        kind: 'hub-seed',
+        reason: 'section-from-archive'
+      });
     }
     const yearUrl = this._buildAbsolutePathUrl([...baseSegments, year]);
     if (yearUrl) {
-      out.push({ url: yearUrl, kind: 'history', reason: 'year-archive' });
+      out.push({
+        url: yearUrl,
+        kind: 'history',
+        reason: 'year-archive'
+      });
     }
     const monthIdx = yearIdx + 1;
     if (monthIdx < segments.length) {
@@ -438,21 +579,33 @@ class NewsCrawler {
       if (/^(0?[1-9]|1[0-2]|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)$/.test(monthSeg)) {
         const monthUrl = this._buildAbsolutePathUrl([...baseSegments, year, monthSegRaw]);
         if (monthUrl) {
-          out.push({ url: monthUrl, kind: 'history', reason: 'month-archive' });
+          out.push({
+            url: monthUrl,
+            kind: 'history',
+            reason: 'month-archive'
+          });
         }
       }
     }
     return out;
   }
 
-  _maybeEnqueueAdaptiveSeeds({ url, metadata, depth }) {
+  _maybeEnqueueAdaptiveSeeds({
+    url,
+    metadata,
+    depth
+  }) {
     if (!this.plannerEnabled) return;
     const candidates = [];
     const sectionSlugFromMeta = this._normalizeSectionSlug(metadata?.section);
     if (sectionSlugFromMeta) {
       const hubUrl = this._buildAbsolutePathUrl([sectionSlugFromMeta]);
       if (hubUrl) {
-        candidates.push({ url: hubUrl, kind: 'hub-seed', reason: 'section-metadata' });
+        candidates.push({
+          url: hubUrl,
+          kind: 'hub-seed',
+          reason: 'section-metadata'
+        });
       }
     }
     try {
@@ -463,7 +616,11 @@ class NewsCrawler {
         if (primarySlug) {
           const primaryHub = this._buildAbsolutePathUrl([primarySlug]);
           if (primaryHub) {
-            candidates.push({ url: primaryHub, kind: 'hub-seed', reason: 'section-from-path' });
+            candidates.push({
+              url: primaryHub,
+              kind: 'hub-seed',
+              reason: 'section-from-path'
+            });
           }
         }
       }
@@ -489,14 +646,20 @@ class NewsCrawler {
         const enqueued = this.enqueueRequest({
           url: cand.url,
           depth: Math.max(0, depth - 1),
-          type: { kind: 'hub-seed', reason: cand.reason }
+          type: {
+            kind: 'hub-seed',
+            reason: cand.reason
+          }
         });
         if (enqueued) {
           this.state.addSeededHub(normalized);
           this.telemetry.milestoneOnce(`adaptive-hub:${normalized}`, {
             kind: 'adaptive-hub-seeded',
             message: 'Queued adaptive hub for deeper coverage',
-            details: { url: normalized, reason: cand.reason }
+            details: {
+              url: normalized,
+              reason: cand.reason
+            }
           });
         }
       } else if (cand.kind === 'history') {
@@ -504,21 +667,29 @@ class NewsCrawler {
         const enqueued = this.enqueueRequest({
           url: cand.url,
           depth: Math.max(0, depth - 1),
-          type: { kind: 'history', reason: cand.reason }
+          type: {
+            kind: 'history',
+            reason: cand.reason
+          }
         });
         if (enqueued) {
           this.state.addHistorySeed(normalized);
           this.telemetry.milestoneOnce(`history-seed:${normalized}`, {
             kind: 'history-path-seeded',
             message: 'Queued archive/history path discovered from article',
-            details: { url: normalized, reason: cand.reason }
+            details: {
+              url: normalized,
+              reason: cand.reason
+            }
           });
         }
       }
     }
   }
 
-  _emitIntelligentCompletionMilestone({ outcomeErr } = {}) {
+  _emitIntelligentCompletionMilestone({
+    outcomeErr
+  } = {}) {
     if (!this.plannerEnabled) return;
     const seededUnique = this.state.getSeededHubCount();
     const summary = this._intelligentPlanSummary || {};
@@ -548,9 +719,9 @@ class NewsCrawler {
       if (fallbackCounters && typeof fallbackCounters[Symbol.iterator] === 'function') {
         for (const [kind, entry] of fallbackCounters) {
           if (!entry || !entry.count) continue;
-          const sample = fallbackSamples && typeof fallbackSamples.get === 'function'
-            ? fallbackSamples.get(kind)
-            : undefined;
+          const sample = fallbackSamples && typeof fallbackSamples.get === 'function' ?
+            fallbackSamples.get(kind) :
+            undefined;
           problems.push({
             kind,
             count: entry.count,
@@ -608,7 +779,9 @@ class NewsCrawler {
     };
     const context = contextDetails && typeof contextDetails === 'object' && Object.keys(contextDetails).length ? contextDetails : null;
     if (context) {
-      startEvent.details = { context };
+      startEvent.details = {
+        context
+      };
     }
     this.telemetry.plannerStage(startEvent);
     try {
@@ -636,7 +809,7 @@ class NewsCrawler {
       if (Object.keys(details).length) {
         completion.details = details;
       }
-    this.telemetry.plannerStage(completion);
+      this.telemetry.plannerStage(completion);
       return result;
     } catch (err) {
       const durationMs = Date.now() - startTime;
@@ -647,11 +820,15 @@ class NewsCrawler {
         ts: new Date().toISOString(),
         durationMs,
         details: {
-          ...(context ? { context } : {}),
-          error: { message: err?.message || String(err) }
+          ...(context ? {
+            context
+          } : {}),
+          error: {
+            message: err?.message || String(err)
+          }
         }
       };
-    this.telemetry.plannerStage(failure);
+      this.telemetry.plannerStage(failure);
       throw err;
     }
   }
@@ -660,45 +837,60 @@ class NewsCrawler {
     this.state.noteDepthVisit(normalizedUrl, depth);
   }
 
-  _checkAnalysisMilestones({ depth, isArticle }) {
+  _checkAnalysisMilestones({
+    depth,
+    isArticle
+  }) {
     // depth milestones
     if ((this.stats.depth2PagesProcessed || 0) >= 10) {
-  this.telemetry.milestoneOnce('depth2-coverage-10', {
+      this.telemetry.milestoneOnce('depth2-coverage-10', {
         kind: 'depth2-coverage',
         message: 'Completed analysis of 10 depth-2 pages from the front page',
-        details: { depth: 2, pages: this.stats.depth2PagesProcessed }
+        details: {
+          depth: 2,
+          pages: this.stats.depth2PagesProcessed
+        }
       });
     }
 
     // downloads milestone
     if (this.stats.pagesDownloaded >= 1000) {
-  this.telemetry.milestoneOnce('downloads-1k', {
+      this.telemetry.milestoneOnce('downloads-1k', {
         kind: 'downloads-1k',
         message: 'Downloaded 1,000 documents',
-        details: { count: this.stats.pagesDownloaded }
+        details: {
+          count: this.stats.pagesDownloaded
+        }
       });
     }
 
     // article identification milestones (analysis-driven)
     if (this.stats.articlesFound >= 1000) {
-  this.telemetry.milestoneOnce('articles-found-1k', {
+      this.telemetry.milestoneOnce('articles-found-1k', {
         kind: 'articles-identified-1k',
         message: 'Identified 1,000 articles during analysis',
-        details: { count: this.stats.articlesFound }
+        details: {
+          count: this.stats.articlesFound
+        }
       });
     }
     if (this.stats.articlesFound >= 10000) {
-  this.telemetry.milestoneOnce('articles-found-10k', {
+      this.telemetry.milestoneOnce('articles-found-10k', {
         kind: 'articles-identified-10k',
         message: 'Identified 10,000 articles during analysis',
-        details: { count: this.stats.articlesFound }
+        details: {
+          count: this.stats.articlesFound
+        }
       });
     }
 
-  // Provide a hook for intelligent crawls to optionally schedule deeper analysis
-  if (this.plannerEnabled && isArticle && typeof this.scheduleWideHistoryCheck === 'function') {
+    // Provide a hook for intelligent crawls to optionally schedule deeper analysis
+    if (this.plannerEnabled && isArticle && typeof this.scheduleWideHistoryCheck === 'function') {
       try {
-        this.scheduleWideHistoryCheck({ depth, articlesFound: this.stats.articlesFound });
+        this.scheduleWideHistoryCheck({
+          depth,
+          articlesFound: this.stats.articlesFound
+        });
       } catch (_) {
         // Analysis scheduling is best-effort; ignore errors
       }
@@ -726,7 +918,11 @@ class NewsCrawler {
     const now = Date.now();
     const windowMs = this.connectionResetWindowMs;
     const threshold = this.connectionResetThreshold;
-  const entry = this.state.getConnectionResetState(host) || { count: 0, firstAt: now, lastAt: now };
+    const entry = this.state.getConnectionResetState(host) || {
+      count: 0,
+      firstAt: now,
+      lastAt: now
+    };
     if (now - entry.firstAt > windowMs) {
       entry.count = 0;
       entry.firstAt = now;
@@ -748,7 +944,7 @@ class NewsCrawler {
         errorMessage: error && error.message ? error.message : null
       };
       try {
-  this.telemetry.problem({
+        this.telemetry.problem({
           kind: 'connection-reset',
           scope: this.domain,
           target: host,
@@ -756,7 +952,10 @@ class NewsCrawler {
           details
         });
       } catch (_) {}
-      this.requestAbort('connection-reset', { ...details, message: `${message} for ${host}` });
+      this.requestAbort('connection-reset', {
+        ...details,
+        message: `${message} for ${host}`
+      });
     }
   }
 
@@ -766,7 +965,9 @@ class NewsCrawler {
       const summary = fatalIssues.map((issue) => issue && (issue.message || issue.reason || issue.kind)).filter(Boolean).join('; ');
       const err = new Error(`Crawl failed: ${summary || 'fatal initialization error'}`);
       err.code = 'CRAWL_FATAL';
-      err.details = { issues: fatalIssues.slice(0, 5) };
+      err.details = {
+        issues: fatalIssues.slice(0, 5)
+      };
       return err;
     }
     const noDownloads = (this.stats.pagesDownloaded || 0) === 0;
@@ -777,7 +978,12 @@ class NewsCrawler {
       const detail = sample ? `${sample.kind || 'error'}${sample.code ? ` ${sample.code}` : ''}${sample.url ? ` ${sample.url}` : ''}`.trim() : null;
       const err = new Error(`Crawl failed: no pages downloaded after ${this.stats.errors} error${this.stats.errors === 1 ? '' : 's'}${detail ? ` (first: ${detail})` : ''}`);
       err.code = 'CRAWL_NO_PROGRESS';
-      err.details = { stats: { ...this.stats }, sampleError: sample || null };
+      err.details = {
+        stats: {
+          ...this.stats
+        },
+        sampleError: sample || null
+      };
       return err;
     }
     return null;
@@ -785,7 +991,10 @@ class NewsCrawler {
 
   _compactUrlAnalysis(analysis) {
     if (!analysis || typeof analysis !== 'object' || analysis.invalid) return null;
-    const trimEntries = (list) => Array.isArray(list) ? list.map((entry) => ({ key: entry.key, value: entry.value })) : [];
+    const trimEntries = (list) => Array.isArray(list) ? list.map((entry) => ({
+      key: entry.key,
+      value: entry.value
+    })) : [];
     return {
       raw: analysis.raw,
       normalized: analysis.normalized,
@@ -834,7 +1043,10 @@ class NewsCrawler {
       decision = {
         allow: false,
         reason: 'policy-error',
-        analysis: { raw: rawUrl, invalid: true },
+        analysis: {
+          raw: rawUrl,
+          invalid: true
+        },
         error: e
       };
     }
@@ -860,10 +1072,10 @@ class NewsCrawler {
       state = {
         host,
         // Core state
-        isLimited: false,       // True if any 429 has been received
-        rpm: null,              // Current requests-per-minute limit
-        nextRequestAt: 0,       // Earliest time the next request is allowed
-        backoffUntil: 0,        // A hard stop for all requests after a 429
+        isLimited: false, // True if any 429 has been received
+        rpm: null, // Current requests-per-minute limit
+        nextRequestAt: 0, // Earliest time the next request is allowed
+        backoffUntil: 0, // A hard stop for all requests after a 429
         // Telemetry for adaptive behavior
         lastRequestAt: 0,
         lastSuccessAt: 0,
@@ -912,8 +1124,10 @@ class NewsCrawler {
 
   async init() {
     // Ensure data directory exists
-    await fs.mkdir(this.dataDir, { recursive: true });
-    
+    await fs.mkdir(this.dataDir, {
+      recursive: true
+    });
+
     // Initialize database (optional)
     if (this.enableDb) {
       if (!this.dbAdapter) {
@@ -923,10 +1137,14 @@ class NewsCrawler {
           cache: this.cache,
           domain: this.domain,
           emitProblem: (problem) => {
-            try { this.telemetry.problem(problem); } catch (_) {}
+            try {
+              this.telemetry.problem(problem);
+            } catch (_) {}
           },
           onFatalIssue: (issue) => {
-            try { this.state.addFatalIssue(issue); } catch (_) {}
+            try {
+              this.state.addFatalIssue(issue);
+            } catch (_) {}
           }
         });
       }
@@ -946,10 +1164,10 @@ class NewsCrawler {
     } catch (_) {
       this.startUrlNormalized = this.startUrl;
     }
-    
+
     // Load robots.txt
     await this.loadRobotsTxt();
-    
+
     console.log(`Starting crawler for ${this.domain}`);
     console.log(`Data will be saved to: ${this.dataDir}`);
   }
@@ -958,7 +1176,7 @@ class NewsCrawler {
     try {
       const robotsUrl = `${this.baseUrl}/robots.txt`;
       console.log(`Loading robots.txt from: ${robotsUrl}`);
-      
+
       const response = await fetch(robotsUrl);
       if (response.ok) {
         const robotsTxt = await response.text();
@@ -1005,20 +1223,31 @@ class NewsCrawler {
     const pushed = await loadSitemaps(this.baseUrl, this.domain, this.sitemapUrls, {
       sitemapMaxUrls: this.sitemapMaxUrls,
       push: (u) => {
-        const decision = this._getUrlDecision(u, { phase: 'sitemap', depth: 0, source: 'sitemap' });
+        const decision = this._getUrlDecision(u, {
+          phase: 'sitemap',
+          depth: 0,
+          source: 'sitemap'
+        });
         const analysis = decision?.analysis || {};
         const n = analysis && !analysis.invalid ? analysis.normalized : null;
         if (!n) return;
         if (!decision.allow) {
           if (decision.reason === 'query-superfluous') {
-            this._handlePolicySkip(decision, { depth: 0, queueSize: this.queue.size() });
+            this._handlePolicySkip(decision, {
+              depth: 0,
+              queueSize: this.queue.size()
+            });
           }
           return;
         }
         if (!this.isOnDomain(n) || !this.isAllowed(n)) return;
         const type = this.looksLikeArticle(n) ? 'article' : 'nav';
-        this.enqueueRequest({ url: n, depth: 0, type });
-        this.sitemapDiscovered = (this.sitemapDiscovered||0) + 1;
+        this.enqueueRequest({
+          url: n,
+          depth: 0,
+          type
+        });
+        this.sitemapDiscovered = (this.sitemapDiscovered || 0) + 1;
         this.emitProgress();
       }
     });
@@ -1041,7 +1270,10 @@ class NewsCrawler {
 
   normalizeUrl(url, context = {}) {
     const phase = context && context.phase ? context.phase : 'normalize';
-    const decision = this._getUrlDecision(url, { ...context, phase });
+    const decision = this._getUrlDecision(url, {
+      ...context,
+      phase
+    });
     const analysis = decision?.analysis;
     if (!analysis || analysis.invalid) return null;
     return analysis.normalized;
@@ -1051,20 +1283,38 @@ class NewsCrawler {
     this.telemetry.progress(force);
   }
 
-  pause() { this.state.setPaused(true); this.emitProgress(true); }
-  resume() { this.state.setPaused(false); this.emitProgress(true); }
-  isPaused() { return this.state.isPaused(); }
-  isAbortRequested() { return this.state.isAbortRequested(); }
+  pause() {
+    this.state.setPaused(true);
+    this.emitProgress(true);
+  }
+  resume() {
+    this.state.setPaused(false);
+    this.emitProgress(true);
+  }
+  isPaused() {
+    return this.state.isPaused();
+  }
+  isAbortRequested() {
+    return this.state.isAbortRequested();
+  }
 
   requestAbort(reason, details = null) {
     if (this.state.isAbortRequested()) return;
     this.state.requestAbort();
     if (reason) {
-      try { console.log(`Abort requested: ${reason}`); } catch (_) {}
+      try {
+        console.log(`Abort requested: ${reason}`);
+      } catch (_) {}
     }
-    try { this.queue?.clear?.(); } catch (_) {}
+    try {
+      this.queue?.clear?.();
+    } catch (_) {}
     if (details && typeof details === 'object') {
-      this.state.addFatalIssue({ kind: reason || 'abort', message: details.message || reason || 'abort', details });
+      this.state.addFatalIssue({
+        kind: reason || 'abort',
+        message: details.message || reason || 'abort',
+        details
+      });
     }
     this.emitProgress(true);
   }
@@ -1079,7 +1329,7 @@ class NewsCrawler {
   looksLikeArticle(url) {
     // Heuristics to determine if URL looks like an article
     const urlStr = url.toLowerCase();
-    
+
     // Skip certain patterns that are unlikely to be articles
     const skipPatterns = [
       '/search', '/login', '/register', '/subscribe', '/newsletter',
@@ -1104,7 +1354,7 @@ class NewsCrawler {
     ];
 
     return articlePatterns.some(pattern => urlStr.includes(pattern)) ||
-           /\/\d{4}\/\d{2}\/\d{2}\//.test(urlStr); // Date pattern
+      /\/\d{4}\/\d{2}\/\d{2}\//.test(urlStr); // Date pattern
   }
 
   async processPage(url, depth = 0, context = {}) {
@@ -1112,7 +1362,9 @@ class NewsCrawler {
 
     // Respect max downloads limit
     if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
-      return { status: 'skipped' };
+      return {
+        status: 'skipped'
+      };
     }
     const fetchResult = await this.fetchPipeline.fetch({
       url,
@@ -1125,10 +1377,15 @@ class NewsCrawler {
     });
 
     if (!fetchResult) {
-      return { status: 'failed', retriable: true };
+      return {
+        status: 'failed',
+        retriable: true
+      };
     }
 
-    const { meta = {}, source, html } = fetchResult;
+    const {
+      meta = {}, source, html
+    } = fetchResult;
     const fetchMeta = meta.fetchMeta || null;
     const resolvedUrl = meta.url || url;
     let normalizedUrl = null;
@@ -1139,7 +1396,9 @@ class NewsCrawler {
     }
 
     if (source === 'skipped') {
-      return { status: meta.status || 'skipped' };
+      return {
+        status: meta.status || 'skipped'
+      };
     }
 
     if (source === 'cache') {
@@ -1151,7 +1410,7 @@ class NewsCrawler {
       this.emitProgress();
       const isArticleFromCache = this.looksLikeArticle(normalizedUrl || resolvedUrl);
       if (isArticleFromCache) {
-  this.state.incrementArticlesFound();
+        this.state.incrementArticlesFound();
         this.emitProgress();
       }
       if (this.dbAdapter && this.dbAdapter.isEnabled()) {
@@ -1182,12 +1441,22 @@ class NewsCrawler {
             nav_links_count: null,
             article_links_count: null,
             word_count: null,
-            analysis: JSON.stringify({ kind: 'cache-hit', url: urlSig, content: contentSig, combined })
+            analysis: JSON.stringify({
+              kind: 'cache-hit',
+              url: urlSig,
+              content: contentSig,
+              combined
+            })
           });
         } catch (_) {}
       }
-      this._checkAnalysisMilestones({ depth, isArticle: isArticleFromCache });
-      return { status: 'cache' };
+      this._checkAnalysisMilestones({
+        depth,
+        isArticle: isArticleFromCache
+      });
+      return {
+        status: 'cache'
+      };
     }
 
     if (source === 'not-modified') {
@@ -1221,20 +1490,29 @@ class NewsCrawler {
             nav_links_count: null,
             article_links_count: null,
             word_count: existing?.word_count ?? null,
-            analysis: JSON.stringify({ status: 'not-modified', conditional: true })
+            analysis: JSON.stringify({
+              status: 'not-modified',
+              conditional: true
+            })
           });
         } catch (_) {}
       }
-      return { status: 'not-modified' };
+      return {
+        status: 'not-modified'
+      };
     }
 
     if (source === 'error') {
-  this.state.incrementErrors();
+      this.state.incrementErrors();
       const httpStatus = meta?.error?.httpStatus;
-      const retriable = typeof httpStatus === 'number'
-        ? (httpStatus === 429 || (httpStatus >= 500 && httpStatus < 600))
-        : true;
-      return { status: 'failed', retriable, retryAfterMs: meta.retryAfterMs };
+      const retriable = typeof httpStatus === 'number' ?
+        (httpStatus === 429 || (httpStatus >= 500 && httpStatus < 600)) :
+        true;
+      return {
+        status: 'failed',
+        retriable,
+        retryAfterMs: meta.retryAfterMs
+      };
     }
 
     if (normalizedUrl) {
@@ -1264,16 +1542,27 @@ class NewsCrawler {
         insertLinkRecords: dbEnabled
       });
     } catch (error) {
-      this._recordError({ url: resolvedUrl, kind: 'article-processing', message: error?.message || String(error) });
-  this.telemetry.problem({ kind: 'article-processing-failed', target: resolvedUrl, message: error?.message || 'ArticleProcessor failed' });
-      return { status: 'failed', retriable: false };
+      this._recordError({
+        url: resolvedUrl,
+        kind: 'article-processing',
+        message: error?.message || String(error)
+      });
+      this.telemetry.problem({
+        kind: 'article-processing-failed',
+        target: resolvedUrl,
+        message: error?.message || 'ArticleProcessor failed'
+      });
+      return {
+        status: 'failed',
+        retriable: false
+      };
     }
 
     if (processorResult?.statsDelta) {
-  const foundDelta = processorResult.statsDelta.articlesFound || 0;
-  const savedDelta = processorResult.statsDelta.articlesSaved || 0;
-  if (foundDelta) this.state.incrementArticlesFound(foundDelta);
-  if (savedDelta) this.state.incrementArticlesSaved(savedDelta);
+      const foundDelta = processorResult.statsDelta.articlesFound || 0;
+      const savedDelta = processorResult.statsDelta.articlesSaved || 0;
+      if (foundDelta) this.state.incrementArticlesFound(foundDelta);
+      if (savedDelta) this.state.incrementArticlesSaved(savedDelta);
     }
 
     const navigationLinks = processorResult?.navigationLinks || [];
@@ -1285,11 +1574,18 @@ class NewsCrawler {
 
     if (processorResult?.isArticle && processorResult.metadata) {
       try {
-        this._maybeEnqueueAdaptiveSeeds({ url: resolvedUrl, metadata: processorResult.metadata, depth });
+        this._maybeEnqueueAdaptiveSeeds({
+          url: resolvedUrl,
+          metadata: processorResult.metadata,
+          depth
+        });
       } catch (_) {}
     }
 
-    this._checkAnalysisMilestones({ depth, isArticle: !!processorResult?.isArticle });
+    this._checkAnalysisMilestones({
+      depth,
+      isArticle: !!processorResult?.isArticle
+    });
 
     const seen = new Set();
     const allLinks = processorResult?.allLinks || [];
@@ -1297,18 +1593,37 @@ class NewsCrawler {
       if (!link || !link.url) continue;
       if (seen.has(link.url)) continue;
       seen.add(link.url);
-      this.enqueueRequest({ url: link.url, depth: depth + 1, type: link.type || 'nav' });
+      this.enqueueRequest({
+        url: link.url,
+        depth: depth + 1,
+        type: link.type || 'nav'
+      });
     }
 
-    return { status: 'success' };
+    return {
+      status: 'success'
+    };
   }
 
-  computePriority({ type, depth, discoveredAt, bias = 0, url = null, meta = null }) {
+  computePriority({
+    type,
+    depth,
+    discoveredAt,
+    bias = 0,
+    url = null,
+    meta = null
+  }) {
     // Use enhanced priority computation if available
     if (this.featuresEnabled?.gapDrivenPrioritization && this.priorityScorer) {
       try {
         const result = this.priorityScorer.computeEnhancedPriority({
-          type, depth, discoveredAt, bias, url, meta, jobId: this.jobId
+          type,
+          depth,
+          discoveredAt,
+          bias,
+          url,
+          meta,
+          jobId: this.jobId
         });
         return result.priority;
       } catch (error) {
@@ -1348,11 +1663,16 @@ class NewsCrawler {
     return typeWeight + depthPenalty + bias + tieBreaker * 1e-9;
   }
 
-  _handlePolicySkip(decision, { depth, queueSize }) {
+  _handlePolicySkip(decision, {
+    depth,
+    queueSize
+  }) {
     const analysis = decision?.analysis || {};
     const normalized = analysis.normalized || analysis.raw || null;
     let host = null;
-    try { if (normalized) host = new URL(normalized).hostname; } catch (_) {}
+    try {
+      if (normalized) host = new URL(normalized).hostname;
+    } catch (_) {}
     this.telemetry.queueEvent({
       action: 'drop',
       url: normalized || analysis.raw,
@@ -1362,7 +1682,9 @@ class NewsCrawler {
       queueSize,
       alias: decision.guessedUrl || analysis.guessedWithoutQuery || null
     });
-    try { this.deepUrlAnalyzer?.analyze(decision); } catch (_) {}
+    try {
+      this.deepUrlAnalyzer?.analyze(decision);
+    } catch (_) {}
     if (normalized) {
       try {
         console.log(`Skipping query URL (heuristic superfluous): ${normalized} -> ${decision.guessedUrl || analysis.guessedWithoutQuery || '<none>'}`);
@@ -1370,8 +1692,16 @@ class NewsCrawler {
     }
   }
 
-  enqueueRequest({ url, depth, type }) {
-    return this.queue.enqueue({ url, depth, type });
+  enqueueRequest({
+    url,
+    depth,
+    type
+  }) {
+    return this.queue.enqueue({
+      url,
+      depth,
+      type
+    });
   }
 
   async acquireRateToken() {
@@ -1389,11 +1719,25 @@ class NewsCrawler {
     await (async () => {
       try {
         // Lazy require to avoid circular timing
-        const { DomainLimiter } = require('./crawler/limiter');
-        if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({ pacerJitterMinMs: this.pacerJitterMinMs, pacerJitterMaxMs: this.pacerJitterMaxMs });
+        const {
+          DomainLimiter
+        } = require('./crawler/limiter');
+        if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({
+          pacerJitterMinMs: this.pacerJitterMinMs,
+          pacerJitterMaxMs: this.pacerJitterMaxMs
+        });
         await this._domainLimiter.acquire(host);
         const s = this._domainLimiter._get(host);
-        if (s) Object.assign(before, { isLimited: s.isLimited, rpm: s.rpm, nextRequestAt: s.nextRequestAt, backoffUntil: s.backoffUntil, lastRequestAt: s.lastRequestAt, rpmLastMinute: s.rpmLastMinute, windowStartedAt: s.windowStartedAt, windowCount: s.windowCount });
+        if (s) Object.assign(before, {
+          isLimited: s.isLimited,
+          rpm: s.rpm,
+          nextRequestAt: s.nextRequestAt,
+          backoffUntil: s.backoffUntil,
+          lastRequestAt: s.lastRequestAt,
+          rpmLastMinute: s.rpmLastMinute,
+          windowStartedAt: s.windowStartedAt,
+          windowCount: s.windowCount
+        });
       } catch (_) {
         // Fall back to old behavior if helper unavailable
         const now = nowMs();
@@ -1405,34 +1749,64 @@ class NewsCrawler {
 
   note429(host, retryAfterMs) {
     try {
-      const { DomainLimiter } = require('./crawler/limiter');
-      if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({ pacerJitterMinMs: this.pacerJitterMinMs, pacerJitterMaxMs: this.pacerJitterMaxMs });
+      const {
+        DomainLimiter
+      } = require('./crawler/limiter');
+      if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({
+        pacerJitterMinMs: this.pacerJitterMinMs,
+        pacerJitterMaxMs: this.pacerJitterMaxMs
+      });
       this._domainLimiter.note429(host, retryAfterMs);
-      const s = this._domainLimiter._get(host); const st = this._getDomainState(host); if (s && st) Object.assign(st, s);
+      const s = this._domainLimiter._get(host);
+      const st = this._getDomainState(host);
+      if (s && st) Object.assign(st, s);
     } catch (_) {
       const now = nowMs();
       const state = this._getDomainState(host);
-      state.isLimited = true; state.last429At = now; state.successStreak = 0; state.err429Streak++;
-      const baseBlackout = retryAfterMs != null ? Math.max(30000, retryAfterMs) : 45000; const jitterV = Math.floor(baseBlackout * ((Math.random() * 0.2) - 0.1)); let blackout = baseBlackout + jitterV;
+      state.isLimited = true;
+      state.last429At = now;
+      state.successStreak = 0;
+      state.err429Streak++;
+      const baseBlackout = retryAfterMs != null ? Math.max(30000, retryAfterMs) : 45000;
+      const jitterV = Math.floor(baseBlackout * ((Math.random() * 0.2) - 0.1));
+      let blackout = baseBlackout + jitterV;
       if (state.err429Streak >= 2) blackout = Math.max(blackout, 5 * 60 * 1000);
       if (state.err429Streak >= 3) blackout = Math.max(blackout, 15 * 60 * 1000);
       state.backoffUntil = now + blackout;
-      const currentRpm = state.rpm || 60; const newRpm = Math.max(1, Math.floor(currentRpm * 0.25)); state.rpm = newRpm; state.nextRequestAt = now + Math.floor(60000 / newRpm);
+      const currentRpm = state.rpm || 60;
+      const newRpm = Math.max(1, Math.floor(currentRpm * 0.25));
+      state.rpm = newRpm;
+      state.nextRequestAt = now + Math.floor(60000 / newRpm);
     }
   }
 
   noteSuccess(host) {
     try {
-      const { DomainLimiter } = require('./crawler/limiter');
-      if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({ pacerJitterMinMs: this.pacerJitterMinMs, pacerJitterMaxMs: this.pacerJitterMaxMs });
+      const {
+        DomainLimiter
+      } = require('./crawler/limiter');
+      if (!this._domainLimiter) this._domainLimiter = new DomainLimiter({
+        pacerJitterMinMs: this.pacerJitterMinMs,
+        pacerJitterMaxMs: this.pacerJitterMaxMs
+      });
       this._domainLimiter.noteSuccess(host);
-      const s = this._domainLimiter._get(host); const st = this._getDomainState(host); if (s && st) Object.assign(st, s);
+      const s = this._domainLimiter._get(host);
+      const st = this._getDomainState(host);
+      if (s && st) Object.assign(st, s);
     } catch (_) {
       const now = nowMs();
       const state = this._getDomainState(host);
-      state.lastSuccessAt = now; state.successStreak++; state.err429Streak = 0;
+      state.lastSuccessAt = now;
+      state.successStreak++;
+      state.err429Streak = 0;
       if (state.isLimited && state.successStreak > 100) {
-        const canProbe = (now - state.last429At) > 5 * 60 * 1000; if (canProbe) { const currentRpm = state.rpm || 10; const nextRpm = Math.max(1, Math.floor(currentRpm * 1.1)); state.rpm = Math.min(nextRpm, 300); state.successStreak = 0; }
+        const canProbe = (now - state.last429At) > 5 * 60 * 1000;
+        if (canProbe) {
+          const currentRpm = state.rpm || 10;
+          const nextRpm = Math.max(1, Math.floor(currentRpm * 1.1));
+          state.rpm = Math.min(nextRpm, 300);
+          state.successStreak = 0;
+        }
       }
     }
   }
@@ -1489,7 +1863,13 @@ class NewsCrawler {
       try {
         const host = this._safeHostFromUrl(item.url);
         const sizeNow = this.queue.size();
-  this.telemetry.queueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: sizeNow });
+        this.telemetry.queueEvent({
+          action: 'dequeued',
+          url: item.url,
+          depth: item.depth,
+          host,
+          queueSize: sizeNow
+        });
       } catch (_) {}
       this.busyWorkers++;
       const processContext = {
@@ -1513,13 +1893,31 @@ class NewsCrawler {
           const base = res.retryAfterMs != null ? res.retryAfterMs : Math.min(this.backoffBaseMs * Math.pow(2, item.retries - 1), this.backoffMaxMs);
           item.nextEligibleAt = nowMs() + jitter(base);
           // Recompute priority to keep ordering roughly stable
-          item.priority = this.computePriority({ type: item.type, depth: item.depth, discoveredAt: item.discoveredAt, bias: item.priorityBias || 0 });
+          item.priority = this.computePriority({
+            type: item.type,
+            depth: item.depth,
+            discoveredAt: item.discoveredAt,
+            bias: item.priorityBias || 0
+          });
           this.queue.reschedule(item);
           // Emit retry event after requeue
           try {
-            const host = (() => { try { return new URL(item.url).hostname; } catch (_) { return null; } })();
+            const host = (() => {
+              try {
+                return new URL(item.url).hostname;
+              } catch (_) {
+                return null;
+              }
+            })();
             const sizeNow = this.queue.size();
-            this.telemetry.queueEvent({ action: 'retry', url: item.url, depth: item.depth, host, reason: 'retriable-error', queueSize: sizeNow });
+            this.telemetry.queueEvent({
+              action: 'retry',
+              url: item.url,
+              depth: item.depth,
+              host,
+              reason: 'retriable-error',
+              queueSize: sizeNow
+            });
           } catch (_) {}
         }
       }
@@ -1530,16 +1928,31 @@ class NewsCrawler {
   async crawlConcurrent() {
     await this.init();
     // Optional intelligent planning path
-  if (this.plannerEnabled) {
-  try { await this.planIntelligent(); } catch (e) { try { this.telemetry.problem({ kind: 'intelligent-plan-failed', message: e?.message || String(e) }); } catch(_) {} }
+    if (this.plannerEnabled) {
+      try {
+        await this.planIntelligent();
+      } catch (e) {
+        try {
+          this.telemetry.problem({
+            kind: 'intelligent-plan-failed',
+            message: e?.message || String(e)
+          });
+        } catch (_) {}
+      }
     }
     // Optionally preload URLs from sitemaps
     if (this.useSitemap) {
-      try { await this.loadSitemapsAndEnqueue(); } catch (_) {}
+      try {
+        await this.loadSitemapsAndEnqueue();
+      } catch (_) {}
     }
     // Seed start URL unless we are sitemap-only
     if (!this.sitemapOnly) {
-      this.enqueueRequest({ url: this.startUrl, depth: 0, type: 'nav' });
+      this.enqueueRequest({
+        url: this.startUrl,
+        depth: 0,
+        type: 'nav'
+      });
     }
     const workers = [];
     const n = this.concurrency;
@@ -1555,9 +1968,11 @@ class NewsCrawler {
       console.log(`Failure summary: ${outcomeErr.message}`);
     }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
-  this.emitProgress(true);
-    this._emitIntelligentCompletionMilestone({ outcomeErr });
-    
+    this.emitProgress(true);
+    this._emitIntelligentCompletionMilestone({
+      outcomeErr
+    });
+
     if (this.dbAdapter && this.dbAdapter.isEnabled()) {
       const count = this.dbAdapter.getArticleCount();
       console.log(`Database contains ${count} article records`);
@@ -1566,7 +1981,9 @@ class NewsCrawler {
 
     if (outcomeErr) {
       if (!outcomeErr.details) outcomeErr.details = {};
-      if (!outcomeErr.details.stats) outcomeErr.details.stats = { ...this.stats };
+      if (!outcomeErr.details.stats) outcomeErr.details.stats = {
+        ...this.stats
+      };
       throw outcomeErr;
     }
   }
@@ -1574,7 +1991,9 @@ class NewsCrawler {
   // --- Intelligent planner ---
   async planIntelligent() {
     const host = this.domain.toLowerCase();
-    try { console.log(`Intelligent crawl planning for host=${host}`); } catch (_) {}
+    try {
+      console.log(`Intelligent crawl planning for host=${host}`);
+    } catch (_) {}
 
     const bootstrapResult = await this._withPlannerStage('bootstrap', {
       host,
@@ -1583,7 +2002,11 @@ class NewsCrawler {
       if (Array.isArray(this.intTargetHosts) && this.intTargetHosts.length > 0) {
         const ok = this.intTargetHosts.some((h) => host.endsWith(h));
         if (!ok) {
-          this.telemetry.problem({ kind: 'planner-skipped-host', host, targetHosts: this.intTargetHosts });
+          this.telemetry.problem({
+            kind: 'planner-skipped-host',
+            host,
+            targetHosts: this.intTargetHosts
+          });
           return {
             allowed: false,
             skipPlan: true,
@@ -1613,13 +2036,22 @@ class NewsCrawler {
       return;
     }
 
-    const patternResult = await this._withPlannerStage('infer-patterns', { startUrl: this.startUrl }, async () => {
+    const patternResult = await this._withPlannerStage('infer-patterns', {
+      startUrl: this.startUrl
+    }, async () => {
       let homepageHtml = null;
-      const fetchMeta = { source: 'network', notModified: false };
+      const fetchMeta = {
+        source: 'network',
+        notModified: false
+      };
       try {
         const result = await this.fetchPipeline.fetch({
           url: this.startUrl,
-          context: { depth: 0, allowRevisit: true, referrerUrl: null }
+          context: {
+            depth: 0,
+            allowRevisit: true,
+            referrerUrl: null
+          }
         });
         if (result) {
           if (result.source === 'cache') {
@@ -1642,9 +2074,17 @@ class NewsCrawler {
       }
       const learned = this._inferSitePatternsFromHomepage(homepageHtml);
       if (learned && (learned.sections?.length || learned.articleHints?.length)) {
-        this.telemetry.milestone({ kind: 'patterns-learned', scope: host, details: learned, message: 'Homepage patterns inferred' });
+        this.telemetry.milestone({
+          kind: 'patterns-learned',
+          scope: host,
+          details: learned,
+          message: 'Homepage patterns inferred'
+        });
       }
-      return { learned, fetchMeta };
+      return {
+        learned,
+        fetchMeta
+      };
     }, {
       mapResultForEvent: (res) => {
         if (!res) return null;
@@ -1662,14 +2102,18 @@ class NewsCrawler {
       }
     });
 
-  const learnedSections = Array.isArray(patternResult?.learned?.sections) ? patternResult.learned.sections : [];
+    const learnedSections = Array.isArray(patternResult?.learned?.sections) ? patternResult.learned.sections : [];
 
-    const countryCandidates = await this._withPlannerStage('country-hubs', { host }, async () => {
+    const countryCandidates = await this._withPlannerStage('country-hubs', {
+      host
+    }, async () => {
       const results = await this._computeCountryHubCandidates(host);
       return Array.isArray(results) ? results : [];
     }, {
       mapResultForEvent: (res) => {
-        if (!Array.isArray(res)) return { candidateCount: 0 };
+        if (!Array.isArray(res)) return {
+          candidateCount: 0
+        };
         return {
           candidateCount: res.length,
           sample: res.slice(0, 5).map((c) => c?.url).filter(Boolean)
@@ -1688,20 +2132,42 @@ class NewsCrawler {
       const hubs = Array.from(hubSet).slice(0, cap);
       const seeded = [];
       for (const hubUrl of hubs) {
-        const enqueued = this.enqueueRequest({ url: hubUrl, depth: 0, type: { kind: 'hub-seed', reason: 'intelligent-seed' } });
+        const enqueued = this.enqueueRequest({
+          url: hubUrl,
+          depth: 0,
+          type: {
+            kind: 'hub-seed',
+            reason: 'intelligent-seed'
+          }
+        });
         if (enqueued) {
-          const norm = (() => { try { return this.normalizeUrl(hubUrl); } catch (_) { return hubUrl; } })();
+          const norm = (() => {
+            try {
+              return this.normalizeUrl(hubUrl);
+            } catch (_) {
+              return hubUrl;
+            }
+          })();
           if (norm) this.seededHubUrls.add(norm);
           seeded.push(hubUrl);
         }
         try {
           this.db?.db?.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)`)
-            .run(host, hubUrl, JSON.stringify({ by: 'intelligent-plan', reason: 'learned-section-or-country' }));
+            .run(host, hubUrl, JSON.stringify({
+              by: 'intelligent-plan',
+              reason: 'learned-section-or-country'
+            }));
         } catch (_) {}
       }
-      try { console.log(`Intelligent plan: seeded ${seeded.length} hub(s)`); } catch (_) {}
+      try {
+        console.log(`Intelligent plan: seeded ${seeded.length} hub(s)`);
+      } catch (_) {}
       if (seeded.length === 0) {
-        this.telemetry.problem({ kind: 'no-hubs-seeded', scope: host, message: 'No suitable hubs found from homepage or models' });
+        this.telemetry.problem({
+          kind: 'no-hubs-seeded',
+          scope: host,
+          message: 'No suitable hubs found from homepage or models'
+        });
       } else {
         this.telemetry.milestone({
           kind: 'hubs-seeded',
@@ -1749,10 +2215,13 @@ class NewsCrawler {
   }
 
   _inferSitePatternsFromHomepage(html) {
-    if (!html) return { sections: [], articleHints: [] };
+    if (!html) return {
+      sections: [],
+      articleHints: []
+    };
     const $ = cheerio.load(html);
     const counts = new Map();
-    const skip = new Set(['about','contact','privacy','terms','cookies','help','advertising','sitemap','account','login','signup','subscribe','newsletter','careers']);
+    const skip = new Set(['about', 'contact', 'privacy', 'terms', 'cookies', 'help', 'advertising', 'sitemap', 'account', 'login', 'signup', 'subscribe', 'newsletter', 'careers']);
     const add = (seg) => {
       const s = (seg || '').trim().toLowerCase();
       if (!s || skip.has(s)) return;
@@ -1769,7 +2238,7 @@ class NewsCrawler {
       } catch (_) {}
     });
     const sections = Array.from(counts.entries())
-      .sort((a,b) => b[1] - a[1])
+      .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([k]) => k);
     // Simple article hints from homepage links
@@ -1784,11 +2253,14 @@ class NewsCrawler {
           const p = u.pathname || '/';
           if (/\/\d{4}\/\d{2}\/\d{2}\//.test(p)) sample.add('date-path');
           if (/(?:^|\/)article[s]?\b|\bnews\b|\bstory\b|\bopinion\b/i.test(p)) sample.add('keywords');
-        } catch(_){}
+        } catch (_) {}
       });
       articleHints.push(...Array.from(sample));
-    } catch(_){}
-    return { sections, articleHints };
+    } catch (_) {}
+    return {
+      sections,
+      articleHints
+    };
   }
 
   async _computeCountryHubCandidates(host) {
@@ -1797,13 +2269,17 @@ class NewsCrawler {
     if (/guardian\.com$/.test(host)) {
       // Sense: use a small set of high-confidence country slugs to start; can expand later from gazetteer table.
       const slugs = this._getTopCountrySlugsFromGazetteer(100) || [
-        'france','germany','spain','italy','china','india','united-states','russia','brazil','canada','australia','japan','south-africa','mexico','nigeria','argentina','poland','netherlands','sweden','norway','denmark','ireland','portugal','greece','turkey','ukraine','egypt','saudiarabia','iran','iraq','israel'
+        'france', 'germany', 'spain', 'italy', 'china', 'india', 'united-states', 'russia', 'brazil', 'canada', 'australia', 'japan', 'south-africa', 'mexico', 'nigeria', 'argentina', 'poland', 'netherlands', 'sweden', 'norway', 'denmark', 'ireland', 'portugal', 'greece', 'turkey', 'ukraine', 'egypt', 'saudiarabia', 'iran', 'iraq', 'israel'
       ];
       for (const slug of slugs) {
         // Map common variations (spaces -> hyphens, lowercase)
         const s = String(slug).trim().toLowerCase().replace(/\s+/g, '-');
         const url = `${this.baseUrl}/world/${encodeURIComponent(s)}`;
-        out.push({ url, slug: s, reason: 'guardian-world-country' });
+        out.push({
+          url,
+          slug: s,
+          reason: 'guardian-world-country'
+        });
       }
     }
     // Future: add patterns for BBC, NYTimes, etc.
@@ -1824,10 +2300,15 @@ class NewsCrawler {
       const slugs = [];
       for (const r of rows) {
         const s = toSlug(r.name);
-        if (s && !uniq.has(s)) { uniq.add(s); slugs.push(s); }
+        if (s && !uniq.has(s)) {
+          uniq.add(s);
+          slugs.push(s);
+        }
       }
       return slugs;
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
 
   async crawl() {
@@ -1835,16 +2316,23 @@ class NewsCrawler {
       return this.crawlConcurrent();
     }
     await this.init();
-    
+
     // Start with the initial URL
-    this.enqueueRequest({ url: this.startUrl, depth: 0, type: 'nav' });
-    
+    this.enqueueRequest({
+      url: this.startUrl,
+      depth: 0,
+      type: 'nav'
+    });
+
     while (true) {
       if (this.isAbortRequested()) {
         break;
       }
       // honor pause
-      while (this.isPaused() && !this.isAbortRequested()) { await sleep(200); this.emitProgress(); }
+      while (this.isPaused() && !this.isAbortRequested()) {
+        await sleep(200);
+        this.emitProgress();
+      }
       if (this.isAbortRequested()) {
         break;
       }
@@ -1873,7 +2361,13 @@ class NewsCrawler {
       const extraCtx = pick.context || {};
       try {
         const host = this._safeHostFromUrl(item.url);
-  this.telemetry.queueEvent({ action: 'dequeued', url: item.url, depth: item.depth, host, queueSize: this.queue.size() });
+        this.telemetry.queueEvent({
+          action: 'dequeued',
+          url: item.url,
+          depth: item.depth,
+          host,
+          queueSize: this.queue.size()
+        });
       } catch (_) {}
 
       const processContext = {
@@ -1904,8 +2398,10 @@ class NewsCrawler {
     }
     console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
     this.emitProgress(true);
-    this._emitIntelligentCompletionMilestone({ outcomeErr });
-    
+    this._emitIntelligentCompletionMilestone({
+      outcomeErr
+    });
+
     if (this.dbAdapter && this.dbAdapter.isEnabled()) {
       const count = this.dbAdapter.getArticleCount();
       console.log(`Database contains ${count} article records`);
@@ -1917,7 +2413,9 @@ class NewsCrawler {
 
     if (outcomeErr) {
       if (!outcomeErr.details) outcomeErr.details = {};
-      if (!outcomeErr.details.stats) outcomeErr.details.stats = { ...this.stats };
+      if (!outcomeErr.details.stats) outcomeErr.details.stats = {
+        ...this.stats
+      };
       throw outcomeErr;
     }
   }
@@ -1931,7 +2429,7 @@ class NewsCrawler {
       // Initialize configuration manager
       this.configManager = new ConfigManager();
       const features = this.configManager.getFeatureFlags();
-      
+
       console.log('Enhanced features configuration:', features);
 
       // Initialize enhanced database adapter if features are enabled
@@ -2005,11 +2503,24 @@ class NewsCrawler {
    * Enhanced priority computation with configurable bonuses and gap-driven logic
    * Falls back to base priority calculation if enhanced features are disabled
    */
-  computeEnhancedPriority({ type, depth, discoveredAt, bias = 0, url, meta = null }) {
+  computeEnhancedPriority({
+    type,
+    depth,
+    discoveredAt,
+    bias = 0,
+    url,
+    meta = null
+  }) {
     if (this.featuresEnabled.gapDrivenPrioritization && this.priorityScorer) {
       try {
         return this.priorityScorer.computeEnhancedPriority({
-          type, depth, discoveredAt, bias, url, meta, jobId: this.jobId
+          type,
+          depth,
+          discoveredAt,
+          bias,
+          url,
+          meta,
+          jobId: this.jobId
         });
       } catch (error) {
         console.warn('Enhanced priority computation failed, falling back to base:', error.message);
@@ -2017,7 +2528,12 @@ class NewsCrawler {
     }
 
     // Fallback to base priority calculation
-    const basePriority = this.computePriority({ type, depth, discoveredAt, bias });
+    const basePriority = this.computePriority({
+      type,
+      depth,
+      discoveredAt,
+      bias
+    });
     return {
       priority: basePriority,
       prioritySource: 'base',
@@ -2109,46 +2625,53 @@ if (require.main === module) {
   if (maxAgeMs === 0) {
     // explicit 0 means always refetch; pass through
   }
-  
+
   console.log(`Starting news crawler with URL: ${startUrl}`);
-  
+
   const crawler = new NewsCrawler(startUrl, {
     rateLimitMs,
     maxDepth,
     enableDb,
     dbPath,
-  
-  slowMode,
+
+    slowMode,
     maxDownloads,
-  maxAgeMs,
-  maxAgeArticleMs,
-  maxAgeHubMs,
+    maxAgeMs,
+    maxAgeArticleMs,
+    maxAgeHubMs,
     concurrency: concurrencyArg ? parseInt(concurrencyArg.split('=')[1], 10) : 1,
-  maxQueue: maxQueueArg ? parseInt(maxQueueArg.split('=')[1], 10) : undefined,
-  preferCache,
-  requestTimeoutMs,
-  pacerJitterMinMs,
-  pacerJitterMaxMs
-  , useSitemap, sitemapOnly,
-  sitemapMaxUrls: sitemapMaxArg ? parseInt(sitemapMaxArg.split('=')[1], 10) : undefined
-  , fastStart
-  , crawlType
-  , hubMaxPages: hubMaxPagesArg ? parseInt(hubMaxPagesArg.split('=')[1], 10) : undefined
-  , hubMaxDays: hubMaxDaysArg ? parseInt(hubMaxDaysArg.split('=')[1], 10) : undefined
-  , intMaxSeeds: intMaxSeedsArg ? parseInt(intMaxSeedsArg.split('=')[1], 10) : undefined
-  , intTargetHosts: intTargetHostsArg ? String(intTargetHostsArg.split('=')[1]).split(',').map(s => s.trim()).filter(Boolean) : undefined
-  , plannerVerbosity: plannerVerbosityArg ? parseInt(plannerVerbosityArg.split('=')[1], 10) : undefined
-  , jobId: jobIdArg ? jobIdArg.split('=')[1] : undefined
-  , skipQueryUrls: !allowQueryUrls
+    maxQueue: maxQueueArg ? parseInt(maxQueueArg.split('=')[1], 10) : undefined,
+    preferCache,
+    requestTimeoutMs,
+    pacerJitterMinMs,
+    pacerJitterMaxMs,
+    useSitemap,
+    sitemapOnly,
+    sitemapMaxUrls: sitemapMaxArg ? parseInt(sitemapMaxArg.split('=')[1], 10) : undefined,
+    fastStart,
+    crawlType,
+    hubMaxPages: hubMaxPagesArg ? parseInt(hubMaxPagesArg.split('=')[1], 10) : undefined,
+    hubMaxDays: hubMaxDaysArg ? parseInt(hubMaxDaysArg.split('=')[1], 10) : undefined,
+    intMaxSeeds: intMaxSeedsArg ? parseInt(intMaxSeedsArg.split('=')[1], 10) : undefined,
+    intTargetHosts: intTargetHostsArg ? String(intTargetHostsArg.split('=')[1]).split(',').map(s => s.trim()).filter(Boolean) : undefined,
+    plannerVerbosity: plannerVerbosityArg ? parseInt(plannerVerbosityArg.split('=')[1], 10) : undefined,
+    jobId: jobIdArg ? jobIdArg.split('=')[1] : undefined,
+    skipQueryUrls: !allowQueryUrls
   });
 
   // Accept PAUSE/RESUME commands over stdin (for GUI control)
   try {
-    const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+    const rl = readline.createInterface({
+      input: process.stdin,
+      crlfDelay: Infinity
+    });
     rl.on('line', (line) => {
       const cmd = String(line || '').trim().toUpperCase();
-      if (cmd === 'PAUSE') { crawler.pause(); }
-      else if (cmd === 'RESUME') { crawler.resume(); }
+      if (cmd === 'PAUSE') {
+        crawler.pause();
+      } else if (cmd === 'RESUME') {
+        crawler.resume();
+      }
     });
   } catch (_) {}
 

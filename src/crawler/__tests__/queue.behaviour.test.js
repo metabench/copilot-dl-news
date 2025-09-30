@@ -12,8 +12,8 @@ function createCrawler(options = {}) {
     ...options
   });
 
-  jest.spyOn(crawler, 'emitQueueEvent').mockImplementation(() => {});
-  jest.spyOn(crawler, 'emitProblem').mockImplementation(() => {});
+  jest.spyOn(crawler.telemetry, 'queueEvent').mockImplementation(() => {});
+  jest.spyOn(crawler.telemetry, 'problem').mockImplementation(() => {});
   jest.spyOn(crawler.cache, 'get').mockResolvedValue(null);
 
   return crawler;
@@ -34,13 +34,13 @@ describe('NewsCrawler queue behaviour (pre-extraction)', () => {
     });
 
     expect(accepted).toBe(false);
-    expect(crawler.emitQueueEvent).toHaveBeenCalledWith(
+    expect(crawler.telemetry.queueEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'drop',
         reason: 'off-domain'
       })
     );
-  expect(crawler.queue.size()).toBe(0);
+    expect(crawler.queue.size()).toBe(0);
   });
 
   it('deduplicates identical URLs when allowRevisit is false', () => {
@@ -60,13 +60,13 @@ describe('NewsCrawler queue behaviour (pre-extraction)', () => {
 
     expect(first).toBe(true);
     expect(second).toBe(false);
-    expect(crawler.emitQueueEvent).toHaveBeenCalledWith(
+    expect(crawler.telemetry.queueEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'drop',
         reason: 'duplicate'
       })
     );
-  expect(crawler.queue.size()).toBe(1);
+    expect(crawler.queue.size()).toBe(1);
   });
 
   it('treats known articles as refresh tasks', () => {

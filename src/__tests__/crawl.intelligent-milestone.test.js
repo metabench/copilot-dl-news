@@ -3,8 +3,7 @@ const NewsCrawler = require('../crawl');
 describe('NewsCrawler intelligent completion milestone', () => {
   test('emits structured milestone with planner summary and problems', () => {
     const crawler = new NewsCrawler('https://example.com', { crawlType: 'intelligent' });
-    const emitted = [];
-    crawler.emitMilestone = (milestone) => emitted.push(milestone);
+    const milestoneSpy = jest.spyOn(crawler.telemetry, 'milestone');
 
     crawler.seededHubUrls = new Set([
       'https://example.com/world/',
@@ -34,10 +33,10 @@ describe('NewsCrawler intelligent completion milestone', () => {
       errors: 1
     };
 
-    crawler._emitIntelligentCompletionMilestone({ outcomeErr: null });
+  crawler._emitIntelligentCompletionMilestone({ outcomeErr: null });
 
-    expect(emitted).toHaveLength(1);
-    const milestone = emitted[0];
+  expect(milestoneSpy).toHaveBeenCalledTimes(1);
+  const milestone = milestoneSpy.mock.calls[0][0];
     expect(milestone.kind).toBe('intelligent-completion');
     expect(milestone.message).toMatch(/completed/);
     expect(milestone.details).toMatchObject({
@@ -72,5 +71,7 @@ describe('NewsCrawler intelligent completion milestone', () => {
         count: 1
       }
     ]);
+
+    milestoneSpy.mockRestore();
   });
 });
