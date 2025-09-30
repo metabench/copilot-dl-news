@@ -17,29 +17,38 @@ const {
   UrlPolicy
 } = require('./crawler/urlPolicy');
 const {
-  DeepUrlAnalyzer
-} = require('./crawler/deepUrlAnalysis');
-const http = require('http');
-const https = require('https');
-const {
-  createCrawlerDb
-} = require('./crawler/dbClient');
-// Enhanced features (optional)
-const {
-  ConfigManager
-} = require('./config/ConfigManager');
-const {
-  EnhancedDatabaseAdapter
-} = require('./db/EnhancedDatabaseAdapter');
-const {
-  PriorityScorer
-} = require('./crawler/PriorityScorer');
-const {
-  ProblemClusteringService
-} = require('./crawler/ProblemClusteringService');
+      try {
+        this.telemetry.problem({
+          kind: 'connection-reset',
+          scope: this.domain,
+          target: host,
+          message,
+          details
+        });
+      } catch (_) {
+        // Telemetry is best-effort; ignore errors
+      }
 const {
   PlannerKnowledgeService
 } = require('./crawler/PlannerKnowledgeService');
+const {
+  PlannerOrchestrator
+} = require('./crawler/planner/PlannerOrchestrator');
+const {
+  PlannerTelemetryBridge
+} = require('./crawler/planner/PlannerTelemetryBridge');
+const {
+  PlannerBootstrap
+} = require('./crawler/planner/PlannerBootstrap');
+const {
+  PatternInference
+} = require('./crawler/planner/PatternInference');
+const {
+  CountryHubPlanner
+} = require('./crawler/planner/CountryHubPlanner');
+const {
+  HubSeeder
+} = require('./crawler/planner/HubSeeder');
 const {
   CompletionReporter
 } = require('./crawler/planner/CompletionReporter');
@@ -158,7 +167,6 @@ class NewsCrawler {
     this.priorityScorer = null;
     this.problemClusteringService = null;
     this.plannerKnowledgeService = null;
-    this.completionReporter = null;
     this.featuresEnabled = {
       gapDrivenPrioritization: false,
       plannerKnowledgeReuse: false,
@@ -242,6 +250,24 @@ class NewsCrawler {
     this.telemetry = new CrawlerTelemetry({
       events: this.events
     });
+
+    this.plannerTelemetry = new PlannerTelemetryBridge({
+      telemetry: this.telemetry,
+      domain: this.domain,
+      logger: console
+    });
+
+    this.plannerOrchestrator = new PlannerOrchestrator({
+      telemetryBridge: this.plannerTelemetry,
+      logger: console,
+      enabled: this.plannerEnabled
+    });
+
+    this.plannerBootstrap = null;
+    this.patternInference = null;
+    this.countryHubPlanner = null;
+    this.hubSeeder = null;
+  this.completionReporter = null;
 
     this.articleProcessor = new ArticleProcessor({
       linkExtractor: this.linkExtractor,
@@ -436,21 +462,12 @@ class NewsCrawler {
         slugLen,
         hasDatePath,
         hasArticleWords,
-        queryCount
-      };
-    } catch (_) {
-      return null;
-    }
-  }
-
-  _computeContentSignals($, html) {
-    let linkDensity = null,
-      h2 = null,
-      h3 = null,
-      aCount = null,
-      pCount = null;
-    try {
-      const bodyText = ($('body').text() || '').replace(/\s+/g, ' ').trim();
+            message,
+            details
+          });
+        } catch (_) {
+          // Telemetry is best-effort; ignore errors
+        }
       let aTextLen = 0;
       $('a').each((_, el) => {
         const t = $(el).text();
@@ -530,259 +547,159 @@ class NewsCrawler {
     };
   }
 
-  _normalizeSectionSlug(value) {
-    if (!value && value !== 0) return null;
-    const slug = String(value).trim().toLowerCase();
-    if (!slug) return null;
-    const cleaned = slug
-      .replace(/&/g, 'and')
-      .replace(/[^a-z0-9\/-]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    return cleaned || null;
-  }
-
-  _buildAbsolutePathUrl(segments) {
-    if (!Array.isArray(segments) || segments.length === 0) return null;
-    const encoded = segments
-      .map((seg) => String(seg || '').trim())
-      .filter(Boolean)
-      .map((seg) => encodeURIComponent(seg));
-    if (!encoded.length) return null;
-    return `${this.baseUrl}/${encoded.join('/')}/`;
-  }
-
-  _collectHistoryCandidatesFromSegments(segments) {
-    const out = [];
-    if (!Array.isArray(segments) || segments.length < 2) return out;
-    const yearIdx = segments.findIndex((seg) => /^(19|20)\d{2}$/.test(seg));
-    if (yearIdx <= 0) return out;
-    const baseSegments = segments.slice(0, yearIdx);
-    if (!baseSegments.length) return out;
-    const year = segments[yearIdx];
-    const baseHubUrl = this._buildAbsolutePathUrl(baseSegments);
-    if (baseHubUrl) {
-      out.push({
-        url: baseHubUrl,
-        kind: 'hub-seed',
-        reason: 'section-from-archive'
-      });
-    }
-    const yearUrl = this._buildAbsolutePathUrl([...baseSegments, year]);
-    if (yearUrl) {
-      out.push({
-        url: yearUrl,
-        kind: 'history',
-        reason: 'year-archive'
-      });
-    }
-    const monthIdx = yearIdx + 1;
-    if (monthIdx < segments.length) {
-      const monthSegRaw = segments[monthIdx];
-      const monthSeg = String(monthSegRaw || '').toLowerCase();
-      if (/^(0?[1-9]|1[0-2]|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)$/.test(monthSeg)) {
-        const monthUrl = this._buildAbsolutePathUrl([...baseSegments, year, monthSegRaw]);
-        if (monthUrl) {
-          out.push({
-            url: monthUrl,
-            kind: 'history',
-            reason: 'month-archive'
-          });
-        }
-      }
-    }
-    return out;
-  }
-
   _maybeEnqueueAdaptiveSeeds({
     url,
     metadata,
     depth
   }) {
     if (!this.plannerEnabled) return;
-    const candidates = [];
-    const sectionSlugFromMeta = this._normalizeSectionSlug(metadata?.section);
-    if (sectionSlugFromMeta) {
-      const hubUrl = this._buildAbsolutePathUrl([sectionSlugFromMeta]);
-      if (hubUrl) {
-        candidates.push({
-          url: hubUrl,
-          kind: 'hub-seed',
-          reason: 'section-metadata'
-        });
-      }
-    }
-    try {
-      const u = new URL(url, this.baseUrl);
-      const segments = (u.pathname || '/').split('/').filter(Boolean);
-      if (segments.length > 0) {
-        const primarySlug = this._normalizeSectionSlug(segments[0]);
-        if (primarySlug) {
-          const primaryHub = this._buildAbsolutePathUrl([primarySlug]);
-          if (primaryHub) {
-            candidates.push({
-              url: primaryHub,
-              kind: 'hub-seed',
-              reason: 'section-from-path'
-            });
-          }
-        }
-      }
-      candidates.push(...this._collectHistoryCandidatesFromSegments(segments));
-    } catch (_) {}
-
-    if (!candidates.length) return;
-    const seen = new Set();
-    for (const cand of candidates) {
-      if (!cand || !cand.url) continue;
-      let normalized;
-      try {
-        normalized = this.normalizeUrl(cand.url);
-      } catch (_) {
-        normalized = cand.url;
-      }
-      if (!normalized) continue;
-      const key = `${cand.kind}:${normalized}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (cand.kind === 'hub-seed') {
-        if (this.state.hasSeededHub(normalized) || this.state.hasVisited(normalized)) continue;
-        const enqueued = this.enqueueRequest({
-          url: cand.url,
-          depth: Math.max(0, depth - 1),
-          type: {
-            kind: 'hub-seed',
-            reason: cand.reason
-          }
-        });
-        if (enqueued) {
-          this.state.addSeededHub(normalized);
-          this.telemetry.milestoneOnce(`adaptive-hub:${normalized}`, {
-            kind: 'adaptive-hub-seeded',
-            message: 'Queued adaptive hub for deeper coverage',
-            details: {
-              url: normalized,
-              reason: cand.reason
-            }
-          });
-        }
-      } else if (cand.kind === 'history') {
-        if (this.state.hasHistorySeed(normalized) || this.state.hasVisited(normalized)) continue;
-        const enqueued = this.enqueueRequest({
-          url: cand.url,
-          depth: Math.max(0, depth - 1),
-          type: {
-            kind: 'history',
-            reason: cand.reason
-          }
-        });
-        if (enqueued) {
-          this.state.addHistorySeed(normalized);
-          this.telemetry.milestoneOnce(`history-seed:${normalized}`, {
-            kind: 'history-path-seeded',
-            message: 'Queued archive/history path discovered from article',
-            details: {
-              url: normalized,
-              reason: cand.reason
-            }
-          });
-        }
-      }
-    }
+    this._ensurePlannerModules();
+    if (!this.hubSeeder) return;
+    this.hubSeeder.seedAdaptiveFromArticle({
+      url,
+      metadata,
+      depth
+    });
   }
 
   _emitIntelligentCompletionMilestone({
     outcomeErr
   } = {}) {
     if (!this.plannerEnabled) return;
-
-    const dependencyPayload = {
-      state: this.state,
-      telemetry: this.telemetry,
-      domain: this.domain,
-      getPlanSummary: () => this._intelligentPlanSummary || {},
-      getStats: () => this.stats
-    };
-
-    if (!this.completionReporter) {
-      this.completionReporter = new CompletionReporter(dependencyPayload);
-    } else {
-      this.completionReporter.updateDependencies(dependencyPayload);
+    const seededUnique = this.state.getSeededHubCount();
+    const summary = this._intelligentPlanSummary || {};
+    const sections = summary.sectionHubCount != null ? summary.sectionHubCount : 0;
+    const countryCandidates = summary.countryCandidateCount != null ? summary.countryCandidateCount : 0;
+    const requested = summary.requestedCount != null ? summary.requestedCount : sections + countryCandidates;
+    const expected = Math.max(requested || 0, sections + countryCandidates, seededUnique);
+    const coveragePct = expected > 0 ? Math.min(1, seededUnique / expected) : null;
+    const problems = [];
+    const summaryProblems = this.telemetry.getProblemSummary();
+    if (summaryProblems) {
+      const counters = summaryProblems?.counters || [];
+      const samples = summaryProblems?.samples || {};
+      for (const item of counters) {
+        if (!item || !item.kind) continue;
+        const sample = samples[item.kind];
+        problems.push({
+          kind: item.kind,
+          count: item.count || 0,
+          sample: sample && Object.keys(sample).length ? sample : undefined
+        });
+      }
     }
-
-    this.completionReporter.emit({
-      outcomeErr
+    if (!problems.length) {
+      const fallbackCounters = this.state.getProblemCounters();
+      const fallbackSamples = this.state.getProblemSamples();
+      if (fallbackCounters && typeof fallbackCounters[Symbol.iterator] === 'function') {
+        for (const [kind, entry] of fallbackCounters) {
+          if (!entry || !entry.count) continue;
+          const sample = fallbackSamples && typeof fallbackSamples.get === 'function' ?
+            fallbackSamples.get(kind) :
+            undefined;
+          problems.push({
+            kind,
+            count: entry.count,
+            sample: sample && Object.keys(sample || {}).length ? sample : undefined
+          });
+        }
+      }
+    }
+    problems.sort((a, b) => b.count - a.count);
+    const details = {
+      outcome: outcomeErr ? 'failed' : 'completed',
+      seededHubs: {
+        unique: seededUnique,
+        requested: requested || 0,
+        sectionsFromPatterns: sections,
+        countryCandidates,
+        sample: Array.isArray(summary.sampleSeeded) ? summary.sampleSeeded.slice(0, 5) : undefined
+      },
+      coverage: coveragePct != null ? {
+        expected,
+        seeded: seededUnique,
+        coveragePct
+      } : undefined,
+      problems: problems.length ? problems : undefined,
+      stats: {
+        visited: this.stats?.pagesVisited || 0,
+        downloaded: this.stats?.pagesDownloaded || 0,
+        articlesFound: this.stats?.articlesFound || 0,
+        articlesSaved: this.stats?.articlesSaved || 0,
+        errors: this.stats?.errors || 0
+      }
+    };
+    this.telemetry.milestone({
+      kind: 'intelligent-completion',
+      scope: this.domain,
+      message: outcomeErr ? 'Intelligent crawl ended with errors' : 'Intelligent crawl completed',
+      details
     });
   }
 
   async _withPlannerStage(stage, contextDetails, fn, options = {}) {
-    if (typeof fn !== 'function') {
-      return undefined;
+    if (!this.plannerOrchestrator || typeof fn !== 'function') {
+      return typeof fn === 'function' ? fn() : undefined;
     }
-    if (!this.plannerEnabled) {
-      return fn();
+    this.plannerOrchestrator.setEnabled(this.plannerEnabled);
+    return this.plannerOrchestrator.runStage(stage, contextDetails, fn, options);
+  }
+
+  _ensurePlannerModules() {
+    if (!this.plannerBootstrap) {
+      this.plannerBootstrap = new PlannerBootstrap({
+        telemetry: this.plannerTelemetry,
+        plannerVerbosity: this.plannerVerbosity
+      });
+    } else {
+      this.plannerBootstrap.telemetry = this.plannerTelemetry;
+      this.plannerBootstrap.plannerVerbosity = this.plannerVerbosity;
     }
-    const seq = (++this._plannerStageSeq) || 1;
-    const startTime = Date.now();
-    const startEvent = {
-      stage,
-      status: 'started',
-      sequence: seq,
-      ts: new Date(startTime).toISOString()
-    };
-    const context = contextDetails && typeof contextDetails === 'object' && Object.keys(contextDetails).length ? contextDetails : null;
-    if (context) {
-      startEvent.details = {
-        context
-      };
+
+    if (!this.patternInference) {
+      this.patternInference = new PatternInference();
     }
-    this.telemetry.plannerStage(startEvent);
-    try {
-      const result = await fn();
-      const durationMs = Date.now() - startTime;
-      const mapper = typeof options.mapResultForEvent === 'function' ? options.mapResultForEvent : null;
-      const mapped = mapper ? mapper(result) : result;
-      const completion = {
-        stage,
-        status: 'completed',
-        sequence: seq,
-        ts: new Date().toISOString(),
-        durationMs
-      };
-      const details = {};
-      if (context) details.context = context;
-      if (mapped !== undefined && mapped !== null) {
-        if (typeof mapped === 'object') {
-          const keys = Object.keys(mapped);
-          if (keys.length) details.result = mapped;
-        } else {
-          details.result = mapped;
-        }
-      }
-      if (Object.keys(details).length) {
-        completion.details = details;
-      }
-      this.telemetry.plannerStage(completion);
-      return result;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      const failure = {
-        stage,
-        status: 'failed',
-        sequence: seq,
-        ts: new Date().toISOString(),
-        durationMs,
-        details: {
-          ...(context ? {
-            context
-          } : {}),
-          error: {
-            message: err?.message || String(err)
-          }
-        }
-      };
-      this.telemetry.plannerStage(failure);
-      throw err;
+    this.patternInference.telemetry = this.plannerTelemetry;
+    this.patternInference.baseUrl = this.baseUrl;
+    this.patternInference.domain = this.domain;
+    this.patternInference.fetchPage = (args) => this.fetchPipeline.fetch(args);
+    this.patternInference.getCachedArticle = (url) => this.getCachedArticle(url);
+    this.patternInference.logger = console;
+
+    if (!this.countryHubPlanner) {
+      this.countryHubPlanner = new CountryHubPlanner();
+    }
+    this.countryHubPlanner.baseUrl = this.baseUrl;
+    this.countryHubPlanner.db = this.dbAdapter;
+    this.countryHubPlanner.knowledgeService = this.plannerKnowledgeService;
+
+    if (!this.hubSeeder) {
+      this.hubSeeder = new HubSeeder();
+    }
+    this.hubSeeder.enqueueRequest = (payload) => this.enqueueRequest(payload);
+    this.hubSeeder.normalizeUrl = (targetUrl) => this.normalizeUrl(targetUrl);
+    this.hubSeeder.state = this.state;
+    this.hubSeeder.telemetry = this.telemetry;
+    this.hubSeeder.db = this.dbAdapter;
+    this.hubSeeder.baseUrl = this.baseUrl;
+    this.hubSeeder.logger = console;
+
+    if (!this.completionReporter) {
+      this.completionReporter = new CompletionReporter({
+        state: this.state,
+        telemetry: this.telemetry,
+        domain: this.domain,
+        getPlanSummary: () => this._intelligentPlanSummary || {},
+        getStats: () => this.stats
+      });
+    } else {
+      this.completionReporter.updateDependencies({
+        state: this.state,
+        telemetry: this.telemetry,
+        domain: this.domain,
+        getPlanSummary: () => this._intelligentPlanSummary || {},
+        getStats: () => this.stats
+      });
     }
   }
 
@@ -901,75 +818,10 @@ class NewsCrawler {
           kind: 'connection-reset',
           scope: this.domain,
           target: host,
-          message: `${message}; crawl aborted`,
-          details
-        });
-      } catch (_) {}
-      this.requestAbort('connection-reset', {
-        ...details,
-        message: `${message} for ${host}`
-      });
-    }
-  }
-
-  _determineOutcomeError() {
-    const fatalIssues = this.state.getFatalIssues();
-    if (Array.isArray(fatalIssues) && fatalIssues.length > 0) {
-      const summary = fatalIssues.map((issue) => issue && (issue.message || issue.reason || issue.kind)).filter(Boolean).join('; ');
-      const err = new Error(`Crawl failed: ${summary || 'fatal initialization error'}`);
-      err.code = 'CRAWL_FATAL';
-      err.details = {
-        issues: fatalIssues.slice(0, 5)
-      };
-      return err;
-    }
-    const noDownloads = (this.stats.pagesDownloaded || 0) === 0;
-    const hadErrors = (this.stats.errors || 0) > 0;
-    if (noDownloads && hadErrors) {
-      const errorSamples = this.state.getErrorSamples();
-      const sample = Array.isArray(errorSamples) ? errorSamples[0] : null;
-      const detail = sample ? `${sample.kind || 'error'}${sample.code ? ` ${sample.code}` : ''}${sample.url ? ` ${sample.url}` : ''}`.trim() : null;
-      const err = new Error(`Crawl failed: no pages downloaded after ${this.stats.errors} error${this.stats.errors === 1 ? '' : 's'}${detail ? ` (first: ${detail})` : ''}`);
-      err.code = 'CRAWL_NO_PROGRESS';
-      err.details = {
-        stats: {
-          ...this.stats
-        },
-        sampleError: sample || null
-      };
-      return err;
-    }
-    return null;
-  }
-
-  _compactUrlAnalysis(analysis) {
-    if (!analysis || typeof analysis !== 'object' || analysis.invalid) return null;
-    const trimEntries = (list) => Array.isArray(list) ? list.map((entry) => ({
-      key: entry.key,
-      value: entry.value
-    })) : [];
-    return {
-      raw: analysis.raw,
-      normalized: analysis.normalized,
-      host: analysis.host,
-      path: analysis.path,
-      hasQuery: !!analysis.hasQuery,
-      pathIsSearchy: !!analysis.pathIsSearchy,
-      guessedWithoutQuery: analysis.guessedWithoutQuery || null,
-      querySummary: {
-        essential: trimEntries(analysis.querySummary?.essentialKeys || []),
-        ignorable: trimEntries(analysis.querySummary?.ignorableKeys || []),
-        uncertain: trimEntries(analysis.querySummary?.uncertainKeys || [])
-      },
-      queryClassification: analysis.queryClassification || null
-    };
-  }
-
-  _persistUrlAnalysis(compactAnalysis, decision) {
-    if (!this.dbAdapter || !this.dbAdapter.isEnabled() || !compactAnalysis || !compactAnalysis.normalized) return;
-    try {
-      const payload = {
-        analysis: compactAnalysis,
+          this._ensurePlannerModules();
+          if (this.completionReporter) {
+            this.completionReporter.emit({ outcomeErr });
+          }
         decision: {
           allow: !!(decision && decision.allow),
           reason: decision?.reason || null,
@@ -1948,32 +1800,15 @@ class NewsCrawler {
       console.log(`Intelligent crawl planning for host=${host}`);
     } catch (_) {}
 
+    this._ensurePlannerModules();
+
     const bootstrapResult = await this._withPlannerStage('bootstrap', {
       host,
       targetHosts: Array.isArray(this.intTargetHosts) && this.intTargetHosts.length ? this.intTargetHosts : undefined
-    }, async () => {
-      if (Array.isArray(this.intTargetHosts) && this.intTargetHosts.length > 0) {
-        const ok = this.intTargetHosts.some((h) => host.endsWith(h));
-        if (!ok) {
-          this.telemetry.problem({
-            kind: 'planner-skipped-host',
-            host,
-            targetHosts: this.intTargetHosts
-          });
-          return {
-            allowed: false,
-            skipPlan: true,
-            targetHosts: this.intTargetHosts
-          };
-        }
-      }
-      return {
-        allowed: true,
-        skipPlan: false,
-        plannerVerbosity: this.plannerVerbosity,
-        targetHosts: this.intTargetHosts || null
-      };
-    }, {
+    }, async () => this.plannerBootstrap.run({
+      host,
+      targetHosts: Array.isArray(this.intTargetHosts) && this.intTargetHosts.length ? this.intTargetHosts : undefined
+    }), {
       mapResultForEvent: (res) => {
         if (!res) return null;
         return {
@@ -1991,54 +1826,9 @@ class NewsCrawler {
 
     const patternResult = await this._withPlannerStage('infer-patterns', {
       startUrl: this.startUrl
-    }, async () => {
-      let homepageHtml = null;
-      const fetchMeta = {
-        source: 'network',
-        notModified: false
-      };
-      try {
-        const result = await this.fetchPipeline.fetch({
-          url: this.startUrl,
-          context: {
-            depth: 0,
-            allowRevisit: true,
-            referrerUrl: null
-          }
-        });
-        if (result) {
-          if (result.source === 'cache') {
-            homepageHtml = result.html || null;
-            fetchMeta.source = 'cache';
-          } else if (result.source === 'not-modified') {
-            fetchMeta.notModified = true;
-            const cached = await this.getCachedArticle(this.startUrl);
-            homepageHtml = cached?.html || null;
-            fetchMeta.source = cached?.html ? 'cache' : 'stale';
-          } else if (result.source === 'network') {
-            homepageHtml = result.html;
-            fetchMeta.source = 'network';
-          } else if (result.source === 'error') {
-            fetchMeta.error = result.meta?.error?.message || result.meta?.error?.kind || 'fetch-error';
-          }
-        }
-      } catch (err) {
-        fetchMeta.error = err?.message || String(err);
-      }
-      const learned = this._inferSitePatternsFromHomepage(homepageHtml);
-      if (learned && (learned.sections?.length || learned.articleHints?.length)) {
-        this.telemetry.milestone({
-          kind: 'patterns-learned',
-          scope: host,
-          details: learned,
-          message: 'Homepage patterns inferred'
-        });
-      }
-      return {
-        learned,
-        fetchMeta
-      };
-    }, {
+    }, async () => this.patternInference.run({
+      startUrl: this.startUrl
+    }), {
       mapResultForEvent: (res) => {
         if (!res) return null;
         const sections = Array.isArray(res.learned?.sections) ? res.learned.sections : [];
@@ -2060,7 +1850,7 @@ class NewsCrawler {
     const countryCandidates = await this._withPlannerStage('country-hubs', {
       host
     }, async () => {
-      const results = await this._computeCountryHubCandidates(host);
+      const results = await this.countryHubPlanner.computeCandidates(host);
       return Array.isArray(results) ? results : [];
     }, {
       mapResultForEvent: (res) => {
@@ -2078,69 +1868,12 @@ class NewsCrawler {
       sectionsFromPatterns: learnedSections.length,
       candidateCount: countryCandidates.length,
       maxSeeds: typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50
-    }, async () => {
-      const sectionHubs = learnedSections.map((s) => `${this.baseUrl}/${s}/`);
-      const hubSet = new Set(sectionHubs.concat(countryCandidates.map((c) => c.url)));
-      const cap = typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50;
-      const hubs = Array.from(hubSet).slice(0, cap);
-      const seeded = [];
-      for (const hubUrl of hubs) {
-        const enqueued = this.enqueueRequest({
-          url: hubUrl,
-          depth: 0,
-          type: {
-            kind: 'hub-seed',
-            reason: 'intelligent-seed'
-          }
-        });
-        if (enqueued) {
-          const norm = (() => {
-            try {
-              return this.normalizeUrl(hubUrl);
-            } catch (_) {
-              return hubUrl;
-            }
-          })();
-          if (norm) this.seededHubUrls.add(norm);
-          seeded.push(hubUrl);
-        }
-        try {
-          this.db?.db?.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)`)
-            .run(host, hubUrl, JSON.stringify({
-              by: 'intelligent-plan',
-              reason: 'learned-section-or-country'
-            }));
-        } catch (_) {}
-      }
-      try {
-        console.log(`Intelligent plan: seeded ${seeded.length} hub(s)`);
-      } catch (_) {}
-      if (seeded.length === 0) {
-        this.telemetry.problem({
-          kind: 'no-hubs-seeded',
-          scope: host,
-          message: 'No suitable hubs found from homepage or models'
-        });
-      } else {
-        this.telemetry.milestone({
-          kind: 'hubs-seeded',
-          scope: host,
-          message: `Seeded ${seeded.length} hubs`,
-          details: {
-            count: seeded.length,
-            sections: sectionHubs.length,
-            countryCandidates: countryCandidates.length
-          }
-        });
-      }
-      return {
-        seededCount: seeded.length,
-        requestedCount: hubs.length,
-        sectionHubCount: sectionHubs.length,
-        countryCandidateCount: countryCandidates.length,
-        sampleSeeded: seeded.slice(0, 5)
-      };
-    }, {
+    }, async () => this.hubSeeder.seedPlan({
+      host,
+      sectionSlugs: learnedSections,
+      countryCandidates,
+      maxSeeds: typeof this.intMaxSeeds === 'number' ? this.intMaxSeeds : 50
+    }), {
       mapResultForEvent: (res) => {
         if (!res) return null;
         return {
@@ -2166,104 +1899,6 @@ class NewsCrawler {
     }
 
   }
-
-  _inferSitePatternsFromHomepage(html) {
-    if (!html) return {
-      sections: [],
-      articleHints: []
-    };
-    const $ = cheerio.load(html);
-    const counts = new Map();
-    const skip = new Set(['about', 'contact', 'privacy', 'terms', 'cookies', 'help', 'advertising', 'sitemap', 'account', 'login', 'signup', 'subscribe', 'newsletter', 'careers']);
-    const add = (seg) => {
-      const s = (seg || '').trim().toLowerCase();
-      if (!s || skip.has(s)) return;
-      counts.set(s, (counts.get(s) || 0) + 1);
-    };
-    $('a[href]').each((_, el) => {
-      try {
-        const href = $(el).attr('href');
-        const u = new URL(href, this.baseUrl);
-        if (u.hostname !== this.domain) return;
-        const seg = (u.pathname || '/').split('/').filter(Boolean)[0] || null;
-        if (!seg) return;
-        add(seg);
-      } catch (_) {}
-    });
-    const sections = Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([k]) => k);
-    // Simple article hints from homepage links
-    const articleHints = [];
-    try {
-      const sample = new Set();
-      $('a[href]').each((_, el) => {
-        const href = $(el).attr('href');
-        try {
-          const u = new URL(href, this.baseUrl);
-          if (u.hostname !== this.domain) return;
-          const p = u.pathname || '/';
-          if (/\/\d{4}\/\d{2}\/\d{2}\//.test(p)) sample.add('date-path');
-          if (/(?:^|\/)article[s]?\b|\bnews\b|\bstory\b|\bopinion\b/i.test(p)) sample.add('keywords');
-        } catch (_) {}
-      });
-      articleHints.push(...Array.from(sample));
-    } catch (_) {}
-    return {
-      sections,
-      articleHints
-    };
-  }
-
-  async _computeCountryHubCandidates(host) {
-    const out = [];
-    // Guardian pattern: https://www.theguardian.com/world/<slug>
-    if (/guardian\.com$/.test(host)) {
-      // Sense: use a small set of high-confidence country slugs to start; can expand later from gazetteer table.
-      const slugs = this._getTopCountrySlugsFromGazetteer(100) || [
-        'france', 'germany', 'spain', 'italy', 'china', 'india', 'united-states', 'russia', 'brazil', 'canada', 'australia', 'japan', 'south-africa', 'mexico', 'nigeria', 'argentina', 'poland', 'netherlands', 'sweden', 'norway', 'denmark', 'ireland', 'portugal', 'greece', 'turkey', 'ukraine', 'egypt', 'saudiarabia', 'iran', 'iraq', 'israel'
-      ];
-      for (const slug of slugs) {
-        // Map common variations (spaces -> hyphens, lowercase)
-        const s = String(slug).trim().toLowerCase().replace(/\s+/g, '-');
-        const url = `${this.baseUrl}/world/${encodeURIComponent(s)}`;
-        out.push({
-          url,
-          slug: s,
-          reason: 'guardian-world-country'
-        });
-      }
-    }
-    // Future: add patterns for BBC, NYTimes, etc.
-    return out;
-  }
-
-  _getTopCountrySlugsFromGazetteer(limit = 50) {
-    try {
-      if (!this.db || !this.db.db) return null;
-      const rows = this.db.db.prepare(`SELECT name FROM place_names WHERE id IN (SELECT canonical_name_id FROM places WHERE kind='country') ORDER BY name LIMIT ?`).all(limit);
-      // Normalize names to slugs similar to Guardian style
-      const toSlug = (name) => String(name || '').trim().toLowerCase()
-        .replace(/\band\b/g, 'and')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-      const uniq = new Set();
-      const slugs = [];
-      for (const r of rows) {
-        const s = toSlug(r.name);
-        if (s && !uniq.has(s)) {
-          uniq.add(s);
-          slugs.push(s);
-        }
-      }
-      return slugs;
-    } catch (_) {
-      return null;
-    }
-  }
-
   async crawl() {
     if (this.usePriorityQueue) {
       return this.crawlConcurrent();
