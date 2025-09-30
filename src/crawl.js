@@ -295,6 +295,24 @@ class NewsCrawler {
         if (typeof this.scheduleWideHistoryCheck === 'function') {
           this.scheduleWideHistoryCheck(payload);
         }
+      },
+      goalPlanExecutor: ({ plan }) => {
+        if (!plan || !Array.isArray(plan.actions)) {
+          return;
+        }
+        for (const action of plan.actions) {
+          if (!action || typeof action !== 'object') continue;
+          if (action.type === 'enqueue-hub-fetch' && action.url) {
+            const depth = typeof action.depth === 'number' ? action.depth : 1;
+            try {
+              this.enqueueRequest({
+                url: action.url,
+                depth,
+                type: action.typeHint || 'nav'
+              });
+            } catch (_) {}
+          }
+        }
       }
     });
 
