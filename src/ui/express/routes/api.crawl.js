@@ -105,7 +105,9 @@ function createCrawlStartRouter(options = {}) {
         downloadsPerSec: 0,
         errorRatePerMin: 0,
         bytesPerSec: 0,
-        stage: 'preparing'
+        stage: 'preparing',
+        statusText: null,
+        startup: null
       },
       watchdogTimers: []
     };
@@ -351,8 +353,24 @@ function createCrawlStartRouter(options = {}) {
         if (line.startsWith('PROGRESS ')) {
           try {
             const obj = JSON.parse(line.slice('PROGRESS '.length));
-            if (job.stage !== 'running') jobRegistry.updateJobStage(job, 'running');
+            const startupSummary = obj && obj.startup && typeof obj.startup === 'object' ? obj.startup.summary : null;
+            const startupActive = startupSummary && typeof startupSummary === 'object' && startupSummary.done === false;
+            if (startupActive) {
+              if (job.stage !== 'preparing') jobRegistry.updateJobStage(job, 'preparing');
+            } else if (job.stage !== 'running') {
+              jobRegistry.updateJobStage(job, 'running');
+            }
             if (!Object.prototype.hasOwnProperty.call(obj, 'stage')) obj.stage = job.stage;
+            if (job.metrics) {
+              try {
+                if (Object.prototype.hasOwnProperty.call(obj, 'statusText')) {
+                  job.metrics.statusText = obj.statusText;
+                }
+                if (Object.prototype.hasOwnProperty.call(obj, 'startup')) {
+                  job.metrics.startup = obj.startup;
+                }
+              } catch (_) {}
+            }
             try {
               if (!QUIET) console.log(`[child:progress] v=${obj.visited || 0} d=${obj.downloaded || 0} q=${obj.queueSize || 0}`);
             } catch (_) {}

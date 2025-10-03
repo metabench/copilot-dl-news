@@ -47,6 +47,7 @@ function buildArgs(body = {}) {
     if (ctype === 'basic') { effUseSitemap = false; effSitemapOnly = false; }
     else if (ctype === 'sitemap-only') { effUseSitemap = true; effSitemapOnly = true; }
     else if (ctype === 'basic-with-sitemap' || ctype === 'basic+site' || ctype === 'basic-with-site') { effUseSitemap = true; effSitemapOnly = false; }
+    else if (ctype === 'intelligent') { effUseSitemap = true; effSitemapOnly = false; }
   }
   // If sitemapOnly is true, it implies using sitemap regardless of useSitemap flag
   if (effSitemapOnly === true) {

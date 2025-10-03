@@ -10,11 +10,17 @@ class CrawlerTelemetry {
   }
 
   progress(options = {}) {
-    const force = typeof options === 'boolean' ? options : !!options.force;
+    let payload;
+    if (typeof options === 'boolean') {
+      payload = { force: options };
+    } else if (options && typeof options === 'object') {
+      payload = { ...options };
+    } else {
+      payload = {};
+    }
+    payload.force = !!payload.force;
     if (this.events && typeof this.events.emitProgress === 'function') {
-      this.events.emitProgress({
-        force
-      });
+      this.events.emitProgress(payload);
     }
   }
 

@@ -32,16 +32,65 @@ function formatFlags(run) {
 	].filter(Boolean).map(escapeHtml).join(', ') || '—';
 }
 
+function formatJson(value, fallback = '—') {
+	if (value === null || value === undefined) {
+		return fallback;
+	}
+	try {
+		return escapeHtml(JSON.stringify(value, null, 2));
+	} catch (err) {
+		return escapeHtml(String(value));
+	}
+}
+
+function collectHighlights(run = {}, payload = {}) {
+	const sources = [];
+	if (Array.isArray(run?.summary?.analysisHighlights)) sources.push(run.summary.analysisHighlights);
+	if (Array.isArray(payload?.analysisHighlights)) sources.push(payload.analysisHighlights);
+	if (Array.isArray(payload?.lastProgress?.analysisHighlights)) sources.push(payload.lastProgress.analysisHighlights);
+	const highlights = [];
+	const seen = new Set();
+	for (const list of sources) {
+		for (const item of list) {
+			if (!item) continue;
+			const text = typeof item === 'string' ? item.trim() : JSON.stringify(item);
+			if (!text) continue;
+			const key = text.toLowerCase();
+			if (seen.has(key)) continue;
+			seen.add(key);
+			highlights.push(text);
+		}
+	}
+	return highlights;
+}
+
 function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav }) {
 	const navRenderer = ensureRenderNav(renderNav);
-	const summaryPretty = run?.summary ? escapeHtml(JSON.stringify(run.summary, null, 2)) : 'No summary yet.';
-	const eventsHtml = events.length ? events.map((event) => `
+	const summarySource = run?.summary || run?.lastProgress || payload?.lastProgress || null;
+	const summaryPretty = summarySource ? formatJson(summarySource, 'No summary yet.') : 'No summary yet.';
+	const eventsHtml = events.length ? events.map((event) => {
+		const detailsPretty = event?.details != null ? formatJson(event.details) : null;
+		return `
 				<tr>
 					<td class="nowrap">${escapeHtml(event.ts || '')}</td>
 					<td>${escapeHtml(event.stage || '')}</td>
 					<td>${escapeHtml(event.message || '')}</td>
+					<td>${detailsPretty ? `<pre class="event-details">${detailsPretty}</pre>` : '<span class="meta">—</span>'}</td>
 				</tr>
-			`).join('') : '<tr><td colspan="3" class="meta">No events logged.</td></tr>';
+		`;
+	}).join('') : '<tr><td colspan="4" class="meta">No events logged.</td></tr>';
+	const highlights = collectHighlights(run, payload);
+	const highlightsHtml = highlights.length
+		? `<ul class="highlights">${highlights.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+		: '<p class="meta">No highlights captured yet.</p>';
+	const lastProgress = run?.lastProgress || payload?.lastProgress || null;
+	const lastProgressHtml = lastProgress
+		? `<pre class="event-details">${formatJson(lastProgress)}</pre>`
+		: '<p class="meta">No progress payload recorded.</p>';
+	const latestProgressLabel = lastProgress
+		? escapeHtml([lastProgress.stage, lastProgress.status, lastProgress.summary].filter(Boolean).join(' · ') || 'See latest progress section below.')
+		: '—';
+	const errorLabel = run?.error ? escapeHtml(run.error) : '—';
 
 	return `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -64,6 +113,10 @@ function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav })
 	.meta{color:var(--muted);font-size:12px}
 	.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
 	.nowrap{white-space:nowrap}
+	.highlights{list-style:disc;padding-left:20px;margin:0;font-size:14px;color:var(--fg)}
+	.highlights li{margin-bottom:6px}
+	.event-details{font-size:12px;margin:0;background:#f8fafc;border-radius:6px;border:1px solid var(--border);padding:10px;white-space:pre-wrap}
+
 </style>
 </head><body>
 	<div class="container">
@@ -83,8 +136,18 @@ function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav })
 					  <tr><th>Page limit</th><td>${run?.pageLimit != null ? escapeHtml(String(run.pageLimit)) : '—'}</td></tr>
 					  <tr><th>Domain limit</th><td>${run?.domainLimit != null ? escapeHtml(String(run.domainLimit)) : '—'}</td></tr>
 					<tr><th>Flags</th><td>${formatFlags(run || {})}</td></tr>
+					<tr><th>Latest progress</th><td>${latestProgressLabel}</td></tr>
+					<tr><th>Error</th><td>${errorLabel}</td></tr>
 				</tbody>
 			</table>
+		</section>
+		<section>
+			<h2>Highlights</h2>
+			${highlightsHtml}
+		</section>
+		<section>
+			<h2>Latest progress payload</h2>
+			${lastProgressHtml}
 		</section>
 		<section>
 			<h2>Summary</h2>
@@ -93,7 +156,7 @@ function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav })
 		<section>
 			<h2>Events</h2>
 			<table>
-				<thead><tr><th>Timestamp</th><th>Stage</th><th>Message</th></tr></thead>
+				<thead><tr><th>Timestamp</th><th>Stage</th><th>Message</th><th>Details</th></tr></thead>
 				<tbody>${eventsHtml}</tbody>
 			</table>
 		</section>

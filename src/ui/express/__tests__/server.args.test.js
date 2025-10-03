@@ -64,4 +64,27 @@ describe('server buildArgs mapping', () => {
       '--allow-query-urls'
     ]));
   });
+
+  test('maps intelligent crawl type to planner-friendly flags', async () => {
+    const started = [];
+    const fakeRunner = {
+      start(args) {
+        started.push(args);
+        return { pid: 2468, stdout: { on(){} }, stderr: { on(){} }, on(){} };
+      }
+    };
+    const app = createApp({ runner: fakeRunner });
+    const body = {
+      startUrl: 'https://example.com',
+      crawlType: 'intelligent'
+    };
+    const res = await request(app).post('/api/crawl').send(body).set('Content-Type', 'application/json');
+    expect(res.status).toBe(202);
+    const args = started[0];
+    expect(args).toEqual(expect.arrayContaining([
+      '--crawl-type=intelligent'
+    ]));
+    expect(args).not.toContain('--no-sitemap');
+    expect(args).not.toContain('--sitemap-only');
+  });
 });

@@ -19,7 +19,7 @@ A focused crawler for news sites: detects navigation, finds articles, and saves 
 - Queue event tracking (enqueued / dequeued / retry / drop) with real-time `queue` SSE events & SSR queue pages
 - Intelligent crawl (planner) that seeds hubs, detects expectation gaps (Problems) and achievements (Milestones)
 - Problems & Milestones history pages with keyset pagination
-- Crawl type presets (basic / sitemap-only / basic-with-sitemap) via `/api/crawl-types`
+- Crawl type presets (basic / sitemap-only / basic-with-sitemap / intelligent) via `/api/crawl-types`
 - Gazetteer-enhanced page analysis (places + hub detection) & per-place hub inference
 - Observability: Prometheus `/metrics`, health endpoints, and a system health strip (CPU/memory and SQLite WAL info)
 
@@ -100,6 +100,16 @@ Backfill publication dates: `npm run backfill:dates` (flags: `--redo`, `--limit=
 
 Analyze domains (news-site heuristic): `npm run analyze:domains`
 
+### Benchmark crawl SQL performance
+
+Measure the latency of the crawler's most common database queries to spot slow indexes before a crawl starts:
+
+```
+node src/tools/crawl-query-benchmark.js --iterations=10
+```
+
+By default the script opens `data/news.db`. Use `--db=PATH` to benchmark a different database, `--only=id1,id2` to restrict the query set, or `--list` to print the available identifiers. Set `--json=true` to emit machine-readable output (helpful for CI checks and historical tracking).
+
 ### GUI (Express)
 
 A minimal dashboard to run and monitor crawls locally.
@@ -121,6 +131,8 @@ What you’ll see:
 - Badges: robots/sitemap status, global and per-host rate‑limited indicators
 - Panels: Recent Errors, Recent Domains; URLs and Domain pages with details
 - Panels: Recent Errors, Recent Domains; URLs and Domain pages with details; Queues, Problems, Milestones, Gazetteer
+- Analysis pipeline card that streams `ANALYSIS_PROGRESS` updates (stage, processed counts, highlights) with quick links to the latest run
+- Intelligent pipeline summary that reflects planner-stage telemetry and live coverage/goal insights
 - Health strip: DB size, disk free, CPU %, memory (RSS), SQLite journal mode and WAL autocheckpoint
 
 #### Sitemap options
@@ -172,7 +184,7 @@ By default only one active crawl is allowed. Set `UI_ALLOW_MULTI_JOBS=1` before 
 
 ### Crawl types
 
-The server seeds a small catalog (`basic`, `sitemap-only`, `basic-with-sitemap`) exposed via `GET /api/crawl-types`. Selecting a type in the UI sets baseline flags; manual overrides (checkboxes / inputs) still apply after selection.
+The server seeds a small catalog (`basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`) exposed via `GET /api/crawl-types`. Selecting a type in the UI sets baseline flags; manual overrides (checkboxes / inputs) still apply after selection. Choosing `intelligent` enables the planner pipeline, hub seeding, and additional coverage insights in the dashboard.
 
 ### Page analysis & gazetteer
 

@@ -127,6 +127,9 @@ const {
 const {
   WorkerRunner
 } = require('./crawler/WorkerRunner');
+const {
+  StartupProgressTracker
+} = require('./crawler/StartupProgressTracker');
 
 class NewsCrawler {
   constructor(startUrl, options = {}) {
@@ -175,6 +178,9 @@ class NewsCrawler {
 
     // State containers
     this.state = new CrawlerState();
+    this.startupTracker = new StartupProgressTracker({
+      emit: (payload, statusText) => this._emitStartupProgress(payload, statusText)
+    });
     this.urlAnalysisCache = this.state.getUrlAnalysisCache();
     this.urlDecisionCache = this.state.getUrlDecisionCache();
     this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
@@ -274,6 +280,9 @@ class NewsCrawler {
       plannerScope: () => this.domain,
       isPlannerEnabled: () => this.plannerEnabled,
       isPaused: () => this.state.isPaused(),
+      getGoalSummary: () => this.milestoneTracker ? this.milestoneTracker.getGoalsSummary() : [],
+      getQueueHeatmap: () => (this.queue && typeof this.queue.getHeatmapSnapshot === 'function') ? this.queue.getHeatmapSnapshot() : null,
+      getCoverageSummary: () => this._getCoverageSummary(),
       logger: console
     });
 
@@ -658,38 +667,50 @@ class NewsCrawler {
 
 
   async init() {
-    // Ensure data directory exists
-    await fs.mkdir(this.dataDir, {
-      recursive: true
+    await this._trackStartupStage('prepare-data', 'Preparing data directory', async () => {
+      await fs.mkdir(this.dataDir, {
+        recursive: true
+      });
     });
 
-    // Initialize database (optional)
     if (this.enableDb) {
-      if (!this.dbAdapter) {
-        this.dbAdapter = createCrawlerDb({
-          dbPath: this.dbPath,
-          fastStart: this.fastStart,
-          cache: this.cache,
-          domain: this.domain,
-          emitProblem: (problem) => {
-            try {
-              this.telemetry.problem(problem);
-            } catch (_) {}
-          },
-          onFatalIssue: (issue) => {
-            try {
-              this.state.addFatalIssue(issue);
-            } catch (_) {}
-          }
-        });
-      }
-      await this.dbAdapter.init();
-      if (!this.dbAdapter.isEnabled()) {
-        this.enableDb = false;
-      }
+      await this._trackStartupStage('db-open', 'Opening crawl database', async () => {
+        if (!this.dbAdapter) {
+          this.dbAdapter = createCrawlerDb({
+            dbPath: this.dbPath,
+            fastStart: this.fastStart,
+            cache: this.cache,
+            domain: this.domain,
+            emitProblem: (problem) => {
+              try {
+                this.telemetry.problem(problem);
+              } catch (_) {}
+            },
+            onFatalIssue: (issue) => {
+              try {
+                this.state.addFatalIssue(issue);
+              } catch (_) {}
+            }
+          });
+        }
+        await this.dbAdapter.init();
+        if (!this.dbAdapter.isEnabled()) {
+          this.enableDb = false;
+          return { status: 'skipped', message: 'Database adapter disabled' };
+        }
+        return { status: 'completed' };
+      });
 
-      // Initialize enhanced features if enabled
-      await this._initializeEnhancedFeatures();
+      if (this.enableDb) {
+        await this._trackStartupStage('enhanced-features', 'Starting enhanced features', async () => {
+          await this._initializeEnhancedFeatures();
+        });
+      } else {
+        this._skipStartupStage('enhanced-features', 'Starting enhanced features', 'Database disabled');
+      }
+    } else {
+      this._skipStartupStage('db-open', 'Opening crawl database', 'Database disabled');
+      this._skipStartupStage('enhanced-features', 'Starting enhanced features', 'Database disabled');
     }
     try {
       this.startUrlNormalized = this.normalizeUrl(this.startUrl) || this.startUrl;
@@ -700,8 +721,13 @@ class NewsCrawler {
       this.startUrlNormalized = this.startUrl;
     }
 
-    // Load robots.txt
-    await this.loadRobotsTxt();
+    await this._trackStartupStage('robots', 'Loading robots.txt', async () => {
+      if (!this.robotsCoordinator) {
+        return { status: 'skipped', message: 'Robots coordinator unavailable' };
+      }
+      await this.robotsCoordinator.loadRobotsTxt();
+      return { status: 'completed' };
+    });
 
     console.log(`Starting crawler for ${this.domain}`);
     console.log(`Data will be saved to: ${this.dataDir}`);
@@ -744,6 +770,124 @@ class NewsCrawler {
 
   emitProgress(force = false) {
     this.telemetry.progress(force);
+  }
+
+  _emitStartupProgress(progressPayload, statusText = null) {
+    if (!progressPayload) return;
+    if (!this.telemetry || typeof this.telemetry.progress !== 'function') return;
+    const patch = {};
+    if (progressPayload.stages) {
+      patch.startup = {
+        stages: Array.isArray(progressPayload.stages) ? progressPayload.stages : [],
+        summary: progressPayload.summary || null
+      };
+    }
+    if (statusText) {
+      patch.statusText = statusText;
+    }
+    if (!patch.startup && !patch.statusText) {
+      return;
+    }
+    this.telemetry.progress({
+      force: true,
+      stage: 'preparing',
+      patch
+    });
+  }
+
+  async _trackStartupStage(id, label, fn) {
+    if (typeof fn !== 'function') {
+      if (this.startupTracker) {
+        this.startupTracker.skipStage(id, { label, message: 'No operation' });
+      }
+      return undefined;
+    }
+    if (this.startupTracker) {
+      this.startupTracker.startStage(id, { label });
+    }
+    try {
+      const result = await fn();
+      if (this.startupTracker) {
+        const status = result && typeof result === 'object' && typeof result.status === 'string'
+          ? result.status.toLowerCase()
+          : 'completed';
+        const meta = {
+          label,
+          message: result && typeof result === 'object' && result.message ? result.message : undefined,
+          details: result && typeof result === 'object' && result.details ? result.details : undefined
+        };
+        if (status === 'skipped') {
+          this.startupTracker.skipStage(id, meta);
+        } else if (status === 'failed') {
+          const errMessage = result && typeof result === 'object' && result.error ? result.error : meta.message || 'Stage failed';
+          this.startupTracker.failStage(id, errMessage, meta);
+        } else {
+          this.startupTracker.completeStage(id, meta);
+        }
+      }
+      return result;
+    } catch (error) {
+      if (this.startupTracker) {
+        this.startupTracker.failStage(id, error, { label });
+      }
+      throw error;
+    }
+  }
+
+  _skipStartupStage(id, label, message = null) {
+    if (!this.startupTracker) return;
+    this.startupTracker.skipStage(id, { label, message });
+  }
+
+  _markStartupComplete(message = null) {
+    if (!this.startupTracker) return;
+    this.startupTracker.markComplete(message);
+  }
+
+  _getCoverageSummary() {
+    try {
+      const stats = typeof this.state?.getStats === 'function' ? this.state.getStats() : null;
+      const hubStats = typeof this.state?.getHubVisitStats === 'function' ? this.state.getHubVisitStats() : null;
+      if (!stats && !hubStats) {
+        return null;
+      }
+      const depth2Visited = stats?.depth2PagesProcessed || 0;
+      const seededCount = hubStats?.seeded || 0;
+      const visitedCount = hubStats?.visited || 0;
+      const percentVisited = seededCount > 0 ? Math.round((visitedCount / seededCount) * 100) : null;
+      const perKind = [];
+      if (hubStats?.perKind && typeof hubStats.perKind === 'object') {
+        for (const [kind, info] of Object.entries(hubStats.perKind)) {
+          const seeded = info?.seeded || 0;
+          const visited = info?.visited || 0;
+          perKind.push({
+            kind,
+            seeded,
+            visited,
+            percent: seeded > 0 ? Math.round((visited / seeded) * 100) : null
+          });
+        }
+      }
+      return {
+        depth2: {
+          visited: depth2Visited,
+          label: depth2Visited === 1 ? 'page at depth 2' : 'pages at depth 2'
+        },
+        hubs: {
+          seeded: seededCount,
+          visited: visitedCount,
+          percentVisited,
+          perKind
+        },
+        samples: {
+          seeded: Array.isArray(hubStats?.seededSample) ? hubStats.seededSample.slice(0, 5) : [],
+          visited: Array.isArray(hubStats?.visitedSample) ? hubStats.visitedSample.slice(0, 5) : []
+        },
+        updatedAt: Date.now()
+      };
+    } catch (_) {
+      return null;
+    }
   }
 
   pause() {
@@ -972,22 +1116,38 @@ class NewsCrawler {
     await this.init();
     // Optional intelligent planning path
     if (this.plannerEnabled) {
-      try {
-        await this.planIntelligent();
-      } catch (e) {
+      await this._trackStartupStage('planner', 'Planning intelligent crawl', async () => {
         try {
-          this.telemetry.problem({
-            kind: 'intelligent-plan-failed',
-            message: e?.message || String(e)
-          });
-        } catch (_) {}
-      }
+          await this.planIntelligent();
+          return { status: 'completed' };
+        } catch (e) {
+          try {
+            this.telemetry.problem({
+              kind: 'intelligent-plan-failed',
+              message: e?.message || String(e)
+            });
+          } catch (_) {}
+          return { status: 'failed', message: 'Intelligent planner failed', error: e?.message || String(e) };
+        }
+      });
+    } else {
+      this._skipStartupStage('planner', 'Planning intelligent crawl', 'Planner disabled');
     }
     // Optionally preload URLs from sitemaps
     if (this.useSitemap) {
-      try {
-        await this.loadSitemapsAndEnqueue();
-      } catch (_) {}
+      await this._trackStartupStage('sitemaps', 'Loading sitemaps', async () => {
+        if (!this.robotsCoordinator) {
+          return { status: 'skipped', message: 'Robots coordinator unavailable' };
+        }
+        try {
+          await this.loadSitemapsAndEnqueue();
+          return { status: 'completed' };
+        } catch (err) {
+          return { status: 'failed', message: 'Sitemap load failed', error: err?.message || String(err) };
+        }
+      });
+    } else {
+      this._skipStartupStage('sitemaps', 'Loading sitemaps', 'Sitemap ingestion disabled');
     }
     // Seed start URL unless we are sitemap-only
     if (!this.sitemapOnly) {
@@ -997,6 +1157,7 @@ class NewsCrawler {
         type: 'nav'
       });
     }
+    this._markStartupComplete();
     const workers = [];
     const n = this.concurrency;
     const workerRunner = this._ensureWorkerRunner();
@@ -1051,12 +1212,26 @@ class NewsCrawler {
     }
     await this.init();
 
+    if (this.plannerEnabled) {
+      this._skipStartupStage('planner', 'Planning intelligent crawl', 'Planner requires concurrent mode');
+    } else {
+      this._skipStartupStage('planner', 'Planning intelligent crawl', 'Planner disabled');
+    }
+
+    if (this.useSitemap) {
+      this._skipStartupStage('sitemaps', 'Loading sitemaps', 'Sitemaps processed in concurrent mode only');
+    } else {
+      this._skipStartupStage('sitemaps', 'Loading sitemaps', 'Sitemap ingestion disabled');
+    }
+
     // Start with the initial URL
     this.enqueueRequest({
       url: this.startUrl,
       depth: 0,
       type: 'nav'
     });
+
+    this._markStartupComplete();
 
     while (true) {
       if (this.isAbortRequested()) {

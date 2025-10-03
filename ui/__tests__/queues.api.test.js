@@ -1,9 +1,12 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const http = require('http');
+const Database = require('better-sqlite3');
 
 function startServerWithEnv(env = {}) {
   return new Promise((resolve, reject) => {
     const { spawn } = require('child_process');
-    const path = require('path');
     const node = process.execPath;
     const repoRoot = path.join(__dirname, '..', '..');
     const envAll = { ...process.env, ...env, PORT: '0' };
@@ -16,6 +19,10 @@ function startServerWithEnv(env = {}) {
     cp.stdout.on('data', onData);
     cp.once('exit', (code) => reject(new Error(`server exited early: code=${code}`)));
   });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function post(port, path, body) {
@@ -55,7 +62,7 @@ describe('Queues persistence and APIs', () => {
       const jobId = r.json.jobId || r.json.job_id || null;
 
       // Allow a short time for events to be processed and persisted
-      await new Promise(res => setTimeout(res, 220));
+      await delay(220);
 
       const q = await get(port, '/api/queues');
       expect(q.status).toBe(200);
@@ -74,6 +81,72 @@ describe('Queues persistence and APIs', () => {
       expect(actions.has('drop')).toBe(true);
     } finally {
       try { cp.kill('SIGINT'); } catch(_) {}
+    }
+  });
+
+  it('auto-resolves queues that never recorded events', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'queues-test-'));
+    const dbPath = path.join(tmpDir, 'news-auto.db');
+
+    const { cp, port } = await startServerWithEnv({
+      UI_FAKE_RUNNER: '1',
+      UI_FAKE_QUEUE: '1',
+      UI_DB_PATH: dbPath
+    });
+
+    try {
+      // Give the server time to initialise the database schema.
+      await delay(120);
+
+      const db = new Database(dbPath);
+      try {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS crawl_jobs (
+            id TEXT PRIMARY KEY,
+            url TEXT,
+            args TEXT,
+            pid INTEGER,
+            started_at TEXT,
+            ended_at TEXT,
+            status TEXT
+          );
+          CREATE TABLE IF NOT EXISTS queue_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id TEXT NOT NULL,
+            ts TEXT NOT NULL,
+            action TEXT NOT NULL,
+            url TEXT,
+            depth INTEGER,
+            host TEXT,
+            reason TEXT,
+            queue_size INTEGER
+          );
+        `);
+        const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        db.prepare('INSERT OR REPLACE INTO crawl_jobs(id, url, args, pid, started_at, ended_at, status) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run('ghost-job-1', 'https://example.com', '[]', null, startedAt, null, 'running');
+      } finally {
+        db.close();
+      }
+
+      const response = await get(port, '/api/queues');
+      expect(response.status).toBe(200);
+      const ghost = response.json.items.find((row) => row.id === 'ghost-job-1');
+      expect(ghost).toBeTruthy();
+      expect(ghost.status).toBe('done');
+      expect(ghost.endedAt).toBeTruthy();
+      expect(ghost.events).toBe(0);
+
+      const detail = await get(port, '/api/queues/ghost-job-1/events');
+      expect(detail.status).toBe(200);
+      expect(detail.json.job.status).toBe('done');
+      expect(detail.json.items).toEqual([]);
+    } finally {
+      try { cp.kill('SIGINT'); } catch (_) {}
+      await delay(80);
+      try {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      } catch (_) {}
     }
   });
 });

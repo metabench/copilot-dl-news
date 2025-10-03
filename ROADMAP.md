@@ -39,6 +39,8 @@ This document tracks medium-term priorities, milestones, and open investigations
 3. **Close the loop on problem clustering.** Build a lightweight aggregation in the UI server that groups `missing-hub` problems by host + section before persistence. This feeds both the queues UI and the coverage inspector while reducing noise in SSE streams.
 4. **Prototype two visual affordances.** (a) A sparkline or histogram for `coveragePct` on the dashboard header fed by the new snapshots. (b) An interactive table on `/gazetteer` that overlays coverage deltas per place using cached planner outputs.
 5. **Automate regression detection.** Add Jest smoke tests that assert `/api/navigation/bar` + `/api/navigation/links` stay in sync with the nav helper, and extend the fake runner to confirm coverage snapshots remain monotonic during deterministic runs so planner tweaks can't silently regress coverage graphs.
+	- Add focused unit tests for the analysis-progress pipeline helpers (`buildAnalysisHighlights`, pipeline state reducers) to ensure new telemetry states render correctly as the UI evolves.
+	- Extend SSE integration tests to assert `analysis-progress` events stream in order and update the intelligent pipeline cards end-to-end.
 
 ## Roadmap & open problems
 

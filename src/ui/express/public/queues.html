@@ -13,6 +13,17 @@
     header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
     header nav a:hover{color:var(--fg);text-decoration:underline}
     .card{background:var(--bg-soft);border:1px solid var(--border);border-radius:10px;padding:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px}
+  .card h2{margin:0 0 8px;font-size:16px}
+  .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .timeline li{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
+  .timeline .stage{font-weight:600;font-size:14px}
+  .timeline .meta{color:var(--muted);font-size:12px;margin-top:4px}
+  .goal-list{display:flex;flex-direction:column;gap:8px}
+  .goal{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
+  .goal h3{margin:0 0 4px;font-size:14px}
+  .goal-progress{height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:4px 0}
+  .goal-progress span{display:block;height:100%;background:var(--accent)}
     table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
     th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
     th{color:var(--muted);text-align:left;background:#fcfcfd}
@@ -21,6 +32,16 @@
     .muted{color:var(--muted)}
     .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;background:#fff;font-size:12px}
     .row{display:flex;gap:8px;align-items:center}
+  .coverage-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:12px}
+  .planner-list{display:flex;flex-direction:column;gap:8px}
+  .planner-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
+  .planner-item summary{cursor:pointer;font-weight:600;font-size:13px}
+  .planner-item pre{background:#f1f5f9;border-radius:6px;padding:8px;overflow:auto;font-size:12px}
+  .heatmap-table{width:100%;border-collapse:collapse}
+  .heatmap-table th,.heatmap-table td{border:1px solid var(--border);padding:6px 8px;text-align:center;font-size:13px}
+  .heatmap-table th:first-child,.heatmap-table td:first-child{text-align:left}
+  .muted-block{color:var(--muted);font-size:13px}
     .warn{color:#b45309}
     .bad{color:#dc2626}
     .ok{color:#16a34a}
@@ -34,6 +55,44 @@
     <header>
       <h1>Queues <span id="job" class="pill mono"></span></h1>
     </header>
+
+    <section class="grid">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2>Planner timeline</h2>
+          <span id="timelineJob" class="muted"></span>
+        </div>
+        <div id="timelineEmpty" class="muted-block">Waiting for planner activity…</div>
+        <ol id="timelineList" class="timeline"></ol>
+      </div>
+      <div class="card">
+        <h2>Goals</h2>
+        <div id="goalSummary" class="muted-block">No active goals yet.</div>
+        <div id="goalList" class="goal-list"></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Queue composition</h2>
+        <div id="heatmapEmpty" class="muted-block">Waiting for queue metrics…</div>
+        <table id="heatmapTable" class="heatmap-table"></table>
+      </div>
+      <div class="card">
+        <h2>Coverage</h2>
+        <div id="coverageBadges" class="coverage-badges"></div>
+        <div id="coverageKinds" class="goal-list"></div>
+      </div>
+    </section>
+
+    <section class="card" id="plannerCard">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 style="margin:0">Planner stages</h2>
+        <button id="clearPlannerBtn" style="border:1px solid var(--border);background:#fff;border-radius:6px;padding:4px 12px;font-size:12px">Clear</button>
+      </div>
+      <div id="plannerEmpty" class="muted-block">No planner stages yet.</div>
+      <div id="plannerList" class="planner-list"></div>
+    </section>
 
     <section class="card">
       <div class="row" style="justify-content:space-between; flex-wrap: wrap; gap:8px">
@@ -62,27 +121,80 @@
       const tbody = document.getElementById('tbody');
       const countEl = document.getElementById('count');
       const onlyActive = document.getElementById('onlyActive');
-  const jobSpan = document.getElementById('job');
-  const jobSelect = document.getElementById('jobSelect');
-  const loadBtn = document.getElementById('loadBtn');
-  const modeLabel = document.getElementById('modeLabel');
-  const persistMeta = document.getElementById('persistMeta');
+      const jobSpan = document.getElementById('job');
+      const jobSelect = document.getElementById('jobSelect');
+      const loadBtn = document.getElementById('loadBtn');
+      const modeLabel = document.getElementById('modeLabel');
+      const persistMeta = document.getElementById('persistMeta');
+      const timelineList = document.getElementById('timelineList');
+      const timelineEmpty = document.getElementById('timelineEmpty');
+      const timelineJob = document.getElementById('timelineJob');
+      const goalSummary = document.getElementById('goalSummary');
+      const goalList = document.getElementById('goalList');
+      const heatmapTable = document.getElementById('heatmapTable');
+      const heatmapEmpty = document.getElementById('heatmapEmpty');
+      const coverageBadges = document.getElementById('coverageBadges');
+      const coverageKinds = document.getElementById('coverageKinds');
+      const plannerList = document.getElementById('plannerList');
+      const plannerEmpty = document.getElementById('plannerEmpty');
+      const clearPlannerBtn = document.getElementById('clearPlannerBtn');
+
       let activeJob = null;
       let seen = 0;
-  let historyMode = false;
+      let historyMode = false;
+      const plannerEvents = [];
+      const MAX_PLANNER_EVENTS = 40;
 
-      function addRow(ev) {
+      function formatClock(value) {
+        if (!value) return '';
+        const date = typeof value === 'string' ? new Date(value) : value;
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        return date.toLocaleTimeString();
+      }
+
+      function formatTimeAgo(value) {
+        if (!value) return '';
+        const date = typeof value === 'string' ? new Date(value) : value;
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        const diff = Date.now() - date.getTime();
+        if (diff < 0) return 'just now';
+        const seconds = Math.floor(diff / 1000);
+        if (seconds < 60) return `${seconds}s ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+      }
+
+      function summarizeDetails(details) {
+        if (!details) return '';
+        if (typeof details === 'string') return details.length > 160 ? `${details.slice(0, 160)}…` : details;
+        try {
+          const compact = JSON.stringify(details);
+          return compact.length > 160 ? `${compact.slice(0, 160)}…` : compact;
+        } catch (_) {
+          return '';
+        }
+      }
+
+      function addQueueRow(ev) {
         const tr = document.createElement('tr');
-        const td = (...args)=>{ const td=document.createElement('td'); td.textContent = args[0] ?? ''; return td; };
-        const ts = new Date().toLocaleTimeString();
+        const td = (text = '') => {
+          const cell = document.createElement('td');
+          cell.textContent = text ?? '';
+          return cell;
+        };
+        const ts = formatClock(new Date());
         tr.appendChild(td(ts));
-        tr.appendChild(td(ev.action||''));
-        tr.appendChild(td(ev.url||''));
-        tr.appendChild(td(ev.depth!=null?String(ev.depth):''));
-        tr.appendChild(td(ev.host||''));
-        tr.appendChild(td(ev.reason||''));
-        tr.appendChild(td(ev.queueSize!=null?String(ev.queueSize):''));
-        tr.appendChild(td(ev.jobId||''));
+        tr.appendChild(td(ev.action || ''));
+        tr.appendChild(td(ev.url || ''));
+        tr.appendChild(td(ev.depth != null ? String(ev.depth) : ''));
+        tr.appendChild(td(ev.host || ''));
+        tr.appendChild(td(ev.reason || ''));
+        tr.appendChild(td(ev.queueSize != null ? String(ev.queueSize) : ''));
+        tr.appendChild(td(ev.jobId || ''));
         tbody.appendChild(tr);
       }
 
@@ -92,25 +204,283 @@
         }
       }
 
+      function renderTimeline(timeline, jobId) {
+        if (!Array.isArray(timeline) || timeline.length === 0) {
+          timelineList.innerHTML = '';
+          timelineEmpty.style.display = 'block';
+          if (timelineJob) timelineJob.textContent = jobId || '';
+          return;
+        }
+        timelineEmpty.style.display = 'none';
+        if (timelineJob) timelineJob.textContent = jobId ? `job ${jobId}` : '';
+        timelineList.innerHTML = '';
+        const recent = timeline.slice(-8).reverse();
+        for (const entry of recent) {
+          const li = document.createElement('li');
+          const stage = document.createElement('div');
+          stage.className = 'stage';
+          stage.textContent = entry.stage || 'unknown stage';
+          li.appendChild(stage);
+
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+          const parts = [];
+          if (entry.status) parts.push(entry.status);
+          if (entry.durationMs != null) parts.push(`${Math.round(entry.durationMs)}ms`);
+          if (entry.emittedAt) parts.push(formatTimeAgo(entry.emittedAt));
+          else if (entry.startedAt) parts.push(formatTimeAgo(entry.startedAt));
+          meta.textContent = parts.join(' · ');
+          li.appendChild(meta);
+
+          if (entry.details) {
+            const details = document.createElement('div');
+            details.className = 'meta';
+            details.textContent = summarizeDetails(entry.details);
+            li.appendChild(details);
+          }
+
+          timelineList.appendChild(li);
+        }
+      }
+
+      function renderGoals(states, summary) {
+        if (!Array.isArray(states) || states.length === 0) {
+          goalSummary.textContent = 'No active goals yet.';
+          goalList.innerHTML = '';
+          return;
+        }
+        const completed = summary?.completed ?? states.filter((g) => g.completed).length;
+        goalSummary.textContent = `${completed}/${states.length} completed`;
+        goalList.innerHTML = '';
+        const subset = states.slice(0, 6);
+        for (const goal of subset) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'goal';
+
+          const heading = document.createElement('h3');
+          heading.textContent = goal.description || goal.id || 'Goal';
+          wrapper.appendChild(heading);
+
+          const status = document.createElement('div');
+          status.className = 'meta';
+          const pct = Math.max(0, Math.min(100, Math.round((goal.progress || 0) * 100)));
+          status.textContent = goal.completed ? 'Completed' : `Progress: ${pct}%`;
+          wrapper.appendChild(status);
+
+          const progressBar = document.createElement('div');
+          progressBar.className = 'goal-progress';
+          const span = document.createElement('span');
+          span.style.width = `${pct}%`;
+          if (goal.completed) span.style.background = '#16a34a';
+          progressBar.appendChild(span);
+          wrapper.appendChild(progressBar);
+
+          if (Array.isArray(goal.nextSteps) && goal.nextSteps.length) {
+            const steps = document.createElement('div');
+            steps.className = 'meta';
+            steps.textContent = `Next: ${goal.nextSteps.slice(0, 2).join('; ')}`;
+            wrapper.appendChild(steps);
+          }
+
+          if (goal.details) {
+            const details = document.createElement('div');
+            details.className = 'meta';
+            details.textContent = summarizeDetails(goal.details);
+            wrapper.appendChild(details);
+          }
+
+          goalList.appendChild(wrapper);
+        }
+      }
+
+      function createTh(text) {
+        const th = document.createElement('th');
+        th.textContent = text;
+        return th;
+      }
+
+      function createTd(value) {
+        const td = document.createElement('td');
+        td.textContent = value != null ? String(value) : '';
+        return td;
+      }
+
+      function renderHeatmap(heatmap) {
+        if (!heatmap || !heatmap.cells) {
+          heatmapTable.innerHTML = '';
+          heatmapEmpty.style.display = 'block';
+          return;
+        }
+        heatmapEmpty.style.display = 'none';
+        heatmapTable.innerHTML = '';
+
+        const columns = ['article', 'hub', 'other'];
+        const header = document.createElement('tr');
+        header.appendChild(createTh('Origin'));
+        for (const col of columns) {
+          header.appendChild(createTh(col.charAt(0).toUpperCase() + col.slice(1)));
+        }
+        header.appendChild(createTh('Total'));
+        heatmapTable.appendChild(header);
+
+        const entries = Object.entries(heatmap.cells).sort(([a], [b]) => a.localeCompare(b));
+        for (const [origin, counts] of entries) {
+          const tr = document.createElement('tr');
+          tr.appendChild(createTd(origin));
+          let rowTotal = 0;
+          for (const col of columns) {
+            const value = counts?.[col] || 0;
+            rowTotal += value;
+            tr.appendChild(createTd(value));
+          }
+          tr.appendChild(createTd(rowTotal));
+          heatmapTable.appendChild(tr);
+        }
+
+        if (heatmap.depthBuckets) {
+          const footerLabel = document.createElement('tr');
+          footerLabel.appendChild(createTh('Depth bucket'));
+          const depthKeys = ['0', '1', '2', '3+', 'unknown'].filter((key) => Object.prototype.hasOwnProperty.call(heatmap.depthBuckets, key));
+          for (const key of depthKeys) {
+            footerLabel.appendChild(createTh(key));
+          }
+          heatmapTable.appendChild(footerLabel);
+
+          const footerValues = document.createElement('tr');
+          footerValues.appendChild(createTd('Queued URLs'));
+          for (const key of depthKeys) {
+            footerValues.appendChild(createTd(heatmap.depthBuckets[key] || 0));
+          }
+          heatmapTable.appendChild(footerValues);
+        }
+      }
+
+      function renderCoverage(coverage) {
+        coverageBadges.innerHTML = '';
+        coverageKinds.innerHTML = '';
+        if (!coverage) {
+          const note = document.createElement('div');
+          note.className = 'muted-block';
+          note.textContent = 'No coverage metrics yet.';
+          coverageKinds.appendChild(note);
+          return;
+        }
+        if (coverage.depth2) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = `${coverage.depth2.visited} ${coverage.depth2.label || 'depth-2 pages'}`;
+          coverageBadges.appendChild(badge);
+        }
+        if (coverage.hubs) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          const pct = coverage.hubs.percentVisited != null ? `${coverage.hubs.percentVisited}%` : '—';
+          badge.textContent = `Hubs visited ${coverage.hubs.visited}/${coverage.hubs.seeded || 0} (${pct})`;
+          coverageBadges.appendChild(badge);
+        }
+        if (Array.isArray(coverage.samples?.visited) && coverage.samples.visited.length) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = `Recent hubs: ${coverage.samples.visited.slice(0, 3).join(', ')}`;
+          coverageBadges.appendChild(badge);
+        }
+
+        if (Array.isArray(coverage.hubs?.perKind) && coverage.hubs.perKind.length) {
+          const subset = coverage.hubs.perKind.slice(0, 6);
+          for (const info of subset) {
+            const card = document.createElement('div');
+            card.className = 'goal';
+            const title = document.createElement('h3');
+            title.textContent = `${info.kind || 'kind'} coverage`;
+            card.appendChild(title);
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            const pct = info.percent != null ? `${info.percent}%` : '—';
+            meta.textContent = `${info.visited}/${info.seeded} visited (${pct})`;
+            card.appendChild(meta);
+            coverageKinds.appendChild(card);
+          }
+        } else {
+          const note = document.createElement('div');
+          note.className = 'muted-block';
+          note.textContent = 'No hub breakdown yet.';
+          coverageKinds.appendChild(note);
+        }
+      }
+
+      function renderPlannerEvents() {
+        if (!plannerEvents.length) {
+          plannerList.innerHTML = '';
+          plannerEmpty.style.display = 'block';
+          return;
+        }
+        plannerEmpty.style.display = 'none';
+        plannerList.innerHTML = '';
+        for (const ev of plannerEvents) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'planner-item';
+          const details = document.createElement('details');
+          const summary = document.createElement('summary');
+          const parts = [];
+          parts.push(ev.stage || 'stage');
+          if (ev.status) parts.push(ev.status);
+          if (ev.durationMs != null) parts.push(`${Math.round(ev.durationMs)}ms`);
+          if (ev.ts) parts.push(formatTimeAgo(ev.ts));
+          summary.textContent = parts.join(' · ');
+          details.appendChild(summary);
+          if (ev.details) {
+            const pre = document.createElement('pre');
+            pre.textContent = typeof ev.details === 'string' ? ev.details : JSON.stringify(ev.details, null, 2);
+            details.appendChild(pre);
+          }
+          wrapper.appendChild(details);
+          plannerList.appendChild(wrapper);
+        }
+      }
+
+      function addPlannerEvent(ev) {
+        if (!ev) return;
+        if (activeJob && ev.jobId && ev.jobId !== activeJob) return;
+        const payload = {
+          ...ev,
+          ts: ev.ts || new Date().toISOString()
+        };
+        plannerEvents.unshift(payload);
+        if (plannerEvents.length > MAX_PLANNER_EVENTS) {
+          plannerEvents.length = MAX_PLANNER_EVENTS;
+        }
+        renderPlannerEvents();
+      }
+
       async function loadJobs() {
         try {
           const res = await fetch('/api/queues');
           const data = await res.json();
           const items = Array.isArray(data.items) ? data.items : [];
           jobSelect.innerHTML = '';
-          const opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = items.length ? '— Select a job —' : 'No jobs'; jobSelect.appendChild(opt0);
+          const opt0 = document.createElement('option');
+          opt0.value = '';
+          opt0.textContent = items.length ? '— Select a job —' : 'No jobs';
+          jobSelect.appendChild(opt0);
           for (const j of items) {
-            const o = document.createElement('option');
-            const label = `${j.id} — ${j.url||''} (${j.status||'unknown'}, ${j.events||0} events)`;
-            o.value = j.id; o.textContent = label; o.dataset.events = String(j.events||0);
-            o.dataset.startedAt = j.startedAt || ''; o.dataset.endedAt = j.endedAt || ''; o.dataset.status = j.status||'';
-            jobSelect.appendChild(o);
+            const option = document.createElement('option');
+            const label = `${j.id} — ${j.url || ''} (${j.status || 'unknown'}, ${j.events || 0} events)`;
+            option.value = j.id;
+            option.textContent = label;
+            option.dataset.events = String(j.events || 0);
+            option.dataset.startedAt = j.startedAt || '';
+            option.dataset.endedAt = j.endedAt || '';
+            option.dataset.status = j.status || '';
+            jobSelect.appendChild(option);
           }
         } catch (_) {}
       }
 
       function renderPersistMeta(opt) {
-        if (!opt) { persistMeta.textContent = ''; return; }
+        if (!opt) {
+          persistMeta.textContent = '';
+          return;
+        }
         const parts = [];
         if (opt.dataset.status) parts.push(`status=${opt.dataset.status}`);
         if (opt.dataset.startedAt) parts.push(`started=${opt.dataset.startedAt}`);
@@ -129,35 +499,67 @@
           const items = Array.isArray(data.items) ? data.items : [];
           for (const it of items) {
             const tr = document.createElement('tr');
-            const td = (text) => { const el = document.createElement('td'); el.textContent = text ?? ''; return el; };
-            const ts = it.ts ? new Date(it.ts).toLocaleTimeString() : '';
+            const td = (text = '') => {
+              const el = document.createElement('td');
+              el.textContent = text ?? '';
+              return el;
+            };
+            const ts = it.ts ? formatClock(it.ts) : '';
             tr.appendChild(td(ts));
-            tr.appendChild(td(it.action||''));
-            tr.appendChild(td(it.url||''));
-            tr.appendChild(td(it.depth!=null?String(it.depth):''));
-            tr.appendChild(td(it.host||''));
-            tr.appendChild(td(it.reason||''));
-            tr.appendChild(td(it.queueSize!=null?String(it.queueSize):''));
+            tr.appendChild(td(it.action || ''));
+            tr.appendChild(td(it.url || ''));
+            tr.appendChild(td(it.depth != null ? String(it.depth) : ''));
+            tr.appendChild(td(it.host || ''));
+            tr.appendChild(td(it.reason || ''));
+            tr.appendChild(td(it.queueSize != null ? String(it.queueSize) : ''));
             tr.appendChild(td(jobId));
             tbody.appendChild(tr);
           }
           modeLabel.textContent = 'Persisted queue events';
           historyMode = true;
           const opt = jobSelect.options[jobSelect.selectedIndex];
-          renderPersistMeta(opt);
-          activeJob = jobId; jobSpan.textContent = activeJob;
+          renderPersistMeta(opt && opt.value ? opt : null);
+          activeJob = jobId;
+          jobSpan.textContent = activeJob;
         } catch (_) {}
+      }
+
+      function handleProgress(payload) {
+        if (!payload || typeof payload !== 'object') return;
+        if (payload.jobId) {
+          activeJob = payload.jobId;
+          jobSpan.textContent = activeJob;
+        }
+        if (!historyMode) {
+          modeLabel.textContent = 'Live queue events';
+        }
+        if (payload.timeline) {
+          renderTimeline(payload.timeline, payload.jobId || activeJob);
+        } else {
+          renderTimeline(null, payload?.jobId || activeJob || null);
+        }
+        if (payload.goalStates) {
+          renderGoals(payload.goalStates, payload.goalSummary || null);
+        } else {
+          renderGoals([], null);
+        }
+        if (payload.queueHeatmap) {
+          renderHeatmap(payload.queueHeatmap);
+        } else {
+          renderHeatmap(null);
+        }
+        if (payload.coverage) {
+          renderCoverage(payload.coverage);
+        } else {
+          renderCoverage(null);
+        }
       }
 
       const evt = new EventSource('/events');
       evt.addEventListener('progress', (e) => {
-        // Set active job if exactly one running
         try {
-          const p = JSON.parse(e.data);
-          if (!activeJob && p && p.jobId) {
-            activeJob = p.jobId;
-            jobSpan.textContent = activeJob;
-          }
+          const payload = JSON.parse(e.data);
+          handleProgress(payload);
         } catch (_) {}
       });
       evt.addEventListener('queue', (e) => {
@@ -166,18 +568,39 @@
           if (onlyActive.checked && activeJob && q.jobId && q.jobId !== activeJob) return;
           if (!historyMode) {
             ensureHeader();
-            addRow(q);
-            seen += 1; countEl.textContent = String(seen);
+            addQueueRow(q);
+            seen += 1;
+            countEl.textContent = String(seen);
           }
         } catch (_) {}
       });
+      evt.addEventListener('planner-stage', (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          addPlannerEvent(payload);
+        } catch (_) {}
+      });
 
-      loadBtn.addEventListener('click', () => { const id = jobSelect.value; if (id) loadEvents(id); });
+      clearPlannerBtn.addEventListener('click', () => {
+        plannerEvents.length = 0;
+        renderPlannerEvents();
+      });
+
+      loadBtn.addEventListener('click', () => {
+        const id = jobSelect.value;
+        if (id) loadEvents(id);
+      });
       jobSelect.addEventListener('change', () => {
         const opt = jobSelect.options[jobSelect.selectedIndex];
         renderPersistMeta(opt && opt.value ? opt : null);
       });
+
       loadJobs();
+      renderPlannerEvents();
+      renderTimeline(null, null);
+      renderGoals([], null);
+      renderHeatmap(null);
+      renderCoverage(null);
     })();
   </script>
 </body>

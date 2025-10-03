@@ -14,9 +14,12 @@ class CrawlerEvents {
       getEnhancedDbAdapter,
       getProblemClusteringService,
       getJobId,
-  plannerScope,
-  isPlannerEnabled,
-  isPaused,
+      plannerScope,
+      isPlannerEnabled,
+      isPaused,
+      getGoalSummary,
+      getQueueHeatmap,
+      getCoverageSummary,
       logger
     } = options;
 
@@ -38,6 +41,9 @@ class CrawlerEvents {
     this.getJobId = typeof getJobId === 'function' ? getJobId : () => null;
     this.plannerScope = typeof plannerScope === 'function' ? plannerScope : () => this.domain;
     this.isPlannerEnabled = typeof isPlannerEnabled === 'function' ? isPlannerEnabled : () => false;
+    this.getGoalSummary = typeof getGoalSummary === 'function' ? getGoalSummary : () => [];
+    this.getQueueHeatmap = typeof getQueueHeatmap === 'function' ? getQueueHeatmap : () => null;
+    this.getCoverageSummary = typeof getCoverageSummary === 'function' ? getCoverageSummary : () => null;
   this.logger = logger || console;
   this.isPausedFn = typeof isPaused === 'function' ? isPaused : () => false;
 
@@ -45,9 +51,14 @@ class CrawlerEvents {
     this.problemCounters = new Map();
     this.problemSamples = new Map();
     this.emittedMilestones = new Set();
+  this.timelineEntries = [];
+  this.timelineMaxEntries = typeof options.timelineMaxEntries === 'number' && options.timelineMaxEntries > 0 ? options.timelineMaxEntries : 24;
+    this._plannerStageStart = new Map();
+    this._timelineSequence = 0;
+    this._startTimestamp = Date.now();
   }
 
-  emitProgress({ force = false } = {}) {
+  emitProgress({ force = false, patch = null, stage = null, statusText = null, startup = null } = {}) {
     const now = Date.now();
     if (!force && now - this._lastProgressEmitAt < 300) return;
     this._lastProgressEmitAt = now;
@@ -109,6 +120,52 @@ class CrawlerEvents {
       cacheRateLimitedServed: stats.cacheRateLimitedServed || 0,
       cacheRateLimitedDeferred: stats.cacheRateLimitedDeferred || 0
     };
+
+    const mergedStartup = startup || (patch && typeof patch === 'object' ? patch.startup : null);
+    if (mergedStartup) {
+      payload.startup = mergedStartup;
+    }
+
+    const effectiveStage = stage || (patch && patch.stage) || null;
+    if (effectiveStage) {
+      payload.stage = effectiveStage;
+    }
+
+    const effectiveStatusText = statusText || (patch && patch.statusText) || null;
+    if (effectiveStatusText) {
+      payload.statusText = effectiveStatusText;
+    }
+
+    const goals = this._safeGoals();
+    if (goals) {
+      payload.goalStates = goals.states;
+      payload.goalSummary = goals.summary;
+    }
+
+    const timeline = this._getTimelineSnapshot();
+    if (timeline) {
+      payload.timeline = timeline;
+    }
+
+    const heatmap = this._safeHeatmap();
+    if (heatmap) {
+      payload.queueHeatmap = heatmap;
+    }
+
+    const coverage = this._safeCoverage();
+    if (coverage) {
+      payload.coverage = coverage;
+    }
+
+    if (patch && typeof patch === 'object') {
+      const sanitized = { ...patch };
+      delete sanitized.startup;
+      delete sanitized.statusText;
+      delete sanitized.stage;
+      if (Object.keys(sanitized).length > 0) {
+        Object.assign(payload, sanitized);
+      }
+    }
 
     this._log('log', `PROGRESS ${JSON.stringify(payload)}`);
   }
@@ -205,6 +262,7 @@ class CrawlerEvents {
       const payload = Object.assign({ scope: this.plannerScope() }, event || {});
       const replacer = (_, value) => (value === undefined ? undefined : value);
       this._log('log', 'PLANNER_STAGE ' + JSON.stringify(payload, replacer));
+      this._recordPlannerTimeline(payload);
     } catch (_) {}
   }
 
@@ -229,6 +287,174 @@ class CrawlerEvents {
     const fn = this.logger[level];
     if (typeof fn === 'function') {
       fn.apply(this.logger, args);
+    }
+  }
+
+  _recordPlannerTimeline(event) {
+    if (!event || !event.stage) {
+      return;
+    }
+    const now = Date.now();
+    const sequenceKey = event.sequence != null ? String(event.sequence) : event.stage;
+    if (event.status === 'started') {
+      this._plannerStageStart.set(sequenceKey, {
+        startedAt: now,
+        tsIso: event.ts || new Date(now).toISOString(),
+        details: this._trimDetails(event.details)
+      });
+      this._appendTimelineEntry({
+        stage: event.stage,
+        status: 'started',
+        sequence: event.sequence,
+        startedAt: event.ts || new Date(now).toISOString(),
+        emittedAt: new Date(now).toISOString(),
+        details: this._trimDetails(event.details)
+      });
+      return;
+    }
+
+    const startMeta = this._plannerStageStart.get(sequenceKey);
+    if (startMeta) {
+      this._plannerStageStart.delete(sequenceKey);
+    }
+
+    const durationMs = typeof event.durationMs === 'number' && Number.isFinite(event.durationMs)
+      ? Math.max(0, event.durationMs)
+      : (startMeta ? Math.max(0, now - startMeta.startedAt) : undefined);
+
+    this._appendTimelineEntry({
+      stage: event.stage,
+      status: event.status || 'completed',
+      sequence: event.sequence,
+      durationMs: durationMs,
+      startedAt: startMeta ? startMeta.tsIso : undefined,
+      emittedAt: event.ts || new Date(now).toISOString(),
+      details: this._trimDetails(event.details)
+    });
+  }
+
+  _appendTimelineEntry(entry) {
+    if (!entry || !entry.stage) {
+      return;
+    }
+    const sanitized = {
+      id: `planner-${++this._timelineSequence}`,
+      stage: entry.stage,
+      status: entry.status || 'started',
+      sequence: entry.sequence != null ? entry.sequence : undefined,
+      durationMs: entry.durationMs != null ? entry.durationMs : undefined,
+      startedAt: entry.startedAt || undefined,
+      emittedAt: entry.emittedAt || new Date().toISOString(),
+      details: entry.details || undefined,
+      sinceStartSec: Math.round((Date.now() - this._startTimestamp) / 1000)
+    };
+    if (!sanitized.details) delete sanitized.details;
+    if (!sanitized.startedAt) delete sanitized.startedAt;
+    if (!sanitized.sequence) delete sanitized.sequence;
+    if (sanitized.durationMs == null) delete sanitized.durationMs;
+    this.timelineEntries.push(sanitized);
+    if (this.timelineEntries.length > this.timelineMaxEntries) {
+      this.timelineEntries.splice(0, this.timelineEntries.length - this.timelineMaxEntries);
+    }
+  }
+
+  _getTimelineSnapshot() {
+    if (!Array.isArray(this.timelineEntries) || this.timelineEntries.length === 0) {
+      return null;
+    }
+    return this.timelineEntries.map((entry) => ({ ...entry }));
+  }
+
+  _trimDetails(details) {
+    if (!details) return undefined;
+    try {
+      if (Array.isArray(details)) {
+        return details.slice(0, 6);
+      }
+      if (typeof details === 'object') {
+        const out = {};
+        const keys = Object.keys(details).slice(0, 8);
+        for (const key of keys) {
+          const value = details[key];
+          if (Array.isArray(value)) {
+            out[key] = value.slice(0, 6);
+          } else if (value && typeof value === 'object') {
+            out[key] = this._trimDetails(value);
+          } else {
+            out[key] = value;
+          }
+        }
+        return out;
+      }
+      return details;
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  _safeGoals() {
+    let goals = null;
+    try {
+      goals = this.getGoalSummary();
+    } catch (_) {
+      goals = null;
+    }
+    if (!Array.isArray(goals) || goals.length === 0) {
+      return null;
+    }
+    let completed = 0;
+    const states = goals.map((goal) => {
+      const nextSteps = Array.isArray(goal.nextSteps) ? goal.nextSteps.slice(0, 4) : undefined;
+      const plan = goal.plan && typeof goal.plan === 'object'
+        ? {
+            actionCount: Array.isArray(goal.plan.actions) ? goal.plan.actions.length : undefined,
+            description: goal.plan.description || undefined
+          }
+        : undefined;
+      if (goal.completed) completed += 1;
+      return {
+        id: goal.id,
+        milestoneId: goal.milestoneId,
+        description: goal.description,
+        progress: goal.progress,
+        completed: !!goal.completed,
+        details: goal.details ? this._trimDetails(goal.details) : undefined,
+        nextSteps,
+        plan,
+        lastUpdatedAt: goal.lastUpdatedAt || null
+      };
+    });
+    return {
+      states,
+      summary: {
+        total: states.length,
+        completed,
+        pending: Math.max(0, states.length - completed)
+      }
+    };
+  }
+
+  _safeHeatmap() {
+    try {
+      const heatmap = this.getQueueHeatmap();
+      if (!heatmap || typeof heatmap !== 'object') {
+        return null;
+      }
+      return heatmap;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _safeCoverage() {
+    try {
+      const coverage = this.getCoverageSummary();
+      if (!coverage || typeof coverage !== 'object') {
+        return null;
+      }
+      return coverage;
+    } catch (_) {
+      return null;
     }
   }
 }

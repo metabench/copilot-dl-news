@@ -95,6 +95,74 @@ function generateRunId(provided) {
   return `analysis-${iso}-${rand}`;
 }
 
+function formatNumberIntl(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  try {
+    return num.toLocaleString();
+  } catch (_) {
+    return String(num);
+  }
+}
+
+function buildRunHighlights(summary = {}) {
+  const highlights = [];
+  if (!summary || typeof summary !== 'object') return highlights;
+  const steps = summary.steps && typeof summary.steps === 'object' ? summary.steps : {};
+  const pages = steps.pages && typeof steps.pages === 'object' ? steps.pages : null;
+  if (pages) {
+    if (pages.skipped) {
+      highlights.push('Page analysis skipped');
+    } else {
+      const updatedStr = formatNumberIntl(pages.updated);
+      const processedStr = formatNumberIntl(pages.processed);
+      if (updatedStr) {
+        highlights.push(`${updatedStr} pages updated`);
+      } else if (processedStr) {
+        highlights.push(`${processedStr} pages analysed`);
+      }
+      if (Number(pages.placesInserted) > 0) {
+        const placesStr = formatNumberIntl(pages.placesInserted) || String(pages.placesInserted);
+        highlights.push(`${placesStr} places extracted`);
+      }
+    }
+  }
+  const domains = steps.domains && typeof steps.domains === 'object' ? steps.domains : null;
+  if (domains) {
+    if (domains.skipped) {
+      highlights.push('Domain analysis skipped');
+    } else if (domains.completed) {
+      const limitStr = formatNumberIntl(domains.limit);
+      highlights.push(`Domain analysis completed${limitStr ? ` (limit ${limitStr})` : ''}`);
+    }
+  }
+  const milestones = steps.milestones && typeof steps.milestones === 'object' ? steps.milestones : null;
+  if (milestones) {
+    const awardedCount = Number(milestones.count);
+    if (Number.isFinite(awardedCount) && awardedCount > 0) {
+      const countStr = formatNumberIntl(awardedCount) || String(awardedCount);
+      highlights.push(`${countStr} milestone${awardedCount === 1 ? '' : 's'} ${milestones.dryRun ? 'would be awarded' : 'awarded'}`);
+    } else if (milestones.dryRun) {
+      highlights.push('Dry-run: no database changes');
+    }
+  }
+  if (Array.isArray(summary.analysisHighlights)) {
+    for (const entry of summary.analysisHighlights) {
+      if (entry) highlights.push(String(entry));
+    }
+  }
+  const unique = [];
+  const seen = new Set();
+  for (const item of highlights) {
+    const key = typeof item === 'string' ? item.trim().toLowerCase() : item;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(typeof item === 'string' ? item : String(item));
+    if (unique.length >= 5) break;
+  }
+  return unique;
+}
+
 function logInfo(message, details) {
   if (details === undefined) {
     console.log(`[analysis-run] ${message}`);
@@ -372,6 +440,77 @@ async function runAnalysis(rawOptions = {}) {
     },
     steps: {}
   };
+  const progressSink = typeof options.progressSink === 'function' ? options.progressSink : null;
+  const progressState = {
+    runId,
+    stage: 'starting',
+    status: 'starting',
+    summary: 'Analysis run starting…',
+    config: runSummary.config,
+    progress: null,
+    signals: []
+  };
+  let lastProgressEmitAt = 0;
+  let pendingProgressPatch = null;
+  let pendingProgressTimer = null;
+  const pushProgress = (payload) => {
+    if (!payload) return;
+    if (progressSink) {
+      try { progressSink(payload); } catch (_) {}
+    }
+    try {
+      process.stdout.write(`ANALYSIS_PROGRESS ${JSON.stringify(payload)}\n`);
+    } catch (_) {}
+  };
+  const emitProgress = (patch = {}, { throttleMs = 0 } = {}) => {
+    if (!patch || typeof patch !== 'object') patch = {};
+    const now = Date.now();
+    const ms = Number.isFinite(throttleMs) ? throttleMs : 0;
+    if (ms > 0 && now - lastProgressEmitAt < ms) {
+      pendingProgressPatch = pendingProgressPatch ? { ...pendingProgressPatch, ...patch } : { ...patch };
+      if (patch.progress && pendingProgressPatch.progress) {
+        pendingProgressPatch.progress = { ...pendingProgressPatch.progress, ...patch.progress };
+      }
+      if (!pendingProgressTimer) {
+        pendingProgressTimer = setTimeout(() => {
+          const pending = pendingProgressPatch;
+          pendingProgressPatch = null;
+          pendingProgressTimer = null;
+          emitProgress(pending || {}, { throttleMs: 0 });
+        }, ms);
+        try { pendingProgressTimer.unref?.(); } catch (_) {}
+      }
+      return;
+    }
+    if (pendingProgressTimer) {
+      try { clearTimeout(pendingProgressTimer); } catch (_) {}
+      pendingProgressTimer = null;
+      pendingProgressPatch = null;
+    }
+    lastProgressEmitAt = now;
+    const payload = {
+      ...progressState,
+      ...patch,
+      runId,
+      ts: new Date().toISOString()
+    };
+    if (patch.progress) {
+      payload.progress = { ...(progressState.progress || {}), ...patch.progress };
+    } else if (progressState.progress) {
+      payload.progress = { ...progressState.progress };
+    }
+    if (Array.isArray(payload.analysisHighlights)) {
+      progressState.analysisHighlights = payload.analysisHighlights.slice();
+    }
+    if (Array.isArray(payload.signals)) {
+      progressState.signals = payload.signals.slice();
+    }
+    if (payload.stage) progressState.stage = payload.stage;
+    if (payload.status) progressState.status = payload.status;
+    if (payload.summary) progressState.summary = payload.summary;
+    if (payload.progress) progressState.progress = { ...payload.progress };
+    pushProgress(payload);
+  };
   const tracker = createRunTracker(dbPath, runId, {
     startedAt: startedAtIso,
     status: 'running',
@@ -400,16 +539,20 @@ async function runAnalysis(rawOptions = {}) {
     verbose
   });
 
+  emitProgress({ stage: 'starting', status: 'starting', summary: 'Analysis run starting…' });
+
   let awarded = [];
   try {
     tracker.update({ stage: 'db-setup', lastProgress: { stage: 'db-setup' } });
     tracker.event('db-setup', 'Ensuring primary database schema', { dbPath });
     logInfo('Ensuring primary database schema', { runId, dbPath });
+  emitProgress({ stage: 'db-setup', status: 'running', summary: 'Preparing database schema…' });
     ensureDatabasePrepared(dbPath, { verbose });
     runSummary.steps.dbSetup = { ensured: true };
     tracker.update({ summary: runSummary, lastProgress: { stage: 'db-setup', ensured: true } });
     tracker.event('db-setup', 'Database schema ready', { dbPath });
     logInfo('Database schema ready', { runId, dbPath });
+  emitProgress({ stage: 'db-setup', status: 'completed', summary: 'Database schema ready.' });
 
     if (!skipPages) {
       logInfo('Running page analysis', {
@@ -421,6 +564,12 @@ async function runAnalysis(rawOptions = {}) {
       tracker.event('page-analysis', 'Starting page analysis', {
         analysisVersion: safeAnalysisVersion ?? null,
         limit: safeLimit ?? null
+      });
+      emitProgress({
+        stage: 'page-analysis',
+        status: 'running',
+        summary: 'Page analysis running…',
+        progress: { processed: 0, updated: 0 }
       });
       const progressLogger = createRollingRateLogger('analyse-pages');
       const progressReporter = progressLoggingEnabled
@@ -449,6 +598,14 @@ async function runAnalysis(rawOptions = {}) {
             if (userProgressHandler) {
               try { userProgressHandler(payload); } catch (_) {}
             }
+            emitProgress({
+              stage: 'page-analysis',
+              status: 'running',
+              progress: {
+                processed: processedTotal != null ? processedTotal : undefined,
+                updated: updatedTotal != null ? updatedTotal : undefined
+              }
+            }, { throttleMs: 600 });
           }
         });
       } finally {
@@ -467,6 +624,33 @@ async function runAnalysis(rawOptions = {}) {
         console.log(`[analysis-run] analyse-pages summary: ${JSON.stringify(summary)}`);
       }
       logInfo('Page analysis completed', { runId, summary: pageSummary });
+      const pageHighlights = buildRunHighlights({ steps: { pages: pageSummary } });
+      const processedCount = Number(pageSummary.processed ?? pageSummary.analysed ?? safeLimit ?? 0);
+      const updatedCount = Number(pageSummary.updated ?? processedCount ?? 0);
+      const summaryParts = [];
+      if (Number.isFinite(updatedCount) && updatedCount > 0) {
+        const updatedStr = formatNumberIntl(updatedCount) || String(updatedCount);
+        summaryParts.push(`${updatedStr} updated`);
+      } else if (Number.isFinite(processedCount) && processedCount > 0) {
+        const processedStr = formatNumberIntl(processedCount) || String(processedCount);
+        summaryParts.push(`${processedStr} analysed`);
+      }
+      if (Number.isFinite(Number(pageSummary.placesInserted)) && Number(pageSummary.placesInserted) > 0) {
+        const placesStr = formatNumberIntl(pageSummary.placesInserted) || String(pageSummary.placesInserted);
+        summaryParts.push(`${placesStr} places extracted`);
+      }
+      emitProgress({
+        stage: 'page-analysis',
+        status: 'completed',
+        summary: summaryParts.length ? `Page analysis completed (${summaryParts.join(', ')})` : 'Page analysis completed.',
+        progress: {
+          processed: Number.isFinite(processedCount) ? processedCount : undefined,
+          updated: Number.isFinite(updatedCount) ? updatedCount : undefined
+        },
+        analysisHighlights: pageHighlights,
+        signals: pageHighlights,
+        details: { pageSummary }
+      });
     } else {
       if (verbose) {
         console.log('[analysis-run] skipping page analysis');
@@ -479,12 +663,24 @@ async function runAnalysis(rawOptions = {}) {
         stage: skipDomains ? 'awarding-milestones' : 'domain-analysis',
         lastProgress: { stage: 'page-analysis', skipped: true }
       });
+      emitProgress({
+        stage: 'page-analysis',
+        status: 'skipped',
+        summary: 'Page analysis skipped (skip-pages flag).',
+        analysisHighlights: ['Page analysis skipped'],
+        signals: ['Page analysis skipped']
+      });
     }
 
     if (!skipDomains) {
       logInfo('Running domain analysis', { runId, domainLimit: safeDomainLimit ?? null });
       tracker.update({ stage: 'domain-analysis', lastProgress: { stage: 'domain-analysis' } });
       tracker.event('domain-analysis', 'Starting domain analysis', { domainLimit: safeDomainLimit ?? null });
+      emitProgress({
+        stage: 'domain-analysis',
+        status: 'running',
+        summary: 'Domain analysis running…'
+      });
       runAnalyzeDomains(path.join(projectRoot, 'src', 'tools', 'analyze-domains.js'), {
         db: dbPath,
         domainLimit: safeDomainLimit
@@ -493,6 +689,17 @@ async function runAnalysis(rawOptions = {}) {
       tracker.update({ summary: runSummary, lastProgress: { stage: 'domain-analysis', completed: true } });
       tracker.event('domain-analysis', 'Completed domain analysis', { domainLimit: safeDomainLimit ?? null });
       logInfo('Domain analysis completed', { runId, domainLimit: safeDomainLimit ?? null });
+      const domainHighlights = buildRunHighlights({ steps: { domains: runSummary.steps.domains } });
+      emitProgress({
+        stage: 'domain-analysis',
+        status: 'completed',
+        summary: safeDomainLimit != null
+          ? `Domain analysis completed (limit ${formatNumberIntl(safeDomainLimit) || safeDomainLimit}).`
+          : 'Domain analysis completed.',
+        analysisHighlights: domainHighlights,
+        signals: domainHighlights,
+        details: { domainSummary: runSummary.steps.domains }
+      });
     } else {
       if (verbose) {
         console.log('[analysis-run] skipping domain analysis');
@@ -505,11 +712,19 @@ async function runAnalysis(rawOptions = {}) {
         stage: 'awarding-milestones',
         lastProgress: { stage: 'domain-analysis', skipped: true }
       });
+      emitProgress({
+        stage: 'domain-analysis',
+        status: 'skipped',
+        summary: 'Domain analysis skipped (skip-domains flag).',
+        analysisHighlights: ['Domain analysis skipped'],
+        signals: ['Domain analysis skipped']
+      });
     }
 
     tracker.update({ stage: 'awarding-milestones', lastProgress: { stage: 'awarding-milestones' } });
     tracker.event('awarding-milestones', 'Awarding milestones', { dryRun });
     logInfo('Awarding milestones', { runId, dryRun });
+  emitProgress({ stage: 'awarding-milestones', status: 'running', summary: 'Awarding milestones…' });
 
     try { NewsDatabase = require('../db'); } catch (e) {
       console.error('Database unavailable:', e.message);
@@ -540,12 +755,25 @@ async function runAnalysis(rawOptions = {}) {
       awarded: awarded.length ? awarded : undefined
     });
     logInfo('Milestone awarding complete', { runId, awardedCount: awarded.length, dryRun });
+    const milestoneHighlights = buildRunHighlights({ steps: { milestones: runSummary.steps.milestones } });
+    emitProgress({
+      stage: 'awarding-milestones',
+      status: 'completed',
+      summary: awarded.length
+        ? `Milestones ${dryRun ? 'would be awarded' : 'awarded'} (${formatNumberIntl(awarded.length) || awarded.length}).`
+        : 'No new milestones to award.',
+      analysisHighlights: milestoneHighlights,
+      signals: milestoneHighlights,
+      details: { milestones: runSummary.steps.milestones }
+    });
 
     const endedAtIso = new Date().toISOString();
     runSummary.endedAt = endedAtIso;
     const duration = Date.parse(endedAtIso) - Date.parse(startedAtIso);
     runSummary.durationMs = Number.isFinite(duration) ? duration : null;
 
+    const runHighlights = buildRunHighlights(runSummary);
+    runSummary.analysisHighlights = runHighlights;
     tracker.update({
       status: 'completed',
       stage: 'completed',
@@ -562,6 +790,16 @@ async function runAnalysis(rawOptions = {}) {
       durationMs: runSummary.durationMs,
       awardedCount: awarded.length,
       dryRun
+    });
+    emitProgress({
+      stage: 'completed',
+      status: 'completed',
+      summary: awarded.length
+        ? `Analysis completed — ${formatNumberIntl(awarded.length) || awarded.length} milestone${awarded.length === 1 ? '' : 's'} ${dryRun ? 'would be' : ''} awarded.`
+        : 'Analysis completed.',
+      analysisHighlights: runHighlights,
+      signals: runHighlights,
+      details: { runSummary }
     });
   } catch (err) {
     const endedAtIso = new Date().toISOString();
@@ -582,9 +820,20 @@ async function runAnalysis(rawOptions = {}) {
       error: runSummary.error
     });
     logInfo('Run failed', { runId, error: runSummary.error });
+    emitProgress({
+      stage: 'failed',
+      status: 'failed',
+      summary: `Analysis run failed: ${runSummary.error}`,
+      details: { error: runSummary.error, runSummary }
+    });
     tracker.close();
     throw err;
   } finally {
+    if (pendingProgressTimer) {
+      try { clearTimeout(pendingProgressTimer); } catch (_) {}
+      pendingProgressTimer = null;
+      pendingProgressPatch = null;
+    }
     tracker.close();
   }
 

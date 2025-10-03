@@ -65,19 +65,64 @@ function createMiscApiRouter(options = {}) {
     try {
       const db = getDbRW();
       if (!db) return res.json({ errors: [] });
-      try {
-        const rows = db.prepare(`
-          SELECT url, message, kind, scope, target, ts
-          FROM crawl_problems
-          WHERE kind IS NOT NULL
-          ORDER BY ts DESC
-          LIMIT 50
-        `).all();
-        return res.json({ errors: rows });
-      } catch (_) {
-        // Fall back to empty payload if table is absent
-        return res.json({ errors: [] });
+
+      const rows = db.prepare(`
+        SELECT url, host, kind, code, message, details, at
+        FROM errors
+        WHERE at IS NOT NULL
+        ORDER BY at DESC
+        LIMIT 200
+      `).all();
+
+      const grouped = new Map();
+      for (const row of rows) {
+        const host = (row.host || '').trim() || '(unknown)';
+        const status = row.code != null ? String(row.code) : (row.kind || 'other');
+        const key = `${host}|${status}`;
+        const entry = grouped.get(key) || {
+          host,
+          status,
+          kind: row.kind || null,
+          latestAt: row.at || null,
+          count: 0,
+          messages: new Set(),
+          examples: []
+        };
+        entry.count += 1;
+        if (!entry.latestAt || (row.at && row.at > entry.latestAt)) {
+          entry.latestAt = row.at;
+        }
+        if (row.message) entry.messages.add(row.message);
+        if (entry.examples.length < 3) {
+          entry.examples.push({
+            url: row.url || null,
+            message: row.message || null,
+            kind: row.kind || null,
+            at: row.at || null
+          });
+        }
+        grouped.set(key, entry);
       }
+
+      const errors = Array.from(grouped.values())
+        .map((entry) => ({
+          host: entry.host,
+          status: entry.status,
+          kind: entry.kind,
+          count: entry.count,
+          latestAt: entry.latestAt,
+          messages: Array.from(entry.messages).slice(0, 5),
+          examples: entry.examples
+        }))
+        .sort((a, b) => {
+          if (a.latestAt && b.latestAt && a.latestAt !== b.latestAt) {
+            return a.latestAt > b.latestAt ? -1 : 1;
+          }
+          return b.count - a.count;
+        })
+        .slice(0, 50);
+
+      return res.json({ errors });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

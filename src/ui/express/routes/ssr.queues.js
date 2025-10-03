@@ -10,6 +10,7 @@ const {
 const {
   renderQueueDetailPage
 } = require('../views/queueDetailPage');
+const { resolveStaleQueueJobs } = require('../services/queueJanitor');
 
 function ensureRenderNav(fn) {
   if (typeof fn === 'function') return fn;
@@ -27,7 +28,7 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
 }
 
-function createQueuesSsrRouter({ getDbRW, renderNav }) {
+function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger = null }) {
   if (typeof getDbRW !== 'function') {
     throw new Error('createQueuesSsrRouter requires getDbRW');
   }
@@ -46,6 +47,9 @@ function createQueuesSsrRouter({ getDbRW, renderNav }) {
         res.status(503).send('<!doctype html><title>Queues</title><body><p>Database unavailable.</p></body></html>');
         return;
       }
+      try {
+        resolveStaleQueueJobs({ db, jobRegistry, logger });
+      } catch (_) {}
       const rows = listQueues(db, { limit: req.query.limit });
       const html = renderQueuesListPage({
         rows,
@@ -65,6 +69,9 @@ function createQueuesSsrRouter({ getDbRW, renderNav }) {
         res.redirect('/queues/ssr');
         return;
       }
+      try {
+        resolveStaleQueueJobs({ db, jobRegistry, logger });
+      } catch (_) {}
       const latestId = getLatestQueueId(db);
       if (!latestId) {
         res.redirect('/queues/ssr');
@@ -88,6 +95,9 @@ function createQueuesSsrRouter({ getDbRW, renderNav }) {
         res.status(503).send('<!doctype html><title>Queue</title><body><p>Database unavailable.</p></body></html>');
         return;
       }
+      try {
+        resolveStaleQueueJobs({ db, jobRegistry, logger });
+      } catch (_) {}
       const detail = getQueueDetail(db, {
         id,
         action: req.query.action,

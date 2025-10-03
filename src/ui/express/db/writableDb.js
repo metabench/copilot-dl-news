@@ -37,11 +37,39 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
           host TEXT,
           reason TEXT,
           queue_size INTEGER,
+          queue_origin TEXT,
+          queue_role TEXT,
+          queue_depth_bucket TEXT,
           FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_queue_events_job_ts ON queue_events(job_id, ts DESC);
         CREATE INDEX IF NOT EXISTS idx_queue_events_action ON queue_events(action);
         CREATE INDEX IF NOT EXISTS idx_queue_events_host ON queue_events(host);
+        CREATE TABLE IF NOT EXISTS queue_events_enhanced (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          job_id TEXT NOT NULL,
+          ts TEXT NOT NULL,
+          action TEXT NOT NULL,
+          url TEXT NOT NULL,
+          depth INTEGER,
+          host TEXT,
+          reason TEXT,
+          queue_size INTEGER,
+          alias TEXT,
+          queue_origin TEXT,
+          queue_role TEXT,
+          queue_depth_bucket TEXT,
+          priority_score REAL,
+          priority_source TEXT,
+          bonus_applied REAL,
+          cluster_id TEXT,
+          gap_prediction_score REAL,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_queue_events_enhanced_job_ts ON queue_events_enhanced(job_id, ts DESC);
+        CREATE INDEX IF NOT EXISTS idx_queue_events_enhanced_priority ON queue_events_enhanced(priority_score DESC);
+        CREATE INDEX IF NOT EXISTS idx_queue_events_enhanced_cluster ON queue_events_enhanced(cluster_id);
+        CREATE INDEX IF NOT EXISTS idx_queue_events_enhanced_host ON queue_events_enhanced(host);
         CREATE TABLE IF NOT EXISTS crawl_types (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT UNIQUE NOT NULL,
@@ -102,29 +130,52 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
       `);
 
       try {
-        const count = db.prepare('SELECT COUNT(*) AS c FROM crawl_types').get().c;
-        if (!count) {
-          const ins = db.prepare('INSERT INTO crawl_types(name, description, declaration) VALUES (?, ?, ?)');
-          ins.run('basic', 'Follow links only (no sitemap)', JSON.stringify({
-            crawlType: 'basic',
-            useSitemap: false,
-            sitemapOnly: false
-          }));
-          ins.run('sitemap-only', 'Use only the sitemap to discover pages', JSON.stringify({
-            crawlType: 'sitemap-only',
-            useSitemap: true,
-            sitemapOnly: true
-          }));
-          ins.run('basic-with-sitemap', 'Follow links and also use the sitemap', JSON.stringify({
-            crawlType: 'basic-with-sitemap',
-            useSitemap: true,
-            sitemapOnly: false
-          }));
-          ins.run('intelligent', 'Intelligent planning (hubs + sitemap + heuristics)', JSON.stringify({
-            crawlType: 'intelligent',
-            useSitemap: true,
-            sitemapOnly: false
-          }));
+        const queueCols = db.prepare('PRAGMA table_info(queue_events)').all().map((r) => r.name);
+        if (!queueCols.includes('queue_origin')) {
+          db.exec('ALTER TABLE queue_events ADD COLUMN queue_origin TEXT');
+        }
+        if (!queueCols.includes('queue_role')) {
+          db.exec('ALTER TABLE queue_events ADD COLUMN queue_role TEXT');
+        }
+        if (!queueCols.includes('queue_depth_bucket')) {
+          db.exec('ALTER TABLE queue_events ADD COLUMN queue_depth_bucket TEXT');
+        }
+      } catch (_) {
+        /* ignore migration errors */
+      }
+
+      try {
+        const upsert = db.prepare(`
+          INSERT INTO crawl_types(name, description, declaration)
+          VALUES (?, ?, ?)
+          ON CONFLICT(name) DO UPDATE SET
+            description = excluded.description,
+            declaration = excluded.declaration
+        `);
+        const defaults = [
+          {
+            name: 'basic',
+            description: 'Follow links only (no sitemap)',
+            declaration: { crawlType: 'basic', useSitemap: false, sitemapOnly: false }
+          },
+          {
+            name: 'sitemap-only',
+            description: 'Use only the sitemap to discover pages',
+            declaration: { crawlType: 'sitemap-only', useSitemap: true, sitemapOnly: true }
+          },
+          {
+            name: 'basic-with-sitemap',
+            description: 'Follow links and also use the sitemap',
+            declaration: { crawlType: 'basic-with-sitemap', useSitemap: true, sitemapOnly: false }
+          },
+          {
+            name: 'intelligent',
+            description: 'Intelligent planning (hubs + sitemap + heuristics)',
+            declaration: { crawlType: 'intelligent', useSitemap: true, sitemapOnly: false }
+          }
+        ];
+        for (const def of defaults) {
+          upsert.run(def.name, def.description, JSON.stringify(def.declaration));
         }
       } catch (_) {
         /* ignore seed errors */

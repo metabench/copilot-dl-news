@@ -5,8 +5,9 @@
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
-    "test": "jest --detectOpenHandles",
+  "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
   "gui": "node src/ui/express/server.js",
+  "ui:capture-screens": "node src/tools/capture-ui-screenshots.js",
   "backfill:dates": "node src/tools/backfill-dates.js",
   "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
   "analyze:domains": "node src/tools/analyze-domains.js",
@@ -36,13 +37,20 @@
   "compression": "^1.7.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.23.9",
+    "@babel/preset-env": "^7.23.9",
+    "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
   "supertest": "^6.3.4",
   "puppeteer": "^22.11.0"
   },
   "jest": {
     "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
     "reporters": ["default", "<rootDir>/jest-reporter-truncate.js"],
-    "maxWorkers": 8
+    "maxWorkers": 8,
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    }
   }
 }

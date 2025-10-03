@@ -35,7 +35,9 @@ function computeJobsSummary(jobs) {
         lastActivityAt: m._lastProgressWall || null,
         status,
         stage,
-        stageChangedAt: j.stageChangedAt || null
+        stageChangedAt: j.stageChangedAt || null,
+        statusText: m.statusText || null,
+        startup: m.startup || null
       });
     }
     return { count: items.length, items };

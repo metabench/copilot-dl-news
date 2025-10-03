@@ -93,6 +93,7 @@ class QueueManager {
     }
 
     this.queuedUrls = new Set();
+    this._heatmapState = this._createEmptyHeatmapState();
   }
 
   size() {
@@ -140,6 +141,12 @@ class QueueManager {
     }
 
     const { normalized, host, decision, kind, allowRevisit, queueKey } = evaluation;
+    const heatmapInfo = this._classifyHeatmap({
+      depth,
+      kind,
+      meta: evaluation?.meta || meta,
+      decision
+    });
     let reason = evaluation.reason;
     if (!reason && meta?.reason) {
       reason = meta.reason;
@@ -181,7 +188,8 @@ class QueueManager {
       decision,
       allowRevisit,
       queueKey,
-      priorityBias
+      priorityBias,
+      _heatmapInfo: heatmapInfo
     };
 
     const priorityResult = this.computeEnhancedPriority({
@@ -228,7 +236,16 @@ class QueueManager {
       queueEventData.gapPredictionScore = priorityResult.gapPredictionScore;
     }
 
+    if (heatmapInfo) {
+      queueEventData.queueOrigin = heatmapInfo.origin;
+      queueEventData.queueRole = heatmapInfo.role;
+      queueEventData.queueDepthBucket = heatmapInfo.depthBucket;
+    }
+
     this.emitEnhancedQueueEvent(queueEventData);
+    if (heatmapInfo) {
+      this._applyHeatmapDelta(heatmapInfo, 1);
+    }
     return true;
   }
 
@@ -291,6 +308,9 @@ class QueueManager {
       }
       if (candidate) {
         this._releaseQueueKey(candidate);
+        if (candidate._heatmapInfo) {
+          this._applyHeatmapDelta(candidate._heatmapInfo, -1);
+        }
         return {
           item: candidate,
           context,
@@ -337,6 +357,9 @@ class QueueManager {
       }
       if (candidate) {
         this._releaseQueueKey(candidate);
+        if (candidate._heatmapInfo) {
+          this._applyHeatmapDelta(candidate._heatmapInfo, -1);
+        }
         return {
           item: candidate,
           context,
@@ -363,6 +386,9 @@ class QueueManager {
     } else {
       this.requestQueue.push(item);
     }
+    if (item && item._heatmapInfo) {
+      this._applyHeatmapDelta(item._heatmapInfo, 1);
+    }
   }
 
   clear() {
@@ -375,6 +401,118 @@ class QueueManager {
     if (this.queuedUrls && typeof this.queuedUrls.clear === 'function') {
       this.queuedUrls.clear();
     }
+    this._heatmapState = this._createEmptyHeatmapState();
+  }
+
+  getHeatmapSnapshot() {
+    if (!this._heatmapState) {
+      return null;
+    }
+    const cells = {};
+    const entries = Object.entries(this._heatmapState.cells || {});
+    for (const [origin, roles] of entries) {
+      cells[origin] = { ...roles };
+    }
+    return {
+      total: this._heatmapState.total,
+      cells,
+      depthBuckets: { ...this._heatmapState.depthBuckets },
+      lastUpdatedAt: this._heatmapState.lastUpdatedAt
+    };
+  }
+
+  _createEmptyHeatmapState() {
+    return {
+      total: 0,
+      cells: {
+        planner: { article: 0, hub: 0, other: 0 },
+        opportunistic: { article: 0, hub: 0, other: 0 }
+      },
+      depthBuckets: {
+        '0': 0,
+        '1': 0,
+        '2': 0,
+        '3+': 0,
+        unknown: 0
+      },
+      lastUpdatedAt: Date.now()
+    };
+  }
+
+  _classifyHeatmap({ depth, kind, meta, decision }) {
+    try {
+      const role = this._mapHeatmapRole(kind, meta);
+      const origin = this._mapHeatmapOrigin(kind, meta, decision);
+      const depthBucket = this._mapHeatmapDepth(depth);
+      return { origin, role, depthBucket };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _mapHeatmapRole(kind, meta) {
+    const normalizedKind = typeof kind === 'string' ? kind.toLowerCase() : '';
+    if (normalizedKind === 'article' || normalizedKind === 'refresh') {
+      return 'article';
+    }
+    if (normalizedKind === 'hub-seed' || normalizedKind === 'nav' || normalizedKind === 'history') {
+      return 'hub';
+    }
+    if (meta?.hubKind || meta?.kind === 'country' || meta?.kind === 'section') {
+      return 'hub';
+    }
+    return 'other';
+  }
+
+  _mapHeatmapOrigin(kind, meta, decision) {
+    const hints = [];
+    if (meta) {
+      if (meta.source) hints.push(meta.source);
+      if (meta.reason) hints.push(meta.reason);
+      if (meta.origin) hints.push(meta.origin);
+      if (meta.strategy) hints.push(meta.strategy);
+    }
+    if (decision?.classification) {
+      hints.push(decision.classification);
+    }
+    if (decision?.reason) {
+      hints.push(decision.reason);
+    }
+    const kindHint = typeof kind === 'string' ? kind : '';
+    if (kindHint) hints.push(kindHint);
+    const joined = hints.join(' ').toLowerCase();
+    const plannerSignals = ['planner', 'seed', 'pattern', 'country', 'section', 'history', 'adaptive'];
+    const isPlanner = plannerSignals.some((signal) => joined.includes(signal));
+    return isPlanner ? 'planner' : 'opportunistic';
+  }
+
+  _mapHeatmapDepth(depth) {
+    if (typeof depth !== 'number' || !Number.isFinite(depth)) {
+      return 'unknown';
+    }
+    if (depth <= 0) return '0';
+    if (depth === 1) return '1';
+    if (depth === 2) return '2';
+    return '3+';
+  }
+
+  _applyHeatmapDelta(info, delta) {
+    if (!info || !delta) {
+      return;
+    }
+    const state = this._heatmapState;
+    if (!state) return;
+    const origin = info.origin || 'opportunistic';
+    const role = info.role || 'other';
+    const depthBucket = info.depthBucket || 'unknown';
+    const originBucket = state.cells[origin] || (state.cells[origin] = { article: 0, hub: 0, other: 0 });
+    originBucket[role] = Math.max(0, (originBucket[role] || 0) + delta);
+    state.total = Math.max(0, (state.total || 0) + delta);
+    if (!Object.prototype.hasOwnProperty.call(state.depthBuckets, depthBucket)) {
+      state.depthBuckets[depthBucket] = 0;
+    }
+    state.depthBuckets[depthBucket] = Math.max(0, (state.depthBuckets[depthBucket] || 0) + delta);
+    state.lastUpdatedAt = Date.now();
   }
 }
 

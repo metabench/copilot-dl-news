@@ -36,7 +36,9 @@ class RealtimeBroadcaster {
         downloadsPerSec: 0,
         errorRatePerMin: 0,
         bytesPerSec: 0,
-        cacheHitRatio1m: 0
+        cacheHitRatio1m: 0,
+        statusText: null,
+        startup: null
       }
     });
     this.metrics = this.progress.metrics;

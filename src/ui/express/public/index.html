@@ -3,93 +3,122 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>News Crawler UI</title>
-    <link rel="stylesheet" href="/crawler.css" />
-    <script type="module" src="/assets/global-nav.js"></script>
+  <title>News Crawler UI</title>
+  <link rel="stylesheet" href="/crawler.css" />
+  <link rel="stylesheet" href="/assets/index.css" />
+  <script type="module" src="/assets/global-nav.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#crawl-controls">Skip to crawl controls</a>
     <div data-global-nav data-active="crawler"></div>
-    <h1>News Crawler</h1>
-    <p style="margin-top:-8px; margin-bottom:14px; color:#555; font-size:13px;">
-      Quick links:
-      <a href="/urls">URLs</a> ·
-      <a href="/domain">Domain summary</a> ·
-  <a href="/domains">Domains</a> ·
-  <a href="/errors">Errors</a> ·
-      <a href="/health" target="_blank" rel="noopener">Health</a> ·
-      <a href="/metrics" target="_blank" rel="noopener">Metrics</a> ·
-      <a href="/gazetteer">Gazetteer</a>
-    </p>
-    <div class="controls-bar">
-      <div class="row">
-        <div>
-          <label>Start URL</label>
-          <input id="startUrl" value="https://www.theguardian.com" size="40" />
-        </div>
-        <div>
-          <label>Depth</label>
-          <input id="depth" type="number" value="2" />
-        </div>
-        <div>
-          <label>Max Pages</label>
-          <input id="maxPages" type="number" />
-        </div>
-        <div>
-          <label>Refetch window (global)</label>
-          <input id="refetchIfOlderThan" type="text" placeholder="e.g., 30m or 6h" />
-        </div>
-        <div>
-          <label>Refetch window — articles</label>
-          <input id="refetchArticleIfOlderThan" type="text" placeholder="e.g., 28d (overrides global)" />
-        </div>
-        <div>
-          <label>Refetch window — hubs/nav</label>
-          <input id="refetchHubIfOlderThan" type="text" placeholder="e.g., 2d (overrides global)" />
-        </div>
-        <div>
-          <label>Concurrency</label>
-          <input id="concurrency" type="number" value="1" />
-        </div>
-        <div>
-          <label>Timeout (ms)</label>
-          <input id="requestTimeoutMs" type="number" placeholder="10000" />
-        </div>
-        <div>
-          <label>Crawl Type</label>
-          <select id="crawlType">
-            <option value="">Loading…</option>
-          </select>
-        </div>
-        <div>
-          <label>Pacer jitter (ms)</label>
-          <div>
-            <input id="pacerJitterMinMs" type="number" placeholder="25" style="width:90px" /> –
-            <input id="pacerJitterMaxMs" type="number" placeholder="50" style="width:90px" />
+    <main class="crawler-layout">
+      <header class="page-header">
+        <h1 class="page-title">News Crawler</h1>
+        <nav class="quick-nav" aria-label="Quick links">
+          <ul class="quick-links">
+            <li><a href="/urls">URLs</a></li>
+            <li><a href="/domain">Domain summary</a></li>
+            <li><a href="/domains">Domains</a></li>
+            <li><a href="/errors">Errors</a></li>
+            <li><a href="/health" target="_blank" rel="noopener">Health</a></li>
+            <li><a href="/metrics" target="_blank" rel="noopener">Metrics</a></li>
+            <li><a href="/gazetteer">Gazetteer</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <section id="crawl-controls" class="panel controls-card" aria-labelledby="crawl-controls-heading">
+        <header class="controls-card__header">
+          <h2 id="crawl-controls-heading" class="section-title">Crawl controls</h2>
+          <button id="themeBtn" class="button button--ghost" type="button" title="Toggle dark mode">Dark</button>
+        </header>
+
+        <div class="control-grid control-grid--primary">
+          <div class="control-field control-field--wide">
+            <label for="startUrl">Start URL</label>
+            <input id="startUrl" value="https://www.theguardian.com" size="40" />
+          </div>
+          <div class="control-field">
+            <label for="depth">Depth</label>
+            <input id="depth" type="number" value="2" />
+          </div>
+          <div class="control-field">
+            <label for="maxPages">Max pages</label>
+            <input id="maxPages" type="number" />
+          </div>
+          <div class="control-field">
+            <label for="concurrency">Concurrency</label>
+            <input id="concurrency" type="number" value="1" />
+          </div>
+          <div class="control-field">
+            <label for="requestTimeoutMs">Timeout (ms)</label>
+            <input id="requestTimeoutMs" type="number" placeholder="10000" />
+          </div>
+          <div class="control-field">
+            <label for="crawlType">Crawl type</label>
+            <select id="crawlType">
+              <option value="">Loading…</option>
+            </select>
           </div>
         </div>
-        <div>
-          <label><input id="slowMode" type="checkbox" /> Slow mode (1 req/s)</label>
+
+        <details class="controls-advanced" id="controlsAdvanced">
+          <summary>Advanced options</summary>
+          <div class="control-grid control-grid--advanced">
+            <div class="control-field">
+              <label for="refetchIfOlderThan">Refetch window (global)</label>
+              <input id="refetchIfOlderThan" type="text" placeholder="e.g., 30m or 6h" />
+            </div>
+            <div class="control-field">
+              <label for="refetchArticleIfOlderThan">Refetch window — articles</label>
+              <input id="refetchArticleIfOlderThan" type="text" placeholder="e.g., 28d (overrides global)" />
+            </div>
+            <div class="control-field">
+              <label for="refetchHubIfOlderThan">Refetch window — hubs/nav</label>
+              <input id="refetchHubIfOlderThan" type="text" placeholder="e.g., 2d (overrides global)" />
+            </div>
+            <div class="control-field control-field--inline">
+              <label for="pacerJitterMinMs">Pacer jitter (ms)</label>
+              <div class="control-inline">
+                <input id="pacerJitterMinMs" type="number" placeholder="25" />
+                <span class="control-inline__dash" aria-hidden="true">–</span>
+                <input id="pacerJitterMaxMs" type="number" placeholder="50" />
+              </div>
+            </div>
+            <div class="control-checkboxes">
+              <label class="control-checkbox">
+                <input id="slowMode" type="checkbox" />
+                <span>Slow mode (1 req/s)</span>
+              </label>
+              <label class="control-checkbox" title="Discover and enqueue URLs from the site’s sitemap in addition to the Start URL. Disable to rely only on link traversal.">
+                <input id="useSitemap" type="checkbox" />
+                <span>Use sitemap</span>
+              </label>
+              <label class="control-checkbox">
+                <input id="sitemapOnly" type="checkbox" />
+                <span>Sitemap only</span>
+              </label>
+            </div>
+          </div>
+        </details>
+
+        <div class="control-actions">
+          <div class="control-buttons">
+            <button id="startBtn" class="button button--primary" type="button">Start</button>
+            <button id="stopBtn" class="button" type="button">Stop</button>
+            <button id="pauseBtn" class="button" type="button">Pause</button>
+            <button id="resumeBtn" class="button" type="button" disabled>Resume</button>
+            <button id="analysisBtn" class="button button--secondary" type="button" title="Run offline analysis pipeline">Perform Analysis</button>
+          </div>
+          <div class="analysis-status-card">
+            <span id="analysisLink" class="analysis-link muted"></span>
+            <div id="analysisStatus" class="analysis-status muted">
+              <div id="analysisStatusSummary" class="analysis-status__summary">No analysis runs yet.</div>
+              <ul id="analysisStatusMetrics" class="analysis-status__metrics"></ul>
+            </div>
+          </div>
         </div>
-        <div>
-          <label title="Discover and enqueue URLs from the site’s sitemap in addition to the Start URL. Disable to rely only on link traversal."><input id="useSitemap" type="checkbox" /> Use sitemap</label>
-        </div>
-        <div>
-          <label><input id="sitemapOnly" type="checkbox" /> Sitemap only</label>
-        </div>
-        <div class="btns">
-          <button id="startBtn">Start</button>
-          <button id="stopBtn">Stop</button>
-          <button id="pauseBtn">Pause</button>
-          <button id="resumeBtn" disabled>Resume</button>
-          <button id="analysisBtn" title="Run offline analysis pipeline">Perform Analysis</button>
-          <span style="flex:1 1 260px; display:flex; flex-direction:column; gap:2px; min-height:22px;">
-            <span id="analysisLink" class="muted" style="font-size:12px;"></span>
-            <span id="analysisStatus" class="muted" style="font-size:11px;"></span>
-          </span>
-          <button id="themeBtn" title="Toggle dark mode">Dark</button>
-        </div>
-      </div>
-    </div>
+      </section>
     <section id="overviewSection" class="panel">
       <div class="summary-head">
         <h3>Run overview</h3>
@@ -151,1311 +180,259 @@
           <span id="insightProblems" class="insight-value">0</span>
           <span id="insightProblemsDetail" class="insight-detail muted"></span>
         </div>
+        <div class="insight-item">
+          <span class="insight-label">Planner goals</span>
+          <span id="insightGoals" class="insight-value">—</span>
+          <span id="insightGoalsDetail" class="insight-detail muted"></span>
+        </div>
+        <div class="insight-item">
+          <span class="insight-label">Queue mix</span>
+          <span id="insightQueueMix" class="insight-value">—</span>
+          <span id="insightQueueMixDetail" class="insight-detail muted"></span>
+        </div>
+      </div>
+      <div class="insight-extras">
+        <div class="insight-extra">
+          <h4>Highlights</h4>
+          <ul id="insightHighlightsList" class="insight-highlights"></ul>
+        </div>
+        <div class="insight-extra">
+          <h4>Queue heatmap</h4>
+          <div id="insightQueueHeatmap" class="insight-heatmap muted">Queue telemetry not yet available.</div>
+        </div>
       </div>
     </section>
-    <section id="jobsSection" style="margin:10px 0;">
-      <h3>Ongoing crawls</h3>
-      <div id="jobsList" class="muted" style="font-size:13px;">None</div>
+    <section id="patternInsightsPanel" class="panel pattern-insights" data-has-data="0" style="display:none;">
+      <div class="summary-head">
+        <h3>Pattern insights</h3>
+        <span id="patternInsightsHint" class="muted" style="font-size:12px;">Pattern discovery events appear once the intelligent planner runs.</span>
+      </div>
+      <div class="pattern-summary-grid">
+        <div class="pattern-summary-card">
+          <span class="pattern-summary-label">Pattern events</span>
+          <span id="patternInsightsTotal" class="pattern-summary-value">0</span>
+        </div>
+        <div class="pattern-summary-card">
+          <span class="pattern-summary-label">Unique sections</span>
+          <span id="patternInsightsSections" class="pattern-summary-value">0</span>
+        </div>
+        <div class="pattern-summary-card">
+          <span class="pattern-summary-label">Article hints</span>
+          <span id="patternInsightsHints" class="pattern-summary-value">0</span>
+        </div>
+        <div class="pattern-summary-card pattern-summary-card--wide">
+          <span class="pattern-summary-label">Last event</span>
+          <span id="patternInsightsLastSummary" class="pattern-summary-value pattern-summary-value--small">No pattern activity yet.</span>
+          <span id="patternInsightsLastStage" class="pattern-summary-detail muted">—</span>
+          <span class="pattern-summary-detail muted">Updated <span id="patternInsightsLastUpdated">—</span></span>
+        </div>
+      </div>
+      <div class="pattern-insights-grid">
+        <div class="pattern-insights-column">
+          <h4>Top sections</h4>
+          <ul id="patternInsightsTopSections" class="pattern-insights-list"></ul>
+        </div>
+        <div class="pattern-insights-column">
+          <h4>Article hints</h4>
+          <ul id="patternInsightsTopHints" class="pattern-insights-list"></ul>
+        </div>
+        <div class="pattern-insights-column">
+          <h4>Homepage fetch sources</h4>
+          <ul id="patternInsightsSources" class="pattern-insights-list"></ul>
+        </div>
+      </div>
+      <div class="pattern-log">
+        <div class="pattern-log__head">
+          <h4>Pattern event log</h4>
+        </div>
+        <div id="patternInsightsLog" class="pattern-log__list timeline-list muted">No pattern events yet.</div>
+      </div>
     </section>
-    
-    <p>
-      <label><input type="checkbox" id="showLogs" /> Show logs</label>
-    </p>
-  <h3>Progress <span id="eta" class="muted" style="font-weight:normal; font-size:13px;"></span></h3>
-  <div id="progress">visited: 0, downloaded: 0, found: 0, saved: 0</div>
-  <div id="inflight" style="font-size:13px; color:#333; margin-top:6px;">
-    current downloads: 0
-    <ul id="inflightList" style="margin:4px 0 0 14px; padding:0; list-style:disc;"></ul>
-  </div>
-  <div id="cacheInfo" style="color:#555; font-size: 13px; margin-top: 6px;">cached hits: 0</div>
-  <div id="metrics" style="font-size:13px; color: #333; margin-top:8px; display:flex; align-items:center; gap:8px;">
-    <strong>Metrics:</strong>
-  <span id="m_reqps" style="display:flex; align-items:center; gap:6px;"><span id="m_reqps_label">req/s: 0</span>
-    <svg id="reqps_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none" style="border:1px solid #ddd; background:#fafafa">
-        <title id="reqps_title">req/s sparkline</title>
-  <polyline id="reqps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
-      </svg>
-    </span>
-  <span id="m_dlps" style="margin-left:12px; display:flex; align-items:center; gap:6px;"><span id="m_dlps_label">dl/s (≤15s avg): 0 · MB/s (≤15s avg): 0</span>
-    <svg id="dlps_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none" style="border:1px solid #ddd; background:#fafafa">
-        <title id="dlps_title">dl/s sparkline</title>
-  <polyline id="dlps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
-      </svg>
-    </span>
-    <span id="m_errpm" style="margin-left:12px;">err/min: 0</span>
-    <span id="m_qsize" style="margin-left:12px; display:flex; align-items:center; gap:6px;">queue: 0
-      <svg id="q_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none" style="border:1px solid #ddd; background:#fafafa">
-        <title id="q_title">queue sparkline</title>
-        <polyline id="q_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
-      </svg>
-    </span>
-  <span id="m_domrpm" class="muted" style="margin-left:12px; display:none;">domain rpm: n/a</span>
-  <span id="m_domlim" class="muted" style="display:none;">limit: n/a</span>
-  <span id="m_dombk" class="muted" style="display:none;">backoff: -</span>
-  <span id="m_domrl" class="bad" style="display:none; font-weight:bold; margin-left:12px;">RATE LIMITED</span>
-    <span id="m_errs" style="margin-left:12px;">errors: 0</span>
-    <span id="cacheGauge" class="muted" style="margin-left:12px;">cache: 1m 0% · 5m 0%</span>
-  </div>
-  <details id="secErrors" open>
-    <summary><strong>Recent errors</strong></summary>
-    <div id="errorsPanel" style="margin-top:6px; font-size:13px;">
-      <div id="errorsList" class="muted">Loading…</div>
-    </div>
-  </details>
-  <details id="secProblems" open style="margin-top:10px;">
-    <summary><strong>Problems (expectations)</strong></summary>
-    <div id="problemsPanel" style="margin-top:6px; font-size:13px;">
-      <div id="problemsList" class="muted">None</div>
-    </div>
-  </details>
-  <details id="secMilestones" open style="margin-top:10px;">
-    <summary><strong>Milestones</strong></summary>
-    <div id="milestonesList" class="timeline-list muted">No milestones yet.</div>
-  </details>
-  <details id="secPlanner" open style="margin-top:10px;">
-    <summary><strong>Planner timeline</strong></summary>
-    <div id="plannerStagesList" class="timeline-list muted">Planner telemetry appears when intelligent crawls run.</div>
-  </details>
-  <details id="secDomains" open style="margin-top:10px;">
-    <summary><strong>Recent Domains</strong></summary>
-    <div id="domains" class="meta" style="font-size:13px; color:#333; margin:6px 0 10px;">Loading…</div>
-  </details>
-  <details id="secLogs" open style="margin-top:10px;">
-    <summary><strong>Logs</strong></summary>
-    <div id="logsToolbar" style="display:flex; align-items:center; gap:8px; margin:6px 0; font-size:12px; color:#555;">
-      <span>font:</span>
-      <button id="logsFontMinus" type="button" title="Smaller" style="padding:2px 6px;">A-</button>
-      <button id="logsFontPlus" type="button" title="Larger" style="padding:2px 6px;">A+</button>
-      <span id="logsFontVal" class="muted"></span>
-    </div>
-    <pre id="logs"></pre>
-    <div id="logsResizer" class="resizer-h" title="Drag to resize logs"></div>
-  </details>
-  <div id="healthStrip" style="margin-top:10px; font-size:13px;">
-  <span id="badgeRobots" class="muted">robots: …</span>
-  <span id="badgeSitemap" class="muted" style="margin-left:12px;">sitemap: 0 / 0</span>
-    <span id="badgeDb" class="muted" style="margin-left:12px;">db: …</span>
-    <span id="badgeDisk" class="muted" style="margin-left:12px;">disk: …</span>
-    <span id="badgeConn" class="badge badge-warn" style="margin-left:12px;">SSE: connecting…</span>
-  </div>
-  <p><a href="/urls">View saved article URLs</a></p>
-    <script>
-  const logs = document.getElementById('logs');
-  const logsResizer = document.getElementById('logsResizer');
-  const logsFontMinus = document.getElementById('logsFontMinus');
-  const logsFontPlus = document.getElementById('logsFontPlus');
-  const logsFontVal = document.getElementById('logsFontVal');
-  const secErrors = document.getElementById('secErrors');
-  const secDomains = document.getElementById('secDomains');
-  const secLogs = document.getElementById('secLogs');
-  const progress = document.getElementById('progress');
-  const mReqps = document.getElementById('m_reqps');
-  const mDlps = document.getElementById('m_dlps');
-  const mReqpsLabel = document.getElementById('m_reqps_label');
-  const mDlpsLabel = document.getElementById('m_dlps_label');
-  const mErrpm = document.getElementById('m_errpm');
-  const mQsize = document.getElementById('m_qsize');
-  const mErrs = document.getElementById('m_errs');
-  const mDomRpm = document.getElementById('m_domrpm');
-  const mDomLim = document.getElementById('m_domlim');
-  const mDomBk = document.getElementById('m_dombk');
-  const mDomRl = document.getElementById('m_domrl');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const resumeBtn = document.getElementById('resumeBtn');
-  const analysisBtn = document.getElementById('analysisBtn');
-  const analysisLink = document.getElementById('analysisLink');
-  const analysisStatus = document.getElementById('analysisStatus');
-  const domains = document.getElementById('domains');
-  const inflightDiv = document.getElementById('inflight');
-  const inflightList = document.getElementById('inflightList');
-  const qPoly = document.getElementById('q_poly');
-  const qTitle = document.getElementById('q_title');
-  const themeBtn = document.getElementById('themeBtn');
-  const etaEl = document.getElementById('eta');
-  const cacheGauge = document.getElementById('cacheGauge');
-  const badgeDb = document.getElementById('badgeDb');
-  const badgeDisk = document.getElementById('badgeDisk');
-  const badgeRobots = document.getElementById('badgeRobots');
-  const badgeSitemap = document.getElementById('badgeSitemap');
-  const badgeConn = document.getElementById('badgeConn');
-  const badgeCpu = document.createElement('span');
-  const badgeMem = document.createElement('span');
-  const badgeWal = document.createElement('span');
-  badgeCpu.className = 'muted';
-  badgeMem.className = 'muted';
-  badgeWal.className = 'muted';
-  const crawlTypeBadge = document.getElementById('crawlTypeBadge');
-  const stageBadge = document.getElementById('stageBadge');
-  const pausedBadge = document.getElementById('pausedBadge');
-  const metricVisited = document.getElementById('metricVisited');
-  const metricDownloaded = document.getElementById('metricDownloaded');
-  const metricSaved = document.getElementById('metricSaved');
-  const metricFound = document.getElementById('metricFound');
-  const metricQueue = document.getElementById('metricQueue');
-  const metricErrors = document.getElementById('metricErrors');
-  const metricCoverage = document.getElementById('metricCoverage');
-  const insightsPanel = document.getElementById('insightsPanel');
-  const insightsHint = document.getElementById('insightsHint');
-  const insightCoverage = document.getElementById('insightCoverage');
-  const insightCoverageDetail = document.getElementById('insightCoverageDetail');
-  const insightHubs = document.getElementById('insightHubs');
-  const insightHubsDetail = document.getElementById('insightHubsDetail');
-  const insightProblems = document.getElementById('insightProblems');
-  const insightProblemsDetail = document.getElementById('insightProblemsDetail');
-  const milestonesList = document.getElementById('milestonesList');
-  const plannerStagesList = document.getElementById('plannerStagesList');
-  try {
-    badgeCpu.style.marginLeft = '12px';
-    badgeMem.style.marginLeft = '12px';
-    badgeWal.style.marginLeft = '12px';
-    const hs = document.getElementById('healthStrip');
-    hs.appendChild(badgeCpu);
-    hs.appendChild(badgeMem);
-    hs.appendChild(badgeWal);
-  } catch(_) {}
-  let evt;
-  let cacheHits = 0;
-  // rolling window samples of network and cache (and bytes)
-  let trafficSamples = []; // [{t, net, cache, bytes}]
-  let reconnectTimer = null;
-  let lastSseEventAt = 0;
+    <section id="pipelinePanel" class="panel pipeline-panel" style="display:none;">
+      <div class="summary-head">
+        <h3>Intelligent pipeline</h3>
+        <span id="pipelineUpdated" class="muted" style="font-size:12px;">Waiting for planner telemetry…</span>
+      </div>
+      <div id="pipelineDiagram" class="pipeline-diagram muted"></div>
+      <div class="pipeline-grid">
+        <article class="pipeline-card" data-pipeline-stage="analysis">
+          <header class="pipeline-card__head">
+            <span id="pipelineAnalysisStatus" class="badge badge-neutral">Idle</span>
+            <span id="pipelineAnalysisSummary" class="pipeline-card__summary muted">No analysis runs detected yet.</span>
+          </header>
+          <dl class="pipeline-card__meta">
+            <div>
+              <dt>Signals</dt>
+              <dd id="pipelineAnalysisSignals" class="muted">None captured</dd>
+            </div>
+            <div>
+              <dt>Last run</dt>
+              <dd id="pipelineAnalysisLastRun" class="muted">—</dd>
+            </div>
+            <div>
+              <dt>Detail</dt>
+              <dd id="pipelineAnalysisLink" class="muted">—</dd>
+            </div>
+          </dl>
+          <footer id="pipelineAnalysisHistorySection" class="pipeline-card__history">
+            <div class="pipeline-history-toolbar">
+              <button id="pipelineAnalysisHistoryClear" type="button" class="link-button">Clear history</button>
+            </div>
+            <ul id="pipelineAnalysisHistory" class="pipeline-history-list"></ul>
+          </footer>
+        </article>
+        <article class="pipeline-card" data-pipeline-stage="planner">
+          <header class="pipeline-card__head">
+            <span id="pipelinePlannerStatus" class="badge badge-neutral">Idle</span>
+            <span id="pipelinePlannerSummary" class="pipeline-card__summary muted">Planner will activate once intelligent crawl begins.</span>
+          </header>
+          <dl class="pipeline-card__meta">
+            <div>
+              <dt>Stage</dt>
+              <dd id="pipelinePlannerStage" class="muted">—</dd>
+            </div>
+            <div>
+              <dt>Goals</dt>
+              <dd id="pipelinePlannerGoals" class="muted">—</dd>
+            </div>
+          </dl>
+        </article>
+        <article class="pipeline-card" data-pipeline-stage="execution">
+          <header class="pipeline-card__head">
+            <span id="pipelineExecutionStatus" class="badge badge-neutral">Idle</span>
+            <span id="pipelineExecutionSummary" class="pipeline-card__summary muted">Awaiting crawl activity.</span>
+          </header>
+          <dl class="pipeline-card__meta">
+            <div>
+              <dt>Jobs</dt>
+              <dd id="pipelineExecutionJobs" class="muted">0</dd>
+            </div>
+            <div>
+              <dt>Queue</dt>
+              <dd id="pipelineExecutionQueue" class="muted">—</dd>
+            </div>
+            <div>
+              <dt>Coverage</dt>
+              <dd id="pipelineExecutionCoverage" class="muted">—</dd>
+            </div>
+          </dl>
+        </article>
+      </div>
+      <div id="insightAnalysisHighlights" class="analysis-highlights"></div>
+    </section>
+    <section id="jobsSection" class="panel panel--compact">
+      <div class="panel-head">
+        <h3>Ongoing crawls</h3>
+        <label class="toggle-control">
+          <input type="checkbox" id="showLogs" />
+          <span>Show logs</span>
+        </label>
+      </div>
+      <div id="jobsList" class="muted text-sm">None</div>
+    </section>
 
-  function markSseLive() {
-    if (badgeConn) {
-      lastSseEventAt = Date.now();
-      badgeConn.textContent = 'SSE: live';
-      badgeConn.classList.remove('badge-warn', 'badge-bad');
-      badgeConn.classList.add('badge-ok');
-    }
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-  }
-  function formatNumber(val) {
-    const num = Number(val);
-    if (!Number.isFinite(num)) return String(val ?? '0');
-    try { return num.toLocaleString(); } catch (_) { return String(num); }
-  }
-  function formatTimestamp(ts) {
-    if (!ts) return new Date().toLocaleTimeString();
-    const parsed = new Date(ts);
-    if (Number.isNaN(parsed.getTime())) return new Date().toLocaleTimeString();
-    return parsed.toLocaleTimeString();
-  }
-  function compactDetails(details) {
-    if (!details) return '';
-    if (typeof details === 'string') return details;
-    try {
-      const json = JSON.stringify(details, null, 2) || '';
-      return json.length > 400 ? json.slice(0, 400) + '…' : json;
-    } catch (_) {
-      return '';
-    }
-  }
-  function refreshCoverageMetric() {
-    if (!metricCoverage) return;
-    const summary = window.__coverageSummary;
-    if (summary && typeof summary.value === 'number') {
-      metricCoverage.textContent = `${summary.value.toFixed(0)}%`;
-    } else {
-      metricCoverage.textContent = '—';
-    }
-  }
-  function resetInsights() {
-    if (!insightsPanel) return;
-    insightsPanel.dataset.hasData = '0';
-    if (insightsPanel && window.__currentCrawlType !== 'intelligent') insightsPanel.style.display = 'none';
-    if (insightCoverage) insightCoverage.textContent = '—';
-    if (insightCoverageDetail) insightCoverageDetail.textContent = '';
-    if (insightHubs) insightHubs.textContent = '—';
-    if (insightHubsDetail) insightHubsDetail.textContent = '';
-    if (insightProblems) insightProblems.textContent = '0';
-    if (insightProblemsDetail) insightProblemsDetail.textContent = '';
-    if (insightsHint) insightsHint.textContent = 'Insights appear once planner telemetry streams in.';
-    window.__coverageSummary = null;
-    refreshCoverageMetric();
-  }
-  function setCrawlType(type) {
-    if (!crawlTypeBadge) return;
-    const norm = type ? String(type) : '';
-    window.__currentCrawlType = norm;
-    crawlTypeBadge.classList.remove('badge-neutral', 'badge-intelligent', 'badge-basic');
-    const pretty = norm ? norm.replace(/-/g, ' ') : 'unknown';
-    crawlTypeBadge.textContent = `Type: ${pretty}`;
-    if (!norm) {
-      crawlTypeBadge.classList.add('badge-neutral');
-      if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = 'none';
-      return;
-    }
-    if (norm === 'intelligent') {
-      crawlTypeBadge.classList.add('badge-intelligent');
-      if (insightsPanel) {
-        if (insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = '';
-        if (insightsHint && insightsPanel.dataset.hasData !== '1') insightsHint.textContent = 'Collecting planner telemetry…';
-      }
-    } else {
-      crawlTypeBadge.classList.add('badge-basic');
-      if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = 'none';
-      if (!window.__coverageSummary) refreshCoverageMetric();
-    }
-  }
-  function setStage(stage) {
-    if (!stageBadge) return;
-    const label = stage ? stage.replace(/[_-]+/g, ' ') : 'idle';
-    stageBadge.textContent = `Stage: ${label}`;
-  }
-  function setPausedBadge(paused) {
-    if (!pausedBadge) return;
-    if (paused == null) {
-      pausedBadge.style.display = 'none';
-      return;
-    }
-    pausedBadge.style.display = '';
-    if (paused) {
-      pausedBadge.textContent = 'Paused';
-      pausedBadge.classList.remove('badge-ok');
-      pausedBadge.classList.add('badge-warn');
-    } else {
-      pausedBadge.textContent = 'Running';
-      pausedBadge.classList.remove('badge-warn');
-      pausedBadge.classList.add('badge-ok');
-    }
-  }
-  function hidePausedBadge() {
-    if (pausedBadge) pausedBadge.style.display = 'none';
-  }
-  function pushTimelineEntry(container, entry, limit = 120) {
-    if (!container || !entry || !entry.title) return;
-    if (!container.dataset.hasEntries) {
-      container.dataset.hasEntries = '1';
-      container.textContent = '';
-      container.classList.remove('muted');
-    }
-    const row = document.createElement('div');
-    row.className = 'timeline-row';
-    const head = document.createElement('div');
-    head.className = 'timeline-head';
-    const tsSpan = document.createElement('span');
-    tsSpan.className = 'muted';
-    tsSpan.textContent = formatTimestamp(entry.timestamp);
-    head.appendChild(tsSpan);
-    const badge = document.createElement('span');
-    badge.className = entry.badgeClass || 'badge badge-neutral';
-    badge.textContent = entry.title;
-    head.appendChild(badge);
-    if (entry.meta) {
-      const metaSpan = document.createElement('span');
-      metaSpan.textContent = entry.meta;
-      head.appendChild(metaSpan);
-    }
-    row.appendChild(head);
-    if (entry.detail) {
-      const detailDiv = document.createElement('div');
-      detailDiv.className = 'timeline-detail';
-      detailDiv.textContent = entry.detail;
-      row.appendChild(detailDiv);
-    }
-    container.prepend(row);
-    while (container.children.length > limit) {
-      container.removeChild(container.lastChild);
-    }
-  }
-  function handleMilestone(m) {
-    if (!m) return;
-    pushTimelineEntry(milestonesList, {
-      title: m.kind || 'milestone',
-      meta: [m.scope, m.message].filter(Boolean).join(' — '),
-      detail: compactDetails(m.details),
-      timestamp: m.ts,
-      badgeClass: 'badge badge-ok'
-    });
-    if (m.kind === 'intelligent-completion') {
-      setCrawlType('intelligent');
-      updateIntelligentInsights(m.details || {});
-      if (insightsHint) insightsHint.textContent = 'Summary updated from latest intelligent completion milestone.';
-    }
-  }
-  function handlePlannerStage(ev) {
-    if (!ev) return;
-    setCrawlType('intelligent');
-    if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = '';
-    const status = ev.status || 'started';
-    const metaParts = [];
-    if (status) metaParts.push(status);
-    if (ev.durationMs != null) metaParts.push(`${ev.durationMs}ms`);
-    const detailSource = ev.details && (ev.details.result || ev.details.error || ev.details.context) ? ev.details : ev.details;
-    pushTimelineEntry(plannerStagesList, {
-      title: ev.stage || 'stage',
-      meta: metaParts.join(' · '),
-      detail: compactDetails(detailSource),
-      timestamp: ev.ts,
-      badgeClass: status === 'completed' ? 'badge badge-ok' : status === 'failed' ? 'badge badge-bad' : 'badge badge-neutral'
-    });
-  }
-  function updateIntelligentInsights(details) {
-    if (!insightsPanel) return;
-    insightsPanel.style.display = '';
-    insightsPanel.dataset.hasData = '1';
-    const coverage = details && typeof details === 'object' ? details.coverage || {} : {};
-    let pctValue = null;
-    if (coverage && typeof coverage.coveragePct === 'number') {
-      pctValue = coverage.coveragePct > 1 ? coverage.coveragePct : coverage.coveragePct * 100;
-    }
-    if (insightCoverage) insightCoverage.textContent = pctValue != null ? `${pctValue.toFixed(1)}%` : '—';
-    if (insightCoverageDetail) {
-      if (coverage && coverage.expected != null) {
-        const seeded = coverage.seeded != null ? coverage.seeded : (details && details.seededHubs && details.seededHubs.unique != null ? details.seededHubs.unique : null);
-        const seededText = seeded != null ? formatNumber(seeded) : '0';
-        insightCoverageDetail.textContent = `${seededText} of ${formatNumber(coverage.expected)} expected hubs`;
-      } else if (coverage && coverage.seeded != null) {
-        insightCoverageDetail.textContent = `${formatNumber(coverage.seeded)} hubs seeded`;
-      } else {
-        insightCoverageDetail.textContent = '';
-      }
-    }
-    if (pctValue != null) window.__coverageSummary = { value: pctValue }; else window.__coverageSummary = null;
-    refreshCoverageMetric();
-    const seeded = details && details.seededHubs ? details.seededHubs : null;
-    if (insightHubs) {
-      if (seeded && seeded.unique != null) insightHubs.textContent = formatNumber(seeded.unique);
-      else if (seeded && seeded.requested != null) insightHubs.textContent = formatNumber(seeded.requested);
-      else insightHubs.textContent = seeded ? formatNumber(seeded.count || 0) : '—';
-    }
-    if (insightHubsDetail) {
-      if (seeded) {
-        const parts = [];
-        if (seeded.requested != null) parts.push(`requested ${formatNumber(seeded.requested)}`);
-        if (seeded.sectionsFromPatterns != null) parts.push(`${formatNumber(seeded.sectionsFromPatterns)} sections inferred`);
-        if (Array.isArray(seeded.sample) && seeded.sample.length) parts.push(`sample: ${seeded.sample.slice(0, 2).join(', ')}`);
-        insightHubsDetail.textContent = parts.join(' · ');
-      } else {
-        insightHubsDetail.textContent = '';
-      }
-    }
-    const problems = Array.isArray(details?.problems) ? details.problems : [];
-    const totalProblems = problems.reduce((sum, item) => sum + (item?.count || 0), 0);
-    if (insightProblems) insightProblems.textContent = formatNumber(totalProblems);
-    if (insightProblemsDetail) {
-      if (problems.length) {
-        const top = problems.slice(0, 3).map((p) => `${p.kind}: ${formatNumber(p.count || 0)}`);
-        insightProblemsDetail.textContent = top.join(' · ');
-      } else {
-        insightProblemsDetail.textContent = 'No unresolved planner problems recorded.';
-      }
-    }
-  }
-  resetInsights();
-  refreshCoverageMetric();
-  try {
-    if (typeof window !== 'undefined') {
-      window.__currentCrawlType = window.__currentCrawlType || '';
-    }
-  } catch (_) {}
-      // Restore saved logs height
-      (function(){
-        const savedH = parseInt(localStorage.getItem('logsH')||'', 10);
-        if (!isNaN(savedH) && savedH >= 120) {
-          logs.style.height = savedH + 'px';
-        }
-      })();
-      // Logs font size controls with persistence
-      (function(){
-        if (!logs) return;
-        const clamp = (v) => Math.max(10, Math.min(28, v|0));
-        const getSize = () => {
-          const cs = parseInt((getComputedStyle(logs).fontSize||'').replace('px',''), 10);
-          return isNaN(cs) ? 16 : cs;
-        };
-        const saved = parseInt(localStorage.getItem('logsFontSize')||'', 10);
-        const base = getSize();
-        const sz = clamp(isNaN(saved) ? base : saved);
-        logs.style.fontSize = sz + 'px';
-        if (logsFontVal) logsFontVal.textContent = sz + 'px';
-        const setSz = (v) => {
-          const n = clamp(v);
-          logs.style.fontSize = n + 'px';
-          localStorage.setItem('logsFontSize', String(n));
-          if (logsFontVal) logsFontVal.textContent = n + 'px';
-        };
-        if (logsFontMinus) logsFontMinus.onclick = () => setSz((parseInt(localStorage.getItem('logsFontSize')||'',10)||getSize()) - 1);
-        if (logsFontPlus) logsFontPlus.onclick = () => setSz((parseInt(localStorage.getItem('logsFontSize')||'',10)||getSize()) + 1);
-      })();
-      // Drag-to-resize for logs area (works even if CSS resize is ignored)
-      (function(){
-        if (!logsResizer) return;
-        let startY = 0, startH = 0, active = false;
-        const onMove = (e) => {
-          if (!active) return;
-          const dy = e.clientY - startY;
-          const maxH = Math.max(200, Math.floor(window.innerHeight * 0.75));
-          const newH = Math.min(maxH, Math.max(120, startH + dy));
-          logs.style.height = newH + 'px';
-        };
-        const onUp = () => {
-          if (!active) return;
-          active = false;
-          document.body.classList.remove('resizing');
-          window.removeEventListener('mousemove', onMove);
-          window.removeEventListener('mouseup', onUp);
-          const h = parseInt(getComputedStyle(logs).height, 10);
-          if (!isNaN(h)) localStorage.setItem('logsH', String(h));
-        };
-        logsResizer.addEventListener('mousedown', (e) => {
-          startY = e.clientY;
-          startH = parseInt(getComputedStyle(logs).height, 10) || logs.clientHeight || 240;
-          active = true;
-          document.body.classList.add('resizing');
-          window.addEventListener('mousemove', onMove);
-          window.addEventListener('mouseup', onUp);
-          e.preventDefault();
-        });
-      })();
-      // Batch log updates to avoid frequent DOM writes (structured to allow styling)
-      let logEntries = []; // { text, isErr }
-      let flushTimer = null;
-      function scheduleFlush() {
-        if (flushTimer) return;
-        flushTimer = setTimeout(() => {
-          try {
-            const frag = document.createDocumentFragment();
-            for (const ent of logEntries) {
-              const span = document.createElement('span');
-              span.textContent = ent.text;
-              if (ent.isErr) span.classList.add('log-error');
-              frag.appendChild(span);
-            }
-            logs.appendChild(frag);
-            logs.scrollTop = logs.scrollHeight;
-          } catch (_) {
-            // Fallback to plain text append if something goes wrong
-            try { logs.textContent += logEntries.map(e => e.text).join(''); } catch (_) {}
-          }
-          logEntries = [];
-          flushTimer = null;
-        }, 200);
-      }
+    <section id="progressSection" class="panel panel--stack">
+      <div class="panel-head">
+        <h3>
+          Progress
+          <span id="eta" class="muted text-sm"></span>
+        </h3>
+      </div>
+      <div id="progress" class="progress-line">visited: 0, downloaded: 0, found: 0, saved: 0</div>
+      <div id="inflight" class="progress-line progress-line--column">
+        <span>current downloads: 0</span>
+        <ul id="inflightList" class="progress-list"></ul>
+      </div>
+      <div id="cacheInfo" class="progress-line">cached hits: 0</div>
+      <div id="metrics" class="metrics-bar">
+        <strong>Metrics:</strong>
+        <span id="m_reqps" class="metric-spark">
+          <span id="m_reqps_label">req/s: 0</span>
+          <svg id="reqps_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+            <title id="reqps_title">req/s sparkline</title>
+            <polyline id="reqps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
+          </svg>
+        </span>
+        <span id="m_dlps" class="metric-spark">
+          <span id="m_dlps_label">dl/s (≤15s avg): 0 · MB/s (≤15s avg): 0</span>
+          <svg id="dlps_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+            <title id="dlps_title">dl/s sparkline</title>
+            <polyline id="dlps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
+          </svg>
+        </span>
+        <span id="m_errpm" class="metric-pill">err/min: 0</span>
+        <span id="m_qsize" class="metric-spark">
+          <span>queue: 0</span>
+          <svg id="q_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+            <title id="q_title">queue sparkline</title>
+            <polyline id="q_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
+          </svg>
+        </span>
+        <span id="m_domrpm" class="metric-pill muted" style="display:none;">domain rpm: n/a</span>
+        <span id="m_domlim" class="metric-pill muted" style="display:none;">limit: n/a</span>
+        <span id="m_dombk" class="metric-pill muted" style="display:none;">backoff: -</span>
+        <span id="m_domrl" class="metric-pill bad" style="display:none; font-weight:bold;">RATE LIMITED</span>
+        <span id="m_errs" class="metric-pill">errors: 0</span>
+        <span id="cacheGauge" class="metric-pill muted">cache: 1m 0% · 5m 0%</span>
+      </div>
+    </section>
 
-      function renderAnalysisLink(url, runId) {
-        if (!analysisLink) return;
-        analysisLink.textContent = '';
-        if (!url) return;
-        const label = document.createElement('span');
-        label.textContent = 'View analysis: ';
-        analysisLink.appendChild(label);
-        const link = document.createElement('a');
-        link.href = url;
-        link.textContent = runId ? runId : url;
-        link.target = '_blank';
-        link.rel = 'noopener';
-        analysisLink.appendChild(link);
-      }
+    <section id="eventsSection" class="panel panel--expando">
+      <details id="secErrors" open>
+        <summary><strong>Recent errors</strong></summary>
+        <div id="errorsPanel" class="expando-body text-sm">
+          <div id="errorsList" class="muted">Loading…</div>
+        </div>
+      </details>
+      <details id="secProblems" open>
+        <summary><strong>Problems (expectations)</strong></summary>
+        <div id="problemsPanel" class="expando-body text-sm">
+          <div id="problemsList" class="muted">None</div>
+        </div>
+      </details>
+      <details id="secMilestones" open>
+        <summary><strong>Milestones</strong></summary>
+        <div id="milestonesList" class="timeline-list muted">No milestones yet.</div>
+      </details>
+      <details id="secPlanner" open>
+        <summary><strong>Planner timeline</strong></summary>
+        <div id="plannerStagesList" class="timeline-list muted">Planner telemetry appears when intelligent crawls run.</div>
+      </details>
+      <details id="secDomains" open>
+        <summary><strong>Recent Domains</strong></summary>
+        <div id="domains" class="meta text-sm">Loading…</div>
+      </details>
+      <details id="secLogs" open>
+        <summary><strong>Logs</strong></summary>
+        <div class="logs-body">
+          <div id="logsToolbar" class="logs-toolbar">
+            <span>font:</span>
+            <button id="logsFontMinus" type="button" class="button button--ghost button--xs" title="Smaller">A-</button>
+            <button id="logsFontPlus" type="button" class="button button--ghost button--xs" title="Larger">A+</button>
+            <span id="logsFontVal" class="muted"></span>
+          </div>
+          <pre id="logs"></pre>
+          <div id="logsResizer" class="resizer-h" title="Drag to resize logs"></div>
+        </div>
+      </details>
+    </section>
 
-      (function initAnalysisLink(){
-        if (!analysisLink) return;
-        try {
-          const savedUrl = localStorage.getItem('analysisLastDetailUrl');
-          const savedId = localStorage.getItem('analysisLastRunId');
-          const savedAt = localStorage.getItem('analysisLastRunAt');
-          if (savedUrl) renderAnalysisLink(savedUrl, savedId);
-          if (savedAt && analysisStatus) {
-            const dt = new Date(parseInt(savedAt, 10));
-            if (!isNaN(dt.getTime())) analysisStatus.textContent = `Last run started ${dt.toLocaleString()}`;
-            else analysisStatus.textContent = 'No analysis runs yet.';
-          } else if (analysisStatus) {
-            analysisStatus.textContent = 'No analysis runs yet.';
-          }
-        } catch (_) {
-          /* ignore */
-        }
-      })();
-      function attachHandlers(es) {
-        es.addEventListener('log', (e) => {
-          markSseLive();
-          try {
-            const j = JSON.parse(e.data);
-            const line = String(j.line||'');
-            // Only structured 'error' events should render in red; regular logs remain default color
-            logEntries.push({ text: line, isErr: false });
-            scheduleFlush();
-          } catch (_) {}
-        });
-        es.addEventListener('error', (e) => {
-          markSseLive();
-          try {
-            const obj = JSON.parse(e.data);
-            const msg = obj.message || (obj.code ? `HTTP ${obj.code}` : 'Error');
-            const url = obj.url || '';
-            logEntries.push({ text: `[ERROR] ${msg} ${url}\n`, isErr: true });
-            scheduleFlush();
-          } catch (_) {}
-        });
-        es.addEventListener('jobs', (e) => {
-          markSseLive();
-          try {
-            const j = JSON.parse(e.data);
-            renderJobs(j);
-          } catch (_) {}
-        });
-        es.addEventListener('problem', (e) => {
-          markSseLive();
-          try {
-            const p = JSON.parse(e.data);
-            const list = document.getElementById('problemsList');
-            if (!list) return;
-            const ts = new Date().toLocaleTimeString();
-            const kind = p.kind || 'problem';
-            const scope = p.scope ? ` [${p.scope}]` : '';
-            const tgt = p.target ? ` — ${p.target}` : '';
-            const msg = p.message || '';
-            const det = p.details ? ` · details: ${((typeof p.details === 'string') ? p.details : JSON.stringify(p.details)).slice(0, 200)}` : '';
-            const line = `<div><span class="muted">${ts}</span> <strong>${kind}</strong>${scope}${tgt} — ${msg}${det}</div>`;
-            if (list.classList.contains('muted')) list.classList.remove('muted');
-            if (list.textContent === 'None') list.textContent = '';
-            // Prepend newest on top
-            try {
-              const div = document.createElement('div');
-              div.innerHTML = line;
-              if (list.firstChild) list.insertBefore(div.firstChild, list.firstChild);
-              else list.appendChild(div.firstChild);
-              // Cap to 200 entries to avoid runaway
-              let count = 0; const max = 200;
-              const els = Array.from(list.children);
-              for (const el of els) { count++; if (count > max) el.remove(); }
-            } catch(_) { list.innerHTML = line + (list.innerHTML||''); }
-          } catch(_) {}
-        });
-  // Throttle progress UI to ~5 FPS
-  let lastProgressAt = 0;
-  es.addEventListener('progress', (e) => {
-    markSseLive();
-    const now = Date.now();
-    if (now - lastProgressAt < 200) return;
-    lastProgressAt = now;
-    try {
-      const p = JSON.parse(e.data);
-            // Also mirror a compact progress line into the Logs panel occasionally so users see activity
-            try {
-              const lpAt = window.__lastProgressLogAt || 0;
-              if (now - lpAt > 2000) { // ≤ once every 2s
-                const line = `[PROGRESS] visited=${p.visited||0} downloaded=${p.downloaded||0} found=${p.found||0} saved=${p.saved||0} queue=${p.queueSize||0}\n`;
-                logEntries.push({ text: line, isErr: false });
-                scheduleFlush();
-                window.__lastProgressLogAt = now;
-              }
-            } catch(_) {}
-          if (p.stage) setStage(p.stage);
-          if (Object.prototype.hasOwnProperty.call(p, 'paused')) {
-            setPausedBadge(!!p.paused);
-          }
-          if (p.crawlType && (!window.__currentCrawlType || window.__currentCrawlType !== p.crawlType)) {
-            setCrawlType(p.crawlType);
-          }
-          if (!window.__currentCrawlType && p.plannerActive) {
-            setCrawlType('intelligent');
-          }
-          if (metricVisited) metricVisited.textContent = formatNumber(p.visited || 0);
-          if (metricDownloaded) metricDownloaded.textContent = formatNumber(p.downloaded || 0);
-          if (metricSaved) metricSaved.textContent = formatNumber(p.saved || 0);
-          if (metricFound) metricFound.textContent = formatNumber(p.found || 0);
-          if (metricQueue) metricQueue.textContent = formatNumber(p.queueSize || 0);
-          if (metricErrors) metricErrors.textContent = formatNumber(p.errors || 0);
-          const stageLabel = p.stage ? `${p.stage} · ` : '';
-          progress.textContent = `${stageLabel}visited: ${p.visited||0}, downloaded: ${p.downloaded||0}, found: ${p.found||0}, saved: ${p.saved||0}`;
-          // toggle pause/resume buttons
-          if (typeof p.paused === 'boolean') {
-            pauseBtn.disabled = !!p.paused;
-            resumeBtn.disabled = !p.paused;
-          }
-          // Show current in-flight downloads
-          const count = p.currentDownloadsCount || (Array.isArray(p.currentDownloads) ? p.currentDownloads.length : 0) || 0;
-          inflightDiv.firstChild.nodeValue = `current downloads: ${count}`;
-          if (Array.isArray(p.currentDownloads)) {
-            const groups = new Map();
-            for (const d of p.currentDownloads) {
-              let host = '';
-              try { host = new URL(d.url).hostname.toLowerCase(); } catch (_) { host = ''; }
-              if (!groups.has(host)) groups.set(host, []);
-              groups.get(host).push(d);
-            }
-            const lines = [];
-            // Per-host limiter info from progress
-            const lim = (p && p.perHostLimits) ? p.perHostLimits : {};
-            for (const [host, arr] of groups.entries()) {
-              const items = arr.slice(0, 3).map(d => {
-                const age = typeof d.ageMs === 'number' ? ` ${(Math.round(d.ageMs/100)/10).toFixed(1)}s` : '';
-                const u = String(d.url||'').replace(/^https?:\/\//,'');
-                return `<a href="/url?url=${encodeURIComponent(d.url)}">${u}</a><span style="color:#666;">${age}</span>`;
-              }).join(' · ');
-              // Build rate-limited badge if applicable
-              let badge = '';
-              try {
-                const info = lim[host];
-                if (info && info.rateLimited) {
-                  const tip = [`limit: ${info.limit ?? 'n/a'}/min`, info.intervalMs!=null?`interval: ~${info.intervalMs}ms`:null, info.backoffMs!=null?`backoff: ~${Math.ceil(info.backoffMs/1000)}s`:null].filter(Boolean).join(' \n');
-                  badge = ` <span class="bad" title="${tip}">RATE LIMITED</span>`;
-                }
-              } catch(_) {}
-              lines.push(`<li><strong>${host||'(unknown)'}</strong>${badge} — ${arr.length} ${items ? '· ' + items : ''}</li>`);
-            }
-            inflightList.innerHTML = lines.join('');
-          }
-          // simple rate calc client-side
-          window.__lastProgress = window.__lastProgress || { t: now, visited: 0, downloaded: 0, errors: 0 };
-          const lp = window.__lastProgress;
-          const dt = Math.max(0.001, (now - lp.t) / 1000);
-          const dv = (p.visited||0) - (lp.visited||0);
-          const dd = (p.downloaded||0) - (lp.downloaded||0);
-          const de = (p.errors||0) - (lp.errors||0);
-          mReqpsLabel.textContent = `req/s: ${(dv/dt).toFixed(2)}`;
-          // dl/s shown below as a ≤15s average to avoid flicker
-          mErrpm.textContent = `err/min: ${((de*(60/dt))||0).toFixed(2)}`;
-          mQsize.firstChild.nodeValue = `queue: ${p.queueSize||0}`;
-          // update queue sparkline from progress
-          window.__q_series = window.__q_series || [];
-          const qSeries = window.__q_series;
-          qSeries.push(Math.max(0, p.queueSize||0));
-          if (qSeries.length > 70) qSeries.shift();
-          (function drawQ(){
-            const svgW = 200, svgH = 36;
-            const min = 0;
-            const max = Math.max(1, Math.max(...qSeries));
-            const n = qSeries.length;
-            const stepX = n > 1 ? (svgW - 2) / (n - 1) : 0;
-            const pts = qSeries.map((v, i) => {
-              const x = 1 + i * stepX;
-              const y = svgH - 1 - ((v - min) / (max - min)) * (svgH - 2);
-              return `${x.toFixed(1)},${y.toFixed(1)}`;
-            }).join(' ');
-            qPoly.setAttribute('points', pts);
-            const last = qSeries[qSeries.length-1] ?? 0;
-            qTitle.textContent = `queue latest=${last} samples=${qSeries.length}`;
-            qPoly.classList.toggle('spark-bad', last > 2000);
-            qPoly.classList.toggle('spark-warn', last > 500 && last <= 2000);
-            qPoly.classList.toggle('spark-ok', last <= 500);
-          })();
-          mErrs.textContent = `errors: ${p.errors||0}`;
-          // robots/sitemap badges
-          if (typeof p.robotsLoaded === 'boolean') {
-            badgeRobots.textContent = 'robots: ' + (p.robotsLoaded ? 'ok' : 'none');
-          }
-          if (typeof p.sitemapCount === 'number' || typeof p.sitemapEnqueued === 'number') {
-            const c = p.sitemapCount || 0;
-            const enq = p.sitemapEnqueued || 0;
-            badgeSitemap.textContent = `sitemap: ${enq} / ${c}`;
-          }
-          // Domain RPM, limit, and backoff
-          if (p && (p.domainRpm != null || p.domainLimit != null || p.domainBackoffMs != null || p.domainRateLimited != null)) {
-            if (p.domainRpm != null) {
-              mDomRpm.style.display = '';
-              mDomRpm.textContent = `domain rpm: ${p.domainRpm}`;
-            }
-            if (p.domainLimit != null) {
-              mDomLim.style.display = '';
-              const iv = (p.domainIntervalMs!=null)? ` (~${p.domainIntervalMs}ms)` : '';
-              mDomLim.textContent = `limit: ${p.domainLimit}/min${iv}`;
-              mDomLim.title = `limit per minute: ${p.domainLimit}${iv?`\ninterval: ~${p.domainIntervalMs}ms`:''}`;
-            }
-            if (p.domainBackoffMs != null) {
-              mDomBk.style.display = '';
-              const secs = Math.ceil((p.domainBackoffMs||0)/1000);
-              mDomBk.textContent = secs > 0 ? `backoff: ${secs}s` : 'backoff: -';
-              mDomBk.title = secs > 0 ? `backoff remaining: ~${secs}s` : '';
-            }
-            if (p.domainRateLimited != null) {
-              const on = !!p.domainRateLimited;
-              mDomRl.style.display = on ? '' : 'none';
-              if (on) mDomRl.title = 'Domain pacing/backoff active';
-            }
-          }
-          // Track rolling traffic for cache gauge and bandwidth
-          const prev = window.__lastProgress || { t: now, visited: 0, downloaded: 0, errors: 0, bytes: 0 };
-          const dt2 = Math.max(0.001, (now - prev.t) / 1000);
-          const dvTot = (p.visited||0) - (prev.visited||0);
-          const dNet = Math.max(0, (p.downloaded||0) - (prev.downloaded||0));
-          const dCache = Math.max(0, dvTot - dNet);
-          const dBytes = Math.max(0, (p.bytes||0) - (prev.bytes||0));
-          trafficSamples.push({ t: now, net: dNet, cache: dCache, bytes: dBytes });
-          const prune = (ms) => { const cut = now - ms; return trafficSamples.filter(s => s.t >= cut); };
-          trafficSamples = prune(5*60*1000);
-          const sumWindow = (ms) => {
-            const cut = now - ms; let n=0,c=0; for (const s of trafficSamples) { if (s.t >= cut) { n+=s.net; c+=s.cache; } }
-            const tot = n + c; return { ratio: tot>0 ? (c/tot) : 0 };
-          };
-          const r1 = sumWindow(60*1000).ratio; const r5 = sumWindow(5*60*1000).ratio;
-        es.addEventListener('milestone', (e) => {
-          markSseLive();
-          try {
-            const m = JSON.parse(e.data);
-            handleMilestone(m);
-          } catch (_) {}
-        });
-        es.addEventListener('planner-stage', (e) => {
-          markSseLive();
-          try {
-            const st = JSON.parse(e.data);
-            handlePlannerStage(st);
-          } catch (_) {}
-        });
-          cacheGauge.textContent = `cache: 1m ${(r1*100).toFixed(0)}% · 5m ${(r5*100).toFixed(0)}%`;
-          // Update dl/s and sparkline using a helper so we can also refresh on a timer
-          window.__lastProgress = { t: now, visited: p.visited||0, downloaded: p.downloaded||0, errors: p.errors||0, bytes: p.bytes||0 };
-          updateDlpsUi(now, p.queueSize||0);
-        } catch (_) {}
-      });
-
-      // Optional: poll /metrics and colorize gauges
-      async function refreshServerMetrics() {
-        try {
-          const r = await fetch('/metrics');
-          if (!r.ok) return;
-          const text = await r.text();
-          const map = {};
-          for (const line of text.split(/\n+/)) {
-            const m = line.match(/^(crawler_[a-z_]+)\s+([0-9.]+)/);
-            if (m) map[m[1]] = parseFloat(m[2]);
-          }
-          const reqps = map['crawler_requests_per_second'] ?? null;
-          const dlps = map['crawler_downloads_per_second'] ?? null;
-          const errpm = map['crawler_error_rate_per_min'] ?? null;
-          const qsize = map['crawler_queue_size'] ?? null;
-          const errs = map['crawler_errors_total'] ?? null;
-          if (reqps != null) mReqpsLabel.textContent = `req/s: ${reqps.toFixed(2)}`;
-          // Update sparkline with a rolling buffer of req/s
-          window.__reqps_series = window.__reqps_series || [];
-          if (reqps != null) {
-            const series = window.__reqps_series;
-            series.push(Math.max(0, reqps));
-            if (series.length > 70) series.shift(); // ~70 samples
-            // draw
-            const svgW = 200, svgH = 36;
-            const min = 0;
-            const max = Math.max(1, Math.max(...series));
-            const n = series.length;
-            const stepX = n > 1 ? (svgW - 2) / (n - 1) : 0;
-            const pts = series.map((v, i) => {
-              const x = 1 + i * stepX;
-              const y = svgH - 1 - ((v - min) / (max - min)) * (svgH - 2);
-              return `${x.toFixed(1)},${y.toFixed(1)}`;
-            }).join(' ');
-            document.getElementById('reqps_poly').setAttribute('points', pts);
-            const last = series[series.length-1] ?? 0;
-            document.getElementById('reqps_title').textContent = `req/s latest=${last.toFixed(2)} samples=${series.length}`;
-            const rp = document.getElementById('reqps_poly');
-            rp.classList.toggle('spark-bad', last < 0.1);
-            rp.classList.toggle('spark-warn', last >= 0.1 && last < 0.5);
-            rp.classList.toggle('spark-ok', last >= 0.5);
-          }
-          // Do not override smoothed dl/s label here; the progress handler maintains both label and sparkline
-          if (errpm != null) mErrpm.textContent = `err/min: ${errpm.toFixed(2)}`;
-          if (qsize != null) mQsize.firstChild.nodeValue = `queue: ${qsize}`;
-          if (errs != null) mErrs.textContent = `errors: ${errs}`;
-          // color rules
-          mErrpm.classList.toggle('warn', (errpm ?? 0) > 1 && (errpm ?? 0) <= 5);
-          mErrpm.classList.toggle('bad', (errpm ?? 0) > 5);
-          mQsize.classList.toggle('warn', (qsize ?? 0) > 500 && (qsize ?? 0) <= 2000);
-          mQsize.classList.toggle('bad', (qsize ?? 0) > 2000);
-        } catch (_) {}
-      }
-      setInterval(refreshServerMetrics, 2000);
-
-      // Recompute dl/s and ETA periodically so it decays during idle periods
-      function updateDlpsUi(nowTs, qsize) {
-        try {
-          const now = nowTs || Date.now();
-          const sumWindowNet = (ms) => { const cut = now - ms; let n=0; for (const s of trafficSamples) { if (s.t >= cut) { n+=s.net; } } return n; };
-          const sumWindowBytes = (ms) => { const cut = now - ms; let b=0; for (const s of trafficSamples) { if (s.t >= cut) { b+= (s.bytes||0); } } return b; };
-          const firstSampleTime = trafficSamples.length ? trafficSamples[0].t : now;
-          const winSec = Math.max(0.001, Math.min(15, (now - firstSampleTime)/1000));
-          const dlps = sumWindowNet(winSec*1000) / winSec;
-          const mbs = (sumWindowBytes(winSec*1000) / winSec) / (1024*1024);
-          const q = Math.max(0, qsize || (window.__lastProgress ? (window.__lastProgress.queueSize || 0) : 0));
-          if (dlps > 0 && q > 0) {
-            const secs = Math.round(q / dlps);
-            const mins = Math.floor(secs/60), s = secs % 60;
-            etaEl.textContent = `ETA ~ ${mins}m ${s}s`;
-          } else {
-            etaEl.textContent = '';
-          }
-          mDlpsLabel.textContent = `dl/s (≤15s avg): ${dlps.toFixed(2)} · MB/s (≤15s avg): ${mbs.toFixed(2)}`;
-          // Keep sparkline moving by sampling current dlps
-          window.__dlps_series = window.__dlps_series || [];
-          const series = window.__dlps_series;
-          series.push(Math.max(0, dlps));
-          if (series.length > 70) series.shift();
-          const svgW = 200, svgH = 36;
-          const min = 0;
-          const max = Math.max(1, Math.max(...series));
-          const n = series.length;
-          const stepX = n > 1 ? (svgW - 2) / (n - 1) : 0;
-          const pts = series.map((v, i) => {
-            const x = 1 + i * stepX;
-            const y = svgH - 1 - ((v - min) / (max - min)) * (svgH - 2);
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-          }).join(' ');
-          document.getElementById('dlps_poly').setAttribute('points', pts);
-          const last = series[series.length-1] ?? 0;
-          document.getElementById('dlps_title').textContent = `dl/s (≤15s avg) latest=${last.toFixed(2)} samples=${series.length}`;
-          const dp = document.getElementById('dlps_poly');
-          dp.classList.toggle('spark-bad', last < 0.1);
-          dp.classList.toggle('spark-warn', last >= 0.1 && last < 0.5);
-          dp.classList.toggle('spark-ok', last >= 0.5);
-        } catch(_) {}
-      }
-      setInterval(() => updateDlpsUi(Date.now()), 1000);
-      // Load recent domains for navigation
-      (async function loadDomains(){
-        try {
-          const r = await fetch('/api/recent-domains?limit=20');
-          if (!r.ok) {
-            let reason = `HTTP ${r.status}`;
-            try { const j = await r.json(); if (j && j.error) reason = j.error; } catch(_) {}
-            domains.textContent = 'Failed to load (' + reason + ')';
-            return;
-          }
-          const j = await r.json();
-          if (!Array.isArray(j.domains) || j.domains.length === 0) { domains.textContent = 'No recent domains.'; return; }
-          domains.innerHTML = j.domains.map(d => {
-            const h = d.host;
-            const url = `/domain?host=${encodeURIComponent(h)}`;
-            return `<a href="${url}">${h}</a> <span class="muted">(${d.article_count} articles)</span>`;
-          }).join(' · ');
-        } catch (e) { domains.textContent = 'Failed to load (network)'; }
-      })();
-      // Load recent errors panel
-      (async function loadErrors(){
-        try {
-          const r = await fetch('/api/recent-errors');
-          if (!r.ok) return;
-          const j = await r.json();
-          const el = document.getElementById('errorsList');
-          if (!Array.isArray(j.errors) || j.errors.length === 0) { el.textContent = 'No recent errors.'; return; }
-          el.innerHTML = j.errors.map(e => {
-            const host = e.host || '(unknown)';
-            const link = `/urls?host=${encodeURIComponent(host)}&status=${encodeURIComponent(e.status)}&dir=desc&details=1`;
-            const items = (e.examples||[]).map(x => `<a href="/url?url=${encodeURIComponent(x.url)}">example</a>`).join(' · ');
-            return `<div><a href="${link}"><span class="muted">${e.status}</span> ${host}</a> — ${e.count} ${items ? '· ' + items : ''}</div>`;
-          }).join('');
-        } catch {}
-      })();
-        es.addEventListener('done', (e) => {
-          markSseLive();
-        try {
-          const key = `done:${e.data}`;
-          if (!window.__seenDone) window.__seenDone = new Set();
-          if (window.__seenDone.has(key)) return;
-          window.__seenDone.add(key);
-        } catch(_) {}
-        logs.textContent += `\nDONE: ${e.data}\n`;
-      });
-        es.addEventListener('cache', (e) => {
-          markSseLive();
-        try {
-          const c = JSON.parse(e.data);
-          cacheHits += 1;
-          const src = c.source || 'cache';
-          const age = typeof c.ageSeconds === 'number' ? `${c.ageSeconds}s` : 'unknown';
-          document.getElementById('cacheInfo').textContent = `cached hits: ${cacheHits} (last from ${src}, age ${age})`;
-          // Also surface cache activity in the Logs panel so users see immediate action
-          try {
-            const url = c.url || '';
-            const line = `CACHE hit (${src}, age ${age}) ${url}\n`;
-            // reuse log buffer batching
-            logEntries.push({ text: line, isErr: false });
-            scheduleFlush();
-          } catch (_) {}
-        } catch (_) {}
-      });
-      }
-
-      function openEventStream(withLogs) {
-        if (evt) try { evt.close(); } catch (_) {}
-        try { window.__sse_open = false; } catch(_) {}
-        evt = new EventSource(`/events?logs=${withLogs ? '1' : '0'}`);
-        try { window.evt = evt; } catch(_) {}
-        try {
-          evt.onopen = () => {
-            try { window.__sse_open = true; } catch(_) {}
-            markSseLive();
-          };
-          evt.onerror = () => {
-            try { window.__sse_open = false; } catch(_) {}
-            if (badgeConn) {
-              badgeConn.textContent = 'SSE: reconnecting…';
-              badgeConn.classList.remove('badge-ok');
-              badgeConn.classList.add('badge-warn');
-            }
-            if (reconnectTimer) clearTimeout(reconnectTimer);
-            const scheduledAt = Date.now();
-            reconnectTimer = setTimeout(() => {
-              if (lastSseEventAt > scheduledAt) {
-                reconnectTimer = null;
-                return;
-              }
-              if (badgeConn) {
-                badgeConn.textContent = 'SSE: offline';
-                badgeConn.classList.remove('badge-warn');
-                badgeConn.classList.add('badge-bad');
-              }
-              reconnectTimer = null;
-            }, 5000);
-          };
-        } catch(_) {}
-        attachHandlers(evt);
-      }
-
-  // Initialize logs toggle from localStorage (default ON if unset)
-  (function initLogsToggle(){
-    const pref = localStorage.getItem('showLogs');
-    const enabled = (pref == null) ? true : (pref === '1');
-    if (pref == null) localStorage.setItem('showLogs', '1');
-    document.getElementById('showLogs').checked = enabled;
-    if (!enabled) logs.textContent = 'Logs are disabled. Enable "Show logs" to stream stdout/stderr here.';
-    openEventStream(enabled);
-  })();
-      // Load crawl types and initialize the dropdown
-      (async function initCrawlTypes(){
-        const sel = document.getElementById('crawlType');
-        if (!sel) return;
-        const storedType = localStorage.getItem('ctrl_crawlType') || '';
-        const legacyMode = localStorage.getItem('ctrl_mode');
-        const saved = storedType || (legacyMode === 'intelligent' ? 'intelligent' : '');
-        try {
-          const r = await fetch('/api/crawl-types');
-          if (!r.ok) throw new Error('HTTP '+r.status);
-          const j = await r.json();
-          const items = Array.isArray(j.items) ? j.items : [];
-          sel.innerHTML = '';
-          for (const it of items) {
-            const opt = document.createElement('option');
-            opt.value = it.name;
-            opt.textContent = it.name;
-            opt.title = it.description || '';
-            sel.appendChild(opt);
-          }
-          const def = items.find(x => x.name === 'basic-with-sitemap') ? 'basic-with-sitemap' : (items[0]?.name || 'basic');
-          sel.value = saved && items.some(x => x.name === saved) ? saved : def;
-        } catch (e) {
-          sel.innerHTML = '<option value="basic-with-sitemap">basic-with-sitemap</option><option value="basic">basic</option><option value="sitemap-only">sitemap-only</option>';
-          if (saved && Array.from(sel.options).some(opt => opt.value === saved)) {
-            sel.value = saved;
-          }
-        }
-        // Apply sitemap checkboxes based on selected type
-        const applyByType = () => {
-          const v = sel.value;
-          const useEl = document.getElementById('useSitemap');
-          const soEl = document.getElementById('sitemapOnly');
-          if (!useEl || !soEl) return;
-          if (v === 'basic') {
-            useEl.checked = false; useEl.disabled = false; soEl.checked = false;
-          } else if (v === 'sitemap-only') {
-            useEl.checked = true; soEl.checked = true; useEl.disabled = true;
-          } else {
-            // basic-with-sitemap
-            useEl.checked = true; useEl.disabled = false; soEl.checked = false;
-          }
-        };
-        sel.addEventListener('change', () => {
-          localStorage.setItem('ctrl_crawlType', sel.value);
-          applyByType();
-        });
-        applyByType();
-      })();
-  // Persist key controls
-  (function persistControls(){
-  const ids = ['startUrl','depth','maxPages','refetchIfOlderThan','refetchArticleIfOlderThan','refetchHubIfOlderThan','concurrency','requestTimeoutMs','pacerJitterMinMs','pacerJitterMaxMs','slowMode','useSitemap','sitemapOnly'];
-  try { localStorage.removeItem('ctrl_mode'); } catch (_) {}
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (!el) continue;
-      const key = `ctrl_${id}`;
-      const val = localStorage.getItem(key);
-      if (val != null) {
-        if (el.type === 'checkbox') el.checked = val === '1';
-        else el.value = val;
-      }
-      el.addEventListener('change', () => {
-        localStorage.setItem(key, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
-        // Enforce sitemap-only implies useSitemap
-        if (id === 'sitemapOnly') {
-          const useEl = document.getElementById('useSitemap');
-          if (el.checked) {
-            useEl.checked = true;
-            useEl.disabled = true;
-            localStorage.setItem('ctrl_useSitemap', '1');
-          } else {
-            useEl.disabled = false;
-          }
-        }
-      });
-      el.addEventListener('input', () => {
-        if (el.type !== 'checkbox') localStorage.setItem(key, el.value);
-      });
-    }
-    // Apply initial disable state on load
-    try {
-      const so = document.getElementById('sitemapOnly');
-      const useEl = document.getElementById('useSitemap');
-      if (so && useEl && so.checked) { useEl.checked = true; useEl.disabled = true; }
-    } catch (_) {}
-  })();
-      if (analysisBtn) {
-        analysisBtn.onclick = async () => {
-          const prevLabel = analysisBtn.textContent;
-          analysisBtn.disabled = true;
-          analysisBtn.textContent = 'Starting…';
-          if (analysisLink) analysisLink.textContent = 'Starting analysis…';
-          if (analysisStatus) analysisStatus.textContent = 'Analysis run is starting…';
-          try {
-            const r = await fetch('/api/analysis/start', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({})
-            });
-            let payload = null;
-            try { payload = await r.json(); } catch (_) {}
-            if (!r.ok) {
-              const detail = payload && payload.error ? payload.error : `HTTP ${r.status}`;
-              if (analysisLink) analysisLink.textContent = `Failed: ${detail}`;
-              logs.textContent += `\nAnalysis start failed: ${detail}\n`;
-            } else {
-              const runId = payload && payload.runId ? String(payload.runId) : '';
-              const detailUrl = payload && payload.detailUrl ? String(payload.detailUrl) : (runId ? `/analysis/${runId}/ssr` : '');
-              renderAnalysisLink(detailUrl, runId);
-              try {
-                if (detailUrl) localStorage.setItem('analysisLastDetailUrl', detailUrl);
-                if (runId) localStorage.setItem('analysisLastRunId', runId);
-                localStorage.setItem('analysisLastRunAt', String(Date.now()));
-              } catch (_) {}
-              if (analysisStatus) {
-                const stamp = new Date();
-                analysisStatus.textContent = `Last run started ${stamp.toLocaleString()}`;
-              }
-              logs.textContent += `\nAnalysis started: ${runId || detailUrl}\n`;
-            }
-          } catch (err) {
-            const message = err && err.message ? err.message : String(err);
-            if (analysisLink) analysisLink.textContent = `Failed: ${message}`;
-            if (analysisStatus) analysisStatus.textContent = `Last attempt failed: ${message}`;
-            logs.textContent += `\nAnalysis start error: ${message}\n`;
-          } finally {
-            analysisBtn.disabled = false;
-            analysisBtn.textContent = prevLabel;
-          }
-        };
-      }
-      document.getElementById('startBtn').onclick = async () => {
-        const selectedType = document.getElementById('crawlType')?.value || '';
-        resetInsights();
-        if (selectedType) setCrawlType(selectedType);
-        else setCrawlType('');
-        const body = {
-          startUrl: document.getElementById('startUrl').value,
-          depth: parseInt(document.getElementById('depth').value, 10),
-          maxPages: document.getElementById('maxPages').value ? parseInt(document.getElementById('maxPages').value, 10) : undefined,
-          refetchIfOlderThan: document.getElementById('refetchIfOlderThan').value || undefined,
-          refetchArticleIfOlderThan: document.getElementById('refetchArticleIfOlderThan').value || undefined,
-          refetchHubIfOlderThan: document.getElementById('refetchHubIfOlderThan').value || undefined,
-          concurrency: parseInt(document.getElementById('concurrency').value, 10),
-          crawlType: selectedType || undefined,
-          slow: document.getElementById('slowMode').checked,
-          requestTimeoutMs: document.getElementById('requestTimeoutMs').value ? parseInt(document.getElementById('requestTimeoutMs').value, 10) : undefined,
-          pacerJitterMinMs: document.getElementById('pacerJitterMinMs').value ? parseInt(document.getElementById('pacerJitterMinMs').value, 10) : undefined,
-          pacerJitterMaxMs: document.getElementById('pacerJitterMaxMs').value ? parseInt(document.getElementById('pacerJitterMaxMs').value, 10) : undefined,
-  // Enforce: if sitemapOnly is checked, useSitemap must be true
-  useSitemap: (function(){ const u = document.getElementById('useSitemap'); const so = document.getElementById('sitemapOnly'); return so.checked ? true : u.checked; })(),
-  sitemapOnly: document.getElementById('sitemapOnly').checked,
-  // sitemapMaxUrls removed: we cap sitemap by maxPages server-side
-        };
-        const btn = document.getElementById('startBtn');
-        const prevLabel = btn.textContent;
-        btn.disabled = true; btn.textContent = 'Starting…';
-        try {
-          const r = await fetch('/api/crawl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-          let payload = null;
-          try { payload = await r.json(); } catch (_) { /* ignore */ }
-          if (!r.ok) {
-            const detail = payload?.error || `HTTP ${r.status}`;
-            if (r.status === 409) {
-              logs.textContent += `\nStart: already running (409)\n`;
-              try {
-                progress.textContent = 'running (already in progress)…';
-                // Briefly poll status to reflect activity
-                const until = Date.now() + 4000;
-                (async function poll(){
-                  try { const rs = await fetch('/api/status'); if (rs.ok) { const js = await rs.json(); if (js.running) progress.textContent = 'running…'; } } catch {}
-                  if (Date.now() < until) setTimeout(poll, 300);
-                })();
-              } catch(_) {}
-            } else {
-              logs.textContent += `\nStart failed: ${detail}\n`;
-            }
-          } else {
-            logs.textContent += `\nStarted: ${JSON.stringify(payload)}\n`;
-            // Immediate UI feedback in Progress area so users see action even if SSE connects late
-            try {
-              progress.textContent = 'starting… (visited: 0, downloaded: 0, found: 0, saved: 0)';
-              // Kick a short status poll to reflect running state without waiting for SSE
-              window.__startPollUntil = Date.now() + 4000; // 4s window
-              (async function pollOnce(){
-                try {
-                  const now = Date.now();
-                  if (now > (window.__startPollUntil||0)) return;
-                  const rs = await fetch('/api/status');
-                  if (rs.ok) {
-                    const js = await rs.json();
-                    if (js && js.running) {
-                      // Mark UI as running if no progress yet
-                      if ((window.__lastProgress?.visited||0) === 0) {
-                        progress.textContent = 'running… (visited: 0, downloaded: 0, found: 0, saved: 0)';
-                      }
-                    }
-                  }
-                } catch(_) {}
-                setTimeout(pollOnce, 250);
-              })();
-            } catch(_) {}
-          }
-        } catch (e) {
-          logs.textContent += `\nStart error: ${e?.message || e}\n`;
-        } finally {
-          btn.disabled = false; btn.textContent = prevLabel;
-        }
-      };
-      document.getElementById('stopBtn').onclick = async () => {
-        try {
-          const r = await fetch('/api/stop', { method: 'POST' });
-          let j = null; try { j = await r.json(); } catch (_) {}
-          if (!r.ok) logs.textContent += `\nStop failed: HTTP ${r.status}\n`;
-          else logs.textContent += `\nStop requested: ${JSON.stringify(j)}\n`;
-        } catch (e) {
-          logs.textContent += `\nStop error: ${e?.message || e}\n`;
-        }
-      };
-      pauseBtn.onclick = async () => {
-        try {
-          const r = await fetch('/api/pause', { method: 'POST' });
-          let j = null; try { j = await r.json(); } catch (_) {}
-          if (!r.ok) logs.textContent += `\nPause failed: HTTP ${r.status}\n`;
-          else {
-            logs.textContent += `\nPause requested: ${JSON.stringify(j)}\n`;
-            if (j && (j.paused === true || j.ok === true)) { pauseBtn.disabled = true; resumeBtn.disabled = false; }
-          }
-        } catch (e) { logs.textContent += `\nPause error: ${e?.message || e}\n`; }
-      };
-      resumeBtn.onclick = async () => {
-        try {
-          const r = await fetch('/api/resume', { method: 'POST' });
-          let j = null; try { j = await r.json(); } catch (_) {}
-          if (!r.ok) logs.textContent += `\nResume failed: HTTP ${r.status}\n`;
-          else {
-            logs.textContent += `\nResume requested: ${JSON.stringify(j)}\n`;
-            if (j && (j.paused === false || j.ok === true)) { pauseBtn.disabled = false; resumeBtn.disabled = true; }
-          }
-        } catch (e) { logs.textContent += `\nResume error: ${e?.message || e}\n`; }
-      };
-      document.getElementById('showLogs').onchange = (e) => {
-        const enabled = e.target.checked;
-        localStorage.setItem('showLogs', enabled ? '1' : '0');
-        if (!enabled) logs.textContent = 'Logs are disabled. Enable "Show logs" to stream stdout/stderr here.';
-        else logs.textContent = '';
-        openEventStream(enabled);
-      };
-
-      function renderJobs(jobs) {
-        try {
-          const el = document.getElementById('jobsList');
-          if (!el) return;
-          if (!jobs || !Array.isArray(jobs.items) || jobs.items.length === 0) {
-            el.textContent = 'None';
-            setStage('idle');
-            hidePausedBadge();
-            return;
-          }
-          const rows = jobs.items.map(it => {
-            const url = it.url || '(unknown)';
-            const v = it.visited ?? 0;
-            const d = it.downloaded ?? 0;
-            const e = it.errors ?? 0;
-            const q = it.queueSize ?? 0;
-            const act = it.lastActivityAt ? ` · active ${Math.round((Date.now() - it.lastActivityAt)/1000)}s ago` : '';
-            const pid = it.pid ? ` · pid ${it.pid}` : '';
-            const stage = it.stage || '';
-            const status = it.status || stage || 'running';
-            const stageHint = stage && stage !== status ? ` (${stage})` : '';
-            return `<div><strong>${status}${stageHint}</strong>${pid} — <a href="/url?url=${encodeURIComponent(url)}">${url}</a> — v:${v} d:${d} e:${e} q:${q}${act}</div>`;
-          }).join('');
-          el.innerHTML = rows;
-          if (jobs.items.length === 1) {
-            const job = jobs.items[0];
-            setStage(job.stage || job.status || 'running');
-            if (job.paused != null) setPausedBadge(!!job.paused);
-            else if (job.status === 'done') hidePausedBadge();
-            if (job.stage && /intelligent/i.test(job.stage)) setCrawlType('intelligent');
-          } else {
-            setStage('multi-run');
-            setPausedBadge(null);
-          }
-        } catch (_) {}
-      }
-
-      // One-time poll as a fallback in case SSE arrives late
-      (async function initialJobs(){
-        try {
-          const r = await fetch('/api/crawls');
-          if (!r.ok) return; const j = await r.json(); renderJobs(j);
-        } catch (_) {}
-      })();
-
-      // Persist open/closed state of collapsible panels
-      (function persistPanels(){
-        const pairs = [ ['secErrors', secErrors], ['secDomains', secDomains], ['secLogs', secLogs] ];
-        for (const [key, el] of pairs) {
-          const v = localStorage.getItem(key);
-          if (v === '0') el.open = false;
-          el.addEventListener('toggle', () => {
-            localStorage.setItem(key, el.open ? '1' : '0');
-          });
-        }
-      })();
-
-      // Theme toggle persisted
-      (function initTheme(){
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') document.documentElement.classList.add('dark');
-        themeBtn.addEventListener('click', () => {
-          document.documentElement.classList.toggle('dark');
-          const isDark = document.documentElement.classList.contains('dark');
-          localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
-      })();
-
-      // Health strip: sizes
-      (async function loadHealth(){
-        try {
-          const r = await fetch('/api/system-health');
-          if (r.ok) {
-            const j = await r.json();
-            const fmt = (b)=> b==null? 'n/a' : (b >= 1073741824 ? (b/1073741824).toFixed(2)+' GB' : (b/1048576).toFixed(1)+' MB');
-            badgeDb.textContent = 'db: ' + fmt(j.dbSizeBytes);
-            badgeDisk.textContent = 'disk: ' + fmt(j.freeDiskBytes);
-            if (j && j.cpu) {
-              const pct = (j.cpu.percent != null) ? j.cpu.percent : (j.cpu.percentOfOneCore != null ? j.cpu.percentOfOneCore : null);
-              if (pct != null) badgeCpu.textContent = 'cpu: ' + pct.toFixed(1) + '%';
-            }
-            if (j && j.memory) {
-              badgeMem.textContent = 'mem: ' + fmt(j.memory.rss);
-            }
-            if (j && (j.walAutocheckpoint != null || j.journalMode != null)) {
-              const jm = j.journalMode ? ('jm=' + j.journalMode) : '';
-              const wal = (typeof j.walAutocheckpoint === 'number') ? ('auto_cp=' + j.walAutocheckpoint) : '';
-              const both = [jm, wal].filter(Boolean).join(' ');
-              badgeWal.textContent = both ? ('sqlite: ' + both) : 'sqlite: n/a';
-            }
-          }
-        } catch (_) {}
-      })();
-    </script>
+    <section id="healthPanel" class="panel panel--compact">
+      <div class="panel-head">
+        <h3>Status</h3>
+      </div>
+      <div id="healthStrip" class="health-strip">
+        <span id="badgeRobots" class="muted">robots: …</span>
+        <span id="badgeSitemap" class="muted">sitemap: 0 / 0</span>
+        <span id="badgeDb" class="muted">db: …</span>
+        <span id="badgeDisk" class="muted">disk: …</span>
+        <span id="badgeConn" class="badge badge-warn">SSE: connecting…</span>
+      </div>
+      <div class="panel-footer-link">
+        <a href="/urls">View saved article URLs</a>
+      </div>
+    </section>
+    </main>
+    <script type="module" src="/assets/index.js"></script>
   </body>
   </html>

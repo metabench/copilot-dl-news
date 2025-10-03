@@ -23,6 +23,9 @@ class QueueDatabase {
         reason TEXT,
         queue_size INTEGER,
         alias TEXT,
+        queue_origin TEXT,
+        queue_role TEXT,
+        queue_depth_bucket TEXT,
         priority_score REAL,
         priority_source TEXT,
         bonus_applied REAL,
@@ -98,9 +101,11 @@ class QueueDatabase {
     this._insertEnhancedQueueEventStmt = this.db.prepare(`
       INSERT INTO queue_events_enhanced (
         job_id, ts, action, url, depth, host, reason, queue_size, alias,
+        queue_origin, queue_role, queue_depth_bucket,
         priority_score, priority_source, bonus_applied, cluster_id, gap_prediction_score
       ) VALUES (
         @jobId, @ts, @action, @url, @depth, @host, @reason, @queueSize, @alias,
+        @queueOrigin, @queueRole, @queueDepthBucket,
         @priorityScore, @prioritySource, @bonusApplied, @clusterId, @gapPredictionScore
       )
     `);
@@ -158,11 +163,15 @@ class QueueDatabase {
   // Enhanced queue event logging
   logEnhancedQueueEvent({
     jobId, ts, action, url, depth, host, reason, queueSize, alias,
+    queueOrigin, queueRole, queueDepthBucket,
     priorityScore, prioritySource, bonusApplied, clusterId, gapPredictionScore
   }) {
     try {
       return this._insertEnhancedQueueEventStmt.run({
         jobId, ts, action, url, depth, host, reason, queueSize, alias,
+        queueOrigin: queueOrigin || null,
+        queueRole: queueRole || null,
+        queueDepthBucket: queueDepthBucket || null,
         priorityScore: priorityScore || null,
         prioritySource: prioritySource || null,
         bonusApplied: bonusApplied || null,

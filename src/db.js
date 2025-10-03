@@ -32,7 +32,7 @@ class NewsDatabase {
   this._setSettingStmt = this.db.prepare(`INSERT INTO crawler_settings(key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`);
   this._insertCrawlJobStmt = this.db.prepare(`INSERT OR REPLACE INTO crawl_jobs(id, url, args, pid, started_at, status) VALUES (@id, @url, @args, @pid, @startedAt, @status)`);
   this._updateCrawlJobStmt = this.db.prepare(`UPDATE crawl_jobs SET ended_at = @endedAt, status = @status WHERE id = @id`);
-  this._insertQueueEventStmt = this.db.prepare(`INSERT INTO queue_events(job_id, ts, action, url, depth, host, reason, queue_size, alias) VALUES (@jobId, @ts, @action, @url, @depth, @host, @reason, @queueSize, @alias)`);
+  this._insertQueueEventStmt = this.db.prepare(`INSERT INTO queue_events(job_id, ts, action, url, depth, host, reason, queue_size, alias, queue_origin, queue_role, queue_depth_bucket) VALUES (@jobId, @ts, @action, @url, @depth, @host, @reason, @queueSize, @alias, @queueOrigin, @queueRole, @queueDepthBucket)`);
   this._insertProblemStmt = this.db.prepare(`INSERT INTO crawl_problems(job_id, ts, kind, scope, target, message, details) VALUES (@jobId, @ts, @kind, @scope, @target, @message, @details)`);
   this._insertMilestoneStmt = this.db.prepare(`INSERT INTO crawl_milestones(job_id, ts, kind, scope, target, message, details) VALUES (@jobId, @ts, @kind, @scope, @target, @message, @details)`);
   this._insertPlannerStageStmt = this.db.prepare(`INSERT INTO planner_stage_events(job_id, ts, stage, status, sequence, duration_ms, details) VALUES (@jobId, @ts, @stage, @status, @sequence, @durationMs, @details)`);
@@ -331,6 +331,9 @@ class NewsDatabase {
         reason TEXT,
         queue_size INTEGER,
         alias TEXT,
+        queue_origin TEXT,
+        queue_role TEXT,
+        queue_depth_bucket TEXT,
         FOREIGN KEY(job_id) REFERENCES crawl_jobs(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_queue_events_job_ts ON queue_events(job_id, ts DESC);
@@ -344,6 +347,15 @@ class NewsDatabase {
       const queueCols = this.db.prepare('PRAGMA table_info(queue_events)').all().map((r) => r.name);
       if (!queueCols.includes('alias')) {
         this.db.exec('ALTER TABLE queue_events ADD COLUMN alias TEXT');
+      }
+      if (!queueCols.includes('queue_origin')) {
+        this.db.exec('ALTER TABLE queue_events ADD COLUMN queue_origin TEXT');
+      }
+      if (!queueCols.includes('queue_role')) {
+        this.db.exec('ALTER TABLE queue_events ADD COLUMN queue_role TEXT');
+      }
+      if (!queueCols.includes('queue_depth_bucket')) {
+        this.db.exec('ALTER TABLE queue_events ADD COLUMN queue_depth_bucket TEXT');
       }
     } catch (_) {}
 
@@ -1249,7 +1261,10 @@ class NewsDatabase {
       host: event.host || null,
       reason: event.reason || null,
       queueSize: Number.isFinite(event.queueSize) ? event.queueSize : null,
-      alias: event.alias || null
+      alias: event.alias || null,
+      queueOrigin: event.queueOrigin || null,
+      queueRole: event.queueRole || null,
+      queueDepthBucket: event.queueDepthBucket || null
     };
     try {
       this._insertQueueEventStmt.run(payload);

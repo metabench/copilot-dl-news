@@ -60,6 +60,12 @@ function createProgressBroadcaster({ broadcast, getPaused, setPaused, legacyMetr
       try { if (jobMetrics) jobMetrics._lastPayload = { ...obj }; } catch (_) {}
       let payload = obj;
       const stage = obj.stage || (jobMetrics && jobMetrics.stage) || null;
+      if (Object.prototype.hasOwnProperty.call(obj, 'statusText')) {
+        try { M.statusText = obj.statusText; } catch (_) {}
+      }
+      if (Object.prototype.hasOwnProperty.call(obj, 'startup')) {
+        try { M.startup = obj.startup; } catch (_) {}
+      }
       if (!Object.prototype.hasOwnProperty.call(obj, 'jobId') || stage) {
         payload = { ...obj };
         if (!Object.prototype.hasOwnProperty.call(payload, 'jobId')) payload.jobId = jobIdForTag || (obj.jobId || null);

@@ -68,6 +68,18 @@ If you touch a route or crawler pathway that is still inline, schedule an extrac
 - When removing or reshaping blocks in `server.js` or `crawl.js`, confirm the file still parses (matching braces, exports, and returns) and run a quick syntax/test check. If a syntax error surfaces, inspect the diff or reported location to understand and fix it before reaching for `git checkout` or other revert commands.
 - Favor small, surgical edits when extracting handlers: anchor patches around precise line ranges, maintain a written checklist of remaining inline surfaces, and step through each removal cautiously to avoid reintroducing regressions.
 - Keep commits reviewable: aim for one extraction per commit whenever possible.
+- For UI state management, pattern discovery logic, or supporting utilities, feel free to reference the `jsgui3-html` and `jsgui3-server` repositories. Copying code from those projects—and modifying it to suit this codebase—is explicitly allowed when it accelerates progress or aligns implementations.
+
+## UI Review Pipeline — Responsive Screenshots
+
+Agents must keep crawler UI enhancements grounded in real rendering evidence. Before proposing layout or presentation changes:
+
+1. **Generate screenshots across key breakpoints.** Run `npm run ui:capture-screens` from the repo root. The tool will spin up the Express UI in fast-start mode (or reuse an existing server when `--url` is provided) and capture the crawler dashboard for eleven devices ranging from compact phones (portrait and landscape) through tablets to ultrawide desktops (both orientations). Override the output location or target path with flags such as `--output=custom/dir`, `--label=my-review`, or `--path=/urls` when needed.
+2. **Review the saved artefacts.** Outputs live under `screenshots/crawler/<timestamp>/` with a `metadata.json` manifest describing each viewport. Open every PNG in that set—especially the smallest and largest form factors—and note crowding, truncation, or wasted space. Cross-reference existing instructions in this document and open issues to prioritise the biggest usability wins.
+3. **Capture insights and follow-ups.** Record concrete improvement ideas (for example spacing adjustments, font scaling, control regrouping, or dark-mode gaps) in the relevant design or implementation notes before editing code. Tie each suggestion to the screenshot filename(s) that revealed the issue so reviewers can reproduce the observation.
+4. **Iterate and repeat.** After landing UI changes, rerun the screenshot tool to confirm the fixes hold across the responsive matrix. Include before/after comparisons in PR discussions when the visuals materially change.
+
+Agents skipping these steps should expect review pushback—responsive evidence is now part of the definition of done for crawler UI polish.
 
 ## Maintaining This Document
 

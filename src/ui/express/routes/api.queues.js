@@ -1,7 +1,8 @@
 const express = require('express');
+const { resolveStaleQueueJobs } = require('../services/queueJanitor');
 
 // Queues APIs (read-only; best-effort when DB available)
-function createQueuesApiRouter({ getDbRW }) {
+function createQueuesApiRouter({ getDbRW, jobRegistry = null, logger = null }) {
   if (typeof getDbRW !== 'function') throw new Error('createQueuesApiRouter: getDbRW function is required');
   const router = express.Router();
 
@@ -9,11 +10,21 @@ function createQueuesApiRouter({ getDbRW }) {
     try {
       const db = getDbRW();
       if (!db) return res.json({ total: 0, items: [] });
+      try {
+        resolveStaleQueueJobs({ db, jobRegistry, logger });
+      } catch (_) {}
       const limit = Math.max(1, Math.min(200, parseInt(req.query.limit || '50', 10)));
       const rows = db.prepare(`
         SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
-               (SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id) AS events,
-               (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id) AS lastEventAt
+               COALESCE(
+                 NULLIF((SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id), 0),
+                 (SELECT COUNT(*) FROM queue_events_enhanced ee WHERE ee.job_id = j.id),
+                 0
+               ) AS events,
+               COALESCE(
+                 (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id),
+                 (SELECT MAX(ts) FROM queue_events_enhanced ee WHERE ee.job_id = j.id)
+               ) AS lastEventAt
         FROM crawl_jobs j
         ORDER BY COALESCE(j.ended_at, j.started_at) DESC
         LIMIT ?
@@ -34,6 +45,9 @@ function createQueuesApiRouter({ getDbRW }) {
     try {
       const db = getDbRW();
       if (!db) return res.json({ job: null, items: [] });
+      try {
+        resolveStaleQueueJobs({ db, jobRegistry, logger });
+      } catch (_) {}
       const job = db.prepare(`SELECT id, url, pid, started_at AS startedAt, ended_at AS endedAt, status FROM crawl_jobs WHERE id = ?`).get(id);
       if (!job) return res.status(404).json({ error: 'not found' });
       const where = ['job_id = ?'];
@@ -43,13 +57,25 @@ function createQueuesApiRouter({ getDbRW }) {
       if (before != null) { where.push('id < ?'); params.push(before); }
       else if (after != null) { where.push('id > ?'); params.push(after); order = 'ASC'; }
       let items = db.prepare(`
-        SELECT id, ts, action, url, depth, host, reason, queue_size AS queueSize
+        SELECT id, ts, action, url, depth, host, reason, queue_size AS queueSize,
+               queue_origin AS queueOrigin, queue_role AS queueRole, queue_depth_bucket AS queueDepthBucket
         FROM queue_events
         WHERE ${where.join(' AND ')}
         ORDER BY id ${order}
         LIMIT ?
       `).all(...params, limit);
       if (order === 'ASC') items.reverse();
+      if (!items.length) {
+        items = db.prepare(`
+          SELECT id, ts, action, url, depth, host, reason, queue_size AS queueSize,
+                 queue_origin AS queueOrigin, queue_role AS queueRole, queue_depth_bucket AS queueDepthBucket
+          FROM queue_events_enhanced
+          WHERE ${where.join(' AND ')}
+          ORDER BY id ${order}
+          LIMIT ?
+        `).all(...params, limit);
+        if (order === 'ASC') items.reverse();
+      }
       const nextCursor = items.length ? items[items.length - 1].id : null; // for older pages (before=nextCursor)
       const prevCursor = items.length ? items[0].id : null; // for newer pages (after=prevCursor)
       res.json({ job, items, cursors: { nextBefore: nextCursor, prevAfter: prevCursor } });

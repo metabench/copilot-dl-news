@@ -187,6 +187,12 @@ function createApp(options = {}) {
   }
 
   const analysisRuns = options.analysisRuns && typeof options.analysisRuns.set === 'function' ? options.analysisRuns : new Map();
+  const analysisProgress = options.analysisProgress && typeof options.analysisProgress === 'object' ? options.analysisProgress : {};
+  analysisProgress.historyLimit = Number.isFinite(options.analysisProgress?.historyLimit) ? options.analysisProgress.historyLimit : (Number.isFinite(analysisProgress.historyLimit) ? analysisProgress.historyLimit : 20);
+  analysisProgress.history = Array.isArray(analysisProgress.history) ? analysisProgress.history : [];
+  analysisProgress.lastPayload = analysisProgress.lastPayload || null;
+  analysisProgress.lastRunId = analysisProgress.lastRunId || null;
+  analysisProgress.runs = analysisRuns;
   const allowMultiJobs = (options.allowMultiJobs === true) || isTruthyFlag(env.UI_ALLOW_MULTI_JOBS);
   const traceStart = options.traceStart === true || isTruthyFlag(env.UI_TRACE_START);
 
@@ -217,6 +223,7 @@ function createApp(options = {}) {
   app.locals._broadcaster = realtime.getBroadcaster();
   app.locals.realtime = realtime;
   app.locals.jobRegistry = jobRegistry;
+  app.locals.analysisProgress = analysisProgress;
 
   function startTrace(req, tag = 'gazetteer') {
     if (!verbose) {
@@ -277,6 +284,8 @@ function createApp(options = {}) {
     lastModified: true
   }));
 
+  app.use('/api/config', createConfigApiRouter(configManager));
+
   const generateAnalysisRunId = (explicit) => {
     if (explicit) {
       const trimmed = String(explicit).trim();
@@ -290,6 +299,7 @@ function createApp(options = {}) {
   app.use(createEventsRouter({
     realtime,
     jobRegistry,
+    analysisProgress,
     QUIET
   }));
   app.use(createCrawlStartRouter({
@@ -316,7 +326,9 @@ function createApp(options = {}) {
   }));
   // Mount queues API router
   app.use(createQueuesApiRouter({
-    getDbRW: getDbRW
+    getDbRW: getDbRW,
+    jobRegistry,
+    logger: queueDebug ? console : null
   }));
   // Mount misc API router (status, crawl-types, health, metrics)
   app.use(createMiscApiRouter({
@@ -340,7 +352,10 @@ function createApp(options = {}) {
     analysisRunner,
     analysisRuns,
     urlsDbPath,
-    generateRunId: generateAnalysisRunId
+    generateRunId: generateAnalysisRunId,
+    broadcast,
+    analysisProgress,
+    QUIET
   }));
   // Mount URLs APIs (list, details, fetch-body)
   app.use(createUrlsApiRouter({
@@ -382,7 +397,9 @@ function createApp(options = {}) {
   // Queues SSR pages (list, detail, latest redirect)
   app.use(createQueuesSsrRouter({
     getDbRW: getDbRW,
-    renderNav
+    renderNav,
+    jobRegistry,
+    logger: queueDebug ? console : null
   }));
   // Gazetteer SSR surface
   app.use(createGazetteerRouter({

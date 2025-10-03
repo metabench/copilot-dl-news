@@ -80,4 +80,36 @@ describe('GUI server API', () => {
     expect(args.some((a) => a.startsWith('--mode'))).toBe(false);
     await request(app).post('/api/stop');
   });
+
+  test('exposes advanced config for UI panels', async () => {
+    const config = {
+      features: {
+        realTimeCoverageAnalytics: true,
+        problemClustering: false
+      },
+      queue: {
+        bonuses: {
+          adaptiveSeed: { value: 12, description: 'Adaptive hub discovery' }
+        },
+        weights: {
+          article: { value: 0, description: 'Articles first' }
+        }
+      }
+    };
+    const fakeConfigManager = {
+      getConfig: () => config,
+      getFeatureFlags: () => config.features,
+      updateConfig: () => false
+    };
+    const app = createApp({ runner: makeFakeRunner([], 0, 5), configManager: fakeConfigManager });
+    const featuresRes = await request(app).get('/api/config/features');
+    expect(featuresRes.statusCode).toBe(200);
+    expect(featuresRes.body.success).toBe(true);
+    expect(featuresRes.body.features).toEqual(config.features);
+
+    const fullRes = await request(app).get('/api/config');
+    expect(fullRes.statusCode).toBe(200);
+    expect(fullRes.body.success).toBe(true);
+    expect(fullRes.body.config).toEqual(config);
+  });
 });

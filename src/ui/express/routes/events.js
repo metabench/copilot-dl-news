@@ -1,7 +1,7 @@
 const express = require('express');
 
 // Factory to create the SSE router. We pass dependencies to avoid changing global behavior.
-function createEventsRouter({ realtime, jobRegistry, QUIET }) {
+function createEventsRouter({ realtime, jobRegistry, QUIET, analysisProgress }) {
   if (!realtime) throw new Error('events router requires realtime broadcaster');
   if (!jobRegistry) throw new Error('events router requires jobRegistry');
   const sseClients = realtime.getSseClients();
@@ -62,10 +62,40 @@ function createEventsRouter({ realtime, jobRegistry, QUIET }) {
               errors: m.errors || 0,
               queueSize: m.queueSize || 0,
               paused: !!j.paused,
-              stage: j.stage || (j.child ? 'running' : 'done')
+              stage: j.stage || (j.child ? 'running' : 'done'),
+              statusText: m.statusText || null,
+              startup: m.startup || null
             };
             broadcast('progress', { ...snapshot, jobId: id }, id);
           }
+        }
+      }
+    } catch (_) {}
+
+    // Seed analysis progress snapshot(s)
+    try {
+      if (analysisProgress && typeof analysisProgress === 'object') {
+        let seeded = false;
+        if (Array.isArray(analysisProgress.history) && analysisProgress.history.length > 0) {
+          for (const entry of analysisProgress.history) {
+            if (!entry || typeof entry !== 'object') continue;
+            const payload = { ...entry };
+            if (!payload.runId && analysisProgress.lastRunId) payload.runId = analysisProgress.lastRunId;
+            broadcast('analysis-progress', payload);
+            seeded = true;
+          }
+        }
+        if (!seeded && analysisProgress.lastPayload && typeof analysisProgress.lastPayload === 'object') {
+          broadcast('analysis-progress', { ...analysisProgress.lastPayload });
+          seeded = true;
+        }
+        if (!seeded && analysisProgress.runs && typeof analysisProgress.runs.forEach === 'function') {
+          analysisProgress.runs.forEach((runEntry, runId) => {
+            if (!runEntry || typeof runEntry !== 'object') return;
+            const payload = runEntry.lastProgress;
+            if (!payload || typeof payload !== 'object') return;
+            broadcast('analysis-progress', { ...payload, runId: payload.runId || runId });
+          });
         }
       }
     } catch (_) {}

@@ -14,6 +14,27 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
     .map((action) => `<option value="${escapeHtml(action)}" ${filters.action === action ? 'selected' : ''}>${action || 'any'}</option>`)
     .join('');
 
+  const emptyStateCopy = (() => {
+    const status = String(job?.status || '').toLowerCase();
+    if (status === 'done') {
+      const ended = job?.endedAt ? ` on ${job.endedAt}` : '';
+      return {
+        title: 'Queue completed with no events',
+        body: `This queue finished${ended} without recording any events. Review crawler filters if this looks unexpected.`
+      };
+    }
+    if (status === 'failed') {
+      return {
+        title: 'Queue ended without activity',
+        body: 'The crawler exited before recording any queue events. Check crawl logs for error details.'
+      };
+    }
+    return {
+      title: 'Queue is idle',
+      body: "The crawler hasn't recorded any events for this queue yet. Completed queues disappear once archival finishes; refresh if you're expecting activity."
+    };
+  })();
+
   const itemsHtml = events.length
     ? events.map((ev) => `
         <tr>
@@ -27,7 +48,16 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
           <td class="fit tr">${ev.queueSize != null ? escapeHtml(ev.queueSize) : ''}</td>
         </tr>
       `).join('')
-    : '<tr><td colspan="8" class="meta">No events</td></tr>';
+    : `
+        <tr class="empty-state">
+          <td colspan="8">
+            <div class="empty-copy">
+              <strong>${escapeHtml(emptyStateCopy.title)}</strong>
+              <p>${escapeHtml(emptyStateCopy.body)}</p>
+            </div>
+          </td>
+        </tr>
+      `;
 
   const latestLink = pagination.latestHref ? `<a href="${pagination.latestHref}">Latest</a>` : '';
   const newerLink = pagination.newerHref ? `<a class="space" href="${pagination.newerHref}">← Newer</a>` : '';
@@ -66,6 +96,9 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
   .fit{width:1%;white-space:nowrap}
   .nowrap{white-space:nowrap}
   .tr{text-align:right}
+  .empty-state td{padding:28px 24px;text-align:center;background:#f8fafc;color:var(--muted)}
+  .empty-copy strong{display:block;margin-bottom:6px;font-size:16px;color:var(--fg)}
+  .empty-copy p{margin:0 auto;max-width:460px;line-height:1.4}
   form.inline{display:flex;gap:8px;align-items:center}
   label.small{font-size:12px;color:var(--muted)}
   input,select{padding:6px 8px}

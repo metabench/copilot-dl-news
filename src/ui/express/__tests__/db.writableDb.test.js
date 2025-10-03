@@ -6,11 +6,6 @@ describe('createWritableDbAccessor', () => {
     return {
       exec: jest.fn(),
       prepare: jest.fn((sql) => {
-        if (sql.includes('SELECT COUNT(*) AS c FROM crawl_types')) {
-          return {
-            get: jest.fn(() => ({ c: 0 }))
-          };
-        }
         if (sql.includes('INSERT INTO crawl_types')) {
           const run = jest.fn((name, description, declaration) => {
             insertRuns.push({ name, description, declaration: JSON.parse(declaration) });
@@ -46,8 +41,8 @@ describe('createWritableDbAccessor', () => {
     expect(dbA).toBe(mockDb);
     expect(dbB).toBe(mockDb);
     expect(ensureDb).toHaveBeenCalledTimes(1);
-    expect(mockDb.exec).toHaveBeenCalledTimes(2); // schema + index batches
-    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('SELECT COUNT(*) AS c FROM crawl_types'));
+  expect(mockDb.exec.mock.calls.length).toBeGreaterThanOrEqual(2); // schema + index batches (may include migrations)
+  expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO crawl_types'));
     expect(mockDb.insertRuns).toHaveLength(4);
     expect(mockDb.insertRuns.map((entry) => entry.name)).toEqual([
       'basic',

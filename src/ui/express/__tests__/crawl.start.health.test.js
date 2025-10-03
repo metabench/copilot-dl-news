@@ -65,10 +65,22 @@ describe('crawl start health', () => {
       expect(body.running).toBe(true);
       expect(body.stage).toBe('preparing');
 
-      // Emit first progress frame to transition to running
+      // Startup frames should keep stage as preparing until done
       expect(typeof emitProgress).toBe('function');
       expect(typeof emitExit).toBe('function');
-      emitProgress();
+      emitProgress({
+        startup: { summary: { done: false }, stages: [{ id: 'db-open', status: 'running' }] },
+        statusText: 'Opening database…'
+      });
+      await new Promise((r) => setTimeout(r, 10));
+
+      const prepHealth = await agent.get('/health');
+      expect(prepHealth.status).toBe(200);
+      expect(prepHealth.body.stage).toBe('preparing');
+
+      emitProgress({
+        startup: { summary: { done: true }, stages: [{ id: 'db-open', status: 'completed' }] }
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       const healthAfterProgress = await agent.get('/health');

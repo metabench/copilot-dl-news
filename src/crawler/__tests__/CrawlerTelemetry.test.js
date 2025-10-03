@@ -12,6 +12,19 @@ describe('CrawlerTelemetry', () => {
     expect(events.emitProgress).toHaveBeenLastCalledWith({ force: false });
   });
 
+  test('progress forwards additional options', () => {
+    const events = { emitProgress: jest.fn() };
+    const telemetry = new CrawlerTelemetry({ events });
+
+    telemetry.progress({ force: true, stage: 'preparing', patch: { statusText: 'opening db' } });
+
+    expect(events.emitProgress).toHaveBeenCalledWith({
+      force: true,
+      stage: 'preparing',
+      patch: { statusText: 'opening db' }
+    });
+  });
+
   test('queueEvent forwards a copy of the payload', () => {
     const events = { emitQueueEvent: jest.fn() };
     const telemetry = new CrawlerTelemetry({ events });

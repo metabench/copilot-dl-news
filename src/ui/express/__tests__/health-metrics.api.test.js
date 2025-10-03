@@ -62,6 +62,10 @@ describe('UI DB-backed endpoints', () => {
       saved_to_db: 1, saved_to_file: 0, file_path: null, file_size: null, classification: 'article', nav_links_count: 1,
       article_links_count: 1, word_count: 100
     });
+    db.insertError({ url, kind: 'http', code: 404, message: 'HTTP 404 not found' });
+    db.insertError({ url: 'https://site.example.com/news/beta', kind: 'http', code: 404, message: 'HTTP 404 not found' });
+    db.insertError({ url: 'https://site.example.com/news/gamma', kind: 'network', message: 'socket hang up' });
+    db.insertError({ url: 'https://other.example.com/home', kind: 'http', code: 500, message: 'HTTP 500 server error' });
     db.close();
   });
   afterAll(() => { try { fs.unlinkSync(tmp); } catch (_) {} });
@@ -76,11 +80,20 @@ describe('UI DB-backed endpoints', () => {
     expect(Array.isArray(res.body.fetches)).toBe(true);
   });
 
-  test('GET /api/recent-errors returns 200 even if none', async () => {
+  test('GET /api/recent-errors groups recent failures by host and status', async () => {
     const app = createApp({ dbPath: tmp });
     const res = await request(app).get('/api/recent-errors');
     expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('errors');
+    expect(Array.isArray(res.body.errors)).toBe(true);
+    expect(res.body.errors.length).toBeGreaterThan(0);
+    const notFoundGroup = res.body.errors.find((err) => err.host === 'site.example.com' && err.status === '404');
+    expect(notFoundGroup).toBeDefined();
+    expect(notFoundGroup.count).toBeGreaterThanOrEqual(2);
+    expect(Array.isArray(notFoundGroup.examples)).toBe(true);
+    expect(notFoundGroup.examples.length).toBeGreaterThan(0);
+    const networkGroup = res.body.errors.find((err) => err.status === 'network');
+    expect(networkGroup).toBeDefined();
+    expect(networkGroup.kind).toBe('network');
   });
 
   test('GET /api/domain-summary returns summary', async () => {

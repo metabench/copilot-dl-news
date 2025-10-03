@@ -34,6 +34,9 @@ build/
 # Data directory (crawled content)
 data/
 
+# UI review artefacts
+screenshots/
+
 *.db-shm
 *.db-wal
 *.db

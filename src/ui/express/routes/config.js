@@ -4,7 +4,6 @@
  */
 
 const express = require('express');
-const { ConfigManager } = require('../../../config/ConfigManager');
 
 function createConfigAPI(configManager) {
   const router = express.Router();
@@ -30,19 +29,20 @@ function createConfigAPI(configManager) {
   router.post('/', (req, res) => {
     try {
       const updates = req.body;
-      const success = configManager.updateConfig(updates);
-      
-      if (success) {
+      const result = configManager.updateConfig(updates) || {};
+
+      if (result.success) {
         res.json({
           success: true,
           message: 'Configuration updated successfully',
-          config: configManager.getConfig(),
+          config: result.config || configManager.getConfig(),
           timestamp: new Date().toISOString()
         });
       } else {
         res.status(400).json({
           success: false,
-          error: 'Configuration update failed'
+          error: 'Configuration update failed',
+          errors: Array.isArray(result.errors) ? result.errors : []
         });
       }
     } catch (error) {
@@ -53,23 +53,13 @@ function createConfigAPI(configManager) {
     }
   });
 
-  // Get specific configuration section
-  router.get('/:section', (req, res) => {
+  // Get feature flags
+  router.get('/features', (req, res) => {
     try {
-      const { section } = req.params;
-      const config = configManager.getConfig();
-      
-      if (!config[section]) {
-        return res.status(404).json({
-          success: false,
-          error: `Configuration section '${section}' not found`
-        });
-      }
-
+      const features = configManager.getFeatureFlags();
       res.json({
         success: true,
-        section,
-        data: config[section],
+        features,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -80,26 +70,24 @@ function createConfigAPI(configManager) {
     }
   });
 
-  // Update specific configuration section
-  router.put('/:section', (req, res) => {
+  // Update feature flags
+  router.put('/features', (req, res) => {
     try {
-      const { section } = req.params;
-      const updates = { [section]: req.body };
-      
-      const success = configManager.updateConfig(updates);
-      
-      if (success) {
+      const features = req.body;
+      const result = configManager.updateConfig({ features }) || {};
+
+      if (result.success) {
         res.json({
           success: true,
-          message: `Section '${section}' updated successfully`,
-          section,
-          data: configManager.getConfig()[section],
+          message: 'Feature flags updated successfully',
+          features: configManager.getFeatureFlags(),
           timestamp: new Date().toISOString()
         });
       } else {
         res.status(400).json({
           success: false,
-          error: `Failed to update section '${section}'`
+          error: 'Failed to update feature flags',
+          errors: Array.isArray(result.errors) ? result.errors : []
         });
       }
     } catch (error) {
@@ -140,9 +128,9 @@ function createConfigAPI(configManager) {
         }
       };
       
-      const success = configManager.updateConfig(updates);
+      const result = configManager.updateConfig(updates) || {};
       
-      if (success) {
+      if (result.success) {
         res.json({
           success: true,
           message: 'Priority bonuses updated successfully',
@@ -152,7 +140,8 @@ function createConfigAPI(configManager) {
       } else {
         res.status(400).json({
           success: false,
-          error: 'Failed to update priority bonuses'
+          error: 'Failed to update priority bonuses',
+          errors: Array.isArray(result.errors) ? result.errors : []
         });
       }
     } catch (error) {
@@ -163,13 +152,23 @@ function createConfigAPI(configManager) {
     }
   });
 
-  // Get feature flags
-  router.get('/features', (req, res) => {
+  // Get specific configuration section
+  router.get('/:section', (req, res) => {
     try {
-      const features = configManager.getFeatureFlags();
+      const { section } = req.params;
+      const config = configManager.getConfig();
+      
+      if (!Object.prototype.hasOwnProperty.call(config, section)) {
+        return res.status(404).json({
+          success: false,
+          error: `Configuration section '${section}' not found`
+        });
+      }
+
       res.json({
         success: true,
-        features,
+        section,
+        data: config[section],
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -180,25 +179,28 @@ function createConfigAPI(configManager) {
     }
   });
 
-  // Update feature flags
-  router.put('/features', (req, res) => {
+  // Update specific configuration section
+  router.put('/:section', (req, res) => {
     try {
-      const features = req.body;
-      const updates = { features };
+      const { section } = req.params;
+      const updates = { [section]: req.body };
       
-      const success = configManager.updateConfig(updates);
+      const result = configManager.updateConfig(updates) || {};
       
-      if (success) {
+      if (result.success) {
+        const latestConfig = result.config || configManager.getConfig();
         res.json({
           success: true,
-          message: 'Feature flags updated successfully',
-          features: configManager.getFeatureFlags(),
+          message: `Section '${section}' updated successfully`,
+          section,
+          data: latestConfig[section],
           timestamp: new Date().toISOString()
         });
       } else {
         res.status(400).json({
           success: false,
-          error: 'Failed to update feature flags'
+          error: `Failed to update section '${section}'`,
+          errors: Array.isArray(result.errors) ? result.errors : []
         });
       }
     } catch (error) {
