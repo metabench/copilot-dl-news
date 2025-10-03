@@ -113,6 +113,9 @@ const {
   RealtimeBroadcaster
 } = require('./services/realtimeBroadcaster');
 const {
+  createMetricsFormatter
+} = require('./services/metricsFormatter');
+const {
   createRequestTimingMiddleware
 } = require('./middleware/requestTiming');
 const {
@@ -218,6 +221,12 @@ function createApp(options = {}) {
   const crawlState = jobRegistry.getCrawlState();
   const progress = realtime.getProgress();
   const metrics = jobRegistry.metrics || realtime.getMetrics();
+  const metricsFormatter = createMetricsFormatter({
+    getMetrics: () => metrics,
+    getLegacy: () => ({
+      paused: jobRegistry.isPaused()
+    })
+  });
   const broadcast = (...args) => realtime.broadcast(...args);
   const broadcastJobs = (force = false) => realtime.broadcastJobs(force);
   const broadcastProgress = realtime.getBroadcastProgress();
@@ -342,6 +351,7 @@ function createApp(options = {}) {
     }),
     getMetrics: () => metrics,
     getDbRW: getDbRW,
+    metricsFormatter,
     QUIET
   }));
   app.use(createJobControlRouter({

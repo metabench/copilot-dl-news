@@ -1,5 +1,6 @@
 const { exec } = require('child_process');
 const { newJobIdFactory, computeJobsSummary } = require('./jobs');
+const { touchMetrics } = require('./metricsFormatter');
 
 class JobRegistry {
   constructor({
@@ -50,6 +51,9 @@ class JobRegistry {
 
   setPaused(paused) {
     this.crawlState.paused = !!paused;
+    if (this.metrics) {
+      touchMetrics(this.metrics, { paused: this.crawlState.paused });
+    }
   }
 
   checkStartAllowed(now = Date.now()) {
@@ -139,9 +143,7 @@ class JobRegistry {
       this.metrics._lastSampleTime = Date.now();
       this.metrics._lastVisited = 0;
       this.metrics._lastDownloaded = 0;
-      try {
-        this.metrics.stage = job.stage || 'preparing';
-      } catch (_) {}
+      touchMetrics(this.metrics, { stage: job.stage || 'preparing', paused: false, dirty: true });
     }
   }
 
@@ -158,9 +160,7 @@ class JobRegistry {
     }
     const first = this.getFirstJob();
     if (first && first.id === job.id && this.metrics) {
-      try {
-        this.metrics.stage = next;
-      } catch (_) {}
+      touchMetrics(this.metrics, { stage: next });
     }
   }
 
@@ -190,9 +190,7 @@ class JobRegistry {
       this.crawlState.paused = false;
       if (this.metrics && typeof this.metrics === 'object') {
         this.metrics.running = 0;
-        try {
-          this.metrics.stage = 'idle';
-        } catch (_) {}
+        touchMetrics(this.metrics, { stage: 'idle', paused: false, dirty: true });
       }
     }
   }

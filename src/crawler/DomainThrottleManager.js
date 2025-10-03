@@ -46,7 +46,8 @@ class DomainThrottleManager {
         err429Streak: 0,
         rpmLastMinute: 0,
         windowStartedAt: 0,
-        windowCount: 0
+        windowCount: 0,
+        lastHttpStatus: null
       };
       this.state.setDomainLimitState(host, state);
     }
@@ -107,6 +108,7 @@ class DomainThrottleManager {
     }
     const now = nowMs();
     state.isLimited = true;
+    state.lastHttpStatus = 429;
     state.last429At = now;
     state.successStreak = 0;
     state.err429Streak += 1;
@@ -149,6 +151,9 @@ class DomainThrottleManager {
         state.successStreak = 0;
       }
     }
+    if (!state.isLimited) {
+      state.lastHttpStatus = null;
+    }
     this._persist(host, state);
   }
 
@@ -187,7 +192,11 @@ class DomainThrottleManager {
     }
     const snapshot = limiter.getSnapshot(host);
     if (snapshot) {
+      const prevStatus = state.lastHttpStatus;
       Object.assign(state, snapshot);
+      if (state.lastHttpStatus == null && prevStatus != null) {
+        state.lastHttpStatus = prevStatus;
+      }
     }
     this._persist(host, state);
   }
@@ -213,6 +222,7 @@ class DomainThrottleManager {
         rpmLastMinute: state.rpmLastMinute || 0,
         windowStartedAt: state.windowStartedAt || 0,
         windowCount: state.windowCount || 0,
+        lastHttpStatus: state.lastHttpStatus != null ? state.lastHttpStatus : null,
         recordedAt: new Date().toISOString()
       };
       adapter.upsertDomain(host, JSON.stringify(payload));

@@ -1,4 +1,5 @@
 const http = require('http');
+const { collectSseUntil } = require('../../src/ui/express/__tests__/helpers/sse');
 
 function startServerWithEnv(env = {}) {
   return new Promise((resolve, reject) => {
@@ -32,24 +33,6 @@ function postJson({ hostname, port, path, body, timeoutMs = 5000 }) {
   });
 }
 
-function sseUntil({ hostname, port, path, matcher, timeoutMs = 1500 }) {
-  return new Promise((resolve, reject) => {
-    const req = http.get({ hostname, port, path }, (res) => {
-      res.setEncoding('utf8');
-      let buf = '';
-      const onData = (d) => {
-        buf += d;
-        try { if (matcher(buf)) { cleanup(); resolve({ status: res.statusCode, text: buf }); } } catch(_) {}
-      };
-      const cleanup = () => { try { res.off('data', onData); } catch(_) {} try { res.destroy(); } catch(_) {} clearTimeout(t); };
-      const t = setTimeout(() => { cleanup(); resolve({ status: res.statusCode, text: buf }); }, timeoutMs);
-      res.on('data', onData);
-      res.on('end', () => { cleanup(); resolve({ status: res.statusCode, text: buf }); });
-    });
-    req.on('error', reject);
-  });
-}
-
 describe('HTTP E2E: catch pending POST and early SSE activity', () => {
   test('POST /api/crawl returns within 800ms', async () => {
     const { cp, port } = await startServerWithEnv({ UI_FAKE_RUNNER: '1' });
@@ -66,8 +49,11 @@ describe('HTTP E2E: catch pending POST and early SSE activity', () => {
     const { cp, port } = await startServerWithEnv({ UI_FAKE_RUNNER: '1' });
     try {
       // Open SSE first to avoid missing seeded events
-      const seen = { start: false, progress: false };
-      const sseP = sseUntil({ hostname: '127.0.0.1', port, path: '/events?logs=1', matcher: (buf) => (/\[server\] starting crawler/.test(buf) || /event: progress/.test(buf)), timeoutMs: 1200 });
+      const sseP = collectSseUntil('127.0.0.1', port, '/events?logs=1', {
+        idleTimeoutMs: 300,
+        overallTimeoutMs: 4000,
+        predicate: (buf) => (/\[server\] starting crawler/.test(buf) || /event: progress/.test(buf))
+      });
       const res = await postJson({ hostname: '127.0.0.1', port, path: '/api/crawl', body: { startUrl: 'https://example.com', depth: 0, maxPages: 1, useSitemap: false, sitemapOnly: false }, timeoutMs: 3000 });
       expect(res.status).toBe(202);
       const sse = await sseP;

@@ -293,12 +293,15 @@ export function createMetricsView({ elements = {}, formatNumber }) {
       }
     }
 
-    if (domRl && progress.domainRateLimited != null) {
-      const on = !!progress.domainRateLimited;
-      updateBadgeVisibility(domRl, on);
-      if (on) {
-        domRl.title = 'Domain pacing/backoff active';
+    if (domRl) {
+      const slowModeActive = progress.slowMode != null ? !!progress.slowMode : !!progress.domainRateLimited;
+      updateBadgeVisibility(domRl, slowModeActive);
+      if (slowModeActive) {
+        const reason = progress.slowModeReason || (progress.domainRateLimited ? 'HTTP 429' : null);
+        domRl.textContent = reason ? `Slow mode (${reason})` : 'Slow mode';
+        domRl.title = reason ? `Rate limited: ${reason}` : 'Domain pacing/backoff active';
       } else {
+        domRl.textContent = 'Slow mode';
         domRl.title = '';
       }
     }

@@ -1000,7 +1000,19 @@ const logs = document.getElementById('logs');
                   window.__lastProgressLogAt = now;
                 }
               } catch (_) {}
-              if (payload.stage) setStage(payload.stage);
+              const baseStage = payload.stage || null;
+              let stageDisplay = baseStage;
+              if (payload.slowMode) {
+                const reason = payload.slowModeReason ? ` (${payload.slowModeReason})` : '';
+                stageDisplay = stageDisplay
+                  ? `${stageDisplay} [slow mode${reason}]`
+                  : `slow mode${reason}`;
+              }
+              if (stageDisplay) {
+                setStage(stageDisplay);
+              } else if (baseStage) {
+                setStage(baseStage);
+              }
               if (Object.prototype.hasOwnProperty.call(payload, 'paused')) {
                 setPausedBadge(!!payload.paused);
               }

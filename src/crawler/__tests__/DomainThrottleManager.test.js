@@ -46,8 +46,9 @@ describe('DomainThrottleManager', () => {
       expect(state.backoffUntil).toBeGreaterThan(mockNowValue);
       expect(upsertDomain).toHaveBeenCalledTimes(1);
       const payload = JSON.parse(upsertDomain.mock.calls[0][1]);
-      expect(payload.isLimited).toBe(true);
-      expect(payload.err429Streak).toBe(1);
+  expect(payload.isLimited).toBe(true);
+  expect(payload.err429Streak).toBe(1);
+  expect(payload.lastHttpStatus).toBe(429);
     });
 
     it('increments success streaks and persists on success', () => {
@@ -94,7 +95,8 @@ describe('DomainThrottleManager', () => {
         err429Streak: 0,
         rpmLastMinute: 0,
         windowStartedAt: 0,
-        windowCount: 0
+        windowCount: 0,
+        lastHttpStatus: null
       };
       limiter = {
         acquire: jest.fn(async () => {
@@ -105,6 +107,7 @@ describe('DomainThrottleManager', () => {
           limiterState.err429Streak += 1;
           limiterState.last429At = mockNowValue;
           limiterState.backoffUntil = mockNowValue + 2000;
+          limiterState.lastHttpStatus = 429;
         }),
         noteSuccess: jest.fn(() => {
           limiterState.successStreak += 1;

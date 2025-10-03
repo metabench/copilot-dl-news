@@ -6,7 +6,8 @@ function createMiscApiRouter(options = {}) {
   const {
     getLegacy,
     getMetrics,
-    getDbRW
+    getDbRW,
+    metricsFormatter = null
   } = options;
   const router = express.Router();
 
@@ -39,6 +40,19 @@ function createMiscApiRouter(options = {}) {
   });
 
   router.get('/metrics', (req, res) => {
+    if (metricsFormatter && typeof metricsFormatter.getSnapshot === 'function') {
+      const snapshot = metricsFormatter.getSnapshot();
+      res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      res.set('ETag', snapshot.etag);
+      res.set('Last-Modified', snapshot.lastModified);
+      if (req.fresh) {
+        return res.status(304).end();
+      }
+      const body = Buffer.isBuffer(snapshot.buffer) ? snapshot.buffer : snapshot.text;
+      return res.type('text/plain').send(body);
+    }
     const metrics = getMetrics();
     const legacy = getLegacy();
     const lines = [];

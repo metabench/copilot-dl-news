@@ -38,7 +38,9 @@ class RealtimeBroadcaster {
         bytesPerSec: 0,
         cacheHitRatio1m: 0,
         statusText: null,
-        startup: null
+        startup: null,
+        slowMode: false,
+        slowModeReason: null
       }
     });
     this.metrics = this.progress.metrics;

@@ -38,6 +38,14 @@ describe('health and metrics', () => {
     expect(res.status).toBe(200);
     expect(String(res.headers['content-type']||'')).toMatch(/text\/plain/);
     expect(res.text).toMatch(/crawler_running/);
+    expect(res.headers).toHaveProperty('etag');
+
+    const res304 = await new Promise((resolve, reject) => {
+      http.get({ hostname: '127.0.0.1', port, path: '/metrics', headers: { 'If-None-Match': res.headers.etag } }, (r) => {
+        resolve({ status: r.statusCode });
+      }).on('error', reject);
+    });
+    expect(res304.status).toBe(304);
     await new Promise((r) => server.close(r));
   });
 });

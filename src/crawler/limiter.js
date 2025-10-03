@@ -24,7 +24,8 @@ class DomainLimiter {
         err429Streak: 0,
         rpmLastMinute: 0,
         windowStartedAt: 0,
-        windowCount: 0
+        windowCount: 0,
+        lastHttpStatus: null
       };
       this.states.set(host, s);
     }
@@ -68,6 +69,7 @@ class DomainLimiter {
     const now = nowMs();
     const s = this._get(host);
     s.isLimited = true;
+    s.lastHttpStatus = 429;
     s.last429At = now;
     s.successStreak = 0;
     s.err429Streak++;
@@ -89,6 +91,9 @@ class DomainLimiter {
     s.lastSuccessAt = now;
     s.successStreak++;
     s.err429Streak = 0;
+    if (!s.isLimited) {
+      s.lastHttpStatus = null;
+    }
     if (s.isLimited && s.successStreak > 100) {
       const canProbe = (now - s.last429At) > 5 * 60 * 1000;
       if (canProbe) {

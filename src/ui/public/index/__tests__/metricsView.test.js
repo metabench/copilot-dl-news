@@ -58,7 +58,9 @@ describe('createMetricsView', () => {
       domainLimit: 60,
       domainIntervalMs: 500,
       domainBackoffMs: 4000,
-      domainRateLimited: true
+      domainRateLimited: true,
+      slowMode: true,
+      slowModeReason: 'HTTP 429'
     }, now);
 
     expect(elements.reqpsLabel.textContent).toContain('req/s:');
@@ -68,6 +70,8 @@ describe('createMetricsView', () => {
     expect(elements.badgeSitemap.textContent).toMatch(/sitemap:/);
     expect(view.getQueueDisplayValue(0)).toBeGreaterThanOrEqual(0);
     expect(elements.domRl.style.display).toBe('');
+    expect(elements.domRl.textContent).toBe('Slow mode (HTTP 429)');
+    expect(elements.domRl.title).toMatch(/HTTP 429/);
   });
 
   test('handleCacheEvent increments cache hit summary', () => {

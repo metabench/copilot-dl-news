@@ -1,4 +1,5 @@
 const http = require('http');
+const { collectSseUntil } = require('./helpers/sse');
 const { createApp } = require('../server');
 
 function startHttp(app) {
@@ -8,19 +9,6 @@ function startHttp(app) {
       const { port } = server.address();
       resolve({ server, port });
     });
-  });
-}
-
-function collectSse(hostname, port, path, timeoutMs = 1500) {
-  return new Promise((resolve, reject) => {
-    const req = http.get({ hostname, port, path }, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      const t = setTimeout(() => { try { res.destroy(); } catch(_){}; resolve({ status: res.statusCode, text: buf }); }, timeoutMs);
-      res.on('data', (d) => buf += d);
-      res.on('end', () => { clearTimeout(t); resolve({ status: res.statusCode, text: buf }); });
-    });
-    req.on('error', reject);
   });
 }
 
@@ -38,8 +26,8 @@ describe('progress telemetry over SSE', () => {
           stderr,
           on(){},
         };
-        // Emit a structured PROGRESS line shortly after start
-        setTimeout(() => {
+        // Emit a structured PROGRESS line immediately after listeners attach
+        const emitProgress = () => {
           const p = {
             visited: 1, downloaded: 1, found: 0, saved: 0, errors: 0,
             bytes: 1024,
@@ -53,7 +41,12 @@ describe('progress telemetry over SSE', () => {
           };
           const line = `PROGRESS ${JSON.stringify(p)}\n`;
           for (const fn of listeners.data) fn(Buffer.from(line, 'utf8'));
-        }, 100);
+        };
+        if (listeners.data.length > 0) {
+          process.nextTick(emitProgress);
+        } else {
+          setImmediate(emitProgress);
+        }
         return child;
       }
     };
@@ -61,7 +54,11 @@ describe('progress telemetry over SSE', () => {
     const { server, port } = await startHttp(app);
 
     // Open SSE first
-    const ssePromise = collectSse('127.0.0.1', port, '/events', 1200);
+    const ssePromise = collectSseUntil('127.0.0.1', port, '/events', {
+      idleTimeoutMs: 200,
+      overallTimeoutMs: 2000,
+      predicate: (buf) => /"slowMode":true/.test(buf)
+    });
     // Start the crawl to trigger the fake runner
     await new Promise((resolve) => {
       const req = http.request({ hostname: '127.0.0.1', port, path: '/api/crawl', method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => {
@@ -75,6 +72,8 @@ describe('progress telemetry over SSE', () => {
     // Ensure payload fields are included in the JSON text
     expect(sse.text).toMatch(/domainRateLimited/);
     expect(sse.text).toMatch(/domainIntervalMs/);
+  expect(sse.text).toMatch(/slowMode/);
+  expect(sse.text).toMatch(/slowModeReason/);
 
     await new Promise((r) => server.close(r));
   });

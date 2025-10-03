@@ -114,7 +114,9 @@ function createCrawlStartRouter(options = {}) {
         bytesPerSec: 0,
         stage: 'preparing',
         statusText: null,
-        startup: null
+        startup: null,
+        slowMode: false,
+        slowModeReason: null
       },
       watchdogTimers: []
     };

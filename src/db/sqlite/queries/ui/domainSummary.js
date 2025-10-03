@@ -12,7 +12,13 @@ function prepareStatements(db) {
       JOIN urls u ON u.url = a.url
       WHERE LOWER(u.host) = ?
     `),
-    fetchesDirect: handle.prepare('SELECT COUNT(*) AS c FROM fetches WHERE LOWER(host) = ?'),
+    fetchesDirect: (() => {
+      try {
+        return handle.prepare('SELECT COUNT(*) AS c FROM fetches WHERE LOWER(host) = ?');
+      } catch (_) {
+        return null;
+      }
+    })(),
     fetchesViaJoin: handle.prepare(`
       SELECT COUNT(*) AS c
       FROM fetches f
@@ -38,6 +44,7 @@ function getArticleCount(db, host) {
 
 function getFetchCountDirect(db, host) {
   const { fetchesDirect } = prepareStatements(db);
+  if (!fetchesDirect) return 0;
   return safeGetCount(fetchesDirect, host);
 }
 

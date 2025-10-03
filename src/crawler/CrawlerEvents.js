@@ -78,6 +78,18 @@ class CrawlerEvents {
 
     const domainLimits = this.getDomainLimits() || new Map();
     const domainState = domainLimits.get(this.domain) || {};
+    const isRateLimited = !!domainState.isLimited;
+    let rateLimitedReason = null;
+    if (isRateLimited) {
+      if (domainState.lastHttpStatus) {
+        rateLimitedReason = String(domainState.lastHttpStatus);
+      } else if (domainState.last429At) {
+        rateLimitedReason = '429';
+      }
+    }
+    const prettyReason = rateLimitedReason
+      ? (/^\d+$/.test(rateLimitedReason) ? `HTTP ${rateLimitedReason}` : rateLimitedReason)
+      : null;
     const now2 = Date.now();
     const perHostLimits = {};
     for (const [host, s] of domainLimits.entries()) {
@@ -106,7 +118,7 @@ class CrawlerEvents {
       queueSize,
       currentDownloadsCount: typeof currentDownloadsMap.size === 'number' ? currentDownloadsMap.size : Array.isArray(currentDownloadsMap) ? currentDownloadsMap.length : 0,
       currentDownloads: inflight,
-  paused: !!this.isPausedFn(),
+      paused: !!this.isPausedFn(),
       robotsLoaded: !!robotsInfo.robotsLoaded,
       sitemapCount: Array.isArray(sitemapInfo.urls) ? sitemapInfo.urls.length : 0,
       sitemapEnqueued: sitemapInfo.discovered || 0,
@@ -114,12 +126,19 @@ class CrawlerEvents {
       domainRpm: domainState.rpmLastMinute || null,
       domainLimit: domainState.rpm || null,
       domainBackoffMs: domainState.backoffUntil && domainState.backoffUntil > now2 ? domainState.backoffUntil - now2 : null,
-      domainRateLimited: !!domainState.isLimited,
+      domainRateLimited: isRateLimited,
+      slowMode: isRateLimited,
+      slowModeReason: prettyReason,
       domainIntervalMs: domainState.rpm > 0 ? Math.floor(60000 / domainState.rpm) : null,
       perHostLimits,
       cacheRateLimitedServed: stats.cacheRateLimitedServed || 0,
       cacheRateLimitedDeferred: stats.cacheRateLimitedDeferred || 0
     };
+
+    if (isRateLimited && !payload.statusText) {
+      const reasonSuffix = prettyReason ? ` (${prettyReason})` : '';
+      payload.statusText = `Slow mode${reasonSuffix}`;
+    }
 
     const mergedStartup = startup || (patch && typeof patch === 'object' ? patch.startup : null);
     if (mergedStartup) {

@@ -1,4 +1,5 @@
 const http = require('http');
+const { collectSseUntil } = require('./helpers/sse');
 
 function startServerWithEnv(env = {}) {
   return new Promise((resolve, reject) => {
@@ -42,19 +43,6 @@ function httpJson(hostname, port, path, method = 'GET', body = null) {
   });
 }
 
-function collectSse(hostname, port, path, timeoutMs = 1500) {
-  return new Promise((resolve, reject) => {
-    const req = http.get({ hostname, port, path }, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      const t = setTimeout(() => { try { res.destroy(); } catch(_){}; resolve({ status: res.statusCode, text: buf }); }, timeoutMs);
-      res.on('data', (d) => buf += d);
-      res.on('end', () => { clearTimeout(t); resolve({ status: res.statusCode, text: buf }); });
-    });
-    req.on('error', reject);
-  });
-}
-
 describe('e2e http: start crawl and receive progress via SSE', () => {
   let cp; let port;
   beforeAll(async () => {
@@ -68,12 +56,16 @@ describe('e2e http: start crawl and receive progress via SSE', () => {
 
   test('POST /api/crawl responds 202 and SSE shows activity', async () => {
     // Open SSE before issuing start to capture seed + progress
-    const ssePromise = collectSse('127.0.0.1', port, '/events?logs=1', 1200);
+    const ssePromise = collectSseUntil('127.0.0.1', port, '/events?logs=1', {
+      idleTimeoutMs: 400,
+      overallTimeoutMs: 5000,
+      predicate: (buf) => /event: progress/.test(buf)
+    });
     const start = await httpJson('127.0.0.1', port, '/api/crawl', 'POST', { startUrl: 'https://example.com', depth: 0, maxPages: 1, useSitemap: false, sitemapOnly: false });
     expect(start.status).toBe(202);
     const sse = await ssePromise;
     expect(sse.status).toBe(200);
-    expect(sse.text).toMatch(/event: log/);
+  expect(sse.text).toMatch(/event: log/);
     // Should include either server seed or progress frames
     expect(sse.text).toMatch(/event: progress/);
   });
