@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../ensure_db');
+const { ensureDb } = require('../db/sqlite');
 
 const DEFAULT_WARMUP = 1;
 const DEFAULT_ITERATIONS = 5;

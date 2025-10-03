@@ -2,8 +2,16 @@
 // Maintenance tool for the SQLite DB: dedupe and enforce constraints
 
 const path = require('path');
-const { ensureDb, dedupePlaceSources } = require('../ensure_db');
-const { repairGazetteer } = require('./gazetteer_qa');
+const { ensureDb, dedupePlaceSources } = require('../db/sqlite');
+const { repairGazetteer } = require('../db/sqlite/tools/gazetteerQA');
+const {
+  countPlaces,
+  countPlaceNames,
+  normalizePlaceNames,
+  trimPlaceNames,
+  deleteEmptyPlaceNames,
+  deleteNamelessPlaces
+} = require('../db/sqlite/tools/maintainDb');
 
 function parseArgs(argv) {
   const args = {};
@@ -22,25 +30,16 @@ function main() {
     const results = {};
     // Always dedupe place_sources; it's safe and idempotent
     results.place_sources = dedupePlaceSources(db);
-  // Normalize & cleanup
-  try { db.exec(`UPDATE place_names SET normalized = LOWER(TRIM(name)) WHERE (normalized IS NULL OR TRIM(normalized) = '') AND name IS NOT NULL;`); } catch (_) {}
-    const beforePlaces = db.prepare('SELECT COUNT(*) AS c FROM places').get().c;
-    const beforeNames = db.prepare('SELECT COUNT(*) AS c FROM place_names').get().c;
-    // Trim whitespace-only names, then delete truly empty names
-    try { db.exec(`UPDATE place_names SET name=TRIM(name) WHERE name <> TRIM(name);`); } catch (_) {}
-    try { db.exec(`DELETE FROM place_names WHERE name IS NULL OR TRIM(name) = ''`); } catch (_) {}
-    // Delete places that have no canonical name and no name rows
-    try {
-      db.exec(`
-        DELETE FROM places
-        WHERE (canonical_name_id IS NULL OR canonical_name_id NOT IN (SELECT id FROM place_names))
-          AND NOT EXISTS(SELECT 1 FROM place_names pn WHERE pn.place_id = places.id);
-      `);
-    } catch (_) {}
+    normalizePlaceNames(db);
+    const beforePlaces = countPlaces(db);
+    const beforeNames = countPlaceNames(db);
+    trimPlaceNames(db);
+    deleteEmptyPlaceNames(db);
+    deleteNamelessPlaces(db);
     // Use shared repair actions
     const actions = repairGazetteer(db);
-    const afterPlaces = db.prepare('SELECT COUNT(*) AS c FROM places').get().c;
-    const afterNames = db.prepare('SELECT COUNT(*) AS c FROM place_names').get().c;
+    const afterPlaces = countPlaces(db);
+    const afterNames = countPlaceNames(db);
     results.cleanup = { placesBefore: beforePlaces, placesAfter: afterPlaces, namesBefore: beforeNames, namesAfter: afterNames, deletedPlaces: beforePlaces - afterPlaces };
     results.actions = actions;
     if (!args.quiet) {

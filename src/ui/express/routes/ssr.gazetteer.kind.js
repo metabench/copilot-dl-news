@@ -38,7 +38,7 @@ function createGazetteerKindRouter(options = {}) {
 
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       endTrace();
       res.status(503).send('<!doctype html><title>Gazetteer</title><body><h1>Database unavailable.</h1></body></html>');

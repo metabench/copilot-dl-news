@@ -1,14 +1,16 @@
-function escapeHtml(value) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
+/**
+ * Problems Page View
+ * Refactored to use centralized utilities and component system
+ */
 
+const { escapeHtml, toQueryString } = require('../utils/html');
+const { pill } = require('../components/base');
+
+/**
+ * Derive severity level from problem kind
+ * @param {string} kind - Problem kind
+ * @returns {string} Severity level (warn, info, etc.)
+ */
 function deriveProblemSeverity(kind) {
   switch (kind) {
     case 'missing-hub':
@@ -20,24 +22,26 @@ function deriveProblemSeverity(kind) {
   }
 }
 
+/**
+ * Build query string for filters with overrides
+ * @param {Object} baseFilters - Base filter values
+ * @param {Object} overrides - Override values
+ * @returns {string} Query string with leading ?
+ */
 function buildFiltersQuery(baseFilters, overrides = {}) {
-  const params = new URLSearchParams();
   const merged = { ...baseFilters, ...overrides };
-  for (const [key, value] of Object.entries(merged)) {
-    if (value !== undefined && value !== null && value !== '') {
-      params.set(key, String(value));
-    }
-  }
-  const qs = params.toString();
-  return qs ? `?${qs}` : '';
+  return toQueryString(merged);
 }
 
-function ensureRenderNav(fn) {
-  if (typeof fn === 'function') return fn;
-  return () => '';
-}
-
+/**
+ * Render problems page with table and filters
+ * @param {Object} spec - Page specification
+ * @returns {string} Complete HTML page
+ */
 function renderProblemsPage({ items, filters, cursors, renderNav }) {
+  // Create render context for components
+  const context = { escapeHtml };
+  
   const rows = items.map((item) => {
     const severity = deriveProblemSeverity(item.kind);
     const severityClass = severity === 'warn' ? 'warn' : 'info';
@@ -45,7 +49,7 @@ function renderProblemsPage({ items, filters, cursors, renderNav }) {
         <tr>
           <td class="nowrap">${escapeHtml(item.ts)}</td>
           <td class="mono">${escapeHtml(item.jobId || '')}</td>
-          <td><span class="pill ${severityClass}"><code>${escapeHtml(item.kind)}</code></span></td>
+          <td>${pill({ text: item.kind, variant: severityClass }, context)}</td>
           <td>${escapeHtml(item.scope || '')}</td>
           <td>${escapeHtml(item.target || '')}</td>
           <td>${escapeHtml(item.message || '')}</td>
@@ -61,8 +65,9 @@ function renderProblemsPage({ items, filters, cursors, renderNav }) {
           </div>
         </div>`;
 
-  const navRenderer = ensureRenderNav(renderNav);
-  const navHtml = navRenderer('problems', { variant: 'bar' });
+  const navHtml = typeof renderNav === 'function' 
+    ? renderNav('problems', { variant: 'bar' })
+    : '';
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>

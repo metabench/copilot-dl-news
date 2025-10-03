@@ -1,8 +1,18 @@
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
-const { ensureDb, ensureGazetteer } = require('./ensure_db');
+const { ensureDb, ensureGazetteer } = require('./ensureDb');
 const { Readable } = require('stream');
+
+function slugifyCountryName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\band\b/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
 
 class NewsDatabase {
   constructor(dbFilePath) {
@@ -27,6 +37,15 @@ class NewsDatabase {
   this._ensurePageCategoryStmt = this.db.prepare(`INSERT OR IGNORE INTO page_categories(name, description) VALUES (?, NULL)`);
   this._getPageCategoryIdStmt = this.db.prepare(`SELECT id FROM page_categories WHERE name = ?`);
   this._mapPageCategoryStmt = this.db.prepare(`INSERT OR IGNORE INTO page_category_map(fetch_id, category_id) VALUES (?, ?)`);
+
+  this._selectCountryNamesStmt = this.db.prepare(`
+    SELECT name FROM place_names
+    WHERE id IN (
+      SELECT canonical_name_id FROM places WHERE kind='country'
+    )
+    ORDER BY name
+    LIMIT ?
+  `);
 
   this._getSettingStmt = this.db.prepare(`SELECT value FROM crawler_settings WHERE key = ?`);
   this._setSettingStmt = this.db.prepare(`INSERT INTO crawler_settings(key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')`);
@@ -870,6 +889,25 @@ class NewsDatabase {
       const r = this.db.prepare("SELECT COUNT(*) AS c FROM fetches WHERE classification = 'article'").get();
       return r?.c || 0;
     } catch (_) { return 0; }
+  }
+
+  getTopCountrySlugs(limit = 50) {
+    const safeLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 50));
+    try {
+      const rows = this._selectCountryNamesStmt.all(safeLimit);
+      const unique = new Set();
+      const slugs = [];
+      for (const entry of rows) {
+        const slug = slugifyCountryName(entry?.name);
+        if (slug && !unique.has(slug)) {
+          unique.add(slug);
+          slugs.push(slug);
+        }
+      }
+      return slugs;
+    } catch (_) {
+      return [];
+    }
   }
 
   getArticleRowByUrl(url) {

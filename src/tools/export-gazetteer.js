@@ -5,7 +5,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const { openDbReadOnly } = require('../ensure_db');
+const { openDbReadOnly } = require('../db/sqlite');
+const {
+  iteratePlaceSources,
+  iteratePlaces,
+  iteratePlaceNames,
+  iteratePlaceHierarchy,
+  iteratePlaceExternalIds
+} = require('../db/sqlite/tools/gazetteerExport');
 const { findProjectRoot } = require('../utils/project-root');
 
 function parseArgs(argv) {
@@ -51,14 +58,6 @@ function writeNdjsonLineSync(fd, obj) {
   fs.writeSync(fd, '\n');
 }
 
-function exportTableIter(db, fd, table, typeName, transformRow) {
-  const stmt = db.prepare(`SELECT * FROM ${table}`);
-  for (const row of stmt.iterate()) {
-    const rec = transformRow ? transformRow(row) : row;
-    writeNdjsonLineSync(fd, { type: typeName, ...rec });
-  }
-}
-
 function main() {
   const args = parseArgs(process.argv);
   const dbPath = args.db; // ensureDb resolves default path when undefined
@@ -76,7 +75,7 @@ function main() {
   } catch (e) {
     // Best-effort: create/ensure schema and proceed (useful in CI where path may not exist yet)
     try {
-      const { ensureDb } = require('../ensure_db');
+  const { ensureDb } = require('../db/sqlite');
       db = ensureDb(dbPath);
     } catch (e2) {
       // Close FD and rethrow to maintain failure semantics
@@ -86,25 +85,30 @@ function main() {
   }
 
   try {
-    // place_sources first for context (skip gracefully if table absent)
-    try { exportTableIter(db, fd, 'place_sources', 'place_source'); } catch (_) {}
+    for (const row of iteratePlaceSources(db)) {
+      writeNdjsonLineSync(fd, { type: 'place_source', ...row });
+    }
 
-    // places with scrubbed extra
-    try {
-      exportTableIter(db, fd, 'places', 'place', (row) => {
-        const out = { ...row };
-        if (out && out.extra != null) {
-          const scrubbed = scrubExtra(out.extra);
-          // Store as object if parsed, else keep as-is
-          out.extra = scrubbed;
-        }
-        return out;
-      });
-    } catch (_) {}
+    for (const row of iteratePlaces(db)) {
+      const out = { ...row };
+      if (out && out.extra != null) {
+        const scrubbed = scrubExtra(out.extra);
+        out.extra = scrubbed;
+      }
+      writeNdjsonLineSync(fd, { type: 'place', ...out });
+    }
 
-    try { exportTableIter(db, fd, 'place_names', 'place_name'); } catch (_) {}
-    try { exportTableIter(db, fd, 'place_hierarchy', 'place_hierarchy'); } catch (_) {}
-    try { exportTableIter(db, fd, 'place_external_ids', 'place_external_id'); } catch (_) {}
+    for (const row of iteratePlaceNames(db)) {
+      writeNdjsonLineSync(fd, { type: 'place_name', ...row });
+    }
+
+    for (const row of iteratePlaceHierarchy(db)) {
+      writeNdjsonLineSync(fd, { type: 'place_hierarchy', ...row });
+    }
+
+    for (const row of iteratePlaceExternalIds(db)) {
+      writeNdjsonLineSync(fd, { type: 'place_external_id', ...row });
+    }
   } finally {
     try { db.close(); } catch (_) {}
     try { fs.closeSync(fd); } catch (_) {}

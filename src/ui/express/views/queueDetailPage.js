@@ -1,18 +1,4 @@
-function escapeHtml(value) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
-
-function ensureRenderNav(fn) {
-  if (typeof fn === 'function') return fn;
-  return () => '';
-}
+const { escapeHtml } = require('../utils/html');
 
 function renderQueueDetailPage({ job, events, filters, pagination, neighbors, renderNav }) {
   const filterOptions = ['', 'enqueued', 'dequeued', 'retry', 'drop']
@@ -73,8 +59,7 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
           ${neighbors.olderId ? `<a class="space" href="/queues/${escapeHtml(neighbors.olderId)}/ssr">Next →</a>` : ''}
         </div>`;
 
-  const navRenderer = ensureRenderNav(renderNav);
-  const navHtml = navRenderer('queues', { variant: 'bar' });
+  const navHtml = (typeof renderNav === 'function') ? renderNav('queues', { variant: 'bar' }) : '';
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>

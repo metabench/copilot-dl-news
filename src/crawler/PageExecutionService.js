@@ -8,6 +8,8 @@ class PageExecutionService {
     state,
     fetchPipeline,
     articleProcessor,
+    navigationDiscoveryService,
+    contentAcquisitionService,
     milestoneTracker,
     adaptiveSeedPlanner,
     enqueueRequest,
@@ -25,9 +27,6 @@ class PageExecutionService {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
     }
-    if (!articleProcessor) {
-      throw new Error('PageExecutionService requires an article processor');
-    }
     if (!state) {
       throw new Error('PageExecutionService requires crawler state');
     }
@@ -37,13 +36,21 @@ class PageExecutionService {
     if (typeof enqueueRequest !== 'function') {
       throw new Error('PageExecutionService requires an enqueueRequest function');
     }
+    if (!navigationDiscoveryService || typeof navigationDiscoveryService.discover !== 'function') {
+      throw new Error('PageExecutionService requires a navigationDiscoveryService with a discover method');
+    }
+    if (!contentAcquisitionService || typeof contentAcquisitionService.acquire !== 'function') {
+      throw new Error('PageExecutionService requires a contentAcquisitionService with an acquire method');
+    }
 
     this.maxDepth = typeof maxDepth === 'number' ? maxDepth : Infinity;
     this.maxDownloads = typeof maxDownloads === 'number' ? maxDownloads : undefined;
     this.getStats = getStats;
     this.state = state;
     this.fetchPipeline = fetchPipeline;
-    this.articleProcessor = articleProcessor;
+    this.articleProcessor = articleProcessor || null;
+    this.navigationDiscoveryService = navigationDiscoveryService;
+    this.contentAcquisitionService = contentAcquisitionService;
     this.milestoneTracker = milestoneTracker;
     this.adaptiveSeedPlanner = adaptiveSeedPlanner || null;
     this.enqueueRequest = enqueueRequest;
@@ -266,12 +273,40 @@ class PageExecutionService {
     if (this.emitProgress) this.emitProgress();
     this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: source });
 
+    let discovery = null;
+    try {
+      discovery = this.navigationDiscoveryService?.discover({
+        url: resolvedUrl,
+        html,
+        depth,
+        normalizedUrl
+      }) || null;
+    } catch (error) {
+      if (this.recordError) {
+        this.recordError({
+          url: resolvedUrl,
+          kind: 'navigation-discovery',
+          message: error?.message || String(error)
+        });
+      }
+      if (this.telemetry) {
+        try {
+          this.telemetry.problem({
+            kind: 'navigation-discovery-failed',
+            target: resolvedUrl,
+            message: error?.message || 'Navigation discovery failed'
+          });
+        } catch (_) {}
+      }
+      discovery = null;
+    }
+
     const dbAdapter = this.getDbAdapter();
     const dbEnabled = dbAdapter && typeof dbAdapter.isEnabled === 'function' && dbAdapter.isEnabled();
 
     let processorResult = null;
     try {
-      processorResult = await this.articleProcessor.process({
+      processorResult = await this.contentAcquisitionService.acquire({
         url: resolvedUrl,
         html,
         fetchMeta,
@@ -281,22 +316,24 @@ class PageExecutionService {
         discoveredAt: context.discoveredAt || new Date().toISOString(),
         persistArticle: dbEnabled,
         insertFetchRecord: dbEnabled,
-        insertLinkRecords: dbEnabled
+        insertLinkRecords: dbEnabled,
+        linkSummary: discovery?.linkSummary || null,
+        cheerioRoot: discovery?.$ || null
       });
     } catch (error) {
       if (this.recordError) {
         this.recordError({
           url: resolvedUrl,
-          kind: 'article-processing',
+          kind: 'content-acquisition',
           message: error?.message || String(error)
         });
       }
       if (this.telemetry) {
         try {
           this.telemetry.problem({
-            kind: 'article-processing-failed',
+            kind: 'content-acquisition-failed',
             target: resolvedUrl,
-            message: error?.message || 'ArticleProcessor failed'
+            message: error?.message || 'Content acquisition failed'
           });
         } catch (_) {}
       }
@@ -315,8 +352,19 @@ class PageExecutionService {
       } catch (_) {}
     }
 
-    const navigationLinks = processorResult?.navigationLinks || [];
-    const articleLinks = processorResult?.articleLinks || [];
+    const discoveryNavigationLinks = Array.isArray(discovery?.navigationLinks) ? discovery.navigationLinks : null;
+    const discoveryArticleLinks = Array.isArray(discovery?.articleLinks) ? discovery.articleLinks : null;
+    const discoveryAllLinks = Array.isArray(discovery?.allLinks) ? discovery.allLinks : null;
+
+    let navigationLinks = processorResult?.navigationLinks || [];
+    if (discoveryNavigationLinks && discoveryNavigationLinks.length > 0) {
+      navigationLinks = discoveryNavigationLinks;
+    }
+
+    let articleLinks = processorResult?.articleLinks || [];
+    if (discoveryArticleLinks && discoveryArticleLinks.length > 0) {
+      articleLinks = discoveryArticleLinks;
+    }
 
     try {
       console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${resolvedUrl}`);
@@ -339,8 +387,12 @@ class PageExecutionService {
       });
     }
 
+    let allLinks = processorResult?.allLinks || [];
+    if (discoveryAllLinks && discoveryAllLinks.length > 0) {
+      allLinks = discoveryAllLinks;
+    }
+
     const seen = new Set();
-    const allLinks = processorResult?.allLinks || [];
     for (const link of allLinks) {
       if (!link || !link.url) continue;
       if (seen.has(link.url)) continue;

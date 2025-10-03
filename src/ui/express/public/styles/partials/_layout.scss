@@ -24,6 +24,82 @@
   }
 }
 
+// Studio layout for ultrawide displays (2560px+)
+@media (min-width: 2560px) {
+  .crawler-layout {
+    max-width: 2500px;
+    padding: 56px 80px 96px;
+    gap: 48px;
+  }
+  
+  .crawler-layout--studio {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 48px 52px;
+    
+    .page-header {
+      grid-column: 1 / -1;
+    }
+    
+    .panel--full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .panel--half-width {
+      grid-column: span 1;
+    }
+  }
+  
+  .page-title {
+    font-size: clamp(38px, 4.2vw, 48px);
+  }
+  
+  .panel {
+    padding: 28px 32px;
+    gap: 24px;
+  }
+}
+
+// Enhanced studio layout for ultra-ultrawide (3440px+)
+@media (min-width: 3440px) {
+  .crawler-layout {
+    max-width: 3300px;
+    padding: 64px 120px 112px;
+    gap: 56px;
+  }
+  
+  .crawler-layout--studio {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 56px 64px;
+    
+    .panel--full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .panel--two-thirds {
+      grid-column: span 2;
+    }
+    
+    .panel--third {
+      grid-column: span 1;
+    }
+  }
+  
+  .page-title {
+    font-size: clamp(42px, 4.5vw, 54px);
+  }
+  
+  .panel {
+    padding: 32px 36px;
+    gap: 26px;
+  }
+  
+  .panel-head h3 {
+    font-size: 20px;
+  }
+}
+
 .page-header {
   display: flex;
   flex-direction: column;
@@ -273,6 +349,51 @@
   .quick-nav {
     padding: 12px;
     border-radius: var(--radius-md);
+  }
+  
+  .crawler-layout {
+    padding: 24px 16px 48px;
+    gap: 24px;
+  }
+  
+  .page-header {
+    padding: 18px;
+    gap: 14px;
+  }
+  
+  .page-title {
+    font-size: clamp(26px, 7vw, 36px);
+  }
+  
+  .panel {
+    padding: 18px 20px;
+    gap: 18px;
+  }
+  
+  .global-nav__inner {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  
+  .global-nav__link {
+    padding: 5px 11px;
+    font-size: 12px;
+  }
+}
+
+// Optimizations for mobile-large-portrait (414px)
+@media (min-width: 390px) and (max-width: 720px) {
+  .crawler-layout {
+    padding: 28px 18px 56px;
+    gap: 28px;
+  }
+  
+  .page-header {
+    padding: 20px;
+  }
+  
+  .panel {
+    padding: 20px 22px;
   }
 }
 

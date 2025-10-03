@@ -1538,6 +1538,47 @@ const logs = document.getElementById('logs');
           }
         } catch (e) { logs.textContent += `\nResume error: ${e?.message || e}\n`; }
       };
+      const resumeAllCheckbox = document.getElementById('resumeAllQueues');
+      if (resumeAllCheckbox) {
+        resumeAllCheckbox.addEventListener('change', async (e) => {
+          if (!e.target.checked) return;
+          e.target.checked = false;
+          e.target.disabled = true;
+          try {
+            logs.textContent += '\nResume all: requesting...\n';
+            const r = await fetch('/api/resume-all', { 
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ maxConcurrent: 8 })
+            });
+            let j = null; 
+            try { j = await r.json(); } catch (_) {}
+            if (!r.ok) {
+              const detail = j?.error || `HTTP ${r.status}`;
+              logs.textContent += `\nResume all failed: ${detail}\n`;
+            } else {
+              const count = j?.resumed || 0;
+              const message = j?.message || `Resumed ${count} crawl(s)`;
+              logs.textContent += `\n${message}\n`;
+              if (Array.isArray(j?.queues)) {
+                for (const q of j.queues) {
+                  logs.textContent += `  - ${q.url} (pid ${q.pid})\n`;
+                }
+              }
+              if (Array.isArray(j?.errors) && j.errors.length > 0) {
+                logs.textContent += `  Errors: ${j.errors.length}\n`;
+                for (const err of j.errors.slice(0, 3)) {
+                  logs.textContent += `    - ${err}\n`;
+                }
+              }
+            }
+          } catch (err) {
+            logs.textContent += `\nResume all error: ${err?.message || err}\n`;
+          } finally {
+            setTimeout(() => { e.target.disabled = false; }, 2000);
+          }
+        });
+      }
       document.getElementById('showLogs').onchange = (e) => {
         const enabled = e.target.checked;
         localStorage.setItem('showLogs', enabled ? '1' : '0');

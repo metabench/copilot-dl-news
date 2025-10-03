@@ -63,7 +63,9 @@ class ArticleProcessor {
     discoveredAt = null,
     persistArticle = true,
     insertFetchRecord = true,
-    insertLinkRecords = true
+    insertLinkRecords = true,
+    linkSummary: providedLinkSummary = null,
+    $: providedCheerio = null
   }) {
     if (!url) {
       throw new Error('ArticleProcessor.process requires url');
@@ -72,8 +74,8 @@ class ArticleProcessor {
       throw new Error('ArticleProcessor.process requires html string');
     }
 
-    const $ = cheerio.load(html);
-    const linkSummary = this.linkExtractor.extract($);
+    const $ = providedCheerio || cheerio.load(html);
+    const linkSummary = providedLinkSummary || this.linkExtractor.extract($);
     const navigationLinks = linkSummary.navigation || [];
     const articleLinks = linkSummary.articles || [];
     const allLinks = linkSummary.all || [];

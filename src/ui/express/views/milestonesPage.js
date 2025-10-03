@@ -1,37 +1,42 @@
-function escapeHtml(value) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
+/**
+ * Milestones Page View
+ * Refactored to use centralized utilities and component system
+ * Following jsgui3-inspired composition patterns
+ */
 
+const { escapeHtml, toQueryString } = require('../utils/html');
+const { pill } = require('../components/base');
+
+/**
+ * Build query string for filters with overrides
+ * @param {Object} baseFilters - Base filter values
+ * @param {Object} overrides - Override values
+ * @returns {string} Query string with leading ?
+ */
 function buildFiltersQuery(baseFilters, overrides = {}) {
-  const params = new URLSearchParams();
   const merged = { ...baseFilters, ...overrides };
-  for (const [key, value] of Object.entries(merged)) {
-    if (value !== undefined && value !== null && value !== '') {
-      params.set(key, String(value));
-    }
-  }
-  const qs = params.toString();
-  return qs ? `?${qs}` : '';
+  return toQueryString(merged);
 }
 
-function ensureRenderNav(fn) {
-  if (typeof fn === 'function') return fn;
-  return () => '';
-}
-
+/**
+ * Render milestones page with table and filters
+ * @param {Object} spec - Page specification
+ * @param {Array} spec.items - Milestone items
+ * @param {Object} spec.filters - Current filter values
+ * @param {Object} spec.cursors - Pagination cursors
+ * @param {Function} spec.renderNav - Navigation renderer
+ * @returns {string} Complete HTML page
+ */
 function renderMilestonesPage({ items, filters, cursors, renderNav }) {
+  // Create render context for components
+  const context = { escapeHtml };
+  
+  // Build table rows with pill component for kind
   const rows = items.map((item) => `
         <tr>
           <td class="nowrap">${escapeHtml(item.ts)}</td>
           <td class="mono">${escapeHtml(item.jobId || '')}</td>
-          <td><span class="pill good"><code>${escapeHtml(item.kind)}</code></span></td>
+          <td>${pill({ text: item.kind, variant: 'good' }, context)}</td>
           <td>${escapeHtml(item.scope || '')}</td>
           <td>${escapeHtml(item.target || '')}</td>
           <td>${escapeHtml(item.message || '')}</td>
@@ -47,8 +52,9 @@ function renderMilestonesPage({ items, filters, cursors, renderNav }) {
           </div>
         </div>`;
 
-  const navRenderer = ensureRenderNav(renderNav);
-  const navHtml = navRenderer('milestones', { variant: 'bar' });
+  const navHtml = typeof renderNav === 'function' 
+    ? renderNav('milestones', { variant: 'bar' })
+    : '';
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>

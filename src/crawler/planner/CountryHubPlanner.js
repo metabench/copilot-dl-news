@@ -65,28 +65,12 @@ class CountryHubPlanner {
   }
 
   async _getTopCountrySlugsFromGazetteer(limit = 50) {
-    if (!this.db || !this.db.db || typeof this.db.db.prepare !== 'function') {
+    if (!this.db || typeof this.db.getTopCountrySlugs !== 'function') {
       return null;
     }
     try {
-      const rows = this.db.db
-        .prepare(`SELECT name FROM place_names WHERE id IN (SELECT canonical_name_id FROM places WHERE kind='country') ORDER BY name LIMIT ?`)
-        .all(limit);
-      const toSlug = (name) => String(name || '').trim().toLowerCase()
-        .replace(/\band\b/g, 'and')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-      const uniq = new Set();
-      const slugs = [];
-      for (const row of rows) {
-        const slug = toSlug(row.name);
-        if (slug && !uniq.has(slug)) {
-          uniq.add(slug);
-          slugs.push(slug);
-        }
-      }
-      return slugs;
+      const slugs = this.db.getTopCountrySlugs(limit);
+      return Array.isArray(slugs) && slugs.length ? slugs : null;
     } catch (_) {
       return null;
     }

@@ -1,15 +1,8 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[c]);
-}
+const { escapeHtml, createRenderContext } = require('../utils/html');
+const { errorPage } = require('../components/base');
+const { fetchGazetteerSummary } = require('../data/gazetteerSummary');
 
 function createGazetteerRouter(options = {}) {
   const { urlsDbPath, startTrace } = options;
@@ -21,6 +14,7 @@ function createGazetteerRouter(options = {}) {
   }
 
   const router = express.Router();
+  const context = createRenderContext({ renderNav });
 
   router.get('/gazetteer', (req, res) => {
     const trace = startTrace(req, 'gazetteer');
@@ -36,9 +30,9 @@ function createGazetteerRouter(options = {}) {
     try {
       let openDbReadOnly;
       try {
-        ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
       } catch (e) {
-        res.status(503).send('<!doctype html><title>Gazetteer</title><h1>Gazetteer</h1><p>Database unavailable.</p>');
+        res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));
         finishTrace();
         return;
       }
@@ -48,36 +42,13 @@ function createGazetteerRouter(options = {}) {
       doneOpen();
 
       const doneCounts = trace.pre('counts');
-      let countries = 0;
-      let regions = 0;
-      let cities = 0;
-      let names = 0;
-      let sources = 0;
-      try {
-        countries = db.prepare("SELECT COUNT(*) c FROM places WHERE kind='country'").get().c;
-      } catch (_) {
-        countries = 0;
-      }
-      try {
-        regions = db.prepare("SELECT COUNT(*) c FROM places WHERE kind='region'").get().c;
-      } catch (_) {
-        regions = 0;
-      }
-      try {
-        cities = db.prepare("SELECT COUNT(*) c FROM places WHERE kind='city'").get().c;
-      } catch (_) {
-        cities = 0;
-      }
-      try {
-        names = db.prepare('SELECT COUNT(*) c FROM place_names').get().c;
-      } catch (_) {
-        names = 0;
-      }
-      try {
-        sources = db.prepare('SELECT COUNT(*) c FROM place_sources').get().c;
-      } catch (_) {
-        sources = 0;
-      }
+      const {
+        countries,
+        regions,
+        cities,
+        names,
+        sources
+      } = fetchGazetteerSummary(db, { trace });
       doneCounts();
 
       const doneClose = trace.pre('db-close');
@@ -140,7 +111,8 @@ function createGazetteerRouter(options = {}) {
       finishTrace();
     } catch (err) {
       finishTrace();
-      res.status(500).send('<!doctype html><title>Error</title><pre>' + escapeHtml(err && err.message ? err.message : String(err)) + '</pre>');
+      const message = err && err.message ? err.message : String(err);
+      res.status(500).type('html').send(errorPage({ status: 500, message }, context));
     }
   });
 

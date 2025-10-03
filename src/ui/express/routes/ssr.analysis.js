@@ -10,22 +10,8 @@ const {
 const {
   renderAnalysisDetailPage
 } = require('../views/analysisDetailPage');
-
-function ensureRenderNav(fn) {
-  if (typeof fn === 'function') return fn;
-  return () => '';
-}
-
-function escapeHtml(value) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
+const { createRenderContext } = require('../utils/html');
+const { errorPage } = require('../components/base');
 
 function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
   if (typeof getDbRW !== 'function') {
@@ -33,7 +19,7 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
   }
 
   const router = express.Router();
-  const navRenderer = ensureRenderNav(renderNav);
+  const context = createRenderContext({ renderNav });
 
   router.get('/analysis', (req, res) => {
     res.redirect('/analysis/ssr');
@@ -44,13 +30,12 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
     try {
       db = getDbRW();
     } catch (err) {
-      const message = escapeHtml(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis runs: ${message}</p></body></html>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message: `Failed to load analysis runs: ${err?.message || err}` }, context));
       return;
     }
 
     if (!db) {
-      res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
+      res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));
       return;
     }
 
@@ -62,19 +47,18 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
         items,
         total,
         limit,
-        renderNav: navRenderer
+        renderNav: context.renderNav
       });
       res.type('html').send(html);
     } catch (err) {
-      const message = escapeHtml(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis runs: ${message}</p></body></html>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message: `Failed to load analysis runs: ${err?.message || err}` }, context));
     }
   });
 
   router.get('/analysis/:id/ssr', (req, res) => {
     const runId = String(req.params.id || '').trim();
     if (!runId) {
-      res.status(400).send('<!doctype html><title>Analysis</title><body><p>Missing analysis run id.</p></body></html>');
+      res.status(400).type('html').send(errorPage({ status: 400, message: 'Missing analysis run id.' }, context));
       return;
     }
 
@@ -82,13 +66,12 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
     try {
       db = getDbRW();
     } catch (err) {
-      const message = escapeHtml(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis run: ${message}</p></body></html>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message: `Failed to load analysis run: ${err?.message || err}` }, context));
       return;
     }
 
     if (!db) {
-      res.status(503).send('<!doctype html><title>Analysis</title><body><p>Database unavailable.</p></body></html>');
+      res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));
       return;
     }
 
@@ -96,19 +79,18 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
       ensureAnalysisRunSchema(db);
       const detail = getAnalysisRun(db, runId);
       if (!detail) {
-        res.status(404).send('<!doctype html><title>Analysis</title><body><p>Analysis run not found.</p></body></html>');
+        res.status(404).type('html').send(errorPage({ status: 404, message: 'Analysis run not found.' }, context));
         return;
       }
       const html = renderAnalysisDetailPage({
         run: detail.run,
         events: detail.events,
         payload: detail,
-        renderNav: navRenderer
+        renderNav: context.renderNav
       });
       res.type('html').send(html);
     } catch (err) {
-      const message = escapeHtml(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Analysis</title><body><p>Failed to load analysis run: ${message}</p></body></html>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message: `Failed to load analysis run: ${err?.message || err}` }, context));
     }
   });
 

@@ -1,4 +1,5 @@
 const express = require('express');
+const { fetchDomainSummary } = require('../data/domainSummary');
 
 function createDomainSummaryApiRouter({ urlsDbPath }) {
   if (!urlsDbPath) {
@@ -27,37 +28,9 @@ function createDomainSummaryApiRouter({ urlsDbPath }) {
     try {
       db = new NewsDatabase(urlsDbPath);
 
-      const articlesRow = db.db.prepare(`
-        SELECT COUNT(*) AS c
-        FROM articles a
-        JOIN urls u ON u.url = a.url
-        WHERE LOWER(u.host) = ?
-      `).get(host);
-      const articles = (articlesRow && typeof articlesRow.c === 'number') ? articlesRow.c : 0;
+      const summary = fetchDomainSummary(db.db, host);
 
-      let fetches = 0;
-      try {
-        const fetchRow = db.db.prepare('SELECT COUNT(*) AS c FROM fetches WHERE LOWER(host) = ?').get(host);
-        fetches = (fetchRow && typeof fetchRow.c === 'number') ? fetchRow.c : 0;
-      } catch (_) {
-        try {
-          const fallbackRow = db.db.prepare(`
-            SELECT COUNT(*) AS c
-            FROM fetches f
-            JOIN urls u ON u.url = f.url
-            WHERE LOWER(u.host) = ?
-          `).get(host);
-          fetches = (fallbackRow && typeof fallbackRow.c === 'number') ? fallbackRow.c : 0;
-        } catch (_) {
-          fetches = 0;
-        }
-      }
-
-      return res.json({
-        host,
-        articles,
-        fetches
-      });
+      return res.json(summary);
     } catch (err) {
       return res.status(500).json({
         error: err && err.message ? err.message : String(err)

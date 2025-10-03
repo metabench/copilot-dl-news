@@ -11,22 +11,8 @@ const {
   renderQueueDetailPage
 } = require('../views/queueDetailPage');
 const { resolveStaleQueueJobs } = require('../services/queueJanitor');
-
-function ensureRenderNav(fn) {
-  if (typeof fn === 'function') return fn;
-  return () => '';
-}
-
-function escapeHtml(value) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
+const { createRenderContext } = require('../utils/html');
+const { errorPage } = require('../components/base');
 
 function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger = null }) {
   if (typeof getDbRW !== 'function') {
@@ -34,7 +20,7 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
   }
 
   const router = express.Router();
-  const navRenderer = ensureRenderNav(renderNav);
+  const context = createRenderContext({ renderNav });
 
   router.get('/queues', (req, res) => {
     res.redirect('/queues/ssr');
@@ -44,7 +30,7 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
     try {
       const db = getDbRW();
       if (!db) {
-        res.status(503).send('<!doctype html><title>Queues</title><body><p>Database unavailable.</p></body></html>');
+        res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));
         return;
       }
       try {
@@ -53,12 +39,11 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
       const rows = listQueues(db, { limit: req.query.limit });
       const html = renderQueuesListPage({
         rows,
-        renderNav: navRenderer
+        renderNav: context.renderNav
       });
       res.type('html').send(html);
     } catch (err) {
-      const message = escapeHtml(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Queues</title><body><p>Failed to load queues: ${message}</p></body></html>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message: `Failed to load queues: ${err?.message || err}` }, context));
     }
   });
 
@@ -86,13 +71,13 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
   router.get('/queues/:id/ssr', (req, res) => {
     const id = String(req.params.id || '').trim();
     if (!id) {
-      res.status(400).send('<!doctype html><title>Queue</title><body><p>Missing queue id.</p></body></html>');
+      res.status(400).type('html').send(errorPage({ status: 400, message: 'Missing queue id.' }, context));
       return;
     }
     try {
       const db = getDbRW();
       if (!db) {
-        res.status(503).send('<!doctype html><title>Queue</title><body><p>Database unavailable.</p></body></html>');
+        res.status(503).type('html').send(errorPage({ status: 503, message: 'Database unavailable.' }, context));
         return;
       }
       try {
@@ -106,7 +91,7 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
         limit: req.query.limit
       });
       if (!detail.job) {
-        res.status(404).send('<!doctype html><title>Queue</title><body><p>Queue not found.</p></body></html>');
+        res.status(404).type('html').send(errorPage({ status: 404, message: 'Queue not found.' }, context));
         return;
       }
 
@@ -158,12 +143,11 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
         },
         pagination: paginationInfo,
         neighbors: detail.neighbors,
-        renderNav: navRenderer
+        renderNav: context.renderNav
       });
       res.type('html').send(html);
     } catch (err) {
-      const message = escapeHtml(err?.message || err);
-      res.status(500).send(`<!doctype html><title>Queue</title><body><p>Failed to load queue: ${message}</p></body></html>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message: `Failed to load queue: ${err?.message || err}` }, context));
     }
   });
 

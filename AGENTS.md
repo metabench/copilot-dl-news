@@ -1,6 +1,6 @@
 # AGENTS.md — Server & Crawler Modularisation Plan
 
-_Last updated: 2025-10-01_
+_Last updated: 2025-10-03_
 
 This document exists solely to keep every change aligned with the ongoing refactor that pulls HTML rendering and database access out of `src/ui/express/server.js` and `src/crawl.js`. Anything that does not help that priority belongs in the RUNBOOK, ROADMAP, or in module-specific docs instead.
 
@@ -12,6 +12,11 @@ This document exists solely to keep every change aligned with the ongoing refact
 
 ## Current Baseline
 
+- **Architectural Foundation**: Centralized HTML utilities (`utils/html.js`) and component library (`components/base.js`) established, inspired by jsgui3 patterns. See `docs/HTML_COMPOSITION_ARCHITECTURE.md` for full design guide.
+- **Complete Migration**: ALL route and view files now use centralized utilities and components (eliminating ~250 lines of duplicate code).
+  - **Route files migrated**: `routes/ssr.milestones.js`, `routes/ssr.queues.js`, `routes/ssr.analysis.js`, `routes/ssr.gazetteer.country.js`, `routes/ssr.gazetteer.js`, `routes/ssr.gazetteer.place.js` now use `createRenderContext` and `errorPage` component.
+  - **View files migrated**: `views/milestonesPage.js`, `views/problemsPage.js`, `views/queueDetailPage.js`, `views/queuesListPage.js`, `views/analysisListPage.js`, `views/analysisDetailPage.js`, `views/problems.js` now import from centralized utilities and use `pill` component for status badges.
+- **Database adapters**: `src/db/index.js` now exposes an adapter registry with SQLite registered by default (`src/db/sqlite/` hosts `NewsDatabase`, `ensureDb`, and related helpers), unlocking future Postgres/compression backends without touching callers.
 - Extracted server surfaces: `routes/api.recent-domains.js`, `routes/api.domain-summary.js`, `routes/api.gazetteer.js`, `routes/api.gazetteer.places.js`, `routes/api.gazetteer.place.js`, `routes/api.crawl.js`, `routes/ssr.queues.js`, `routes/ssr.milestones.js`, `routes/ssr.gazetteer.places.js`, `routes/ssr.gazetteer.kind.js`, `routes/ssr.analysis.js`.
 - Dedicated gazetteer data helpers now cover list/detail lookups: `data/gazetteerPlaces.js`, `data/gazetteerPlace.js`.
 - Crawler helpers already exist under `src/crawler/` (limiter, sitemap, urlPolicy, etc.); remaining inline logic in `crawl.js` should migrate into that directory.
@@ -68,7 +73,10 @@ If you touch a route or crawler pathway that is still inline, schedule an extrac
 - When removing or reshaping blocks in `server.js` or `crawl.js`, confirm the file still parses (matching braces, exports, and returns) and run a quick syntax/test check. If a syntax error surfaces, inspect the diff or reported location to understand and fix it before reaching for `git checkout` or other revert commands.
 - Favor small, surgical edits when extracting handlers: anchor patches around precise line ranges, maintain a written checklist of remaining inline surfaces, and step through each removal cautiously to avoid reintroducing regressions.
 - Keep commits reviewable: aim for one extraction per commit whenever possible.
-- For UI state management, pattern discovery logic, or supporting utilities, feel free to reference the `jsgui3-html` and `jsgui3-server` repositories. Copying code from those projects—and modifying it to suit this codebase—is explicitly allowed when it accelerates progress or aligns implementations.
+- For UI state management, pattern discovery logic, or supporting utilities, reference the implementation patterns at:
+  * **jsgui3-html**: https://github.com/metabench/jsgui3-html (Control-based component composition, data binding, isomorphic rendering)
+  * **jsgui3-server**: https://github.com/metabench/jsgui3-server (Server-side rendering patterns, Active_HTML_Document base class, context management)
+  * Copying code patterns from those projects—and adapting them to suit this codebase's SSR needs—is explicitly allowed and encouraged when it accelerates progress or aligns implementations.
 
 ## UI Review Pipeline — Responsive Screenshots
 

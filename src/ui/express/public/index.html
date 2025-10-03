@@ -2,7 +2,24 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport"             <div class="control-checkboxes">
+              <label class="control-checkbox">
+                <input id="slowMode" type="checkbox" />
+                <span>Slow mode (1 req/s)</span>
+              </label>
+              <label class="control-checkbox" title="Discover and enqueue URLs from the site's sitemap in addition to the Start URL. Disable to rely only on link traversal.">
+                <input id="useSitemap" type="checkbox" />
+                <span>Use sitemap</span>
+              </label>
+              <label class="control-checkbox">
+                <input id="sitemapOnly" type="checkbox" />
+                <span>Sitemap only</span>
+              </label>
+              <label class="control-checkbox" title="Resume all incomplete crawls (max 8 concurrent, one per domain)">
+                <input id="resumeAllQueues" type="checkbox" />
+                <span>Resume all queues</span>
+              </label>
+            </div>=device-width, initial-scale=1" />
   <title>News Crawler UI</title>
   <link rel="stylesheet" href="/crawler.css" />
   <link rel="stylesheet" href="/assets/index.css" />
@@ -10,8 +27,8 @@
   </head>
   <body>
     <a class="skip-link" href="#crawl-controls">Skip to crawl controls</a>
-    <main class="crawler-layout">
-      <header class="page-header">
+    <main class="crawler-layout crawler-layout--studio">
+      <header class="page-header panel--full-width">
         <div class="page-header__primary">
           <h1 class="page-title">News Crawler</h1>
           <div class="page-header__nav" data-nav-container>
@@ -31,7 +48,7 @@
         </nav>
       </header>
 
-      <section id="crawl-controls" class="panel controls-card" aria-labelledby="crawl-controls-heading">
+      <section id="crawl-controls" class="panel controls-card panel--full-width" aria-labelledby="crawl-controls-heading">
         <header class="controls-card__header">
           <h2 id="crawl-controls-heading" class="section-title">Crawl controls</h2>
           <button id="themeBtn" class="button button--ghost" type="button" title="Toggle dark mode">Dark</button>
@@ -123,7 +140,7 @@
           </div>
         </div>
       </section>
-    <section id="overviewSection" class="panel">
+    <section id="overviewSection" class="panel panel--half-width">
       <div class="summary-head">
         <h3>Run overview</h3>
         <div class="summary-meta">
@@ -163,7 +180,7 @@
         </div>
       </div>
     </section>
-    <section id="insightsPanel" class="panel" data-has-data="0" style="display:none;">
+    <section id="insightsPanel" class="panel panel--two-thirds" data-has-data="0" style="display:none;">
       <div class="summary-head">
         <h3>Intelligent insights</h3>
         <span id="insightsHint" class="muted" style="font-size:12px;">Insights appear once planner telemetry streams in.</span>
@@ -206,7 +223,7 @@
         </div>
       </div>
     </section>
-    <section id="patternInsightsPanel" class="panel pattern-insights" data-has-data="0" style="display:none;">
+    <section id="patternInsightsPanel" class="panel pattern-insights panel--full-width" data-has-data="0" style="display:none;">
       <div class="summary-head">
         <h3>Pattern insights</h3>
         <span id="patternInsightsHint" class="muted" style="font-size:12px;">Pattern discovery events appear once the intelligent planner runs.</span>
@@ -252,7 +269,7 @@
         <div id="patternInsightsLog" class="pattern-log__list timeline-list muted">No pattern events yet.</div>
       </div>
     </section>
-    <section id="pipelinePanel" class="panel pipeline-panel" style="display:none;">
+    <section id="pipelinePanel" class="panel pipeline-panel panel--full-width" style="display:none;">
       <div class="summary-head">
         <h3>Intelligent pipeline</h3>
         <span id="pipelineUpdated" class="muted" style="font-size:12px;">Waiting for planner telemetry…</span>
@@ -324,7 +341,7 @@
       </div>
       <div id="insightAnalysisHighlights" class="analysis-highlights"></div>
     </section>
-    <section id="jobsSection" class="panel panel--compact">
+    <section id="jobsSection" class="panel panel--compact panel--half-width">
       <div class="panel-head">
         <h3>Ongoing crawls</h3>
         <label class="toggle-control">
@@ -335,7 +352,7 @@
       <div id="jobsList" class="muted text-sm">None</div>
     </section>
 
-    <section id="progressSection" class="panel panel--stack">
+    <section id="progressSection" class="panel panel--stack panel--two-thirds">
       <div class="panel-head">
         <h3>
           Progress
@@ -381,7 +398,7 @@
       </div>
     </section>
 
-    <section id="eventsSection" class="panel panel--expando">
+    <section id="eventsSection" class="panel panel--expando panel--full-width">
       <details id="secErrors" open>
         <summary><strong>Recent errors</strong></summary>
         <div id="errorsPanel" class="expando-body text-sm">
@@ -421,7 +438,7 @@
       </details>
     </section>
 
-    <section id="healthPanel" class="panel panel--compact">
+    <section id="healthPanel" class="panel panel--compact panel--third">
       <div class="panel-head">
         <h3>Status</h3>
       </div>

@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { startServer } = require('../server');
-const NewsDatabase = require(path.resolve(__dirname, '../../../db.js'));
+const NewsDatabase = require(path.resolve(__dirname, '../../../db'));
 
 function getText(hostname, port, pathStr) {
   return new Promise((resolve, reject) => {

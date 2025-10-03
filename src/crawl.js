@@ -87,6 +87,12 @@ const {
 const {
   ArticleProcessor
 } = require('./crawler/ArticleProcessor');
+const {
+  NavigationDiscoveryService
+} = require('./crawler/NavigationDiscoveryService');
+const {
+  ContentAcquisitionService
+} = require('./crawler/ContentAcquisitionService');
 const ArticleSignalsService = require('./crawler/ArticleSignalsService');
 const {
   sleep,
@@ -355,6 +361,18 @@ class NewsCrawler {
       logger: console
     });
 
+    this.navigationDiscoveryService = new NavigationDiscoveryService({
+      linkExtractor: this.linkExtractor,
+      normalizeUrl: (url, ctx) => this.normalizeUrl(url, ctx),
+      looksLikeArticle: (url) => this.looksLikeArticle(url),
+      logger: console
+    });
+
+    this.contentAcquisitionService = new ContentAcquisitionService({
+      articleProcessor: this.articleProcessor,
+      logger: console
+    });
+
     this.adaptiveSeedPlanner = new AdaptiveSeedPlanner({
       baseUrl: this.baseUrl,
       state: this.state,
@@ -477,6 +495,8 @@ class NewsCrawler {
       getStats: () => this.stats,
       state: this.state,
       fetchPipeline: this.fetchPipeline,
+      navigationDiscoveryService: this.navigationDiscoveryService,
+      contentAcquisitionService: this.contentAcquisitionService,
       articleProcessor: this.articleProcessor,
       milestoneTracker: this.milestoneTracker,
       adaptiveSeedPlanner: this.adaptiveSeedPlanner,

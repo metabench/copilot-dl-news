@@ -17,7 +17,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
     const rawId = req.params.id;
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       return res.status(503).json({
         error: 'Database unavailable',
@@ -63,7 +63,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
     const rawId = req.query.id;
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       return res.status(503).json({
         error: 'Database unavailable',
@@ -97,7 +97,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/hubs', (req, res) => {
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (_) {
       return res.status(200).json([]);
     }
@@ -124,7 +124,7 @@ function createGazetteerPlaceApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/resolve', (req, res) => {
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (_) {
       return res.status(200).json([]);
     }

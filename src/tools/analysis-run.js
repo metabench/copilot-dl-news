@@ -7,7 +7,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../ensure_db');
+const { ensureDb } = require('../db/sqlite');
 const {
   ensureAnalysisRunSchema,
   createAnalysisRun,

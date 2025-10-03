@@ -31,7 +31,7 @@ function createGazetteerPlacesRouter(options = {}) {
 
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       endTrace();
       res.status(503).send('<!doctype html><title>Gazetteer</title><body><h1>Gazetteer</h1><p>Database unavailable.</p></body></html>');

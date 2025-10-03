@@ -1,18 +1,4 @@
-function escapeHtml(value) {
-	const map = {
-		'&': '&amp;',
-		'<': '&lt;',
-		'>': '&gt;',
-		'"': '&quot;',
-		"'": '&#39;'
-	};
-	return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
-
-function ensureRenderNav(fn) {
-	if (typeof fn === 'function') return fn;
-	return () => '';
-}
+const { escapeHtml } = require('../utils/html');
 
 function safeScript(value) {
 	const json = JSON.stringify(value ?? {});
@@ -65,8 +51,7 @@ function collectHighlights(run = {}, payload = {}) {
 }
 
 function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav }) {
-	const navRenderer = ensureRenderNav(renderNav);
-	const navHtml = navRenderer('analysis', { variant: 'bar' });
+	const navHtml = (typeof renderNav === 'function') ? renderNav('analysis', { variant: 'bar' }) : '';
 	const summarySource = run?.summary || run?.lastProgress || payload?.lastProgress || null;
 	const summaryPretty = summarySource ? formatJson(summarySource, 'No summary yet.') : 'No summary yet.';
 	const eventsHtml = events.length ? events.map((event) => {

@@ -33,6 +33,37 @@
   .flag { font-size: 14px; }
   .subtle { color: #94a3b8; }
   .muted { color: #9aa6b2; }
+  
+  /* Mobile-large-portrait optimization (414px) */
+  @media (max-width:720px){
+    main{grid-template-columns:1fr;gap:12px;padding:12px}
+    header{padding:10px 12px}
+    .panel{padding:10px}
+    table{font-size:13px}
+    th,td{padding:6px 8px}
+    .row{flex-wrap:wrap}
+  }
+  @media (min-width:390px) and (max-width:720px){
+    main{padding:14px}
+    .panel{padding:12px}
+  }
+  
+  /* Studio layout for ultrawide (2560px+) */
+  @media (min-width:2560px){
+    main{max-width:2400px;margin:0 auto;padding:24px 72px;grid-template-columns:500px 1fr;gap:24px}
+    header h1{font-size:22px}
+    table{font-size:15px}
+    th,td{padding:10px 12px}
+  }
+  /* Ultra-ultrawide (3440px+) */
+  @media (min-width:3440px){
+    main{max-width:3200px;padding:32px 96px;grid-template-columns:600px 1fr;gap:32px}
+    header h1{font-size:24px}
+    table{font-size:16px}
+    th,td{padding:11px 14px}
+    input[type="text"], select, input[type="number"]{font-size:15px;padding:7px 10px}
+    button{font-size:15px;padding:7px 12px}
+  }
   </style>
   <script type="module" src="/assets/global-nav.js"></script>
 </head>

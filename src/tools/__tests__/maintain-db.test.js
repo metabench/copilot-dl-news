@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { ensureDb } = require('../../ensure_db');
+const { ensureDb } = require('../../db/sqlite');
 const { spawnSync } = require('child_process');
 
 describe('maintain-db dedupes place_sources', () => {

@@ -101,7 +101,7 @@ const {
 } = require('../../config/ConfigManager');
 const {
   ensureDb
-} = require('../../ensure_db');
+} = require('../../db/sqlite');
 const {
   createRunnerFactory,
   isTruthyFlag
@@ -124,6 +124,9 @@ const {
 const {
   createJobControlRouter
 } = require('./routes/api.job-control');
+const {
+  createResumeAllRouter
+} = require('./routes/api.resume-all');
 
 // Quiet test mode: suppress certain async logs that can fire after Jest completes
 const QUIET = !!process.env.JEST_WORKER_ID || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_TEST_QUIET || '').toLowerCase());
@@ -347,6 +350,19 @@ function createApp(options = {}) {
     broadcast,
     broadcastJobs,
     quiet: QUIET
+  }));
+  app.use(createResumeAllRouter({
+    jobRegistry,
+    getDbRW,
+    runner,
+    buildArgs,
+    broadcast,
+    broadcastJobs,
+    broadcastProgress,
+    urlsDbPath,
+    queueDebug,
+    metrics,
+    QUIET
   }));
   app.use(createAnalysisControlRouter({
     analysisRunner,

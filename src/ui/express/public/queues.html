@@ -13,7 +13,7 @@
     header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
     header nav a:hover{color:var(--fg);text-decoration:underline}
     .card{background:var(--bg-soft);border:1px solid var(--border);border-radius:10px;padding:10px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:12px}
   .card h2{margin:0 0 8px;font-size:16px}
   .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
   .timeline li{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
@@ -46,6 +46,37 @@
     .bad{color:#dc2626}
     .ok{color:#16a34a}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    
+    /* Mobile-large-portrait optimization (414px) */
+    @media (max-width:720px){
+      .container{padding:0 12px;margin:12px auto}
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+      .grid{grid-template-columns:1fr;gap:10px}
+      .card{padding:12px}
+      table{font-size:13px}
+      th,td{padding:6px 8px}
+    }
+    @media (min-width:390px) and (max-width:720px){
+      .container{padding:0 14px}
+      .card{padding:14px}
+    }
+    
+    /* Studio layout for ultrawide (2560px+) */
+    @media (min-width:2560px){
+      .container{max-width:2400px;padding:0 72px}
+      .grid{grid-template-columns:repeat(2,1fr) !important;gap:20px}
+      .card{padding:14px}
+      header h1{font-size:24px}
+      th,td{font-size:15px}
+    }
+    /* Ultra-ultrawide (3440px+) */
+    @media (min-width:3440px){
+      .container{max-width:3200px;padding:0 96px}
+      .grid{grid-template-columns:repeat(3,1fr) !important;gap:24px}
+      .card{padding:16px}
+      header h1{font-size:26px}
+      th,td{font-size:16px}
+    }
   </style>
   <script type="module" src="/assets/global-nav.js"></script>
   </head>

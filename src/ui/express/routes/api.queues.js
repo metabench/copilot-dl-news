@@ -1,5 +1,6 @@
 const express = require('express');
 const { resolveStaleQueueJobs } = require('../services/queueJanitor');
+const { listQueues, getQueueDetail } = require('../data/queues');
 
 // Queues APIs (read-only; best-effort when DB available)
 function createQueuesApiRouter({ getDbRW, jobRegistry = null, logger = null }) {
@@ -14,21 +15,7 @@ function createQueuesApiRouter({ getDbRW, jobRegistry = null, logger = null }) {
         resolveStaleQueueJobs({ db, jobRegistry, logger });
       } catch (_) {}
       const limit = Math.max(1, Math.min(200, parseInt(req.query.limit || '50', 10)));
-      const rows = db.prepare(`
-        SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
-               COALESCE(
-                 NULLIF((SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id), 0),
-                 (SELECT COUNT(*) FROM queue_events_enhanced ee WHERE ee.job_id = j.id),
-                 0
-               ) AS events,
-               COALESCE(
-                 (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id),
-                 (SELECT MAX(ts) FROM queue_events_enhanced ee WHERE ee.job_id = j.id)
-               ) AS lastEventAt
-        FROM crawl_jobs j
-        ORDER BY COALESCE(j.ended_at, j.started_at) DESC
-        LIMIT ?
-      `).all(limit);
+      const rows = listQueues(db, { limit });
       res.json({ total: rows.length, items: rows });
     } catch (e) {
       res.status(500).json({ error: e.message });
@@ -48,37 +35,20 @@ function createQueuesApiRouter({ getDbRW, jobRegistry = null, logger = null }) {
       try {
         resolveStaleQueueJobs({ db, jobRegistry, logger });
       } catch (_) {}
-      const job = db.prepare(`SELECT id, url, pid, started_at AS startedAt, ended_at AS endedAt, status FROM crawl_jobs WHERE id = ?`).get(id);
-      if (!job) return res.status(404).json({ error: 'not found' });
-      const where = ['job_id = ?'];
-      const params = [id];
-      if (action) { where.push('action = ?'); params.push(action); }
-      let order = 'DESC';
-      if (before != null) { where.push('id < ?'); params.push(before); }
-      else if (after != null) { where.push('id > ?'); params.push(after); order = 'ASC'; }
-      let items = db.prepare(`
-        SELECT id, ts, action, url, depth, host, reason, queue_size AS queueSize,
-               queue_origin AS queueOrigin, queue_role AS queueRole, queue_depth_bucket AS queueDepthBucket
-        FROM queue_events
-        WHERE ${where.join(' AND ')}
-        ORDER BY id ${order}
-        LIMIT ?
-      `).all(...params, limit);
-      if (order === 'ASC') items.reverse();
-      if (!items.length) {
-        items = db.prepare(`
-          SELECT id, ts, action, url, depth, host, reason, queue_size AS queueSize,
-                 queue_origin AS queueOrigin, queue_role AS queueRole, queue_depth_bucket AS queueDepthBucket
-          FROM queue_events_enhanced
-          WHERE ${where.join(' AND ')}
-          ORDER BY id ${order}
-          LIMIT ?
-        `).all(...params, limit);
-        if (order === 'ASC') items.reverse();
-      }
-      const nextCursor = items.length ? items[items.length - 1].id : null; // for older pages (before=nextCursor)
-      const prevCursor = items.length ? items[0].id : null; // for newer pages (after=prevCursor)
-      res.json({ job, items, cursors: { nextBefore: nextCursor, prevAfter: prevCursor } });
+      const detail = getQueueDetail(db, { id, action, before, after, limit });
+      if (!detail.job) return res.status(404).json({ error: 'not found' });
+      const cursors = {
+        nextBefore: detail.pagination?.oldestId ?? null,
+        prevAfter: detail.pagination?.newestId ?? null
+      };
+      res.json({
+        job: detail.job,
+        items: detail.events,
+        cursors,
+        pagination: detail.pagination,
+        neighbors: detail.neighbors,
+        filters: detail.filters
+      });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

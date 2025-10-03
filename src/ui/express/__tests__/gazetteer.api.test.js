@@ -2,7 +2,7 @@ const request = require('supertest');
 const fs = require('fs');
 const path = require('path');
 const { createApp } = require('../server');
-const pathResolveDb = require('path').resolve(__dirname, '../../../db.js');
+const pathResolveDb = require('path').resolve(__dirname, '../../../db');
 let NewsDatabase;
 beforeAll(() => {
   jest.isolateModules(() => {

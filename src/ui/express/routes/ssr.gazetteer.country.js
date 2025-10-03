@@ -1,31 +1,8 @@
 const express = require('express');
 const { renderNav } = require('../services/navigation');
 const { fetchCountryPageData, GazetteerCountryError } = require('../data/gazetteerCountry');
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-function formatNumber(value) {
-  if (value == null) return '';
-  try {
-    return Number(value).toLocaleString();
-  } catch (_) {
-    return String(value);
-  }
-}
-
-function formatBytes(value) {
-  if (value == null) return '';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let index = 0;
-  let current = Number(value) || 0;
-  while (current >= 1024 && index < units.length - 1) {
-    current /= 1024;
-    index += 1;
-  }
-  return (index === 0 ? String(current | 0) : current.toFixed(1)) + ' ' + units[index];
-}
+const { escapeHtml, formatNumber, formatBytes, createRenderContext } = require('../utils/html');
+const { errorPage } = require('../components/base');
 
 function createGazetteerCountryRouter(options = {}) {
   const { urlsDbPath, startTrace } = options;
@@ -37,6 +14,7 @@ function createGazetteerCountryRouter(options = {}) {
   }
 
   const router = express.Router();
+  const context = createRenderContext({ renderNav });
 
   router.get('/gazetteer/country/:cc', (req, res) => {
     const trace = startTrace(req, 'gazetteer');
@@ -188,16 +166,16 @@ function createGazetteerCountryRouter(options = {}) {
       endTrace();
       if (err instanceof GazetteerCountryError) {
         if (err.code === 'DB_UNAVAILABLE') {
-          res.status(err.statusCode).send('<!doctype html><title>Country</title><h1>Country</h1><p>Database unavailable.</p>');
+          res.status(err.statusCode).type('html').send(errorPage({ status: err.statusCode, message: 'Database unavailable.' }, context));
           return;
         }
         if (err.code === 'NOT_FOUND') {
-          res.status(err.statusCode).send('<!doctype html><title>Not found</title><p>Country not found</p>');
+          res.status(err.statusCode).type('html').send(errorPage({ status: err.statusCode, message: 'Country not found.' }, context));
           return;
         }
       }
       const message = err && err.message ? err.message : String(err);
-      res.status(500).send(`<!doctype html><title>Error</title><pre>${escapeHtml(message)}</pre>`);
+      res.status(500).type('html').send(errorPage({ status: 500, message }, context));
     }
   });
 

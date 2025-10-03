@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const { recordPlaceHubSeed } = require('./data/placeHubs');
 
 let NewsDatabase = null;
 
@@ -160,44 +161,19 @@ class CrawlerDb {
   }
 
   recordPlaceHubSeed({ host, url, evidence = null }) {
-    if (!this.db || !this.db.db) return false;
+    if (!this.db) return false;
     try {
-      this.db.db.prepare(`
-        INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence)
-        VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)
-      `).run(host, url, evidence ? JSON.stringify(evidence) : null);
-      return true;
+      return !!recordPlaceHubSeed(this.db, { host, url, evidence });
     } catch (_) {
       return false;
     }
   }
 
   getTopCountrySlugs(limit = 50) {
-    if (!this.db || !this.db.db) return null;
+    if (!this.db || typeof this.db.getTopCountrySlugs !== 'function') return null;
     try {
-      const rows = this.db.db.prepare(`
-        SELECT name FROM place_names
-        WHERE id IN (
-          SELECT canonical_name_id FROM places WHERE kind='country'
-        )
-        ORDER BY name
-        LIMIT ?
-      `).all(limit);
-      const toSlug = (name) => String(name || '').trim().toLowerCase()
-        .replace(/\band\b/g, 'and')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-      const unique = new Set();
-      const slugs = [];
-      for (const entry of rows) {
-        const slug = toSlug(entry.name);
-        if (slug && !unique.has(slug)) {
-          unique.add(slug);
-          slugs.push(slug);
-        }
-      }
-      return slugs;
+      const slugs = this.db.getTopCountrySlugs(limit);
+      return Array.isArray(slugs) ? slugs : null;
     } catch (_) {
       return null;
     }

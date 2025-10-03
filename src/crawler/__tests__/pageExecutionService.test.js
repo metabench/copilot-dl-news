@@ -34,6 +34,22 @@ describe('PageExecutionService', () => {
       articleProcessor: {
         process: jest.fn()
       },
+      navigationDiscoveryService: {
+        discover: jest.fn(() => ({
+          navigationLinks: [],
+          articleLinks: [],
+          allLinks: [],
+          linkSummary: {
+            navigation: [],
+            articles: [],
+            all: []
+          },
+          $: null
+        }))
+      },
+      contentAcquisitionService: {
+        acquire: jest.fn()
+      },
       milestoneTracker: {
         checkAnalysisMilestones: jest.fn()
       },
@@ -84,7 +100,25 @@ describe('PageExecutionService', () => {
       html: '<html></html>'
     });
 
-    deps.articleProcessor.process.mockResolvedValue({
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks: [{ url: 'https://example.com/nav', type: 'nav' }],
+      articleLinks: [],
+      allLinks: [
+        { url: 'https://example.com/nav', type: 'nav' },
+        { url: 'https://example.com/nav', type: 'nav' }
+      ],
+      linkSummary: {
+        navigation: [{ url: 'https://example.com/nav', type: 'nav' }],
+        articles: [],
+        all: [
+          { url: 'https://example.com/nav', type: 'nav' },
+          { url: 'https://example.com/nav', type: 'nav' }
+        ]
+      },
+      $: null
+    });
+
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
       statsDelta: {
         articlesFound: 1
       },
@@ -108,7 +142,7 @@ describe('PageExecutionService', () => {
 
     expect(result).toEqual({ status: 'success' });
     expect(deps.fetchPipeline.fetch).toHaveBeenCalledTimes(1);
-    expect(deps.articleProcessor.process).toHaveBeenCalledWith(expect.objectContaining({
+    expect(deps.contentAcquisitionService.acquire).toHaveBeenCalledWith(expect.objectContaining({
       url: 'https://example.com/article',
       persistArticle: false
     }));
@@ -152,7 +186,18 @@ describe('PageExecutionService', () => {
       },
       html: '<html></html>'
     });
-    deps.articleProcessor.process.mockResolvedValue({
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: [],
+      linkSummary: {
+        navigation: [],
+        articles: [],
+        all: []
+      },
+      $: null
+    });
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
       statsDelta: null,
       navigationLinks: [],
       articleLinks: [],

@@ -12,7 +12,7 @@
 
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const { ensureDb, ensureGazetteer } = require('../ensure_db');
+const { ensureDb, ensureGazetteer } = require('../db/sqlite');
 const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../utils/project-root');
 

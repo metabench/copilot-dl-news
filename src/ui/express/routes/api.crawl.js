@@ -1,6 +1,13 @@
 const express = require('express');
 const { EventEmitter } = require('events');
 const { performance } = require('perf_hooks');
+const { recordCrawlJobStart, markCrawlJobStatus } = require('../data/crawlJobs');
+const {
+  insertQueueEvent,
+  insertCrawlProblem,
+  insertPlannerStageEvent,
+  insertCrawlMilestone
+} = require('../data/crawlEvents');
 
 function createCrawlStartRouter(options = {}) {
   const {
@@ -125,9 +132,17 @@ function createCrawlStartRouter(options = {}) {
               console.log('[db] inserting crawl_jobs row for', jobId);
             } catch (_) {}
           }
-          const info = db.prepare(
-            'INSERT OR REPLACE INTO crawl_jobs(id, url, args, pid, started_at, status) VALUES (?, ?, ?, ?, ?, ?)'
-          ).run(jobId, job.url || null, JSON.stringify(args), child?.pid || null, job.startedAt, 'running');
+          const info = recordCrawlJobStart(
+            db,
+            {
+              id: jobId,
+              url: job.url || null,
+              args,
+              pid: child?.pid || null,
+              startedAt: job.startedAt,
+              status: 'running'
+            }
+          );
           if (queueDebug) {
             try {
               console.log('[db] crawl_jobs insert changes=', info?.changes, 'rows');
@@ -173,7 +188,11 @@ function createCrawlStartRouter(options = {}) {
               console.log('[db] marking crawl_jobs row done for', jobId);
             } catch (_) {}
           }
-          const info = db.prepare('UPDATE crawl_jobs SET ended_at = ?, status = ? WHERE id = ?').run(job.lastExit.endedAt, 'done', jobId);
+          const info = markCrawlJobStatus(db, {
+            id: jobId,
+            endedAt: job.lastExit.endedAt,
+            status: 'done'
+          });
           if (queueDebug) {
             try {
               console.log('[db] crawl_jobs update changes=', info?.changes, 'rows');
@@ -392,17 +411,22 @@ function createCrawlStartRouter(options = {}) {
                     console.log('[db] queue event', jobId, obj.action, obj.url || '');
                   } catch (_) {}
                 }
-                const info = db.prepare(
-                  'INSERT INTO queue_events(job_id, ts, action, url, depth, host, reason, queue_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-                ).run(
+                const info = insertQueueEvent(
+                  db,
                   jobId,
-                  ts,
-                  String(obj.action || ''),
-                  obj.url || null,
-                  obj.depth != null ? obj.depth : null,
-                  obj.host || null,
-                  obj.reason || null,
-                  obj.queueSize != null ? obj.queueSize : null
+                  {
+                    ts,
+                    action: obj.action,
+                    url: obj.url || null,
+                    depth: obj.depth,
+                    host: obj.host,
+                    reason: obj.reason,
+                    queueSize: obj.queueSize,
+                    alias: obj.alias,
+                    queueOrigin: obj.queueOrigin,
+                    queueRole: obj.queueRole,
+                    queueDepthBucket: obj.queueDepthBucket
+                  }
                 );
                 if (queueDebug) {
                   try {
@@ -428,20 +452,17 @@ function createCrawlStartRouter(options = {}) {
               const db = getDbRW();
               if (db) {
                 const ts = new Date().toISOString();
-                db.prepare(
-                  'INSERT INTO crawl_problems(job_id, ts, kind, scope, target, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(
+                insertCrawlProblem(
+                  db,
                   jobId,
-                  ts,
-                  String(obj.kind || ''),
-                  obj.scope || null,
-                  obj.target || null,
-                  obj.message || null,
-                  obj.details != null
-                    ? typeof obj.details === 'string'
-                      ? obj.details
-                      : JSON.stringify(obj.details)
-                    : null
+                  {
+                    ts,
+                    kind: obj.kind,
+                    scope: obj.scope,
+                    target: obj.target,
+                    message: obj.message,
+                    details: obj.details
+                  }
                 );
               }
             } catch (_) {}
@@ -456,20 +477,17 @@ function createCrawlStartRouter(options = {}) {
               const db = getDbRW();
               if (db) {
                 const ts = obj.ts || new Date().toISOString();
-                db.prepare(
-                  'INSERT INTO planner_stage_events(job_id, ts, stage, status, sequence, duration_ms, details) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(
+                insertPlannerStageEvent(
+                  db,
                   jobId,
-                  ts,
-                  obj.stage != null ? String(obj.stage) : null,
-                  obj.status != null ? String(obj.status) : null,
-                  obj.sequence != null ? obj.sequence : null,
-                  obj.durationMs != null ? obj.durationMs : null,
-                  obj.details != null
-                    ? typeof obj.details === 'string'
-                      ? obj.details
-                      : JSON.stringify(obj.details)
-                    : null
+                  {
+                    ts,
+                    stage: obj.stage,
+                    status: obj.status,
+                    sequence: obj.sequence,
+                    durationMs: obj.durationMs,
+                    details: obj.details
+                  }
                 );
               }
             } catch (_) {}
@@ -484,20 +502,17 @@ function createCrawlStartRouter(options = {}) {
               const db = getDbRW();
               if (db) {
                 const ts = new Date().toISOString();
-                db.prepare(
-                  'INSERT INTO crawl_milestones(job_id, ts, kind, scope, target, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)'
-                ).run(
+                insertCrawlMilestone(
+                  db,
                   jobId,
-                  ts,
-                  String(obj.kind || ''),
-                  obj.scope || null,
-                  obj.target || null,
-                  obj.message || null,
-                  obj.details != null
-                    ? typeof obj.details === 'string'
-                      ? obj.details
-                      : JSON.stringify(obj.details)
-                    : null
+                  {
+                    ts,
+                    kind: obj.kind,
+                    scope: obj.scope,
+                    target: obj.target,
+                    message: obj.message,
+                    details: obj.details
+                  }
                 );
               }
             } catch (_) {}

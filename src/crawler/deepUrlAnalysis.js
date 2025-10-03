@@ -13,21 +13,14 @@ class DeepUrlAnalyzer {
 
   _hasUrl(db, url) {
     if (!db || !url) return false;
+    if (typeof db.hasUrl !== 'function') {
+      return false;
+    }
     try {
-      if (typeof db.hasUrl === 'function') {
-        return db.hasUrl(url);
-      }
-      if (db.db && typeof db.db.prepare === 'function') {
-        const stmt = db.db.prepare('SELECT 1 FROM urls WHERE url = ? LIMIT 1');
-        const row = stmt.get(url);
-        if (row) return true;
-        const art = db.db.prepare('SELECT 1 FROM articles WHERE url = ? LIMIT 1').get(url);
-        if (art) return true;
-        const fetch = db.db.prepare('SELECT 1 FROM fetches WHERE url = ? LIMIT 1').get(url);
-        if (fetch) return true;
-      }
-    } catch (_) { /* ignore */ }
-    return false;
+      return !!db.hasUrl(url);
+    } catch (_) {
+      return false;
+    }
   }
 
   analyze(decision) {

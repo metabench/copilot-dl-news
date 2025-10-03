@@ -1,4 +1,6 @@
 const express = require('express');
+const { listRecentErrors } = require('../data/errors');
+const { listCrawlTypes } = require('../data/crawlTypes');
 
 function createMiscApiRouter(options = {}) {
   const {
@@ -66,13 +68,7 @@ function createMiscApiRouter(options = {}) {
       const db = getDbRW();
       if (!db) return res.json({ errors: [] });
 
-      const rows = db.prepare(`
-        SELECT url, host, kind, code, message, details, at
-        FROM errors
-        WHERE at IS NOT NULL
-        ORDER BY at DESC
-        LIMIT 200
-      `).all();
+      const rows = listRecentErrors(db, { limit: 200 });
 
       const grouped = new Map();
       for (const row of rows) {
@@ -136,18 +132,12 @@ function createMiscApiRouter(options = {}) {
           error: 'Database unavailable'
         });
       }
-      const rows = db.prepare('SELECT name, description, declaration FROM crawl_types ORDER BY id').all();
-      const items = rows.map(row => {
-        try {
-          return { ...row,
-            declaration: JSON.parse(row.declaration)
-          };
-        } catch (e) {
-          return { ...row,
-            declaration: {},
-            error: 'invalid JSON'
-          };
-        }
+      const raw = listCrawlTypes(db);
+      const items = raw.map((row) => {
+        const { declarationError, ...rest } = row;
+        return declarationError
+          ? { ...rest, error: declarationError }
+          : rest;
       });
       res.json({
         items

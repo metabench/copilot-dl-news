@@ -1,4 +1,5 @@
 const express = require('express');
+const { fetchGazetteerSummary } = require('../data/gazetteerSummary');
 
 function createGazetteerApiRouter({ urlsDbPath }) {
   if (!urlsDbPath) {
@@ -10,7 +11,7 @@ function createGazetteerApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/summary', (req, res) => {
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       return res.status(503).json({
         error: 'Database unavailable',
@@ -21,28 +22,9 @@ function createGazetteerApiRouter({ urlsDbPath }) {
     let db;
     try {
       db = openDbReadOnly(urlsDbPath);
-      const getCount = (sql) => {
-        try {
-          const row = db.prepare(sql).get();
-          return (row && typeof row.c === 'number') ? row.c : 0;
-        } catch (_) {
-          return 0;
-        }
-      };
+  const counts = fetchGazetteerSummary(db);
 
-      const countries = getCount("SELECT COUNT(*) AS c FROM places WHERE kind='country'");
-      const regions = getCount("SELECT COUNT(*) AS c FROM places WHERE kind='region'");
-      const cities = getCount("SELECT COUNT(*) AS c FROM places WHERE kind='city'");
-      const names = getCount('SELECT COUNT(*) AS c FROM place_names');
-      const sources = getCount('SELECT COUNT(*) AS c FROM place_sources');
-
-      res.json({
-        countries,
-        regions,
-        cities,
-        names,
-        sources
-      });
+  res.json(counts);
     } catch (err) {
       res.status(500).json({
         error: 'Failed to load gazetteer summary',

@@ -1,13 +1,4 @@
-function escapeHtml(value) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
-}
+const { escapeHtml } = require('../utils/html');
 
 function deriveProblemSeverity(kind) {
   switch (kind) {

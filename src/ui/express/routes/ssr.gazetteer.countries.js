@@ -32,7 +32,7 @@ function createGazetteerCountriesRouter(options = {}) {
 
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       endTrace();
       res.status(503).send('<!doctype html><title>Countries</title><h1>Countries</h1><p>Database unavailable.</p>');

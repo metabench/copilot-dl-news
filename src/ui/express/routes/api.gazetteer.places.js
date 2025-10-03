@@ -14,7 +14,7 @@ function createGazetteerPlacesApiRouter({ urlsDbPath }) {
   router.get('/api/gazetteer/places', (req, res) => {
     let openDbReadOnly;
     try {
-      ({ openDbReadOnly } = require('../../../ensure_db'));
+  ({ openDbReadOnly } = require('../../../db/sqlite'));
     } catch (err) {
       res.status(503).json({
         error: 'Database unavailable',

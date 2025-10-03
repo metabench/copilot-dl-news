@@ -2,8 +2,8 @@
 // Validate gazetteer data quality: prints a summary and optionally details.
 
 const path = require('path');
-const { ensureDb, openDbReadOnly } = require('../ensure_db');
-const { validateGazetteer } = require('./gazetteer_qa');
+const { ensureDb, openDbReadOnly } = require('../db/sqlite');
+const { validateGazetteer } = require('../db/sqlite/tools/gazetteerQA');
 
 function parseArgs(argv) {
   const args = { details: false, json: false };

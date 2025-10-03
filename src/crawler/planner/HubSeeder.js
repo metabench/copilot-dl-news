@@ -1,5 +1,7 @@
 'use strict';
 
+const { recordPlaceHubSeed } = require('../data/placeHubs');
+
 class HubSeeder {
   constructor({
     enqueueRequest,
@@ -271,17 +273,20 @@ class HubSeeder {
   }
 
   _recordSeedInDatabase(host, hubUrl, meta = null) {
-    if (!this.db || !this.db.db || typeof this.db.db.prepare !== 'function') {
-      return;
-    }
+    if (!this.db) return;
     try {
-      this.db.db.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?, ?, NULL, NULL, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'), NULL, NULL, ?)`)
-        .run(host, hubUrl, JSON.stringify({
+      recordPlaceHubSeed(this.db, {
+        host,
+        url: hubUrl,
+        evidence: {
           by: 'intelligent-plan',
           reason: meta?.reason || 'learned-section-or-country',
           kind: meta?.kind || null,
-          source: meta?.source || null
-        }));
+          source: meta?.source || null,
+          slug: meta?.slug || null,
+          priorityBias: typeof meta?.priorityBias === 'number' ? meta.priorityBias : null
+        }
+      });
     } catch (_) {
       // ignore DB errors
     }

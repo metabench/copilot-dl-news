@@ -2,8 +2,8 @@ const path = require('path');
 const fs = require('fs');
 const request = require('supertest');
 
-// Absolute path to the DB module as resolved by server.js ('../../db' -> src/db.js)
-const DB_ABS = path.resolve(__dirname, '../../../db.js');
+// Absolute path to the DB module as resolved by server.js ('../../db' -> src/db)
+const DB_ABS = path.resolve(__dirname, '../../../db');
 
 describe('/api/recent-domains', () => {
   beforeEach(() => {
@@ -12,12 +12,12 @@ describe('/api/recent-domains', () => {
   });
 
   test('returns empty list when DB is unavailable (fallback)', async () => {
-    // Mock the exact module path that server.js resolves ('../../db' -> src/db.js)
-  jest.doMock(DB_ABS, () => { throw new Error('better-sqlite3 not installed'); }, { virtual: false });
+    // Mock the exact module path that server.js resolves ('../../db' -> src/db)
+    jest.doMock(DB_ABS, () => { throw new Error('better-sqlite3 not installed'); }, { virtual: false });
 
     let app;
     jest.isolateModules(() => {
-  const { createApp } = require('../server');
+      const { createApp } = require('../server');
       app = createApp();
     });
     const res = await request(app).get('/api/recent-domains?limit=20');
@@ -26,10 +26,10 @@ describe('/api/recent-domains', () => {
   });
 
   test('aggregates recent domains from articles', async () => {
-  // Ensure real DB is used
-  try { jest.unmock(DB_ABS); } catch (_) {}
-  const { createApp } = require('../server');
-  const NewsDatabase = require('../../../db');
+    // Ensure real DB is used
+    try { jest.unmock(DB_ABS); } catch (_) {}
+    const { createApp } = require('../server');
+    const NewsDatabase = require('../../../db');
     const tmp = path.join(__dirname, 'tmp_recent_domains.db');
     try { fs.unlinkSync(tmp); } catch (_) {}
     const db = new NewsDatabase(tmp);

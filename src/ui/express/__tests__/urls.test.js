@@ -41,11 +41,15 @@ function makeTempDb(filePath) {
 
 describe('URLs API', () => {
   const tmp = path.join(__dirname, 'tmp_urls.db');
+  const bodyPath = path.join(__dirname, 'tmp_urls_body.txt');
+  let fetchId;
   beforeAll(() => {
     try { fs.unlinkSync(tmp); } catch (_) {}
+    try { fs.unlinkSync(bodyPath); } catch (_) {}
     makeTempDb(tmp);
     // Add a fetch row to enable filters
     const db = new NewsDatabase(tmp);
+    fs.writeFileSync(bodyPath, 'hello world');
     db.insertFetch({
       url: 'https://example.com/a',
       request_started_at: new Date().toISOString(),
@@ -60,18 +64,22 @@ describe('URLs API', () => {
       download_ms: 20,
       total_ms: 30,
       saved_to_db: 1,
-      saved_to_file: 0,
-      file_path: null,
-      file_size: null,
+      saved_to_file: 1,
+      file_path: bodyPath,
+      file_size: 11,
       classification: 'article',
       nav_links_count: 0,
       article_links_count: 0,
       word_count: 123
     });
+    const handle = typeof db.getHandle === 'function' ? db.getHandle() : db.db;
+    const res = handle.prepare('SELECT id FROM fetches WHERE url = ? ORDER BY id DESC LIMIT 1').get('https://example.com/a');
+    fetchId = res?.id;
     db.close();
   });
   afterAll(() => {
     try { fs.unlinkSync(tmp); } catch (_) {}
+    try { fs.unlinkSync(bodyPath); } catch (_) {}
   });
 
   test('GET /api/urls returns list of URLs', async () => {
@@ -92,5 +100,24 @@ describe('URLs API', () => {
     expect(it.http_status).toBe(404);
     expect(it.classification).toBe('article');
     expect(it.word_count).toBeGreaterThanOrEqual(100);
+  });
+
+  test('GET /api/url-details returns article and fetches', async () => {
+    const app = createApp({ dbPath: tmp });
+    const res = await request(app).get('/api/url-details?url=' + encodeURIComponent('https://example.com/a'));
+    expect(res.statusCode).toBe(200);
+    expect(res.body.url).toBe('https://example.com/a');
+    expect(res.body.article).not.toBeNull();
+    expect(Array.isArray(res.body.fetches)).toBe(true);
+    expect(res.body.fetches.some(f => f.id === fetchId)).toBe(true);
+    expect(res.body.urlInfo).not.toBeNull();
+  });
+
+  test('GET /api/fetch-body returns stored body text', async () => {
+    const app = createApp({ dbPath: tmp });
+    const res = await request(app).get(`/api/fetch-body?id=${fetchId}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.text).toBe('hello world');
+    expect(res.headers['content-type']).toMatch(/text\/plain/);
   });
 });

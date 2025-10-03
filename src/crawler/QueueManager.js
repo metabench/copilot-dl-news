@@ -1,116 +1,100 @@
-'use strict';
+"use strict";
 
-function nowMs() {
-  return Date.now();
-}
+function nowMs() { return Date.now(); }
 
 class MinHeap {
-  constructor(compare) {
-    this.data = [];
-    this.compare = compare;
-  }
-
-  size() {
-    return this.data.length;
-  }
-
-  peek() {
-    return this.data[0];
-  }
-
-  push(item) {
-    this.data.push(item);
-    this._siftUp(this.data.length - 1);
-  }
-
+  constructor(compare) { this.data = []; this.compare = compare; }
+  size() { return this.data.length; }
+  push(item) { this.data.push(item); this._siftUp(this.data.length - 1); }
   pop() {
-    const n = this.data.length;
-    if (n === 0) return undefined;
+    const count = this.data.length;
+    if (!count) return undefined;
     const top = this.data[0];
     const last = this.data.pop();
-    if (n > 1) {
+    if (count > 1) {
       this.data[0] = last;
       this._siftDown(0);
     }
     return top;
   }
-
   _siftUp(index) {
-    let i = index;
-    while (i > 0) {
-      const parent = Math.floor((i - 1) / 2);
-      if (this.compare(this.data[i], this.data[parent]) < 0) {
-        [this.data[i], this.data[parent]] = [this.data[parent], this.data[i]];
-        i = parent;
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.compare(this.data[index], this.data[parent]) < 0) {
+        [this.data[index], this.data[parent]] = [this.data[parent], this.data[index]];
+        index = parent;
       } else {
         break;
       }
     }
   }
-
   _siftDown(index) {
-    const n = this.data.length;
-    let i = index;
+    const size = this.data.length;
     while (true) {
-      const left = 2 * i + 1;
-      const right = 2 * i + 2;
-      let smallest = i;
-      if (left < n && this.compare(this.data[left], this.data[smallest]) < 0) smallest = left;
-      if (right < n && this.compare(this.data[right], this.data[smallest]) < 0) smallest = right;
-      if (smallest !== i) {
-        [this.data[i], this.data[smallest]] = [this.data[smallest], this.data[i]];
-        i = smallest;
-      } else {
-        break;
-      }
+      const left = 2 * index + 1;
+      const right = 2 * index + 2;
+      let smallest = index;
+      if (left < size && this.compare(this.data[left], this.data[smallest]) < 0) smallest = left;
+      if (right < size && this.compare(this.data[right], this.data[smallest]) < 0) smallest = right;
+      if (smallest === index) break;
+      [this.data[index], this.data[smallest]] = [this.data[smallest], this.data[index]];
+      index = smallest;
     }
   }
 }
 
 class QueueManager {
-  constructor(options) {
-    this.usePriorityQueue = options.usePriorityQueue !== false;
-    this.maxQueue = options.maxQueue;
-    this.maxDepth = options.maxDepth;
-    this.stats = options.stats;
-  this.urlEligibilityService = options.urlEligibilityService;
-    this.safeHostFromUrl = options.safeHostFromUrl;
-    this.emitQueueEvent = options.emitQueueEvent;
-    this.emitEnhancedQueueEvent = options.emitEnhancedQueueEvent;
-    this.computeEnhancedPriority = options.computeEnhancedPriority;
-  this.computePriority = options.computePriority;
-    this.cache = options.cache;
-    this.getHostResumeTime = options.getHostResumeTime;
-    this.isHostRateLimited = options.isHostRateLimited;
-    this.jobIdProvider = options.jobIdProvider || (() => null);
+  constructor(opts = {}) {
+    this.usePriorityQueue = opts.usePriorityQueue !== false;
+    this.maxQueue = typeof opts.maxQueue === 'number' ? opts.maxQueue : 10000;
+    this.maxDepth = typeof opts.maxDepth === 'number' ? opts.maxDepth : 10;
+
+    this.urlEligibilityService = opts.urlEligibilityService;
+    this.safeHostFromUrl = opts.safeHostFromUrl || (() => null);
+    this.cache = opts.cache || { get: async () => null };
+    this.getHostResumeTime = opts.getHostResumeTime || (() => null);
+    this.isHostRateLimited = opts.isHostRateLimited || (() => false);
+    this.emitQueueEvent = opts.emitQueueEvent || (() => {});
+    this.emitEnhancedQueueEvent = opts.emitEnhancedQueueEvent || (() => {});
+    this.computeEnhancedPriority = opts.computeEnhancedPriority || (() => ({ priority: 0, prioritySource: 'base' }));
+    this.jobIdProvider = opts.jobIdProvider || (() => null);
+
+    this.discoveryQueueType = 'discovery';
+    this.acquisitionQueueType = 'acquisition';
 
     if (this.usePriorityQueue) {
-      this.queueHeap = new MinHeap((a, b) => a.priority - b.priority);
-      this.requestQueue = null;
+      this.priorityQueues = {
+        [this.discoveryQueueType]: new MinHeap((a, b) => a.priority - b.priority),
+        [this.acquisitionQueueType]: new MinHeap((a, b) => a.priority - b.priority)
+      };
+      this.fifoQueues = null;
     } else {
-      this.queueHeap = null;
-      this.requestQueue = [];
+      this.priorityQueues = null;
+      this.fifoQueues = {
+        [this.discoveryQueueType]: [],
+        [this.acquisitionQueueType]: []
+      };
     }
 
     this.queuedUrls = new Set();
     this._heatmapState = this._createEmptyHeatmapState();
+    this._lastServedQueueType = null;
+    this._streaks = {
+      [this.discoveryQueueType]: 0,
+      [this.acquisitionQueueType]: 0
+    };
+    this._burstLimit = typeof opts.burstLimit === 'number' && opts.burstLimit > 0 ? Math.floor(opts.burstLimit) : 5;
   }
 
   size() {
-    return this.usePriorityQueue ? this.queueHeap.size() : this.requestQueue.length;
-  }
-
-  peek() {
     if (this.usePriorityQueue) {
-      return this.queueHeap.peek();
+      return this.priorityQueues[this.discoveryQueueType].size() + this.priorityQueues[this.acquisitionQueueType].size();
     }
-    return this.requestQueue[0];
+    return this.fifoQueues[this.discoveryQueueType].length + this.fifoQueues[this.acquisitionQueueType].length;
   }
 
-  enqueue({ url, depth, type }) {
+  enqueue({ url, depth, type, meta }) {
     const currentSize = this.size();
-    const meta = type && typeof type === 'object' ? type : null;
-
     if (!this.urlEligibilityService || typeof this.urlEligibilityService.evaluate !== 'function') {
       throw new Error('QueueManager requires a urlEligibilityService with an evaluate method');
     }
@@ -120,158 +104,249 @@ class QueueManager {
       depth,
       type,
       queueSize: currentSize,
-      isDuplicate: (queueKey) => this.queuedUrls.has(queueKey)
-    });
+      isDuplicate: (queueKey) => queueKey && this.queuedUrls.has(queueKey)
+    }) || null;
 
     if (!evaluation || evaluation.status !== 'allow') {
-      if (evaluation?.handled) {
-        return false;
-      }
-      const normalizedDrop = evaluation?.normalized || url;
-      const hostDrop = evaluation?.host || this.safeHostFromUrl(normalizedDrop);
+      if (evaluation && evaluation.handled) return false;
+      const normalizedDrop = (evaluation && evaluation.normalized) || url;
+      const hostDrop = (evaluation && evaluation.host) || this.safeHostFromUrl(normalizedDrop);
       this.emitQueueEvent({
         action: 'drop',
         url: normalizedDrop,
         depth,
         host: hostDrop,
-        reason: evaluation?.reason || 'policy-blocked',
+        reason: (evaluation && evaluation.reason) || 'policy-blocked',
         queueSize: currentSize
       });
       return false;
     }
 
-    const { normalized, host, decision, kind, allowRevisit, queueKey } = evaluation;
-    const heatmapInfo = this._classifyHeatmap({
-      depth,
-      kind,
-      meta: evaluation?.meta || meta,
-      decision
-    });
-    let reason = evaluation.reason;
-    if (!reason && meta?.reason) {
-      reason = meta.reason;
-    }
+    const normalized = evaluation.normalized || url;
+    const host = evaluation.host || this.safeHostFromUrl(normalized);
+    const queueKey = evaluation.queueKey;
+    const kind = evaluation.kind || type || 'hub';
+    const evaluationMeta = evaluation.meta || meta || null;
+    const decision = evaluation.decision;
+    const allowRevisit = evaluation.allowRevisit;
 
     if (depth > this.maxDepth) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url: normalized,
-        depth,
-        host,
-        reason: 'max-depth',
-        queueSize: currentSize
-      });
+      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'max-depth', queueSize: currentSize });
+      return false;
+    }
+    if (currentSize >= this.maxQueue) {
+      this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'overflow', queueSize: currentSize });
       return false;
     }
 
-    if (this.size() >= this.maxQueue) {
-      this.emitQueueEvent({
-        action: 'drop',
-        url: normalized,
-        depth,
-        host,
-        reason: 'overflow',
-        queueSize: currentSize
-      });
-      return false;
-    }
-
+    const heatmapInfo = this._classifyHeatmap({ depth, kind, meta: evaluationMeta, decision });
+    const priorityBias = evaluationMeta && typeof evaluationMeta.priorityBias === 'number' ? evaluationMeta.priorityBias : 0;
     const discoveredAt = nowMs();
-    const priorityBias = typeof meta?.priorityBias === 'number' ? meta.priorityBias : 0;
+    const priorityResult = this.computeEnhancedPriority({
+      type: kind,
+      depth,
+      discoveredAt,
+      bias: priorityBias,
+      url: normalized,
+      meta: evaluationMeta
+    }) || { priority: 0, prioritySource: 'base' };
+
     const item = {
       url: normalized,
       depth,
       type: kind,
-      retries: 0,
-      nextEligibleAt: 0,
       discoveredAt,
       decision,
       allowRevisit,
       queueKey,
       priorityBias,
+      priority: typeof priorityResult.priority === 'number' ? priorityResult.priority : 0,
+      priorityMetadata: priorityResult.prioritySource && priorityResult.prioritySource !== 'base'
+        ? {
+            source: priorityResult.prioritySource,
+            bonusApplied: priorityResult.bonusApplied,
+            clusterId: priorityResult.clusterId,
+            gapPredictionScore: priorityResult.gapPredictionScore
+          }
+        : undefined,
       _heatmapInfo: heatmapInfo
     };
 
-    const priorityResult = this.computeEnhancedPriority({
-      type: item.type,
-      depth: item.depth,
-      discoveredAt,
-      bias: priorityBias,
-      url: normalized,
-      meta
-    });
+    const queueType = this._determineQueueType(item);
+    item.queueType = queueType;
+    this._pushItem(item, queueType);
+    if (queueKey) this.queuedUrls.add(queueKey);
+    if (heatmapInfo) this._applyHeatmapDelta(heatmapInfo, 1);
 
-    item.priority = priorityResult.priority;
-    if (priorityResult.prioritySource !== 'base') {
-      item.priorityMetadata = {
-        source: priorityResult.prioritySource,
-        bonusApplied: priorityResult.bonusApplied,
-        clusterId: priorityResult.clusterId,
-        gapPredictionScore: priorityResult.gapPredictionScore
-      };
-    }
-
-    if (this.usePriorityQueue) {
-      this.queueHeap.push(item);
-    } else {
-      this.requestQueue.push(item);
-    }
-    this.queuedUrls.add(queueKey);
-
-    const queueEventData = {
+    const eventPayload = {
       action: 'enqueued',
       url: normalized,
       depth,
       host,
       queueSize: this.size(),
-  reason,
-      jobId: this.jobIdProvider()
+      jobId: this.jobIdProvider(),
+      priorityScore: item.priority,
+      prioritySource: priorityResult.prioritySource || 'base'
     };
-
-    if (priorityResult.prioritySource !== 'base') {
-      queueEventData.priorityScore = priorityResult.priority;
-      queueEventData.prioritySource = priorityResult.prioritySource;
-      queueEventData.bonusApplied = priorityResult.bonusApplied;
-      queueEventData.clusterId = priorityResult.clusterId;
-      queueEventData.gapPredictionScore = priorityResult.gapPredictionScore;
+    if (priorityResult.prioritySource && priorityResult.prioritySource !== 'base') {
+      eventPayload.bonusApplied = priorityResult.bonusApplied;
+      eventPayload.clusterId = priorityResult.clusterId;
+      eventPayload.gapPredictionScore = priorityResult.gapPredictionScore;
     }
-
     if (heatmapInfo) {
-      queueEventData.queueOrigin = heatmapInfo.origin;
-      queueEventData.queueRole = heatmapInfo.role;
-      queueEventData.queueDepthBucket = heatmapInfo.depthBucket;
+      eventPayload.queueOrigin = heatmapInfo.origin;
+      eventPayload.queueRole = heatmapInfo.role;
+      eventPayload.queueDepthBucket = heatmapInfo.depthBucket;
     }
-
-    this.emitEnhancedQueueEvent(queueEventData);
-    if (heatmapInfo) {
-      this._applyHeatmapDelta(heatmapInfo, 1);
-    }
+    this.emitEnhancedQueueEvent(eventPayload);
     return true;
-  }
-
-  _releaseQueueKey(item) {
-    const key = item.queueKey || item.url;
-    if (key) {
-      this.queuedUrls.delete(key);
-    }
   }
 
   async pullNext() {
     const now = nowMs();
-    let minWake = Infinity;
+    let bestWakeAt = null;
+    const queueOrder = this._chooseQueueOrder();
+
+    for (const queueType of queueOrder) {
+      const result = await this._pullFromQueueType(queueType, now);
+      if (!result) continue;
+
+      const { item, deferred, context, wakeAt } = result;
+      if (Array.isArray(deferred) && deferred.length) {
+        for (const deferredItem of deferred) {
+          this._pushItem(deferredItem, queueType);
+        }
+      }
+      if (wakeAt != null) {
+        bestWakeAt = bestWakeAt == null ? wakeAt : Math.min(bestWakeAt, wakeAt);
+      }
+      if (!item) continue;
+
+      this._releaseQueueKey(item);
+      if (item._heatmapInfo) this._applyHeatmapDelta(item._heatmapInfo, -1);
+      this._noteQueueServed(queueType);
+      return { item, context: context || null, wakeAt: bestWakeAt };
+    }
+
+    if (bestWakeAt != null) return { wakeAt: bestWakeAt };
+    return null;
+  }
+
+  reschedule(item) {
+    if (!item) return;
+    const queueType = item.queueType || this._determineQueueType(item);
+    this._pushItem(item, queueType);
+    if (item.queueKey) this.queuedUrls.add(item.queueKey);
+    if (item._heatmapInfo) this._applyHeatmapDelta(item._heatmapInfo, 1);
+  }
+
+  clear() {
+    if (this.usePriorityQueue && this.priorityQueues) {
+      this.priorityQueues[this.discoveryQueueType].data.length = 0;
+      this.priorityQueues[this.acquisitionQueueType].data.length = 0;
+    }
+    if (!this.usePriorityQueue && this.fifoQueues) {
+      this.fifoQueues[this.discoveryQueueType].length = 0;
+      this.fifoQueues[this.acquisitionQueueType].length = 0;
+    }
+    this.queuedUrls.clear();
+    this._heatmapState = this._createEmptyHeatmapState();
+    this._lastServedQueueType = null;
+    this._streaks[this.discoveryQueueType] = 0;
+    this._streaks[this.acquisitionQueueType] = 0;
+  }
+
+  _determineQueueType(item) {
+    const kind = item && (item.type || (item.decision && item.decision.kind));
+    if (kind === 'article' || kind === 'refresh' || kind === 'history') return this.acquisitionQueueType;
+    return this.discoveryQueueType;
+  }
+
+  _pushItem(item, queueType) {
+    item.queueType = queueType;
+    if (this.usePriorityQueue) this.priorityQueues[queueType].push(item);
+    else this.fifoQueues[queueType].push(item);
+  }
+
+  _queueLength(queueType) {
+    if (this.usePriorityQueue) return this.priorityQueues[queueType].size();
+    return this.fifoQueues[queueType].length;
+  }
+
+  _releaseQueueKey(item) {
+    const key = item.queueKey;
+    if (key) this.queuedUrls.delete(key);
+  }
+
+  _chooseQueueOrder() {
+    const hasDiscovery = this._queueLength(this.discoveryQueueType) > 0;
+    const hasAcquisition = this._queueLength(this.acquisitionQueueType) > 0;
+
+    if (hasDiscovery && !hasAcquisition) return [this.discoveryQueueType];
+    if (!hasDiscovery && hasAcquisition) return [this.acquisitionQueueType];
+    if (!hasDiscovery && !hasAcquisition) return [this.discoveryQueueType, this.acquisitionQueueType];
+
+    const last = this._lastServedQueueType;
+    if (!last) return [this.discoveryQueueType, this.acquisitionQueueType];
+
+    if (this._streaks[last] >= this._burstLimit) {
+      return [this._oppositeQueue(last), last];
+    }
+
+    return last === this.discoveryQueueType
+      ? [this.acquisitionQueueType, this.discoveryQueueType]
+      : [this.discoveryQueueType, this.acquisitionQueueType];
+  }
+
+  _oppositeQueue(queueType) {
+    return queueType === this.discoveryQueueType ? this.acquisitionQueueType : this.discoveryQueueType;
+  }
+
+  _noteQueueServed(queueType) {
+    if (queueType !== this.discoveryQueueType && queueType !== this.acquisitionQueueType) return;
+    if (this._lastServedQueueType === queueType) {
+      this._streaks[queueType] += 1;
+    } else {
+      this._lastServedQueueType = queueType;
+      this._streaks[queueType] = 1;
+      this._streaks[this._oppositeQueue(queueType)] = 0;
+    }
+  }
+
+  async _pullFromQueueType(queueType, now) {
+    if (this._queueLength(queueType) === 0) return null;
 
     if (this.usePriorityQueue) {
+      const queue = this.priorityQueues[queueType];
       const deferred = [];
       let candidate = null;
       let context = null;
-      const maxScans = Math.min(64, this.queueHeap.size() + 1);
-      for (let i = 0; i < maxScans; i++) {
-        const item = this.queueHeap.pop();
+      let minWake = Infinity;
+      const scanLimit = Math.min(64, queue.size() + 1);
+
+      for (let i = 0; i < scanLimit; i += 1) {
+        const item = queue.pop();
         if (!item) break;
+
         const host = this.safeHostFromUrl(item.url);
         const resumeAt = this.getHostResumeTime(host);
         let earliest = item.nextEligibleAt || 0;
         if (resumeAt) earliest = Math.max(earliest, resumeAt);
+
+        if (this.isHostRateLimited(host)) {
+          const cached = await this.cache.get(item.url);
+          if (cached) {
+            context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
+            candidate = item;
+            break;
+          }
+          const wakeTime = earliest > now ? earliest : now + 1000;
+          item.nextEligibleAt = wakeTime;
+          minWake = Math.min(minWake, wakeTime);
+          deferred.push(item);
+          continue;
+        }
+
         if (earliest > now) {
           item.nextEligibleAt = earliest;
           minWake = Math.min(minWake, earliest);
@@ -279,143 +354,80 @@ class QueueManager {
           continue;
         }
 
-        if (this.isHostRateLimited(host)) {
-          const cached = await this.cache.get(item.url);
-          if (cached) {
-            context = {
-              forceCache: true,
-              cachedPage: cached,
-              rateLimitedHost: host
-            };
-            candidate = item;
-            break;
-          }
-          const nextResume = this.getHostResumeTime(host);
-          if (nextResume && nextResume > now) {
-            item.nextEligibleAt = nextResume;
-            minWake = Math.min(minWake, nextResume);
-            this.stats.cacheRateLimitedDeferred = (this.stats.cacheRateLimitedDeferred || 0) + 1;
-            deferred.push(item);
-            continue;
-          }
-        }
-
         candidate = item;
         break;
       }
-      for (const d of deferred) {
-        this.queueHeap.push(d);
-      }
-      if (candidate) {
-        this._releaseQueueKey(candidate);
-        if (candidate._heatmapInfo) {
-          this._applyHeatmapDelta(candidate._heatmapInfo, -1);
-        }
-        return {
-          item: candidate,
-          context,
-          wakeAt: minWake < Infinity ? minWake : null
-        };
-      }
-    } else {
-      const deferred = [];
-      let candidate = null;
-      let context = null;
-      const limit = Math.min(64, this.requestQueue.length);
-      for (let i = 0; i < limit; i++) {
-        const item = this.requestQueue.shift();
-        if (!item) break;
-        const host = this.safeHostFromUrl(item.url);
-        const resumeAt = this.getHostResumeTime(host);
-        let earliest = item.deferredUntil || 0;
-        if (resumeAt) earliest = Math.max(earliest, resumeAt);
-        if (earliest > now) {
-          item.deferredUntil = earliest;
-          minWake = Math.min(minWake, earliest);
-          const cached = await this.cache.get(item.url);
-          if (cached) {
-            delete item.deferredUntil;
-            context = {
-              forceCache: true,
-              cachedPage: cached,
-              rateLimitedHost: host
-            };
-            candidate = item;
-            break;
-          }
-          this.stats.cacheRateLimitedDeferred = (this.stats.cacheRateLimitedDeferred || 0) + 1;
-          deferred.push(item);
-          continue;
-        }
 
-        delete item.deferredUntil;
-        candidate = item;
-        break;
-      }
-      for (const d of deferred) {
-        this.requestQueue.push(d);
-      }
-      if (candidate) {
-        this._releaseQueueKey(candidate);
-        if (candidate._heatmapInfo) {
-          this._applyHeatmapDelta(candidate._heatmapInfo, -1);
-        }
-        return {
-          item: candidate,
-          context,
-          wakeAt: minWake < Infinity ? minWake : null
-        };
-      }
-    }
-
-    if (minWake < Infinity) {
       return {
-        wakeAt: minWake
+        item: candidate,
+        context,
+        deferred,
+        wakeAt: minWake < Infinity ? minWake : null
       };
     }
-    return null;
-  }
 
-  reschedule(item) {
-    const key = item.queueKey || item.url;
-    if (key) {
-      this.queuedUrls.add(key);
-    }
-    if (this.usePriorityQueue) {
-      this.queueHeap.push(item);
-    } else {
-      this.requestQueue.push(item);
-    }
-    if (item && item._heatmapInfo) {
-      this._applyHeatmapDelta(item._heatmapInfo, 1);
-    }
-  }
+    const queue = this.fifoQueues[queueType];
+    const deferred = [];
+    let candidate = null;
+    let context = null;
+    let minWake = Infinity;
+    const scanLimit = Math.min(64, queue.length);
 
-  clear() {
-    if (this.usePriorityQueue && this.queueHeap && Array.isArray(this.queueHeap.data)) {
-      this.queueHeap.data.length = 0;
+    for (let i = 0; i < scanLimit; i += 1) {
+      const item = queue.shift();
+      if (!item) break;
+
+      const host = this.safeHostFromUrl(item.url);
+      const resumeAt = this.getHostResumeTime(host);
+      let earliest = item.deferredUntil || 0;
+      if (resumeAt) earliest = Math.max(earliest, resumeAt);
+
+      if (this.isHostRateLimited(host)) {
+        const cached = await this.cache.get(item.url);
+        if (cached) {
+          context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
+          candidate = item;
+          break;
+        }
+        const wakeTime = earliest > now ? earliest : now + 1000;
+        item.deferredUntil = wakeTime;
+        minWake = Math.min(minWake, wakeTime);
+        deferred.push(item);
+        continue;
+      }
+
+      if (earliest > now) {
+        item.deferredUntil = earliest;
+        minWake = Math.min(minWake, earliest);
+        const cached = await this.cache.get(item.url);
+        if (cached) {
+          delete item.deferredUntil;
+          context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
+          candidate = item;
+          break;
+        }
+        deferred.push(item);
+        continue;
+      }
+
+      delete item.deferredUntil;
+      candidate = item;
+      break;
     }
-    if (!this.usePriorityQueue && Array.isArray(this.requestQueue)) {
-      this.requestQueue.length = 0;
-    }
-    if (this.queuedUrls && typeof this.queuedUrls.clear === 'function') {
-      this.queuedUrls.clear();
-    }
-    this._heatmapState = this._createEmptyHeatmapState();
+
+    return {
+      item: candidate,
+      context,
+      deferred,
+      wakeAt: minWake < Infinity ? minWake : null
+    };
   }
 
   getHeatmapSnapshot() {
-    if (!this._heatmapState) {
-      return null;
-    }
-    const cells = {};
-    const entries = Object.entries(this._heatmapState.cells || {});
-    for (const [origin, roles] of entries) {
-      cells[origin] = { ...roles };
-    }
+    if (!this._heatmapState) return null;
     return {
       total: this._heatmapState.total,
-      cells,
+      cells: JSON.parse(JSON.stringify(this._heatmapState.cells || {})),
       depthBuckets: { ...this._heatmapState.depthBuckets },
       lastUpdatedAt: this._heatmapState.lastUpdatedAt
     };
@@ -424,95 +436,49 @@ class QueueManager {
   _createEmptyHeatmapState() {
     return {
       total: 0,
-      cells: {
-        planner: { article: 0, hub: 0, other: 0 },
-        opportunistic: { article: 0, hub: 0, other: 0 }
-      },
-      depthBuckets: {
-        '0': 0,
-        '1': 0,
-        '2': 0,
-        '3+': 0,
-        unknown: 0
-      },
-      lastUpdatedAt: Date.now()
+      cells: {},
+      depthBuckets: { '0': 0, '1': 0, '2': 0, '3+': 0, unknown: 0 },
+      lastUpdatedAt: nowMs()
     };
   }
 
   _classifyHeatmap({ depth, kind, meta, decision }) {
-    try {
-      const role = this._mapHeatmapRole(kind, meta);
-      const origin = this._mapHeatmapOrigin(kind, meta, decision);
-      const depthBucket = this._mapHeatmapDepth(depth);
-      return { origin, role, depthBucket };
-    } catch (_) {
-      return null;
-    }
+    if (kind == null && !meta && !decision) return null;
+    const origin = (meta && meta.origin) || (decision && decision.origin) || 'opportunistic';
+    const role = (meta && meta.role)
+      || (kind === 'article' ? 'article' : (kind === 'hub' || kind === 'index' ? 'hub' : 'other'));
+    const depthBucket = (meta && meta.depthBucket) || this._bucketDepth(depth);
+    return { origin, role, depthBucket };
   }
 
-  _mapHeatmapRole(kind, meta) {
-    const normalizedKind = typeof kind === 'string' ? kind.toLowerCase() : '';
-    if (normalizedKind === 'article' || normalizedKind === 'refresh') {
-      return 'article';
-    }
-    if (normalizedKind === 'hub-seed' || normalizedKind === 'nav' || normalizedKind === 'history') {
-      return 'hub';
-    }
-    if (meta?.hubKind || meta?.kind === 'country' || meta?.kind === 'section') {
-      return 'hub';
-    }
-    return 'other';
-  }
-
-  _mapHeatmapOrigin(kind, meta, decision) {
-    const hints = [];
-    if (meta) {
-      if (meta.source) hints.push(meta.source);
-      if (meta.reason) hints.push(meta.reason);
-      if (meta.origin) hints.push(meta.origin);
-      if (meta.strategy) hints.push(meta.strategy);
-    }
-    if (decision?.classification) {
-      hints.push(decision.classification);
-    }
-    if (decision?.reason) {
-      hints.push(decision.reason);
-    }
-    const kindHint = typeof kind === 'string' ? kind : '';
-    if (kindHint) hints.push(kindHint);
-    const joined = hints.join(' ').toLowerCase();
-    const plannerSignals = ['planner', 'seed', 'pattern', 'country', 'section', 'history', 'adaptive'];
-    const isPlanner = plannerSignals.some((signal) => joined.includes(signal));
-    return isPlanner ? 'planner' : 'opportunistic';
-  }
-
-  _mapHeatmapDepth(depth) {
-    if (typeof depth !== 'number' || !Number.isFinite(depth)) {
-      return 'unknown';
-    }
+  _bucketDepth(depth) {
+    if (typeof depth !== 'number' || Number.isNaN(depth)) return 'unknown';
     if (depth <= 0) return '0';
     if (depth === 1) return '1';
     if (depth === 2) return '2';
-    return '3+';
+    if (depth >= 3) return '3+';
+    return 'unknown';
   }
 
   _applyHeatmapDelta(info, delta) {
-    if (!info || !delta) {
-      return;
-    }
-    const state = this._heatmapState;
-    if (!state) return;
+    if (!info || !delta || !this._heatmapState) return;
     const origin = info.origin || 'opportunistic';
-    const role = info.role || 'other';
+    const role = info.role === 'article' || info.role === 'hub' ? info.role : 'other';
     const depthBucket = info.depthBucket || 'unknown';
-    const originBucket = state.cells[origin] || (state.cells[origin] = { article: 0, hub: 0, other: 0 });
-    originBucket[role] = Math.max(0, (originBucket[role] || 0) + delta);
-    state.total = Math.max(0, (state.total || 0) + delta);
-    if (!Object.prototype.hasOwnProperty.call(state.depthBuckets, depthBucket)) {
-      state.depthBuckets[depthBucket] = 0;
+
+    if (!this._heatmapState.cells[origin]) {
+      this._heatmapState.cells[origin] = { article: 0, hub: 0, other: 0 };
     }
-    state.depthBuckets[depthBucket] = Math.max(0, (state.depthBuckets[depthBucket] || 0) + delta);
-    state.lastUpdatedAt = Date.now();
+    const cell = this._heatmapState.cells[origin];
+    cell[role] = Math.max(0, (cell[role] || 0) + delta);
+
+    if (!Object.prototype.hasOwnProperty.call(this._heatmapState.depthBuckets, depthBucket)) {
+      this._heatmapState.depthBuckets[depthBucket] = 0;
+    }
+    this._heatmapState.depthBuckets[depthBucket] = Math.max(0, (this._heatmapState.depthBuckets[depthBucket] || 0) + delta);
+
+    this._heatmapState.total = Math.max(0, (this._heatmapState.total || 0) + delta);
+    this._heatmapState.lastUpdatedAt = nowMs();
   }
 }
 
