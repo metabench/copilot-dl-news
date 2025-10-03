@@ -32,6 +32,11 @@ function buildFiltersQuery(baseFilters, overrides = {}) {
   return qs ? `?${qs}` : '';
 }
 
+function ensureRenderNav(fn) {
+  if (typeof fn === 'function') return fn;
+  return () => '';
+}
+
 function renderProblemsPage({ items, filters, cursors, renderNav }) {
   const rows = items.map((item) => {
     const severity = deriveProblemSeverity(item.kind);
@@ -56,6 +61,9 @@ function renderProblemsPage({ items, filters, cursors, renderNav }) {
           </div>
         </div>`;
 
+  const navRenderer = ensureRenderNav(renderNav);
+  const navHtml = navRenderer('problems', { variant: 'bar' });
+
   return `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Problems</title>
@@ -63,10 +71,8 @@ function renderProblemsPage({ items, filters, cursors, renderNav }) {
   :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
   .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
+  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 18px}
   header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
   table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
   th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
   th{color:var(--muted);text-align:left;background:#fcfcfd}
@@ -87,10 +93,10 @@ function renderProblemsPage({ items, filters, cursors, renderNav }) {
   .nowrap{white-space:nowrap}
 </style>
 </head><body>
+  ${navHtml}
   <div class="container">
     <header>
       <h1>Problems</h1>
-  ${renderNav('problems')}
     </header>
     <form class="filters" method="GET" action="/problems/ssr">
       <label>Job <input type="text" name="job" value="${escapeHtml(filters.job || '')}"/></label>

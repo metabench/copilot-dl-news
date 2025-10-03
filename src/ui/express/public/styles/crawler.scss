@@ -1,0 +1,15 @@
+// Source SASS for crawler dashboard styles. Run `npm run sass:build` after edits.
+/*
+  crawler.css
+  ------------------------------------------------------------------
+  Modernised presentation for the crawler dashboard with responsive
+  layouts, modular components, and dark-mode support.
+  Generated output: ../crawler.css (do not edit directly).
+*/
+
+@use 'partials/core';
+@use 'partials/layout';
+@use 'partials/controls';
+@use 'partials/analytics';
+@use 'partials/logs';
+@use 'partials/themes';

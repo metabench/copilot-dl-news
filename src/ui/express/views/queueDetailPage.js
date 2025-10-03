@@ -9,6 +9,11 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (match) => map[match] || match);
 }
 
+function ensureRenderNav(fn) {
+  if (typeof fn === 'function') return fn;
+  return () => '';
+}
+
 function renderQueueDetailPage({ job, events, filters, pagination, neighbors, renderNav }) {
   const filterOptions = ['', 'enqueued', 'dequeued', 'retry', 'drop']
     .map((action) => `<option value="${escapeHtml(action)}" ${filters.action === action ? 'selected' : ''}>${action || 'any'}</option>`)
@@ -68,6 +73,9 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
           ${neighbors.olderId ? `<a class="space" href="/queues/${escapeHtml(neighbors.olderId)}/ssr">Next →</a>` : ''}
         </div>`;
 
+  const navRenderer = ensureRenderNav(renderNav);
+  const navHtml = navRenderer('queues', { variant: 'bar' });
+
   return `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Queue ${escapeHtml(job.id)}</title>
@@ -75,10 +83,8 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
   :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
   .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
+  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 18px}
   header h1{margin:0;font-size:20px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
   .meta{color:var(--muted);font-size:12px}
   .kv{margin:2px 0}
   .kv .k{color:var(--muted);margin-right:4px}
@@ -111,10 +117,10 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
   .nav-small a:hover{color:var(--fg);text-decoration:underline}
 </style>
 </head><body>
+  ${navHtml}
   <div class="container">
     <header>
       <h1>Queue <span class="mono">${escapeHtml(job.id)}</span></h1>
-${renderNav('queues')}
     </header>
 
     <section class="controls">

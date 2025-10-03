@@ -10,9 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   placeholders.forEach(async (el) => {
     const active = el.getAttribute('data-active') || '';
+    const variant = el.getAttribute('data-variant') || '';
     const params = new URLSearchParams();
     if (active) {
       params.set('active', active);
+    }
+    if (variant) {
+      params.set('variant', variant);
     }
 
     try {
@@ -26,11 +30,40 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const wrapper = document.createElement('div');
       wrapper.innerHTML = payload.html.trim();
-      const nav = wrapper.firstElementChild;
-      if (nav) {
-        el.replaceWith(nav);
+      const candidates = Array.from(wrapper.children);
+      let replacement = null;
+      const extras = [];
+
+      for (const node of candidates) {
+        if (node.tagName === 'STYLE' && node.dataset.globalNavStyle) {
+          const existing = document.head.querySelector(`style[data-global-nav-style="${node.dataset.globalNavStyle}"]`);
+          if (existing) {
+            node.remove();
+          } else {
+            document.head.appendChild(node);
+          }
+          continue;
+        }
+
+        if (!replacement) {
+          replacement = node;
+        } else {
+          extras.push(node);
+        }
+      }
+
+      if (replacement) {
+        el.replaceWith(replacement);
+        if (extras.length) {
+          let anchor = replacement;
+          for (const extra of extras) {
+            anchor.after(extra);
+            anchor = extra;
+          }
+        }
       } else {
         el.textContent = 'Navigation unavailable';
+        el.classList.add('global-nav--error');
       }
     } catch (err) {
       el.textContent = 'Navigation unavailable';

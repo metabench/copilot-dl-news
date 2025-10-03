@@ -10,7 +10,8 @@ function createNavigationApiRouter() {
 
   router.get('/api/navigation/bar', (req, res) => {
     const active = typeof req.query.active === 'string' ? req.query.active : '';
-    const html = renderNav(active);
+    const variant = typeof req.query.variant === 'string' ? req.query.variant : undefined;
+    const html = renderNav(active, { variant });
     res.json({ html });
   });
 

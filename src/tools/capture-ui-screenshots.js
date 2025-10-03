@@ -135,6 +135,15 @@ const VIEWPORT_PRESETS = [
   }
 ];
 
+const TOOLING_VIEW_NAMES = ['mobile-large-portrait', 'ultrawide-landscape'];
+const TOOLING_ROUTES = [
+  '/queues/ssr',
+  '/analysis/ssr',
+  '/milestones/ssr',
+  '/problems/ssr',
+  '/gazetteer/places'
+];
+
 function getArg(name, fallback = null) {
   const prefix = `--${name}`;
   const raw = process.argv.find((entry) => entry === prefix || entry.startsWith(`${prefix}=`));
@@ -146,6 +155,88 @@ function getArg(name, fallback = null) {
   if (value === 'false') return false;
   const numeric = Number(value);
   return Number.isNaN(numeric) ? value : numeric;
+}
+
+function getAllArgs(name) {
+  const prefix = `--${name}`;
+  return process.argv
+    .filter((entry) => entry === prefix || entry.startsWith(`${prefix}=`))
+    .map((entry) => {
+      if (entry === prefix) return true;
+      const [, value] = entry.split('=');
+      return value === undefined ? true : value;
+    });
+}
+
+function toList(value) {
+  if (value == null) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => toList(entry));
+  }
+  if (value === true) return [];
+  return String(value)
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function uniqueLowercase(list) {
+  const seen = new Set();
+  const result = [];
+  for (const item of list) {
+    const lowered = item.toLowerCase();
+    if (seen.has(lowered)) continue;
+    seen.add(lowered);
+    result.push(lowered);
+  }
+  return result;
+}
+
+function selectViewportsByName(names) {
+  if (!names.length) return VIEWPORT_PRESETS;
+  const presetsByName = new Map(VIEWPORT_PRESETS.map((preset) => [preset.name.toLowerCase(), preset]));
+  const missing = [];
+  const selected = [];
+
+  for (const name of uniqueLowercase(names)) {
+    const preset = presetsByName.get(name);
+    if (!preset) {
+      missing.push(name);
+      continue;
+    }
+    selected.push(preset);
+  }
+
+  if (!selected.length) {
+    throw new Error(`No matching viewports for names: ${names.join(', ')}`);
+  }
+
+  if (missing.length) {
+    console.warn(`[capture-ui-screenshots] Unknown view names ignored: ${missing.join(', ')}`);
+  }
+
+  return selected;
+}
+
+function normaliseRoutePath(routePath) {
+  if (!routePath) return '/';
+  const trimmed = routePath.trim();
+  if (!trimmed) return '/';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    const url = new URL(trimmed);
+    return url.pathname + (url.search || '');
+  }
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
+
+function slugifyPath(value) {
+  const safe = value && value !== '/' ? value : 'root';
+  return safe
+    .replace(/https?:\/\//gi, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase() || 'root';
 }
 
 function toBoolean(value, fallback = false) {
@@ -283,8 +374,28 @@ async function main() {
   const waitMs = Number(getArg('waitMs', DEFAULT_WAIT_MS));
   const timeoutMs = Number(getArg('timeoutMs', DEFAULT_TIMEOUT_MS));
   const baseUrl = getArg('url', null);
-  const routePath = getArg('path', '/');
+  const routePathArg = getArg('path', '/');
+  const pathsArg = toList(getAllArgs('paths'));
+  const toolingMode = toBoolean(getArg('tooling', null), false);
+  const viewsArg = toList(getAllArgs('views'));
   const headless = getArg('headless', 'new');
+
+  let targetPaths = [];
+  if (toolingMode) {
+    targetPaths = [...TOOLING_ROUTES];
+  } else if (pathsArg.length) {
+    targetPaths = pathsArg;
+  }
+  if (!targetPaths.length) {
+    targetPaths = [routePathArg];
+  }
+  targetPaths = targetPaths.map(normaliseRoutePath);
+
+  let desiredViewNames = viewsArg;
+  if (!desiredViewNames.length && toolingMode) {
+    desiredViewNames = [...TOOLING_VIEW_NAMES];
+  }
+  const viewports = selectViewportsByName(desiredViewNames);
 
   const runDir = path.join(outputRoot, runLabel);
   await ensureDir(runDir);
@@ -292,31 +403,56 @@ async function main() {
   let serverControl;
   try {
     serverControl = await launchServerIfNeeded(baseUrl);
-    const targetUrl = new URL(routePath, serverControl.baseUrl).toString();
+    const pages = [];
 
-    const metadata = await captureScreenshots({
-      url: targetUrl,
-      viewports: VIEWPORT_PRESETS,
-      outputDir: runDir,
-      waitMs,
-      timeoutMs,
-      headless
-    });
+    for (const routePath of targetPaths) {
+      const targetUrl = new URL(routePath, serverControl.baseUrl).toString();
+      const pageSlug = slugifyPath(routePath);
+      const pageDir = path.join(runDir, pageSlug);
+      await ensureDir(pageDir);
+
+      const metadata = await captureScreenshots({
+        url: targetUrl,
+        viewports,
+        outputDir: pageDir,
+        waitMs,
+        timeoutMs,
+        headless
+      });
+
+      const relativeDir = path.relative(repoRoot, pageDir) || pageDir;
+      console.log(`[capture-ui-screenshots] ${routePath} → ${relativeDir} (${metadata.length} views)`);
+      for (const entry of metadata) {
+        console.log(`   - ${entry.name}: ${entry.file} (${entry.width}x${entry.height})`);
+      }
+
+      pages.push({
+        route: routePath,
+        targetUrl,
+        outputDir: relativeDir,
+        viewports: metadata
+      });
+    }
 
     const manifestPath = path.join(runDir, 'metadata.json');
     const manifest = {
       generatedAt: new Date().toISOString(),
-      targetUrl,
       waitMs,
       timeoutMs,
-      viewports: metadata
+      headless,
+      baseUrl: serverControl.baseUrl,
+      viewFilter: desiredViewNames,
+      pages
     };
+
+    if (pages.length === 1) {
+      manifest.targetUrl = pages[0].targetUrl;
+      manifest.viewports = pages[0].viewports;
+    }
+
     await fs.promises.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
-    console.log(`[capture-ui-screenshots] Saved ${metadata.length} screenshots to ${path.relative(repoRoot, runDir)}`);
-    for (const entry of metadata) {
-      console.log(` - ${entry.name}: ${entry.file} (${entry.width}x${entry.height})`);
-    }
+    console.log(`[capture-ui-screenshots] Saved screenshots run to ${path.relative(repoRoot, runDir)}`);
   } finally {
     if (serverControl) {
       await serverControl.shutdown();

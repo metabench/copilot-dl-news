@@ -66,6 +66,7 @@ function collectHighlights(run = {}, payload = {}) {
 
 function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav }) {
 	const navRenderer = ensureRenderNav(renderNav);
+	const navHtml = navRenderer('analysis', { variant: 'bar' });
 	const summarySource = run?.summary || run?.lastProgress || payload?.lastProgress || null;
 	const summaryPretty = summarySource ? formatJson(summarySource, 'No summary yet.') : 'No summary yet.';
 	const eventsHtml = events.length ? events.map((event) => {
@@ -99,10 +100,8 @@ function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav })
 	:root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
 	body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
 	.container{max-width:1000px;margin:18px auto;padding:0 16px}
-	header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
+	header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 18px}
 	header h1{margin:0;font-size:20px}
-	header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-	header nav a:hover{color:var(--fg);text-decoration:underline}
 	section{margin-bottom:24px}
 	table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
 	th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
@@ -119,10 +118,10 @@ function renderAnalysisDetailPage({ run, events = [], payload = {}, renderNav })
 
 </style>
 </head><body>
+	${navHtml}
 	<div class="container">
 		<header>
 			<h1>Analysis run <span class="mono">${escapeHtml(run?.id || '')}</span></h1>
-			${navRenderer('analysis')}
 		</header>
 		<section>
 			<h2>Overview</h2>

@@ -135,6 +135,10 @@ What you’ll see:
 - Intelligent pipeline summary that reflects planner-stage telemetry and live coverage/goal insights
 - Health strip: DB size, disk free, CPU %, memory (RSS), SQLite journal mode and WAL autocheckpoint
 
+### Styling workflow
+
+Crawler dashboard styles now originate from `src/ui/express/public/styles/crawler.scss`. After editing the SCSS, run `npm run sass:build` to regenerate `src/ui/express/public/crawler.css`, or `npm run sass:watch` while iterating. The Express server and tests continue to load the compiled CSS from `/assets/crawler.css`.
+
 #### Sitemap options
 
 - Use sitemap: When enabled, the crawler discovers and enqueues URLs from the site’s sitemap (linked from robots.txt or common paths) in addition to the Start URL. This accelerates finding articles without deep link traversal. Respects robots.txt and same‑domain rules.

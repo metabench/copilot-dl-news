@@ -37,6 +37,7 @@ function ensureRenderNav(fn) {
 function renderAnalysisListPage({ items = [], total = 0, limit = 50, renderNav }) {
 	const navRenderer = ensureRenderNav(renderNav);
 	const safeLimit = Number.isFinite(limit) ? limit : 50;
+	const navHtml = navRenderer('analysis', { variant: 'bar' });
 
 	const rowsHtml = items.length ? items.map((run) => {
 		const duration = formatDuration(run.durationMs);
@@ -63,10 +64,8 @@ function renderAnalysisListPage({ items = [], total = 0, limit = 50, renderNav }
 	:root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
 	body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
 	.container{max-width:1100px;margin:18px auto;padding:0 16px}
-	header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
+	header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 18px}
 	header h1{margin:0;font-size:20px}
-	header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-	header nav a:hover{color:var(--fg);text-decoration:underline}
 	table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
 	th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
 	th{color:var(--muted);text-align:left;background:#fcfcfd}
@@ -80,10 +79,10 @@ function renderAnalysisListPage({ items = [], total = 0, limit = 50, renderNav }
 	button:hover{text-decoration:underline}
 </style>
 </head><body>
+	${navHtml}
 	<div class="container">
 		<header>
 			<h1>Analysis runs</h1>
-			${navRenderer('analysis')}
 		</header>
 		<form class="filters" method="GET" action="/analysis/ssr">
 			<label>Limit <input type="number" min="1" max="200" name="limit" value="${escapeHtml(String(safeLimit))}"/></label>

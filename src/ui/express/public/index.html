@@ -10,10 +10,14 @@
   </head>
   <body>
     <a class="skip-link" href="#crawl-controls">Skip to crawl controls</a>
-    <div data-global-nav data-active="crawler"></div>
     <main class="crawler-layout">
       <header class="page-header">
-        <h1 class="page-title">News Crawler</h1>
+        <div class="page-header__primary">
+          <h1 class="page-title">News Crawler</h1>
+          <div class="page-header__nav" data-nav-container>
+            <div data-global-nav data-active="crawler" data-variant="bar"></div>
+          </div>
+        </div>
         <nav class="quick-nav" aria-label="Quick links">
           <ul class="quick-links">
             <li><a href="/urls">URLs</a></li>

@@ -5,17 +5,19 @@
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
-  "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
-  "gui": "node src/ui/express/server.js",
-  "ui:capture-screens": "node src/tools/capture-ui-screenshots.js",
-  "backfill:dates": "node src/tools/backfill-dates.js",
-  "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
-  "analyze:domains": "node src/tools/analyze-domains.js",
-  "analyze:pages": "node src/analyse-pages.js",
-  "analysis:run": "node src/tools/analysis-run.js",
-  "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
-  "export:gazetteer": "node src/tools/export-gazetteer.js",
-  "validate:gazetteer": "node src/tools/validate-gazetteer.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "gui": "node src/ui/express/server.js",
+    "ui:capture-screens": "node src/tools/capture-ui-screenshots.js",
+    "backfill:dates": "node src/tools/backfill-dates.js",
+    "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
+    "analyze:domains": "node src/tools/analyze-domains.js",
+    "analyze:pages": "node src/analyse-pages.js",
+    "analysis:run": "node src/tools/analysis-run.js",
+    "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
+    "export:gazetteer": "node src/tools/export-gazetteer.js",
+    "validate:gazetteer": "node src/tools/validate-gazetteer.js",
+    "sass:build": "sass src/ui/express/public/styles/crawler.scss src/ui/express/public/crawler.css --no-source-map",
+    "sass:watch": "npm run sass:build -- --watch"
   },
   "keywords": [
     "crawler",
@@ -26,15 +28,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cheerio": "^1.1.2",
-  "better-sqlite3": "^12.2.0",
     "@mozilla/readability": "^0.5.0",
+    "better-sqlite3": "^12.2.0",
+    "cheerio": "^1.1.2",
+    "compression": "^1.7.4",
+    "express": "^5.0.0",
+    "fast-xml-parser": "^4.3.6",
     "jsdom": "^24.0.0",
     "node-fetch": "^3.3.2",
-    "robots-parser": "^3.0.1",
-  "express": "^5.0.0",
-  "fast-xml-parser": "^4.3.6",
-  "compression": "^1.7.4"
+    "robots-parser": "^3.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.23.9",
@@ -42,12 +44,18 @@
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-  "supertest": "^6.3.4",
-  "puppeteer": "^22.11.0"
+    "puppeteer": "^22.11.0",
+    "sass": "^1.93.2",
+    "supertest": "^6.3.4"
   },
   "jest": {
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
-    "reporters": ["default", "<rootDir>/jest-reporter-truncate.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ],
+    "reporters": [
+      "default",
+      "<rootDir>/jest-reporter-truncate.js"
+    ],
     "maxWorkers": 8,
     "transform": {
       "^.+\\.js$": "babel-jest"
