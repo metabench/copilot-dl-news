@@ -69,7 +69,7 @@ describe('createMetricsView', () => {
     expect(elements.badgeRobots.textContent).toContain('robots: ok');
     expect(elements.badgeSitemap.textContent).toMatch(/sitemap:/);
     expect(view.getQueueDisplayValue(0)).toBeGreaterThanOrEqual(0);
-    expect(elements.domRl.style.display).toBe('');
+  expect(elements.domRl.classList.contains('is-hidden')).toBe(false);
     expect(elements.domRl.textContent).toBe('Slow mode (HTTP 429)');
     expect(elements.domRl.title).toMatch(/HTTP 429/);
   });

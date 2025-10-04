@@ -23,7 +23,8 @@ function createCrawlStartRouter(options = {}) {
     queueDebug = false,
     metrics,
     QUIET = false,
-    traceStart = false
+    traceStart = false,
+    crawlerManager = null
   } = options;
 
   if (!jobRegistry) {
@@ -125,6 +126,18 @@ function createCrawlStartRouter(options = {}) {
     jobRegistry.registerJob(job);
     broadcastJobs(true);
 
+    if (crawlerManager && typeof crawlerManager.noteJobStart === 'function') {
+      try {
+        crawlerManager.noteJobStart({
+          jobId,
+          url: job.url,
+          mode: 'fresh',
+          argsSource: 'api.crawl',
+          startedAt: job.startedAt
+        });
+      } catch (_) {}
+    }
+
     const persistStart = () => {
       try {
         const db = getDbRW();
@@ -213,10 +226,18 @@ function createCrawlStartRouter(options = {}) {
       } catch (_) {
         broadcast('done', job.lastExit, jobId);
       }
+      if (crawlerManager && typeof crawlerManager.noteJobExit === 'function') {
+        try {
+          crawlerManager.noteJobExit(jobId, { endedAt: job.lastExit?.endedAt, exitInfo: job.lastExit });
+        } catch (_) {}
+      }
       setTimeout(() => {
         try {
           jobRegistry.removeJob(jobId);
         } catch (_) {}
+        if (crawlerManager && typeof crawlerManager.clearJob === 'function') {
+          try { crawlerManager.clearJob(jobId); } catch (_) {}
+        }
         try {
           broadcastJobs(true);
         } catch (_) {}
@@ -381,7 +402,14 @@ function createCrawlStartRouter(options = {}) {
             } else if (job.stage !== 'running') {
               jobRegistry.updateJobStage(job, 'running');
             }
+            if (!startupActive) {
+              if (!Object.prototype.hasOwnProperty.call(obj, 'statusText')) obj.statusText = null;
+              if (!Object.prototype.hasOwnProperty.call(obj, 'startup')) obj.startup = null;
+            }
             if (!Object.prototype.hasOwnProperty.call(obj, 'stage')) obj.stage = job.stage;
+            if (crawlerManager && typeof crawlerManager.noteJobHeartbeat === 'function') {
+              try { crawlerManager.noteJobHeartbeat(jobId); } catch (_) {}
+            }
             if (job.metrics) {
               try {
                 if (Object.prototype.hasOwnProperty.call(obj, 'statusText')) {
@@ -500,6 +528,9 @@ function createCrawlStartRouter(options = {}) {
           try {
             const obj = JSON.parse(line.slice('MILESTONE '.length));
             broadcast('milestone', obj, jobId);
+            if (crawlerManager && typeof crawlerManager.recordMilestone === 'function') {
+              try { crawlerManager.recordMilestone(jobId, obj); } catch (_) {}
+            }
             try {
               const db = getDbRW();
               if (db) {

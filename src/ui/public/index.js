@@ -4,6 +4,8 @@ import { createPipelineView } from './index/pipelineView.js';
 import { createMetricsView } from './index/metricsView.js';
 import { createSseClient } from './index/sseClient.js';
 import { createApp } from './index/app.js';
+import { showElement, hideElement, setElementVisibility } from './index/domUtils.js';
+import { createBrowserThemeController } from './theme/browserController.js';
 
 const logs = document.getElementById('logs');
   const logsResizer = document.getElementById('logsResizer');
@@ -151,6 +153,28 @@ const logs = document.getElementById('logs');
   const insightQueueHeatmapContainer = document.getElementById('insightQueueHeatmap');
   const milestonesList = document.getElementById('milestonesList');
   const plannerStagesList = document.getElementById('plannerStagesList');
+  const resumeSection = document.getElementById('resumeSection');
+  const resumeSummary = document.getElementById('resumeSummary');
+  const resumeList = document.getElementById('resumeList');
+  const resumeStatus = document.getElementById('resumeStatus');
+  const resumeAllBtn = document.getElementById('resumeAllBtn');
+  const resumeRefreshBtn = document.getElementById('resumeRefreshBtn');
+
+  const RESUME_REASON_LABELS = {
+    'domain-conflict': 'Blocked: another crawl from this domain is already running',
+    'missing-source': 'Blocked: queue is missing saved resume data',
+    'capacity-exceeded': 'Waiting for a free worker slot',
+    'already-running': 'Already running'
+  };
+  const RESUME_STATE_WEIGHT = {
+    selected: 0,
+    queued: 1,
+    available: 1,
+    blocked: 2
+  };
+  let resumeInventoryState = { loading: false, lastFetch: 0, data: null };
+  let resumeActionPending = false;
+  let resumeRefreshTimer = null;
 
   const uiApp = createApp({
     elements: {
@@ -316,9 +340,7 @@ const logs = document.getElementById('logs');
     entries.sort(([a], [b]) => a.localeCompare(b));
     for (const [key, value] of entries) {
       const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.alignItems = 'center';
-      row.style.gap = '8px';
+      row.className = 'feature-flags__row';
       row.setAttribute('role', 'listitem');
       const badge = document.createElement('span');
       badge.className = value ? 'badge badge-ok' : 'badge badge-neutral';
@@ -385,15 +407,11 @@ const logs = document.getElementById('logs');
     const subset = entries.slice(0, 4);
     for (const [key, raw] of subset) {
       const val = numericValue(raw);
-  const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.flexDirection = 'column';
-      row.style.gap = '2px';
-  row.setAttribute('role', 'listitem');
+      const row = document.createElement('div');
+      row.className = 'priority-list__row';
+      row.setAttribute('role', 'listitem');
       const head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.alignItems = 'center';
-      head.style.gap = '8px';
+      head.className = 'priority-list__head';
       const badge = document.createElement('span');
       badge.className = 'badge badge-neutral';
       badge.textContent = `+${val}`;
@@ -405,7 +423,7 @@ const logs = document.getElementById('logs');
       const desc = describeEntry(raw);
       if (desc) {
         const detail = document.createElement('span');
-        detail.className = 'muted';
+        detail.className = 'priority-list__detail muted';
         detail.textContent = desc;
         row.appendChild(detail);
       }
@@ -429,15 +447,11 @@ const logs = document.getElementById('logs');
     const subset = entries.slice(0, 4);
     for (const [key, raw] of subset) {
       const val = numericValue(raw);
-  const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.flexDirection = 'column';
-      row.style.gap = '2px';
-  row.setAttribute('role', 'listitem');
+      const row = document.createElement('div');
+      row.className = 'priority-list__row';
+      row.setAttribute('role', 'listitem');
       const head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.alignItems = 'center';
-      head.style.gap = '8px';
+      head.className = 'priority-list__head';
       const badge = document.createElement('span');
       badge.className = 'badge badge-neutral';
       badge.textContent = `${val}`;
@@ -449,7 +463,7 @@ const logs = document.getElementById('logs');
       const desc = describeEntry(raw);
       if (desc) {
         const detail = document.createElement('span');
-        detail.className = 'muted';
+        detail.className = 'priority-list__detail muted';
         detail.textContent = desc;
         row.appendChild(detail);
       }
@@ -470,7 +484,7 @@ const logs = document.getElementById('logs');
     try {
       setAdvancedCapabilitiesState({ busy: true });
       if (!quiet) {
-        advancedFeaturesPanelEl.style.display = '';
+        showElement(advancedFeaturesPanelEl);
         setAdvancedCapabilitiesState({ state: 'loading', message: 'Loading configuration…', busy: true });
       }
       const res = await fetch('/api/config');
@@ -481,10 +495,10 @@ const logs = document.getElementById('logs');
       renderPriorityBonuses(config.queue || {});
       renderPriorityWeights(config.queue || {});
       try { window.__advancedConfig = config; } catch (_) {}
-      advancedFeaturesPanelEl.style.display = '';
+      showElement(advancedFeaturesPanelEl);
       setAdvancedCapabilitiesState({ state: 'ready', message: `Updated ${formatTimestamp()}`, busy: false });
     } catch (error) {
-      advancedFeaturesPanelEl.style.display = '';
+      showElement(advancedFeaturesPanelEl);
       const message = error && error.message ? error.message : String(error || 'unknown error');
       setAdvancedCapabilitiesState({ state: 'error', message: `Failed to load advanced config (${message})`, busy: false });
       if (!quiet) {
@@ -516,18 +530,18 @@ const logs = document.getElementById('logs');
     crawlTypeBadge.textContent = `Type: ${pretty}`;
     if (!norm) {
       crawlTypeBadge.classList.add('badge-neutral');
-      if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = 'none';
+      if (insightsPanel && insightsPanel.dataset.hasData !== '1') hideElement(insightsPanel);
       return;
     }
     if (norm === 'intelligent') {
       crawlTypeBadge.classList.add('badge-intelligent');
       if (insightsPanel) {
-        if (insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = '';
+        if (insightsPanel.dataset.hasData !== '1') showElement(insightsPanel);
         if (insightsHint && insightsPanel.dataset.hasData !== '1') insightsHint.textContent = 'Collecting planner telemetry…';
       }
     } else {
       crawlTypeBadge.classList.add('badge-basic');
-      if (insightsPanel && insightsPanel.dataset.hasData !== '1') insightsPanel.style.display = 'none';
+      if (insightsPanel && insightsPanel.dataset.hasData !== '1') hideElement(insightsPanel);
       if (!window.__coverageSummary) refreshCoverageMetric();
     }
   }
@@ -679,6 +693,9 @@ const logs = document.getElementById('logs');
     const summary = [statusLabel, durationLabel].filter(Boolean).join(' · ');
     const tsRaw = ev.ts ? Date.parse(ev.ts) : Date.now();
     const timestamp = Number.isFinite(tsRaw) ? tsRaw : Date.now();
+    const stageResult = ev.details && typeof ev.details === 'object' && ev.details.result && typeof ev.details.result === 'object'
+      ? ev.details.result
+      : null;
 
     appActions.patchPipeline({
       planner: {
@@ -688,6 +705,17 @@ const logs = document.getElementById('logs');
         summary: summary || undefined
       }
     });
+
+    if (ev.stage === 'targeted-analysis' && status === 'started') {
+      appActions.patchPipeline({
+        analysis: {
+          status: 'running',
+          statusLabel: 'Running',
+          summary: 'Running targeted seed analysis…',
+          updatedAt: timestamp
+        }
+      });
+    }
 
     if (ev.stage === 'infer-patterns') {
       const stageDetails = ev.details && typeof ev.details === 'object' ? ev.details : {};
@@ -719,17 +747,114 @@ const logs = document.getElementById('logs');
         details: result,
         contextHost: context.host || ev.scope || ''
       });
+    } else if (ev.stage === 'navigation-discovery') {
+      if (status === 'started') {
+        appActions.patchPipeline({
+          planner: {
+            status: 'running',
+            statusLabel: 'Running',
+            stage: 'Navigation discovery',
+            summary: 'Mapping site navigation…',
+            updatedAt: timestamp
+          }
+        });
+      } else if (status === 'completed' && stageResult) {
+        const pipelinePatch = stageResult.pipelinePatch && typeof stageResult.pipelinePatch === 'object'
+          ? stageResult.pipelinePatch
+          : {
+              planner: {
+                status: stageResult.navigationSummary && stageResult.navigationSummary.totalLinks ? 'ready' : 'pending',
+                statusLabel: stageResult.navigationSummary && stageResult.navigationSummary.totalLinks ? 'Mapped' : 'Pending',
+                stage: 'Navigation discovery',
+                summary: Array.isArray(stageResult.analysisHighlights) && stageResult.analysisHighlights.length
+                  ? stageResult.analysisHighlights[0]
+                  : 'Navigation map updated',
+                updatedAt: timestamp
+              }
+            };
+        appActions.patchPipeline(pipelinePatch);
+        const insightDetails = stageResult.details && typeof stageResult.details === 'object'
+          ? stageResult.details
+          : { navigation: stageResult.navigationSummary || {} };
+        const extrasPayload = {
+          source: 'planner-stage',
+          timestamp,
+          analysisHighlights: Array.isArray(stageResult.analysisHighlights) ? stageResult.analysisHighlights : undefined
+        };
+        if (pipelinePatch) {
+          extrasPayload.pipelinePatch = pipelinePatch;
+        }
+        updateIntelligentInsights(insightDetails, extrasPayload);
+      } else if (status === 'failed') {
+        appActions.patchPipeline({
+          planner: {
+            status: 'failed',
+            statusLabel: 'Failed',
+            stage: 'Navigation discovery',
+            summary: stageResult && stageResult.error ? `Navigation failed: ${stageResult.error}` : 'Navigation discovery failed'
+          }
+        });
+      }
+    } else if (ev.stage === 'targeted-analysis') {
+      if (status === 'completed' && stageResult) {
+        const pipelinePatch = stageResult.pipelinePatch && typeof stageResult.pipelinePatch === 'object'
+          ? stageResult.pipelinePatch
+          : {
+              analysis: {
+                status: stageResult.analysedCount ? 'ready' : 'pending',
+                statusLabel: stageResult.analysedCount ? 'Targeted' : 'Pending',
+                summary: Array.isArray(stageResult.analysisHighlights) && stageResult.analysisHighlights.length
+                  ? stageResult.analysisHighlights[0]
+                  : 'Targeted analysis updated',
+                signals: Array.isArray(stageResult.topKeywords)
+                  ? stageResult.topKeywords.slice(0, 4)
+                  : [],
+                updatedAt: timestamp,
+                lastRun: timestamp
+              }
+            };
+        if (pipelinePatch.analysis) {
+          pipelinePatch.analysis.updatedAt = pipelinePatch.analysis.updatedAt || timestamp;
+          pipelinePatch.analysis.lastRun = pipelinePatch.analysis.lastRun || timestamp;
+        }
+        appActions.patchPipeline(pipelinePatch);
+      } else if (status === 'failed') {
+        const errorMessage = stageResult && stageResult.error
+          ? String(stageResult.error)
+          : 'Targeted analysis failed';
+        appActions.patchPipeline({
+          analysis: {
+            status: 'failed',
+            statusLabel: 'Failed',
+            summary: errorMessage,
+            updatedAt: timestamp
+          }
+        });
+      }
     }
     if (ev.details || Array.isArray(ev.goalStates) || Array.isArray(ev.analysisHighlights)) {
       const insightDetails = { ...(ev.details && typeof ev.details === 'object' ? ev.details : {}) };
       if (!insightDetails.goalStates && Array.isArray(ev.goalStates)) {
         insightDetails.goalStates = ev.goalStates;
       }
-      updateIntelligentInsights(insightDetails, {
+      if (stageResult && !insightDetails.targetedAnalysis) {
+        insightDetails.targetedAnalysis = {
+          sampleCount: Number(stageResult.analysedCount) || 0,
+          sectionsCovered: Array.isArray(stageResult.sectionsCovered) ? stageResult.sectionsCovered.slice(0, 6) : [],
+          avgWordCount: Number(stageResult.avgWordCount) || 0,
+          topKeywords: Array.isArray(stageResult.topKeywords) ? stageResult.topKeywords.slice(0, 6) : [],
+          samples: Array.isArray(stageResult.samples) ? stageResult.samples.slice(0, 5) : []
+        };
+      }
+      const extrasPayload = {
         source: 'planner-stage',
         timestamp,
         analysisHighlights: Array.isArray(ev.analysisHighlights) ? ev.analysisHighlights : undefined
-      });
+      };
+      if (stageResult && stageResult.pipelinePatch) {
+        extrasPayload.pipelinePatch = stageResult.pipelinePatch;
+      }
+      updateIntelligentInsights(insightDetails, extrasPayload);
     }
   }
   function updateIntelligentInsights(details, extras = {}) {
@@ -1550,47 +1675,6 @@ const logs = document.getElementById('logs');
           }
         } catch (e) { logs.textContent += `\nResume error: ${e?.message || e}\n`; }
       };
-      const resumeAllCheckbox = document.getElementById('resumeAllQueues');
-      if (resumeAllCheckbox) {
-        resumeAllCheckbox.addEventListener('change', async (e) => {
-          if (!e.target.checked) return;
-          e.target.checked = false;
-          e.target.disabled = true;
-          try {
-            logs.textContent += '\nResume all: requesting...\n';
-            const r = await fetch('/api/resume-all', { 
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ maxConcurrent: 8 })
-            });
-            let j = null; 
-            try { j = await r.json(); } catch (_) {}
-            if (!r.ok) {
-              const detail = j?.error || `HTTP ${r.status}`;
-              logs.textContent += `\nResume all failed: ${detail}\n`;
-            } else {
-              const count = j?.resumed || 0;
-              const message = j?.message || `Resumed ${count} crawl(s)`;
-              logs.textContent += `\n${message}\n`;
-              if (Array.isArray(j?.queues)) {
-                for (const q of j.queues) {
-                  logs.textContent += `  - ${q.url} (pid ${q.pid})\n`;
-                }
-              }
-              if (Array.isArray(j?.errors) && j.errors.length > 0) {
-                logs.textContent += `  Errors: ${j.errors.length}\n`;
-                for (const err of j.errors.slice(0, 3)) {
-                  logs.textContent += `    - ${err}\n`;
-                }
-              }
-            }
-          } catch (err) {
-            logs.textContent += `\nResume all error: ${err?.message || err}\n`;
-          } finally {
-            setTimeout(() => { e.target.disabled = false; }, 2000);
-          }
-        });
-      }
       document.getElementById('showLogs').onchange = (e) => {
         const enabled = e.target.checked;
         localStorage.setItem('showLogs', enabled ? '1' : '0');
@@ -1598,6 +1682,271 @@ const logs = document.getElementById('logs');
         else logs.textContent = '';
         openEventStream(enabled);
       };
+
+      function stateWeight(value) {
+        return RESUME_STATE_WEIGHT[value] != null ? RESUME_STATE_WEIGHT[value] : 3;
+      }
+
+      function extractHostname(url) {
+        if (!url) return null;
+        try {
+          return new URL(url).hostname;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function describeResumeReasons(reasons) {
+        if (!Array.isArray(reasons) || reasons.length === 0) {
+          return null;
+        }
+        const labels = reasons
+          .map((code) => RESUME_REASON_LABELS[code] || (code ? code.replace(/[-_]/g, ' ') : null))
+          .filter(Boolean);
+        if (labels.length === 0) {
+          return null;
+        }
+        return labels.join(' · ');
+      }
+
+      function setResumeStatus(message, options = {}) {
+        if (!resumeStatus) return;
+        resumeStatus.textContent = message || '';
+        if (options.error) {
+          resumeStatus.dataset.state = 'error';
+        } else if (options.busy) {
+          resumeStatus.dataset.state = 'busy';
+        } else if (options.ok) {
+          resumeStatus.dataset.state = 'ok';
+        } else {
+          resumeStatus.dataset.state = 'idle';
+        }
+      }
+
+      function renderResumeInventory(data) {
+        if (!resumeSection) return;
+        resumeInventoryState.data = data || null;
+        const total = data?.total ?? 0;
+        const recommendedCount = Array.isArray(data?.recommendedIds) ? data.recommendedIds.length : 0;
+        const availableSlots = Number.isFinite(data?.availableSlots) ? data.availableSlots : null;
+
+        resumeSection.dataset.hasData = total > 0 ? '1' : '0';
+        if (resumeSummary) {
+          const summaryParts = [];
+          summaryParts.push(recommendedCount ? `${recommendedCount} ready to resume` : 'No resumable queues detected');
+          if (availableSlots != null) {
+            summaryParts.push(`slots free: ${availableSlots}`);
+          }
+          summaryParts.push(`paused total: ${total}`);
+          resumeSummary.textContent = summaryParts.join(' · ');
+        }
+
+        if (resumeAllBtn) {
+          resumeAllBtn.disabled = recommendedCount === 0 || resumeActionPending;
+          resumeAllBtn.textContent = recommendedCount
+            ? `Resume ${recommendedCount} queue${recommendedCount === 1 ? '' : 's'}`
+            : 'Resume suggestions';
+        }
+
+        if (!resumeList) return;
+        resumeList.innerHTML = '';
+        const queues = Array.isArray(data?.queues) ? data.queues.slice() : [];
+        if (!queues.length) {
+          const empty = document.createElement('li');
+          empty.className = 'resume-item resume-item--empty';
+          empty.textContent = 'No paused or incomplete queues.';
+          resumeList.appendChild(empty);
+          return;
+        }
+
+        queues.sort((a, b) => {
+          const weightDiff = stateWeight(a?.state) - stateWeight(b?.state);
+          if (weightDiff !== 0) return weightDiff;
+          const aTs = Number.isFinite(a?.startedAtMs) ? a.startedAtMs : Number(a?.startedAt) || 0;
+          const bTs = Number.isFinite(b?.startedAtMs) ? b.startedAtMs : Number(b?.startedAt) || 0;
+          return bTs - aTs;
+        });
+
+        for (const queue of queues) {
+          const li = document.createElement('li');
+          li.className = 'resume-item';
+          li.dataset.state = queue?.state || 'blocked';
+
+          const header = document.createElement('div');
+          header.className = 'resume-item__header';
+
+          const title = document.createElement('div');
+          title.className = 'resume-item__title';
+          const domain = queue?.domain || extractHostname(queue?.url);
+          title.textContent = domain || queue?.url || `Queue ${queue?.id}`;
+          header.appendChild(title);
+
+          const link = document.createElement('a');
+          link.href = `/queues/${queue?.id}/ssr`;
+          link.textContent = `Queue ${queue?.id}`;
+          link.className = 'resume-item__queue-link';
+          header.appendChild(link);
+
+          li.appendChild(header);
+
+          const meta = document.createElement('div');
+          meta.className = 'resume-item__meta';
+          const metaParts = [];
+          if (queue?.status) metaParts.push(String(queue.status));
+          const startedAtMs = Number.isFinite(queue?.startedAtMs) ? queue.startedAtMs : null;
+          if (startedAtMs) {
+            metaParts.push(`started ${formatRelativeTime(startedAtMs)}`);
+          } else if (queue?.startedAt) {
+            metaParts.push(`started ${queue.startedAt}`);
+          }
+          if (typeof queue?.ageMs === 'number' && queue.ageMs > 0 && !startedAtMs) {
+            const ageSec = Math.max(1, Math.round(queue.ageMs / 1000));
+            metaParts.push(`${ageSec}s old`);
+          }
+          meta.textContent = metaParts.join(' · ');
+          li.appendChild(meta);
+
+          const reasonLabel = describeResumeReasons(queue?.reasons);
+          if (reasonLabel) {
+            const reasonEl = document.createElement('div');
+            reasonEl.className = 'resume-item__reason';
+            reasonEl.textContent = reasonLabel;
+            li.appendChild(reasonEl);
+          }
+
+          const actions = document.createElement('div');
+          actions.className = 'resume-item__actions';
+
+          if (queue?.state === 'selected') {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'button button--primary resume-item__button';
+            btn.textContent = 'Resume';
+            btn.dataset.resumeQueue = queue.id;
+            btn.disabled = resumeActionPending;
+            actions.appendChild(btn);
+          } else if (queue?.state === 'queued') {
+            const waitBtn = document.createElement('button');
+            waitBtn.type = 'button';
+            waitBtn.className = 'button button--ghost resume-item__button';
+            waitBtn.textContent = 'Waiting for slot';
+            waitBtn.disabled = true;
+            actions.appendChild(waitBtn);
+          } else {
+            const badge = document.createElement('span');
+            badge.className = 'resume-item__badge';
+            badge.textContent = reasonLabel || 'Blocked';
+            actions.appendChild(badge);
+          }
+
+          li.appendChild(actions);
+          resumeList.appendChild(li);
+        }
+      }
+
+      function scheduleResumeInventoryRefresh(delayMs = 1500) {
+        if (!resumeSection) return;
+        if (resumeRefreshTimer) {
+          try { clearTimeout(resumeRefreshTimer); } catch (_) {}
+        }
+        resumeRefreshTimer = setTimeout(() => {
+          fetchResumeInventory({ silent: true }).catch(() => {});
+        }, delayMs);
+      }
+
+      async function fetchResumeInventory({ silent = false } = {}) {
+        if (!resumeSection || resumeInventoryState.loading) return;
+        resumeInventoryState.loading = true;
+        if (!silent) {
+          setResumeStatus('Checking paused queues…', { busy: true });
+        }
+        try {
+          const res = await fetch('/api/resume-all');
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data?.error || `HTTP ${res.status}`);
+          }
+          renderResumeInventory(data);
+          if (!silent) {
+            setResumeStatus('Resume suggestions updated.', { ok: true });
+          }
+        } catch (err) {
+          if (!silent) {
+            setResumeStatus(`Resume inventory error: ${err?.message || err}`, { error: true });
+          }
+        } finally {
+          resumeInventoryState.loading = false;
+          resumeInventoryState.lastFetch = Date.now();
+          scheduleResumeInventoryRefresh(60000);
+        }
+      }
+
+      async function triggerResumeRequest({ queueIds = null, sourceButton = null } = {}) {
+        if (resumeActionPending) return;
+        resumeActionPending = true;
+        if (sourceButton) sourceButton.disabled = true;
+        if (resumeAllBtn) resumeAllBtn.disabled = true;
+        setResumeStatus('Resuming crawl queue…', { busy: true });
+        try {
+          const body = {};
+          if (Array.isArray(queueIds) && queueIds.length) {
+            body.queueIds = queueIds;
+          }
+          body.maxConcurrent = 8;
+          const res = await fetch('/api/resume-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(payload?.error || `HTTP ${res.status}`);
+          }
+          const resumed = payload?.resumed || 0;
+          const message = payload?.message || (resumed ? `Resumed ${resumed} crawl(s)` : 'No crawls resumed');
+          const hasErrors = Array.isArray(payload?.errors) && payload.errors.length > 0;
+          const skippedReason = Array.isArray(payload?.skipped) && payload.skipped.length
+            ? describeResumeReasons(payload.skipped[0].reasons)
+            : null;
+          if (logs) {
+            logs.textContent += `\n${message}\n`;
+            if (Array.isArray(payload?.queues)) {
+              for (const q of payload.queues) {
+                logs.textContent += `  - resumed queue ${q.id} ${q.url ? `(${q.url})` : ''}\n`;
+              }
+            }
+            if (hasErrors) {
+              logs.textContent += `  Errors: ${payload.errors.length}\n`;
+              for (const err of payload.errors.slice(0, 3)) {
+                logs.textContent += `    - ${err.error || err}\n`;
+              }
+            }
+            if (skippedReason) {
+              logs.textContent += `  Skipped: ${skippedReason}\n`;
+            }
+          }
+          if (hasErrors || skippedReason || resumed === 0) {
+            setResumeStatus(skippedReason ? `${message}. ${skippedReason}` : message, { error: hasErrors || resumed === 0 });
+          } else {
+            setResumeStatus(message, { ok: true });
+          }
+          await fetchResumeInventory({ silent: resumed === 0 && !hasErrors && !skippedReason });
+          scheduleResumeInventoryRefresh(4000);
+        } catch (err) {
+          if (logs) logs.textContent += `\nResume error: ${err?.message || err}\n`;
+          setResumeStatus(`Resume failed: ${err?.message || err}`, { error: true });
+          await fetchResumeInventory({ silent: true });
+        } finally {
+          resumeActionPending = false;
+          if (sourceButton) sourceButton.disabled = false;
+          if (resumeAllBtn && resumeInventoryState?.data) {
+            const recommended = Array.isArray(resumeInventoryState.data.recommendedIds)
+              ? resumeInventoryState.data.recommendedIds.length
+              : 0;
+            resumeAllBtn.disabled = recommended === 0;
+          }
+        }
+      }
 
       function renderJobs(jobs) {
         try {
@@ -1608,6 +1957,7 @@ const logs = document.getElementById('logs');
             el.textContent = 'None';
             setStage('idle');
             hidePausedBadge();
+            scheduleResumeInventoryRefresh(600);
             el.setAttribute('aria-busy', 'false');
             return;
           }
@@ -1645,6 +1995,7 @@ const logs = document.getElementById('logs');
             setPausedBadge(null);
             updateStartupStatus(null, null);
           }
+          scheduleResumeInventoryRefresh(1200);
         } catch (_) {
         } finally {
           const el = document.getElementById('jobsList');
@@ -1660,6 +2011,32 @@ const logs = document.getElementById('logs');
         } catch (_) {}
       })();
 
+          if (resumeRefreshBtn) {
+            resumeRefreshBtn.addEventListener('click', () => {
+              fetchResumeInventory().catch(() => {});
+            });
+          }
+
+          if (resumeAllBtn) {
+            resumeAllBtn.addEventListener('click', () => {
+              triggerResumeRequest({}).catch(() => {});
+            });
+          }
+
+          if (resumeList) {
+            resumeList.addEventListener('click', (event) => {
+              const btn = event.target.closest('[data-resume-queue]');
+              if (!btn || btn.disabled) return;
+              const id = Number(btn.dataset.resumeQueue);
+              if (!Number.isFinite(id) || id <= 0) return;
+              triggerResumeRequest({ queueIds: [id], sourceButton: btn }).catch(() => {});
+            });
+          }
+
+          if (resumeSection) {
+            fetchResumeInventory().catch(() => {});
+          }
+
       // Persist open/closed state of collapsible panels
       (function persistPanels(){
         const pairs = [ ['secErrors', secErrors], ['secDomains', secDomains], ['secLogs', secLogs] ];
@@ -1672,31 +2049,27 @@ const logs = document.getElementById('logs');
         }
       })();
 
-      function applyThemePreference(isDark) {
-        document.documentElement.classList.toggle('dark', isDark);
-        if (themeBtn) {
-          themeBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-          themeBtn.textContent = isDark ? 'Light' : 'Dark';
-          const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-          themeBtn.setAttribute('aria-label', label);
-          themeBtn.title = label;
-        }
-      }
+      // Theme controller (esbuild bundle shared with SSR pages)
+      const themeController = createBrowserThemeController();
 
-      // Theme toggle persisted
-      (function initTheme(){
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const initialDark = savedTheme ? savedTheme === 'dark' : prefersDark;
-        applyThemePreference(initialDark);
-        if (themeBtn) {
-          themeBtn.addEventListener('click', () => {
-            const nextDark = !document.documentElement.classList.contains('dark');
-            applyThemePreference(nextDark);
-            localStorage.setItem('theme', nextDark ? 'dark' : 'light');
-          });
-        }
-      })();
+      const syncThemeButton = ({ theme }) => {
+        if (!themeBtn) return;
+        const isDark = theme === 'dark';
+        themeBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+        themeBtn.textContent = isDark ? 'Light' : 'Dark';
+        const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+        themeBtn.setAttribute('aria-label', label);
+        themeBtn.title = label;
+      };
+
+      themeController.subscribe(syncThemeButton);
+
+      if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+          const nextTheme = themeController.getTheme() === 'dark' ? 'light' : 'dark';
+          themeController.setTheme(nextTheme);
+        });
+      }
 
       // Health strip: sizes
       (async function loadHealth(){

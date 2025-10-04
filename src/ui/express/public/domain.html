@@ -1,89 +1,94 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Domain Summary</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
-      .row { display:flex; gap:12px; align-items:end; flex-wrap: wrap; }
-      label { display:block; font-size:12px; color:#555; }
-      input, button { padding:6px 8px; }
-      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
-      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; text-align:left; }
-      th { background:#f7f7f7; }
-      .muted { color:#666; }
-      .stat { display:inline-block; padding:6px 10px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc; margin-right:8px; }
-      .wrap { word-break: break-all; }
-    </style>
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/ui-dark.css" />
+    <script type="module" src="/assets/theme/init.js"></script>
     <script type="module" src="/assets/global-nav.js"></script>
   </head>
-  <body>
-  <div data-global-nav data-active="domains" data-variant="bar"></div>
-    <h1>Domain Summary</h1>
-    <div class="row">
-      <div>
-        <label>Domain or host</label>
-        <input id="host" placeholder="example.com" />
-      </div>
-      <div>
-        <label><input id="subs" type="checkbox" /> Include subdomains</label>
-      </div>
-      <div>
-        <button id="load">Load</button>
-        <a href="/" style="margin-left:8px">Home</a>
-  <button id="analyze" style="margin-left:8px">Analyze now</button>
-      </div>
-    </div>
+  <body class="ui-page domain-summary-page">
+    <div data-global-nav data-active="domains" data-variant="bar"></div>
+    <main class="ui-container domain-summary">
+      <header class="ui-header">
+        <h1 class="ui-header__title">Domain Summary</h1>
+      </header>
 
-    <div id="summary" class="muted" style="margin-top:10px;">Enter a host and click Load.</div>
+      <section class="domain-summary__controls u-flex u-flex-wrap u-gap-sm u-items-end">
+        <div class="domain-summary__control">
+          <label class="domain-summary__label" for="host">Domain or host</label>
+          <input id="host" class="domain-summary__input" placeholder="example.com" />
+        </div>
+        <div class="domain-summary__control domain-summary__control--checkbox">
+          <label class="domain-summary__checkbox">
+            <input id="subs" type="checkbox" />
+            <span>Include subdomains</span>
+          </label>
+        </div>
+        <div class="domain-summary__actions u-flex u-gap-sm">
+          <button id="load" class="ui-button">Load</button>
+          <a href="/" class="ui-button ui-button--secondary">Home</a>
+          <button id="analyze" class="ui-button ui-button--secondary">Analyze now</button>
+        </div>
+      </section>
 
-  <div id="domAnalysis" style="margin-top:14px;"></div>
+      <section id="summary" class="domain-summary__status text-muted">Enter a host and click Load.</section>
 
-  <h3 style="margin-top:20px;">Recent Articles</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Section</th>
-          <th>Date</th>
-          <th>Saved at</th>
-          <th>URL</th>
-        </tr>
-      </thead>
-      <tbody id="arts"></tbody>
-    </table>
+      <section id="domAnalysis" class="domain-summary__analysis"></section>
 
-    <h3 style="margin-top:20px;">Fetch Classification</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Classification</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody id="classTbl"></tbody>
-    </table>
+      <section class="domain-summary__section">
+        <h3 class="domain-summary__section-title">Recent Articles</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Section</th>
+              <th>Date</th>
+              <th>Saved at</th>
+              <th>URL</th>
+            </tr>
+          </thead>
+          <tbody id="arts"></tbody>
+        </table>
+      </section>
 
-    <h3 style="margin-top:20px;">Top Content Types</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody id="ctTbl"></tbody>
-    </table>
+      <section class="domain-summary__section">
+        <h3 class="domain-summary__section-title">Fetch Classification</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Classification</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          <tbody id="classTbl"></tbody>
+        </table>
+      </section>
+
+      <section class="domain-summary__section">
+        <h3 class="domain-summary__section-title">Top Content Types</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          <tbody id="ctTbl"></tbody>
+        </table>
+      </section>
+    </main>
 
     <script>
       function fmt(v){ return v==null? '' : String(v); }
       function fmtBytes(n){ if(n==null) return ''; const k=1024; const sizes=['B','KB','MB','GB']; let i=0; let x=n; while(x>=k && i<sizes.length-1){ x/=k; i++; } return `${x.toFixed(1)} ${sizes[i]}`; }
       function esc(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
       function renderJson(data){
-        if(!data) return '<div class="muted">No domain analysis.</div>';
-        try { const o = typeof data==='string'? JSON.parse(data) : data; return `<pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:6px;border-radius:6px;max-height:260px;overflow:auto">${esc(JSON.stringify(o,null,2))}</pre>`; } catch {
-          return `<pre style="white-space:pre-wrap;background:#f8fafc;border:1px solid #e2e8f0;padding:6px;border-radius:6px;max-height:260px;overflow:auto">${esc(data)}</pre>`;
+        if(!data) return '<div class="domain-summary__placeholder text-muted">No domain analysis.</div>';
+        try { const o = typeof data==='string'? JSON.parse(data) : data; return `<pre class="domain-summary__analysis-pre">${esc(JSON.stringify(o,null,2))}</pre>`; } catch {
+          return `<pre class="domain-summary__analysis-pre">${esc(data)}</pre>`;
         }
       }
       async function load(){
@@ -104,13 +109,13 @@
           `avg total ms: ${Math.round(f.avg_total_ms||0)}`,
           `last fetch: ${fmt(f.last_fetch_at)}`
         ];
-        document.getElementById('summary').innerHTML = stats.map(s=>`<span class="stat">${s}</span>`).join(' ');
+        document.getElementById('summary').innerHTML = stats.map(s=>`<span class="domain-summary__stat">${s}</span>`).join(' ');
 
   const domDiv = document.getElementById('domAnalysis');
-  const categories = (j.domainCategories||[]).map(c=>`<span class="stat">category: ${esc(c)}</span>`).join(' ');
-  const header = `<div>${categories || '<span class="muted">No categories</span>'}</div>`;
+  const categories = (j.domainCategories||[]).map(c=>`<span class="domain-summary__tag">category: ${esc(c)}</span>`).join(' ');
+  const header = `<div class="domain-summary__categories">${categories || '<span class="text-muted">No categories</span>'}</div>`;
   const analysis = renderJson(j.domain?.analysis || null);
-  domDiv.innerHTML = `<h3 style="margin:10px 0 6px">Domain analysis</h3>${header}${analysis}`;
+  domDiv.innerHTML = `<h3 class="domain-summary__section-title">Domain analysis</h3>${header}${analysis}`;
         const tb = document.getElementById('arts');
         tb.innerHTML = '';
         (j.recentArticles||[]).forEach(r => {
@@ -120,7 +125,7 @@
             <td>${fmt(r.section)}</td>
             <td>${fmt(r.date)}</td>
             <td>${fmt(r.ts)}</td>
-            <td class="wrap"><a href="/url?u=${encodeURIComponent(r.url)}" target="_blank">${r.url}</a></td>
+            <td class="domain-summary__wrap"><a href="/url?u=${encodeURIComponent(r.url)}" target="_blank">${r.url}</a></td>
           `;
           tb.appendChild(tr);
         });

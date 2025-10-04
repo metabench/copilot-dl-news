@@ -1,0 +1,228 @@
+// Shared utility classes for UI pages and legacy SSR surfaces.
+
+.is-hidden {
+  display: none !important;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.text-sm {
+  font-size: 13px;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: #64748b;
+}
+
+.text-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.u-bold {
+  font-weight: 600;
+}
+
+.u-nowrap {
+  white-space: nowrap;
+}
+
+.u-fit {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.u-gap-xs {
+  gap: 4px;
+}
+
+.u-gap-sm {
+  gap: 8px;
+}
+
+.u-flex {
+  display: flex;
+}
+
+.u-flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.u-flex-wrap {
+  flex-wrap: wrap;
+}
+
+.u-items-center {
+  align-items: center;
+}
+
+.u-items-end {
+  align-items: flex-end;
+}
+
+.u-justify-end {
+  justify-content: flex-end;
+}
+
+.u-mt-none {
+  margin-top: 0;
+}
+
+.u-mt-xs {
+  margin-top: 4px;
+}
+
+.u-mt-sm {
+  margin-top: 8px;
+}
+
+.u-mt-md {
+  margin-top: 12px;
+}
+
+.u-mt-lg {
+  margin-top: 20px;
+}
+
+.u-mb-none {
+  margin-bottom: 0;
+}
+
+.u-mb-xs {
+  margin-bottom: 4px;
+}
+
+.u-mb-sm {
+  margin-bottom: 8px;
+}
+
+.u-mb-md {
+  margin-bottom: 12px;
+}
+
+.u-mb-lg {
+  margin-bottom: 20px;
+}
+
+.u-ml-sm {
+  margin-left: 8px;
+}
+
+.u-ml-md {
+  margin-left: 12px;
+}
+
+.u-ml-lg {
+  margin-left: 16px;
+}
+
+.u-mr-sm {
+  margin-right: 8px;
+}
+
+.u-mr-md {
+  margin-right: 12px;
+}
+
+.u-mr-lg {
+  margin-right: 16px;
+}
+
+.u-my-sm {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.u-my-md {
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.u-py-sm {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.u-py-md {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.u-w-5em {
+  width: 5em;
+}
+
+.u-w-7em {
+  width: 7em;
+}
+
+.u-w-10em {
+  width: 10em;
+}
+
+.u-w-12em {
+  width: 12em;
+}
+
+.u-w-16em {
+  width: 16em;
+}
+
+.u-w-18em {
+  width: 18em;
+}
+
+.u-w-100px {
+  width: 100px;
+}
+
+.u-w-120px {
+  width: 120px;
+}
+
+.u-w-160px {
+  width: 160px;
+}
+
+.u-minw-20rem {
+  min-width: 20rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.card {
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.card--muted {
+  background: #f8fafc;
+}
+
+.muted-block {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed rgba(100, 116, 139, 0.4);
+  background: rgba(226, 232, 240, 0.3);
+  color: #64748b;
+  font-size: 13px;
+}
+
+.list-plain {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}

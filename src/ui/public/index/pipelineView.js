@@ -1,4 +1,5 @@
 import { formatNumber as defaultFormatNumber, formatRelativeTime as defaultFormatRelativeTime } from './formatters.js';
+import { setElementVisibility } from './domUtils.js';
 
 const STATUS_STYLES = {
   idle: { label: 'Idle', className: 'badge badge-neutral' },
@@ -248,7 +249,7 @@ export function createPipelineView(dom, formatters = {}) {
     }
 
     if (panel) {
-      panel.style.display = hasActivity ? '' : 'none';
+      setElementVisibility(panel, hasActivity);
     }
     if (updatedEl) {
       if (hasActivity && latestTs) {
@@ -268,7 +269,7 @@ export function createPipelineView(dom, formatters = {}) {
       state[stageKey] = deepClone(defaults);
     }
     if (panel) {
-      panel.style.display = 'none';
+      setElementVisibility(panel, false);
     }
     if (updatedEl) {
       updatedEl.textContent = 'Waiting for planner telemetry…';

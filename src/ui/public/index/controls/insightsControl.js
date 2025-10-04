@@ -2,6 +2,7 @@ import { createControl } from './baseControl.js';
 import { createDerivedBinding } from '../jsgui/derivedBinding.js';
 import { formatNumber } from '../formatters.js';
 import { buildQueueHeatmapDiagram } from '../svg/queueHeatmap.js';
+import { setElementVisibility } from '../domUtils.js';
 
 function setText(el, value) {
   if (!el) return;
@@ -82,7 +83,7 @@ export function createInsightsControl({ store, elements }) {
     const panelVisible = crawlType === 'intelligent' || hasData;
 
     if (panel) {
-      panel.style.display = panelVisible ? '' : 'none';
+      setElementVisibility(panel, panelVisible);
       panel.dataset.hasData = hasData ? '1' : '0';
     }
     if (hint) {

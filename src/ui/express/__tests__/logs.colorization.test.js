@@ -33,6 +33,6 @@ describe('logs colorization CSS', () => {
     const cssRes = await getText('/crawler.css');
     expect(cssRes.status).toBe(200);
     // Ensure the style rule exists and specifies our red color in the bundled stylesheet
-    expect(cssRes.text).toMatch(/\.log-error\s*\{[^}]*color:\s*#dc322f/i);
+  expect(cssRes.text).toMatch(/\.log-error\s*\{[^}]*color:\s*#ff6b6b/i);
   });
 });

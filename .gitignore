@@ -37,6 +37,14 @@ data/
 # UI review artefacts
 screenshots/
 
+# Generated stylesheets (built from Sass)
+src/ui/express/public/ui.css
+src/ui/express/public/ui-dark.css
+src/ui/express/public/crawler.css
+
+# Generated UI bundles (built via esbuild)
+src/ui/express/public/assets/**/*.js
+
 *.db-shm
 *.db-wal
 *.db

@@ -113,6 +113,12 @@ const VIEWPORT_PRESETS = [
     deviceScaleFactor: 1
   },
   {
+    name: 'desktop-wxga-landscape',
+    width: 1366,
+    height: 768,
+    deviceScaleFactor: 1
+  },
+  {
     name: 'desktop-fullhd-landscape',
     width: 1920,
     height: 1080,
@@ -140,6 +146,7 @@ const VIEWPORT_PRESETS = [
 
 const TOOLING_VIEW_NAMES = ['mobile-large-portrait', 'ultrawide-landscape'];
 const STUDIO_VIEW_NAMES = ['mobile-large-portrait', 'ultrawide-landscape'];
+const WXGA_VIEW_NAMES = ['desktop-wxga-landscape'];
 const TOOLING_ROUTES = [
   '/queues/ssr',
   '/analysis/ssr',
@@ -156,6 +163,36 @@ const STUDIO_ROUTES = [
   '/domains'
 ];
 
+const WXGA_ROUTES = Array.from(new Set([
+  ...STUDIO_ROUTES,
+  ...TOOLING_ROUTES,
+  '/domain',
+  '/coverage-dashboard',
+  '/priority-config',
+  '/queues',
+  '/analysis',
+  '/gazetteer'
+]));
+
+const ALL_ROUTES = Array.from(new Set([
+  ...WXGA_ROUTES,
+  '/',
+  '/errors',
+  '/milestones/ssr',
+  '/problems/ssr',
+  '/analysis',
+  '/analysis/ssr',
+  '/queues',
+  '/queues/ssr',
+  '/gazetteer',
+  '/gazetteer/places',
+  '/coverage-dashboard',
+  '/priority-config',
+  '/domains',
+  '/domain',
+  '/urls'
+]));
+
 const QUICK_ROUTES = [
   '/',
   '/queues/ssr',
@@ -163,6 +200,51 @@ const QUICK_ROUTES = [
 ];
 
 const QUICK_VIEW_NAMES = ['ultrawide-landscape'];
+
+const PRESETS = [
+  {
+    name: 'quick',
+    description: 'Quick smoke set (/, /queues/ssr, /gazetteer/places) with focused viewport mix; light + targeted dark.',
+    routes: QUICK_ROUTES,
+    viewNames: QUICK_VIEW_NAMES,
+    applies: { legacyFlag: 'quick', dark: true, darkRoutes: ['/'] }
+  },
+  {
+    name: 'studio',
+    description: 'Studio review bundle (/, /queues/ssr, /analysis/ssr, /gazetteer/places, /urls, /domains) with mobile + ultrawide views.',
+    routes: STUDIO_ROUTES,
+    viewNames: STUDIO_VIEW_NAMES,
+    applies: { legacyFlag: 'studio', dark: true, darkRoutes: ['/', '/queues/ssr'] }
+  },
+  {
+    name: 'tooling',
+    description: 'Tooling surfaces (queues, analysis, milestones, problems, gazetteer places) on mobile + ultrawide.',
+    routes: TOOLING_ROUTES,
+    viewNames: TOOLING_VIEW_NAMES,
+    applies: { legacyFlag: 'tooling', dark: true }
+  },
+  {
+    name: 'wxga-all',
+    description: 'WXGA coverage across studio + tooling routes (light + dark). Equivalent to --wxga.',
+    routes: WXGA_ROUTES,
+    viewNames: WXGA_VIEW_NAMES,
+    applies: { legacyFlag: 'wxga', aliases: ['wxga'], dark: true }
+  },
+  {
+    name: 'all',
+    description: 'Full crawler surface sweep (all known routes) using default viewport mix with light + dark.',
+    routes: ALL_ROUTES,
+    viewNames: [],
+    applies: { legacyFlag: 'all', dark: true }
+  },
+  {
+    name: 'wxga-light-gazetteer',
+    description: 'Front page, Gazetteer summary + places + GB country view, and Domains at WXGA (light only, 5 shots).',
+    routes: ['/', '/gazetteer', '/gazetteer/places', '/gazetteer/country/GB', '/domains'],
+    viewNames: WXGA_VIEW_NAMES,
+    applies: { dark: false, darkOnly: false }
+  }
+];
 
 function getArg(name, fallback = null) {
   const prefix = `--${name}`;
@@ -238,6 +320,46 @@ function selectViewportsByName(names) {
   return selected;
 }
 
+function resolvePreset(name) {
+  if (!name) return null;
+  const lowered = String(name).trim().toLowerCase();
+  return (
+    PRESETS.find((preset) => {
+      if (preset.name.toLowerCase() === lowered) return true;
+      const aliases = preset.applies?.aliases || [];
+      if (aliases.some((alias) => alias.toLowerCase() === lowered)) return true;
+      const legacy = preset.applies?.legacyFlag;
+      return legacy && legacy.toLowerCase() === lowered;
+    }) || null
+  );
+}
+
+function formatPresetHelp(preset) {
+  const views = preset.viewNames && preset.viewNames.length ? preset.viewNames.join(', ') : 'default mix';
+  const routes = preset.routes.length;
+  return `  ${preset.name.padEnd(24)} ${preset.description} (routes: ${routes}, views: ${views})`;
+}
+
+function printHelp() {
+  const usage = `Usage: node src/tools/capture-ui-screenshots.js [options]\n\n`;
+  const options = [
+    'Options:',
+    '  --preset=<name>           Use a named preset (see list below).',
+    '  --paths=/path             Extra routes to capture (repeatable or comma-separated).',
+    '  --views=name              Limit to specific viewport presets (repeatable).',
+    '  --dark                    Capture dark-theme variants as well as light.',
+    '  --dark-only               Capture dark theme only (implies --dark).',
+    '  --separate-dirs           Save each route in its own directory.',
+    '  --threads=<n>             Concurrency for captures (default 10).',
+    '  --output=<dir>            Destination root (default screenshots/crawler).',
+    '  --label=<name>            Folder label (defaults to timestamp).',
+    '  --help                    Show this message.\n'
+  ].join('\n');
+
+  const presetLines = PRESETS.map(formatPresetHelp).join('\n');
+  console.log(`${usage}${options}Presets:\n${presetLines}\n`);
+}
+
 function normaliseRoutePath(routePath) {
   if (!routePath) return '/';
   const trimmed = routePath.trim();
@@ -270,6 +392,12 @@ function toBoolean(value, fallback = false) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normaliseThreads(value, fallback = 10) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
+  return Math.min(Math.max(Math.floor(numeric), 1), 32);
 }
 
 async function launchServerIfNeeded(baseUrl) {
@@ -340,6 +468,25 @@ async function ensureDir(dir) {
   await fs.promises.mkdir(dir, { recursive: true });
 }
 
+async function runWithConcurrency(items, handler, concurrency) {
+  if (!Array.isArray(items) || !items.length) return [];
+  const limit = Math.max(1, Math.min(concurrency || 1, items.length));
+  const results = new Array(items.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (true) {
+      if (cursor >= items.length) return;
+      const index = cursor++;
+      results[index] = await handler(items[index], index);
+    }
+  }
+
+  const workers = Array.from({ length: limit }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 async function captureScreenshots({
   url,
   viewports,
@@ -370,26 +517,20 @@ async function captureScreenshots({
         hasTouch: toBoolean(viewport.hasTouch, false)
       });
 
-      await page.goto(url, {
+      const target = new URL(url);
+      if (darkMode) {
+        target.hash = 'theme_name=dark';
+      } else if (target.hash === '#theme_name=dark') {
+        target.hash = '';
+      }
+
+      await page.goto(target.toString(), {
         waitUntil: ['domcontentloaded', 'networkidle2'],
         timeout: timeoutMs
       });
       
       if (waitMs > 0) {
         await delay(waitMs);
-      }
-      
-      // Enable dark mode if requested
-      if (darkMode) {
-        await page.evaluate(() => {
-          document.documentElement.classList.add('dark');
-          // Also trigger theme button if it exists
-          const themeBtn = document.getElementById('themeBtn');
-          if (themeBtn && !document.documentElement.classList.contains('dark')) {
-            themeBtn.click();
-          }
-        });
-        await delay(300); // Allow theme to settle
       }
       
       const slug = viewport.name.replace(/[^a-z0-9-_]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
@@ -461,24 +602,90 @@ async function main() {
   let serverControl = null;
   
   try {
+    const helpRequested = process.argv.includes('--help') || process.argv.includes('-h');
+    const presetName = getArg('preset', null);
+    const preset = resolvePreset(presetName);
+    if (presetName && !preset) {
+      throw new Error(`Unknown preset "${presetName}". Run with --help to see available presets.`);
+    }
+
     const repoRoot = findProjectRoot(__dirname);
+    if (helpRequested) {
+      printHelp();
+      return;
+    }
     const outputRoot = getArg('output', path.join(repoRoot, 'screenshots', 'crawler'));
     const runLabel = getArg('label', new Date().toISOString().replace(/[:.]/g, '-'));
     const waitMs = Number(getArg('waitMs', DEFAULT_WAIT_MS));
     const timeoutMs = Number(getArg('timeoutMs', DEFAULT_TIMEOUT_MS));
-    const baseUrl = getArg('url', null);
-    const routePathArg = getArg('path', '/');
-    const pathsArg = toList(getAllArgs('paths'));
-    const toolingMode = toBoolean(getArg('tooling', null), false);
-    const studioMode = toBoolean(getArg('studio', null), false);
-    const quickMode = toBoolean(getArg('quick', null), false);
+  const baseUrl = getArg('url', null);
+  const routePathArg = getArg('path', '/');
+  const pathsArg = toList(getAllArgs('paths'));
+  let wxgaMode = toBoolean(getArg('wxga', null), false);
+  let allMode = toBoolean(getArg('all', null), false);
+    let toolingMode = toBoolean(getArg('tooling', null), false);
+    let studioMode = toBoolean(getArg('studio', null), false);
+    let quickMode = toBoolean(getArg('quick', null), false);
     const viewsArg = toList(getAllArgs('views'));
     const headless = getArg('headless', 'new');
-    const darkThemePages = toBoolean(getArg('dark', null), false); // Only enabled explicitly, not by default
-    const separateDirs = toBoolean(getArg('separate-dirs', null), false); // By default, all screenshots in one directory
+  let darkOnly = toBoolean(getArg('dark-only', null), false);
+  let darkThemePages = darkOnly ? true : toBoolean(getArg('dark', null), false); // Only enabled explicitly, not by default
+    let separateDirs = toBoolean(getArg('separate-dirs', null), false); // By default, all screenshots in one directory
+  const threadsArg = getArg('threads', 10);
+  let threads = normaliseThreads(threadsArg, 10);
+
+    if (preset?.applies?.legacyFlag) {
+      switch (preset.applies.legacyFlag) {
+        case 'wxga':
+          wxgaMode = true;
+          break;
+        case 'all':
+          allMode = true;
+          break;
+        case 'tooling':
+          toolingMode = true;
+          break;
+        case 'studio':
+          studioMode = true;
+          break;
+        case 'quick':
+          quickMode = true;
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (typeof preset?.applies?.dark === 'boolean') {
+      darkThemePages = preset.applies.dark;
+      if (!darkThemePages) {
+        darkOnly = false;
+      }
+    }
+
+    if (typeof preset?.applies?.darkOnly === 'boolean') {
+      darkOnly = preset.applies.darkOnly;
+      if (darkOnly) {
+        darkThemePages = true;
+      }
+    }
+
+    if (typeof preset?.applies?.separateDirs === 'boolean') {
+      separateDirs = preset.applies.separateDirs;
+    }
+
+    if (typeof preset?.applies?.threads === 'number') {
+      threads = normaliseThreads(preset.applies.threads, threads);
+    }
 
     let targetPaths = [];
-    if (quickMode) {
+    if (preset?.routes?.length) {
+      targetPaths = [...preset.routes];
+    } else if (allMode) {
+      targetPaths = [...ALL_ROUTES];
+    } else if (wxgaMode) {
+      targetPaths = [...WXGA_ROUTES];
+    } else if (quickMode) {
       targetPaths = [...QUICK_ROUTES];
     } else if (studioMode) {
       targetPaths = [...STUDIO_ROUTES];
@@ -493,7 +700,11 @@ async function main() {
     targetPaths = targetPaths.map(normaliseRoutePath);
 
     let desiredViewNames = viewsArg;
-    if (!desiredViewNames.length && quickMode) {
+    if (!desiredViewNames.length && preset?.viewNames?.length) {
+      desiredViewNames = [...preset.viewNames];
+    } else if (!desiredViewNames.length && wxgaMode) {
+      desiredViewNames = [...WXGA_VIEW_NAMES];
+    } else if (!desiredViewNames.length && quickMode) {
       desiredViewNames = [...QUICK_VIEW_NAMES];
     } else if (!desiredViewNames.length && studioMode) {
       desiredViewNames = [...STUDIO_VIEW_NAMES];
@@ -506,46 +717,61 @@ async function main() {
     await ensureDir(runDir);
 
     console.log(`[capture-ui-screenshots] Starting capture run`);
-    console.log(`  Routes: ${targetPaths.length} (${targetPaths.join(', ')})`);
+    if (preset) {
+      console.log(`  Preset: ${preset.name}`);
+    }
+  console.log(`  Routes: ${targetPaths.length} (${targetPaths.join(', ')})`);
     console.log(`  Viewports: ${viewports.length} (${viewports.map(v => v.name).join(', ')})`);
     console.log(`  Dark theme: ${darkThemePages ? 'enabled' : 'disabled'}`);
     console.log(`  Separate dirs: ${separateDirs ? 'yes' : 'no (all in one directory)'}`);
+  console.log(`  Threads: ${threads}`);
     console.log(`  Output: ${path.relative(repoRoot, runDir)}`);
 
     serverControl = await launchServerIfNeeded(baseUrl);
-    const pages = [];
+    const routeDescriptors = targetPaths.map((routePath, index) => ({ routePath, index }));
+    const presetDarkRoutes = Array.isArray(preset?.applies?.darkRoutes)
+      ? new Set(preset.applies.darkRoutes.map(normaliseRoutePath))
+      : null;
 
-    for (let routeIndex = 0; routeIndex < targetPaths.length; routeIndex++) {
-      const routePath = targetPaths[routeIndex];
+    const pagesResults = await runWithConcurrency(routeDescriptors, async ({ routePath, index }) => {
       const targetUrl = new URL(routePath, serverControl.baseUrl).toString();
       const pageSlug = slugifyPath(routePath);
-      
-      // Use separate directories per page only if --separate-dirs is specified
       const pageDir = separateDirs ? path.join(runDir, pageSlug) : runDir;
       await ensureDir(pageDir);
 
-      console.log(`[capture-ui-screenshots] [${routeIndex + 1}/${targetPaths.length}] Capturing ${routePath}...`);
+      console.log(`[capture-ui-screenshots] [${index + 1}/${targetPaths.length}] Capturing ${routePath}...`);
 
-      // Capture light mode
-      const lightMetadata = await captureScreenshots({
-        url: targetUrl,
-        viewports,
-        outputDir: pageDir,
-        waitMs,
-        timeoutMs,
-        headless,
-        darkMode: false,
-        routeSlug: separateDirs ? null : pageSlug // Add route slug to filename if all in one dir
-      });
+      const allMetadata = [];
 
-      const allMetadata = [...lightMetadata];
+      if (!darkOnly) {
+        const lightMetadata = await captureScreenshots({
+          url: targetUrl,
+          viewports,
+          outputDir: pageDir,
+          waitMs,
+          timeoutMs,
+          headless,
+          darkMode: false,
+          routeSlug: separateDirs ? null : pageSlug
+        });
 
-      // Capture dark mode for selected pages (only index and one tooling page in studio mode)
+        allMetadata.push(...lightMetadata);
+      } else {
+        console.log(`[capture-ui-screenshots]   → Skipping light capture for ${routePath} (dark-only mode)`);
+      }
       if (darkThemePages) {
-        const shouldCaptureDark = quickMode ? (routePath === '/') : (studioMode ? (routePath === '/' || routePath === '/queues/ssr') : true);
-        
+        const shouldCaptureDark = darkOnly
+          ? true
+          : (presetDarkRoutes
+              ? presetDarkRoutes.has(routePath)
+              : (quickMode
+                  ? routePath === '/'
+                  : (studioMode
+                      ? (routePath === '/' || routePath === '/queues/ssr')
+                      : true)));
+
         if (shouldCaptureDark) {
-          console.log(`[capture-ui-screenshots]   → Capturing dark theme variant...`);
+          console.log(`[capture-ui-screenshots]   → Capturing dark theme variant for ${routePath}...`);
           const darkMetadata = await captureScreenshots({
             url: targetUrl,
             viewports,
@@ -557,19 +783,23 @@ async function main() {
             routeSlug: separateDirs ? null : pageSlug
           });
           allMetadata.push(...darkMetadata);
+        } else {
+          console.log(`[capture-ui-screenshots]   → Dark theme skipped for ${routePath}`);
         }
       }
 
       const relativeDir = path.relative(repoRoot, pageDir) || pageDir;
       console.log(`[capture-ui-screenshots]   ✓ ${routePath} → ${relativeDir} (${allMetadata.length} screenshots)`);
 
-      pages.push({
+      return {
         route: routePath,
         targetUrl,
         outputDir: relativeDir,
         viewports: allMetadata
-      });
-    }
+      };
+    }, threads);
+
+    const pages = pagesResults.filter(Boolean);
 
     const manifestPath = path.join(runDir, 'metadata.json');
     const manifest = {
@@ -578,9 +808,14 @@ async function main() {
       timeoutMs,
       headless,
       baseUrl: serverControl.baseUrl,
-      viewFilter: desiredViewNames,
-      darkTheme: darkThemePages,
-      pages
+  viewFilter: desiredViewNames,
+  darkTheme: darkThemePages,
+  darkOnly,
+  wxgaMode,
+  allMode,
+  threads,
+      pages,
+      preset: preset ? preset.name : null
     };
 
     if (pages.length === 1) {

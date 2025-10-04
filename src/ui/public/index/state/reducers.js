@@ -309,6 +309,22 @@ function mergeHighlights(extras = {}, details = {}) {
       highlights.push(`Problem ${top.kind}: ${top.count}`);
     }
   }
+
+    const navigation = details.navigation || extras.navigation;
+    if (navigation && navigation.totalLinks) {
+      const pieces = [`Nav links ${navigation.totalLinks}`];
+      if (navigation.primary) pieces.push(`${navigation.primary} primary`);
+      if (Array.isArray(navigation.focusSections) && navigation.focusSections.length) {
+        const sectionLabels = navigation.focusSections
+          .slice(0, 2)
+          .map((entry) => entry.section)
+          .filter(Boolean);
+        if (sectionLabels.length) {
+          pieces.push(`Focus: ${sectionLabels.join(', ')}`);
+        }
+      }
+      highlights.push(pieces.join(' · '));
+    }
   return highlights.slice(0, 6);
 }
 

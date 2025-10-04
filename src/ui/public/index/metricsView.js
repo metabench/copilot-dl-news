@@ -1,3 +1,5 @@
+import { setElementVisibility } from './domUtils.js';
+
 const DEFAULT_QUEUE_STATE = {
   lastStable: null,
   lastRaw: null,
@@ -22,7 +24,7 @@ function updateBadge(el, text) {
 
 function updateBadgeVisibility(el, show) {
   if (!el) return;
-  el.style.display = show ? '' : 'none';
+  setElementVisibility(el, !!show);
 }
 
 export function createMetricsView({ elements = {}, formatNumber }) {

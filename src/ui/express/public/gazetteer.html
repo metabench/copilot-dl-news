@@ -4,83 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gazetteer Browser</title>
-  <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 0; color: #1f2937; }
-    header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #fff; z-index: 1; }
-    header h1 { margin: 0; font-size: 18px; }
-  main { display: grid; grid-template-columns: 400px 1fr; gap: 16px; padding: 16px; }
-  .panel { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .row label { font-size: 12px; color: #555; }
-  input[type="text"], select, input[type="number"] { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
-  button { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; cursor: pointer; }
-  button:hover { background: #f1f5f9; }
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
-  th, td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; }
-  th { text-align: left; color: #64748b; user-select: none; }
-  th.sortable { cursor: pointer; }
-  th.sortable .dir { font-size: 11px; color: #94a3b8; margin-left: 4px; }
-    tr:hover { background: #fafafa; }
-  .meta { color: #64748b; font-size: 12px; }
-  .pill { display: inline-block; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 999px; font-size: 12px; color: #334155; background: #f8fafc; }
-    .tabs { display: flex; gap: 8px; border-bottom: 1px solid #eee; margin-top: 8px; }
-    .tabs button { padding: 6px 10px; border: none; background: transparent; cursor: pointer; border-bottom: 2px solid transparent; }
-    .tabs button.active { border-bottom-color: #333; font-weight: 600; }
-    .tab-panel { display: none; padding-top: 8px; }
-    .tab-panel.active { display: block; }
-    .right-header { display: flex; gap: 8px; align-items: center; }
-  .flag { font-size: 14px; }
-  .subtle { color: #94a3b8; }
-  .muted { color: #9aa6b2; }
-  
-  /* Mobile-large-portrait optimization (414px) */
-  @media (max-width:720px){
-    main{grid-template-columns:1fr;gap:12px;padding:12px}
-    header{padding:10px 12px}
-    .panel{padding:10px}
-    table{font-size:13px}
-    th,td{padding:6px 8px}
-    .row{flex-wrap:wrap}
-  }
-  @media (min-width:390px) and (max-width:720px){
-    main{padding:14px}
-    .panel{padding:12px}
-  }
-  
-  /* Studio layout for ultrawide (2560px+) */
-  @media (min-width:2560px){
-    main{max-width:2400px;margin:0 auto;padding:24px 72px;grid-template-columns:500px 1fr;gap:24px}
-    header h1{font-size:22px}
-    table{font-size:15px}
-    th,td{padding:10px 12px}
-  }
-  /* Ultra-ultrawide (3440px+) */
-  @media (min-width:3440px){
-    main{max-width:3200px;padding:32px 96px;grid-template-columns:600px 1fr;gap:32px}
-    header h1{font-size:24px}
-    table{font-size:16px}
-    th,td{padding:11px 14px}
-    input[type="text"], select, input[type="number"]{font-size:15px;padding:7px 10px}
-    button{font-size:15px;padding:7px 12px}
-  }
-  </style>
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/ui-dark.css" />
+  <script type="module" src="/assets/theme/init.js"></script>
   <script type="module" src="/assets/global-nav.js"></script>
 </head>
-<body>
+<body class="ui-page gazetteer-page">
   <div data-global-nav data-active="gazetteer" data-variant="bar"></div>
-  <header>
-    <h1>Gazetteer</h1>
-    <div class="meta" id="summary"></div>
+  <header class="gazetteer-header">
+    <h1 class="gazetteer-header__title">Gazetteer</h1>
+    <div class="gazetteer-header__summary text-muted" id="summary"></div>
   </header>
-  <main>
-    <section class="panel" id="searchPanel">
-      <div class="row">
-        <input id="q" type="text" placeholder="Search places..." style="flex:1" />
+  <main class="gazetteer-layout">
+    <section class="panel gazetteer-panel" id="searchPanel">
+      <div class="gazetteer-search__row">
+        <input id="q" class="gazetteer-input gazetteer-input--wide" type="text" placeholder="Search places..." />
       </div>
-      <div class="row" style="margin-top:8px">
-        <label>Kind</label>
-        <select id="kind">
+      <div class="gazetteer-search__row u-mt-sm">
+        <label class="gazetteer-search__label">Kind</label>
+        <select id="kind" class="gazetteer-input">
           <option value="">Any</option>
           <option>country</option>
           <option>region</option>
@@ -88,54 +30,54 @@
           <option>poi</option>
           <option>supranational</option>
         </select>
-        <label>Country</label>
-        <input id="cc" type="text" placeholder="US, GB, FR..." style="width:80px" />
-        <label>ADM1</label>
-        <input id="adm1" type="text" placeholder="CA-ON" style="width:100px" />
+        <label class="gazetteer-search__label">Country</label>
+        <input id="cc" class="gazetteer-input gazetteer-input--compact" type="text" placeholder="US, GB, FR..." />
+        <label class="gazetteer-search__label">ADM1</label>
+        <input id="adm1" class="gazetteer-input gazetteer-input--compact" type="text" placeholder="CA-ON" />
       </div>
-      <div class="row" style="margin-top:8px">
-        <label>Min pop</label>
-        <input id="minpop" type="number" min="0" value="0" style="width:100px" />
-        <label>Sort</label>
-        <select id="sort">
+      <div class="gazetteer-search__row u-mt-sm">
+        <label class="gazetteer-search__label">Min pop</label>
+        <input id="minpop" class="gazetteer-input gazetteer-input--compact" type="number" min="0" value="0" />
+        <label class="gazetteer-search__label">Sort</label>
+        <select id="sort" class="gazetteer-input">
           <option value="name">Name</option>
           <option value="country">Country</option>
           <option value="population">Population</option>
         </select>
-        <select id="dir">
+        <select id="dir" class="gazetteer-input">
           <option value="asc">Asc</option>
           <option value="desc">Desc</option>
         </select>
-        <label>Page size</label>
-        <select id="pageSizeSel">
+        <label class="gazetteer-search__label">Page size</label>
+        <select id="pageSizeSel" class="gazetteer-input">
           <option>25</option>
           <option selected>50</option>
           <option>100</option>
         </select>
       </div>
-      <div class="row" style="margin-top:8px">
-        <button id="searchBtn">Search</button>
-        <button id="resetBtn" class="muted">Reset</button>
-        <span class="meta" id="count"></span>
+      <div class="gazetteer-search__row u-mt-sm">
+        <button id="searchBtn" class="ui-button">Search</button>
+        <button id="resetBtn" class="ui-button ui-button--secondary">Reset</button>
+        <span class="text-muted" id="count"></span>
       </div>
-      <div class="row" style="margin-top:6px">
-        <span class="meta">Download:</span>
-        <a id="dlCsv" href="#">CSV</a>
-        <a id="dlNdjson" href="#">NDJSON</a>
+      <div class="gazetteer-search__row u-mt-xs">
+        <span class="text-muted">Download:</span>
+        <a id="dlCsv" class="gazetteer-link" href="#">CSV</a>
+        <a id="dlNdjson" class="gazetteer-link" href="#">NDJSON</a>
       </div>
-      <div class="panel" style="margin-top:10px">
-        <div class="row">
-          <b>Disambiguation tester</b>
+      <div class="panel gazetteer-panel gazetteer-panel--nested u-mt-sm">
+        <div class="gazetteer-search__row">
+          <strong>Disambiguation tester</strong>
         </div>
-        <div class="row" style="margin-top:6px">
-          <input id="resolvePhrase" type="text" placeholder="Place name (e.g., Paris)" style="flex:1" />
-          <input id="resolveUrl" type="text" placeholder="Context URL (optional)" style="flex:1" />
-          <button id="resolveBtn">Resolve</button>
+        <div class="gazetteer-search__row u-mt-xs">
+          <input id="resolvePhrase" class="gazetteer-input gazetteer-input--wide" type="text" placeholder="Place name (e.g., Paris)" />
+          <input id="resolveUrl" class="gazetteer-input gazetteer-input--wide" type="text" placeholder="Context URL (optional)" />
+          <button id="resolveBtn" class="ui-button">Resolve</button>
         </div>
-        <div id="resolveResults" class="meta" style="margin-top:6px"></div>
+        <div id="resolveResults" class="text-muted u-mt-xs"></div>
       </div>
-      <div style="margin-top:10px; max-height: 65vh; overflow:auto">
-        <table>
+      <div class="gazetteer-table-wrap">
+        <table class="gazetteer-table">
           <thead>
             <tr>
               <th class="sortable" data-sort="name">Name <span class="dir" id="sortIndicator-name"></span></th>
@@ -147,14 +89,14 @@
           </thead>
           <tbody id="results"></tbody>
         </table>
-        <div class="row" style="margin-top:8px">
-          <button id="prev">Prev</button>
-          <button id="next">Next</button>
-          <span class="meta" id="pageInfo"></span>
+        <div class="gazetteer-search__row u-mt-sm">
+          <button id="prev" class="ui-button ui-button--secondary">Prev</button>
+          <button id="next" class="ui-button ui-button--secondary">Next</button>
+          <span class="text-muted" id="pageInfo"></span>
         </div>
       </div>
     </section>
-    <section class="panel" id="detailPanel">
+    <section class="panel gazetteer-panel" id="detailPanel">
       <div id="detail"></div>
     </section>
   </main>
@@ -390,7 +332,7 @@
 
     function renderArticles(panel, items) {
       if (!items || items.length === 0) { panel.innerHTML = '<div class="meta">No related articles</div>'; return; }
-      panel.innerHTML = '<ul>' + items.map(a => `<li><a href="${a.url}" target="_blank">${escapeHtml(a.title || a.url)}</a> <span class="meta">${a.date||''}</span></li>`).join('') + '</ul>';
+  panel.innerHTML = '<ul>' + items.map(a => `<li><a href="${a.url}" target="_blank">${escapeHtml(a.title || a.url)}</a> <span class="meta">${a.date||''}</span></li>`).join('') + '</ul>';
     }
     function renderHubs(panel, items) {
       if (!items || items.length === 0) { panel.innerHTML = '<div class="meta">No hubs found</div>'; return; }

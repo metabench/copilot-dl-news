@@ -110,6 +110,9 @@ const {
   JobRegistry
 } = require('./services/jobRegistry');
 const {
+  IntelligentCrawlerManager
+} = require('./services/IntelligentCrawlerManager');
+const {
   RealtimeBroadcaster
 } = require('./services/realtimeBroadcaster');
 const {
@@ -202,11 +205,35 @@ function createApp(options = {}) {
   const allowMultiJobs = (options.allowMultiJobs === true) || isTruthyFlag(env.UI_ALLOW_MULTI_JOBS);
   const traceStart = options.traceStart === true || isTruthyFlag(env.UI_TRACE_START);
 
-  const jobRegistry = options.jobRegistry instanceof JobRegistry ? options.jobRegistry : new JobRegistry({
-    allowMultiJobs,
-    guardWindowMs: options.guardWindowMs,
-    summaryFn: computeJobsSummary
-  });
+  const providedJobRegistry = options.jobRegistry instanceof JobRegistry ? options.jobRegistry : null;
+  const originalSummaryFn = providedJobRegistry && typeof providedJobRegistry.summaryFn === 'function'
+    ? providedJobRegistry.summaryFn.bind(providedJobRegistry)
+    : computeJobsSummary;
+
+  const baseSummaryFn = options.crawlerManager instanceof IntelligentCrawlerManager
+    ? options.crawlerManager.baseSummaryFn || ((jobs) => originalSummaryFn(jobs))
+    : (jobs) => originalSummaryFn(jobs);
+
+  const crawlerManager = options.crawlerManager instanceof IntelligentCrawlerManager
+    ? options.crawlerManager
+    : new IntelligentCrawlerManager({
+        baseSummaryFn
+      });
+
+  let jobRegistry;
+  if (providedJobRegistry) {
+    jobRegistry = providedJobRegistry;
+  } else {
+    jobRegistry = new JobRegistry({
+      allowMultiJobs,
+      guardWindowMs: options.guardWindowMs,
+      summaryFn: (jobs) => crawlerManager.buildJobsSummary(jobs)
+    });
+  }
+
+  jobRegistry.summaryFn = (jobs) => crawlerManager.buildJobsSummary(jobs);
+
+  crawlerManager.setJobRegistry(jobRegistry);
   const realtime = options.realtime instanceof RealtimeBroadcaster ? options.realtime : new RealtimeBroadcaster({
     jobRegistry,
     logsMaxPerSec: Number(env.UI_LOGS_MAX_PER_SEC || 200),
@@ -236,6 +263,7 @@ function createApp(options = {}) {
   app.locals.realtime = realtime;
   app.locals.jobRegistry = jobRegistry;
   app.locals.analysisProgress = analysisProgress;
+  app.locals.crawlerManager = crawlerManager;
 
   function startTrace(req, tag = 'gazetteer') {
     if (!verbose) {
@@ -289,7 +317,16 @@ function createApp(options = {}) {
     }
   }));
   // Static assets with cache headers
-  // Serve shared UI assets (CSS/JS) from src/ui/public at /assets
+  const builtAssetsDir = path.join(__dirname, 'public', 'assets');
+  if (fs.existsSync(builtAssetsDir)) {
+    app.use('/assets', express.static(builtAssetsDir, {
+      maxAge: '1h',
+      etag: true,
+      lastModified: true
+    }));
+  }
+
+  // Serve shared UI assets (CSS/JS) from src/ui/public at /assets (fallback)
   app.use('/assets', express.static(path.join(__dirname, '..', 'public'), {
     maxAge: '1h',
     etag: true,
@@ -327,7 +364,8 @@ function createApp(options = {}) {
     queueDebug,
     metrics,
     QUIET,
-    traceStart
+    traceStart,
+    crawlerManager
   }));
   // Mount crawls API router (list, detail, and job-scoped controls)
   app.use(createCrawlsApiRouter({
@@ -372,7 +410,8 @@ function createApp(options = {}) {
     urlsDbPath,
     queueDebug,
     metrics,
-    QUIET
+    QUIET,
+    crawlerManager
   }));
   app.use(createAnalysisControlRouter({
     analysisRunner,
@@ -481,7 +520,26 @@ function createApp(options = {}) {
         /* ignore individual stat errors */ }
     }
     if (!QUIET) console.warn('[server] index.html not found in any candidate paths');
-    res.status(200).type('html').send(`<!doctype html><meta charset="utf-8"/><title>Crawler UI (fallback)</title><body style="font-family:system-ui;padding:24px;max-width:720px;margin:0 auto;">\n<h1>UI Fallback Page</h1>\n<p>The expected <code>index.html</code> was not found. Checked paths:</p><pre style="background:#111;color:#0f0;padding:10px;white-space:pre-wrap;">${candidates.map(c=>c.replace(/</g,'&lt;')).join('\n')}</pre>\n<p>Create or restore <code>src/ui/express/public/index.html</code> (preferred) or place an <code>index.html</code> into one of the checked legacy locations.</p>\n</body>`);
+    const candidateMarkup = candidates
+      .map((candidate) => candidate.replace(/</g, '&lt;'))
+      .join('\n');
+    res.status(200).type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Crawler UI (fallback)</title>
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/ui-dark.css" />
+</head>
+<body class="fallback-page">
+  <main class="fallback-page__container">
+    <h1 class="fallback-page__title">UI Fallback Page</h1>
+    <p class="fallback-page__intro">The expected <code>index.html</code> was not found. We looked in these locations:</p>
+    <pre class="fallback-page__paths">${candidateMarkup}</pre>
+    <p class="fallback-page__note">Create or restore <code>src/ui/express/public/index.html</code> (preferred) or place an <code>index.html</code> into one of the checked legacy locations.</p>
+  </main>
+</body>
+</html>`);
   });
 
   return app;

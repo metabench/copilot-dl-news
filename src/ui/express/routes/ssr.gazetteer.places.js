@@ -90,8 +90,8 @@ function createGazetteerPlacesRouter(options = {}) {
         pageSize
       };
       const toggleLink = showStorage
-        ? `<a href="${toQueryString(toggleLinkParams)}">Hide storage</a>`
-        : `<a href="${toQueryString({ ...toggleLinkParams, storage: 1 })}">Show approx storage</a>`;
+        ? `<a class="gazetteer-link" href="${toQueryString(toggleLinkParams)}">Hide storage</a>`
+        : `<a class="gazetteer-link" href="${toQueryString({ ...toggleLinkParams, storage: 1 })}">Show approx storage</a>`;
 
       const rowsHtml = rows.map((row) => `
         <tr>
@@ -131,74 +131,84 @@ function createGazetteerPlacesRouter(options = {}) {
       const hasPrev = page > 1;
       const hasNext = page < totalPages;
       const prevLink = hasPrev
-        ? `<a href="${toQueryString({ ...basePagerParams, page: page - 1 })}">← Prev</a>`
+        ? `<a class="gazetteer-link" href="${toQueryString({ ...basePagerParams, page: page - 1 })}">← Prev</a>`
         : `<span class="muted">← Prev</span>`;
       const nextLink = hasNext
-        ? `<a href="${toQueryString({ ...basePagerParams, page: page + 1 })}">Next →</a>`
+        ? `<a class="gazetteer-link" href="${toQueryString({ ...basePagerParams, page: page + 1 })}">Next →</a>`
         : `<span class="muted">Next →</span>`;
 
+      const navHtml = renderNav('gazetteer', { variant: 'bar' });
+      const summaryLine = summaryBits.join(' · ');
+      const storageSummary = showStorage ? `<div class="muted">Total shown storage: ~ ${formatBytes(totalStorage)}</div>` : '';
+
       const html = `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Gazetteer places</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff;--bg-soft:#f8fafc}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:960px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-  header h1{margin:0;font-size:22px}
-  header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-  header nav a:hover{color:var(--fg);text-decoration:underline}
-  .meta{color:var(--muted);font-size:13px;margin:6px 0}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  form.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
-  form.filters label{display:flex;flex-direction:column;font-size:12px;color:var(--muted)}
-  form.filters input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px}
-  .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0;font-size:13px}
-  .toolbar a{color:#2563eb;text-decoration:none}
-  .toolbar a:hover{text-decoration:underline}
-  .pager{display:flex;align-items:center;justify-content:space-between;margin:10px 0;font-size:13px}
-  .pager span.muted{color:var(--muted)}
-  .pager .current{flex:1;text-align:center;color:var(--muted)}
-  .tr{text-align:right}
-</style>
-</head><body>
-  <div class="container">
-    <header>
-      <h1>Gazetteer places</h1>
-      ${renderNav('gazetteer')}
+<link rel="stylesheet" href="/ui.css" />
+<link rel="stylesheet" href="/ui-dark.css" />
+<script type="module" src="/assets/theme/init.js"></script>
+<script type="module" src="/assets/global-nav.js"></script>
+</head><body class="ui-page gazetteer-page">
+  ${navHtml}
+  <div class="ui-container">
+    <header class="gazetteer-header">
+      <h1 class="gazetteer-header__title">Gazetteer places</h1>
+      <p class="gazetteer-header__summary">${summaryLine || 'Filter and browse all known places.'}</p>
     </header>
-    <form class="filters" method="GET" action="/gazetteer/places">
-  <label>Search<input type="text" name="q" value="${escapeHtml(search)}" placeholder="City, region, …"/></label>
-  <label>Kind<input type="text" name="kind" value="${escapeHtml(kind)}" placeholder="city"/></label>
-  <label>Country<input type="text" name="cc" value="${escapeHtml(countryCode)}" placeholder="GB"/></label>
-  <label>ADM1<input type="text" name="adm1" value="${escapeHtml(adm1)}" placeholder="ENG"/></label>
-  <label>Min population<input type="number" name="minpop" value="${escapeHtml(minPopulation || '')}"/></label>
-  <label>Sort<input type="text" name="sort" value="${escapeHtml(sort)}"/></label>
-  <label>Direction<input type="text" name="dir" value="${escapeHtml(direction)}"/></label>
-  <label>Page<input type="number" min="1" name="page" value="${escapeHtml(page)}"/></label>
-  <label>Page size<input type="number" min="1" max="200" name="pageSize" value="${escapeHtml(pageSize)}"/></label>
-      <button type="submit">Apply</button>
-    </form>
-    <div class="meta">${summaryBits.join(' · ')}</div>
-    <div class="pager">
-      <div>${prevLink}</div>
-      <div class="current">Page ${page} of ${totalPages}</div>
-      <div>${nextLink}</div>
-    </div>
-    <div class="toolbar">
-      ${toggleLink}
-      <a href="/gazetteer">Back to summary</a>
-      <a href="/gazetteer/countries">Countries</a>
-    </div>
-    <table>
-      <thead><tr><th>Name</th><th>Country</th><th>ADM1</th>${showStorage ? '<th class="tr">Storage</th>' : ''}<th class="tr">Population</th></tr></thead>
-      <tbody>${rowsHtml || `<tr><td colspan="${showStorage ? 5 : 4}" class="meta">No places found.</td></tr>`}</tbody>
-    </table>
-  ${showStorage ? `<div class="meta">Total shown storage: ~ ${formatBytes(totalStorage)}</div>` : ''}
+    <main class="gazetteer-layout">
+      <section class="panel gazetteer-panel" aria-label="Filter places">
+        <form class="gazetteer-search" method="GET" action="/gazetteer/places">
+          <div class="gazetteer-search__row">
+            <label class="gazetteer-search__label" for="filter-q">Search</label>
+            <input id="filter-q" class="gazetteer-input gazetteer-input--wide" type="text" name="q" value="${escapeHtml(search)}" placeholder="City, region, …" />
+            <label class="gazetteer-search__label" for="filter-kind">Kind</label>
+            <input id="filter-kind" class="gazetteer-input gazetteer-input--compact" type="text" name="kind" value="${escapeHtml(kind)}" placeholder="city" />
+            <label class="gazetteer-search__label" for="filter-cc">Country</label>
+            <input id="filter-cc" class="gazetteer-input gazetteer-input--compact" type="text" name="cc" value="${escapeHtml(countryCode)}" placeholder="GB" />
+            <label class="gazetteer-search__label" for="filter-adm1">ADM1</label>
+            <input id="filter-adm1" class="gazetteer-input gazetteer-input--compact" type="text" name="adm1" value="${escapeHtml(adm1)}" placeholder="ENG" />
+          </div>
+          <div class="gazetteer-search__row u-mt-sm">
+            <label class="gazetteer-search__label" for="filter-minpop">Min population</label>
+            <input id="filter-minpop" class="gazetteer-input gazetteer-input--compact" type="number" name="minpop" value="${escapeHtml(minPopulation || '')}" min="0" />
+            <label class="gazetteer-search__label" for="filter-sort">Sort</label>
+            <input id="filter-sort" class="gazetteer-input gazetteer-input--compact" type="text" name="sort" value="${escapeHtml(sort)}" placeholder="name" />
+            <label class="gazetteer-search__label" for="filter-dir">Direction</label>
+            <input id="filter-dir" class="gazetteer-input gazetteer-input--compact" type="text" name="dir" value="${escapeHtml(direction)}" placeholder="asc" />
+            <label class="gazetteer-search__label" for="filter-page">Page</label>
+            <input id="filter-page" class="gazetteer-input gazetteer-input--compact" type="number" min="1" name="page" value="${escapeHtml(page)}" />
+            <label class="gazetteer-search__label" for="filter-pageSize">Page size</label>
+            <input id="filter-pageSize" class="gazetteer-input gazetteer-input--compact" type="number" min="1" max="200" name="pageSize" value="${escapeHtml(pageSize)}" />
+          </div>
+          <div class="gazetteer-search__row u-mt-sm">
+            <button type="submit" class="ui-button">Apply filters</button>
+            <a class="ui-button ui-button--secondary" href="/gazetteer/places">Reset</a>
+          </div>
+        </form>
+      </section>
+      <section class="panel gazetteer-panel" aria-label="Places results">
+        <div class="gazetteer-search__row">
+          <span class="muted">${summaryLine || 'Showing all places.'}</span>
+        </div>
+        <div class="gazetteer-search__row u-mt-xs">
+          <div>${prevLink}</div>
+          <div class="muted">Page ${page} of ${totalPages}</div>
+          <div>${nextLink}</div>
+        </div>
+        <div class="gazetteer-search__row u-mt-xs">
+          ${toggleLink}
+          <a class="gazetteer-link" href="/gazetteer">Back to summary</a>
+          <a class="gazetteer-link" href="/gazetteer/countries">Countries</a>
+        </div>
+        <div class="table-responsive u-mt-sm">
+          <table class="gazetteer-table">
+            <thead><tr><th>Name</th><th>Country</th><th>ADM1</th>${showStorage ? '<th class="tr">Storage</th>' : ''}<th class="tr">Population</th></tr></thead>
+            <tbody>${rowsHtml || `<tr><td colspan="${showStorage ? 5 : 4}" class="muted">No places found.</td></tr>`}</tbody>
+          </table>
+        </div>
+        ${storageSummary}
+      </section>
+    </main>
   </div>
 </body></html>`;
 

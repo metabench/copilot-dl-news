@@ -345,6 +345,38 @@
   gap: 6px;
 }
 
+// Scroll management for dense panels
+#jobsSection #jobsList,
+#resumeSection #resumeList,
+#progressSection #inflightList,
+#eventsSection .expando-body,
+#patternInsightsPanel .pattern-log__list,
+#pipelinePanel .pipeline-history-list,
+#eventsSection #domains {
+  max-height: min(420px, 58vh);
+  overflow: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+
+#eventsSection .expando-body {
+  gap: 10px;
+}
+
+@media (max-width: 780px) {
+  #jobsSection #jobsList,
+  #resumeSection #resumeList,
+  #progressSection #inflightList,
+  #eventsSection .expando-body,
+  #patternInsightsPanel .pattern-log__list,
+  #pipelinePanel .pipeline-history-list,
+  #eventsSection #domains {
+    max-height: min(360px, 72vh);
+    padding-right: 4px;
+  }
+}
+
 @media (max-width: 720px) {
   .quick-nav {
     padding: 12px;

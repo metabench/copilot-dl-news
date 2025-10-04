@@ -336,7 +336,31 @@ class NewsDatabase {
         ended_at TEXT,
         status TEXT
       );
+      CREATE INDEX IF NOT EXISTS idx_crawl_jobs_status_active ON crawl_jobs(status, ended_at, started_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_crawl_jobs_started_desc ON crawl_jobs(started_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_crawl_jobs_end_started_desc ON crawl_jobs(ended_at, started_at DESC);
     `);
+    try {
+      const crawlJobCols = this.db.prepare('PRAGMA table_info(crawl_jobs)').all().map((r) => r.name);
+      if (!crawlJobCols.includes('pid')) {
+        this.db.exec('ALTER TABLE crawl_jobs ADD COLUMN pid INTEGER');
+      }
+      if (!crawlJobCols.includes('args')) {
+        this.db.exec('ALTER TABLE crawl_jobs ADD COLUMN args TEXT');
+      }
+      if (!crawlJobCols.includes('started_at')) {
+        this.db.exec('ALTER TABLE crawl_jobs ADD COLUMN started_at TEXT');
+      }
+      if (!crawlJobCols.includes('ended_at')) {
+        this.db.exec('ALTER TABLE crawl_jobs ADD COLUMN ended_at TEXT');
+      }
+      if (!crawlJobCols.includes('status')) {
+        this.db.exec("ALTER TABLE crawl_jobs ADD COLUMN status TEXT");
+      }
+    } catch (_) {}
+    try {
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_crawl_jobs_sort_key ON crawl_jobs((COALESCE(ended_at, started_at)) DESC);`);
+    } catch (_) {}
 
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS queue_events (

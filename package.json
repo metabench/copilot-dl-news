@@ -1,6 +1,6 @@
 {
   "name": "news_crawler",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
@@ -16,8 +16,9 @@
     "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
     "export:gazetteer": "node src/tools/export-gazetteer.js",
     "validate:gazetteer": "node src/tools/validate-gazetteer.js",
-    "sass:build": "sass src/ui/express/public/styles/crawler.scss src/ui/express/public/crawler.css --no-source-map",
-    "sass:watch": "npm run sass:build -- --watch"
+  "sass:build": "sass src/ui/express/public/styles/crawler.scss:src/ui/express/public/crawler.css src/ui/express/public/styles/ui.scss:src/ui/express/public/ui.css src/ui/express/public/styles/ui-dark.scss:src/ui/express/public/ui-dark.css --no-source-map",
+  "sass:watch": "sass src/ui/express/public/styles/crawler.scss:src/ui/express/public/crawler.css src/ui/express/public/styles/ui.scss:src/ui/express/public/ui.css src/ui/express/public/styles/ui-dark.scss:src/ui/express/public/ui-dark.css --no-source-map --watch",
+  "ui:build": "node scripts/build-ui.js"
   },
   "keywords": [
     "crawler",
@@ -44,7 +45,8 @@
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "puppeteer": "^22.11.0",
+  "esbuild": "^0.24.0",
+  "puppeteer": "^22.11.0",
     "sass": "^1.93.2",
     "sharp": "^0.34.4",
     "supertest": "^6.3.4"

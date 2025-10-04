@@ -19,7 +19,8 @@ describe('createPipelineView', () => {
   let view;
 
   beforeEach(() => {
-    panel = document.createElement('section');
+  panel = document.createElement('section');
+  panel.classList.add('is-hidden');
     updatedEl = document.createElement('span');
 
     cards = {
@@ -104,7 +105,7 @@ describe('createPipelineView', () => {
     expect(elements.planner.goals.textContent).toBe('#3/#5 complete');
     expect(elements.execution.jobs.textContent).toBe('#2');
     expect(elements.execution.queue.textContent).toBe('#15');
-    expect(panel.style.display).toBe('');
+  expect(panel.classList.contains('is-hidden')).toBe(false);
     expect(updatedEl.textContent).toContain('Updated');
   });
 

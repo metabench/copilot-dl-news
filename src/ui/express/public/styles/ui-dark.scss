@@ -1,0 +1,4 @@
+// Dark-mode stylesheet for server-rendered UI pages.
+// This bundle only includes colour overrides scoped beneath `.dark`.
+
+@use 'partials/dark/ui-page-theme';

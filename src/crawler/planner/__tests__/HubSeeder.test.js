@@ -41,10 +41,18 @@ describe('HubSeeder', () => {
           source: 'country-planner'
         }
       ],
+      navigationLinks: [
+        {
+          url: 'https://example.com/opinion/',
+          labels: ['Opinion'],
+          type: 'primary',
+          occurrences: 4
+        }
+      ],
       maxSeeds: 5
     });
 
-    expect(enqueueRequest).toHaveBeenCalledTimes(2);
+    expect(enqueueRequest).toHaveBeenCalledTimes(3);
     expect(enqueueRequest).toHaveBeenCalledWith(expect.objectContaining({
       type: expect.objectContaining({
         kind: 'hub-seed',
@@ -56,6 +64,13 @@ describe('HubSeeder', () => {
         kind: 'hub-seed',
         hubKind: 'country',
         priorityBias: -5
+      })
+    }));
+    expect(enqueueRequest).toHaveBeenCalledWith(expect.objectContaining({
+      type: expect.objectContaining({
+        kind: 'hub-seed',
+        hubKind: 'navigation',
+        source: 'navigation-discovery'
       })
     }));
 
@@ -75,12 +90,21 @@ describe('HubSeeder', () => {
         reason: 'country-candidate'
       })
     );
+    expect(addSeededHub).toHaveBeenCalledWith(
+      'https://example.com/opinion/',
+      expect.objectContaining({
+        kind: 'navigation',
+        source: 'navigation-discovery',
+        reason: 'nav-primary'
+      })
+    );
 
-    expect(recordPlaceHubSeed).toHaveBeenCalledTimes(2);
+    expect(recordPlaceHubSeed).toHaveBeenCalledTimes(3);
 
     const payloads = recordPlaceHubSeed.mock.calls.map(([, payload]) => payload);
     const sectionSeed = payloads.find((payload) => payload.evidence?.kind === 'section');
     const countrySeed = payloads.find((payload) => payload.evidence?.kind === 'country');
+    const navigationSeed = payloads.find((payload) => payload.evidence?.kind === 'navigation');
 
     expect(sectionSeed).toMatchObject({
       host: 'example.com',
@@ -97,6 +121,15 @@ describe('HubSeeder', () => {
       evidence: {
         reason: 'country-candidate',
         source: 'country-planner'
+      }
+    });
+
+    expect(navigationSeed).toMatchObject({
+      host: 'example.com',
+      url: 'https://example.com/opinion/',
+      evidence: {
+        reason: 'nav-primary',
+        source: 'navigation-discovery'
       }
     });
   });

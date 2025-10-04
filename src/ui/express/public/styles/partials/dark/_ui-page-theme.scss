@@ -1,0 +1,813 @@
+// Dark theme overrides for legacy SSR UI pages.
+// These styles are scoped under `.dark body.ui-page` so they can ship
+// as a separate stylesheet that only adjusts colours.
+
+$dark-bg: #050b16 !default;
+$dark-bg-muted: #0a1424 !default;
+$dark-surface: rgba(12, 20, 33, 0.92) !default;
+$dark-surface-alt: rgba(15, 24, 38, 0.84) !default;
+$dark-surface-muted: rgba(18, 30, 46, 0.78) !default;
+$dark-row-alt: rgba(21, 32, 48, 0.6) !default;
+$dark-row-hover: rgba(45, 64, 92, 0.42) !default;
+$dark-border: rgba(96, 110, 140, 0.48) !default;
+$dark-border-strong: rgba(148, 163, 184, 0.62) !default;
+$dark-shadow-card: 0 26px 60px rgba(3, 9, 20, 0.55) !default;
+$dark-shadow-panel: 0 28px 72px rgba(3, 10, 24, 0.6) !default;
+
+$dark-text: #e2e8f0 !default;
+$dark-text-strong: #f8fafc !default;
+$dark-text-muted: #a5bad6 !default;
+$dark-text-secondary: #d8e7ff !default;
+
+$dark-link: #cfe4ff !default;
+$dark-link-hover: #e3f0ff !default;
+$dark-link-active: #f3f8ff !default;
+$dark-link-underline: rgba(207, 228, 255, 0.65) !default;
+
+$dark-badge-info-bg: rgba(76, 106, 173, 0.28) !default;
+$dark-pill-info-bg: rgba(96, 165, 250, 0.18) !default;
+$dark-pill-info-border: rgba(148, 197, 255, 0.38) !default;
+$dark-pill-warn-bg: rgba(234, 179, 8, 0.22) !default;
+$dark-pill-warn-border: rgba(250, 204, 21, 0.45) !default;
+$dark-pill-good-bg: rgba(34, 197, 94, 0.2) !default;
+$dark-pill-good-border: rgba(34, 197, 94, 0.46) !default;
+$dark-status-success: #34d399 !default;
+$dark-status-warn: #fbbf24 !default;
+$dark-status-error: #f87171 !default;
+
+$dark-chip-bg: rgba(59, 130, 246, 0.18) !default;
+$dark-chip-text: #e2efff !default;
+
+$dark-legacy-surface: rgba(12, 20, 33, 0.92) !default;
+$dark-legacy-surface-alt: rgba(15, 24, 38, 0.82) !default;
+$dark-legacy-surface-muted: rgba(20, 32, 50, 0.68) !default;
+$dark-legacy-chip-bg: rgba(37, 99, 235, 0.2) !default;
+$dark-legacy-chip-text: #cbd5f5 !default;
+$dark-badge-article-bg: rgba(34, 197, 94, 0.26) !default;
+$dark-badge-nav-bg: rgba(59, 130, 246, 0.26) !default;
+$dark-badge-other-bg: rgba(148, 163, 184, 0.28) !default;
+$dark-badge-enc-bg: rgba(189, 224, 255, 0.32) !default;
+$dark-badge-ok-bg: rgba(22, 163, 74, 0.26) !default;
+$dark-badge-ok-text: #34d399 !default;
+$dark-badge-err-bg: rgba(248, 113, 113, 0.22) !default;
+$dark-badge-err-text: #fca5a5 !default;
+$dark-legacy-skeleton: rgba(71, 85, 105, 0.26) !default;
+
+$dark-progress-bg: rgba(51, 65, 85, 0.72) !default;
+$dark-progress-fill: linear-gradient(90deg, #38bdf8, #2563eb) !default;
+
+$dark-highlight-bg: rgba(96, 165, 250, 0.2) !default;
+$dark-highlight-border: rgba(96, 165, 250, 0.42) !default;
+
+$dark-control-bg: rgba(15, 24, 38, 0.78) !default;
+$dark-control-border: rgba(96, 110, 140, 0.5) !default;
+$dark-control-shadow: 0 0 0 3px rgba(96, 165, 250, 0.32) !default;
+
+$dark-table-header-bg: rgba(21, 33, 52, 0.92) !default;
+$dark-table-header-text: #cbd5f5 !default;
+
+$dark-hover-accent: rgba(96, 165, 250, 0.16) !default;
+$dark-list-accent: rgba(59, 130, 246, 0.35) !default;
+$dark-header-bg: rgba(12, 21, 36, 0.9) !default;
+$dark-header-border: rgba(96, 110, 140, 0.52) !default;
+$dark-header-shadow: 0 26px 64px rgba(3, 10, 24, 0.62) !default;
+$dark-header-highlight: radial-gradient(140% 120% at 20% 10%, rgba(96, 165, 250, 0.18), transparent 68%) !default;
+$dark-nav-bg: rgba(15, 26, 44, 0.92) !default;
+$dark-nav-border: rgba(96, 110, 140, 0.55) !default;
+$dark-nav-shadow: 0 24px 58px rgba(3, 10, 24, 0.65) !default;
+$dark-nav-hover-bg: rgba(96, 165, 250, 0.22) !default;
+$dark-nav-hover-border: rgba(96, 165, 250, 0.42) !default;
+$dark-nav-active-border: rgba(129, 140, 248, 0.55) !default;
+
+.dark body.ui-page {
+  background: radial-gradient(1400px circle at 50% -10%, rgba(59, 130, 246, 0.18), transparent 65%),
+    linear-gradient(190deg, $dark-bg, $dark-bg-muted);
+  color: $dark-text;
+}
+
+.dark body.ui-page::before,
+.dark body.ui-page::after {
+  content: none;
+}
+
+.dark body.ui-page a {
+  color: $dark-link;
+  text-decoration-color: $dark-link-underline;
+}
+
+.dark body.ui-page a:hover,
+.dark body.ui-page a:focus-visible {
+  color: $dark-link-hover;
+  text-decoration-color: $dark-link-hover;
+}
+
+.dark body.ui-page h1,
+.dark body.ui-page h2,
+.dark body.ui-page h3,
+.dark body.ui-page h4,
+.dark body.ui-page strong {
+  color: $dark-text-strong;
+}
+
+.dark body.ui-page .muted,
+.dark body.ui-page .ui-meta,
+.dark body.ui-page label,
+.dark body.ui-page summary,
+.dark body.ui-page caption,
+.dark body.ui-page .queues-summary__card span,
+.dark body.ui-page .queues-panel__tip,
+.dark body.ui-page .analysis-detail__event-details,
+.dark body.ui-page .coverage-dashboard__meta-line,
+.dark body.ui-page .domains-details__meta,
+.dark body.ui-page .domains-details__analysis,
+.dark body.ui-page .domains-details__rate,
+.dark body.ui-page .domains-details__hubs,
+.dark body.ui-page .gazetteer-header__summary,
+.dark body.ui-page .planner-item details,
+.dark body.ui-page .planner-item summary,
+.dark body.ui-page .priority-config-page .config-description,
+.dark body.ui-page .priority-config-page .loading,
+.dark body.ui-page .priority-config-page .config-item > div span,
+.dark body.ui-page .priority-config-page .value-item span:last-child {
+  color: $dark-text-muted;
+}
+
+.dark body.ui-page .global-nav--inline {
+  color: $dark-text-muted;
+}
+
+.dark body.ui-page .global-nav--inline .global-nav__link--active {
+  color: $dark-text-strong;
+}
+
+.dark body.ui-page .page-header {
+  background: $dark-header-bg;
+  border-color: $dark-header-border;
+  box-shadow: $dark-header-shadow;
+}
+
+.dark body.ui-page .page-header::before {
+  background: $dark-header-highlight;
+}
+
+.dark body.ui-page .page-title {
+  color: $dark-text-strong;
+}
+
+.dark body.ui-page .global-nav__inner {
+  background: $dark-nav-bg;
+  border-color: $dark-nav-border;
+  box-shadow: $dark-nav-shadow;
+}
+
+.dark body.ui-page .global-nav__link {
+  color: $dark-text;
+}
+
+.dark body.ui-page .global-nav__link:hover,
+.dark body.ui-page .global-nav__link:focus-visible {
+  background: $dark-nav-hover-bg;
+  border-color: $dark-nav-hover-border;
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .global-nav__item--active .global-nav__link {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.88), rgba(99, 102, 241, 0.92));
+  border-color: $dark-nav-active-border;
+  box-shadow: 0 20px 42px rgba(59, 130, 246, 0.34);
+  color: $dark-text-strong;
+}
+
+.dark body.ui-page .quick-nav {
+  background: $dark-surface-alt;
+  border-color: $dark-border;
+  box-shadow: $dark-shadow-panel;
+  color: $dark-text;
+}
+
+$surface-blocks: (
+  '.ui-summary',
+  '.ui-button',
+  '.ui-filters__label',
+  'details',
+  'pre',
+  '.table-responsive',
+  'table',
+  '.queues-summary',
+  '.queues-summary__card',
+  '.queues-statuses li',
+  '.queues-panel',
+  '.queue-detail__stats',
+  '.queue-detail__empty-row td',
+  '.analysis-detail__overview',
+  '.analysis-detail__event-details',
+  '.analysis-detail__summary',
+  '.coverage-dashboard-page .controls',
+  '.coverage-dashboard-page .dashboard-grid .card',
+  '.coverage-dashboard-page .loading',
+  '.domain-summary-page .domain-summary__controls',
+  '.domain-summary-page .domain-summary__status',
+  '.domain-summary-page .domain-summary__analysis',
+  '.domain-summary-page .domain-summary__placeholder',
+  '.domain-summary-page .domain-summary__tag',
+  '.domains-page .domains-list',
+  '.domains-page .domains-content',
+  '.domains-page .domains-details__analysis',
+  '.domains-page .domains-details__rate',
+  '.domains-page .domains-details__hubs',
+  '.domains-page .domains-placeholder',
+  '.gazetteer-page .gazetteer-panel',
+  '.gazetteer-page .gazetteer-panel--nested',
+  '.gazetteer-page .gazetteer-table',
+  '.queues-monitor-page .goal',
+  '.queues-monitor-page .planner-item',
+  '.queues-monitor-page .planner-item pre',
+  '.queues-monitor-page .queues-events',
+  '.queues-monitor-page .timeline li',
+  '.queues-monitor-page .goal-progress',
+  '.queues-monitor-page .queues-section__header',
+  '.priority-config-page .card',
+  '.priority-config-page .config-item',
+  '.priority-config-page .current-values',
+  '.priority-config-page .section-description',
+  '.priority-config-page .config-input',
+  '.priority-config-page .value-item',
+  '.priority-config-page .status-message',
+  '.priority-config-page .slider',
+  '.priority-config-page .priority-config__status',
+  '.errors-page .errors-table tbody tr',
+  '.errors-page .errors-page__summary'
+);
+
+@each $selector in $surface-blocks {
+  .dark body.ui-page :where(#{$selector}) {
+    background: $dark-surface;
+    border-color: $dark-border;
+    box-shadow: none;
+    color: $dark-text;
+  }
+}
+
+.dark body.ui-page :where(details[open]) {
+  background: $dark-surface-alt;
+}
+
+.dark body.ui-page :where(table) {
+  background: $dark-surface;
+  border-color: $dark-border;
+}
+
+.dark body.ui-page table :where(th) {
+  background: $dark-table-header-bg;
+  color: $dark-table-header-text;
+  border-color: $dark-border-strong;
+}
+
+.dark body.ui-page table :where(td) {
+  border-color: $dark-border;
+}
+
+.dark body.ui-page table tr:nth-child(even) {
+  background: rgba($dark-row-alt, 1);
+}
+
+.dark body.ui-page table tr:hover {
+  background: rgba($dark-row-hover, 1);
+}
+
+.dark body.ui-page .ui-button {
+  border-color: $dark-border;
+  background: $dark-surface-alt;
+  color: $dark-text;
+}
+
+.dark body.ui-page .ui-button:hover,
+.dark body.ui-page .ui-button:focus-visible {
+  border-color: $dark-link;
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .ui-button--secondary {
+  background: $dark-pill-info-bg;
+  border-color: $dark-pill-info-border;
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .ui-button--ghost {
+  background: transparent;
+  color: $dark-text-muted;
+}
+
+.dark body.ui-page details {
+  border-color: $dark-border;
+}
+
+.dark body.ui-page summary {
+  color: $dark-text-muted;
+}
+
+.dark body.ui-page input,
+.dark body.ui-page select,
+.dark body.ui-page textarea {
+  background: $dark-control-bg;
+  border-color: $dark-control-border;
+  color: $dark-text;
+}
+
+.dark body.ui-page input:focus-visible,
+.dark body.ui-page select:focus-visible,
+.dark body.ui-page textarea:focus-visible {
+  border-color: $dark-link;
+  box-shadow: $dark-control-shadow;
+}
+
+.dark body.ui-page input::placeholder,
+.dark body.ui-page textarea::placeholder {
+  color: rgba($dark-text-muted, 0.7);
+}
+
+.dark body.ui-page .pill {
+  background: $dark-surface-alt;
+  border-color: $dark-border;
+  color: $dark-text-secondary;
+}
+
+.dark body.ui-page .pill.warn {
+  background: $dark-pill-warn-bg;
+  border-color: $dark-pill-warn-border;
+  color: $dark-status-warn;
+}
+
+.dark body.ui-page .pill.info {
+  background: $dark-pill-info-bg;
+  border-color: $dark-pill-info-border;
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .pill.good {
+  background: $dark-pill-good-bg;
+  border-color: $dark-pill-good-border;
+  color: $dark-status-success;
+}
+
+.dark body.ui-page .queues-summary__card span,
+.dark body.ui-page .queues-statuses .status,
+.dark body.ui-page .queue-detail__stats dt,
+.dark body.ui-page .domain-summary__label,
+.dark body.ui-page .control-group label,
+.dark body.ui-page .domains-details__heading,
+.dark body.ui-page .coverage-dashboard-page .controls h3,
+.dark body.ui-page .coverage-dashboard-page .metric,
+.dark body.ui-page .gazetteer-search__label,
+.dark body.ui-page .planner-item summary,
+.dark body.ui-page .priority-config-page .config-label,
+.dark body.ui-page .priority-config-page .current-values h4 {
+  color: $dark-text-muted;
+}
+
+.dark body.ui-page .queues-statuses .count,
+.dark body.ui-page .metric-value,
+.dark body.ui-page .summary-head h3,
+.dark body.ui-page .queues-panel__header h1,
+.dark body.ui-page .coverage-dashboard__title,
+.dark body.ui-page .domains-details__title,
+.dark body.ui-page .gazetteer-header__title,
+.dark body.ui-page .queues-section__title,
+.dark body.ui-page .priority-config-page .priority-config__title {
+  color: $dark-text-strong;
+}
+
+.dark body.ui-page .queue-detail__neighbor-link,
+.dark body.ui-page .queue-detail__pager-link,
+.dark body.ui-page .domain-summary__stat,
+.dark body.ui-page .domain-summary__analysis-pre,
+.dark body.ui-page .domains-details__link,
+.dark body.ui-page .gazetteer-link,
+.dark body.ui-page .errors-table a,
+.dark body.ui-page .priority-config-page .link {
+  color: $dark-link;
+}
+
+.dark body.ui-page .queue-detail__neighbor-link:hover,
+.dark body.ui-page .queue-detail__pager-link:hover,
+.dark body.ui-page .gazetteer-link:hover,
+.dark body.ui-page .domain-summary__stat:hover,
+.dark body.ui-page .errors-table a:hover,
+.dark body.ui-page .errors-table a:focus-visible {
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .queues-monitor-page .timeline li {
+  border-left-color: $dark-list-accent;
+}
+
+.dark body.ui-page .queues-monitor-page .goal-progress {
+  background: $dark-progress-bg;
+}
+
+.dark body.ui-page .queues-monitor-page .goal-progress span {
+  background: $dark-progress-fill;
+}
+
+.dark body.ui-page .coverage-dashboard-page .progress-bar {
+  background: $dark-progress-bg;
+}
+
+.dark body.ui-page .coverage-dashboard-page .progress-fill {
+  background: $dark-progress-fill;
+  color: $dark-text;
+}
+
+.dark body.ui-page .domain-summary__analysis-pre,
+.dark body.ui-page pre {
+  background: $dark-surface-muted;
+  border-color: $dark-border;
+  color: $dark-text;
+}
+
+.dark body.ui-page .domains-list__item {
+  color: $dark-text;
+}
+
+.dark body.ui-page .domains-list__item:hover {
+  background: $dark-hover-accent;
+}
+
+.dark body.ui-page .domains-list__item--active {
+  background: $dark-pill-info-bg;
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .domain-summary__stat {
+  background: $dark-pill-info-bg;
+  color: $dark-link-hover;
+}
+
+.dark body.ui-page .queues-summary,
+.dark body.ui-page .queues-panel,
+.dark body.ui-page .queue-detail__stats,
+.dark body.ui-page .gazetteer-panel,
+.dark body.ui-page .domains-content,
+.dark body.ui-page .priority-config-page .card,
+.dark body.ui-page .queues-monitor-page .queues-events {
+  box-shadow: $dark-shadow-panel;
+}
+
+.dark body.ui-page .queues-summary__card,
+.dark body.ui-page .queues-statuses li,
+.dark body.ui-page .queue-detail__stats,
+.dark body.ui-page .priority-config-page .config-item,
+.dark body.ui-page .priority-config-page .current-values,
+.dark body.ui-page .priority-config-page .value-item,
+.dark body.ui-page .priority-config-page .section-description,
+.dark body.ui-page .priority-config-page .status-message {
+  box-shadow: none;
+}
+
+.dark body.legacy-page {
+  background: linear-gradient(200deg, $dark-bg, $dark-bg-muted);
+  color: $dark-text;
+}
+
+.dark body.legacy-page::before,
+.dark body.legacy-page::after {
+  content: none;
+}
+
+.dark body.legacy-page a {
+  color: $dark-link;
+  text-decoration-color: $dark-link-underline;
+}
+
+.dark body.legacy-page a:hover,
+.dark body.legacy-page a:focus-visible {
+  color: $dark-link-hover;
+  text-decoration-color: $dark-link-hover;
+}
+
+.dark body.legacy-page h1,
+.dark body.legacy-page h2,
+.dark body.legacy-page h3,
+.dark body.legacy-page h4,
+.dark body.legacy-page strong {
+  color: $dark-text-strong;
+}
+
+.dark body.legacy-page .muted,
+.dark body.legacy-page .meta,
+.dark body.legacy-page label,
+.dark body.legacy-page .legend,
+.dark body.legacy-page .hint-legend,
+.dark body.legacy-page .title {
+  color: $dark-text-muted;
+}
+
+.dark body.legacy-page button,
+.dark body.legacy-page .btn,
+.dark body.legacy-page .copy {
+  background: $dark-control-bg;
+  border: 1px solid $dark-control-border;
+  color: $dark-text;
+  border-radius: 10px;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.dark body.legacy-page button:hover,
+.dark body.legacy-page button:focus-visible,
+.dark body.legacy-page .btn:hover,
+.dark body.legacy-page .btn:focus-visible,
+.dark body.legacy-page .copy:hover,
+.dark body.legacy-page .copy:focus-visible {
+  border-color: $dark-link;
+  color: $dark-link-hover;
+  box-shadow: $dark-control-shadow;
+}
+
+.dark body.legacy-page input,
+.dark body.legacy-page select,
+.dark body.legacy-page textarea {
+  background: $dark-control-bg;
+  border: 1px solid $dark-control-border;
+  color: $dark-text;
+}
+
+.dark body.legacy-page input:focus-visible,
+.dark body.legacy-page select:focus-visible,
+.dark body.legacy-page textarea:focus-visible {
+  border-color: $dark-link;
+  box-shadow: $dark-control-shadow;
+}
+
+.dark body.legacy-page input::placeholder,
+.dark body.legacy-page textarea::placeholder {
+  color: rgba($dark-text-muted, 0.65);
+}
+
+.dark body.legacy-page table {
+  background: $dark-legacy-surface;
+  border-color: $dark-border;
+  color: $dark-text;
+  box-shadow: none;
+}
+
+.dark body.legacy-page th {
+  background: $dark-table-header-bg;
+  color: $dark-table-header-text;
+  border-color: $dark-border-strong;
+}
+
+.dark body.legacy-page td {
+  border-color: $dark-border;
+}
+
+.dark body.legacy-page table tr:nth-child(even) {
+  background: $dark-row-alt;
+}
+
+.dark body.legacy-page table tr:hover {
+  background: $dark-row-hover;
+}
+
+.dark body.legacy-page pre,
+.dark body.legacy-page .legacy-pre {
+  background: $dark-legacy-surface-muted;
+  border: 1px solid $dark-border;
+  color: $dark-text;
+}
+
+.dark body.legacy-page code {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 6px;
+  padding: 0 4px;
+  color: $dark-text-secondary;
+}
+
+.dark body.legacy-page .xp-code {
+  background: $dark-legacy-surface-alt;
+  border: 1px solid $dark-border;
+  color: $dark-text;
+}
+
+.dark body.legacy-page .xp-wrap {
+  background: $dark-legacy-surface;
+  border: 1px solid $dark-border;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.dark body.legacy-page .legacy-section,
+.dark body.legacy-page #urlAnalysis,
+.dark body.legacy-page #article,
+.dark body.legacy-page #diffPanel,
+.dark body.legacy-page .diff-panel,
+.dark body.legacy-page .diff-wrap,
+.dark body.legacy-page #badges {
+  background: $dark-legacy-surface-alt;
+  border: 1px solid $dark-border;
+  border-radius: 12px;
+  color: $dark-text;
+}
+
+.dark body.legacy-page #badges {
+  display: inline-flex;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.dark body.legacy-page #diffPanel,
+.dark body.legacy-page .diff-panel {
+  box-shadow: 0 18px 36px rgba(3, 9, 20, 0.5);
+}
+
+.dark body.legacy-page .diff-table {
+  background: transparent;
+  border-color: transparent;
+}
+
+.dark body.legacy-page .diff-cell {
+  background: $dark-legacy-surface-muted;
+  border: 1px solid $dark-border;
+}
+
+.dark body.legacy-page .diff-cell--changed {
+  background: rgba(248, 113, 113, 0.24);
+}
+
+.dark body.legacy-page .diff-pre {
+  background: transparent;
+  color: $dark-text;
+}
+
+.dark body.legacy-page #list li {
+  background: $dark-legacy-surface;
+  border: 1px solid $dark-border;
+  border-radius: 12px;
+  color: $dark-text;
+  box-shadow: 0 18px 36px rgba(3, 9, 20, 0.45);
+}
+
+.dark body.legacy-page #list li + li {
+  margin-top: 6px;
+}
+
+.dark body.legacy-page #list li .title {
+  color: $dark-text-muted;
+}
+
+.dark body.legacy-page .skeleton {
+  background: $dark-legacy-skeleton;
+  color: rgba($dark-text-muted, 0.6);
+  border: 1px solid transparent;
+}
+
+.dark body.legacy-page .legend,
+.dark body.legacy-page .hint-legend {
+  border: 1px solid $dark-border;
+  background: $dark-legacy-surface-alt;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.dark body.legacy-page .badge,
+.dark body.legacy-page .chip {
+  background: $dark-legacy-chip-bg;
+  border: 1px solid $dark-border;
+  color: $dark-legacy-chip-text;
+}
+
+.dark body.legacy-page .badge.badge-article,
+.dark body.legacy-page .badge-hint-article {
+  background: $dark-badge-article-bg;
+  color: $dark-status-success;
+}
+
+.dark body.legacy-page .badge.badge-nav,
+.dark body.legacy-page .badge-hint-nav {
+  background: $dark-badge-nav-bg;
+  color: $dark-link-hover;
+}
+
+.dark body.legacy-page .badge.badge-other,
+.dark body.legacy-page .badge-hint-other {
+  background: $dark-badge-other-bg;
+  color: $dark-text;
+}
+
+.dark body.legacy-page .badge.badge-enc {
+  background: $dark-badge-enc-bg;
+  color: $dark-link-hover;
+}
+
+.dark body.legacy-page .badge.ok {
+  background: $dark-badge-ok-bg;
+  color: $dark-badge-ok-text;
+}
+
+.dark body.legacy-page .badge.err {
+  background: $dark-badge-err-bg;
+  color: $dark-badge-err-text;
+}
+
+.dark body.legacy-page .badge.warn {
+  background: $dark-pill-warn-bg;
+  color: $dark-status-warn;
+}
+
+.dark body.legacy-page .legend .chip {
+  background: $dark-chip-bg;
+  border-color: $dark-border;
+  color: $dark-chip-text;
+}
+
+.dark body.legacy-page .row-controls {
+  background: $dark-legacy-surface-alt;
+  border: 1px solid $dark-border;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.dark body.legacy-page .legacy-article-meta {
+  background: $dark-legacy-surface;
+  border: 1px solid $dark-border;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: $dark-text;
+}
+
+.dark body.legacy-page .legacy-article-meta strong {
+  color: $dark-text-strong;
+}
+
+.dark body.coverage-dashboard-page {
+  background: linear-gradient(200deg, $dark-bg, $dark-bg-muted);
+}
+
+.dark body.errors-page {
+  background: $dark-bg-muted;
+  color: $dark-text;
+}
+
+.dark body.errors-page .errors-page__links {
+  color: $dark-text-muted;
+}
+
+.dark body.priority-config-page {
+  background: $dark-bg-muted;
+  color: $dark-text;
+}
+
+.dark body.priority-config-page .btn {
+  color: $dark-text-strong;
+}
+
+.dark body.priority-config-page .status-success {
+  background: rgba(16, 185, 129, 0.18);
+  color: $dark-status-success;
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.dark body.priority-config-page .status-error {
+  background: rgba(248, 113, 113, 0.18);
+  color: $dark-status-error;
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.dark body.priority-config-page .status-warning {
+  background: rgba(234, 179, 8, 0.2);
+  color: $dark-status-warn;
+  border-color: rgba(250, 204, 21, 0.48);
+}
+
+.dark body.ui-page .analysis-detail__highlights {
+  color: $dark-text;
+}
+
+.dark body.ui-page .analysis-detail__events thead th {
+  background: $dark-table-header-bg;
+  color: $dark-table-header-text;
+}
+
+.dark body.ui-page .analysis-detail__events tbody tr:nth-child(odd) {
+  background: rgba($dark-row-alt, 0.8);
+}
+
+.dark body.ui-page .gazetteer-table tbody tr:hover {
+  background: rgba($dark-row-hover, 0.8);
+}
+
+.dark body.ui-page .queues-monitor-page .planner-item pre {
+  background: $dark-surface-alt;
+}
+
+.dark body.ui-page .priority-config-page .toggle-switch .slider {
+  background: $dark-hover-accent;
+}
+
+.dark body.ui-page .priority-config-page .toggle-switch input:checked + .slider {
+  background: rgba(52, 211, 153, 0.45);
+}
+
+.dark body.ui-page .priority-config-page .slider::before {
+  background: $dark-surface;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}

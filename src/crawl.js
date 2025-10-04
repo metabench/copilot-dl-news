@@ -122,6 +122,12 @@ const {
   PlannerOrchestrator
 } = require('./crawler/planner/PlannerOrchestrator');
 const {
+  TargetedAnalysisRunner
+} = require('./crawler/planner/TargetedAnalysisRunner');
+const {
+  NavigationDiscoveryRunner
+} = require('./crawler/planner/navigation/NavigationDiscoveryRunner');
+const {
   MilestoneTracker
 } = require('./crawler/MilestoneTracker');
 const {
@@ -1126,7 +1132,9 @@ class NewsCrawler {
         PlannerBootstrap,
         PatternInference,
         CountryHubPlanner,
-        HubSeeder
+        HubSeeder,
+        TargetedAnalysisRunner,
+        NavigationDiscoveryRunner
       });
     }
     return this.intelligentPlanRunner;

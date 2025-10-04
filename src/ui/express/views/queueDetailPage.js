@@ -29,20 +29,20 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
   const itemsHtml = events.length
     ? events.map((ev) => `
         <tr>
-          <td class="fit mono">#${escapeHtml(ev.id)}</td>
-          <td class="fit nowrap">${escapeHtml(ev.ts || '')}</td>
-          <td class="fit">${escapeHtml(ev.action || '')}</td>
+          <td class="u-fit text-mono">#${escapeHtml(ev.id)}</td>
+          <td class="u-fit u-nowrap">${escapeHtml(ev.ts || '')}</td>
+          <td class="u-fit">${escapeHtml(ev.action || '')}</td>
           <td>${ev.url ? `<a href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">${escapeHtml(ev.url)}</a>` : ''}</td>
-          <td class="fit">${ev.depth != null ? escapeHtml(ev.depth) : ''}</td>
-          <td class="fit">${escapeHtml(ev.host || '')}</td>
+          <td class="u-fit">${ev.depth != null ? escapeHtml(ev.depth) : ''}</td>
+          <td class="u-fit">${escapeHtml(ev.host || '')}</td>
           <td>${escapeHtml(ev.reason || '')}</td>
-          <td class="fit tr">${ev.queueSize != null ? escapeHtml(ev.queueSize) : ''}</td>
+          <td class="u-fit text-right">${ev.queueSize != null ? escapeHtml(ev.queueSize) : ''}</td>
         </tr>
       `).join('')
     : `
-        <tr class="empty-state">
+        <tr class="queue-detail__empty-row">
           <td colspan="8">
-            <div class="empty-copy">
+            <div class="queue-detail__empty">
               <strong>${escapeHtml(emptyStateCopy.title)}</strong>
               <p>${escapeHtml(emptyStateCopy.body)}</p>
             </div>
@@ -50,99 +50,83 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
         </tr>
       `;
 
-  const latestLink = pagination.latestHref ? `<a href="${pagination.latestHref}">Latest</a>` : '';
-  const newerLink = pagination.newerHref ? `<a class="space" href="${pagination.newerHref}">← Newer</a>` : '';
-  const olderLink = pagination.olderHref ? `<a class="space" href="${pagination.olderHref}">Older →</a>` : '';
+  const latestLink = pagination.latestHref ? `<a class="queue-detail__pager-link" href="${pagination.latestHref}">Latest</a>` : '';
+  const newerLink = pagination.newerHref ? `<a class="queue-detail__pager-link" href="${pagination.newerHref}">← Newer</a>` : '';
+  const olderLink = pagination.olderHref ? `<a class="queue-detail__pager-link" href="${pagination.olderHref}">Older →</a>` : '';
   const neighborsNav = `
-        <div class="right nav-small">
-          ${neighbors.newerId ? `<a href="/queues/${escapeHtml(neighbors.newerId)}/ssr">← Newer</a>` : ''}
-          ${neighbors.olderId ? `<a class="space" href="/queues/${escapeHtml(neighbors.olderId)}/ssr">Next →</a>` : ''}
-        </div>`;
+        <nav class="queue-detail__neighbors" aria-label="Adjacent queues">
+          ${neighbors.newerId ? `<a class="queue-detail__neighbor-link" href="/queues/${escapeHtml(neighbors.newerId)}/ssr">← Newer</a>` : ''}
+          ${neighbors.olderId ? `<a class="queue-detail__neighbor-link" href="/queues/${escapeHtml(neighbors.olderId)}/ssr">Next →</a>` : ''}
+        </nav>`;
 
   const navHtml = (typeof renderNav === 'function') ? renderNav('queues', { variant: 'bar' }) : '';
 
   return `<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Queue ${escapeHtml(job.id)}</title>
-<style>
-  :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-  .container{max-width:1100px;margin:18px auto;padding:0 16px}
-  header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 18px}
-  header h1{margin:0;font-size:20px}
-  .meta{color:var(--muted);font-size:12px}
-  .kv{margin:2px 0}
-  .kv .k{color:var(--muted);margin-right:4px}
-  .kv .v.mono{font-weight:600}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-  .row{display:flex;justify-content:space-between;align-items:center}
-  .row .right a{margin-left:8px}
-  .row .right a:first-child{margin-left:0}
-  .controls{margin:6px 2px}
-  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-  th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px;vertical-align:top}
-  th{color:var(--muted);text-align:left;background:#fcfcfd}
-  tr:nth-child(even){background:#fafafa}
-  tr:hover{background:#f6f8fa}
-  .fit{width:1%;white-space:nowrap}
-  .nowrap{white-space:nowrap}
-  .tr{text-align:right}
-  .empty-state td{padding:28px 24px;text-align:center;background:#f8fafc;color:var(--muted)}
-  .empty-copy strong{display:block;margin-bottom:6px;font-size:16px;color:var(--fg)}
-  .empty-copy p{margin:0 auto;max-width:460px;line-height:1.4}
-  form.inline{display:flex;gap:8px;align-items:center}
-  label.small{font-size:12px;color:var(--muted)}
-  input,select{padding:6px 8px}
-  button{padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer}
-  button:hover{text-decoration:underline}
-  a.btn{border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-decoration:none;color:var(--fg);background:#fff}
-  a.btn:hover{text-decoration:underline}
-  .nav-small{margin-left:8px}
-  .nav-small a{color:var(--muted);text-decoration:none}
-  .nav-small a:hover{color:var(--fg);text-decoration:underline}
-</style>
-</head><body>
+<link rel="stylesheet" href="/ui.css" />
+<link rel="stylesheet" href="/ui-dark.css" />
+</head><body class="ui-page queue-detail-page">
   ${navHtml}
-  <div class="container">
-    <header>
-      <h1>Queue <span class="mono">${escapeHtml(job.id)}</span></h1>
+  <div class="ui-container queue-detail">
+    <header class="queue-detail__header">
+      <h1>Queue <span class="text-mono">${escapeHtml(job.id)}</span></h1>
+      ${neighborsNav}
     </header>
 
-    <section class="controls">
-      <div class="row">
+    <section class="queue-detail__meta">
+      <dl class="queue-detail__stats">
         <div>
-          <div class="kv"><span class="k">Status:</span> <span class="v mono">${escapeHtml(job.status || '')}</span></div>
-          <div class="kv"><span class="k">PID:</span> <span class="v mono">${escapeHtml(job.pid || '')}</span> <span class="k">URL:</span> <span class="v mono">${escapeHtml(job.url || '')}</span></div>
-          <div class="kv"><span class="k">Started:</span> <span class="v mono">${escapeHtml(job.startedAt || '')}</span> <span class="k">Ended:</span> <span class="v mono">${escapeHtml(job.endedAt || '')}</span></div>
+          <dt>Status</dt>
+          <dd class="text-mono">${escapeHtml(job.status || '')}</dd>
         </div>
-        ${neighborsNav}
-      </div>
-      <form method="GET" class="inline" action="">
-        <label class="small">Action
-          <select name="action">${filterOptions}</select>
-        </label>
-        <label class="small">Limit
-          <input type="number" name="limit" value="${escapeHtml(filters.limit)}" min="1" max="500"/>
-        </label>
-        ${filters.before ? `<input type="hidden" name="before" value="${escapeHtml(filters.before)}"/>` : ''}
-        ${filters.after ? `<input type="hidden" name="after" value="${escapeHtml(filters.after)}"/>` : ''}
-        <button type="submit">Apply</button>
-        <a class="btn" href="/queues/ssr">All queues</a>
-      </form>
+        <div>
+          <dt>PID</dt>
+          <dd class="text-mono">${escapeHtml(job.pid || '')}</dd>
+        </div>
+        <div class="queue-detail__stats--wide">
+          <dt>URL</dt>
+          <dd class="text-mono">${escapeHtml(job.url || '')}</dd>
+        </div>
+        <div>
+          <dt>Started</dt>
+          <dd class="text-mono">${escapeHtml(job.startedAt || '')}</dd>
+        </div>
+        <div>
+          <dt>Ended</dt>
+          <dd class="text-mono">${escapeHtml(job.endedAt || '')}</dd>
+        </div>
+      </dl>
     </section>
 
-    <div class="row" style="margin:6px 2px">
-  <div class="meta">${events.length} shown${pagination.summary || ''}</div>
-      <div class="right nav-small">
+    <form method="GET" class="ui-filters" action="">
+      <label class="ui-filters__label">Action
+        <select name="action">${filterOptions}</select>
+      </label>
+      <label class="ui-filters__label">Limit
+        <input type="number" name="limit" value="${escapeHtml(filters.limit)}" min="1" max="500"/>
+      </label>
+      ${filters.before ? `<input type="hidden" name="before" value="${escapeHtml(filters.before)}"/>` : ''}
+      ${filters.after ? `<input type="hidden" name="after" value="${escapeHtml(filters.after)}"/>` : ''}
+      <button type="submit" class="ui-button">Apply</button>
+      <a class="ui-button ui-button--secondary" href="/queues/ssr">All queues</a>
+    </form>
+
+    <div class="queue-detail__summary">
+      <div class="ui-meta">${events.length} shown${pagination.summary || ''}</div>
+      <div class="queue-detail__pager">
         ${latestLink}
         ${newerLink}
         ${olderLink}
       </div>
     </div>
-    <table>
-      <thead><tr><th class="fit">#</th><th class="fit">Time</th><th class="fit">Action</th><th>URL</th><th class="fit">Depth</th><th class="fit">Host</th><th>Reason</th><th class="fit tr">Queue</th></tr></thead>
-      <tbody>${itemsHtml}</tbody>
-    </table>
+
+    <div class="table-responsive">
+      <table class="queue-detail__table">
+        <thead><tr><th class="u-fit">#</th><th class="u-fit">Time</th><th class="u-fit">Action</th><th>URL</th><th class="u-fit">Depth</th><th class="u-fit">Host</th><th>Reason</th><th class="u-fit text-right">Queue</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+    </div>
   </div>
 </body></html>`;
 }

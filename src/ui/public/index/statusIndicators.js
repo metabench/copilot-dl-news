@@ -1,3 +1,5 @@
+import { hideElement, showElement } from './domUtils.js';
+
 export function createStatusIndicators({
   stageBadge,
   pausedBadge,
@@ -15,10 +17,10 @@ export function createStatusIndicators({
   function setPausedBadge(paused) {
     if (!pausedBadge) return;
     if (paused == null) {
-      pausedBadge.style.display = 'none';
+      hideElement(pausedBadge);
       return;
     }
-    pausedBadge.style.display = '';
+    showElement(pausedBadge);
     if (paused) {
       pausedBadge.textContent = 'Paused';
       pausedBadge.classList.remove('badge-ok');
@@ -31,7 +33,7 @@ export function createStatusIndicators({
   }
 
   function hidePausedBadge() {
-    if (pausedBadge) pausedBadge.style.display = 'none';
+    if (pausedBadge) hideElement(pausedBadge);
   }
 
   function updateStartupStatus(startup, statusText) {
@@ -48,7 +50,7 @@ export function createStatusIndicators({
         return;
       }
       if (startupStatusEl.dataset.active === '1') {
-        startupStatusEl.style.display = 'none';
+  hideElement(startupStatusEl);
         startupStatusEl.setAttribute('aria-hidden', 'true');
         startupStatusEl.dataset.active = '0';
         startupStatusEl.classList.remove('is-complete');
@@ -58,8 +60,8 @@ export function createStatusIndicators({
       return;
     }
 
-    startupStatusEl.dataset.active = '1';
-    startupStatusEl.style.display = '';
+  startupStatusEl.dataset.active = '1';
+  showElement(startupStatusEl);
     startupStatusEl.setAttribute('aria-hidden', 'false');
     if (startupStatusText) {
       startupStatusText.textContent = text || (done ? 'Startup complete' : 'Preparing…');
@@ -107,7 +109,7 @@ export function createStatusIndicators({
         const stored = Number(startupStatusEl?.dataset?.hideAt || 0);
         if (!startupStatusEl || stored === 0) return;
         if (Date.now() >= stored) {
-          startupStatusEl.style.display = 'none';
+          hideElement(startupStatusEl);
           startupStatusEl.setAttribute('aria-hidden', 'true');
           startupStatusEl.classList.remove('is-complete');
           startupStatusEl.dataset.active = '0';

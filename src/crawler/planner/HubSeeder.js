@@ -21,23 +21,27 @@ class HubSeeder {
     this.logger = logger;
   }
 
-  async seedPlan({ host, sectionSlugs = [], countryCandidates = [], maxSeeds = 50 }) {
+  async seedPlan({ host, sectionSlugs = [], countryCandidates = [], navigationLinks = [], maxSeeds = 50 }) {
     if (!this.enqueueRequest) {
       return {
         seededCount: 0,
         requestedCount: 0,
         sectionHubCount: sectionSlugs.length,
         countryCandidateCount: countryCandidates.length,
+        navigationCandidateCount: Array.isArray(navigationLinks) ? navigationLinks.length : 0,
+        navigationSeededCount: 0,
+        navigationSample: [],
         sampleSeeded: []
       };
     }
 
     const sectionHubs = sectionSlugs.map((slug) => this._buildAbsolutePathUrl([slug])).filter(Boolean);
-    const entries = this._buildHubEntries({ sectionSlugs, countryCandidates });
+    const entries = this._buildHubEntries({ sectionSlugs, countryCandidates, navigationLinks });
     const cap = typeof maxSeeds === 'number' && maxSeeds > 0 ? maxSeeds : 50;
     const hubs = entries.slice(0, cap);
 
     const seeded = [];
+    const navigationSeeded = [];
     for (const entry of hubs) {
       const enqueued = this.enqueueRequest({
         url: entry.url,
@@ -62,6 +66,9 @@ class HubSeeder {
           });
         }
         seeded.push(entry.url);
+        if (entry.meta.kind === 'navigation') {
+          navigationSeeded.push(entry.url);
+        }
       }
       this._recordSeedInDatabase(host, entry.url, entry.meta);
     }
@@ -90,6 +97,9 @@ class HubSeeder {
       requestedCount: hubs.length,
       sectionHubCount: sectionHubs.length,
       countryCandidateCount: countryCandidates.length,
+      navigationCandidateCount: Array.isArray(navigationLinks) ? navigationLinks.length : 0,
+      navigationSeededCount: navigationSeeded.length,
+      navigationSample: navigationSeeded.slice(0, 5),
       sampleSeeded: seeded.slice(0, 5)
     };
   }
@@ -292,7 +302,7 @@ class HubSeeder {
     }
   }
 
-  _buildHubEntries({ sectionSlugs = [], countryCandidates = [] }) {
+  _buildHubEntries({ sectionSlugs = [], countryCandidates = [], navigationLinks = [] }) {
     const entries = [];
     const seen = new Set();
 
@@ -315,7 +325,7 @@ class HubSeeder {
       });
     };
 
-  for (const slug of (Array.isArray(sectionSlugs) ? sectionSlugs : [])) {
+    for (const slug of (Array.isArray(sectionSlugs) ? sectionSlugs : [])) {
       const url = this._buildAbsolutePathUrl([slug]);
       if (!url) continue;
       pushEntry(url, {
@@ -327,7 +337,7 @@ class HubSeeder {
       });
     }
 
-  for (const candidate of (Array.isArray(countryCandidates) ? countryCandidates : [])) {
+    for (const candidate of (Array.isArray(countryCandidates) ? countryCandidates : [])) {
       if (!candidate || !candidate.url) continue;
       pushEntry(candidate.url, {
         kind: 'country',
@@ -338,7 +348,38 @@ class HubSeeder {
       });
     }
 
+    const navList = Array.isArray(navigationLinks) ? navigationLinks : [];
+    for (const link of navList) {
+      if (!link || !link.url) continue;
+      const type = String(link.type || 'other').toLowerCase();
+      const label = Array.isArray(link.labels) && link.labels.length ? link.labels[0] : null;
+      const priorityBias = this._navigationPriorityBias(type);
+      pushEntry(link.url, {
+        kind: 'navigation',
+        source: 'navigation-discovery',
+        reason: `nav-${type}`,
+        label,
+        occurrences: Number(link.occurrences) || 0,
+        priorityBias
+      });
+    }
+
     return entries;
+  }
+
+  _navigationPriorityBias(type) {
+    switch (type) {
+      case 'primary':
+        return 6;
+      case 'secondary':
+        return 4;
+      case 'category':
+        return 2;
+      case 'meta':
+        return -2;
+      default:
+        return 0;
+    }
   }
 
   _emitMilestone(payload, scope) {

@@ -1,6 +1,7 @@
 import { createControl } from './baseControl.js';
 import { createDerivedBinding } from '../jsgui/derivedBinding.js';
 import { formatNumber, formatRelativeTime, formatTimestamp } from '../formatters.js';
+import { setElementVisibility } from '../domUtils.js';
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
@@ -234,7 +235,7 @@ export function createPatternInsightsControl({ store, elements }) {
     const panelVisible = crawlType === 'intelligent' || hasData;
 
     if (panel) {
-      panel.style.display = panelVisible ? '' : 'none';
+      setElementVisibility(panel, panelVisible);
       panel.dataset.hasData = hasData ? '1' : '0';
       panel.dataset.mode = crawlType || '';
     }

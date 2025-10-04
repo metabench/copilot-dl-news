@@ -1,140 +1,69 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Queues</title>
-  <style>
-    :root{--fg:#0f172a;--muted:#64748b;--border:#e5e7eb;--bg:#ffffff;--bg-soft:#f8fafc;--accent:#0ea5e9}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-    .container{max-width:1000px;margin:18px auto;padding:0 16px}
-    header{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 12px}
-    header h1{margin:0;font-size:20px}
-    header nav a{color:var(--muted);text-decoration:none;margin-left:10px}
-    header nav a:hover{color:var(--fg);text-decoration:underline}
-    .card{background:var(--bg-soft);border:1px solid var(--border);border-radius:10px;padding:10px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:12px}
-  .card h2{margin:0 0 8px;font-size:16px}
-  .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-  .timeline li{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
-  .timeline .stage{font-weight:600;font-size:14px}
-  .timeline .meta{color:var(--muted);font-size:12px;margin-top:4px}
-  .goal-list{display:flex;flex-direction:column;gap:8px}
-  .goal{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
-  .goal h3{margin:0 0 4px;font-size:14px}
-  .goal-progress{height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:4px 0}
-  .goal-progress span{display:block;height:100%;background:var(--accent)}
-    table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-    th,td{border-bottom:1px solid var(--border);padding:8px 10px;font-size:14px}
-    th{color:var(--muted);text-align:left;background:#fcfcfd}
-    tr:nth-child(even){background:#fafafa}
-    tr:hover{background:#f6f8fa}
-    .muted{color:var(--muted)}
-    .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;background:#fff;font-size:12px}
-    .row{display:flex;gap:8px;align-items:center}
-  .coverage-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-  .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:12px}
-  .planner-list{display:flex;flex-direction:column;gap:8px}
-  .planner-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px}
-  .planner-item summary{cursor:pointer;font-weight:600;font-size:13px}
-  .planner-item pre{background:#f1f5f9;border-radius:6px;padding:8px;overflow:auto;font-size:12px}
-  .heatmap-table{width:100%;border-collapse:collapse}
-  .heatmap-table th,.heatmap-table td{border:1px solid var(--border);padding:6px 8px;text-align:center;font-size:13px}
-  .heatmap-table th:first-child,.heatmap-table td:first-child{text-align:left}
-  .muted-block{color:var(--muted);font-size:13px}
-    .warn{color:#b45309}
-    .bad{color:#dc2626}
-    .ok{color:#16a34a}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    
-    /* Mobile-large-portrait optimization (414px) */
-    @media (max-width:720px){
-      .container{padding:0 12px;margin:12px auto}
-      header{flex-direction:column;align-items:flex-start;gap:8px}
-      .grid{grid-template-columns:1fr;gap:10px}
-      .card{padding:12px}
-      table{font-size:13px}
-      th,td{padding:6px 8px}
-    }
-    @media (min-width:390px) and (max-width:720px){
-      .container{padding:0 14px}
-      .card{padding:14px}
-    }
-    
-    /* Studio layout for ultrawide (2560px+) */
-    @media (min-width:2560px){
-      .container{max-width:2400px;padding:0 72px}
-      .grid{grid-template-columns:repeat(2,1fr) !important;gap:20px}
-      .card{padding:14px}
-      header h1{font-size:24px}
-      th,td{font-size:15px}
-    }
-    /* Ultra-ultrawide (3440px+) */
-    @media (min-width:3440px){
-      .container{max-width:3200px;padding:0 96px}
-      .grid{grid-template-columns:repeat(3,1fr) !important;gap:24px}
-      .card{padding:16px}
-      header h1{font-size:26px}
-      th,td{font-size:16px}
-    }
-  </style>
+  <link rel="stylesheet" href="/ui.css"/>
+  <link rel="stylesheet" href="/ui-dark.css"/>
+  <script type="module" src="/assets/theme/init.js"></script>
   <script type="module" src="/assets/global-nav.js"></script>
   </head>
-  <body>
-  <div class="container">
+  <body class="ui-page queues-monitor-page">
   <div data-global-nav data-active="queues" data-variant="bar"></div>
-    <header>
-      <h1>Queues <span id="job" class="pill mono"></span></h1>
+  <main class="ui-container queues-monitor">
+    <header class="ui-header">
+      <h1 class="ui-header__title">Queues <span id="job" class="pill mono"></span></h1>
     </header>
 
-    <section class="grid">
-      <div class="card">
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <h2>Planner timeline</h2>
-          <span id="timelineJob" class="muted"></span>
+    <section class="queues-monitor__grid">
+      <article class="card card--muted queues-monitor__card">
+        <div class="queues-section__header u-flex-between u-items-center">
+          <h2 class="queues-section__title">Planner timeline</h2>
+          <span id="timelineJob" class="queues-text-muted"></span>
         </div>
         <div id="timelineEmpty" class="muted-block">Waiting for planner activity…</div>
         <ol id="timelineList" class="timeline"></ol>
-      </div>
-      <div class="card">
-        <h2>Goals</h2>
+      </article>
+      <article class="card card--muted queues-monitor__card">
+        <h2 class="queues-section__title">Goals</h2>
         <div id="goalSummary" class="muted-block">No active goals yet.</div>
         <div id="goalList" class="goal-list"></div>
-      </div>
+      </article>
     </section>
 
-    <section class="grid">
-      <div class="card">
-        <h2>Queue composition</h2>
+    <section class="queues-monitor__grid">
+      <article class="card card--muted queues-monitor__card">
+        <h2 class="queues-section__title">Queue composition</h2>
         <div id="heatmapEmpty" class="muted-block">Waiting for queue metrics…</div>
         <table id="heatmapTable" class="heatmap-table"></table>
-      </div>
-      <div class="card">
-        <h2>Coverage</h2>
+      </article>
+      <article class="card card--muted queues-monitor__card">
+        <h2 class="queues-section__title">Coverage</h2>
         <div id="coverageBadges" class="coverage-badges"></div>
         <div id="coverageKinds" class="goal-list"></div>
-      </div>
+      </article>
     </section>
 
-    <section class="card" id="plannerCard">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h2 style="margin:0">Planner stages</h2>
-        <button id="clearPlannerBtn" style="border:1px solid var(--border);background:#fff;border-radius:6px;padding:4px 12px;font-size:12px">Clear</button>
+    <section class="card planner-card" id="plannerCard">
+      <div class="queues-section__header u-flex-between u-items-center">
+        <h2 class="queues-section__title u-mt-none u-mb-none">Planner stages</h2>
+        <button id="clearPlannerBtn" class="ui-button ui-button--secondary">Clear</button>
       </div>
       <div id="plannerEmpty" class="muted-block">No planner stages yet.</div>
       <div id="plannerList" class="planner-list"></div>
     </section>
 
-    <section class="card">
-      <div class="row" style="justify-content:space-between; flex-wrap: wrap; gap:8px">
+    <section class="card queues-events">
+      <div class="queues-events__controls u-flex u-flex-between u-flex-wrap u-gap-sm">
         <div class="meta">
           <span id="modeLabel">Live queue events</span> (<span id="count">0</span>)
-          <span id="persistMeta" class="meta" style="margin-left:8px"></span>
+          <span id="persistMeta" class="meta u-ml-sm"></span>
         </div>
-        <div class="row" style="gap:8px">
+        <div class="u-flex u-gap-sm">
           <label class="meta"><input type="checkbox" id="onlyActive"/> Filter to active job</label>
-          <select id="jobSelect" style="min-width:320px"></select>
-          <button id="loadBtn">Load events</button>
+          <select id="jobSelect" class="u-minw-20rem"></select>
+          <button id="loadBtn" class="ui-button">Load events</button>
         </div>
       </div>
       <table>
@@ -146,7 +75,7 @@
         <tbody id="tbody"><tr><td colspan="8" class="muted">Waiting for events…</td></tr></tbody>
       </table>
     </section>
-  </div>
+  </main>
   <script>
     (function(){
       const tbody = document.getElementById('tbody');

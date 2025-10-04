@@ -130,6 +130,32 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
       `);
 
       try {
+        const crawlCols = db.prepare('PRAGMA table_info(crawl_jobs)').all().map((r) => r.name);
+        if (!crawlCols.includes('args')) {
+          db.exec('ALTER TABLE crawl_jobs ADD COLUMN args TEXT');
+          crawlCols.push('args');
+        }
+        if (!crawlCols.includes('pid')) {
+          db.exec('ALTER TABLE crawl_jobs ADD COLUMN pid INTEGER');
+          crawlCols.push('pid');
+        }
+        if (!crawlCols.includes('started_at')) {
+          db.exec('ALTER TABLE crawl_jobs ADD COLUMN started_at TEXT');
+          crawlCols.push('started_at');
+        }
+        if (!crawlCols.includes('ended_at')) {
+          db.exec('ALTER TABLE crawl_jobs ADD COLUMN ended_at TEXT');
+          crawlCols.push('ended_at');
+        }
+        if (!crawlCols.includes('status')) {
+          db.exec('ALTER TABLE crawl_jobs ADD COLUMN status TEXT');
+          crawlCols.push('status');
+        }
+      } catch (_) {
+        /* ignore migration errors */
+      }
+
+      try {
         const queueCols = db.prepare('PRAGMA table_info(queue_events)').all().map((r) => r.name);
         if (!queueCols.includes('queue_origin')) {
           db.exec('ALTER TABLE queue_events ADD COLUMN queue_origin TEXT');
