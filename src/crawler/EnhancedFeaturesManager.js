@@ -5,9 +5,10 @@ class EnhancedFeaturesManager {
     PriorityScorer,
     ProblemClusteringService,
     PlannerKnowledgeService,
+    ProblemResolutionService,
     logger = console
   } = {}) {
-    if (!ConfigManager || !EnhancedDatabaseAdapter || !PriorityScorer || !ProblemClusteringService || !PlannerKnowledgeService) {
+    if (!ConfigManager || !EnhancedDatabaseAdapter || !PriorityScorer || !ProblemClusteringService || !PlannerKnowledgeService || !ProblemResolutionService) {
       throw new Error('EnhancedFeaturesManager requires configuration and service constructors');
     }
 
@@ -16,6 +17,7 @@ class EnhancedFeaturesManager {
     this.PriorityScorer = PriorityScorer;
     this.ProblemClusteringService = ProblemClusteringService;
     this.PlannerKnowledgeService = PlannerKnowledgeService;
+    this.ProblemResolutionService = ProblemResolutionService;
     this.logger = logger;
 
     this._resetState();
@@ -26,13 +28,15 @@ class EnhancedFeaturesManager {
       gapDrivenPrioritization: false,
       plannerKnowledgeReuse: false,
       realTimeCoverageAnalytics: false,
-      problemClustering: false
+      problemClustering: false,
+      problemResolution: false
     };
     this.configManager = null;
     this.enhancedDbAdapter = null;
     this.priorityScorer = null;
     this.problemClusteringService = null;
     this.plannerKnowledgeService = null;
+    this.problemResolutionService = null;
     this.jobId = null;
   }
 
@@ -50,6 +54,10 @@ class EnhancedFeaturesManager {
 
   getPlannerKnowledgeService() {
     return this.plannerKnowledgeService;
+  }
+
+  getProblemResolutionService() {
+    return this.problemResolutionService;
   }
 
   async initialize({ dbAdapter, jobId } = {}) {
@@ -75,7 +83,7 @@ class EnhancedFeaturesManager {
         }
       }
 
-      await this._initializeFeatureServices(featureFlags || {});
+      await this._initializeFeatureServices(featureFlags || {}, { dbAdapter });
 
       const enabledFeatures = Object.keys(this.featuresEnabled).filter((key) => this.featuresEnabled[key]);
       if (enabledFeatures.length > 0) {
@@ -89,7 +97,9 @@ class EnhancedFeaturesManager {
     }
   }
 
-  async _initializeFeatureServices(features) {
+  async _initializeFeatureServices(features, { dbAdapter } = {}) {
+    const baseNewsDb = typeof dbAdapter?.getDb === 'function' ? dbAdapter.getDb() : null;
+
     if (features.gapDrivenPrioritization && this.enhancedDbAdapter) {
       try {
         this.priorityScorer = new this.PriorityScorer(this.configManager, this.enhancedDbAdapter);
@@ -127,6 +137,33 @@ class EnhancedFeaturesManager {
     }
 
     this.featuresEnabled.realTimeCoverageAnalytics = Boolean(features.realTimeCoverageAnalytics && this.enhancedDbAdapter);
+
+    if (features.problemResolution && (baseNewsDb || this.enhancedDbAdapter)) {
+      try {
+        const recordSeed = typeof dbAdapter?.recordPlaceHubSeed === 'function'
+          ? (_handle, payload) => {
+              try {
+                return dbAdapter.recordPlaceHubSeed(payload);
+              } catch (err) {
+                this._warn('Failed to record hub seed via crawler db:', err);
+                return false;
+              }
+            }
+          : null;
+
+        this.problemResolutionService = new this.ProblemResolutionService({
+          db: baseNewsDb || this.enhancedDbAdapter?.newsDb?.getDb?.() || this.enhancedDbAdapter?.newsDb,
+          recordSeed,
+          logger: this.logger
+        });
+        this.featuresEnabled.problemResolution = true;
+        this.logger.log('Problem resolution service initialized');
+      } catch (error) {
+        this._warn('Failed to initialize problem resolution service:', error);
+        this.problemResolutionService = null;
+        this.featuresEnabled.problemResolution = false;
+      }
+    }
   }
 
   computePriority(args, { computeBasePriority, jobId } = {}) {
@@ -160,6 +197,9 @@ class EnhancedFeaturesManager {
       }
       if (this.priorityScorer?.close) {
         this.priorityScorer.close();
+      }
+      if (this.problemResolutionService?.close) {
+        this.problemResolutionService.close();
       }
       if (this.configManager?.close) {
         this.configManager.close();

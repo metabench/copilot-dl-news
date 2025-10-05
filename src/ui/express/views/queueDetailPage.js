@@ -123,7 +123,7 @@ function renderQueueDetailPage({ job, events, filters, pagination, neighbors, re
 
     <div class="table-responsive">
       <table class="queue-detail__table">
-        <thead><tr><th class="u-fit">#</th><th class="u-fit">Time</th><th class="u-fit">Action</th><th>URL</th><th class="u-fit">Depth</th><th class="u-fit">Host</th><th>Reason</th><th class="u-fit text-right">Queue</th></tr></thead>
+  <thead><tr><th class="fit">#</th><th class="fit">Time</th><th class="fit">Action</th><th>URL</th><th class="fit">Depth</th><th class="fit">Host</th><th>Reason</th><th class="fit text-right">Queue</th></tr></thead>
         <tbody>${itemsHtml}</tbody>
       </table>
     </div>

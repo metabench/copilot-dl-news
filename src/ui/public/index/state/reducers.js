@@ -1,9 +1,6 @@
 import { initialState, createInitialPatternInsightsState } from './initialState.js';
 import { PIPELINE_DEFAULTS } from '../pipelineView.js';
-
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
+import { tof, is_array, clone } from 'lang-tools';
 
 function normalizeStatusKey(status) {
   if (!status) return 'idle';
@@ -28,9 +25,9 @@ function mergePipeline(prevPipeline, patch) {
     for (const [prop, value] of Object.entries(stagePatch)) {
       if (prop === 'status') {
         next[stageKey][prop] = normalizeStatusKey(value);
-      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      } else if (value && tof(value) === 'object' && !is_array(value)) {
         next[stageKey][prop] = { ...(next[stageKey][prop] || {}), ...value };
-      } else if (Array.isArray(value)) {
+      } else if (is_array(value)) {
         next[stageKey][prop] = value.slice();
       } else {
         next[stageKey][prop] = value;
@@ -50,7 +47,7 @@ function normaliseString(value) {
 
 function normaliseSlugList(values) {
   if (!values) return [];
-  const list = Array.isArray(values) ? values : [values];
+  const list = is_array(values) ? values : [values];
   const seen = new Set();
   const out = [];
   for (const raw of list) {
@@ -73,7 +70,7 @@ function normaliseSlugList(values) {
 
 function normaliseHintList(values) {
   if (!values) return [];
-  const list = Array.isArray(values) ? values : [values];
+  const list = is_array(values) ? values : [values];
   const seen = new Set();
   const out = [];
   for (const raw of list) {
@@ -120,7 +117,7 @@ function normalisePatternEvent(payload = {}) {
   if (notModified) summaryPieces.push('not-modified');
   if (hadError) summaryPieces.push('with error');
   const summaryText = normaliseString(payload.summary) || message || summaryPieces.join(' · ');
-  const rawDetails = payload.details && typeof payload.details === 'object' ? payload.details : (payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : null);
+  const rawDetails = payload.details && tof(payload.details) === 'object' ? payload.details : (payload.metadata && tof(payload.metadata) === 'object' ? payload.metadata : null);
 
   return {
     id,
@@ -140,12 +137,12 @@ function normalisePatternEvent(payload = {}) {
     hadError,
     contextHost,
     summary: summaryText,
-    rawDetails: rawDetails ? JSON.parse(JSON.stringify(rawDetails)) : null
+    rawDetails: rawDetails ? clone(rawDetails) : null
   };
 }
 
 function updateCounts(counts = {}, items = []) {
-  if (!Array.isArray(items) || !items.length) {
+  if (!is_array(items) || !items.length) {
     return counts;
   }
   const next = { ...counts };
@@ -195,7 +192,7 @@ function createPatternLogEntry(event) {
 }
 
 function describeProblems(problems = []) {
-  if (!Array.isArray(problems) || problems.length === 0) {
+  if (!is_array(problems) || problems.length === 0) {
     return { total: 0, detail: 'No unresolved planner problems recorded.' };
   }
   const total = problems.reduce((sum, item) => sum + (Number(item?.count) || 0), 0);
@@ -209,10 +206,10 @@ function describeProblems(problems = []) {
 }
 
 function describeGoals(goalStates = [], goalSummary) {
-  if (goalSummary && typeof goalSummary === 'string') {
+  if (goalSummary && tof(goalSummary) === 'string') {
     return { label: goalSummary, detail: '' };
   }
-  if (!Array.isArray(goalStates) || goalStates.length === 0) {
+  if (!is_array(goalStates) || goalStates.length === 0) {
     return {
       label: 'No planner goals yet.',
       detail: 'Planner goals will appear once intelligent crawling begins.'
@@ -232,13 +229,13 @@ function describeGoals(goalStates = [], goalSummary) {
 }
 
 function describeCoverage(coverage) {
-  if (!coverage || typeof coverage !== 'object') {
+  if (!coverage || tof(coverage) !== 'object') {
     return { pct: null, detail: '' };
   }
   let pct = null;
-  if (typeof coverage.coveragePct === 'number') {
+  if (tof(coverage.coveragePct) === 'number') {
     pct = coverage.coveragePct;
-  } else if (typeof coverage.visitedCoveragePct === 'number') {
+  } else if (tof(coverage.visitedCoveragePct) === 'number') {
     pct = coverage.visitedCoveragePct;
   }
   if (pct != null && pct <= 1) {
@@ -255,7 +252,7 @@ function describeCoverage(coverage) {
 }
 
 function describeQueueMix(queueHeatmap) {
-  if (!queueHeatmap || typeof queueHeatmap !== 'object' || !queueHeatmap.cells) {
+  if (!queueHeatmap || tof(queueHeatmap) !== 'object' || !queueHeatmap.cells) {
     return { label: 'Queue idle', detail: 'Queue telemetry not yet available.' };
   }
   const totals = { article: 0, hub: 0, other: 0 };
@@ -292,9 +289,9 @@ function describeQueueMix(queueHeatmap) {
 
 function mergeHighlights(extras = {}, details = {}) {
   const highlights = [];
-  const analysisHighlights = Array.isArray(extras.analysisHighlights)
+  const analysisHighlights = is_array(extras.analysisHighlights)
     ? extras.analysisHighlights
-    : Array.isArray(details.analysisHighlights)
+    : is_array(details.analysisHighlights)
       ? details.analysisHighlights
       : [];
   if (analysisHighlights.length) {

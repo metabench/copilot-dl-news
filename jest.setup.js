@@ -2,6 +2,7 @@
 (() => {
   const MAX_LINES = parseInt(process.env.JEST_MAX_CONSOLE_LINES || '40', 10); // total lines per test
   const MAX_LINE_LEN = parseInt(process.env.JEST_MAX_CONSOLE_COLS || '200', 10);
+  const MAX_TOTAL_CHARS = parseInt(process.env.JEST_MAX_CONSOLE_CHARS || '2000', 10);
   const ALLOW_NOISY_LOGS = process.env.JEST_ALLOW_NOISY_LOGS === '1';
   const DROP_PATTERNS = ALLOW_NOISY_LOGS ? [] : [
     /^\[req\]/i,
@@ -29,6 +30,7 @@
   const origError = console.error.bind(console);
 
   let lineCount = 0;
+  let charCount = 0;
   let suppressed = false;
 
   function wrap(fn, level) {
@@ -48,6 +50,12 @@
         if (!ALLOW_NOISY_LOGS && shouldDrop(msg)) return;
         const parts = String(msg).split(/\r?\n/);
         for (let i = 0; i < parts.length; i++) {
+          if (suppressed) return;
+          if (charCount >= MAX_TOTAL_CHARS) {
+            suppressed = true;
+            origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
+            return;
+          }
           if (lineCount >= MAX_LINES) {
             if (!suppressed) {
               suppressed = true;
@@ -56,8 +64,26 @@
             return;
           }
           const line = parts[i];
-          const out = line.length > MAX_LINE_LEN ? (line.slice(0, MAX_LINE_LEN) + ' … [truncated]') : line;
+          let out = line.length > MAX_LINE_LEN ? (line.slice(0, MAX_LINE_LEN) + ' … [truncated]') : line;
+          if (charCount + out.length > MAX_TOTAL_CHARS) {
+            const truncatedSuffix = ' … [truncated]';
+            const remaining = MAX_TOTAL_CHARS - charCount;
+            if (remaining <= truncatedSuffix.length) {
+              suppressed = true;
+              origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
+              return;
+            }
+            const allowed = remaining - truncatedSuffix.length;
+            out = out.slice(0, Math.max(0, allowed)) + truncatedSuffix;
+            charCount = MAX_TOTAL_CHARS; // will trigger suppression after emit
+            suppressed = true;
+            lineCount++;
+            fn(out);
+            origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
+            return;
+          }
           lineCount++;
+          charCount += out.length;
           fn(out);
         }
       } catch (e) {
@@ -68,6 +94,7 @@
 
   beforeEach(() => {
     lineCount = 0;
+    charCount = 0;
     suppressed = false;
     console.log = wrap(origLog, 'console');
     console.warn = wrap(origWarn, 'console');

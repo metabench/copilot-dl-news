@@ -37,6 +37,7 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
           host TEXT,
           reason TEXT,
           queue_size INTEGER,
+          alias TEXT,
           queue_origin TEXT,
           queue_role TEXT,
           queue_depth_bucket TEXT,
@@ -157,6 +158,9 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
 
       try {
         const queueCols = db.prepare('PRAGMA table_info(queue_events)').all().map((r) => r.name);
+        if (!queueCols.includes('alias')) {
+          db.exec('ALTER TABLE queue_events ADD COLUMN alias TEXT');
+        }
         if (!queueCols.includes('queue_origin')) {
           db.exec('ALTER TABLE queue_events ADD COLUMN queue_origin TEXT');
         }
@@ -198,6 +202,16 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
             name: 'intelligent',
             description: 'Intelligent planning (hubs + sitemap + heuristics)',
             declaration: { crawlType: 'intelligent', useSitemap: true, sitemapOnly: false }
+          },
+          {
+            name: 'discover-structure',
+            description: 'Map site structure without downloading articles',
+            declaration: { crawlType: 'discover-structure', useSitemap: true, sitemapOnly: false }
+          },
+          {
+            name: 'gazetteer',
+            description: 'Aggregate gazetteer data from structured external sources',
+            declaration: { crawlType: 'gazetteer', useSitemap: false, sitemapOnly: false }
           }
         ];
         for (const def of defaults) {
@@ -260,7 +274,13 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
     } catch (err) {
       dbInstance = null;
       try {
-        if (queueDebug || verbose || process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+        // Only log DB warnings in verbose mode or when explicitly requested
+        // Skip logging "no such column: wikidata_qid" errors in tests (gazetteer not initialized)
+        const isGazetteerError = err?.message?.includes('wikidata_qid');
+        const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';
+        const shouldLog = (queueDebug || verbose) && !(isGazetteerError && isTestEnv);
+        
+        if (shouldLog) {
           logger.warn('[db] failed to open writable DB:', err?.message || err);
         }
       } catch (_) {

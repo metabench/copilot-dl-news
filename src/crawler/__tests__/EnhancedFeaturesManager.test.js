@@ -6,7 +6,8 @@ describe('EnhancedFeaturesManager', () => {
       config: false,
       scorer: false,
       clustering: false,
-      knowledge: false
+      knowledge: false,
+      resolution: false
     };
 
     class FakeConfigManager {
@@ -68,12 +69,22 @@ describe('EnhancedFeaturesManager', () => {
       }
     }
 
+    class FakeProblemResolutionService {
+      constructor(options) {
+        this.options = options;
+      }
+      close() {
+        closed.resolution = true;
+      }
+    }
+
     const manager = new EnhancedFeaturesManager({
       ConfigManager: FakeConfigManager,
       EnhancedDatabaseAdapter: FakeEnhancedDbAdapter,
       PriorityScorer: FakePriorityScorer,
       ProblemClusteringService: FakeProblemClusteringService,
       PlannerKnowledgeService: FakePlannerKnowledgeService,
+      ProblemResolutionService: FakeProblemResolutionService,
       logger: { log: jest.fn(), warn: jest.fn() }
     });
 
@@ -89,7 +100,8 @@ describe('EnhancedFeaturesManager', () => {
       gapDrivenPrioritization: true,
       problemClustering: true,
       plannerKnowledgeReuse: true,
-      realTimeCoverageAnalytics: true
+      realTimeCoverageAnalytics: true,
+      problemResolution: true
     };
     const { manager, dbAdapter } = createManager({ flags });
 
@@ -100,9 +112,11 @@ describe('EnhancedFeaturesManager', () => {
     expect(enabled.problemClustering).toBe(true);
     expect(enabled.plannerKnowledgeReuse).toBe(true);
     expect(enabled.realTimeCoverageAnalytics).toBe(true);
+    expect(enabled.problemResolution).toBe(true);
     expect(manager.getEnhancedDbAdapter()).toBeTruthy();
     expect(manager.getProblemClusteringService()).toBeTruthy();
     expect(manager.getPlannerKnowledgeService()).toBeTruthy();
+    expect(manager.getProblemResolutionService()).toBeTruthy();
   });
 
   test('computePriority falls back to base when features disabled', () => {
@@ -140,7 +154,12 @@ describe('EnhancedFeaturesManager', () => {
 
   test('cleanup closes services and resets state', async () => {
     const { manager, dbAdapter, closed } = createManager({
-      flags: { gapDrivenPrioritization: true, problemClustering: true, plannerKnowledgeReuse: true }
+      flags: {
+        gapDrivenPrioritization: true,
+        problemClustering: true,
+        plannerKnowledgeReuse: true,
+        problemResolution: true
+      }
     });
     await manager.initialize({ dbAdapter, jobId: 'job-z' });
 
@@ -149,7 +168,15 @@ describe('EnhancedFeaturesManager', () => {
     expect(closed.scorer).toBe(true);
     expect(closed.clustering).toBe(true);
     expect(closed.knowledge).toBe(true);
+    expect(closed.resolution).toBe(true);
     expect(manager.getEnhancedDbAdapter()).toBeNull();
     expect(manager.getEnabledFeatures().gapDrivenPrioritization).toBe(false);
+  });
+
+  test('does not initialize problem resolution when flag disabled', async () => {
+    const { manager, dbAdapter } = createManager({ flags: { problemResolution: false } });
+    await manager.initialize({ dbAdapter, jobId: 'job-flag' });
+    expect(manager.getProblemResolutionService()).toBeNull();
+    expect(manager.getEnabledFeatures().problemResolution).toBe(false);
   });
 });

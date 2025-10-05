@@ -22,7 +22,8 @@ class PageExecutionService {
     getDbAdapter,
     computeContentSignals,
     computeUrlSignals,
-    combineSignals
+    combineSignals,
+    structureOnly = false
   } = {}) {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
@@ -64,6 +65,7 @@ class PageExecutionService {
     this.computeContentSignals = typeof computeContentSignals === 'function' ? computeContentSignals : null;
     this.computeUrlSignals = typeof computeUrlSignals === 'function' ? computeUrlSignals : null;
     this.combineSignals = typeof combineSignals === 'function' ? combineSignals : null;
+    this.structureOnly = !!structureOnly;
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -304,42 +306,55 @@ class PageExecutionService {
     const dbAdapter = this.getDbAdapter();
     const dbEnabled = dbAdapter && typeof dbAdapter.isEnabled === 'function' && dbAdapter.isEnabled();
 
+  const shouldAcquireContent = !!this.contentAcquisitionService && !this.structureOnly;
+
     let processorResult = null;
-    try {
-      processorResult = await this.contentAcquisitionService.acquire({
-        url: resolvedUrl,
-        html,
-        fetchMeta,
-        depth,
-        normalizedUrl,
-        referrerUrl: context.referrerUrl || null,
-        discoveredAt: context.discoveredAt || new Date().toISOString(),
-        persistArticle: dbEnabled,
-        insertFetchRecord: dbEnabled,
-        insertLinkRecords: dbEnabled,
-        linkSummary: discovery?.linkSummary || null,
-        cheerioRoot: discovery?.$ || null
-      });
-    } catch (error) {
-      if (this.recordError) {
-        this.recordError({
+    if (shouldAcquireContent) {
+      try {
+        processorResult = await this.contentAcquisitionService.acquire({
           url: resolvedUrl,
-          kind: 'content-acquisition',
-          message: error?.message || String(error)
+          html,
+          fetchMeta,
+          depth,
+          normalizedUrl,
+          referrerUrl: context.referrerUrl || null,
+          discoveredAt: context.discoveredAt || new Date().toISOString(),
+          persistArticle: dbEnabled && !this.structureOnly,
+          insertFetchRecord: dbEnabled,
+          insertLinkRecords: dbEnabled,
+          linkSummary: discovery?.linkSummary || null,
+          cheerioRoot: discovery?.$ || null
         });
-      }
-      if (this.telemetry) {
-        try {
-          this.telemetry.problem({
-            kind: 'content-acquisition-failed',
-            target: resolvedUrl,
-            message: error?.message || 'Content acquisition failed'
+      } catch (error) {
+        if (this.recordError) {
+          this.recordError({
+            url: resolvedUrl,
+            kind: 'content-acquisition',
+            message: error?.message || String(error)
           });
-        } catch (_) {}
+        }
+        if (this.telemetry) {
+          try {
+            this.telemetry.problem({
+              kind: 'content-acquisition-failed',
+              target: resolvedUrl,
+              message: error?.message || 'Content acquisition failed'
+            });
+          } catch (_) {}
+        }
+        return {
+          status: 'failed',
+          retriable: false
+        };
       }
-      return {
-        status: 'failed',
-        retriable: false
+    } else {
+      processorResult = {
+        isArticle: !!(discovery?.looksLikeArticle),
+        metadata: null,
+        navigationLinks: Array.isArray(discovery?.navigationLinks) ? discovery.navigationLinks : [],
+        articleLinks: Array.isArray(discovery?.articleLinks) ? discovery.articleLinks : [],
+        allLinks: Array.isArray(discovery?.allLinks) ? discovery.allLinks : [],
+        statsDelta: { articlesFound: 0, articlesSaved: 0 }
       };
     }
 
@@ -366,11 +381,22 @@ class PageExecutionService {
       articleLinks = discoveryArticleLinks;
     }
 
+    if (this.structureOnly) {
+      try {
+        if (!discovery?.looksLikeArticle) {
+          this.state?.incrementStructureNavPages?.();
+        }
+        if (articleLinks.length > 0) {
+          this.state?.recordStructureArticleLinks?.(articleLinks);
+        }
+      } catch (_) {}
+    }
+
     try {
       console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${resolvedUrl}`);
     } catch (_) {}
 
-    if (processorResult?.isArticle && processorResult.metadata) {
+    if (!this.structureOnly && processorResult?.isArticle && processorResult.metadata) {
       try {
         this.adaptiveSeedPlanner?.seedFromArticle({
           url: resolvedUrl,

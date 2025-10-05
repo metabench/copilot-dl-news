@@ -37,6 +37,7 @@ function attachSignalHandlers(server, {
   realtime = null,
   cleanupTempDb = null,
   configManager = null,
+  benchmarkManager = null,
   quiet = false
 } = {}) {
   if (!server) return;
@@ -65,6 +66,9 @@ function attachSignalHandlers(server, {
     }
     try {
       configManager?.close?.();
+    } catch (_) {}
+    try {
+      benchmarkManager?.destroy?.();
     } catch (_) {}
     try {
       cleanupTempDb?.();
@@ -112,7 +116,10 @@ function startServer(app, {
   jobRegistry = null,
   realtime = null,
   configManager = null,
+  benchmarkManager = null,
   cleanupTempDb = null,
+  detached = false,
+  autoShutdownMs = null,
   candidates = buildPortCandidates()
 } = {}) {
   if (!app) throw new Error('startServer requires an Express app instance');
@@ -120,6 +127,9 @@ function startServer(app, {
   server.on('close', () => {
     try {
       configManager?.close?.();
+    } catch (_) {}
+    try {
+      benchmarkManager?.destroy?.();
     } catch (_) {}
     try {
       cleanupTempDb?.();
@@ -185,6 +195,26 @@ function startServer(app, {
       const addr = server.address();
       const port = addr && typeof addr === 'object' ? addr.port : lastRequestedPort;
       console.log(`GUI server listening on http://localhost:${port}`);
+      
+      // Setup auto-shutdown timer if requested
+      if (autoShutdownMs && Number.isFinite(autoShutdownMs) && autoShutdownMs > 0) {
+        const shutdownTimer = setTimeout(() => {
+          if (!quiet) {
+            console.log(`[server] Auto-shutdown timer expired (${autoShutdownMs}ms)`);
+          }
+          try {
+            server.close();
+          } catch (_) {}
+          setTimeout(() => {
+            process.exit(0);
+          }, 100);
+        }, autoShutdownMs);
+        
+        // Don't prevent process exit
+        if (shutdownTimer.unref) {
+          shutdownTimer.unref();
+        }
+      }
     } catch (_) {
       if (lastRequestedPort != null) {
         console.log(`GUI server listening on http://localhost:${lastRequestedPort}`);
@@ -195,7 +225,12 @@ function startServer(app, {
   });
 
   tryListen();
-  attachSignalHandlers(server, { jobRegistry, realtime, cleanupTempDb, configManager, quiet });
+  
+  // In detached mode, disable SIGINT/SIGTERM handlers so the terminal can be released
+  if (!detached) {
+    attachSignalHandlers(server, { jobRegistry, realtime, cleanupTempDb, configManager, benchmarkManager, quiet });
+  }
+  
   return server;
 }
 

@@ -5,6 +5,8 @@
  * across the crawler codebase (throttling, resume, deduplication, etc.)
  */
 
+const { tof } = require('lang-tools');
+
 /**
  * Extract hostname from URL, returning null for invalid URLs
  * @param {string|URL} url - URL to extract domain from
@@ -14,7 +16,7 @@ function extractDomain(url) {
   if (!url) return null;
   
   try {
-    const parsed = typeof url === 'string' ? new URL(url) : url;
+    const parsed = tof(url) === 'string' ? new URL(url) : url;
     return parsed.hostname.toLowerCase();
   } catch {
     return null;

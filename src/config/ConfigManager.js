@@ -1,16 +1,13 @@
 const path = require('path');
 const fs = require('fs');
-
-function deepClone(value) {
-  return value == null ? value : JSON.parse(JSON.stringify(value));
-}
+const { tof, clone, is_array } = require('lang-tools');
 
 function deepMerge(target, source) {
-  if (!source || typeof source !== 'object') return target;
-  const output = Array.isArray(target) ? [...target] : { ...target };
+  if (!source || tof(source) !== 'object') return target;
+  const output = is_array(target) ? [...target] : { ...target };
   for (const [key, value] of Object.entries(source)) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      output[key] = deepMerge(output[key] && typeof output[key] === 'object' ? output[key] : {}, value);
+    if (value && tof(value) === 'object' && !is_array(value)) {
+      output[key] = deepMerge(output[key] && tof(output[key]) === 'object' ? output[key] : {}, value);
     } else {
       output[key] = value;
     }
@@ -20,12 +17,12 @@ function deepMerge(target, source) {
 
 function coerceNumber(value) {
   if (value == null) return null;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string' && value.trim() !== '') {
+  if (tof(value) === 'number' && Number.isFinite(value)) return value;
+  if (tof(value) === 'string' && value.trim() !== '') {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
-  if (typeof value === 'object' && typeof value.value !== 'undefined') {
+  if (tof(value) === 'object' && tof(value.value) !== 'undefined') {
     return coerceNumber(value.value);
   }
   return null;
@@ -96,7 +93,7 @@ class ConfigManager {
   }
 
   _validateConfig(config) {
-    if (!config || typeof config !== 'object') {
+    if (!config || tof(config) !== 'object') {
       throw new Error('Config must be a valid JSON object');
     }
 
@@ -106,14 +103,14 @@ class ConfigManager {
 
     // Validate all bonus values are numbers
     for (const [key, bonus] of Object.entries(config.queue.bonuses)) {
-      if (typeof bonus.value !== 'number' || bonus.value < 0) {
+      if (tof(bonus.value) !== 'number' || bonus.value < 0) {
         throw new Error(`Invalid bonus value for ${key}: must be non-negative number`);
       }
     }
 
     // Validate all weight values are numbers
     for (const [key, weight] of Object.entries(config.queue.weights)) {
-      if (typeof weight.value !== 'number' || weight.value < 0) {
+      if (tof(weight.value) !== 'number' || weight.value < 0) {
         throw new Error(`Invalid weight value for ${key}: must be non-negative number`);
       }
     }
@@ -155,77 +152,78 @@ class ConfigManager {
         gapDrivenPrioritization: true,
         plannerKnowledgeReuse: true,
         realTimeCoverageAnalytics: true,
-        problemClustering: true
+        problemClustering: true,
+        problemResolution: true
       }
     };
   }
 
   _applyDefaults(rawConfig) {
     const defaults = this._getDefaultConfig();
-    if (!rawConfig || typeof rawConfig !== 'object') {
-      return this._normalizeConfigStructure(deepClone(defaults));
+    if (!rawConfig || tof(rawConfig) !== 'object') {
+      return this._normalizeConfigStructure(clone(defaults));
     }
     const merged = deepMerge(defaults, rawConfig);
     return this._normalizeConfigStructure(merged);
   }
 
   _normalizeConfigStructure(config) {
-    if (!config || typeof config !== 'object') {
+    if (!config || tof(config) !== 'object') {
       return config;
     }
 
-    if (!config.queue || typeof config.queue !== 'object') {
-      config.queue = deepClone(this._getDefaultConfig().queue);
+    if (!config.queue || tof(config.queue) !== 'object') {
+      config.queue = clone(this._getDefaultConfig().queue);
     }
 
-    if (!config.queue.bonuses || typeof config.queue.bonuses !== 'object') {
+    if (!config.queue.bonuses || tof(config.queue.bonuses) !== 'object') {
       config.queue.bonuses = {};
     }
 
-    if (config.queuePriorityBonuses && typeof config.queuePriorityBonuses === 'object') {
+    if (config.queuePriorityBonuses && tof(config.queuePriorityBonuses) === 'object') {
       for (const [key, value] of Object.entries(config.queuePriorityBonuses)) {
-        config.queue.bonuses[key] = typeof value === 'number'
+        config.queue.bonuses[key] = tof(value) === 'number'
           ? { value }
           : { ...(value || {}), value: coerceNumber(value?.value ?? value) ?? 0 };
       }
     }
 
     for (const [key, value] of Object.entries(config.queue.bonuses)) {
-      if (typeof value !== 'object' || value === null || typeof value.value !== 'number') {
+      if (tof(value) !== 'object' || value === null || tof(value.value) !== 'number') {
         config.queue.bonuses[key] = { value: coerceNumber(value) ?? 0 };
       }
     }
 
-    if (!config.queue.weights || typeof config.queue.weights !== 'object') {
+    if (!config.queue.weights || tof(config.queue.weights) !== 'object') {
       config.queue.weights = {};
     }
 
-    if (config.priorityWeights && typeof config.priorityWeights === 'object') {
+    if (config.priorityWeights && tof(config.priorityWeights) === 'object') {
       for (const [key, value] of Object.entries(config.priorityWeights)) {
-        config.queue.weights[key] = typeof value === 'number'
+        config.queue.weights[key] = tof(value) === 'number'
           ? { value }
           : { ...(value || {}), value: coerceNumber(value?.value ?? value) ?? 0 };
       }
     }
 
     for (const [key, value] of Object.entries(config.queue.weights)) {
-      if (typeof value !== 'object' || value === null || typeof value.value !== 'number') {
+      if (tof(value) !== 'object' || value === null || tof(value.value) !== 'number') {
         config.queue.weights[key] = { value: coerceNumber(value) ?? 0 };
       }
     }
 
-    if (config.clustering && typeof config.clustering === 'object') {
+    if (config.clustering && tof(config.clustering) === 'object') {
       config.queue.clustering = {
         ...(config.queue.clustering || {}),
         ...config.clustering
       };
     }
 
-    if (!config.queue.clustering || typeof config.queue.clustering !== 'object') {
+    if (!config.queue.clustering || tof(config.queue.clustering) !== 'object') {
       config.queue.clustering = {};
     }
 
-    if (config.features && typeof config.features === 'object') {
+    if (config.features && tof(config.features) === 'object') {
       const normalized = {};
       for (const [key, value] of Object.entries(config.features)) {
         const normalizedKey = toCamelCase(key);
@@ -296,7 +294,7 @@ class ConfigManager {
 
   // Public API
   getConfig() {
-    const snapshot = deepClone(this.config);
+    const snapshot = clone(this.config);
     snapshot.queuePriorityBonuses = Object.fromEntries(
       Object.entries(snapshot.queue?.bonuses || {}).map(([key, meta]) => [key, meta.value])
     );
@@ -304,7 +302,7 @@ class ConfigManager {
       Object.entries(snapshot.queue?.weights || {}).map(([key, meta]) => [key, meta.value])
     );
     snapshot.clustering = { ...(snapshot.queue?.clustering || {}) };
-    if (snapshot.features && typeof snapshot.features === 'object') {
+    if (snapshot.features && tof(snapshot.features) === 'object') {
       const features = { ...snapshot.features };
       for (const [key, value] of Object.entries(snapshot.features)) {
         const kebab = toKebabCase(key);
@@ -318,23 +316,23 @@ class ConfigManager {
   }
 
   getBonuses() {
-    return deepClone(this.config?.queue?.bonuses || {});
+    return clone(this.config?.queue?.bonuses || {});
   }
 
   getWeights() {
-    return deepClone(this.config?.queue?.weights || {});
+    return clone(this.config?.queue?.weights || {});
   }
 
   getClusteringConfig() {
-    return deepClone(this.config?.queue?.clustering || {});
+    return clone(this.config?.queue?.clustering || {});
   }
 
   getCoverageConfig() {
-    return deepClone(this.config?.coverage || {});
+    return clone(this.config?.coverage || {});
   }
 
   getFeatureFlags() {
-    return deepClone(this.config?.features || {});
+    return clone(this.config?.features || {});
   }
 
   isFeatureEnabled(featureName) {
@@ -358,11 +356,11 @@ class ConfigManager {
   // Update configuration programmatically (for UI)
   updateConfig(updates = {}) {
     const errors = [];
-    if (!updates || typeof updates !== 'object') {
+    if (!updates || tof(updates) !== 'object') {
       return { success: false, errors: ['Updates must be an object'] };
     }
 
-  let nextConfig = deepClone(this.config);
+  let nextConfig = clone(this.config);
 
     const applyBonusUpdate = (key, rawValue) => {
       const value = coerceNumber(rawValue);
@@ -419,7 +417,7 @@ class ConfigManager {
 
     if (updates.features) {
       for (const [key, rawValue] of Object.entries(updates.features)) {
-        if (typeof rawValue !== 'boolean') {
+        if (tof(rawValue) !== 'boolean') {
           errors.push(`Invalid feature flag ${key}: must be boolean`);
         } else {
           const normalizedKey = toCamelCase(key);
@@ -436,16 +434,16 @@ class ConfigManager {
       }
     }
 
-    if (updates.coverage && typeof updates.coverage === 'object') {
+    if (updates.coverage && tof(updates.coverage) === 'object') {
       nextConfig.coverage = deepMerge(nextConfig.coverage, updates.coverage);
     }
 
-    if (updates.queue && typeof updates.queue === 'object') {
+    if (updates.queue && tof(updates.queue) === 'object') {
       const { description, version } = updates.queue;
-      if (typeof description === 'string') {
+      if (tof(description) === 'string') {
         nextConfig.queue.description = description;
       }
-      if (typeof version === 'string') {
+      if (tof(version) === 'string') {
         nextConfig.queue.version = version;
       }
     }

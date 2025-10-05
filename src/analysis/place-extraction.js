@@ -1,5 +1,29 @@
 const { URL } = require('url');
 
+const DEFAULT_TOPIC_TOKENS = new Set([
+  'news', 'world', 'politics', 'sport', 'sports', 'culture', 'business', 'money',
+  'travel', 'opinion', 'technology', 'tech', 'science', 'health', 'environment',
+  'lifestyle', 'education', 'finance', 'economy', 'markets', 'analysis'
+]);
+
+const COUNTRY_CODE_SYNONYMS = {
+  US: ['usa', 'u.s', 'u.s.', 'u-s', 'america', 'american', 'united-states'],
+  GB: ['uk', 'u.k', 'u-k', 'britain', 'great-britain', 'united-kingdom'],
+  AU: ['aus', 'australia'],
+  CA: ['canada'],
+  NZ: ['nz', 'new-zealand'],
+  AE: ['uae', 'u.a.e', 'emirates', 'united-arab-emirates'],
+  EU: ['eu', 'european-union'],
+  RU: ['russia', 'russian-federation'],
+  CN: ['china', 'prc', 'people-s-republic-of-china', 'peoples-republic-of-china'],
+  IN: ['india', 'bharat'],
+  ZA: ['south-africa', 'sa'],
+  BR: ['brazil'],
+  JP: ['japan']
+};
+
+const MAX_HIERARCHY_DEPTH = 5;
+
 function normName(value) {
   return String(value || '')
     .normalize('NFD')
@@ -15,15 +39,202 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '');
 }
 
-function buildGazetteerMatchers(db) {
-  const nameMap = new Map();
-  const slugMap = new Map();
+function addToArrayMap(map, key, value) {
+  if (!key) return;
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+  map.get(key).push(value);
+}
+
+function ensurePlaceRecord(matchers, row) {
+  const id = row.place_id;
+  let record = matchers.placeIndex.get(id);
+  if (!record) {
+    record = {
+      id,
+      place_id: id,
+      kind: row.kind,
+      country_code: row.country_code || null,
+      countryCode: row.country_code || null,
+      population: Number(row.population) || 0,
+      names: new Set(),
+      slugs: new Set(),
+      synonyms: new Set(),
+      nameOrder: [],
+      canonicalSlug: null,
+      name: null
+    };
+    matchers.placeIndex.set(id, record);
+  }
+  return record;
+}
+
+function addNameToRecord(record, row) {
+  const name = String(row.name || '').trim();
+  if (!name) return;
+  record.names.add(name);
+  record.nameOrder.push(name);
+  if (!record.name) {
+    record.name = name;
+  }
+}
+
+function addSlugToRecord(record, matchers, value, source = 'name') {
+  const slug = slugify(value);
+  if (!slug) return;
+  record.slugs.add(slug);
+  addToArrayMap(matchers.slugMap, slug, record);
+  if (source === 'code') {
+    record.synonyms.add(slug);
+  }
+}
+
+function addNameKey(matchers, key, record) {
+  if (!key) return;
+  addToArrayMap(matchers.nameMap, key, record);
+}
+
+function finalizePlaceRecords(matchers) {
+  for (const record of matchers.placeIndex.values()) {
+    if (!record.name) {
+      const first = record.nameOrder[0] || null;
+      if (first) record.name = first;
+    }
+    if (!record.canonicalSlug && record.name) {
+      record.canonicalSlug = slugify(record.name);
+    }
+    if (!record.canonicalSlug) {
+      const firstSlug = record.slugs.values().next().value || null;
+      record.canonicalSlug = firstSlug;
+    }
+    if (record.canonicalSlug) {
+      record.synonyms.add(record.canonicalSlug);
+      record.slugs.add(record.canonicalSlug);
+    }
+
+    for (const slug of record.slugs) {
+      record.synonyms.add(slug);
+    }
+
+    const code = record.country_code;
+    if (code) {
+      record.synonyms.add(code.toLowerCase());
+      const custom = COUNTRY_CODE_SYNONYMS[code.toUpperCase()];
+      if (Array.isArray(custom)) {
+        for (const token of custom) {
+          const slug = slugify(token);
+          if (slug) record.synonyms.add(slug);
+        }
+      }
+    }
+
+    record.synonyms = Array.from(new Set(Array.from(record.synonyms).filter(Boolean)));
+
+    for (const synonym of record.synonyms) {
+      addToArrayMap(matchers.slugMap, synonym, record);
+    }
+  }
+}
+
+function buildHierarchyIndex(db, placeIndex) {
+  if (!db || typeof db.prepare !== 'function' || !placeIndex || placeIndex.size === 0) {
+    return {
+      parents: new Map(),
+      children: new Map(),
+      isAncestor: () => false
+    };
+  }
+
+  let rows = [];
+  try {
+    rows = db.prepare(`
+      SELECT parent_id, child_id,
+             COALESCE(relation, NULL) AS relation,
+             COALESCE(depth, NULL) AS depth
+        FROM place_hierarchy
+    `).all();
+  } catch (_) {
+    return {
+      parents: new Map(),
+      children: new Map(),
+      isAncestor: () => false
+    };
+  }
+
+  const parents = new Map();
+  const children = new Map();
+
+  for (const row of rows) {
+    const parentId = row.parent_id;
+    const childId = row.child_id;
+    if (!placeIndex.has(parentId) || !placeIndex.has(childId)) continue;
+    addToArrayMap(parents, childId, {
+      parentId,
+      relation: row.relation || null,
+      depth: Number(row.depth) || null
+    });
+    addToArrayMap(children, parentId, {
+      childId,
+      relation: row.relation || null,
+      depth: Number(row.depth) || null
+    });
+  }
+
+  const memo = new Map();
+
+  const isAncestor = (ancestorId, descendantId, maxDepth = MAX_HIERARCHY_DEPTH) => {
+    if (ancestorId === descendantId) return false;
+    const key = `${ancestorId}->${descendantId}`;
+    if (memo.has(key)) return memo.get(key);
+    let found = false;
+    const visited = new Set();
+    const queue = [{ id: descendantId, depth: 0 }];
+    while (queue.length) {
+      const { id, depth } = queue.shift();
+      if (depth >= maxDepth) continue;
+      const parentEntries = parents.get(id);
+      if (!parentEntries || !parentEntries.length) continue;
+      for (const entry of parentEntries) {
+        const pid = entry.parentId;
+        if (pid === ancestorId) {
+          found = true;
+          queue.length = 0;
+          break;
+        }
+        if (!visited.has(pid)) {
+          visited.add(pid);
+          queue.push({ id: pid, depth: depth + 1 });
+        }
+      }
+    }
+    memo.set(key, found);
+    return found;
+  };
+
+  return {
+    parents,
+    children,
+    isAncestor
+  };
+}
+
+function buildGazetteerMatchers(db, options = {}) {
+  if (!db || typeof db.prepare !== 'function') {
+    throw new Error('buildGazetteerMatchers requires a database handle with prepare()');
+  }
+
+  const matchers = {
+    nameMap: new Map(),
+    slugMap: new Map(),
+    placeIndex: new Map(),
+    topicTokens: options.topicTokens instanceof Set ? options.topicTokens : DEFAULT_TOPIC_TOKENS
+  };
 
   const TEST_FAST = process.env.TEST_FAST === '1' || process.env.TEST_FAST === 'true';
   const CITY_LIMIT = TEST_FAST ? 500 : 5000;
 
-  const countryRows = db
-    .prepare(`
+  const countryRows = db.prepare(`
       SELECT pn.name,
              COALESCE(pn.normalized, LOWER(pn.name)) AS norm,
              p.id AS place_id,
@@ -35,29 +246,17 @@ function buildGazetteerMatchers(db) {
        WHERE (pn.lang IS NULL OR pn.lang = 'en')
          AND pn.name_kind IN ('common', 'official', 'alias', 'endonym', 'exonym')
          AND p.kind IN ('country', 'region')
-    `)
-    .all();
+    `).all();
 
   for (const row of countryRows) {
+    const record = ensurePlaceRecord(matchers, row);
+    addNameToRecord(record, row);
     const key = normName(row.norm || row.name);
-    const record = {
-      place_id: row.place_id,
-      kind: row.kind,
-      country_code: row.country_code || null,
-      name: row.name,
-      population: row.population
-    };
-
-    if (!nameMap.has(key)) nameMap.set(key, []);
-    nameMap.get(key).push(record);
-
-    const slug = slugify(row.name);
-    if (!slugMap.has(slug)) slugMap.set(slug, []);
-    slugMap.get(slug).push(record);
+    addNameKey(matchers, key, record);
+    addSlugToRecord(record, matchers, row.name);
   }
 
-  const cityRows = db
-    .prepare(`
+  const cityRows = db.prepare(`
       SELECT pn.name,
              COALESCE(pn.normalized, LOWER(pn.name)) AS norm,
              p.id AS place_id,
@@ -71,28 +270,29 @@ function buildGazetteerMatchers(db) {
          AND p.kind = 'city'
     ORDER BY COALESCE(p.population, 0) DESC
        LIMIT ${CITY_LIMIT}
-    `)
-    .all();
+    `).all();
 
   for (const row of cityRows) {
+    const record = ensurePlaceRecord(matchers, row);
+    addNameToRecord(record, row);
     const key = normName(row.norm || row.name);
-    const record = {
-      place_id: row.place_id,
-      kind: row.kind,
-      country_code: row.country_code || null,
-      name: row.name,
-      population: row.population
-    };
-
-    if (!nameMap.has(key)) nameMap.set(key, []);
-    nameMap.get(key).push(record);
-
-    const slug = slugify(row.name);
-    if (!slugMap.has(slug)) slugMap.set(slug, []);
-    slugMap.get(slug).push(record);
+    addNameKey(matchers, key, record);
+    addSlugToRecord(record, matchers, row.name);
   }
 
-  return { nameMap, slugMap };
+  // Add country code synonyms
+  for (const record of matchers.placeIndex.values()) {
+    if (record.country_code) {
+      addSlugToRecord(record, matchers, record.country_code, 'code');
+    }
+  }
+
+  finalizePlaceRecords(matchers);
+
+  const dbHandle = db; // better-sqlite3 handle
+  matchers.hierarchy = buildHierarchyIndex(dbHandle, matchers.placeIndex);
+
+  return matchers;
 }
 
 function pickBestCandidate(candidates, ctx, isTitle) {
@@ -143,7 +343,7 @@ function extractGazetteerPlacesFromText(text, matchers, ctx, isTitle) {
   for (let i = 0; i < tokens.length; i++) {
     let matched = false;
     for (let windowSize = Math.min(maxWindow, tokens.length - i); windowSize >= 1; windowSize--) {
-      const phrase = tokens.slice(i, i + windowSize).map(t => t.word).join(' ');
+      const phrase = tokens.slice(i, i + windowSize).map((t) => t.word).join(' ');
       const key = normName(phrase);
       const candidates = matchers.nameMap.get(key);
       if (candidates && candidates.length) {
@@ -170,38 +370,355 @@ function extractGazetteerPlacesFromText(text, matchers, ctx, isTitle) {
   return results;
 }
 
-function extractPlacesFromUrl(url, matchers) {
-  const results = [];
-  if (!matchers) return results;
+function tokenizeSegment(segment) {
+  if (!segment) return [];
+  return segment
+    .split(/[\s_\.\-]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
 
-  try {
-    const parsed = new URL(url);
-    const segments = parsed.pathname.split('/').filter(Boolean);
+function deriveMatchType(record, normalizedToken) {
+  if (normalizedToken === record.canonicalSlug) return 'canonical';
+  if (record.slugs && record.slugs.has && record.slugs.has(normalizedToken)) return 'alias';
+  if (record.slug && normalizedToken === record.slug) return 'alias';
+  if (record.country_code && normalizedToken === record.country_code.toLowerCase()) return 'country-code';
+  if (record.synonyms && record.synonyms.includes && record.synonyms.includes(normalizedToken)) return 'synonym';
+  return 'synonym';
+}
 
-    for (const segment of segments) {
-      const parts = segment.split('-');
-      const candidates = [segment, ...parts];
+function scoreMatch(record, matchType, source) {
+  let score;
+  switch (matchType) {
+    case 'canonical':
+      score = 1.0;
+      break;
+    case 'alias':
+      score = 0.95;
+      break;
+    case 'country-code':
+      score = 0.9;
+      break;
+    default:
+      score = 0.85;
+      break;
+  }
+  if (source === 'token') {
+    score -= 0.05;
+  }
+  const population = Number(record.population || 0);
+  if (population > 0) {
+    score += Math.min(0.1, Math.log10(population + 1) * 0.02);
+  }
+  return Math.min(1, Math.max(0.2, score));
+}
 
-      for (const part of candidates) {
-        const slug = slugify(part);
-        if (!slug) continue;
-        const records = matchers.slugMap.get(slug);
-        if (records && records.length) {
-          const record = records[0];
-          results.push({
-            name: record.name,
-            kind: record.kind,
-            country_code: record.country_code,
-            place_id: record.place_id
-          });
-        }
-      }
+function toPublicPlace(record) {
+  return {
+    id: record.id,
+    place_id: record.place_id,
+    name: record.name,
+    kind: record.kind,
+    country_code: record.country_code,
+    countryCode: record.country_code,
+    slug: record.canonicalSlug,
+    canonicalSlug: record.canonicalSlug,
+    population: record.population
+  };
+}
+
+function analyzeSegment(segment, segmentIndex, matchers) {
+  const slugMap = matchers?.slugMap || new Map();
+  const tokens = tokenizeSegment(segment);
+  const placeMatches = [];
+  const usedTokens = new Set();
+
+  const candidateEntries = [];
+  const segmentSlug = slugify(segment);
+  if (segmentSlug) {
+    candidateEntries.push({ token: segment, normalized: segmentSlug, source: 'segment' });
+  }
+  for (const token of tokens) {
+    const slug = slugify(token);
+    if (slug) {
+      candidateEntries.push({ token, normalized: slug, source: 'token' });
     }
-  } catch (_) {
-    // ignore URL parse failures
   }
 
-  return results;
+  for (const candidate of candidateEntries) {
+    const records = slugMap.get(candidate.normalized);
+    if (!records || !records.length) continue;
+    for (const record of records) {
+      const matchType = deriveMatchType(record, candidate.normalized);
+      const score = scoreMatch(record, matchType, candidate.source);
+      const match = {
+        placeId: record.id,
+        place: toPublicPlace(record),
+        segmentIndex,
+        segment,
+        token: candidate.token,
+        normalizedToken: candidate.normalized,
+        matchType,
+        score,
+        source: candidate.source
+      };
+      placeMatches.push(match);
+      usedTokens.add(candidate.normalized);
+    }
+  }
+
+  const normalizedTokens = tokens.map((token) => slugify(token)).filter(Boolean);
+  const topicTokens = [];
+  const recognizedTopics = [];
+  for (let i = 0; i < normalizedTokens.length; i++) {
+    const normalized = normalizedTokens[i];
+    if (usedTokens.has(normalized)) continue;
+    const original = tokens[i];
+    topicTokens.push(original);
+    const topicNormalized = normalized;
+    if (matchers?.topicTokens?.has(topicNormalized) || DEFAULT_TOPIC_TOKENS.has(topicNormalized)) {
+      recognizedTopics.push(original);
+    }
+  }
+
+  return {
+    segment,
+    segmentIndex,
+    tokens,
+    normalizedTokens,
+    placeMatches,
+    topicTokens,
+    recognizedTopics
+  };
+}
+
+function cloneMatch(match) {
+  return {
+    placeId: match.placeId,
+    place: { ...match.place },
+    segmentIndex: match.segmentIndex,
+    segment: match.segment,
+    token: match.token,
+    normalizedToken: match.normalizedToken,
+    matchType: match.matchType,
+    score: match.score,
+    source: match.source
+  };
+}
+
+function chainKey(chain) {
+  return chain.places.map((match) => `${match.placeId}@${match.segmentIndex}:${match.normalizedToken}`).join('>');
+}
+
+function isMatchCompatible(prevMatch, nextMatch, hierarchy) {
+  if (prevMatch.placeId === nextMatch.placeId) return false;
+  if (nextMatch.segmentIndex < prevMatch.segmentIndex) return false;
+  if (!hierarchy || typeof hierarchy.isAncestor !== 'function') {
+    return prevMatch.segmentIndex !== nextMatch.segmentIndex;
+  }
+  return hierarchy.isAncestor(prevMatch.placeId, nextMatch.placeId);
+}
+
+function buildChains(segmentAnalyses, matchers) {
+  const hierarchy = matchers?.hierarchy || null;
+  if (!segmentAnalyses || !segmentAnalyses.length) return [];
+
+  const matchesPerSegment = segmentAnalyses.map((analysis) => analysis.placeMatches || []);
+  const chains = [];
+
+  for (let index = 0; index < matchesPerSegment.length; index++) {
+    const matches = matchesPerSegment[index];
+    for (const match of matches) {
+      let bestPrevChain = null;
+      for (let prevIdx = index - 1; prevIdx >= 0; prevIdx--) {
+        const prevMatches = matchesPerSegment[prevIdx];
+        for (const prevMatch of prevMatches) {
+          if (!isMatchCompatible(prevMatch, match, hierarchy)) continue;
+          const prevChain = prevMatch._bestChain;
+          if (!prevChain) continue;
+          const candidateScore = prevChain.score + match.score + 0.15;
+          if (!bestPrevChain || candidateScore > bestPrevChain.score) {
+            bestPrevChain = {
+              places: [...prevChain.places, match],
+              score: candidateScore
+            };
+          }
+        }
+      }
+
+      if (!bestPrevChain) {
+        bestPrevChain = {
+          places: [match],
+          score: match.score + 0.01 * match.segmentIndex
+        };
+      }
+
+      match._bestChain = bestPrevChain;
+      chains.push(bestPrevChain);
+    }
+  }
+
+  const uniqueChains = [];
+  const seen = new Set();
+  for (const chain of chains) {
+    const key = chainKey(chain);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueChains.push(chain);
+  }
+  return uniqueChains;
+}
+
+function chooseBestChain(chains) {
+  if (!chains || !chains.length) return null;
+  return chains.reduce((best, chain) => {
+    if (!best) return chain;
+    const bestLen = best.places.length;
+    const chainLen = chain.places.length;
+    if (chainLen > bestLen) return chain;
+    if (chainLen === bestLen && chain.score > best.score) return chain;
+    if (chainLen === bestLen && chain.score === best.score) {
+      const bestSpan = best.places[bestLen - 1].segmentIndex - best.places[0].segmentIndex;
+      const chainSpan = chain.places[chainLen - 1].segmentIndex - chain.places[0].segmentIndex;
+      if (chainSpan < bestSpan) return chain;
+    }
+    return best;
+  }, null);
+}
+
+function collectTopics(segmentAnalyses, bestChain) {
+  const recognized = new Set();
+  const all = new Set();
+  const perSegment = segmentAnalyses.map((analysis) => ({
+    segment: analysis.segment,
+    segmentIndex: analysis.segmentIndex,
+    topics: analysis.topicTokens.slice(),
+    recognized: analysis.recognizedTopics.slice()
+  }));
+
+  for (const analysis of segmentAnalyses) {
+    for (const token of analysis.topicTokens) {
+      all.add(token);
+    }
+    for (const token of analysis.recognizedTopics) {
+      recognized.add(token);
+    }
+  }
+
+  const bestIndices = new Set();
+  if (bestChain && Array.isArray(bestChain.places)) {
+    for (const match of bestChain.places) {
+      bestIndices.add(match.segmentIndex);
+    }
+  }
+
+  const firstPlaceIdx = bestChain?.places?.[0]?.segmentIndex ?? Infinity;
+  const lastPlaceIdx = bestChain?.places?.[bestChain.places.length - 1]?.segmentIndex ?? -1;
+  const leading = [];
+  const trailing = [];
+
+  for (const analysis of segmentAnalyses) {
+    const isPlaceSegment = bestIndices.has(analysis.segmentIndex);
+    if (!isPlaceSegment && analysis.segmentIndex < firstPlaceIdx) {
+      leading.push(...(analysis.recognizedTopics.length ? analysis.recognizedTopics : analysis.topicTokens));
+    } else if (!isPlaceSegment && analysis.segmentIndex > lastPlaceIdx) {
+      trailing.push(...(analysis.recognizedTopics.length ? analysis.recognizedTopics : analysis.topicTokens));
+    }
+  }
+
+  return {
+    all: Array.from(all),
+    recognized: Array.from(recognized),
+    segments: perSegment,
+    leading,
+    trailing
+  };
+}
+
+function cleanupMatchArtifacts(segmentAnalyses) {
+  for (const analysis of segmentAnalyses) {
+    for (const match of analysis.placeMatches) {
+      delete match._bestChain;
+    }
+  }
+}
+
+function resolveUrlPlaces(url, matchers, options = {}) {
+  if (!matchers) {
+    return {
+      matches: [],
+      segments: [],
+      chains: [],
+      bestChain: null,
+      topics: { all: [], recognized: [], segments: [], leading: [], trailing: [] }
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (error) {
+    return {
+      matches: [],
+      segments: [],
+      chains: [],
+      bestChain: null,
+      topics: { all: [], recognized: [], segments: [], leading: [], trailing: [] },
+      error: error?.message || String(error)
+    };
+  }
+
+  const segmentsRaw = parsed.pathname.split('/').filter(Boolean);
+  const segmentAnalyses = segmentsRaw.map((segment, idx) => analyzeSegment(segment, idx, matchers));
+
+  const chains = buildChains(segmentAnalyses, matchers);
+  const bestChain = chooseBestChain(chains);
+  const topics = collectTopics(segmentAnalyses, bestChain);
+
+  cleanupMatchArtifacts(segmentAnalyses);
+
+  const chainedKeys = new Map();
+  const sanitizedChains = chains.map((chain) => {
+    const key = chainKey(chain);
+    chainedKeys.set(key, true);
+    return {
+      key,
+      places: chain.places.map(cloneMatch),
+      score: Number(chain.score.toFixed(4))
+    };
+  });
+
+  const bestKey = bestChain ? chainKey(bestChain) : null;
+  let sanitizedBestChain = null;
+  if (bestKey) {
+    sanitizedBestChain = sanitizedChains.find((chain) => chain.key === bestKey) || null;
+  }
+
+  const sanitizedSegments = segmentAnalyses.map((analysis) => ({
+    segment: analysis.segment,
+    segmentIndex: analysis.segmentIndex,
+    tokens: analysis.tokens.slice(),
+    placeMatches: analysis.placeMatches.map(cloneMatch),
+    topicTokens: analysis.topicTokens.slice(),
+    recognizedTopics: analysis.recognizedTopics.slice()
+  }));
+
+  const allMatches = sanitizedSegments.flatMap((analysis) => analysis.placeMatches);
+
+  const outputChains = sanitizedChains.map(({ key, ...rest }) => rest);
+  const outputBestChain = sanitizedBestChain ? { places: sanitizedBestChain.places, score: sanitizedBestChain.score } : null;
+
+  return {
+    matches: allMatches,
+    segments: sanitizedSegments,
+    chains: outputChains,
+    bestChain: outputBestChain,
+    topics
+  };
+}
+
+function extractPlacesFromUrl(url, matchers, options = {}) {
+  return resolveUrlPlaces(url, matchers, options);
 }
 
 function dedupeDetections(detections) {
@@ -282,6 +799,7 @@ module.exports = {
   buildGazetteerMatchers,
   pickBestCandidate,
   extractGazetteerPlacesFromText,
+  resolveUrlPlaces,
   extractPlacesFromUrl,
   dedupeDetections,
   inferContext

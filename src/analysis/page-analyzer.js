@@ -37,10 +37,24 @@ function analyzePage({
 
   const places = Array.isArray(analysis.findings?.places) ? analysis.findings.places : [];
   const latestWordCount = extractWordCount(analysis);
+  const urlPlaceAnalysis = analysis.meta?.urlPlaceAnalysis || null;
+  const urlPlaceMatches = (() => {
+    if (!urlPlaceAnalysis) return [];
+    const chain = urlPlaceAnalysis.bestChain?.places && urlPlaceAnalysis.bestChain.places.length
+      ? urlPlaceAnalysis.bestChain.places
+      : urlPlaceAnalysis.matches || [];
+    return chain.map((match) => ({
+      name: match.place?.name || null,
+      kind: match.place?.kind || null,
+      place_id: match.place?.place_id || match.place?.id || null,
+      country_code: match.place?.country_code || match.place?.countryCode || null
+    })).filter((entry) => entry.name);
+  })();
 
   const hubCandidate = detectPlaceHub({
     url,
-    urlPlaces: gazetteer ? extractPlacesFromUrl(url, gazetteer) : [],
+    urlPlaceAnalysis,
+    urlPlaces: urlPlaceMatches,
     analysisPlaces: places,
     section,
     fetchClassification: fetchRow?.classification || null,
@@ -82,6 +96,23 @@ function buildAnalysis({
     meta: {}
   };
 
+  let urlPlaceAnalysis = null;
+  if (gazetteer) {
+    try {
+      urlPlaceAnalysis = extractPlacesFromUrl(url, gazetteer);
+    } catch (error) {
+      urlPlaceAnalysis = {
+        matches: [],
+        segments: [],
+        chains: [],
+        bestChain: null,
+        topics: { all: [], recognized: [], segments: [], leading: [], trailing: [] },
+        error: error?.message || String(error)
+      };
+    }
+    base.meta.urlPlaceAnalysis = urlPlaceAnalysis;
+  }
+
   if (articleRow && articleRow.text) {
     base.kind = 'article';
     base.meta.wordCount = articleRow.word_count ?? null;
@@ -120,8 +151,12 @@ function buildAnalysis({
         }
       }
 
-      if (gazetteer) {
-        for (const place of extractPlacesFromUrl(url, gazetteer)) {
+      if (urlPlaceAnalysis) {
+        const chain = urlPlaceAnalysis.bestChain?.places && urlPlaceAnalysis.bestChain.places.length
+          ? urlPlaceAnalysis.bestChain.places
+          : urlPlaceAnalysis.matches || [];
+        for (const match of chain) {
+          const place = match.place || match;
           detections.push({
             place: place.name,
             place_kind: place.kind,

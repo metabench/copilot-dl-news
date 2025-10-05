@@ -3,6 +3,8 @@
  * Keeping these in one place makes the main dashboard controller easier to scan.
  */
 
+import { tof } from 'lang-tools';
+
 /**
  * Turn a numeric-looking value into a locale-aware string.
  * Falls back to the original value when it cannot be parsed.
@@ -51,7 +53,7 @@ export function formatRelativeTime(value) {
   if (!value) {
     return 'just now';
   }
-  const ts = typeof value === 'number' ? value : Date.parse(value);
+  const ts = tof(value) === 'number' ? value : Date.parse(value);
   if (!Number.isFinite(ts)) {
     return '—';
   }

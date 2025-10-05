@@ -1,10 +1,26 @@
 const { analyzePage } = require('../page-analyzer');
 
 function createGazetteer() {
-  const record = { name: 'Iceland', kind: 'country', country_code: 'IS', place_id: 1, population: 366000 };
+  const record = {
+    id: 1,
+    place_id: 1,
+    name: 'Iceland',
+    kind: 'country',
+    country_code: 'IS',
+    countryCode: 'IS',
+    canonicalSlug: 'iceland',
+    population: 366000,
+    slugs: new Set(['iceland']),
+    synonyms: ['iceland']
+  };
   return {
-    nameMap: new Map([[ 'iceland', [record] ]]),
-    slugMap: new Map([[ 'iceland', [record] ]])
+    nameMap: new Map([['iceland', [record]]]),
+    slugMap: new Map([['iceland', [record]]]),
+    placeIndex: new Map([[1, record]]),
+    topicTokens: new Set(),
+    hierarchy: {
+      isAncestor: () => false
+    }
   };
 }
 

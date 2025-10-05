@@ -58,6 +58,7 @@ class QueueManager {
     this.emitEnhancedQueueEvent = opts.emitEnhancedQueueEvent || (() => {});
     this.computeEnhancedPriority = opts.computeEnhancedPriority || (() => ({ priority: 0, prioritySource: 'base' }));
     this.jobIdProvider = opts.jobIdProvider || (() => null);
+    this.onRateLimitDeferred = typeof opts.onRateLimitDeferred === 'function' ? opts.onRateLimitDeferred : null;
 
     this.discoveryQueueType = 'discovery';
     this.acquisitionQueueType = 'acquisition';
@@ -240,6 +241,15 @@ class QueueManager {
     if (item._heatmapInfo) this._applyHeatmapDelta(item._heatmapInfo, 1);
   }
 
+  peek() {
+    const queueOrder = this._chooseQueueOrder();
+    for (const queueType of queueOrder) {
+      const candidate = this._peekFromQueueType(queueType);
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+
   clear() {
     if (this.usePriorityQueue && this.priorityQueues) {
       this.priorityQueues[this.discoveryQueueType].data.length = 0;
@@ -271,6 +281,15 @@ class QueueManager {
   _queueLength(queueType) {
     if (this.usePriorityQueue) return this.priorityQueues[queueType].size();
     return this.fifoQueues[queueType].length;
+  }
+
+  _peekFromQueueType(queueType) {
+    if (this.usePriorityQueue) {
+      const queue = this.priorityQueues?.[queueType];
+      return queue && queue.data.length ? queue.data[0] : null;
+    }
+    const queue = this.fifoQueues?.[queueType];
+    return queue && queue.length ? queue[0] : null;
   }
 
   _releaseQueueKey(item) {
@@ -340,6 +359,9 @@ class QueueManager {
             candidate = item;
             break;
           }
+          if (this.onRateLimitDeferred) {
+            try { this.onRateLimitDeferred(item, { host }); } catch (_) {}
+          }
           const wakeTime = earliest > now ? earliest : now + 1000;
           item.nextEligibleAt = wakeTime;
           minWake = Math.min(minWake, wakeTime);
@@ -388,6 +410,9 @@ class QueueManager {
           context = { forceCache: true, cachedPage: cached, rateLimitedHost: host };
           candidate = item;
           break;
+        }
+        if (this.onRateLimitDeferred) {
+          try { this.onRateLimitDeferred(item, { host }); } catch (_) {}
         }
         const wakeTime = earliest > now ? earliest : now + 1000;
         item.deferredUntil = wakeTime;

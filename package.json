@@ -16,9 +16,10 @@
     "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
     "export:gazetteer": "node src/tools/export-gazetteer.js",
     "validate:gazetteer": "node src/tools/validate-gazetteer.js",
-  "sass:build": "sass src/ui/express/public/styles/crawler.scss:src/ui/express/public/crawler.css src/ui/express/public/styles/ui.scss:src/ui/express/public/ui.css src/ui/express/public/styles/ui-dark.scss:src/ui/express/public/ui-dark.css --no-source-map",
-  "sass:watch": "sass src/ui/express/public/styles/crawler.scss:src/ui/express/public/crawler.css src/ui/express/public/styles/ui.scss:src/ui/express/public/ui.css src/ui/express/public/styles/ui-dark.scss:src/ui/express/public/ui-dark.css --no-source-map --watch",
-  "ui:build": "node scripts/build-ui.js"
+    "sass:build": "sass src/ui/express/public/styles/crawler.scss:src/ui/express/public/crawler.css src/ui/express/public/styles/ui.scss:src/ui/express/public/ui.css src/ui/express/public/styles/ui-dark.scss:src/ui/express/public/ui-dark.css --no-source-map",
+    "sass:watch": "sass src/ui/express/public/styles/crawler.scss:src/ui/express/public/crawler.css src/ui/express/public/styles/ui.scss:src/ui/express/public/ui.css src/ui/express/public/styles/ui-dark.scss:src/ui/express/public/ui-dark.css --no-source-map --watch",
+    "ui:build": "node scripts/build-ui.js",
+    "benchmarks": "node tools/benchmarks/run.js"
   },
   "keywords": [
     "crawler",
@@ -36,6 +37,7 @@
     "express": "^5.0.0",
     "fast-xml-parser": "^4.3.6",
     "jsdom": "^24.0.0",
+    "lang-tools": "^0.0.36",
     "node-fetch": "^3.3.2",
     "robots-parser": "^3.0.1"
   },
@@ -43,10 +45,10 @@
     "@babel/core": "^7.23.9",
     "@babel/preset-env": "^7.23.9",
     "babel-jest": "^29.7.0",
+    "esbuild": "^0.24.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-  "esbuild": "^0.24.0",
-  "puppeteer": "^22.11.0",
+    "puppeteer": "^22.11.0",
     "sass": "^1.93.2",
     "sharp": "^0.34.4",
     "supertest": "^6.3.4"

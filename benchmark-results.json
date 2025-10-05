@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "generatedAt": "2025-10-05T08:44:22.119Z",
+    "hostname": "Predator4080",
+    "platform": "win32",
+    "dbPath": "C:\\Users\\james\\Documents\\repos\\copilot-dl-news\\data\\news.db",
+    "iterations": 5
+  },
+  "sections": [
+    {
+      "name": "direct-db",
+      "benchmarks": [
+        {
+          "name": "count-countries",
+          "stats": {
+            "count": 5,
+            "minMs": 0.0125,
+            "maxMs": 0.1559,
+            "meanMs": 0.05678000000000001,
+            "medianMs": 0.0206
+          }
+        },
+        {
+          "name": "list-canonical-names",
+          "stats": {
+            "count": 5,
+            "minMs": 0.0174,
+            "maxMs": 0.3449,
+            "meanMs": 0.11265999999999998,
+            "medianMs": 0.0594
+          }
+        }
+      ]
+    },
+    {
+      "name": "db-modules",
+      "benchmarks": [
+        {
+          "name": "get-country-by-code",
+          "stats": {
+            "count": 5,
+            "minMs": 0.0285,
+            "maxMs": 14.0668,
+            "meanMs": 2.84012,
+            "medianMs": 0.0325
+          }
+        },
+        {
+          "name": "list-top-cities",
+          "stats": {
+            "count": 5,
+            "minMs": 0.0293,
+            "maxMs": 0.1636,
+            "meanMs": 0.058539999999999995,
+            "medianMs": 0.0309
+          }
+        },
+        {
+          "name": "fetch-country-minimal-data",
+          "stats": {
+            "count": 5,
+            "minMs": 0.0017,
+            "maxMs": 21.3761,
+            "meanMs": 4.28242,
+            "medianMs": 0.0034
+          }
+        }
+      ]
+    },
+    {
+      "name": "ssr-routes",
+      "benchmarks": [
+        {
+          "name": "gazetteer-country-minimal",
+          "stats": {
+            "count": 3,
+            "minMs": 3.1317,
+            "maxMs": 4.3506,
+            "meanMs": 3.6761666666666666,
+            "medianMs": 3.5462
+          }
+        }
+      ]
+    }
+  ]
+}

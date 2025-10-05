@@ -19,7 +19,7 @@ A focused crawler for news sites: detects navigation, finds articles, and saves 
 - Queue event tracking (enqueued / dequeued / retry / drop) with real-time `queue` SSE events & SSR queue pages
 - Intelligent crawl (planner) that seeds hubs, detects expectation gaps (Problems) and achievements (Milestones)
 - Problems & Milestones history pages with keyset pagination
-- Crawl type presets (basic / sitemap-only / basic-with-sitemap / intelligent) via `/api/crawl-types`
+- Crawl type presets (basic / sitemap-only / basic-with-sitemap / intelligent / discover-structure) via `/api/crawl-types`
 - Gazetteer-enhanced page analysis (places + hub detection) & per-place hub inference
 - Observability: Prometheus `/metrics`, health endpoints, and a system health strip (CPU/memory and SQLite WAL info)
 
@@ -188,7 +188,7 @@ By default only one active crawl is allowed. Set `UI_ALLOW_MULTI_JOBS=1` before 
 
 ### Crawl types
 
-The server seeds a small catalog (`basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`) exposed via `GET /api/crawl-types`. Selecting a type in the UI sets baseline flags; manual overrides (checkboxes / inputs) still apply after selection. Choosing `intelligent` enables the planner pipeline, hub seeding, and additional coverage insights in the dashboard.
+The server seeds a small catalog (`basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`, `discover-structure`) exposed via `GET /api/crawl-types`. Selecting a type in the UI sets baseline flags; manual overrides (checkboxes / inputs) still apply after selection. Choosing `intelligent` enables the planner pipeline, hub seeding, and additional coverage insights in the dashboard. The `discover-structure` preset reuses the same planner stages but suppresses article fetch/persistence, focusing the crawl on mapping navigation hubs, history archives, and URL patterns while keeping network usage minimal. Structure-only runs now auto-scale to four concurrent workers and keep the priority queue enabled so nav scaffolding is mapped quickly; the dashboard surfaces a dedicated **Structure discovery** panel (navigation pages mapped, skipped article counts, top path prefixes, and freshness) so it’s easy to track progress without scanning raw logs.
 
 ### Page analysis & gazetteer
 

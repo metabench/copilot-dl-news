@@ -13,6 +13,7 @@ class CrawlerEvents {
       getFeatures,
       getEnhancedDbAdapter,
       getProblemClusteringService,
+      getProblemResolutionService,
       getJobId,
       plannerScope,
       isPlannerEnabled,
@@ -38,21 +39,22 @@ class CrawlerEvents {
     this.getFeatures = typeof getFeatures === 'function' ? getFeatures : () => ({ problemClustering: false });
     this.getEnhancedDbAdapter = typeof getEnhancedDbAdapter === 'function' ? getEnhancedDbAdapter : () => null;
     this.getProblemClusteringService = typeof getProblemClusteringService === 'function' ? getProblemClusteringService : () => null;
+    this.getProblemResolutionService = typeof getProblemResolutionService === 'function' ? getProblemResolutionService : () => null;
     this.getJobId = typeof getJobId === 'function' ? getJobId : () => null;
     this.plannerScope = typeof plannerScope === 'function' ? plannerScope : () => this.domain;
     this.isPlannerEnabled = typeof isPlannerEnabled === 'function' ? isPlannerEnabled : () => false;
     this.getGoalSummary = typeof getGoalSummary === 'function' ? getGoalSummary : () => [];
     this.getQueueHeatmap = typeof getQueueHeatmap === 'function' ? getQueueHeatmap : () => null;
     this.getCoverageSummary = typeof getCoverageSummary === 'function' ? getCoverageSummary : () => null;
-  this.logger = logger || console;
-  this.isPausedFn = typeof isPaused === 'function' ? isPaused : () => false;
+    this.logger = logger || console;
+    this.isPausedFn = typeof isPaused === 'function' ? isPaused : () => false;
 
     this._lastProgressEmitAt = 0;
     this.problemCounters = new Map();
     this.problemSamples = new Map();
     this.emittedMilestones = new Set();
-  this.timelineEntries = [];
-  this.timelineMaxEntries = typeof options.timelineMaxEntries === 'number' && options.timelineMaxEntries > 0 ? options.timelineMaxEntries : 24;
+    this.timelineEntries = [];
+    this.timelineMaxEntries = typeof options.timelineMaxEntries === 'number' && options.timelineMaxEntries > 0 ? options.timelineMaxEntries : 24;
     this._plannerStageStart = new Map();
     this._timelineSequence = 0;
     this._startTimestamp = Date.now();
@@ -253,6 +255,27 @@ class CrawlerEvents {
           }
         } catch (error) {
           this._log('warn', 'Problem clustering failed:', error && error.message ? error.message : error);
+        }
+      }
+    }
+
+    if (features.problemResolution && problem && problem.kind === 'missing-hub') {
+      const resolver = this.getProblemResolutionService();
+      if (resolver && typeof resolver.resolveMissingHub === 'function') {
+        const scopeHost = problem.scope || problem.domain || null;
+        if (scopeHost) {
+          try {
+            const details = problem.details || {};
+            resolver.resolveMissingHub({
+              jobId: this.getJobId(),
+              host: scopeHost,
+              sourceUrl: details.sourceUrl || details.url || problem.target || null,
+              urlPlaceAnalysis: details.urlPlaceAnalysis || null,
+              hubCandidate: details.hubCandidate || null
+            });
+          } catch (error) {
+            this._log('warn', 'Problem resolution failed:', error && error.message ? error.message : error);
+          }
         }
       }
     }

@@ -64,6 +64,9 @@ const {
   createGazetteerPlaceApiRouter
 } = require('./routes/api.gazetteer.place');
 const {
+  createGazetteerProgressRouter
+} = require('./routes/api.gazetteer.progress');
+const {
   createGazetteerRouter
 } = require('./routes/ssr.gazetteer');
 const {
@@ -72,6 +75,15 @@ const {
 const {
   createGazetteerPlaceRouter
 } = require('./routes/ssr.gazetteer.place');
+const {
+  createGazetteerProgressSsrRouter
+} = require('./routes/ssr.gazetteer.progress');
+const {
+  createBootstrapDbApiRouter
+} = require('./routes/api.bootstrapDb');
+const {
+  createBootstrapDbRouter
+} = require('./routes/ssr.bootstrapDb');
 const {
   createGazetteerCountriesRouter
 } = require('./routes/ssr.gazetteer.countries');
@@ -91,8 +103,17 @@ const {
   createMilestonesSsrRouter
 } = require('./routes/ssr.milestones');
 const {
+  createBenchmarksApiRouter
+} = require('./routes/api.benchmarks');
+const {
+  createBenchmarksSsrRouter
+} = require('./routes/ssr.benchmarks');
+const {
   renderNav
 } = require('./services/navigation');
+const {
+  fetchCountryMinimalData
+} = require('./data/gazetteerCountry');
 const {
   createWritableDbAccessor
 } = require('./db/writableDb');
@@ -118,6 +139,12 @@ const {
 const {
   createMetricsFormatter
 } = require('./services/metricsFormatter');
+const {
+  BenchmarkManager
+} = require('./services/benchmarkManager');
+const {
+  GazetteerPriorityScheduler
+} = require('../../crawler/gazetteer/GazetteerPriorityScheduler');
 const {
   createRequestTimingMiddleware
 } = require('./middleware/requestTiming');
@@ -185,6 +212,7 @@ function createApp(options = {}) {
   const configManager = options.configManager || new ConfigManager(priorityConfigPath, {
     watch: shouldWatchConfig
   });
+  const bootstrapDatasetPath = options.bootstrapDatasetPath || env.UI_BOOTSTRAP_DATASET_PATH || env.UI_BOOTSTRAP_DATASET || null;
   app.locals.configManager = configManager;
   if (tempDbCleanup) {
     app.locals._cleanupTempDb = tempDbCleanup;
@@ -265,6 +293,13 @@ function createApp(options = {}) {
   app.locals.analysisProgress = analysisProgress;
   app.locals.crawlerManager = crawlerManager;
 
+  // Initialize benchmark manager
+  const benchmarkManager = options.benchmarkManager || new BenchmarkManager({
+    repoRoot,
+    logger: verbose ? console : { error: console.error, warn: () => {}, log: () => {} }
+  });
+  app.locals.benchmarkManager = benchmarkManager;
+
   function startTrace(req, tag = 'gazetteer') {
     if (!verbose) {
       const noop = () => {};
@@ -299,6 +334,25 @@ function createApp(options = {}) {
     verbose,
     logger: console
   });
+  
+  // Alias for read-only access (same connection can be used for reading)
+  const getDbRO = getDbRW;
+  
+  // Initialize gazetteer priority scheduler
+  let gazetteerScheduler = null;
+  try {
+    const db = getDbRO();
+    gazetteerScheduler = new GazetteerPriorityScheduler({ 
+      db, 
+      logger: verbose ? console : { error: console.error, warn: () => {}, log: () => {} }
+    });
+    app.locals.gazetteerScheduler = gazetteerScheduler;
+  } catch (err) {
+    // Only log in verbose mode or non-test environments to reduce test noise
+    if (verbose || !process.env.JEST_WORKER_ID) {
+      console.error('[server] Failed to initialize gazetteerScheduler:', err.message);
+    }
+  }
 
   app.use(express.json());
   // Enable gzip compression for most responses, but explicitly skip SSE (/events)
@@ -440,6 +494,14 @@ function createApp(options = {}) {
     getDbRW: getDbRW,
     renderNav
   }));
+  // Mount Benchmark APIs and SSR pages
+  app.use(createBenchmarksApiRouter({
+    benchmarkManager
+  }));
+  app.use(createBenchmarksSsrRouter({
+    benchmarkManager,
+    renderNav
+  }));
   // Mount Problems APIs (read-only)
   app.use(createProblemsApiRouter({
     getDbRW: getDbRW
@@ -458,6 +520,17 @@ function createApp(options = {}) {
   }));
   app.use(createGazetteerPlaceApiRouter({
     urlsDbPath
+  }));
+  // Mount gazetteer progress routes
+  if (gazetteerScheduler) {
+    app.use(createGazetteerProgressRouter({ 
+      getDbRO, 
+      gazetteerScheduler 
+    }));
+  }
+  app.use(createBootstrapDbApiRouter({
+    getDbRW: getDbRW,
+    datasetPath: bootstrapDatasetPath
   }));
   // Queues SSR pages (list, detail, latest redirect)
   app.use(createQueuesSsrRouter({
@@ -479,6 +552,19 @@ function createApp(options = {}) {
     urlsDbPath,
     startTrace
   }));
+  // Mount gazetteer progress SSR route
+  if (gazetteerScheduler) {
+    app.use(createGazetteerProgressSsrRouter({
+      getDbRO,
+      renderNav,
+      gazetteerScheduler
+    }));
+  }
+  app.use(createBootstrapDbRouter({
+    getDbRW: getDbRW,
+    renderNav,
+    datasetPath: bootstrapDatasetPath
+  }));
   app.use(createGazetteerCountriesRouter({
     urlsDbPath,
     startTrace,
@@ -488,6 +574,17 @@ function createApp(options = {}) {
     urlsDbPath,
     startTrace
   }));
+
+  if (!process.env.UI_SKIP_GAZETTEER_WARMUP) {
+    const warmupCode = process.env.UI_GAZETTEER_WARMUP_CODE || 'ID';
+    try {
+      if (urlsDbPath && fs.existsSync(urlsDbPath)) {
+        fetchCountryMinimalData({ dbPath: urlsDbPath, countryCode: warmupCode });
+      }
+    } catch (_) {
+      // warmup best-effort only
+    }
+  }
   app.use(createGazetteerKindRouter({ urlsDbPath, startTrace }));
 
   app.use(createMilestonesSsrRouter({ getDbRW: getDbRW, renderNav }));
@@ -544,19 +641,73 @@ function createApp(options = {}) {
 
   return app;
 }
+
+/**
+ * Parse command-line arguments for server configuration
+ */
+function parseServerArgs(argv = process.argv) {
+  const args = {
+    detached: false,
+    autoShutdownMs: null
+  };
+  
+  for (let i = 2; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--detached') {
+      args.detached = true;
+    } else if (arg === '--auto-shutdown') {
+      const nextArg = argv[i + 1];
+      if (nextArg) {
+        const ms = parseInt(nextArg, 10);
+        if (Number.isFinite(ms) && ms > 0) {
+          args.autoShutdownMs = ms;
+          i++; // skip next arg since we consumed it
+        }
+      }
+    } else if (arg === '--auto-shutdown-seconds') {
+      const nextArg = argv[i + 1];
+      if (nextArg) {
+        const seconds = parseInt(nextArg, 10);
+        if (Number.isFinite(seconds) && seconds > 0) {
+          args.autoShutdownMs = seconds * 1000;
+          i++; // skip next arg
+        }
+      }
+    }
+  }
+  
+  return args;
+}
+
 function startServer(appOptions = {}) {
   const app = createApp(appOptions);
-  return bootstrapServer(app, {
+  const serverArgs = parseServerArgs(appOptions.argv);
+  
+  const server = bootstrapServer(app, {
     quiet: QUIET,
     jobRegistry: app.locals?.jobRegistry || null,
     realtime: app.locals?.realtime || null,
     configManager: app.locals?.configManager || null,
-    cleanupTempDb: app.locals?._cleanupTempDb || null
+    benchmarkManager: app.locals?.benchmarkManager || null,
+    cleanupTempDb: app.locals?._cleanupTempDb || null,
+    detached: serverArgs.detached,
+    autoShutdownMs: serverArgs.autoShutdownMs
   });
+  
+  return server;
 }
 
 if (require.main === module) {
-  startServer();
+  const serverArgs = parseServerArgs();
+  startServer({ argv: process.argv });
+  
+  // In detached mode, prevent the process from exiting immediately
+  if (serverArgs.detached) {
+    console.log('[server] Running in detached mode');
+    if (serverArgs.autoShutdownMs) {
+      console.log(`[server] Auto-shutdown scheduled in ${serverArgs.autoShutdownMs / 1000}s`);
+    }
+  }
 }
 
 module.exports = {

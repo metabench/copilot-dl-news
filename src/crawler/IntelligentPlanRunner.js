@@ -23,7 +23,8 @@ class IntelligentPlanRunner {
     CountryHubPlanner,
     HubSeeder,
     TargetedAnalysisRunner,
-    NavigationDiscoveryRunner
+    NavigationDiscoveryRunner,
+    enableTargetedAnalysis = true
   } = {}) {
     if (!telemetry || !domain || !baseUrl || !startUrl) {
       throw new Error('IntelligentPlanRunner requires telemetry, domain, baseUrl, and startUrl');
@@ -37,8 +38,11 @@ class IntelligentPlanRunner {
     if (typeof enqueueRequest !== 'function' || typeof normalizeUrl !== 'function') {
       throw new Error('IntelligentPlanRunner requires enqueueRequest and normalizeUrl functions');
     }
-    if (!PlannerTelemetryBridge || !PlannerOrchestrator || !PlannerBootstrap || !PatternInference || !CountryHubPlanner || !HubSeeder || !TargetedAnalysisRunner || !NavigationDiscoveryRunner) {
+    if (!PlannerTelemetryBridge || !PlannerOrchestrator || !PlannerBootstrap || !PatternInference || !CountryHubPlanner || !HubSeeder || !NavigationDiscoveryRunner) {
       throw new Error('IntelligentPlanRunner requires planner constructors');
+    }
+    if (enableTargetedAnalysis !== false && !TargetedAnalysisRunner) {
+      throw new Error('IntelligentPlanRunner requires TargetedAnalysisRunner when targeted analysis is enabled');
     }
 
     this.telemetry = telemetry;
@@ -66,6 +70,7 @@ class IntelligentPlanRunner {
     this.HubSeeder = HubSeeder;
     this.TargetedAnalysisRunner = TargetedAnalysisRunner;
     this.NavigationDiscoveryRunner = NavigationDiscoveryRunner;
+    this.enableTargetedAnalysis = enableTargetedAnalysis !== false;
   }
 
   async run() {
@@ -279,7 +284,7 @@ class IntelligentPlanRunner {
 
     let targetedAnalysisResult = null;
 
-    if (this.TargetedAnalysisRunner) {
+    if (this.enableTargetedAnalysis && this.TargetedAnalysisRunner) {
       const targetedAnalyzer = new this.TargetedAnalysisRunner({
         fetchPage: this.fetchPage,
         getCachedArticle: this.getCachedArticle,

@@ -1,3 +1,6 @@
+const { URL } = require('url');
+const { tof, is_array } = require('lang-tools');
+
 class CrawlerState {
   constructor() {
     this.visited = new Set();
@@ -23,6 +26,13 @@ class CrawlerState {
       depth2PagesProcessed: 0,
       cacheRateLimitedServed: 0,
       cacheRateLimitedDeferred: 0
+    };
+
+    this.structure = {
+      navPagesVisited: 0,
+      articleCandidatesSkipped: 0,
+      sectionCounts: new Map(),
+      lastUpdatedAt: null
     };
 
     this.depth2Visited = new Set();
@@ -57,7 +67,7 @@ class CrawlerState {
   }
 
   incrementBytesDownloaded(bytes = 0) {
-    if (typeof bytes === 'number' && Number.isFinite(bytes) && bytes > 0) {
+    if (tof(bytes) === 'number' && Number.isFinite(bytes) && bytes > 0) {
       this.stats.bytesDownloaded += bytes;
     }
   }
@@ -80,6 +90,73 @@ class CrawlerState {
 
   incrementCacheRateLimitedDeferred(amount = 1) {
     this.stats.cacheRateLimitedDeferred += amount;
+  }
+
+  incrementStructureNavPages(amount = 1) {
+    const delta = Number(amount) || 0;
+    if (!delta) return;
+    this.structure.navPagesVisited += delta;
+    this.structure.lastUpdatedAt = Date.now();
+  }
+
+  incrementStructureArticleSkipped(amount = 1) {
+    const delta = Number(amount) || 0;
+    if (!delta) return;
+    this.structure.articleCandidatesSkipped += delta;
+    this.structure.lastUpdatedAt = Date.now();
+  }
+
+  recordStructureArticleLinks(links) {
+    if (!links) return;
+    const list = is_array(links) ? links : [links];
+    let recorded = false;
+    for (const entry of list) {
+      if (!entry) continue;
+      const rawUrl = tof(entry) === 'string' ? entry : entry.url;
+      if (!rawUrl) continue;
+      const key = this._deriveStructureSection(rawUrl);
+      if (!key) continue;
+      const prev = this.structure.sectionCounts.get(key) || 0;
+      this.structure.sectionCounts.set(key, prev + 1);
+      recorded = true;
+    }
+    if (recorded) {
+      this.structure.lastUpdatedAt = Date.now();
+    }
+  }
+
+  getStructureSnapshot(limit = 6) {
+    if (!this.structure) {
+      return null;
+    }
+    const topSections = Array.from(this.structure.sectionCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, Math.max(0, limit | 0 || 6))
+      .map(([section, count]) => ({ section, count }));
+    return {
+      navPagesVisited: this.structure.navPagesVisited,
+      articleCandidatesSkipped: this.structure.articleCandidatesSkipped,
+      topSections,
+      updatedAt: this.structure.lastUpdatedAt ? new Date(this.structure.lastUpdatedAt).toISOString() : null
+    };
+  }
+
+  resetStructureStats() {
+    this.structure.navPagesVisited = 0;
+    this.structure.articleCandidatesSkipped = 0;
+    this.structure.sectionCounts.clear();
+    this.structure.lastUpdatedAt = null;
+  }
+
+  _deriveStructureSection(url) {
+    try {
+      const parsed = new URL(url);
+      const segments = (parsed.pathname || '/').split('/').filter(Boolean);
+      if (!segments.length) return '/';
+      return `/${segments[0].toLowerCase()}`;
+    } catch (_) {
+      return null;
+    }
   }
 
   noteDepthVisit(normalizedUrl, depth) {
@@ -140,20 +217,20 @@ class CrawlerState {
     this.visitedSeededHubUrls = new Set();
     this.visitedHubMetadata = new Map();
 
-    if (!iterable || typeof iterable[Symbol.iterator] !== 'function') {
+    if (!iterable || tof(iterable[Symbol.iterator]) !== 'function') {
       return;
     }
 
     for (const entry of iterable) {
       if (!entry) continue;
-      if (typeof entry === 'string') {
+      if (tof(entry) === 'string') {
         this.seededHubUrls.add(entry);
         if (!this.seededHubMetadata.has(entry)) {
           this.seededHubMetadata.set(entry, {});
         }
         continue;
       }
-      if (typeof entry === 'object') {
+      if (tof(entry) === 'object') {
         const url = entry.url || entry.normalized || entry.href;
         if (!url) continue;
         this.seededHubUrls.add(url);
@@ -167,7 +244,7 @@ class CrawlerState {
 
   // --- Stats replacement helper ---
   replaceStats(nextStats) {
-    if (!nextStats || typeof nextStats !== 'object') {
+    if (!nextStats || tof(nextStats) !== 'object') {
       return;
     }
     Object.assign(this.stats, nextStats);
@@ -194,7 +271,7 @@ class CrawlerState {
     if (!this.seededHubMetadata.has(normalizedUrl)) {
       this.seededHubMetadata.set(normalizedUrl, {});
     }
-    if (meta && typeof meta === 'object') {
+    if (meta && tof(meta) === 'object') {
       const existing = this.seededHubMetadata.get(normalizedUrl) || {};
       this.seededHubMetadata.set(normalizedUrl, {
         ...existing,
@@ -225,7 +302,7 @@ class CrawlerState {
     const visitMeta = {
       ...existing,
       visitedAt: existing.visitedAt || new Date().toISOString(),
-      ...(info && typeof info === 'object' ? info : {})
+      ...(info && tof(info) === 'object' ? info : {})
     };
     this.seededHubMetadata.set(normalizedUrl, visitMeta);
     this.visitedHubMetadata.set(normalizedUrl, visitMeta);
@@ -309,7 +386,7 @@ class CrawlerState {
   }
 
   replaceFatalIssues(list) {
-    if (!Array.isArray(list)) {
+    if (!is_array(list)) {
       this.fatalIssues = [];
       return;
     }
@@ -325,7 +402,7 @@ class CrawlerState {
   }
 
   addErrorSample(sample) {
-    if (!sample || typeof sample !== 'object') {
+    if (!sample || tof(sample) !== 'object') {
       return;
     }
     if (this.errorSamples.length >= 5) {
@@ -339,7 +416,7 @@ class CrawlerState {
   }
 
   replaceErrorSamples(list) {
-    if (!Array.isArray(list)) {
+    if (!is_array(list)) {
       this.errorSamples = [];
       return;
     }
@@ -382,7 +459,7 @@ class CrawlerState {
   }
 
   replaceProblemCounters(iterable) {
-    if (!iterable || typeof iterable[Symbol.iterator] !== 'function') {
+    if (!iterable || tof(iterable[Symbol.iterator]) !== 'function') {
       this.problemCounters = new Map();
       return;
     }
@@ -390,7 +467,7 @@ class CrawlerState {
   }
 
   replaceProblemSamples(iterable) {
-    if (!iterable || typeof iterable[Symbol.iterator] !== 'function') {
+    if (!iterable || tof(iterable[Symbol.iterator]) !== 'function') {
       this.problemSamples = new Map();
       return;
     }

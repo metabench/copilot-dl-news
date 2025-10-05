@@ -21,16 +21,32 @@ function ensureGazetteer(db) {
       bbox TEXT,                           -- JSON [west,south,east,north] when available
       canonical_name_id INTEGER,           -- references place_names.id (optional)
       source TEXT,                         -- provenance (e.g., restcountries@v3)
-  extra JSON                           -- JSON blob for source-specific data
+      extra JSON,                          -- JSON blob for source-specific data
+      wikidata_qid TEXT,                   -- Wikidata QID (e.g., Q30 for USA)
+      osm_type TEXT,                       -- OpenStreetMap type (node, way, relation)
+      osm_id TEXT,                         -- OpenStreetMap ID
+      area REAL,                           -- Area in square kilometers
+      gdp_usd REAL,                        -- GDP in USD (for countries/regions)
+      admin_level INTEGER,                 -- Wikidata administrative level
+      wikidata_props JSON,                 -- Comprehensive Wikidata properties
+      osm_tags JSON,                       -- OpenStreetMap tags
+      crawl_depth INTEGER DEFAULT 0,       -- 0=country, 1=ADM1, 2=ADM2, 3=city
+      priority_score REAL,                 -- For breadth-first scheduling
+      last_crawled_at INTEGER              -- Timestamp of last data fetch
     );
     CREATE INDEX IF NOT EXISTS idx_places_kind ON places(kind);
     CREATE INDEX IF NOT EXISTS idx_places_country ON places(country_code);
-  CREATE INDEX IF NOT EXISTS idx_places_adm1 ON places(adm1_code);
-  CREATE INDEX IF NOT EXISTS idx_places_adm2 ON places(adm2_code);
-  CREATE INDEX IF NOT EXISTS idx_places_canonical_name ON places(canonical_name_id);
-  -- Helpful composite and filter indexes to speed common SSR filters
-  CREATE INDEX IF NOT EXISTS idx_places_kind_country ON places(kind, country_code);
-  CREATE INDEX IF NOT EXISTS idx_places_population ON places(population);
+    CREATE INDEX IF NOT EXISTS idx_places_adm1 ON places(adm1_code);
+    CREATE INDEX IF NOT EXISTS idx_places_adm2 ON places(adm2_code);
+    CREATE INDEX IF NOT EXISTS idx_places_canonical_name ON places(canonical_name_id);
+    -- Helpful composite and filter indexes to speed common SSR filters
+    CREATE INDEX IF NOT EXISTS idx_places_kind_country ON places(kind, country_code);
+    CREATE INDEX IF NOT EXISTS idx_places_population ON places(population);
+    -- New indexes for breadth-first crawling
+    CREATE INDEX IF NOT EXISTS idx_places_wikidata_qid ON places(wikidata_qid);
+    CREATE INDEX IF NOT EXISTS idx_places_crawl_depth ON places(crawl_depth);
+    CREATE INDEX IF NOT EXISTS idx_places_priority_score ON places(priority_score);
+    CREATE INDEX IF NOT EXISTS idx_places_osm ON places(osm_type, osm_id);
 
     CREATE TABLE IF NOT EXISTS place_names (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,6 +93,46 @@ function ensureGazetteer(db) {
       FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_place_external_place ON place_external_ids(place_id);
+
+    CREATE TABLE IF NOT EXISTS gazetteer_crawl_state (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      stage TEXT NOT NULL,                 -- countries | adm1 | adm2 | cities | osm_boundaries
+      status TEXT NOT NULL,                -- pending | in_progress | completed | failed
+      started_at INTEGER,
+      completed_at INTEGER,
+      records_total INTEGER DEFAULT 0,
+      records_processed INTEGER DEFAULT 0,
+      records_upserted INTEGER DEFAULT 0,
+      errors INTEGER DEFAULT 0,
+      error_message TEXT,
+      metadata JSON
+    );
+    CREATE INDEX IF NOT EXISTS idx_crawl_state_stage ON gazetteer_crawl_state(stage);
+    CREATE INDEX IF NOT EXISTS idx_crawl_state_status ON gazetteer_crawl_state(status);
+    
+    CREATE TABLE IF NOT EXISTS topic_keywords (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      topic TEXT NOT NULL,
+      lang TEXT NOT NULL,
+      term TEXT NOT NULL,
+      normalized TEXT NOT NULL,
+      source TEXT,
+      metadata JSON
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_topic_keywords ON topic_keywords(topic, lang, normalized);
+    CREATE INDEX IF NOT EXISTS idx_topic_keywords_lang ON topic_keywords(lang);
+
+    CREATE TABLE IF NOT EXISTS crawl_skip_terms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lang TEXT NOT NULL,
+      term TEXT NOT NULL,
+      normalized TEXT NOT NULL,
+      reason TEXT,
+      source TEXT,
+      metadata JSON
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_crawl_skip_terms ON crawl_skip_terms(lang, normalized);
+    CREATE INDEX IF NOT EXISTS idx_crawl_skip_terms_reason ON crawl_skip_terms(reason);
   CREATE INDEX IF NOT EXISTS idx_place_hierarchy_parent ON place_hierarchy(parent_id);
   CREATE INDEX IF NOT EXISTS idx_place_hierarchy_child ON place_hierarchy(child_id);
   CREATE INDEX IF NOT EXISTS idx_place_hierarchy_relation ON place_hierarchy(relation);

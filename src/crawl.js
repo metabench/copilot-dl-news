@@ -51,12 +51,16 @@ const {
 const {
   EnhancedFeaturesManager
 } = require('./crawler/EnhancedFeaturesManager');
+const {
+  ProblemResolutionService
+} = require('./crawler/ProblemResolutionService');
 
 const DEFAULT_FEATURE_FLAGS = Object.freeze({
   gapDrivenPrioritization: false,
   plannerKnowledgeReuse: false,
   realTimeCoverageAnalytics: false,
-  problemClustering: false
+  problemClustering: false,
+  problemResolution: false
 });
 const {
   loadSitemaps
@@ -94,6 +98,9 @@ const {
   ContentAcquisitionService
 } = require('./crawler/ContentAcquisitionService');
 const ArticleSignalsService = require('./crawler/ArticleSignalsService');
+const {
+  GazetteerModeController
+} = require('./crawler/gazetteer/GazetteerModeController');
 const {
   sleep,
   nowMs,
@@ -211,6 +218,7 @@ class NewsCrawler {
       PriorityScorer,
       ProblemClusteringService,
       PlannerKnowledgeService,
+      ProblemResolutionService,
       logger: console
     });
     // Track active workers to coordinate idle waiting
@@ -241,9 +249,18 @@ class NewsCrawler {
     this.pacerJitterMinMs = typeof options.pacerJitterMinMs === 'number' ? Math.max(0, options.pacerJitterMinMs) : 25;
     this.pacerJitterMaxMs = typeof options.pacerJitterMaxMs === 'number' ? Math.max(this.pacerJitterMinMs, options.pacerJitterMaxMs) : 50;
     // Crawl type determines planner features (e.g., 'intelligent')
-    this.crawlType = (options.crawlType || 'basic').toLowerCase();
-    this.plannerEnabled = this.crawlType.startsWith('intelligent');
+  this.crawlType = (options.crawlType || 'basic').toLowerCase();
+  this.isGazetteerMode = this.crawlType === 'gazetteer';
+  this.structureOnly = this.crawlType === 'discover-structure';
+    if (options.concurrency == null && this.structureOnly && this.concurrency < 4) {
+      this.concurrency = 4;
+      this.usePriorityQueue = this.concurrency > 1;
+    }
+  this.plannerEnabled = this.crawlType.startsWith('intelligent') || this.structureOnly;
     this.skipQueryUrls = options.skipQueryUrls !== undefined ? !!options.skipQueryUrls : true;
+    if (this.isGazetteerMode) {
+      this._applyGazetteerDefaults(options);
+    }
     this.urlPolicy = new UrlPolicy({
       baseUrl: this.baseUrl,
       skipQueryUrls: this.skipQueryUrls
@@ -288,6 +305,7 @@ class NewsCrawler {
       getFeatures: () => this.featuresEnabled,
       getEnhancedDbAdapter: () => this.enhancedDbAdapter,
       getProblemClusteringService: () => this.problemClusteringService,
+  getProblemResolutionService: () => this.problemResolutionService,
       getJobId: () => this.jobId,
       plannerScope: () => this.domain,
       isPlannerEnabled: () => this.plannerEnabled,
@@ -413,7 +431,12 @@ class NewsCrawler {
       cache: this.cache,
       getHostResumeTime: (host) => this._getHostResumeTime(host),
       isHostRateLimited: (host) => this._isHostRateLimited(host),
-      jobIdProvider: () => this.jobId
+      jobIdProvider: () => this.jobId,
+      onRateLimitDeferred: () => {
+        try {
+          this.state.incrementCacheRateLimitedDeferred();
+        } catch (_) {}
+      }
     });
 
     this.robotsCoordinator = new RobotsAndSitemapCoordinator({
@@ -516,8 +539,13 @@ class NewsCrawler {
       getDbAdapter: () => this.dbAdapter,
       computeContentSignals: ($, html) => this._computeContentSignals($, html),
       computeUrlSignals: (rawUrl) => this._computeUrlSignals(rawUrl),
-      combineSignals: (urlSignals, contentSignals, opts) => this._combineSignals(urlSignals, contentSignals, opts)
+      combineSignals: (urlSignals, contentSignals, opts) => this._combineSignals(urlSignals, contentSignals, opts),
+      structureOnly: this.structureOnly
     });
+
+    if (this.isGazetteerMode) {
+      this._setupGazetteerModeController(options);
+    }
   }
 
   get stats() {
@@ -582,6 +610,10 @@ class NewsCrawler {
 
   get plannerKnowledgeService() {
     return this.enhancedFeatures?.getPlannerKnowledgeService() || null;
+  }
+
+  get problemResolutionService() {
+    return this.enhancedFeatures?.getProblemResolutionService() || null;
   }
 
   get seededHubUrls() {
@@ -651,6 +683,77 @@ class NewsCrawler {
 
   _combineSignals(urlSignals, contentSignals, opts = {}) {
     return this.articleSignals.combineSignals(urlSignals, contentSignals, opts);
+  }
+
+  _applyGazetteerDefaults(options = {}) {
+    this.structureOnly = false;
+    this.useSitemap = false;
+    this.sitemapOnly = false;
+    if (options.skipQueryUrls == null) {
+      this.skipQueryUrls = false;
+    }
+    if (options.preferCache == null) {
+      this.preferCache = false;
+    }
+    this.concurrency = Math.max(1, options.concurrency || 1);
+    this.usePriorityQueue = false;
+  }
+
+  _setupGazetteerModeController(options = {}) {
+    const gazetteerOptions = options.gazetteer || {};
+    const controllerOptions = {
+      telemetry: this.telemetry,
+      milestoneTracker: this.milestoneTracker,
+      state: this.state,
+      dbAdapter: this.dbAdapter,
+      logger: console,
+      jobId: this.jobId
+    };
+    if (gazetteerOptions.ingestionCoordinator) {
+      controllerOptions.ingestionCoordinator = gazetteerOptions.ingestionCoordinator;
+    }
+    this.gazetteerOptions = gazetteerOptions;
+    this.gazetteerModeController = new GazetteerModeController(controllerOptions);
+  }
+
+  async _runGazetteerMode() {
+    if (!this.gazetteerModeController) {
+      throw new Error('Gazetteer mode controller not configured');
+    }
+
+    await this._trackStartupStage('gazetteer-prepare', 'Preparing gazetteer services', async () => {
+      this.gazetteerModeController.dbAdapter = this.dbAdapter;
+      await this.gazetteerModeController.initialize();
+      return { status: 'completed' };
+    });
+
+    this._markStartupComplete('Gazetteer services ready');
+
+    let summary = null;
+    try {
+      summary = await this.gazetteerModeController.run();
+      console.log('\nGazetteer crawl completed.');
+      if (summary && summary.totals) {
+        try {
+          console.log(`[gazetteer] Totals: ${JSON.stringify(summary.totals)}`);
+        } catch (_) {}
+      }
+      this.emitProgress(true);
+      this.milestoneTracker.emitCompletionMilestone({ outcomeErr: null });
+      await this.gazetteerModeController.shutdown({ reason: 'completed' });
+      if (this.dbAdapter && this.dbAdapter.isEnabled && this.dbAdapter.isEnabled()) {
+        const count = this.dbAdapter.getArticleCount();
+        console.log(`Database contains ${count} article records`);
+        this.dbAdapter.close();
+      }
+    } catch (error) {
+      await this.gazetteerModeController.shutdown({ reason: 'failed' });
+      this.emitProgress(true);
+      if (this.dbAdapter && this.dbAdapter.isEnabled && this.dbAdapter.isEnabled()) {
+        this.dbAdapter.close();
+      }
+      throw error;
+    }
   }
 
   _noteDepthVisit(normalizedUrl, depth) {
@@ -747,16 +850,23 @@ class NewsCrawler {
       this.startUrlNormalized = this.startUrl;
     }
 
-    await this._trackStartupStage('robots', 'Loading robots.txt', async () => {
-      if (!this.robotsCoordinator) {
-        return { status: 'skipped', message: 'Robots coordinator unavailable' };
-      }
-      await this.robotsCoordinator.loadRobotsTxt();
-      return { status: 'completed' };
-    });
+    if (this.isGazetteerMode) {
+      this._skipStartupStage('robots', 'Loading robots.txt', 'Gazetteer mode uses external data sources');
+    } else {
+      await this._trackStartupStage('robots', 'Loading robots.txt', async () => {
+        if (!this.robotsCoordinator) {
+          return { status: 'skipped', message: 'Robots coordinator unavailable' };
+        }
+        await this.robotsCoordinator.loadRobotsTxt();
+        return { status: 'completed' };
+      });
+    }
 
     console.log(`Starting crawler for ${this.domain}`);
     console.log(`Data will be saved to: ${this.dataDir}`);
+    if (this.isGazetteerMode) {
+      console.log('Gazetteer crawl mode enabled');
+    }
   }
 
   async loadRobotsTxt() {
@@ -795,6 +905,20 @@ class NewsCrawler {
   }
 
   emitProgress(force = false) {
+    if (this.structureOnly) {
+      const snapshot = typeof this.state?.getStructureSnapshot === 'function'
+        ? this.state.getStructureSnapshot()
+        : null;
+      if (snapshot) {
+        this.telemetry.progress({
+          force: !!force,
+          patch: {
+            structure: snapshot
+          }
+        });
+        return;
+      }
+    }
     this.telemetry.progress(force);
   }
 
@@ -1048,6 +1172,28 @@ class NewsCrawler {
     depth,
     type
   }) {
+    if (this.structureOnly) {
+      const kind = typeof type === 'string'
+        ? type
+        : (type && typeof type === 'object' && typeof type.kind === 'string')
+          ? type.kind
+          : null;
+      if (kind === 'article' || kind === 'refresh') {
+        try {
+          this.telemetry.queueEvent({
+            action: 'drop',
+            url,
+            depth,
+            host: this._safeHostFromUrl(url),
+            reason: 'structure-skip'
+          });
+        } catch (_) {}
+        try {
+          this.state?.incrementStructureArticleSkipped?.();
+        } catch (_) {}
+        return false;
+      }
+    }
     return this.queue.enqueue({
       url,
       depth,
@@ -1134,7 +1280,8 @@ class NewsCrawler {
         CountryHubPlanner,
         HubSeeder,
         TargetedAnalysisRunner,
-        NavigationDiscoveryRunner
+        NavigationDiscoveryRunner,
+        enableTargetedAnalysis: !this.structureOnly
       });
     }
     return this.intelligentPlanRunner;
@@ -1142,6 +1289,10 @@ class NewsCrawler {
 
   async crawlConcurrent() {
     await this.init();
+    if (this.isGazetteerMode) {
+      await this._runGazetteerMode();
+      return;
+    }
     // Optional intelligent planning path
     if (this.plannerEnabled) {
       await this._trackStartupStage('planner', 'Planning intelligent crawl', async () => {
@@ -1235,6 +1386,9 @@ class NewsCrawler {
   }
 
   async crawl() {
+    if (this.isGazetteerMode) {
+      return this.crawlConcurrent();
+    }
     if (this.usePriorityQueue) {
       return this.crawlConcurrent();
     }

@@ -83,9 +83,10 @@ function getLatestQueueId(db) {
 }
 
 function getQueueJob(db, id) {
-  if (!Number.isFinite(Number(id))) return null;
+  const safeId = String(id ?? '').trim();
+  if (!safeId) return null;
   const { queueJob } = prepareStatements(db);
-  return queueJob.get(id);
+  return queueJob.get(safeId);
 }
 
 function getQueueEventBounds(db, id, action) {

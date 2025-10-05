@@ -27,22 +27,22 @@ function prepareStatements(db) {
   }));
 }
 
-function insertQueueEvent(db, params) {
+function insertQueueEvent(db, params = []) {
   const { insertQueueEvent } = prepareStatements(db);
   return insertQueueEvent.run(...params);
 }
 
-function insertCrawlProblem(db, params) {
+function insertCrawlProblem(db, params = []) {
   const { insertCrawlProblem } = prepareStatements(db);
   return insertCrawlProblem.run(...params);
 }
 
-function insertPlannerStageEvent(db, params) {
+function insertPlannerStageEvent(db, params = []) {
   const { insertPlannerStage } = prepareStatements(db);
   return insertPlannerStage.run(...params);
 }
 
-function insertCrawlMilestone(db, params) {
+function insertCrawlMilestone(db, params = []) {
   const { insertCrawlMilestone } = prepareStatements(db);
   return insertCrawlMilestone.run(...params);
 }

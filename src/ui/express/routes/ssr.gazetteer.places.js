@@ -90,8 +90,8 @@ function createGazetteerPlacesRouter(options = {}) {
         pageSize
       };
       const toggleLink = showStorage
-        ? `<a class="gazetteer-link" href="${toQueryString(toggleLinkParams)}">Hide storage</a>`
-        : `<a class="gazetteer-link" href="${toQueryString({ ...toggleLinkParams, storage: 1 })}">Show approx storage</a>`;
+        ? `<a href="${toQueryString(toggleLinkParams)}" class="gazetteer-link">Hide storage</a>`
+        : `<a href="${toQueryString({ ...toggleLinkParams, storage: 1 })}" class="gazetteer-link">Show approx storage</a>`;
 
       const rowsHtml = rows.map((row) => `
         <tr>
@@ -131,10 +131,10 @@ function createGazetteerPlacesRouter(options = {}) {
       const hasPrev = page > 1;
       const hasNext = page < totalPages;
       const prevLink = hasPrev
-        ? `<a class="gazetteer-link" href="${toQueryString({ ...basePagerParams, page: page - 1 })}">← Prev</a>`
+        ? `<a href="${toQueryString({ ...basePagerParams, page: page - 1 })}">← Prev</a>`
         : `<span class="muted">← Prev</span>`;
       const nextLink = hasNext
-        ? `<a class="gazetteer-link" href="${toQueryString({ ...basePagerParams, page: page + 1 })}">Next →</a>`
+        ? `<a href="${toQueryString({ ...basePagerParams, page: page + 1 })}">Next →</a>`
         : `<span class="muted">Next →</span>`;
 
       const navHtml = renderNav('gazetteer', { variant: 'bar' });

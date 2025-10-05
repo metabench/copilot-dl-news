@@ -38,11 +38,16 @@
         </header>
 
         <div class="control-grid control-grid--primary">
-          <div class="control-field control-field--wide">
+          <div class="control-field control-field--wide" id="startUrlField">
             <label for="startUrl">Start URL</label>
             <input id="startUrl" value="https://www.theguardian.com" size="40" />
           </div>
-          <div class="control-field">
+          <div class="control-field control-field--wide control-field--hidden" id="gazetteerNote">
+            <div class="info-message">
+              <strong>Gazetteer Crawl Mode:</strong> This crawl type uses predefined URLs from the gazetteer database. No start URL or depth setting is required.
+            </div>
+          </div>
+          <div class="control-field" id="depthField">
             <label for="depth">Depth</label>
             <input id="depth" type="number" value="2" />
           </div>
@@ -162,6 +167,29 @@
           <span id="metricCoverage" class="metric-value">—</span>
         </div>
       </div>
+    </section>
+    <section id="structurePanel" class="panel panel--two-thirds is-hidden" data-has-data="0" aria-live="polite">
+      <div class="summary-head">
+        <h3>Structure discovery</h3>
+        <span id="structureHint" class="muted text-xs">Structure-only runs map navigation pathways without downloading full articles.</span>
+      </div>
+      <div class="structure-grid">
+        <div class="structure-card">
+          <span class="structure-label">Navigation pages mapped</span>
+          <span id="structureNavPages" class="structure-value">0</span>
+        </div>
+        <div class="structure-card">
+          <span class="structure-label">Article candidates skipped</span>
+          <span id="structureArticlesSkipped" class="structure-value">0</span>
+        </div>
+        <div class="structure-card structure-card--wide">
+          <span class="structure-label">Top sections</span>
+          <ul id="structureTopSections" class="structure-list">
+            <li class="structure-list__empty">No sections discovered yet.</li>
+          </ul>
+        </div>
+      </div>
+      <p id="structureUpdated" class="structure-updated muted text-xs">Awaiting crawl activity…</p>
     </section>
     <section id="insightsPanel" class="panel panel--two-thirds is-hidden" data-has-data="0">
       <div class="summary-head">

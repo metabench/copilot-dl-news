@@ -34,6 +34,11 @@ describe('detectPlaceHub helper', () => {
       nav_links_count: 24,
       article_links_count: 6
     });
+
+    expect(result.placeId).toBe(42);
+    expect(result.evidence.urlChain).toEqual([
+      expect.objectContaining({ place_id: 42, slug: 'iceland' })
+    ]);
   });
 
   test('falls back to analysis detections when URL lacks place hint', () => {
@@ -86,5 +91,67 @@ describe('detectPlaceHub helper', () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  test('uses urlPlaceAnalysis chain and derived topics when provided', () => {
+    const urlPlaceAnalysis = {
+      bestChain: {
+        places: [
+          {
+            place: {
+              name: 'United States',
+              kind: 'country',
+              place_id: 1,
+              country_code: 'US'
+            },
+            segmentIndex: 0,
+            score: 0.8
+          },
+          {
+            place: {
+              name: 'California',
+              kind: 'region',
+              place_id: 2,
+              country_code: 'US'
+            },
+            segmentIndex: 1,
+            score: 0.9
+          }
+        ]
+      },
+      matches: [],
+      topics: {
+        recognized: ['politica'],
+        trailing: ['economia']
+      }
+    };
+
+    const result = detectPlaceHub({
+      url: 'https://www.example.com/us/california/politica',
+      fetchClassification: 'nav',
+      navLinksCount: 14,
+      articleLinksCount: 5,
+      wordCount: 120,
+      urlPlaceAnalysis
+    });
+
+    expect(result).toBeTruthy();
+    expect(result.placeSlug).toBe('california');
+    expect(result.placeKind).toBe('region');
+    expect(result.placeId).toBe(2);
+    expect(result.placeCountry).toBe('US');
+    expect(result.topic).toEqual(
+      expect.objectContaining({ slug: 'politica', label: 'Politica', kind: 'topic', source: 'url-analysis' })
+    );
+    expect(result.evidence.urlMatches).toEqual(['united-states', 'california']);
+    expect(result.evidence.urlChain).toEqual([
+      expect.objectContaining({ place_id: 1, slug: 'united-states', segmentIndex: 0 }),
+      expect.objectContaining({ place_id: 2, slug: 'california', segmentIndex: 1 })
+    ]);
+    expect(result.evidence.urlTopics).toEqual({
+      leading: [],
+      trailing: ['economia'],
+      recognized: ['politica']
+    });
   });
 });
