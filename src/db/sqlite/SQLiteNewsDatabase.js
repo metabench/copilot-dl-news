@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
+const { is_array, tof } = require('lang-tools');
 const { ensureDb, ensureGazetteer } = require('./ensureDb');
 const { Readable } = require('stream');
 
@@ -578,6 +579,18 @@ class NewsDatabase {
   addCol('language', 'TEXT');
   addCol('article_xpath', 'TEXT');
   addCol('analysis', 'TEXT');
+  
+  // Compression columns for background compression task
+  // Individual compression (stores blob directly)
+  addCol('compressed_html', 'BLOB');
+  addCol('compression_type_id', 'INTEGER');
+  // Bucket compression (stores reference to bucket)
+  addCol('compression_bucket_id', 'INTEGER');
+  addCol('compression_bucket_key', 'TEXT');  // Key within the bucket
+  // Compression statistics (shared by both methods)
+  addCol('original_size', 'INTEGER');
+  addCol('compressed_size', 'INTEGER');
+  addCol('compression_ratio', 'REAL');
 
   // Optional helpful indexes
     this.db.exec(`
@@ -587,6 +600,8 @@ class NewsDatabase {
       CREATE INDEX IF NOT EXISTS idx_articles_sha ON articles(html_sha256);
       CREATE INDEX IF NOT EXISTS idx_articles_analysis_progress
         ON articles((analysis IS NULL), CAST(json_extract(analysis, '$.analysis_version') AS INTEGER));
+      CREATE INDEX IF NOT EXISTS idx_articles_compressed ON articles((compressed_html IS NULL) AND (compression_bucket_id IS NULL));
+      CREATE INDEX IF NOT EXISTS idx_articles_bucket ON articles(compression_bucket_id);
     `);
 
     // Speed up lookups of the latest fetch per URL
@@ -1183,7 +1198,7 @@ class NewsDatabase {
       clauses.push('job_id = ?');
       params.push(jobId);
     }
-    if (Array.isArray(statuses) && statuses.length) {
+    if (is_array(statuses) && statuses.length) {
       const placeholders = statuses.map(() => '?').join(',');
       clauses.push(`status IN (${placeholders})`);
       params.push(...statuses);
@@ -1218,7 +1233,7 @@ class NewsDatabase {
 
   clearTasksForJob(jobId, { statuses = null } = {}) {
     if (!jobId) return 0;
-    if (Array.isArray(statuses) && statuses.length) {
+    if (is_array(statuses) && statuses.length) {
       const placeholders = statuses.map(() => '?').join(',');
       const stmt = this.db.prepare(`DELETE FROM crawl_tasks WHERE job_id = ? AND status IN (${placeholders})`);
       const info = stmt.run(jobId, ...statuses);
@@ -1255,8 +1270,10 @@ class NewsDatabase {
       { name: 'sitemap-only', description: 'Use only the sitemap to discover pages', declaration: { crawlType: 'sitemap-only', useSitemap: true, sitemapOnly: true } },
       { name: 'basic-with-sitemap', description: 'Follow links and also use the sitemap', declaration: { crawlType: 'basic-with-sitemap', useSitemap: true, sitemapOnly: false } },
       { name: 'intelligent', description: 'Intelligent planning (hubs + sitemap + heuristics)', declaration: { crawlType: 'intelligent', useSitemap: true, sitemapOnly: false } },
-      { name: 'discover-structure', description: 'Map site structure without downloading articles', declaration: { crawlType: 'discover-structure', useSitemap: true, sitemapOnly: false } },
-      { name: 'gazetteer', description: 'Aggregate gazetteer data from structured external sources', declaration: { crawlType: 'gazetteer', useSitemap: false, sitemapOnly: false } }
+  { name: 'discover-structure', description: 'Map site structure without downloading articles', declaration: { crawlType: 'discover-structure', useSitemap: true, sitemapOnly: false } },
+  { name: 'gazetteer', description: 'Legacy alias for geography gazetteer crawl', declaration: { crawlType: 'geography', useSitemap: false, sitemapOnly: false } },
+  { name: 'wikidata', description: 'Only ingest gazetteer data from Wikidata', declaration: { crawlType: 'wikidata', useSitemap: false, sitemapOnly: false } },
+  { name: 'geography', description: 'Aggregate gazetteer data from Wikidata plus OpenStreetMap boundaries', declaration: { crawlType: 'geography', useSitemap: false, sitemapOnly: false } }
     ];
     const stmt = this.db.prepare(`
       INSERT INTO crawl_types(name, description, declaration)
@@ -1286,7 +1303,7 @@ class NewsDatabase {
     const payload = {
       id,
       url,
-      args: args != null ? (typeof args === 'string' ? args : JSON.stringify(args)) : null,
+      args: args != null ? (tof(args) === 'string' ? args : JSON.stringify(args)) : null,
       pid: pid != null ? pid : null,
       startedAt: startedAt || new Date().toISOString(),
       status: status || 'running'
@@ -1530,6 +1547,115 @@ class NewsDatabase {
       }));
     } catch (_) {
       return [];
+    }
+  }
+  
+  /**
+   * Get compressed HTML for an article (supports both individual and bucket compression)
+   * 
+   * @param {number} articleId - Article ID
+   * @returns {Object|null} { html: Buffer|string, compressionType: string, method: 'individual'|'bucket' }
+   */
+  getCompressedHtml(articleId) {
+    try {
+      const article = this.db.prepare(`
+        SELECT 
+          compressed_html,
+          compression_type_id,
+          compression_bucket_id,
+          compression_bucket_key,
+          html
+        FROM articles
+        WHERE id = ?
+      `).get(articleId);
+      
+      if (!article) {
+        return null;
+      }
+      
+      // Check if stored in bucket
+      if (article.compression_bucket_id && article.compression_bucket_key) {
+        // Bucket storage - would retrieve from bucket here
+        // For now, return metadata indicating bucket storage
+        return {
+          method: 'bucket',
+          bucketId: article.compression_bucket_id,
+          bucketKey: article.compression_bucket_key,
+          compressionTypeId: article.compression_type_id,
+          // Note: Actual decompression would happen via compressionBuckets.retrieveFromBucket()
+          html: null
+        };
+      }
+      
+      // Check if stored individually
+      if (article.compressed_html) {
+        return {
+          method: 'individual',
+          html: article.compressed_html,
+          compressionTypeId: article.compression_type_id
+          // Note: Caller would need to decompress using compression.decompress()
+        };
+      }
+      
+      // Not compressed, return original HTML
+      return {
+        method: 'uncompressed',
+        html: article.html,
+        compressionTypeId: null
+      };
+      
+    } catch (error) {
+      console.error('[NewsDatabase] Error getting compressed HTML:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Get compression statistics
+   * 
+   * @returns {Object} Statistics about compressed articles
+   */
+  getCompressionStats() {
+    try {
+      const stats = this.db.prepare(`
+        SELECT 
+          COUNT(*) as total_articles,
+          COUNT(CASE WHEN compressed_html IS NOT NULL THEN 1 END) as individually_compressed,
+          COUNT(CASE WHEN compression_bucket_id IS NOT NULL THEN 1 END) as bucket_compressed,
+          COUNT(CASE WHEN compressed_html IS NULL AND compression_bucket_id IS NULL AND html IS NOT NULL THEN 1 END) as uncompressed,
+          SUM(CASE WHEN original_size IS NOT NULL THEN original_size ELSE 0 END) as total_original_size,
+          SUM(CASE WHEN compressed_size IS NOT NULL THEN compressed_size ELSE 0 END) as total_compressed_size,
+          AVG(CASE WHEN compression_ratio IS NOT NULL THEN compression_ratio ELSE NULL END) as avg_compression_ratio
+        FROM articles
+        WHERE html IS NOT NULL
+      `).get();
+      
+      return {
+        totalArticles: stats.total_articles || 0,
+        individuallyCompressed: stats.individually_compressed || 0,
+        bucketCompressed: stats.bucket_compressed || 0,
+        uncompressed: stats.uncompressed || 0,
+        totalOriginalSize: stats.total_original_size || 0,
+        totalCompressedSize: stats.total_compressed_size || 0,
+        avgCompressionRatio: stats.avg_compression_ratio || null,
+        spaceSavedBytes: (stats.total_original_size || 0) - (stats.total_compressed_size || 0),
+        spaceSavedPercent: stats.total_original_size > 0 
+          ? (1 - (stats.total_compressed_size / stats.total_original_size)) * 100
+          : 0
+      };
+    } catch (error) {
+      console.error('[NewsDatabase] Error getting compression stats:', error);
+      return {
+        totalArticles: 0,
+        individuallyCompressed: 0,
+        bucketCompressed: 0,
+        uncompressed: 0,
+        totalOriginalSize: 0,
+        totalCompressedSize: 0,
+        avgCompressionRatio: null,
+        spaceSavedBytes: 0,
+        spaceSavedPercent: 0
+      };
     }
   }
 }

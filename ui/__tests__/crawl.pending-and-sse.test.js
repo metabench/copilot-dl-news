@@ -34,6 +34,8 @@ function postJson({ hostname, port, path, body, timeoutMs = 5000 }) {
 }
 
 describe('HTTP E2E: catch pending POST and early SSE activity', () => {
+  jest.setTimeout(20000); // E2E tests need more time for server startup and shutdown
+  
   test('POST /api/crawl returns within 800ms', async () => {
     const { cp, port } = await startServerWithEnv({ UI_FAKE_RUNNER: '1' });
     try {

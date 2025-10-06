@@ -4,6 +4,7 @@
  * priority bonuses, and priority weights. Handles loading, rendering, and state management.
  */
 
+import { each, is_defined, tof } from 'lang-tools';
 import {
   renderFeatureFlags as renderFeatureFlagsBase,
   renderPriorityBonuses as renderPriorityBonusesBase,
@@ -31,6 +32,34 @@ export function createAdvancedFeaturesPanel(deps) {
     priorityWeightsList
   } = deps;
 
+  const toPlainObject = (value) => (tof(value) === 'object' ? value : {});
+
+  const sectionRenderers = [
+    {
+      render: renderFeatureFlagsBase,
+      select: (config) => config.features,
+      target: featureFlagsList
+    },
+    {
+      render: renderPriorityBonusesBase,
+      select: (config) => config.queue,
+      target: priorityBonusesList
+    },
+    {
+      render: renderPriorityWeightsBase,
+      select: (config) => config.queue,
+      target: priorityWeightsList
+    }
+  ];
+
+  const renderSections = (config) => {
+    const resolvedConfig = toPlainObject(config);
+    each(sectionRenderers, ({ render, select, target }) => {
+      if (!is_defined(target)) return;
+      render(toPlainObject(select(resolvedConfig)), target);
+    });
+  };
+
   /**
    * Sets the visual state of the advanced features panel
    * @param {Object} options - State options
@@ -38,15 +67,15 @@ export function createAdvancedFeaturesPanel(deps) {
    * @param {string} [options.message] - Status message
    * @param {boolean} [options.busy] - Whether panel is busy
    */
-  function setState({ state, message, busy }) {
-    if (!panelEl) return;
-    if (typeof state === 'string') {
+  function setState({ state, message, busy } = {}) {
+    if (!is_defined(panelEl)) return;
+    if (tof(state) === 'string') {
       panelEl.dataset.state = state;
     }
-    if (typeof busy === 'boolean') {
+    if (tof(busy) === 'boolean') {
       panelEl.setAttribute('aria-busy', busy ? 'true' : 'false');
     }
-    if (statusEl && typeof message === 'string') {
+    if (is_defined(statusEl) && tof(message) === 'string') {
       statusEl.textContent = message;
     }
   }
@@ -56,7 +85,7 @@ export function createAdvancedFeaturesPanel(deps) {
    * @param {Object} features - Feature flags configuration
    */
   function renderFeatureFlags(features) {
-    renderFeatureFlagsBase(features, featureFlagsList);
+    renderFeatureFlagsBase(toPlainObject(features), featureFlagsList);
   }
 
   /**
@@ -64,7 +93,7 @@ export function createAdvancedFeaturesPanel(deps) {
    * @param {Object} queueConfig - Queue configuration with bonus settings
    */
   function renderPriorityBonuses(queueConfig) {
-    renderPriorityBonusesBase(queueConfig, priorityBonusesList);
+    renderPriorityBonusesBase(toPlainObject(queueConfig), priorityBonusesList);
   }
 
   /**
@@ -72,7 +101,7 @@ export function createAdvancedFeaturesPanel(deps) {
    * @param {Object} queueConfig - Queue configuration with weight settings
    */
   function renderPriorityWeights(queueConfig) {
-    renderPriorityWeightsBase(queueConfig, priorityWeightsList);
+    renderPriorityWeightsBase(toPlainObject(queueConfig), priorityWeightsList);
   }
 
   /**
@@ -82,7 +111,7 @@ export function createAdvancedFeaturesPanel(deps) {
    * @returns {Promise<void>}
    */
   async function load({ quiet = false } = {}) {
-    if (!panelEl || !statusEl) return;
+    if (!is_defined(panelEl) || !is_defined(statusEl)) return;
 
     try {
       setState({ busy: true });
@@ -102,12 +131,10 @@ export function createAdvancedFeaturesPanel(deps) {
       }
 
       const payload = await res.json();
-      const config = payload?.config || {};
+      const config = toPlainObject(payload?.config);
 
       // Render all configuration sections
-      renderFeatureFlags(config.features || {});
-      renderPriorityBonuses(config.queue || {});
-      renderPriorityWeights(config.queue || {});
+      renderSections(config);
 
       // Store config globally for debugging
       try {
@@ -126,8 +153,8 @@ export function createAdvancedFeaturesPanel(deps) {
     } catch (error) {
       showElement(panelEl);
       
-      const message = error && error.message 
-        ? error.message 
+      const message = is_defined(error?.message)
+        ? error.message
         : String(error || 'unknown error');
       
       setState({ 
@@ -138,9 +165,7 @@ export function createAdvancedFeaturesPanel(deps) {
 
       if (!quiet) {
         // Clear all lists on error
-        renderFeatureFlags({});
-        renderPriorityBonuses({});
-        renderPriorityWeights({});
+        renderSections({});
       }
     }
   }

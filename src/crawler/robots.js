@@ -1,4 +1,5 @@
 const robotsParser = require('robots-parser');
+const { compact } = require('../utils/pipelines');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 async function loadRobots(baseUrl) {
@@ -15,7 +16,11 @@ async function loadRobots(baseUrl) {
       if (typeof rules.getSitemaps === 'function') {
         sm = rules.getSitemaps() || [];
       } else {
-        sm = txt.split(/\r?\n/).map(l => l.trim()).filter(l => /^sitemap\s*:/i.test(l)).map(l => l.split(/:/i).slice(1).join(':').trim()).filter(Boolean);
+        const lines = compact(txt.split(/\r?\n/), l => {
+          const trimmed = l.trim();
+          return /^sitemap\s*:/i.test(trimmed) ? trimmed : null;
+        });
+        sm = compact(lines, l => l.split(/:/i).slice(1).join(':').trim());
       }
       const norm = [];
       for (const u of sm) { try { const abs = new URL(u, baseUrl).href; norm.push(abs); } catch {} }

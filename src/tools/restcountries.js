@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const { is_array } = require('lang-tools');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const { findProjectRoot } = require('../utils/project-root');
 
@@ -59,7 +60,7 @@ async function fetchCountries(options = {}, deps = {}) {
     for (const r of regions) {
       const base = `https://restcountries.com/v3.1/region/${encodeURIComponent(r)}`;
       const json = await tryFetch(base, fields);
-      if (!json || !Array.isArray(json)) continue;
+      if (!json || !is_array(json)) continue;
       for (const c of json) {
         const code = (c.cca2 || '').toUpperCase();
         if (!code || seen.has(code)) continue;

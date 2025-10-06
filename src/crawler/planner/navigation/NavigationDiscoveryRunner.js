@@ -1,6 +1,7 @@
 'use strict';
 
 const cheerio = require('cheerio');
+const { each } = require('lang-tools');
 
 function safeUrlJoin(baseUrl, href) {
   if (!href) return null;
@@ -150,7 +151,7 @@ class NavigationDiscoveryRunner {
     ].filter((el) => el && el.length);
     const links = [];
 
-    navRoots.forEach((root) => {
+    each(navRoots, (root) => {
       root.find('a[href]').each((_, node) => {
         if (links.length >= this.maxLinksPerPage) return false;
         const el = $(node);

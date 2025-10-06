@@ -43,14 +43,16 @@ describe('createWritableDbAccessor', () => {
     expect(ensureDb).toHaveBeenCalledTimes(1);
   expect(mockDb.exec.mock.calls.length).toBeGreaterThanOrEqual(2); // schema + index batches (may include migrations)
   expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO crawl_types'));
-    expect(mockDb.insertRuns).toHaveLength(6);
+    expect(mockDb.insertRuns).toHaveLength(8);
     expect(mockDb.insertRuns.map((entry) => entry.name)).toEqual([
       'basic',
       'sitemap-only',
       'basic-with-sitemap',
       'intelligent',
       'discover-structure',
-      'gazetteer'
+      'gazetteer',
+      'wikidata',
+      'geography'
     ]);
     expect(logger.log).toHaveBeenCalledWith('[db] opened writable queue DB at', '/tmp/test.db');
   });

@@ -1,0 +1,405 @@
+/**
+ * Compression Buckets Module
+ * 
+ * Manages compression buckets that store multiple similar files in a single compressed archive.
+ * Uses tar format for packaging and applies compression algorithms (gzip/brotli) to the entire archive.
+ */
+
+const tar = require('tar-stream');
+const { compress, decompress, getCompressionType } = require('./compression');
+
+/**
+ * Create a compression bucket from multiple items
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {Object} options - Bucket creation options
+ * @param {string} options.bucketType - Type of bucket ('article_content', 'http_body', 'analysis_results', etc.)
+ * @param {string} [options.domainPattern] - Optional domain pattern for grouping
+ * @param {string} options.compressionType - Compression type name (e.g., 'brotli_11')
+ * @param {Array<Object>} options.items - Items to add to bucket
+ * @param {string} options.items[].key - Unique key for this item (e.g., SHA256 or article ID)
+ * @param {Buffer|string} options.items[].content - Content to store
+ * @param {Object} [options.items[].metadata] - Optional metadata (stored in index)
+ * @returns {Object} { bucketId, compressionType, itemCount, uncompressedSize, compressedSize, ratio }
+ */
+function createBucket(db, options) {
+  return new Promise((resolve, reject) => {
+    try {
+      const { bucketType, domainPattern, compressionType, items } = options;
+      
+      if (!items || items.length === 0) {
+        return reject(new Error('Cannot create empty bucket'));
+      }
+      
+      // Get compression type
+      const type = getCompressionType(db, compressionType);
+      
+      // Create tar archive
+      const pack = tar.pack();
+      const chunks = [];
+      
+      // Track statistics
+      let totalUncompressedSize = 0;
+      const index = {};
+      
+      // Add each item to tar
+      for (const item of items) {
+        const { key, content, metadata } = item;
+        
+        if (!key) {
+          return reject(new Error('Each item must have a key'));
+        }
+        
+        // Check for duplicate keys
+        if (index[key]) {
+          return reject(new Error(`Duplicate key found: ${key}`));
+        }
+      
+        // Convert content to buffer
+        const buffer = Buffer.isBuffer(content) 
+          ? content 
+          : Buffer.from(content, 'utf8');
+      
+      totalUncompressedSize += buffer.length;
+      
+      // Add to tar archive with sanitized filename
+      const filename = sanitizeFilename(key);
+      pack.entry({ name: filename, size: buffer.length }, buffer);
+      
+      // Store in index
+      index[key] = {
+        filename,
+        size: buffer.length,
+        offset: null,  // Tar doesn't provide random access offsets
+        metadata: metadata || null
+      };
+    }
+    
+    // Finalize tar
+    pack.finalize();
+    
+    // Collect tar stream into buffer
+    pack.on('data', chunk => chunks.push(chunk));
+    
+    pack.on('end', () => {
+      try {
+        const tarBuffer = Buffer.concat(chunks);
+        
+        // Compress the entire tar archive
+        const result = compress(tarBuffer, {
+          algorithm: type.algorithm,
+          level: type.level,
+          windowBits: type.window_bits,
+          blockBits: type.block_bits
+        });
+        
+        // Insert into database
+        const insertResult = db.prepare(`
+          INSERT INTO compression_buckets (
+            bucket_type,
+            domain_pattern,
+            compression_type_id,
+            bucket_blob,
+            content_count,
+            uncompressed_size,
+            compressed_size,
+            compression_ratio,
+            index_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id
+        `).get(
+          bucketType,
+          domainPattern || null,
+          type.id,
+          result.compressed,
+          items.length,
+          totalUncompressedSize,
+          result.compressedSize,
+          result.ratio,
+          JSON.stringify(index)
+        );
+        
+        resolve({
+          bucketId: insertResult.id,
+          compressionType: type.name,
+          algorithm: type.algorithm,
+          level: type.level,
+          itemCount: items.length,
+          uncompressedSize: totalUncompressedSize,
+          compressedSize: result.compressedSize,
+          ratio: result.ratio
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+    
+    pack.on('error', reject);
+    
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Retrieve an item from a compression bucket
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} bucketId - Bucket ID
+ * @param {string} entryKey - Entry key to retrieve
+ * @param {Buffer} [cachedTarBuffer] - Optional cached decompressed tar buffer (for performance)
+ * @returns {Object} { content: Buffer, metadata: Object }
+ */
+async function retrieveFromBucket(db, bucketId, entryKey, cachedTarBuffer = null) {
+  // Fetch bucket metadata
+  const bucket = db.prepare(`
+    SELECT cb.bucket_blob, cb.index_json, ct.algorithm
+    FROM compression_buckets cb
+    JOIN compression_types ct ON cb.compression_type_id = ct.id
+    WHERE cb.id = ?
+  `).get(bucketId);
+  
+  if (!bucket) {
+    throw new Error(`Bucket not found: ${bucketId}`);
+  }
+  
+  // Parse index (with error handling)
+  let index;
+  try {
+    index = JSON.parse(bucket.index_json);
+  } catch (error) {
+    throw new Error(`Corrupted bucket index for bucket ${bucketId}: ${error.message}`);
+  }
+  
+  const entry = index[entryKey];
+  
+  if (!entry) {
+    throw new Error(`Entry not found in bucket: ${entryKey}`);
+  }
+  
+  // Decompress tar (use cached buffer if available)
+  const tarBuffer = cachedTarBuffer || decompress(bucket.bucket_blob, bucket.algorithm);
+  
+  // Extract specific file from tar
+  return new Promise((resolve, reject) => {
+    const extract = tar.extract();
+    let found = false;
+    
+    extract.on('entry', (header, stream, next) => {
+      if (header.name === entry.filename) {
+        found = true;
+        const chunks = [];
+        
+        stream.on('data', chunk => chunks.push(chunk));
+        stream.on('end', () => {
+          resolve({
+            content: Buffer.concat(chunks),
+            metadata: entry.metadata
+          });
+        });
+        stream.on('error', reject);
+        
+        stream.resume();
+      } else {
+        stream.resume();
+        next();
+      }
+    });
+    
+    extract.on('finish', () => {
+      if (!found) {
+        reject(new Error(`Entry file not found in tar: ${entry.filename}`));
+      }
+    });
+    
+    extract.on('error', reject);
+    
+    // Write tar buffer to extract stream
+    extract.end(tarBuffer);
+  });
+}
+
+/**
+ * List all entries in a compression bucket
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} bucketId - Bucket ID
+ * @returns {Array<Object>} Array of { key, filename, size, metadata }
+ */
+function listBucketEntries(db, bucketId) {
+  const bucket = db.prepare(`
+    SELECT index_json FROM compression_buckets WHERE id = ?
+  `).get(bucketId);
+  
+  if (!bucket) {
+    throw new Error(`Bucket not found: ${bucketId}`);
+  }
+  
+  const index = JSON.parse(bucket.index_json);
+  
+  return Object.entries(index).map(([key, entry]) => ({
+    key,
+    filename: entry.filename,
+    size: entry.size,
+    metadata: entry.metadata
+  }));
+}
+
+/**
+ * Get compression bucket statistics
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} bucketId - Bucket ID
+ * @returns {Object} Bucket statistics
+ */
+function getBucketStats(db, bucketId) {
+  const bucket = db.prepare(`
+    SELECT 
+      cb.id,
+      cb.bucket_type,
+      cb.domain_pattern,
+      cb.content_count,
+      cb.uncompressed_size,
+      cb.compressed_size,
+      cb.compression_ratio,
+      cb.created_at,
+      cb.finalized_at,
+      ct.name as compression_type,
+      ct.algorithm,
+      ct.level
+    FROM compression_buckets cb
+    JOIN compression_types ct ON cb.compression_type_id = ct.id
+    WHERE cb.id = ?
+  `).get(bucketId);
+  
+  if (!bucket) {
+    throw new Error(`Bucket not found: ${bucketId}`);
+  }
+  
+  return bucket;
+}
+
+/**
+ * Finalize a compression bucket (mark as immutable)
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} bucketId - Bucket ID
+ */
+function finalizeBucket(db, bucketId) {
+  const result = db.prepare(`
+    UPDATE compression_buckets
+    SET finalized_at = CURRENT_TIMESTAMP
+    WHERE id = ? AND finalized_at IS NULL
+  `).run(bucketId);
+  
+  if (result.changes === 0) {
+    throw new Error(`Bucket not found or already finalized: ${bucketId}`);
+  }
+}
+
+/**
+ * Delete a compression bucket
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} bucketId - Bucket ID
+ */
+function deleteBucket(db, bucketId) {
+  // Check if any content_storage rows reference this bucket
+  const references = db.prepare(`
+    SELECT COUNT(*) as count FROM content_storage
+    WHERE compression_bucket_id = ?
+  `).get(bucketId);
+  
+  if (references.count > 0) {
+    throw new Error(`Cannot delete bucket: ${references.count} content_storage rows reference it`);
+  }
+  
+  const result = db.prepare(`
+    DELETE FROM compression_buckets WHERE id = ?
+  `).run(bucketId);
+  
+  if (result.changes === 0) {
+    throw new Error(`Bucket not found: ${bucketId}`);
+  }
+}
+
+/**
+ * Sanitize filename for tar entry (remove path separators, special chars)
+ * 
+ * @param {string} key - Original key
+ * @returns {string} Sanitized filename
+ */
+function sanitizeFilename(key) {
+  return key
+    .replace(/[\/\\]/g, '_')  // Replace path separators
+    .replace(/[^a-zA-Z0-9._-]/g, '_')  // Replace special chars
+    .substring(0, 255);  // Limit length
+}
+
+/**
+ * Query compression buckets by type or domain pattern
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {Object} filters - Query filters
+ * @param {string} [filters.bucketType] - Filter by bucket type
+ * @param {string} [filters.domainPattern] - Filter by domain pattern
+ * @param {boolean} [filters.finalizedOnly] - Only return finalized buckets
+ * @param {number} [filters.limit] - Limit results
+ * @returns {Array<Object>} Array of bucket records
+ */
+function queryBuckets(db, filters = {}) {
+  const { bucketType, domainPattern, finalizedOnly, limit } = filters;
+  
+  let sql = `
+    SELECT 
+      cb.id,
+      cb.bucket_type,
+      cb.domain_pattern,
+      cb.content_count,
+      cb.uncompressed_size,
+      cb.compressed_size,
+      cb.compression_ratio,
+      cb.created_at,
+      cb.finalized_at,
+      ct.name as compression_type
+    FROM compression_buckets cb
+    JOIN compression_types ct ON cb.compression_type_id = ct.id
+    WHERE 1=1
+  `;
+  
+  const params = [];
+  
+  if (bucketType) {
+    sql += ' AND cb.bucket_type = ?';
+    params.push(bucketType);
+  }
+  
+  if (domainPattern) {
+    sql += ' AND cb.domain_pattern = ?';
+    params.push(domainPattern);
+  }
+  
+  if (finalizedOnly) {
+    sql += ' AND cb.finalized_at IS NOT NULL';
+  }
+  
+  sql += ' ORDER BY cb.created_at DESC';
+  
+  if (limit) {
+    sql += ' LIMIT ?';
+    params.push(limit);
+  }
+  
+  return db.prepare(sql).all(...params);
+}
+
+module.exports = {
+  createBucket,
+  retrieveFromBucket,
+  listBucketEntries,
+  getBucketStats,
+  finalizeBucket,
+  deleteBucket,
+  queryBuckets
+};

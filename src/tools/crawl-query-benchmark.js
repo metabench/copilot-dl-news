@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { is_array, tof, fp } = require('lang-tools');
 const os = require('os');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite');
@@ -77,8 +78,8 @@ const DEFAULT_QUERIES = [
 
 function parseArgs(argv = process.argv) {
   const args = {};
-  for (const raw of Array.isArray(argv) ? argv.slice(2) : []) {
-    if (typeof raw !== 'string' || !raw.startsWith('--')) continue;
+  for (const raw of is_array(argv) ? argv.slice(2) : []) {
+    if (tof(raw) !== 'string' || !raw.startsWith('--')) continue;
     if (raw === '--help') {
       args.help = true;
       continue;
@@ -103,19 +104,47 @@ function toCamelCase(text) {
   return text.replace(/-([a-zA-Z0-9])/g, (_, ch) => ch.toUpperCase());
 }
 
-function coerceValue(value) {
-  if (value === undefined) return undefined;
-  if (value === '') return '';
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  if (value === 'null') return null;
-  if (value === 'undefined') return undefined;
-  const trimmed = String(value).trim();
-  if (!trimmed) return '';
-  const numeric = Number(trimmed);
-  if (!Number.isNaN(numeric)) return numeric;
-  return value;
-}
+/**
+ * Polymorphic argument value coercion.
+ * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
+ * 
+ * Identical to coerceArgValue in analysis-run.js - converts string literals to
+ * appropriate types and parses numeric strings.
+ */
+const coerceValue = fp((a, sig) => {
+  // Undefined - return as-is
+  if (sig === '[u]') {
+    return undefined;
+  }
+  
+  // String - handle literal conversions and numeric parsing
+  if (sig === '[s]') {
+    const value = a[0];
+    
+    // Empty string
+    if (value === '') return '';
+    
+    // Boolean literals
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    
+    // Null/undefined literals
+    if (value === 'null') return null;
+    if (value === 'undefined') return undefined;
+    
+    // Numeric string parsing
+    const trimmed = String(value).trim();
+    if (!trimmed) return '';
+    const numeric = Number(trimmed);
+    if (!Number.isNaN(numeric)) return numeric;
+    
+    // Non-numeric, non-literal string
+    return value;
+  }
+  
+  // Default: return value as-is
+  return a[0];
+});
 
 function tableExists(db, tableName) {
   if (!tableName) return false;
@@ -128,7 +157,7 @@ function tableExists(db, tableName) {
 }
 
 function hasRequiredTables(db, required = []) {
-  if (!Array.isArray(required) || required.length === 0) return { ok: true, missing: [] };
+  if (!is_array(required) || required.length === 0) return { ok: true, missing: [] };
   const missing = [];
   for (const name of required) {
     if (!tableExists(db, name)) missing.push(name);
@@ -162,7 +191,7 @@ function percentile(sorted, fraction) {
 }
 
 function computeStats(samples) {
-  if (!Array.isArray(samples) || samples.length === 0) return null;
+  if (!is_array(samples) || samples.length === 0) return null;
   const sorted = [...samples].sort((a, b) => a - b);
   const sum = samples.reduce((acc, value) => acc + value, 0);
   return {
@@ -178,8 +207,8 @@ function computeStats(samples) {
 
 function extractRowCount(result) {
   if (result == null) return null;
-  if (Array.isArray(result)) return result.length;
-  if (typeof result === 'object') {
+  if (is_array(result)) return result.length;
+  if (tof(result) === 'object') {
     const priorityKeys = ['count', 'total', 'rows', 'c'];
     for (const key of priorityKeys) {
       if (Object.prototype.hasOwnProperty.call(result, key)) {
@@ -193,16 +222,16 @@ function extractRowCount(result) {
     }
     return 1;
   }
-  if (typeof result === 'number') return 1;
+  if (tof(result) === 'number') return 1;
   return null;
 }
 
 function buildResultPreview(result, limit = 3) {
   if (result == null) return null;
-  if (Array.isArray(result)) {
+  if (is_array(result)) {
     return result.slice(0, limit);
   }
-  if (typeof result === 'object') {
+  if (tof(result) === 'object') {
     return { ...result };
   }
   return result;
@@ -217,7 +246,7 @@ function formatMs(value) {
 }
 
 function renderTable(results) {
-  if (!Array.isArray(results) || results.length === 0) {
+  if (!is_array(results) || results.length === 0) {
     console.log('No benchmark results to display.');
     return;
   }
@@ -264,7 +293,7 @@ function renderTable(results) {
 }
 
 function selectQueries(definitions, options = {}) {
-  if (!Array.isArray(definitions)) return [];
+  if (!is_array(definitions)) return [];
   const { only } = options;
   if (!only) return definitions;
   const wanted = new Set(String(only).split(',').map((value) => value.trim()).filter(Boolean));

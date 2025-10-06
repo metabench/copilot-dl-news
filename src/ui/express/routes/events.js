@@ -1,4 +1,5 @@
 const express = require('express');
+const { each, tof, is_array } = require('lang-tools');
 
 // Factory to create the SSE router. We pass dependencies to avoid changing global behavior.
 function createEventsRouter({ realtime, jobRegistry, QUIET, analysisProgress }) {
@@ -74,26 +75,26 @@ function createEventsRouter({ realtime, jobRegistry, QUIET, analysisProgress }) 
 
     // Seed analysis progress snapshot(s)
     try {
-      if (analysisProgress && typeof analysisProgress === 'object') {
+      if (analysisProgress && tof(analysisProgress) === 'object') {
         let seeded = false;
-        if (Array.isArray(analysisProgress.history) && analysisProgress.history.length > 0) {
+        if (is_array(analysisProgress.history) && analysisProgress.history.length > 0) {
           for (const entry of analysisProgress.history) {
-            if (!entry || typeof entry !== 'object') continue;
+            if (!entry || tof(entry) !== 'object') continue;
             const payload = { ...entry };
             if (!payload.runId && analysisProgress.lastRunId) payload.runId = analysisProgress.lastRunId;
             broadcast('analysis-progress', payload);
             seeded = true;
           }
         }
-        if (!seeded && analysisProgress.lastPayload && typeof analysisProgress.lastPayload === 'object') {
+        if (!seeded && analysisProgress.lastPayload && tof(analysisProgress.lastPayload) === 'object') {
           broadcast('analysis-progress', { ...analysisProgress.lastPayload });
           seeded = true;
         }
-        if (!seeded && analysisProgress.runs && typeof analysisProgress.runs.forEach === 'function') {
-          analysisProgress.runs.forEach((runEntry, runId) => {
-            if (!runEntry || typeof runEntry !== 'object') return;
+        if (!seeded && analysisProgress.runs && tof(analysisProgress.runs.forEach) === 'function') {
+          each(analysisProgress.runs, (runEntry, runId) => {
+            if (!runEntry || tof(runEntry) !== 'object') return;
             const payload = runEntry.lastProgress;
-            if (!payload || typeof payload !== 'object') return;
+            if (!payload || tof(payload) !== 'object') return;
             broadcast('analysis-progress', { ...payload, runId: payload.runId || runId });
           });
         }

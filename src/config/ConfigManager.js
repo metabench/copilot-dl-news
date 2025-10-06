@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { tof, clone, is_array } = require('lang-tools');
+const { tof, clone, is_array, fp } = require('lang-tools');
 
 function deepMerge(target, source) {
   if (!source || tof(source) !== 'object') return target;
@@ -15,18 +15,53 @@ function deepMerge(target, source) {
   return output;
 }
 
-function coerceNumber(value) {
-  if (value == null) return null;
-  if (tof(value) === 'number' && Number.isFinite(value)) return value;
-  if (tof(value) === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+/**
+ * Polymorphic numeric coercion with null handling.
+ * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
+ * 
+ * Similar to coerceNumeric in PriorityScorer.js but returns null for invalid values.
+ * 
+ * Signature handlers:
+ * - '[u]' or '[N]': null/undefined returns null
+ * - '[n]': Number returns as-is if finite, else null
+ * - '[s]': String parsed to number if valid, else null
+ * - '[o]': Object recursively unwraps .value property
+ * 
+ * @param {*} value - Value to coerce to number
+ * @returns {number|null} Coerced number or null if invalid
+ */
+const coerceNumber = fp((a, sig) => {
+  // Null/undefined - return null
+  if (sig === '[u]' || sig === '[N]') {
+    return null;
   }
-  if (tof(value) === 'object' && tof(value.value) !== 'undefined') {
-    return coerceNumber(value.value);
+  
+  // Number - return if finite
+  if (sig === '[n]') {
+    return Number.isFinite(a[0]) ? a[0] : null;
   }
+  
+  // String - parse to number
+  if (sig === '[s]') {
+    const trimmed = a[0].trim();
+    if (trimmed !== '') {
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+  
+  // Object - recursively unwrap .value property
+  if (sig === '[o]') {
+    if (tof(a[0].value) !== 'undefined') {
+      return coerceNumber(a[0].value);
+    }
+    return null;
+  }
+  
+  // Default: null
   return null;
-}
+});
 
 function toCamelCase(name = '') {
   return String(name)

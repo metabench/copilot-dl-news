@@ -160,6 +160,18 @@ const {
 const {
   createResumeAllRouter
 } = require('./routes/api.resume-all');
+const {
+  createBackgroundTasksRouter
+} = require('./routes/api.background-tasks');
+const {
+  BackgroundTaskManager
+} = require('../../background/BackgroundTaskManager');
+const {
+  CompressionTask
+} = require('../../background/tasks/CompressionTask');
+const {
+  CompressionWorkerPool
+} = require('../../background/workers/CompressionWorkerPool');
 
 // Quiet test mode: suppress certain async logs that can fire after Jest completes
 const QUIET = !!process.env.JEST_WORKER_ID || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_TEST_QUIET || '').toLowerCase());
@@ -354,6 +366,73 @@ function createApp(options = {}) {
     }
   }
 
+  // Initialize background task manager
+  let backgroundTaskManager = null;
+  let compressionWorkerPool = null;
+  
+  try {
+    // Initialize worker pool for compression tasks (async initialization deferred)
+    compressionWorkerPool = new CompressionWorkerPool({
+      poolSize: 1, // Start with 1 worker as requested
+      brotliQuality: 10, // High quality Brotli compression
+      lgwin: 24 // 256MB window size for best compression
+    });
+    
+    // Initialize pool asynchronously (don't block app creation)
+    compressionWorkerPool.initialize().then(() => {
+      if (verbose) {
+        console.log('[server] Initialized compression worker pool with 1 worker');
+      }
+    }).catch(err => {
+      console.error('[server] Failed to initialize compression worker pool:', err.message);
+    });
+    
+    const db = getDbRW();
+    backgroundTaskManager = new BackgroundTaskManager({
+      db,
+      broadcastEvent: (eventType, data) => {
+        // Broadcast background task events via SSE with specific event types
+        // This allows clients to listen for 'task-progress', 'task-created', etc.
+        broadcast(eventType, data);
+      },
+      updateMetrics: (stats) => {
+        // Update metrics object with background task stats
+        if (metrics && metrics.backgroundTasks) {
+          Object.assign(metrics.backgroundTasks, stats);
+        } else if (metrics) {
+          metrics.backgroundTasks = stats;
+        }
+      }
+    });
+
+    // Register task types with worker pool injected
+    backgroundTaskManager.registerTaskType('article-compression', CompressionTask, {
+      workerPool: compressionWorkerPool
+    });
+
+    // Resume paused tasks on startup (after a delay to ensure server is ready)
+    if (!process.env.JEST_WORKER_ID) {
+      setTimeout(async () => {
+        try {
+          await backgroundTaskManager.resumeAllPausedTasks();
+          if (verbose) {
+            console.log('[server] Resumed paused background tasks');
+          }
+        } catch (err) {
+          console.error('[server] Failed to resume paused tasks:', err);
+        }
+      }, 1000);
+    }
+
+    app.locals.backgroundTaskManager = backgroundTaskManager;
+    app.locals.compressionWorkerPool = compressionWorkerPool;
+  } catch (err) {
+    // Only log in verbose mode or non-test environments to reduce test noise
+    if (verbose || !process.env.JEST_WORKER_ID) {
+      console.error('[server] Failed to initialize backgroundTaskManager:', err.message);
+    }
+  }
+
   app.use(express.json());
   // Enable gzip compression for most responses, but explicitly skip SSE (/events)
   app.use(compression({
@@ -476,6 +555,15 @@ function createApp(options = {}) {
     analysisProgress,
     QUIET
   }));
+  // Mount background tasks API router
+  if (backgroundTaskManager) {
+    app.use('/api/background-tasks', createBackgroundTasksRouter(backgroundTaskManager, getDbRW));
+    
+    // Serve background tasks UI page
+    app.get('/background-tasks', (req, res) => {
+      res.sendFile(path.join(__dirname, '..', 'public', 'background-tasks.html'));
+    });
+  }
   // Mount URLs APIs (list, details, fetch-body)
   app.use(createUrlsApiRouter({
     urlsDbPath
@@ -689,6 +777,7 @@ function startServer(appOptions = {}) {
     realtime: app.locals?.realtime || null,
     configManager: app.locals?.configManager || null,
     benchmarkManager: app.locals?.benchmarkManager || null,
+    compressionWorkerPool: app.locals?.compressionWorkerPool || null,
     cleanupTempDb: app.locals?._cleanupTempDb || null,
     detached: serverArgs.detached,
     autoShutdownMs: serverArgs.autoShutdownMs

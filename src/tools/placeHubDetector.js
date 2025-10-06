@@ -1,4 +1,5 @@
 const { URL } = require('url');
+const { is_array, tof } = require('lang-tools');
 
 function normName(s) {
   return String(s || '')
@@ -79,14 +80,14 @@ function collectUrlPlaceCandidates(urlPlaceAnalysis, urlPlaces = []) {
   };
 
   if (urlPlaceAnalysis) {
-    if (urlPlaceAnalysis.bestChain && Array.isArray(urlPlaceAnalysis.bestChain.places) && urlPlaceAnalysis.bestChain.places.length) {
+    if (urlPlaceAnalysis.bestChain && is_array(urlPlaceAnalysis.bestChain.places) && urlPlaceAnalysis.bestChain.places.length) {
       addMatches(urlPlaceAnalysis.bestChain.places);
-    } else if (Array.isArray(urlPlaceAnalysis.matches) && urlPlaceAnalysis.matches.length) {
+    } else if (is_array(urlPlaceAnalysis.matches) && urlPlaceAnalysis.matches.length) {
       addMatches(urlPlaceAnalysis.matches);
     }
   }
 
-  if (!candidates.length && Array.isArray(urlPlaces)) {
+  if (!candidates.length && is_array(urlPlaces)) {
     addMatches(urlPlaces);
   }
 
@@ -125,8 +126,8 @@ function detectPlaceHub({
 } = {}) {
   if (!url) return null;
 
-  const isNavLike = fetchClassification === 'nav' || (typeof navLinksCount === 'number' && navLinksCount >= 10);
-  const isLightContent = typeof wordCount === 'number' && wordCount < 200;
+  const isNavLike = fetchClassification === 'nav' || (tof(navLinksCount) === 'number' && navLinksCount >= 10);
+  const isLightContent = tof(wordCount) === 'number' && wordCount < 200;
   if (!isNavLike && !isLightContent) {
     return null;
   }
@@ -150,7 +151,7 @@ function detectPlaceHub({
       return best;
     }, null);
   }
-  if (!chosen && Array.isArray(analysisPlaces) && analysisPlaces.length) {
+  if (!chosen && is_array(analysisPlaces) && analysisPlaces.length) {
     const dominant = pickDominantPlace(analysisPlaces);
     if (dominant) {
       chosen = {
@@ -200,7 +201,7 @@ function detectPlaceHub({
     const rawTopic = segments[placeIndex - 1] || '';
     const slugTopic = normalizedSegments[placeIndex - 1];
     const isCountryCodeSegment = placeCountry && slugTopic === placeCountry.toLowerCase();
-    const isShortSegment = typeof slugTopic === 'string' && slugTopic.length <= 2;
+    const isShortSegment = tof(slugTopic) === 'string' && slugTopic.length <= 2;
     if (slugTopic && slugTopic !== placeSlug && !isCountryCodeSegment && !isShortSegment) {
       const sectionMatches = section && slugify(section) === slugTopic;
       topicSlug = slugTopic;

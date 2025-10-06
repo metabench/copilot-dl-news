@@ -1,21 +1,23 @@
+const { each, tof } = require('lang-tools');
+
 function defineMilestone({ id, enabled = true, evaluate, onAward = null, goal = null }) {
   if (!id) {
     throw new Error('Milestone definitions require an id');
   }
-  if (typeof evaluate !== 'function') {
+  if (tof(evaluate) !== 'function') {
     throw new Error(`Milestone '${id}' requires an evaluate(context) function`);
   }
   if (goal != null) {
-    if (typeof goal !== 'object') {
+    if (tof(goal) !== 'object') {
       throw new Error(`Milestone '${id}' goal definition must be an object`);
     }
     if (!goal.id) {
       throw new Error(`Milestone '${id}' goal definition requires an id`);
     }
-    if (goal.getProgress && typeof goal.getProgress !== 'function') {
+    if (goal.getProgress && tof(goal.getProgress) !== 'function') {
       throw new Error(`Milestone '${id}' goal.getProgress must be a function`);
     }
-    if (goal.planActions && typeof goal.planActions !== 'function') {
+    if (goal.planActions && tof(goal.planActions) !== 'function') {
       throw new Error(`Milestone '${id}' goal.planActions must be a function`);
     }
   }
@@ -23,7 +25,7 @@ function defineMilestone({ id, enabled = true, evaluate, onAward = null, goal = 
     id,
     enabled: enabled !== false,
     evaluate,
-    onAward: typeof onAward === 'function' ? onAward : null,
+    onAward: tof(onAward) === 'function' ? onAward : null,
     goal: goal || null
   };
 }
@@ -39,11 +41,11 @@ function createDepthCoverageMilestone({
     id,
     enabled,
     evaluate: ({ stats }) => {
-      const processed = stats && typeof stats.depth2PagesProcessed === 'number' ? stats.depth2PagesProcessed : 0;
+      const processed = stats && tof(stats.depth2PagesProcessed) === 'number' ? stats.depth2PagesProcessed : 0;
       if (processed < countThreshold) {
         return null;
       }
-      const resolvedMessage = typeof message === 'function'
+      const resolvedMessage = tof(message) === 'function'
         ? message({ countThreshold, processed })
         : (message || `Processed ${processed} depth-2 pages (threshold ${countThreshold})`);
       return {
@@ -77,11 +79,11 @@ function createDownloadsMilestone({
     id,
     enabled,
     evaluate: ({ stats }) => {
-      const downloaded = stats && typeof stats.pagesDownloaded === 'number' ? stats.pagesDownloaded : 0;
+      const downloaded = stats && tof(stats.pagesDownloaded) === 'number' ? stats.pagesDownloaded : 0;
       if (downloaded < countThreshold) {
         return null;
       }
-      const resolvedMessage = typeof message === 'function'
+      const resolvedMessage = tof(message) === 'function'
         ? message({ countThreshold, downloaded })
         : (message || `Downloaded ${downloaded} pages (threshold ${countThreshold})`);
       return {
@@ -113,11 +115,11 @@ function createArticlesFoundMilestone({
     id,
     enabled,
     evaluate: ({ stats }) => {
-      const count = stats && typeof stats.articlesFound === 'number' ? stats.articlesFound : 0;
+      const count = stats && tof(stats.articlesFound) === 'number' ? stats.articlesFound : 0;
       if (count < countThreshold) {
         return null;
       }
-      const resolvedMessage = typeof message === 'function'
+      const resolvedMessage = tof(message) === 'function'
         ? message({ countThreshold, count })
         : (message || `Found ${count} articles (threshold ${countThreshold})`);
       return {
@@ -166,7 +168,7 @@ function createIdentifiedCountryHubsMilestone({
     if (state.getSeededHubSet && typeof state.getSeededHubSet === 'function') {
       const seededSet = state.getSeededHubSet();
       if (seededSet && typeof seededSet.forEach === 'function') {
-        seededSet.forEach((url) => {
+        each(seededSet, (url) => {
           if (missingSample.length >= maxMissingSample) {
             return;
           }
@@ -266,7 +268,7 @@ function createIdentifiedCountryHubsMilestone({
       if (missingCount > 0 && ratio < visitRatioThreshold) {
         return null;
       }
-      const resolvedMessage = typeof message === 'function'
+      const resolvedMessage = tof(message) === 'function'
         ? message({ seeded, visited, missingCount, ratio })
         : (message || `Identified country hubs for ${visited} of ${seeded} countries`);
       return {
@@ -309,7 +311,7 @@ function createRepeatedCrawlsMilestone({
     id,
     enabled,
     evaluate: ({ stats }) => {
-      if (!stats || typeof stats.depth2PagesProcessed !== 'number') {
+      if (!stats || tof(stats.depth2PagesProcessed) !== 'number') {
         return null;
       }
       if (depthThreshold > 2) {
@@ -320,7 +322,7 @@ function createRepeatedCrawlsMilestone({
       if (processed < countThreshold) {
         return null;
       }
-      const resolvedMessage = typeof message === 'function'
+      const resolvedMessage = tof(message) === 'function'
         ? message({ depthThreshold, countThreshold, processed })
         : (message || `Completed ${processed} depth-${depthThreshold} page visits (threshold ${countThreshold})`);
       return {

@@ -10,9 +10,15 @@
     node src/tools/populate-gazetteer.js --db=./data/news.db --limit=all
 */
 
+const { is_array, tof } = require('lang-tools');
+
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { ensureDb, ensureGazetteer } = require('../db/sqlite');
+const {
+  createAttributeStatements,
+  recordAttribute
+} = require('../db/sqlite/queries/gazetteer.attributes');
 const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../utils/project-root');
 
@@ -139,13 +145,13 @@ function getArg(name, fallback) {
     VALUES(@kind, @country_code, @population, @timezone, @lat, @lng, @bbox, NULL, @source, @extra)
   `);
   const updPlaceByCode = raw.prepare(`
-    UPDATE places SET population=COALESCE(@population, population),
-                      timezone=COALESCE(@timezone, timezone),
-                      lat=COALESCE(@lat, lat),
-                      lng=COALESCE(@lng, lng),
-                      bbox=COALESCE(@bbox, bbox),
-                      source=COALESCE(@source, source),
-                      extra=COALESCE(@extra, extra)
+    UPDATE places SET population = COALESCE(population, @population),
+                      timezone = COALESCE(timezone, @timezone),
+                      lat = COALESCE(lat, @lat),
+                      lng = COALESCE(lng, @lng),
+                      bbox = COALESCE(bbox, @bbox),
+                      source = COALESCE(NULLIF(source, ''), @source),
+                      extra = COALESCE(extra, @extra)
     WHERE id = @id
   `);
   const getCountryByCode = raw.prepare(`SELECT id FROM places WHERE kind='country' AND country_code = ?`);
@@ -180,6 +186,8 @@ function getArg(name, fallback) {
   let countries = 0, capitals = 0, names = 0;
   let adm1Count = 0, adm2Count = 0, cityCount = 0;
 
+  const attributeStatements = createAttributeStatements(raw);
+
   function includeCountry(c) {
     const cc2 = (c.cca2 || '').toUpperCase();
     if (!cc2) return false;
@@ -211,8 +219,8 @@ function getArg(name, fallback) {
   if (verbose) log(`[gazetteer] Upserting country ${cc2} ${c.name?.common?('('+c.name.common+')'):''}`);
       // Upsert country place
       let pid = getCountryByCode.get(cc2)?.id || null;
-      const latlng = Array.isArray(c.latlng) && c.latlng.length === 2 ? c.latlng : null;
-      const primTz = Array.isArray(c.timezones) && c.timezones.length ? c.timezones[0] : null;
+      const latlng = is_array(c.latlng) && c.latlng.length === 2 ? c.latlng : null;
+      const primTz = is_array(c.timezones) && c.timezones.length ? c.timezones[0] : null;
       const extraObj = {
         cca3: c.cca3 || null,
         ccn3: c.ccn3 || null,
@@ -239,6 +247,67 @@ function getArg(name, fallback) {
       } else {
         updPlaceByCode.run({ id: pid, population: c.population || null, timezone: primTz, lat: latlng?latlng[0]:null, lng: latlng?latlng[1]:null, bbox: null, source: 'restcountries@v3.1', extra });
       }
+
+      const attrSource = 'restcountries';
+      const fetchedAt = Date.now();
+      if (Number.isFinite(c.population)) {
+        recordAttribute(attributeStatements, {
+          placeId: pid,
+          attr: 'population',
+          value: c.population,
+          source: attrSource,
+          fetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
+      }
+      if (latlng) {
+        recordAttribute(attributeStatements, {
+          placeId: pid,
+          attr: 'lat',
+          value: latlng[0],
+          source: attrSource,
+          fetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
+        recordAttribute(attributeStatements, {
+          placeId: pid,
+          attr: 'lng',
+          value: latlng[1],
+          source: attrSource,
+          fetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
+      }
+      if (primTz) {
+        recordAttribute(attributeStatements, {
+          placeId: pid,
+          attr: 'timezone',
+          value: primTz,
+          source: attrSource,
+          fetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
+      }
+      if (c.area != null) {
+        recordAttribute(attributeStatements, {
+          placeId: pid,
+          attr: 'area_sq_km',
+          value: c.area,
+          source: attrSource,
+          fetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
+      }
+      if (cc2) {
+        recordAttribute(attributeStatements, {
+          placeId: pid,
+          attr: 'iso.alpha2',
+          value: cc2,
+          source: attrSource,
+          fetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
+      }
       // Names: common + official + translations
       const common = c.name?.common || null;
       const official = c.name?.official || null;
@@ -260,20 +329,20 @@ function getArg(name, fallback) {
         if (on && on !== cn) { insName.run(pid, on, normalizeName(on), lang, 'official', 0, 1); names++; }
       }
       // Alt spellings as aliases
-      const alt = Array.isArray(c.altSpellings) ? c.altSpellings : [];
+      const alt = is_array(c.altSpellings) ? c.altSpellings : [];
       for (const a of alt) { if (a) { insName.run(pid, a, normalizeName(a), 'und', 'alias', 0, 0); names++; } }
       // Demonyms as names (language-tagged where possible)
       const dem = c.demonyms || {};
       for (const [lang, mf] of Object.entries(dem)) {
-        if (mf && typeof mf === 'object') {
+        if (mf && tof(mf) === 'object') {
           const f = mf.f || null; const m = mf.m || null;
           if (f) { insName.run(pid, f, normalizeName(f), lang, 'demonym', 0, 0); names++; }
           if (m && m !== f) { insName.run(pid, m, normalizeName(m), lang, 'demonym', 0, 0); names++; }
         }
       }
   // Capitals (as cities with parent link)
-      const capList = Array.isArray(c.capital) ? c.capital : (c.capital ? [c.capital] : []);
-      const capInfo = Array.isArray(c.capitalInfo?.latlng) ? c.capitalInfo.latlng : null;
+      const capList = is_array(c.capital) ? c.capital : (c.capital ? [c.capital] : []);
+      const capInfo = is_array(c.capitalInfo?.latlng) ? c.capitalInfo.latlng : null;
       for (const cap of capList) {
         // Create city place
         const normCap = normalizeName(cap);
@@ -284,6 +353,33 @@ function getArg(name, fallback) {
           capitals++;
         }
         insName.run(cid, cap, normCap, 'und', 'endonym', 1, 0); names++;
+        const cityFetchedAt = Date.now();
+        if (capInfo) {
+          recordAttribute(attributeStatements, {
+            placeId: cid,
+            attr: 'lat',
+            value: capInfo[0],
+            source: attrSource,
+            fetchedAt: cityFetchedAt,
+            metadata: { provider: 'restcountries', version: 'v3.1', role: 'capital' }
+          });
+          recordAttribute(attributeStatements, {
+            placeId: cid,
+            attr: 'lng',
+            value: capInfo[1],
+            source: attrSource,
+            fetchedAt: cityFetchedAt,
+            metadata: { provider: 'restcountries', version: 'v3.1', role: 'capital' }
+          });
+        }
+        recordAttribute(attributeStatements, {
+          placeId: cid,
+          attr: 'role',
+          value: 'capital',
+          source: attrSource,
+          fetchedAt: cityFetchedAt,
+          metadata: { provider: 'restcountries', version: 'v3.1' }
+        });
         // Link hierarchy (country -> city)
   try { raw.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?, ?, 'admin_parent', 1)`).run(pid, cid); } catch (_) {}
         // Set canonical for the city
@@ -293,7 +389,7 @@ function getArg(name, fallback) {
         } catch (_) {}
       }
       // Supranational blocs (e.g., EU) membership
-      const blocs = Array.isArray(c.regionalBlocs) ? c.regionalBlocs : [];
+      const blocs = is_array(c.regionalBlocs) ? c.regionalBlocs : [];
       for (const b of blocs) {
         const ac = String(b.acronym || '').toUpperCase();
         const nm = b.name || null;
@@ -489,7 +585,7 @@ function getArg(name, fallback) {
             try {
               const claims = ent?.claims?.P300 || [];
               const v = claims[0]?.mainsnak?.datavalue?.value;
-              if (typeof v === 'string' && v.length <= 12) adm1Code = v;
+              if (tof(v) === 'string' && v.length <= 12) adm1Code = v;
             } catch (_) {}
             const namesArr = ent ? labelMap(ent) : (r.admLabel?.value ? [{ name: r.admLabel.value, lang: 'und', kind:'official', preferred:1, official:1 }] : []);
             const { id: rid, created } = insPlaceWithNames('region', crow.country_code, null, null, null, namesArr, 'wikidata', qid, { adm1Code });
@@ -523,12 +619,12 @@ function getArg(name, fallback) {
             let adm2Code = null;
             try {
               const v = ent?.claims?.P300?.[0]?.mainsnak?.datavalue?.value;
-              if (typeof v === 'string' && v.length <= 24) adm2Code = v;
+              if (tof(v) === 'string' && v.length <= 24) adm2Code = v;
             } catch (_) {}
             // US county FIPS code
             try {
               const fips = ent?.claims?.P882?.[0]?.mainsnak?.datavalue?.value;
-              if (!adm2Code && typeof fips === 'string') adm2Code = fips;
+              if (!adm2Code && tof(fips) === 'string') adm2Code = fips;
             } catch (_) {}
             const pt = r.coord?.value ? parseWktPoint(r.coord.value) : null;
             const lat = pt ? pt.lat : null;

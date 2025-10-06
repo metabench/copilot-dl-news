@@ -1,11 +1,12 @@
+import { tof, is_array } from 'lang-tools';
 import { createEventHub } from './events.js';
 import { createTx } from './tx.js';
 
 function cloneValue(value) {
-  if (Array.isArray(value)) {
+  if (is_array(value)) {
     return value.slice();
   }
-  if (value && typeof value === 'object') {
+  if (value && tof(value) === 'object') {
     return { ...value };
   }
   return value;
@@ -18,17 +19,17 @@ export class DataModel {
   }
 
   get(prop) {
-    if (typeof prop === 'undefined') {
+    if (tof(prop) === 'undefined') {
       return { ...this._state };
     }
     return this._state[prop];
   }
 
   set(prop, value, options = {}) {
-    if (prop && typeof prop === 'object' && !Array.isArray(prop)) {
+    if (prop && tof(prop) === 'object' && !is_array(prop)) {
       return this.replace(prop, options);
     }
-    if (typeof prop !== 'string') {
+    if (tof(prop) !== 'string') {
       throw new TypeError('DataModel.set requires a property name string');
     }
     const previous = this._state[prop];

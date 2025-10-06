@@ -1,7 +1,8 @@
+import { tof, is_array } from 'lang-tools';
 import { createTx } from './tx.js';
 
 function ensureArray(value) {
-  if (Array.isArray(value)) return value;
+  if (is_array(value)) return value;
   if (value == null) return [];
   return [value];
 }
@@ -41,18 +42,18 @@ export function createDerivedBinding({
   let stopped = false;
 
   const writer = (() => {
-    if (typeof apply === 'function') {
+    if (tof(apply) === 'function') {
       return apply;
     }
-    if (!target || typeof target.set !== 'function') {
+    if (!target || tof(target.set) !== 'function') {
       return null;
     }
     return (value, meta) => {
       const tx = meta.tx;
       const baseOptions = { force: true, ...(targetOptions || {}), tx };
-      if (typeof targetProp === 'string') {
+      if (tof(targetProp) === 'string') {
         target.set(targetProp, value, baseOptions);
-      } else if (typeof target.replace === 'function' && value && typeof value === 'object') {
+      } else if (tof(target.replace) === 'function' && value && tof(value) === 'object') {
         target.replace(value, baseOptions);
       } else {
         target.set('value', value, baseOptions);
@@ -92,7 +93,7 @@ export function createDerivedBinding({
       stopped = true;
       for (const unsubscribe of unsubscribes) {
         try {
-          if (typeof unsubscribe === 'function') unsubscribe();
+          if (tof(unsubscribe) === 'function') unsubscribe();
         } catch (err) {
           console.error('[derivedBinding] failed to unsubscribe', err);
         }

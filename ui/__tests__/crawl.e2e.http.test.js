@@ -59,6 +59,8 @@ function collectSse(hostname, port, path, timeoutMs = 1500) {
 const E2E_ENABLED = !process.env.CI || process.env.E2E_HTTP === '1';
 
 (E2E_ENABLED ? describe : describe.skip)('e2e http: start crawl and receive progress via SSE', () => {
+  jest.setTimeout(20000); // E2E tests need more time for server startup and shutdown
+  
   let cp; let port;
   beforeAll(async () => {
     const started = await startServerWithEnv({ UI_FAKE_RUNNER: '1' });

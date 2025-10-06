@@ -1,6 +1,32 @@
 'use strict';
 
-const { GazetteerPriorityScheduler } = require('./GazetteerPriorityScheduler');
+const { is_array } = require('lang-tools');
+const { GazetteerPriorityScheduler, DEFAULT_STAGE_DEFS } = require('./GazetteerPriorityScheduler');
+
+function normalizeStageConfig(stage, index = 0) {
+  if (!stage || !stage.name) {
+    return null;
+  }
+  const ingestors = is_array(stage.ingestors)
+    ? stage.ingestors.slice()
+    : (stage.ingestors ? [stage.ingestors] : []);
+  const fallback = DEFAULT_STAGE_DEFS.find((entry) => entry.name === stage.name) || {};
+
+  return {
+    name: stage.name,
+    ingestors,
+    priority: Number.isFinite(stage.priority) ? stage.priority : fallback.priority,
+    crawlDepth: Number.isFinite(stage.crawlDepth) ? stage.crawlDepth : (Number.isFinite(fallback.crawlDepth) ? fallback.crawlDepth : index),
+    kind: stage.kind || fallback.kind || 'place'
+  };
+}
+
+function deriveSchedulerStages(stageConfigs) {
+  return stageConfigs
+    .map((stage, index) => normalizeStageConfig(stage, index))
+    .filter(Boolean)
+    .map(({ name, priority, crawlDepth, kind }) => ({ name, priority, crawlDepth, kind }));
+}
 
 /**
  * StagedGazetteerCoordinator
@@ -28,20 +54,35 @@ class StagedGazetteerCoordinator {
     this.db = db;
     this.logger = logger;
     this.telemetry = telemetry;
-    
-    // Initialize priority scheduler
-    this.scheduler = new GazetteerPriorityScheduler({ db, logger });
-    
-    // Stages configuration: { name, ingestors[] }
-    this._stages = Array.isArray(stages) ? stages : [];
+
+    const initialStages = is_array(stages) ? stages.slice() : [];
+    const normalizedStages = initialStages
+      .map((stage, index) => normalizeStageConfig(stage, index))
+      .filter(Boolean);
+
+    // Initialize priority scheduler with provided stage definitions
+    this.scheduler = new GazetteerPriorityScheduler({
+      db,
+      logger,
+      stages: deriveSchedulerStages(normalizedStages)
+    });
+
+    // Stages configuration: { name, ingestors[], priority?, crawlDepth?, kind? }
+    this._stages = normalizedStages;
     this._lastSummary = null;
   }
 
-  registerStage(stageName, ingestors = []) {
-    if (!Array.isArray(ingestors)) {
-      ingestors = [ingestors];
+  registerStage(stageName, ingestors = [], stageOptions = {}) {
+    const config = normalizeStageConfig({
+      name: stageName,
+      ingestors,
+      ...stageOptions
+    }, this._stages.length);
+    if (!config) {
+      return;
     }
-    this._stages.push({ name: stageName, ingestors });
+    this._stages.push(config);
+    this._syncSchedulerStages();
   }
 
   getStages() {
@@ -92,7 +133,7 @@ class StagedGazetteerCoordinator {
       });
 
       // Initialize stage in scheduler
-      this.scheduler.initStage(stageName, 0);
+      this.scheduler.initStage(stageName, stage.recordsTotal || 0);
 
       const stageStartedAt = Date.now();
       const stageTotals = {
@@ -105,7 +146,7 @@ class StagedGazetteerCoordinator {
 
       try {
         // Run all ingestors for this stage
-        for (const ingestor of stage.ingestors) {
+  for (const ingestor of stage.ingestors) {
           if (signal?.aborted) {
             throw new Error('Aborted during stage execution');
           }
@@ -135,11 +176,11 @@ class StagedGazetteerCoordinator {
                 });
                 
                 // Update scheduler progress
-                if (payload.recordsProcessed != null) {
+                if (payload.recordsProcessed != null || payload.recordsUpserted != null || payload.errors != null) {
                   this.scheduler.updateStageProgress(stageName, {
-                    recordsProcessed: payload.recordsProcessed,
-                    recordsUpserted: payload.recordsUpserted || 0,
-                    errors: payload.errors || 0
+                    recordsProcessed: payload.recordsProcessed != null ? payload.recordsProcessed : undefined,
+                    recordsUpserted: payload.recordsUpserted != null ? payload.recordsUpserted : undefined,
+                    errors: payload.errors != null ? payload.errors : undefined
                   });
                 }
               }
@@ -285,6 +326,10 @@ class StagedGazetteerCoordinator {
     } catch (_) {
       // Best effort only
     }
+  }
+
+  _syncSchedulerStages() {
+    this.scheduler.replaceStages(deriveSchedulerStages(this._stages));
   }
 }
 

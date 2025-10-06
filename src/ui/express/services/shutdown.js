@@ -38,6 +38,7 @@ function attachSignalHandlers(server, {
   cleanupTempDb = null,
   configManager = null,
   benchmarkManager = null,
+  compressionWorkerPool = null,
   quiet = false
 } = {}) {
   if (!server) return;
@@ -69,6 +70,10 @@ function attachSignalHandlers(server, {
     } catch (_) {}
     try {
       benchmarkManager?.destroy?.();
+    } catch (_) {}
+    try {
+      // Shutdown compression worker pool
+      compressionWorkerPool?.shutdown?.();
     } catch (_) {}
     try {
       cleanupTempDb?.();
@@ -117,6 +122,7 @@ function startServer(app, {
   realtime = null,
   configManager = null,
   benchmarkManager = null,
+  compressionWorkerPool = null,
   cleanupTempDb = null,
   detached = false,
   autoShutdownMs = null,
@@ -198,6 +204,9 @@ function startServer(app, {
       
       // Setup auto-shutdown timer if requested
       if (autoShutdownMs && Number.isFinite(autoShutdownMs) && autoShutdownMs > 0) {
+        if (!quiet) {
+          console.log(`[server] Auto-shutdown scheduled in ${autoShutdownMs / 1000}s`);
+        }
         const shutdownTimer = setTimeout(() => {
           if (!quiet) {
             console.log(`[server] Auto-shutdown timer expired (${autoShutdownMs}ms)`);
@@ -210,8 +219,9 @@ function startServer(app, {
           }, 100);
         }, autoShutdownMs);
         
-        // Don't prevent process exit
-        if (shutdownTimer.unref) {
+        // In detached mode, keep the timer referenced so process doesn't exit
+        // In normal mode, unref so it doesn't prevent exit
+        if (!detached && shutdownTimer.unref) {
           shutdownTimer.unref();
         }
       }
@@ -228,7 +238,7 @@ function startServer(app, {
   
   // In detached mode, disable SIGINT/SIGTERM handlers so the terminal can be released
   if (!detached) {
-    attachSignalHandlers(server, { jobRegistry, realtime, cleanupTempDb, configManager, benchmarkManager, quiet });
+    attachSignalHandlers(server, { jobRegistry, realtime, cleanupTempDb, configManager, benchmarkManager, compressionWorkerPool, quiet });
   }
   
   return server;

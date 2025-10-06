@@ -1,20 +1,47 @@
 const { ConfigManager } = require('../config/ConfigManager');
+const { fp } = require('lang-tools');
 
-function coerceNumeric(value, fallback = 0) {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
+/**
+ * Polymorphic numeric coercion with recursive object unwrapping.
+ * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
+ * 
+ * Signature handlers:
+ * - '[n]' or '[n,n]': Number returns as-is if finite
+ * - '[s]' or '[s,n]': String parsed to number if valid
+ * - '[o]' or '[o,n]': Object recursively unwraps .value property
+ * - All other cases return fallback (default 0)
+ */
+const coerceNumeric = fp((a, sig) => {
+  const fallback = a.l >= 2 ? a[1] : 0;
+  
+  // Number - return if finite
+  if (sig === '[n]' || sig === '[n,n]') {
+    return Number.isFinite(a[0]) ? a[0] : fallback;
   }
-  if (typeof value === 'object' && value !== null) {
-    return coerceNumeric(value.value, fallback);
-  }
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
+  
+  // String - parse to number
+  if (sig === '[s]' || sig === '[s,n]') {
+    const trimmed = a[0].trim();
+    if (trimmed !== '') {
+      const parsed = Number(trimmed);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
     }
+    return fallback;
   }
+  
+  // Object - recursively unwrap .value property
+  if (sig === '[o]' || sig === '[o,n]') {
+    if (a[0] !== null && typeof a[0].value !== 'undefined') {
+      return coerceNumeric(a[0].value, fallback);
+    }
+    return fallback;
+  }
+  
+  // Default: fallback
   return fallback;
-}
+});
 
 function toCamelCase(name = '') {
   return String(name)

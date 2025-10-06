@@ -1,3 +1,4 @@
+import { tof } from 'lang-tools';
 import { nanoid } from './utils.js';
 
 export function createStore(initialState = {}) {
@@ -10,7 +11,7 @@ export function createStore(initialState = {}) {
   }
 
   function setState(updater, meta = null) {
-    const nextState = typeof updater === 'function'
+    const nextState = tof(updater) === 'function'
       ? Object.freeze({ ...state, ...updater(state) })
       : Object.freeze({ ...state, ...updater });
     if (nextState === state) {

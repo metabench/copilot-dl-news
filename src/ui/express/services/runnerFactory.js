@@ -3,15 +3,31 @@ const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
 const fs = require('fs');
 const os = require('os');
+const { fp } = require('lang-tools');
 
-function isTruthyFlag(value) {
-  if (value === true) return true;
-  if (typeof value === 'string') {
-    const v = value.trim().toLowerCase();
+/**
+ * Polymorphic truthy flag detection.
+ * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
+ * 
+ * Signature handlers:
+ * - '[b]': Boolean value returns as-is
+ * - '[s]': String checked against truthy literals ('1', 'true', 'yes', 'on')
+ */
+const isTruthyFlag = fp((a, sig) => {
+  // Boolean - return as-is
+  if (sig === '[b]') {
+    return a[0];
+  }
+  
+  // String - check against truthy literals
+  if (sig === '[s]') {
+    const v = a[0].trim().toLowerCase();
     return ['1', 'true', 'yes', 'on'].includes(v);
   }
+  
+  // Default: false
   return false;
-}
+});
 
 function createFakeRunner(env) {
   return {

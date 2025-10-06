@@ -1,5 +1,7 @@
 'use strict';
 
+const { each } = require('lang-tools');
+
 /**
  * Gazetteer crawl progress queries
  * 
@@ -28,8 +30,9 @@ function getStageState(db, stageName) {
  */
 function getAllStageStates(db) {
   return db.prepare(`
-    SELECT stage, status, started_at, completed_at, 
-           records_total, records_processed, records_upserted, errors
+    SELECT stage, status, started_at, completed_at,
+           records_total, records_processed, records_upserted, errors,
+           metadata
     FROM gazetteer_crawl_state
     ORDER BY id ASC
   `).all();
@@ -41,8 +44,9 @@ function getAllStageStates(db) {
  * @param {string} stageName
  * @param {number} recordsTotal
  */
-function initStage(db, stageName, recordsTotal = 0) {
+function initStage(db, stageName, recordsTotal = 0, metadata = null) {
   const existing = getStageState(db, stageName);
+  const metadataJson = metadata != null ? JSON.stringify(metadata) : null;
   
   if (existing) {
     db.prepare(`
@@ -53,14 +57,15 @@ function initStage(db, stageName, recordsTotal = 0) {
           records_processed = 0,
           records_upserted = 0,
           errors = 0,
-          error_message = NULL
+          error_message = NULL,
+          metadata = ?
       WHERE stage = ?
-    `).run(Date.now(), recordsTotal, stageName);
+    `).run(Date.now(), recordsTotal, metadataJson, stageName);
   } else {
     db.prepare(`
-      INSERT INTO gazetteer_crawl_state (stage, status, started_at, records_total)
-      VALUES (?, 'in_progress', ?, ?)
-    `).run(stageName, Date.now(), recordsTotal);
+      INSERT INTO gazetteer_crawl_state (stage, status, started_at, records_total, metadata)
+      VALUES (?, 'in_progress', ?, ?, ?)
+    `).run(stageName, Date.now(), recordsTotal, metadataJson);
   }
 }
 
@@ -145,7 +150,7 @@ function getPlaceCountsByKind(db) {
   `).all();
   
   const counts = {};
-  rows.forEach(row => {
+  each(rows, row => {
     counts[row.kind] = row.count;
   });
   return counts;

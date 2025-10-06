@@ -1,9 +1,11 @@
+import { tof } from 'lang-tools';
+
 export function createEventHub() {
   const listeners = new Map();
   let counter = 0;
 
   function on(event, handler, options = {}) {
-    if (typeof handler !== 'function') {
+    if (tof(handler) !== 'function') {
       throw new TypeError('Event handler must be a function');
     }
     const key = `${event}:${++counter}`;
@@ -37,16 +39,16 @@ export function createEventHub() {
     const store = listeners.get(event);
     if (!store || store.size === 0) return;
     const txFromMeta = (() => {
-      if (meta && typeof meta === 'object' && meta.tx !== undefined) {
+      if (meta && tof(meta) === 'object' && meta.tx !== undefined) {
         return meta.tx;
       }
-      if (payload && typeof payload === 'object' && payload.tx !== undefined) {
+      if (payload && tof(payload) === 'object' && payload.tx !== undefined) {
         return payload.tx;
       }
       return undefined;
     })();
     const preparedPayload = (() => {
-      if (payload && typeof payload === 'object') {
+      if (payload && tof(payload) === 'object') {
         if (txFromMeta !== undefined && payload.tx !== txFromMeta) {
           return { ...payload, tx: txFromMeta };
         }

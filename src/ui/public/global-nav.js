@@ -1,3 +1,5 @@
+const { each } = require('lang-tools');
+
 /**
  * Hydrate every `[data-global-nav]` placeholder by requesting the shared
  * navigation markup from the Express API and swapping it into the DOM.
@@ -8,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  placeholders.forEach(async (el) => {
+  each(placeholders, async (el) => {
     const active = el.getAttribute('data-active') || '';
     const variant = el.getAttribute('data-variant') || '';
     const params = new URLSearchParams();

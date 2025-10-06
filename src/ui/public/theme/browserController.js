@@ -1,3 +1,4 @@
+const { each } = require('lang-tools');
 const {
   createThemeController,
   DEFAULT_THEMES
@@ -65,12 +66,12 @@ function createBrowserThemeController(options = {}) {
       if (!root || !root.classList) {
         return;
       }
-      allClasses.forEach((cls) => {
+      each(allClasses, (cls) => {
         if (cls) {
           root.classList.remove(cls);
         }
       });
-      classes.forEach((cls) => {
+      each(classes, (cls) => {
         if (cls) {
           root.classList.add(cls);
         }

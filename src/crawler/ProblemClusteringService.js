@@ -1,3 +1,5 @@
+const { tof, is_array, each } = require('lang-tools');
+
 /**
  * Problem clustering service for intelligent gap-driven prioritization
  * Analyzes problem patterns and generates priority boosts for related URLs
@@ -112,11 +114,11 @@ class ProblemClusteringService {
    */
   clusterProblems(problems = []) {
     try {
-      if (!Array.isArray(problems)) return [];
+      if (!is_array(problems)) return [];
 
       const grouped = new Map();
       for (const problem of problems) {
-        if (!problem || typeof problem !== 'object') continue;
+        if (!problem || tof(problem) !== 'object') continue;
         const kind = problem.kind || 'unknown';
         const scope = problem.scope || 'global';
         const key = `${kind}|${scope}`;
@@ -177,7 +179,7 @@ class ProblemClusteringService {
   }
 
   _estimateClusterSimilarity(cluster) {
-    const count = Array.isArray(cluster.problems) ? cluster.problems.length : 0;
+    const count = is_array(cluster.problems) ? cluster.problems.length : 0;
     if (!count) return 0;
     const base = 0.65;
     const bonus = Math.min(Math.log2(count + 1) * 0.08, 0.3);
@@ -186,10 +188,10 @@ class ProblemClusteringService {
 
   _deriveClusterPatterns(cluster) {
     const patterns = new Set();
-    const problems = Array.isArray(cluster.problems) ? cluster.problems : [];
+    const problems = is_array(cluster.problems) ? cluster.problems : [];
     const representative = cluster.representative || problems[0];
     const target = representative?.target;
-    if (typeof target === 'string' && target.includes('/')) {
+    if (tof(target) === 'string' && target.includes('/')) {
       const segments = target.split('/').filter(Boolean);
       if (segments.length >= 2) {
         const prefix = segments.slice(0, -1).join('/');
@@ -199,7 +201,7 @@ class ProblemClusteringService {
     }
 
     for (const problem of problems) {
-      if (typeof problem?.target === 'string' && problem.target.includes('{')) {
+      if (tof(problem?.target) === 'string' && problem.target.includes('{')) {
         patterns.add(problem.target);
       }
     }
@@ -208,17 +210,17 @@ class ProblemClusteringService {
   }
 
   _normalizeClusterForAnalysis(cluster) {
-    if (!cluster || typeof cluster !== 'object') {
+    if (!cluster || tof(cluster) !== 'object') {
       return null;
     }
 
-    const rawProblems = Array.isArray(cluster.problems) ? cluster.problems : [];
+    const rawProblems = is_array(cluster.problems) ? cluster.problems : [];
     const problems = rawProblems
       .filter((p) => p != null)
-      .map((p) => (typeof p === 'object' ? p : { target: String(p) }))
-      .filter((p) => p && typeof p === 'object');
+      .map((p) => (tof(p) === 'object' ? p : { target: String(p) }))
+      .filter((p) => p && tof(p) === 'object');
 
-    const representative = cluster.representative && typeof cluster.representative === 'object'
+    const representative = cluster.representative && tof(cluster.representative) === 'object'
       ? cluster.representative
       : problems[0] || null;
 
@@ -230,7 +232,7 @@ class ProblemClusteringService {
       target: cluster.target || representative?.target || null,
       problems,
       occurrenceCount: cluster.occurrenceCount ?? problems.length,
-      recentProblems: Array.isArray(cluster.recentProblems) ? cluster.recentProblems.slice() : []
+      recentProblems: is_array(cluster.recentProblems) ? cluster.recentProblems.slice() : []
     };
 
     if (!normalized.recentProblems.length) {
@@ -245,12 +247,12 @@ class ProblemClusteringService {
   }
 
   _buildFallbackPredictions(cluster) {
-    const problems = Array.isArray(cluster.problems) ? cluster.problems : [];
+    const problems = is_array(cluster.problems) ? cluster.problems : [];
     const targets = new Set();
     for (const problem of problems) {
       if (problem?.target) {
         targets.add(problem.target);
-      } else if (typeof problem === 'string') {
+      } else if (tof(problem) === 'string') {
         targets.add(problem);
       }
     }
@@ -269,7 +271,7 @@ class ProblemClusteringService {
     const confidenceBase = Math.min(0.9, 0.7 + targets.size * 0.03);
 
     return Array.from(targets).map((target) => {
-      const normalizedTarget = typeof target === 'string' ? target : String(target || '');
+      const normalizedTarget = tof(target) === 'string' ? target : String(target || '');
       const formattedTarget = normalizedTarget.startsWith('http')
         ? normalizedTarget
         : `https://${baseHost}${normalizedTarget.startsWith('/') ? normalizedTarget : `/${normalizedTarget}`}`;
@@ -438,9 +440,9 @@ class ProblemClusteringService {
     const segments = new Set();
     
     for (const target of targets) {
-      if (typeof target === 'string') {
+      if (tof(target) === 'string') {
         const pathParts = target.split('/').filter(Boolean);
-        pathParts.forEach(part => segments.add(part));
+        each(pathParts, part => segments.add(part));
       }
     }
     

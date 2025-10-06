@@ -1,3 +1,5 @@
+import { tof } from 'lang-tools';
+
 let counter = 0;
 
 function nextCounter() {
@@ -12,7 +14,7 @@ export function createTx(prefix = 'tx') {
 }
 
 export function withTx(options = {}, tx) {
-  if (options && typeof options === 'object') {
+  if (options && tof(options) === 'object') {
     return { ...options, tx };
   }
   return { tx };

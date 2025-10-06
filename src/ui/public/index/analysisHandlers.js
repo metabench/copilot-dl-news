@@ -4,6 +4,7 @@
  * Manages pipeline updates, intelligent insights, and analysis state persistence.
  */
 
+import { tof } from 'lang-tools';
 import { formatNumber, formatRelativeTime } from './formatters.js';
 
 /**
@@ -110,12 +111,12 @@ export function createAnalysisHandlers(deps) {
 
     // Parse timestamp
     const tsRaw = payload.ts != null ? payload.ts : payload.endedAt || payload.startedAt || Date.now();
-    const tsParsed = typeof tsRaw === 'number' ? tsRaw : Date.parse(tsRaw);
+    const tsParsed = tof(tsRaw) === 'number' ? tsRaw : Date.parse(tsRaw);
     const ts = Number.isFinite(tsParsed) ? tsParsed : Date.now();
 
     // Build summary
     const stageLabel = payload.stage ? payload.stage.replace(/[_-]+/g, ' ') : 'analysis';
-    const progressInfo = payload.progress && typeof payload.progress === 'object' ? payload.progress : null;
+    const progressInfo = payload.progress && tof(payload.progress) === 'object' ? payload.progress : null;
     let summary = payload.summary;
     
     if (!summary && progressInfo) {
@@ -445,11 +446,11 @@ export function createAnalysisHandlers(deps) {
 
     // Update coverage metric if present
     const coverageSource = (details && details.coverage) || extras.coverage;
-    if (coverageSource && typeof coverageSource === 'object') {
+    if (coverageSource && tof(coverageSource) === 'object') {
       let pct = null;
-      if (typeof coverageSource.coveragePct === 'number') {
+      if (tof(coverageSource.coveragePct) === 'number') {
         pct = coverageSource.coveragePct;
-      } else if (typeof coverageSource.visitedCoveragePct === 'number') {
+      } else if (tof(coverageSource.visitedCoveragePct) === 'number') {
         pct = coverageSource.visitedCoveragePct;
       }
       

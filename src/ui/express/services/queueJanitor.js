@@ -1,3 +1,5 @@
+const { each } = require('lang-tools');
+
 const PID_CHECK_UNAVAILABLE = process.platform === 'win32';
 
 function isPidActive(pid) {
@@ -28,7 +30,7 @@ function collectActiveJobIds(jobRegistry) {
   try {
     const jobs = jobRegistry.getJobs();
     if (jobs && typeof jobs.forEach === 'function') {
-      jobs.forEach((_, key) => ids.add(key));
+      each(jobs, (_, key) => ids.add(key));
     } else if (jobs && typeof jobs.keys === 'function') {
       for (const key of jobs.keys()) {
         ids.add(key);

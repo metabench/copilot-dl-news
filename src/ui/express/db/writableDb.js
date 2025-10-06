@@ -210,8 +210,18 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
           },
           {
             name: 'gazetteer',
-            description: 'Aggregate gazetteer data from structured external sources',
-            declaration: { crawlType: 'gazetteer', useSitemap: false, sitemapOnly: false }
+            description: 'Legacy alias for geography gazetteer crawl',
+            declaration: { crawlType: 'geography', useSitemap: false, sitemapOnly: false }
+          },
+          {
+            name: 'wikidata',
+            description: 'Only ingest gazetteer data from Wikidata',
+            declaration: { crawlType: 'wikidata', useSitemap: false, sitemapOnly: false }
+          },
+          {
+            name: 'geography',
+            description: 'Aggregate gazetteer data from Wikidata plus OpenStreetMap boundaries',
+            declaration: { crawlType: 'geography', useSitemap: false, sitemapOnly: false }
           }
         ];
         for (const def of defaults) {

@@ -1,3 +1,4 @@
+import { tof } from 'lang-tools';
 import { createControl } from './baseControl.js';
 import { createDerivedBinding } from '../jsgui/derivedBinding.js';
 import { formatNumber } from '../formatters.js';
@@ -92,7 +93,7 @@ export function createInsightsControl({ store, elements }) {
 
     if (coverage) {
       const pct = insights?.coverage;
-      coverage.textContent = typeof pct === 'number' ? `${pct.toFixed(1)}%` : '—';
+      coverage.textContent = tof(pct) === 'number' ? `${pct.toFixed(1)}%` : '—';
     }
     setText(coverageDetail, insights?.coverageDetail || '');
 

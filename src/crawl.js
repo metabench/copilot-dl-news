@@ -6,6 +6,8 @@ const fetch = (...args) => import('node-fetch').then(({
 const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
 const path = require('path');
+const { tof, is_array } = require('lang-tools');
+const { buildOptions } = require('./utils/optionsBuilder');
 const {
   URL
 } = require('url');
@@ -102,6 +104,18 @@ const {
   GazetteerModeController
 } = require('./crawler/gazetteer/GazetteerModeController');
 const {
+  StagedGazetteerCoordinator
+} = require('./crawler/gazetteer/StagedGazetteerCoordinator');
+const {
+  WikidataCountryIngestor
+} = require('./crawler/gazetteer/ingestors/WikidataCountryIngestor');
+const {
+  WikidataAdm1Ingestor
+} = require('./crawler/gazetteer/ingestors/WikidataAdm1Ingestor');
+const {
+  OsmBoundaryIngestor
+} = require('./crawler/gazetteer/ingestors/OsmBoundaryIngestor');
+const {
   sleep,
   nowMs,
   jitter,
@@ -150,50 +164,84 @@ const {
   StartupProgressTracker
 } = require('./crawler/StartupProgressTracker');
 
+/**
+ * Schema for NewsCrawler constructor options
+ */
+const crawlerOptionsSchema = {
+  jobId: { type: 'string', default: null },
+  slowMode: { type: 'boolean', default: false },
+  rateLimitMs: { type: 'number', default: (opts) => opts.slowMode ? 1000 : 0 },
+  maxDepth: { type: 'number', default: 3 },
+  dataDir: { type: 'string', default: (opts) => path.join(process.cwd(), 'data') },
+  concurrency: { type: 'number', default: 1, processor: (val) => Math.max(1, val) },
+  maxQueue: { type: 'number', default: 10000, processor: (val) => Math.max(1000, val) },
+  retryLimit: { type: 'number', default: 3 },
+  backoffBaseMs: { type: 'number', default: 500 },
+  backoffMaxMs: { type: 'number', default: 5 * 60 * 1000 },
+  maxDownloads: { type: 'number', default: undefined, validator: (val) => val > 0 },
+  maxAgeMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
+  maxAgeArticleMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
+  maxAgeHubMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
+  dbPath: { type: 'string', default: null }, // Will be computed after dataDir
+  fastStart: { type: 'boolean', default: false },
+  enableDb: { type: 'boolean', default: true },
+  preferCache: { type: 'boolean', default: true },
+  useSitemap: { type: 'boolean', default: true },
+  sitemapOnly: { type: 'boolean', default: false },
+  sitemapMaxUrls: { type: 'number', default: 5000, processor: (val) => Math.max(0, val) },
+  hubMaxPages: { type: 'number', default: undefined },
+  hubMaxDays: { type: 'number', default: undefined },
+  intMaxSeeds: { type: 'number', default: 50 },
+  intTargetHosts: { type: 'array', default: null, processor: (val) => val ? val.map(s => String(s || '').toLowerCase()) : null },
+  plannerVerbosity: { type: 'number', default: 0 },
+  requestTimeoutMs: { type: 'number', default: 10000, validator: (val) => val > 0 },
+  pacerJitterMinMs: { type: 'number', default: 25, processor: (val) => Math.max(0, val) },
+  pacerJitterMaxMs: { type: 'number', default: 50 },
+  crawlType: { type: 'string', default: 'basic', processor: (val) => val.toLowerCase() },
+  skipQueryUrls: { type: 'boolean', default: true },
+  connectionResetWindowMs: { type: 'number', default: 2 * 60 * 1000, validator: (val) => val > 0 },
+  connectionResetThreshold: { type: 'number', default: 3, validator: (val) => val > 0 }
+};
+
 class NewsCrawler {
   constructor(startUrl, options = {}) {
     this.startUrl = startUrl;
     this.domain = new URL(startUrl).hostname;
     this.baseUrl = `${new URL(startUrl).protocol}//${this.domain}`;
-    this.jobId = options.jobId || null;
+    
+    // Apply schema-driven option validation
+    const opts = buildOptions(options, crawlerOptionsSchema);
+    this.jobId = opts.jobId;
 
     // Configuration
-    this.slowMode = options.slowMode === true;
-    this.rateLimitMs = typeof options.rateLimitMs === 'number' ? options.rateLimitMs : (this.slowMode ? 1000 : 0); // default: no pacing
-    this.maxDepth = options.maxDepth || 3;
-    this.dataDir = options.dataDir || path.join(process.cwd(), 'data');
+    this.slowMode = opts.slowMode;
+    this.rateLimitMs = opts.rateLimitMs;
+    this.maxDepth = opts.maxDepth;
+    this.dataDir = opts.dataDir;
     this._lastProgressEmitAt = 0;
-    this.concurrency = Math.max(1, options.concurrency || 1);
-    this.maxQueue = Math.max(1000, options.maxQueue || 10000);
-    this.retryLimit = options.retryLimit || 3;
-    this.backoffBaseMs = options.backoffBaseMs || 500;
-    this.backoffMaxMs = options.backoffMaxMs || 5 * 60 * 1000;
-    this.maxDownloads =
-      typeof options.maxDownloads === 'number' && options.maxDownloads > 0 ?
-      options.maxDownloads :
-      undefined; // Limit number of network downloads
-    // Preserve 0 to mean "always refetch" (never accept cache)
-    this.maxAgeMs =
-      typeof options.maxAgeMs === 'number' && options.maxAgeMs >= 0 ?
-      options.maxAgeMs :
-      undefined; // Freshness window for cached items
-    // Optional per-type freshness windows (override maxAgeMs when provided)
-    this.maxAgeArticleMs = typeof options.maxAgeArticleMs === 'number' && options.maxAgeArticleMs >= 0 ? options.maxAgeArticleMs : undefined;
-    this.maxAgeHubMs = typeof options.maxAgeHubMs === 'number' && options.maxAgeHubMs >= 0 ? options.maxAgeHubMs : undefined;
-    this.dbPath = options.dbPath || path.join(this.dataDir, 'news.db');
-    this.fastStart = options.fastStart === true; // skip heavy startup stats
-    this.enableDb = options.enableDb !== undefined ? options.enableDb : true;
-    this.preferCache = options.preferCache !== false; // default to prefer cache unless explicitly disabled
+    this.concurrency = opts.concurrency;
+    this.maxQueue = opts.maxQueue;
+    this.retryLimit = opts.retryLimit;
+    this.backoffBaseMs = opts.backoffBaseMs;
+    this.backoffMaxMs = opts.backoffMaxMs;
+    this.maxDownloads = opts.maxDownloads;
+    this.maxAgeMs = opts.maxAgeMs;
+    this.maxAgeArticleMs = opts.maxAgeArticleMs;
+    this.maxAgeHubMs = opts.maxAgeHubMs;
+    this.dbPath = opts.dbPath || path.join(this.dataDir, 'news.db');
+    this.fastStart = opts.fastStart;
+    this.enableDb = opts.enableDb;
+    this.preferCache = opts.preferCache;
     // Sitemap support
-    this.useSitemap = options.useSitemap !== false; // default true
-    this.sitemapOnly = options.sitemapOnly === true; // only crawl URLs from sitemaps
-    this.sitemapMaxUrls = Math.max(0, options.sitemapMaxUrls || 5000);
+    this.useSitemap = opts.useSitemap;
+    this.sitemapOnly = opts.sitemapOnly;
+    this.sitemapMaxUrls = opts.sitemapMaxUrls;
     // Intelligent planner options
-    this.hubMaxPages = typeof options.hubMaxPages === 'number' ? options.hubMaxPages : undefined;
-    this.hubMaxDays = typeof options.hubMaxDays === 'number' ? options.hubMaxDays : undefined;
-    this.intMaxSeeds = typeof options.intMaxSeeds === 'number' ? options.intMaxSeeds : 50;
-    this.intTargetHosts = Array.isArray(options.intTargetHosts) ? options.intTargetHosts.map(s => String(s || '').toLowerCase()) : null;
-    this.plannerVerbosity = typeof options.plannerVerbosity === 'number' ? options.plannerVerbosity : 0;
+    this.hubMaxPages = opts.hubMaxPages;
+    this.hubMaxDays = opts.hubMaxDays;
+    this.intMaxSeeds = opts.intMaxSeeds;
+    this.intTargetHosts = opts.intTargetHosts;
+    this.plannerVerbosity = opts.plannerVerbosity;
 
     // State containers
     this.state = new CrawlerState();
@@ -244,23 +292,25 @@ class NewsCrawler {
     // Per-domain rate limiting and telemetry
     this._domainWindowMs = 60 * 1000;
     // Networking config
-    this.requestTimeoutMs = typeof options.requestTimeoutMs === 'number' && options.requestTimeoutMs > 0 ? options.requestTimeoutMs : 10000; // default 10s
+    this.requestTimeoutMs = opts.requestTimeoutMs;
     // Pacing jitter to avoid worker alignment
-    this.pacerJitterMinMs = typeof options.pacerJitterMinMs === 'number' ? Math.max(0, options.pacerJitterMinMs) : 25;
-    this.pacerJitterMaxMs = typeof options.pacerJitterMaxMs === 'number' ? Math.max(this.pacerJitterMinMs, options.pacerJitterMaxMs) : 50;
+    this.pacerJitterMinMs = opts.pacerJitterMinMs;
+    this.pacerJitterMaxMs = Math.max(this.pacerJitterMinMs, opts.pacerJitterMaxMs);
     // Crawl type determines planner features (e.g., 'intelligent')
-  this.crawlType = (options.crawlType || 'basic').toLowerCase();
-  this.isGazetteerMode = this.crawlType === 'gazetteer';
-  this.structureOnly = this.crawlType === 'discover-structure';
+    this.crawlType = opts.crawlType;
+    this.gazetteerVariant = this._resolveGazetteerVariant(this.crawlType);
+    this.isGazetteerMode = !!this.gazetteerVariant;
+    this.structureOnly = this.crawlType === 'discover-structure';
     if (options.concurrency == null && this.structureOnly && this.concurrency < 4) {
       this.concurrency = 4;
       this.usePriorityQueue = this.concurrency > 1;
     }
   this.plannerEnabled = this.crawlType.startsWith('intelligent') || this.structureOnly;
-    this.skipQueryUrls = options.skipQueryUrls !== undefined ? !!options.skipQueryUrls : true;
+    this.skipQueryUrls = opts.skipQueryUrls;
     if (this.isGazetteerMode) {
       this._applyGazetteerDefaults(options);
     }
+    this._gazetteerPipelineConfigured = false;
     this.urlPolicy = new UrlPolicy({
       baseUrl: this.baseUrl,
       skipQueryUrls: this.skipQueryUrls
@@ -276,12 +326,8 @@ class NewsCrawler {
       getDbAdapter: () => this.dbAdapter
     });
     // Failure tracking configuration
-    this.connectionResetWindowMs = typeof options.connectionResetWindowMs === 'number' && options.connectionResetWindowMs > 0 ?
-      options.connectionResetWindowMs :
-      2 * 60 * 1000; // 2 minutes rolling window
-    this.connectionResetThreshold = typeof options.connectionResetThreshold === 'number' && options.connectionResetThreshold > 0 ?
-      options.connectionResetThreshold :
-      3; // after 3 resets within window we pause
+    this.connectionResetWindowMs = opts.connectionResetWindowMs;
+    this.connectionResetThreshold = opts.connectionResetThreshold;
 
     this.linkExtractor = new LinkExtractor({
       normalizeUrl: (url, ctx) => this.normalizeUrl(url, ctx),
@@ -336,7 +382,7 @@ class NewsCrawler {
         }
       },
       goalPlanExecutor: ({ plan }) => {
-        if (!plan || !Array.isArray(plan.actions)) {
+        if (!plan || !is_array(plan.actions)) {
           return;
         }
         for (const action of plan.actions) {
@@ -582,7 +628,7 @@ class NewsCrawler {
 
   set sitemapUrls(urls) {
     if (this.robotsCoordinator) {
-      this.robotsCoordinator.sitemapUrls = Array.isArray(urls) ? urls : [];
+      this.robotsCoordinator.sitemapUrls = is_array(urls) ? urls : [];
     }
   }
 
@@ -685,6 +731,20 @@ class NewsCrawler {
     return this.articleSignals.combineSignals(urlSignals, contentSignals, opts);
   }
 
+  _resolveGazetteerVariant(crawlType) {
+    if (!crawlType) {
+      return null;
+    }
+    const normalized = String(crawlType).toLowerCase();
+    if (normalized === 'wikidata') {
+      return 'wikidata';
+    }
+    if (normalized === 'geography' || normalized === 'gazetteer') {
+      return 'geography';
+    }
+    return null;
+  }
+
   _applyGazetteerDefaults(options = {}) {
     this.structureOnly = false;
     this.useSitemap = false;
@@ -707,13 +767,105 @@ class NewsCrawler {
       state: this.state,
       dbAdapter: this.dbAdapter,
       logger: console,
-      jobId: this.jobId
+      jobId: this.jobId,
+      mode: this.gazetteerVariant || 'gazetteer'
     };
     if (gazetteerOptions.ingestionCoordinator) {
       controllerOptions.ingestionCoordinator = gazetteerOptions.ingestionCoordinator;
     }
     this.gazetteerOptions = gazetteerOptions;
     this.gazetteerModeController = new GazetteerModeController(controllerOptions);
+    this.gazetteerModeProfile = controllerOptions.mode;
+  }
+
+  _configureGazetteerPipeline() {
+    if (!this.isGazetteerMode || this._gazetteerPipelineConfigured) {
+      return;
+    }
+    if (this.gazetteerOptions && this.gazetteerOptions.ingestionCoordinator) {
+      this._gazetteerPipelineConfigured = true;
+      return;
+    }
+    if (!this.dbAdapter || typeof this.dbAdapter.getDb !== 'function') {
+      this._gazetteerPipelineConfigured = true;
+      return;
+    }
+
+    const db = this.dbAdapter.getDb();
+    if (!db) {
+      this._gazetteerPipelineConfigured = true;
+      return;
+    }
+
+    const variant = this.gazetteerVariant || 'geography';
+    const logger = console;
+    const cacheRoot = path.join(this.dataDir, 'cache', 'gazetteer');
+
+    const stages = [];
+
+    const wikidataCountry = new WikidataCountryIngestor({
+      db,
+      logger,
+      cacheDir: path.join(cacheRoot, 'wikidata'),
+      useCache: this.preferCache !== false
+    });
+
+    if (variant === 'wikidata') {
+      stages.push({
+        name: 'countries',
+        kind: 'country',
+        crawlDepth: 0,
+        priority: 1000,
+        ingestors: [wikidataCountry]
+      });
+    } else {
+      stages.push({
+        name: 'countries',
+        kind: 'country',
+        crawlDepth: 0,
+        priority: 1000,
+        ingestors: [wikidataCountry]
+      });
+      stages.push({
+        name: 'adm1',
+        kind: 'region',
+        crawlDepth: 1,
+        priority: 100,
+        ingestors: [
+          new WikidataAdm1Ingestor({
+            db,
+            logger
+          })
+        ]
+      });
+    }
+
+    if (variant === 'geography') {
+      stages.push({
+        name: 'boundaries',
+        kind: 'boundary',
+        crawlDepth: 1,
+        priority: 80,
+        ingestors: [
+          new OsmBoundaryIngestor({
+            db,
+            logger
+          })
+        ]
+      });
+    }
+
+    const ingestionCoordinator = new StagedGazetteerCoordinator({
+      db,
+      telemetry: this.telemetry,
+      logger,
+      stages
+    });
+
+    if (this.gazetteerModeController) {
+      this.gazetteerModeController.ingestionCoordinator = ingestionCoordinator;
+    }
+    this._gazetteerPipelineConfigured = true;
   }
 
   async _runGazetteerMode() {
@@ -723,6 +875,7 @@ class NewsCrawler {
 
     await this._trackStartupStage('gazetteer-prepare', 'Preparing gazetteer services', async () => {
       this.gazetteerModeController.dbAdapter = this.dbAdapter;
+      this._configureGazetteerPipeline();
       await this.gazetteerModeController.initialize();
       return { status: 'completed' };
     });
@@ -865,7 +1018,7 @@ class NewsCrawler {
     console.log(`Starting crawler for ${this.domain}`);
     console.log(`Data will be saved to: ${this.dataDir}`);
     if (this.isGazetteerMode) {
-      console.log('Gazetteer crawl mode enabled');
+      console.log(`Gazetteer crawl mode enabled (${this.gazetteerVariant || 'geography'})`);
     }
   }
 
@@ -928,7 +1081,7 @@ class NewsCrawler {
     const patch = {};
     if (progressPayload.stages) {
       patch.startup = {
-        stages: Array.isArray(progressPayload.stages) ? progressPayload.stages : [],
+        stages: is_array(progressPayload.stages) ? progressPayload.stages : [],
         summary: progressPayload.summary || null
       };
     }
@@ -1030,8 +1183,8 @@ class NewsCrawler {
           perKind
         },
         samples: {
-          seeded: Array.isArray(hubStats?.seededSample) ? hubStats.seededSample.slice(0, 5) : [],
-          visited: Array.isArray(hubStats?.visitedSample) ? hubStats.visitedSample.slice(0, 5) : []
+          seeded: is_array(hubStats?.seededSample) ? hubStats.seededSample.slice(0, 5) : [],
+          visited: is_array(hubStats?.visitedSample) ? hubStats.visitedSample.slice(0, 5) : []
         },
         updatedAt: Date.now()
       };

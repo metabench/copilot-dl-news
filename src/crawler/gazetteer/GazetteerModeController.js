@@ -1,5 +1,6 @@
 'use strict';
 
+const { tof, is_array } = require('lang-tools');
 const { GazetteerIngestionCoordinator, sanitizeSummary } = require('./GazetteerIngestionCoordinator');
 
 class GazetteerModeController {
@@ -10,7 +11,8 @@ class GazetteerModeController {
     dbAdapter = null,
     logger = console,
     jobId = null,
-    ingestionCoordinator = null
+    ingestionCoordinator = null,
+    mode = 'gazetteer'
   } = {}) {
     if (!telemetry) {
       throw new Error('GazetteerModeController requires telemetry');
@@ -21,7 +23,8 @@ class GazetteerModeController {
     this.dbAdapter = dbAdapter || null;
     this.logger = logger || console;
     this.jobId = jobId || null;
-    this.ingestionCoordinator = ingestionCoordinator || new GazetteerIngestionCoordinator({ telemetry, logger: this.logger });
+  this.ingestionCoordinator = ingestionCoordinator || new GazetteerIngestionCoordinator({ telemetry, logger: this.logger });
+  this.mode = mode || 'gazetteer';
 
     this._initialized = false;
     this._status = 'idle';
@@ -54,13 +57,15 @@ class GazetteerModeController {
       message: 'Gazetteer crawl mode initializing',
       details: {
         jobId: this.jobId,
-        startedAt: new Date(this._startedAt).toISOString()
+        startedAt: new Date(this._startedAt).toISOString(),
+        mode: this.mode
       }
     });
     if (this.state && !this.state.gazetteer) {
       this.state.gazetteer = {
         status: 'initializing',
-        lastUpdatedAt: this._startedAt
+        lastUpdatedAt: this._startedAt,
+        mode: this.mode
       };
     }
     this._initialized = true;
@@ -77,7 +82,8 @@ class GazetteerModeController {
       message: 'Gazetteer ingestion started',
       details: {
         jobId: this.jobId,
-        startedAt: new Date(this._startedAt || Date.now()).toISOString()
+        startedAt: new Date(this._startedAt || Date.now()).toISOString(),
+        mode: this.mode
       }
     });
 
@@ -101,14 +107,16 @@ class GazetteerModeController {
         details: {
           jobId: this.jobId,
           durationMs: summary?.durationMs || (this._completedAt - (this._startedAt || this._completedAt)),
-          totals: summary?.totals || null
+          totals: summary?.totals || null,
+          mode: this.mode
         }
       });
       if (this.state) {
         this.state.gazetteer = {
           status: 'completed',
           summary: compactSummary,
-          lastUpdatedAt: this._completedAt
+          lastUpdatedAt: this._completedAt,
+          mode: this.mode
         };
       }
       return summary;
@@ -133,7 +141,8 @@ class GazetteerModeController {
         this.state.gazetteer = {
           status: 'failed',
           error: problem.message,
-          lastUpdatedAt: failedAt
+          lastUpdatedAt: failedAt,
+          mode: this.mode
         };
       }
       throw error;
@@ -148,7 +157,8 @@ class GazetteerModeController {
       details: {
         jobId: this.jobId,
         reason: reason || null,
-        finishedAt: new Date(finishedAt).toISOString()
+        finishedAt: new Date(finishedAt).toISOString(),
+        mode: this.mode
       }
     });
   }
@@ -171,7 +181,8 @@ class GazetteerModeController {
         status: 'running',
         phase: payload.phase || 'progress',
         payload,
-        lastUpdatedAt: now
+        lastUpdatedAt: now,
+        mode: this.mode
       };
     }
   }
@@ -185,7 +196,9 @@ class GazetteerModeController {
         error: data?.error || null,
         startedAt: this._startedAt,
         completedAt: this._completedAt,
-        lastProgress: this._lastProgress || null
+        lastProgress: this._lastProgress || null,
+        mode: this.mode,
+        currentStage: data?.payload?.stage || null
       }
     };
     if (data?.completedAt) {
@@ -198,7 +211,7 @@ class GazetteerModeController {
       patch.gazetteer.payload = data.payload;
     }
     this.telemetry.progress({ force, patch });
-    if (typeof emitProgress === 'function') {
+    if (tof(emitProgress) === 'function') {
       try {
         emitProgress(patch.gazetteer);
       } catch (_) {
@@ -216,7 +229,7 @@ function compactGazetteerSummary(summary) {
     durationMs: summary.durationMs || null,
     totals: summary.totals || null
   };
-  if (Array.isArray(summary.ingestors)) {
+  if (is_array(summary.ingestors)) {
     base.ingestors = summary.ingestors.map((entry) => ({
       id: entry.id,
       durationMs: entry.durationMs,

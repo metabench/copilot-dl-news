@@ -3,7 +3,10 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const ingestQueries = require('../../db/sqlite/queries/gazetteer.ingest');
+const { tof, each, is_array } = require('lang-tools');
+const { compact } = require('../../../utils/pipelines');
+const { AttributeBuilder } = require('../../../utils/attributeBuilder');
+const ingestQueries = require('../../../db/sqlite/queries/gazetteer.ingest');
 
 /**
  * WikidataCountryIngestor
@@ -39,6 +42,15 @@ class WikidataCountryIngestor {
 
     this.id = 'wikidata-countries';
     this.name = 'Wikidata Country Ingestor';
+
+    try {
+      this.db.prepare(`
+        INSERT OR IGNORE INTO place_sources(name, version, url, license)
+        VALUES ('wikidata', 'latest', 'https://www.wikidata.org', 'CC0 1.0')
+      `).run();
+    } catch (err) {
+      this.logger.warn('[WikidataCountryIngestor] Failed to register source metadata:', err.message);
+    }
 
     // Ensure cache directory exists
     if (this.useCache) {
@@ -92,7 +104,7 @@ class WikidataCountryIngestor {
       });
 
       // Step 2: Fetch full entity data for each country
-      const qids = bindings.map(b => this._extractQid(b.country?.value)).filter(Boolean);
+      const qids = compact(bindings, b => this._extractQid(b.country?.value));
       const entities = await this._fetchEntities(qids);
 
       this._emitProgress(emitProgress, { 
@@ -173,6 +185,8 @@ class WikidataCountryIngestor {
     const geonamesId = this._extractStringClaim(claims.P1566);
 
     // Build wikidata_props JSON with comprehensive data
+    const gdpPerCapita = this._extractQuantityClaim(claims.P2132);
+
     const wikidataProps = {
       qid,
       iso2,
@@ -182,7 +196,7 @@ class WikidataCountryIngestor {
       population,
       area,
       gdp,
-      gdpPerCapita: this._extractQuantityClaim(claims.P2132),
+      gdpPerCapita,
       timezone: this._extractStringClaim(claims.P421),
       continent: this._extractItemClaim(claims.P30),
       memberOf: this._extractItemClaimArray(claims.P463),
@@ -192,6 +206,34 @@ class WikidataCountryIngestor {
     };
 
     // Upsert place using data layer
+    const attributes = [];
+    const coordValue = coords ? { lat: coords.lat, lng: coords.lon } : null;
+
+    if (population != null) {
+      attributes.push({ attr: 'population', value: population, metadata: { property: 'P1082' } });
+    }
+    if (area != null) {
+      attributes.push({ attr: 'area_sq_km', value: area, metadata: { property: 'P2046' } });
+    }
+    if (gdp != null) {
+      attributes.push({ attr: 'gdp_usd', value: gdp, metadata: { property: 'P2131' } });
+    }
+    if (gdpPerCapita != null) {
+      attributes.push({ attr: 'gdp_per_capita_usd', value: gdpPerCapita, metadata: { property: 'P2132' } });
+    }
+    if (iso2) {
+      attributes.push({ attr: 'iso.alpha2', value: iso2, metadata: { property: 'P297' } });
+    }
+    if (coordValue) {
+      attributes.push({ attr: 'coordinates', value: coordValue, metadata: { property: 'P625' } });
+    }
+    if (osmRelationId) {
+      attributes.push({ attr: 'osm.relation', value: osmRelationId, metadata: { property: 'P402' } });
+    }
+    if (geonamesId) {
+      attributes.push({ attr: 'geonames.id', value: geonamesId, metadata: { property: 'P1566' } });
+    }
+
     const placeData = {
       wikidataQid: qid,
       kind: 'country',
@@ -208,14 +250,17 @@ class WikidataCountryIngestor {
       adminLevel: 2,
       wikidataProps,
       crawlDepth: 0,
-      priorityScore: 1000
+      priorityScore: 1000,
+      osmType: osmRelationId ? 'relation' : null,
+      osmId: osmRelationId || null,
+      attributes
     };
 
     const placeId = ingestQueries.upsertPlace(this.db, this.stmts, placeData);
 
     // Insert names (labels and aliases)
     const names = this._extractNames(entity);
-    names.forEach(name => {
+    each(names, name => {
       ingestQueries.insertPlaceName(this.stmts, placeId, {
         text: name.text,
         lang: name.lang,
@@ -247,7 +292,7 @@ class WikidataCountryIngestor {
     const aliases = entity.aliases || {};
 
     // Labels (official)
-    Object.entries(labels).forEach(([lang, labelObj]) => {
+    each(labels, (labelObj, lang) => {
       if (labelObj?.value) {
         names.push({
           text: labelObj.value,
@@ -260,8 +305,8 @@ class WikidataCountryIngestor {
     });
 
     // Aliases
-    Object.entries(aliases).forEach(([lang, aliasArray]) => {
-      (aliasArray || []).forEach(aliasObj => {
+    each(aliases, (aliasArray, lang) => {
+      each(aliasArray, aliasObj => {
         if (aliasObj?.value) {
           names.push({
             text: aliasObj.value,
@@ -289,13 +334,13 @@ class WikidataCountryIngestor {
   }
 
   _extractStringClaim(claimArray) {
-    if (!Array.isArray(claimArray) || claimArray.length === 0) return null;
+    if (!is_array(claimArray) || claimArray.length === 0) return null;
     const value = claimArray[0]?.mainsnak?.datavalue?.value;
-    return typeof value === 'string' ? value : null;
+    return tof(value) === 'string' ? value : null;
   }
 
   _extractQuantityClaim(claimArray) {
-    if (!Array.isArray(claimArray) || claimArray.length === 0) return null;
+    if (!is_array(claimArray) || claimArray.length === 0) return null;
     const value = claimArray[0]?.mainsnak?.datavalue?.value;
     if (value?.amount) {
       const num = parseFloat(value.amount);
@@ -305,20 +350,18 @@ class WikidataCountryIngestor {
   }
 
   _extractItemClaim(claimArray) {
-    if (!Array.isArray(claimArray) || claimArray.length === 0) return null;
+    if (!is_array(claimArray) || claimArray.length === 0) return null;
     const value = claimArray[0]?.mainsnak?.datavalue?.value;
     return value?.id || null;
   }
 
   _extractItemClaimArray(claimArray) {
-    if (!Array.isArray(claimArray)) return [];
-    return claimArray
-      .map(claim => claim?.mainsnak?.datavalue?.value?.id)
-      .filter(Boolean);
+    if (!is_array(claimArray)) return [];
+    return compact(claimArray, claim => claim?.mainsnak?.datavalue?.value?.id);
   }
 
   _extractCoordinates(claimArray) {
-    if (!Array.isArray(claimArray) || claimArray.length === 0) return null;
+    if (!is_array(claimArray) || claimArray.length === 0) return null;
     const value = claimArray[0]?.mainsnak?.datavalue?.value;
     if (value?.latitude != null && value?.longitude != null) {
       return { lat: value.latitude, lon: value.longitude };
@@ -327,7 +370,7 @@ class WikidataCountryIngestor {
   }
 
   _parseWktPoint(wkt) {
-    if (typeof wkt !== 'string') return null;
+    if (tof(wkt) !== 'string') return null;
     const match = wkt.match(/Point\(([-0-9.]+)\s+([-0-9.]+)\)/i);
     if (!match) return null;
     const lon = parseFloat(match[1]);
@@ -434,7 +477,7 @@ class WikidataCountryIngestor {
   }
 
   _emitProgress(handler, payload) {
-    if (typeof handler === 'function') {
+    if (tof(handler) === 'function') {
       try {
         handler(payload);
       } catch (err) {

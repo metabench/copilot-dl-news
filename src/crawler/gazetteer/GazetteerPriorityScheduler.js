@@ -1,6 +1,73 @@
 'use strict';
 
+const { tof, is_array } = require('lang-tools');
 const progressQueries = require('../../db/sqlite/queries/gazetteer.progress');
+
+const DEFAULT_STAGE_DEFS = Object.freeze([
+  { name: 'countries', priority: 1000, crawlDepth: 0, kind: 'country' },
+  { name: 'adm1', priority: 100, crawlDepth: 1, kind: 'region' },
+  { name: 'adm2', priority: 10, crawlDepth: 2, kind: 'region' },
+  { name: 'cities', priority: 1, crawlDepth: 3, kind: 'city' }
+]);
+
+const DEFAULT_STAGE_LOOKUP = DEFAULT_STAGE_DEFS.reduce((acc, stage) => {
+  acc[stage.name] = stage;
+  return acc;
+}, {});
+
+function safeParseMetadata(raw) {
+  if (!raw) {
+    return null;
+  }
+  if (tof(raw) === 'object') {
+    return raw;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildStageDescriptor(name, index = 0, metadata = null) {
+  const meta = safeParseMetadata(metadata);
+  const fallback = DEFAULT_STAGE_LOOKUP[name] || {};
+  const priority = Number.isFinite(meta?.priority)
+    ? meta.priority
+    : (Number.isFinite(fallback.priority) ? fallback.priority : Math.max(1, DEFAULT_STAGE_DEFS.length - index));
+  const crawlDepth = Number.isFinite(meta?.crawlDepth)
+    ? meta.crawlDepth
+    : (Number.isFinite(fallback.crawlDepth) ? fallback.crawlDepth : index);
+  const kind = typeof meta?.kind === 'string'
+    ? meta.kind
+    : (fallback.kind || 'place');
+
+  return {
+    name,
+    priority,
+    crawlDepth,
+    kind
+  };
+}
+
+function normalizeStages(inputStages) {
+  if (!is_array(inputStages) || inputStages.length === 0) {
+    return DEFAULT_STAGE_DEFS.map((stage) => ({ ...stage }));
+  }
+
+  const normalized = [];
+
+  for (let index = 0; index < inputStages.length; index += 1) {
+    const stage = inputStages[index];
+    if (!stage || !stage.name) {
+      continue;
+    }
+    const descriptor = buildStageDescriptor(stage.name, index, stage);
+    normalized.push(descriptor);
+  }
+
+  return normalized.length ? normalized : DEFAULT_STAGE_DEFS.map((stage) => ({ ...stage }));
+}
 
 /**
  * GazetteerPriorityScheduler
@@ -22,7 +89,7 @@ const progressQueries = require('../../db/sqlite/queries/gazetteer.progress');
  */
 
 class GazetteerPriorityScheduler {
-  constructor({ db, logger = console } = {}) {
+  constructor({ db, logger = console, stages = null } = {}) {
     if (!db) {
       throw new Error('GazetteerPriorityScheduler requires a database handle');
     }
@@ -30,14 +97,12 @@ class GazetteerPriorityScheduler {
     this.logger = logger;
 
     // Stage definitions
-    this.stages = [
-      { name: 'countries', priority: 1000, crawlDepth: 0, kind: 'country' },
-      { name: 'adm1', priority: 100, crawlDepth: 1, kind: 'region' },
-      { name: 'adm2', priority: 10, crawlDepth: 2, kind: 'region' },
-      { name: 'cities', priority: 1, crawlDepth: 3, kind: 'city' }
-    ];
+    this.stages = normalizeStages(stages);
+    this._lastStageSignature = JSON.stringify(this.stages);
+    this._syncWarningLogged = false;
 
     this._ensureStateTable();
+    this._syncStagesFromDb();
   }
 
   _ensureStateTable() {
@@ -57,6 +122,7 @@ class GazetteerPriorityScheduler {
    * @returns {string} 'countries' | 'adm1' | 'adm2' | 'cities' | 'complete'
    */
   getCurrentStage() {
+    this._syncStagesFromDb();
     try {
       for (const stage of this.stages) {
         const state = progressQueries.getStageState(this.db, stage.name);
@@ -76,6 +142,7 @@ class GazetteerPriorityScheduler {
    * @returns {Array} Array of stage state objects
    */
   getAllStages() {
+    this._syncStagesFromDb();
     return this.stages.map(stage => {
       const state = progressQueries.getStageState(this.db, stage.name);
       return {
@@ -90,7 +157,12 @@ class GazetteerPriorityScheduler {
         recordsProcessed: state?.records_processed || 0,
         recordsUpserted: state?.records_upserted || 0,
         errors: state?.errors || 0,
-        progressPercent: this._calculateProgress(state)
+        progressPercent: this._calculateProgress(state),
+        metadata: state?.metadata ? safeParseMetadata(state.metadata) : {
+          priority: stage.priority,
+          crawlDepth: stage.crawlDepth,
+          kind: stage.kind
+        }
       };
     });
   }
@@ -119,7 +191,15 @@ class GazetteerPriorityScheduler {
    */
   initStage(stageName, recordsTotal = 0) {
     try {
-      progressQueries.initStage(this.db, stageName, recordsTotal);
+      const stageDef = this.stages.find((entry) => entry.name === stageName) || null;
+      const metadata = stageDef
+        ? {
+            priority: stageDef.priority,
+            crawlDepth: stageDef.crawlDepth,
+            kind: stageDef.kind
+          }
+        : null;
+      progressQueries.initStage(this.db, stageName, recordsTotal, metadata);
       this.logger.info(`[GazetteerPriorityScheduler] Stage '${stageName}' initialized with ${recordsTotal} total records`);
     } catch (err) {
       this.logger.error(`[GazetteerPriorityScheduler] Error initializing stage '${stageName}':`, err.message);
@@ -202,6 +282,7 @@ class GazetteerPriorityScheduler {
    * @returns {object}
    */
   getOverallProgress() {
+    this._syncStagesFromDb();
     const stages = this.getAllStages();
     const totalStages = stages.length;
     const completedStages = stages.filter(s => s.status === 'completed').length;
@@ -217,6 +298,51 @@ class GazetteerPriorityScheduler {
       stages
     };
   }
+
+  replaceStages(nextStages = []) {
+    this.stages = normalizeStages(nextStages);
+    this._lastStageSignature = JSON.stringify(this.stages);
+  }
+
+  _syncStagesFromDb() {
+    if (!this.db) {
+      return;
+    }
+    try {
+      const rows = progressQueries.getAllStageStates(this.db);
+      if (!rows || rows.length === 0) {
+        return;
+      }
+      const seen = new Set();
+      const descriptors = [];
+      for (const row of rows) {
+        if (!row || !row.stage || seen.has(row.stage)) {
+          continue;
+        }
+        const descriptor = buildStageDescriptor(row.stage, descriptors.length, row.metadata);
+        descriptors.push(descriptor);
+        seen.add(row.stage);
+      }
+      if (!descriptors.length) {
+        return;
+      }
+      const additional = this.stages.filter((stage) => !seen.has(stage.name));
+      const merged = normalizeStages([...descriptors, ...additional]);
+      const signature = JSON.stringify(merged);
+      if (signature !== this._lastStageSignature) {
+        this.stages = merged;
+        this._lastStageSignature = signature;
+      }
+    } catch (err) {
+      if (!this._syncWarningLogged) {
+        this._syncWarningLogged = true;
+        this.logger.warn('[GazetteerPriorityScheduler] Failed to sync stages from database:', err.message);
+      }
+    }
+  }
 }
 
-module.exports = { GazetteerPriorityScheduler };
+module.exports = {
+  GazetteerPriorityScheduler,
+  DEFAULT_STAGE_DEFS
+};

@@ -1,3 +1,5 @@
+const { each, tof } = require('lang-tools');
+
 const DEFAULT_THEMES = Object.freeze([
   { name: 'light', classes: [] },
   { name: 'dark', classes: ['dark'] }
@@ -5,7 +7,7 @@ const DEFAULT_THEMES = Object.freeze([
 
 function buildRegistry(themes) {
   const registry = new Map();
-  themes.forEach((theme) => {
+  each(themes, (theme) => {
     if (!theme || !theme.name) {
       return;
     }
@@ -111,7 +113,7 @@ function createThemeController(options = {}) {
   ));
 
   const callListeners = (payload) => {
-    listeners.forEach((listener) => {
+    each(listeners, (listener) => {
       try {
         listener(payload);
       } catch (err) {
@@ -130,7 +132,7 @@ function createThemeController(options = {}) {
     currentTheme = entry.name;
     lastAppliedSource = source;
 
-    if (persist && typeof writeStorage === 'function') {
+    if (persist && tof(writeStorage) === 'function') {
       try {
         writeStorage(storageKey, currentTheme);
       } catch (err) {
@@ -146,7 +148,7 @@ function createThemeController(options = {}) {
       source
     };
 
-    if (typeof onThemeApplied === 'function') {
+    if (tof(onThemeApplied) === 'function') {
       try {
         onThemeApplied(payload);
       } catch (err) {
@@ -164,7 +166,7 @@ function createThemeController(options = {}) {
     }
 
     let storedTheme = null;
-    if (typeof readStorage === 'function') {
+    if (tof(readStorage) === 'function') {
       try {
         storedTheme = readStorage(storageKey);
       } catch (err) {
@@ -227,7 +229,7 @@ function createThemeController(options = {}) {
   };
 
   const clearStoredTheme = () => {
-    if (typeof removeStorage === 'function') {
+    if (tof(removeStorage) === 'function') {
       try {
         removeStorage(storageKey);
       } catch (err) {

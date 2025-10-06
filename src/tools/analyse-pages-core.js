@@ -1,4 +1,5 @@
 const path = require('path');
+const { is_array } = require('lang-tools');
 let NewsDatabase = null;
 const { analyzePage } = require('../analysis/page-analyzer');
 const { buildGazetteerMatchers } = require('../analysis/place-extraction');
@@ -206,7 +207,7 @@ async function analysePages({
         emit(logger, 'warn', `[analyse-pages] Failed to persist analysis for ${row.url}`, verbose ? error : error?.message);
       }
 
-      if (Array.isArray(places)) {
+      if (is_array(places)) {
         for (const place of places) {
           try {
             insertPlace.run(

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Tasks - News Crawler</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    
+    h1 {
+      margin: 0 0 20px;
+      color: #2c3e50;
+    }
+    
+    h3 {
+      margin: 0 0 15px;
+      color: #34495e;
+    }
+    
+    h4 {
+      margin: 15px 0 10px;
+      color: #555;
+      font-size: 1.1em;
+    }
+    
+    .background-tasks-ui {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .task-creator {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    
+    .form-text {
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      color: #777;
+    }
+    
+    .task-config {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 15px 0;
+      border-left: 3px solid #3498db;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: #2980b9;
+    }
+    
+    .btn-success {
+      background: #27ae60;
+      color: white;
+    }
+    
+    .btn-success:hover:not(:disabled) {
+      background: #229954;
+    }
+    
+    .btn-warning {
+      background: #f39c12;
+      color: white;
+    }
+    
+    .btn-warning:hover {
+      background: #e67e22;
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+    
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 13px;
+    }
+    
+    .task-list-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .task-list {
+      margin-top: 15px;
+    }
+    
+    .task-card {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 15px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .task-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .task-card.status-running {
+      border-left: 4px solid #3498db;
+    }
+    
+    .task-card.status-resuming {
+      border-left: 4px solid #9b59b6;
+      background: #f5f0ff;
+    }
+    
+    .task-card.status-paused {
+      border-left: 4px solid #f39c12;
+    }
+    
+    .task-card.status-completed {
+      border-left: 4px solid #27ae60;
+    }
+    
+    .task-card.status-failed {
+      border-left: 4px solid #e74c3c;
+    }
+    
+    .task-card.status-cancelled {
+      border-left: 4px solid #95a5a6;
+    }
+    
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .task-type {
+      font-weight: 600;
+      font-size: 16px;
+      color: #2c3e50;
+    }
+    
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    
+    .badge-pending {
+      background: #ecf0f1;
+      color: #7f8c8d;
+    }
+    
+    .badge-resuming {
+      background: #e8daef;
+      color: #6c3483;
+      animation: pulse-badge 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .badge-running {
+      background: #d6eaf8;
+      color: #2471a3;
+    }
+    
+    .badge-paused {
+      background: #fef5e7;
+      color: #d68910;
+    }
+    
+    .badge-completed {
+      background: #d5f4e6;
+      color: #196f3d;
+    }
+    
+    .badge-failed {
+      background: #fadbd8;
+      color: #943126;
+    }
+    
+    .badge-cancelled {
+      background: #ecf0f1;
+      color: #566573;
+    }
+    
+    .task-progress {
+      margin-bottom: 12px;
+    }
+    
+    .progress-bar-container {
+      width: 100%;
+      height: 24px;
+      background: #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .progress-bar-resuming {
+      background: linear-gradient(90deg, #9b59b6 0%, #3498db 100%);
+      animation: shimmer 2s ease-in-out infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { opacity: 0.8; }
+    }
+    
+    .progress-text {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 4px;
+    }
+    
+    .progress-message {
+      font-size: 12px;
+      color: #777;
+      font-style: italic;
+    }
+    
+    .resuming-hint {
+      color: #9b59b6;
+      font-weight: 500;
+    }
+    
+    .task-metadata {
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .task-metadata > div {
+      margin-bottom: 4px;
+    }
+    
+    .error-message {
+      color: #e74c3c;
+      font-weight: 500;
+      padding: 8px;
+      background: #fadbd8;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    
+    .task-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .loading, .no-tasks, .error {
+      text-align: center;
+      padding: 40px 20px;
+      color: #777;
+      font-size: 14px;
+    }
+    
+    .error {
+      color: #e74c3c;
+    }
+    
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 20px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+    }
+    
+    .notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .notification-success {
+      background: #27ae60;
+      color: white;
+    }
+    
+    .notification-error {
+      background: #e74c3c;
+      color: white;
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .task-creator, .task-list-container {
+        padding: 15px;
+      }
+      
+      .form-actions {
+        flex-direction: column;
+      }
+      
+      .task-controls {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Background Tasks</h1>
+  
+  <div id="background-tasks-container">
+    <!-- UI will be rendered here by backgroundTasksUI.js -->
+  </div>
+  
+  <script src="/js/backgroundTasksUI.js"></script>
+  <script>
+    // SSE connection for real-time updates
+    let eventSource = null;
+    
+    function connectSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+      
+      eventSource = new EventSource('/events');
+      
+      // Handle task-related events
+      eventSource.addEventListener('task-created', (e) => {
+        const data = JSON.parse(e.data);
+        console.log('[BackgroundTasks] Task created:', data);
+        if (typeof refreshTaskList === 'function') {
+          refreshTaskList();
+        }
+      });
+      
+      eventSource.addEventListener('task-progress', (e) => {
+        const data = JSON.parse(e.data);
+        console.log('[BackgroundTasks] Task progress:', data);
+        if (typeof updateTaskCard === 'function') {
+          updateTaskCard(data);
+        }
+      });
+      
+      eventSource.addEventListener('task-status-changed', (e) => {
+        const data = JSON.parse(e.data);
+        console.log('[BackgroundTasks] Task status changed:', data);
+        if (typeof updateTaskCard === 'function') {
+          updateTaskCard(data);
+        }
+      });
+      
+      eventSource.addEventListener('task-completed', (e) => {
+        const data = JSON.parse(e.data);
+        console.log('[BackgroundTasks] Task completed:', data);
+        if (typeof updateTaskCard === 'function') {
+          updateTaskCard(data);
+        }
+      });
+      
+      eventSource.addEventListener('task-error', (e) => {
+        const data = JSON.parse(e.data);
+        console.log('[BackgroundTasks] Task error:', data);
+        if (typeof updateTaskCard === 'function') {
+          updateTaskCard(data);
+        }
+      });
+      
+      eventSource.addEventListener('task-problem', (e) => {
+        const data = JSON.parse(e.data);
+        console.warn('[BackgroundTasks] Task problem:', data);
+        if (typeof showNotification === 'function') {
+          showNotification(`Task ${data.task.id} problem: ${data.problem.message}`, 'error');
+        }
+      });
+      
+      eventSource.onerror = (e) => {
+        console.error('[BackgroundTasks] SSE error:', e);
+        eventSource.close();
+        // Reconnect after 5 seconds
+        setTimeout(connectSSE, 5000);
+      };
+    }
+    
+    // Initialize UI when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        initBackgroundTasksUI(null);
+        connectSSE();
+      });
+    } else {
+      initBackgroundTasksUI(null);
+      connectSSE();
+    }
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    });
+    
+    // Fallback: Auto-refresh task list every 30 seconds (SSE should handle most updates)
+    setInterval(() => {
+      if (typeof refreshTaskList === 'function') {
+        refreshTaskList();
+      }
+    }, 30000);
+  </script>
+</body>
+</html>

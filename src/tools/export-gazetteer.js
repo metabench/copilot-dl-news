@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { is_array, tof } = require('lang-tools');
 const { openDbReadOnly } = require('../db/sqlite');
 const {
   iteratePlaceSources,
@@ -28,17 +29,17 @@ function parseArgs(argv) {
 function scrubExtra(extra) {
   if (!extra) return extra;
   let obj = extra;
-  if (typeof extra === 'string') {
+  if (tof(extra) === 'string') {
     try { obj = JSON.parse(extra); } catch (_) { return extra; }
   }
-  if (obj && typeof obj === 'object') {
+  if (obj && tof(obj) === 'object') {
     const removeKeys = new Set([
       'geometry','geom','wkt','shape','shapes','polygon','polygons','multipolygon','linestring','coordinates','coord','boundary','border','geoshape','geojson','footprint'
     ]);
     for (const k of Object.keys(obj)) {
       if (removeKeys.has(k)) delete obj[k];
       // Heuristic: very large numeric arrays are not human-friendly
-      else if (Array.isArray(obj[k]) && obj[k].length > 50 && obj[k].every(v => typeof v === 'number')) delete obj[k];
+      else if (is_array(obj[k]) && obj[k].length > 50 && obj[k].every(v => tof(v) === 'number')) delete obj[k];
     }
     return obj;
   }

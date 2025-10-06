@@ -6,6 +6,7 @@
 
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { is_array, tof, fp } = require('lang-tools');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite');
 const {
@@ -19,10 +20,10 @@ const { analysePages } = require('./analyse-pages-core');
 let NewsDatabase;
 
 function parseArgs(argv = []) {
-  if (!Array.isArray(argv)) return {};
+  if (!is_array(argv)) return {};
   const args = {};
   for (const raw of argv.slice(2)) {
-    if (typeof raw !== 'string' || !raw.startsWith('--')) continue;
+    if (tof(raw) !== 'string' || !raw.startsWith('--')) continue;
     const eq = raw.indexOf('=');
     const keyPart = eq === -1 ? raw.slice(2) : raw.slice(2, eq);
     if (!keyPart) continue;
@@ -43,34 +44,92 @@ function toCamelCase(text) {
   return text.replace(/-([a-zA-Z0-9])/g, (_, ch) => ch.toUpperCase());
 }
 
-function coerceArgValue(value) {
-  if (value === undefined) return undefined;
-  if (value === '') return '';
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  if (value === 'null') return null;
-  if (value === 'undefined') return undefined;
-  if (typeof value === 'string') {
+/**
+ * Polymorphic argument value coercion.
+ * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
+ * 
+ * Converts string literals to appropriate types and parses numeric strings.
+ * 
+ * Signature handlers:
+ * - '[u]': undefined returns as-is
+ * - '[s]': String with special literal handling ('true' → true, 'false' → false, etc.)
+ *          Empty or numeric strings are parsed accordingly
+ */
+const coerceArgValue = fp((a, sig) => {
+  // Undefined - return as-is
+  if (sig === '[u]') {
+    return undefined;
+  }
+  
+  // String - handle literal conversions and numeric parsing
+  if (sig === '[s]') {
+    const value = a[0];
+    
+    // Empty string
+    if (value === '') return '';
+    
+    // Boolean literals
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    
+    // Null/undefined literals
+    if (value === 'null') return null;
+    if (value === 'undefined') return undefined;
+    
+    // Numeric string parsing
     const trimmed = value.trim();
     if (!trimmed) return '';
     const numeric = Number(trimmed);
     if (!Number.isNaN(numeric)) return numeric;
+    
+    // Non-numeric, non-literal string
+    return value;
   }
-  return value;
-}
+  
+  // Default: return value as-is
+  return a[0];
+});
 
-function boolArg(value, fallback = false) {
-  if (value === null || value === undefined) return fallback;
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
+/**
+ * Polymorphic boolean coercion with fallback support.
+ * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
+ * 
+ * Signature handlers:
+ * - '[b]' or '[b,b]': Boolean value returns as-is
+ * - '[n]' or '[n,b]': Number converted to boolean (0 → false, non-zero → true)
+ * - '[s]' or '[s,b]': String parsed (supports 'true', 't', 'yes', 'y', 'on', '1' for true)
+ * - '[u]' or '[N]': undefined/null returns fallback
+ */
+const boolArg = fp((a, sig) => {
+  const fallback = a.l >= 2 ? a[1] : false;
+  
+  // Handle undefined/null - return fallback
+  if (sig === '[u]' || sig === '[N]' || sig === '[u,b]' || sig === '[N,b]') {
+    return fallback;
+  }
+  
+  // Boolean - return as-is
+  if (sig === '[b]' || sig === '[b,b]') {
+    return a[0];
+  }
+  
+  // Number - truthy conversion
+  if (sig === '[n]' || sig === '[n,b]') {
+    return a[0] !== 0;
+  }
+  
+  // String - parse common boolean representations
+  if (sig === '[s]' || sig === '[s,b]') {
+    const normalized = a[0].trim().toLowerCase();
     if (!normalized) return fallback;
     if (['true', 't', 'yes', 'y', 'on', '1'].includes(normalized)) return true;
     if (['false', 'f', 'no', 'n', 'off', '0'].includes(normalized)) return false;
+    // Non-empty string not matching above patterns falls through to Boolean()
   }
-  return Boolean(value);
-}
+  
+  // Default: JavaScript Boolean() coercion
+  return Boolean(a[0]);
+});
 
 function getOption(source, ...names) {
   if (!source) return undefined;
@@ -146,7 +205,7 @@ function buildRunHighlights(summary = {}) {
       highlights.push('Dry-run: no database changes');
     }
   }
-  if (Array.isArray(summary.analysisHighlights)) {
+  if (is_array(summary.analysisHighlights)) {
     for (const entry of summary.analysisHighlights) {
       if (entry) highlights.push(String(entry));
     }
@@ -154,10 +213,10 @@ function buildRunHighlights(summary = {}) {
   const unique = [];
   const seen = new Set();
   for (const item of highlights) {
-    const key = typeof item === 'string' ? item.trim().toLowerCase() : item;
+    const key = tof(item) === 'string' ? item.trim().toLowerCase() : item;
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    unique.push(typeof item === 'string' ? item : String(item));
+    unique.push(tof(item) === 'string' ? item : String(item));
     if (unique.length >= 5) break;
   }
   return unique;
@@ -499,10 +558,10 @@ async function runAnalysis(rawOptions = {}) {
     } else if (progressState.progress) {
       payload.progress = { ...progressState.progress };
     }
-    if (Array.isArray(payload.analysisHighlights)) {
+    if (is_array(payload.analysisHighlights)) {
       progressState.analysisHighlights = payload.analysisHighlights.slice();
     }
-    if (Array.isArray(payload.signals)) {
+    if (is_array(payload.signals)) {
       progressState.signals = payload.signals.slice();
     }
     if (payload.stage) progressState.stage = payload.stage;

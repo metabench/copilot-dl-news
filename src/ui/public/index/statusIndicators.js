@@ -1,3 +1,4 @@
+import { tof, is_array } from 'lang-tools';
 import { hideElement, showElement } from './domUtils.js';
 
 export function createStatusIndicators({
@@ -38,8 +39,8 @@ export function createStatusIndicators({
 
   function updateStartupStatus(startup, statusText) {
     if (!startupStatusEl) return;
-    const summary = startup && typeof startup === 'object' ? startup.summary : null;
-    const stages = startup && Array.isArray(startup.stages) ? startup.stages : [];
+    const summary = startup && tof(startup) === 'object' ? startup.summary : null;
+    const stages = startup && is_array(startup.stages) ? startup.stages : [];
     const done = !!(summary && summary.done);
     const hasStages = stages.length > 0;
     const text = statusText || (hasStages ? (stages.find((s) => s && s.status === 'running')?.label || stages[stages.length - 1]?.label || 'Preparing…') : null);

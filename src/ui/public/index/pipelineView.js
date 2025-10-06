@@ -1,3 +1,4 @@
+import { tof, is_array } from 'lang-tools';
 import { formatNumber as defaultFormatNumber, formatRelativeTime as defaultFormatRelativeTime } from './formatters.js';
 import { setElementVisibility } from './domUtils.js';
 
@@ -291,8 +292,8 @@ export function createPipelineView(dom, formatters = {}) {
       if (prop === 'updatedAt') {
         continue;
       }
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const existing = target[prop] && typeof target[prop] === 'object' && !Array.isArray(target[prop])
+      if (value && tof(value) === 'object' && !is_array(value)) {
+        const existing = target[prop] && tof(target[prop]) === 'object' && !is_array(target[prop])
           ? target[prop]
           : {};
         const merged = { ...existing, ...value };
@@ -300,8 +301,8 @@ export function createPipelineView(dom, formatters = {}) {
           target[prop] = merged;
           stageChanged = true;
         }
-      } else if (Array.isArray(value)) {
-        const existing = Array.isArray(target[prop]) ? target[prop] : [];
+      } else if (is_array(value)) {
+        const existing = is_array(target[prop]) ? target[prop] : [];
         const same = existing.length === value.length && existing.every((v, idx) => v === value[idx]);
         if (!same) {
           target[prop] = value.slice();

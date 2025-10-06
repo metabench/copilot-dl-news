@@ -10,6 +10,8 @@
   screenshots/crawler/<timestamp>/ for later review by agents.
 */
 
+const { is_array, tof } = require('lang-tools');
+
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
@@ -29,7 +31,7 @@ function installDuplicateLogFilter({ prefixes = ['[server]', '[sse]'], windowMs 
       return;
     }
 
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : String(arg))).join(' ');
+    const message = args.map((arg) => (tof(arg) === 'string' ? arg : String(arg))).join(' ');
     const matchesPrefix = prefixes.some((prefix) => message.startsWith(prefix));
 
     if (matchesPrefix) {
@@ -272,7 +274,7 @@ function getAllArgs(name) {
 
 function toList(value) {
   if (value == null) return [];
-  if (Array.isArray(value)) {
+  if (is_array(value)) {
     return value.flatMap((entry) => toList(entry));
   }
   if (value === true) return [];
@@ -383,7 +385,7 @@ function slugifyPath(value) {
 
 function toBoolean(value, fallback = false) {
   if (value === undefined || value === null) return fallback;
-  if (typeof value === 'boolean') return value;
+  if (tof(value) === 'boolean') return value;
   const normalised = String(value).trim().toLowerCase();
   if (['1', 'true', 'yes', 'on'].includes(normalised)) return true;
   if (['0', 'false', 'no', 'off'].includes(normalised)) return false;
@@ -440,8 +442,8 @@ async function launchServerIfNeeded(baseUrl) {
     server.on('error', handleError);
   });
   const address = server.address();
-  const port = (address && typeof address === 'object') ? address.port : Number(env.PORT || 0);
-  const resolvedPort = port || (address && typeof address === 'number' ? address : null);
+  const port = (address && tof(address) === 'object') ? address.port : Number(env.PORT || 0);
+  const resolvedPort = port || (address && tof(address) === 'number' ? address : null);
   if (!resolvedPort) {
     throw new Error('Unable to determine port for screenshot server');
   }
@@ -469,7 +471,7 @@ async function ensureDir(dir) {
 }
 
 async function runWithConcurrency(items, handler, concurrency) {
-  if (!Array.isArray(items) || !items.length) return [];
+  if (!is_array(items) || !items.length) return [];
   const limit = Math.max(1, Math.min(concurrency || 1, items.length));
   const results = new Array(items.length);
   let cursor = 0;
@@ -729,7 +731,7 @@ async function main() {
 
     serverControl = await launchServerIfNeeded(baseUrl);
     const routeDescriptors = targetPaths.map((routePath, index) => ({ routePath, index }));
-    const presetDarkRoutes = Array.isArray(preset?.applies?.darkRoutes)
+    const presetDarkRoutes = is_array(preset?.applies?.darkRoutes)
       ? new Set(preset.applies.darkRoutes.map(normaliseRoutePath))
       : null;
 

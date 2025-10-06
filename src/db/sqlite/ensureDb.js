@@ -94,6 +94,20 @@ function ensureGazetteer(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_place_external_place ON place_external_ids(place_id);
 
+    CREATE TABLE IF NOT EXISTS place_attribute_values (
+      place_id INTEGER NOT NULL,
+      attr TEXT NOT NULL,
+      source TEXT NOT NULL,
+      value_json TEXT,
+      confidence REAL,
+      fetched_at INTEGER,
+      metadata JSON,
+      PRIMARY KEY (place_id, attr, source),
+      FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_place_attr_attr ON place_attribute_values(attr);
+    CREATE INDEX IF NOT EXISTS idx_place_attr_source ON place_attribute_values(source);
+
     CREATE TABLE IF NOT EXISTS gazetteer_crawl_state (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       stage TEXT NOT NULL,                 -- countries | adm1 | adm2 | cities | osm_boundaries
@@ -557,6 +571,8 @@ function ensureDb(dbFilePath) {
 
   ensureGazetteer(db);
   ensurePlaceHubs(db);
+  ensureCompressionInfrastructure(db);
+  ensureBackgroundTasks(db);
   return db;
 }
 
@@ -595,4 +611,165 @@ function dedupePlaceSources(db) {
   return { before, after, removed, duplicateGroups: groups.length };
 }
 
-module.exports = { ensureDb, ensureGazetteer, ensurePlaceHubs, openDbReadOnly, dedupePlaceSources };
+// Ensure compression infrastructure tables exist
+function ensureCompressionInfrastructure(db) {
+  if (!db) throw new Error('ensureCompressionInfrastructure requires an open better-sqlite3 Database');
+
+  // Create compression types table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS compression_types (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      algorithm TEXT NOT NULL,
+      level INTEGER NOT NULL,
+      mime_type TEXT,
+      extension TEXT,
+      memory_mb INTEGER DEFAULT 0,
+      window_bits INTEGER,
+      block_bits INTEGER,
+      description TEXT
+    );
+  `);
+
+  // Create compression buckets table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS compression_buckets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      bucket_type TEXT NOT NULL,
+      domain_pattern TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finalized_at TEXT,
+      content_count INTEGER DEFAULT 0,
+      uncompressed_size INTEGER DEFAULT 0,
+      compressed_size INTEGER DEFAULT 0,
+      compression_ratio REAL,
+      compression_type_id INTEGER REFERENCES compression_types(id),
+      bucket_blob BLOB,
+      index_json TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_compression_buckets_type 
+      ON compression_buckets(bucket_type);
+    CREATE INDEX IF NOT EXISTS idx_compression_buckets_domain 
+      ON compression_buckets(domain_pattern);
+    CREATE INDEX IF NOT EXISTS idx_compression_buckets_finalized 
+      ON compression_buckets(finalized_at);
+  `);
+
+  // Create content storage table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS content_storage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      storage_type TEXT NOT NULL,
+      compression_type_id INTEGER REFERENCES compression_types(id),
+      compression_bucket_id INTEGER REFERENCES compression_buckets(id),
+      bucket_entry_key TEXT,
+      content_blob BLOB,
+      content_sha256 TEXT,
+      uncompressed_size INTEGER,
+      compressed_size INTEGER,
+      compression_ratio REAL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_content_storage_bucket 
+      ON content_storage(compression_bucket_id);
+    CREATE INDEX IF NOT EXISTS idx_content_storage_sha256 
+      ON content_storage(content_sha256);
+    CREATE INDEX IF NOT EXISTS idx_content_storage_type 
+      ON content_storage(storage_type);
+  `);
+
+  // Seed compression types (idempotent)
+  const compressionTypes = [
+    // No compression
+    { name: 'none', algorithm: 'none', level: 0, mime_type: null, extension: null, memory_mb: 0, description: 'No compression' },
+    
+    // Gzip levels
+    { name: 'gzip_1', algorithm: 'gzip', level: 1, mime_type: 'application/gzip', extension: '.gz', memory_mb: 1, description: 'Gzip fast (level 1)' },
+    { name: 'gzip_3', algorithm: 'gzip', level: 3, mime_type: 'application/gzip', extension: '.gz', memory_mb: 2, description: 'Gzip balanced (level 3)' },
+    { name: 'gzip_6', algorithm: 'gzip', level: 6, mime_type: 'application/gzip', extension: '.gz', memory_mb: 4, description: 'Gzip standard (level 6)' },
+    { name: 'gzip_9', algorithm: 'gzip', level: 9, mime_type: 'application/gzip', extension: '.gz', memory_mb: 8, description: 'Gzip maximum (level 9)' },
+    
+    // Brotli levels
+    { name: 'brotli_0', algorithm: 'brotli', level: 0, mime_type: 'application/x-br', extension: '.br', memory_mb: 1, window_bits: 20, description: 'Brotli fastest (level 0)' },
+    { name: 'brotli_1', algorithm: 'brotli', level: 1, mime_type: 'application/x-br', extension: '.br', memory_mb: 2, window_bits: 20, description: 'Brotli fast (level 1)' },
+    { name: 'brotli_3', algorithm: 'brotli', level: 3, mime_type: 'application/x-br', extension: '.br', memory_mb: 4, window_bits: 21, description: 'Brotli fast (level 3)' },
+    { name: 'brotli_4', algorithm: 'brotli', level: 4, mime_type: 'application/x-br', extension: '.br', memory_mb: 8, window_bits: 22, description: 'Brotli balanced (level 4)' },
+    { name: 'brotli_5', algorithm: 'brotli', level: 5, mime_type: 'application/x-br', extension: '.br', memory_mb: 16, window_bits: 22, description: 'Brotli balanced (level 5)' },
+    { name: 'brotli_6', algorithm: 'brotli', level: 6, mime_type: 'application/x-br', extension: '.br', memory_mb: 16, window_bits: 22, description: 'Brotli standard (level 6)' },
+    { name: 'brotli_7', algorithm: 'brotli', level: 7, mime_type: 'application/x-br', extension: '.br', memory_mb: 32, window_bits: 23, description: 'Brotli high quality (level 7)' },
+    { name: 'brotli_8', algorithm: 'brotli', level: 8, mime_type: 'application/x-br', extension: '.br', memory_mb: 32, window_bits: 23, description: 'Brotli high quality (level 8)' },
+    { name: 'brotli_9', algorithm: 'brotli', level: 9, mime_type: 'application/x-br', extension: '.br', memory_mb: 64, window_bits: 23, description: 'Brotli high quality (level 9)' },
+    { name: 'brotli_10', algorithm: 'brotli', level: 10, mime_type: 'application/x-br', extension: '.br', memory_mb: 128, window_bits: 24, block_bits: 24, description: 'Brotli ultra-high (level 10, 128MB)' },
+    { name: 'brotli_11', algorithm: 'brotli', level: 11, mime_type: 'application/x-br', extension: '.br', memory_mb: 256, window_bits: 24, block_bits: 24, description: 'Brotli maximum (level 11, 256MB, 16MB window)' },
+    
+    // Zstd levels (optional)
+    { name: 'zstd_3', algorithm: 'zstd', level: 3, mime_type: 'application/zstd', extension: '.zst', memory_mb: 8, description: 'Zstandard fast (level 3)' },
+    { name: 'zstd_19', algorithm: 'zstd', level: 19, mime_type: 'application/zstd', extension: '.zst', memory_mb: 512, description: 'Zstandard ultra (level 19)' }
+  ];
+
+  const insertType = db.prepare(`
+    INSERT OR IGNORE INTO compression_types (
+      name, algorithm, level, mime_type, extension, 
+      memory_mb, window_bits, block_bits, description
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const type of compressionTypes) {
+    insertType.run(
+      type.name,
+      type.algorithm,
+      type.level,
+      type.mime_type,
+      type.extension,
+      type.memory_mb,
+      type.window_bits || null,
+      type.block_bits || null,
+      type.description
+    );
+  }
+}
+
+/**
+ * Ensure background tasks infrastructure
+ * Creates tables for persistent background task management with progress tracking
+ * @param {Database} db - better-sqlite3 database instance
+ */
+function ensureBackgroundTasks(db) {
+  // Background tasks table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS background_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_type TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('pending', 'resuming', 'running', 'paused', 'completed', 'failed', 'cancelled')),
+      progress_current INTEGER DEFAULT 0,
+      progress_total INTEGER DEFAULT 0,
+      progress_message TEXT,
+      config TEXT, -- JSON configuration
+      metadata TEXT, -- JSON metadata
+      error_message TEXT,
+      created_at TEXT NOT NULL,
+      started_at TEXT,
+      updated_at TEXT NOT NULL,
+      completed_at TEXT,
+      resume_started_at TEXT
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_background_tasks_status ON background_tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_background_tasks_type ON background_tasks(task_type);
+    CREATE INDEX IF NOT EXISTS idx_background_tasks_created ON background_tasks(created_at DESC);
+  `);
+  
+  console.log('[DB] Background tasks tables initialized');
+}
+
+module.exports = { 
+  ensureDb, 
+  ensureGazetteer, 
+  ensurePlaceHubs, 
+  ensureCompressionInfrastructure,
+  ensureBackgroundTasks,
+  openDbReadOnly, 
+  dedupePlaceSources 
+};

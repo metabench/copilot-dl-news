@@ -1,3 +1,5 @@
+import { each, is_array, tof } from 'lang-tools';
+
 export function createSseClient({ badgeEl, offlineDelayMs = 5000 } = {}) {
   let source = null;
   let lastEventAt = 0;
@@ -38,15 +40,15 @@ export function createSseClient({ badgeEl, offlineDelayMs = 5000 } = {}) {
   }
 
   function attachListeners(evt, listeners = {}) {
-    Object.entries(listeners).forEach(([type, handler]) => {
+    each(listeners, (handler, type) => {
       if (!handler) return;
-      if (Array.isArray(handler)) {
-        handler.forEach((fn) => {
-          if (typeof fn === 'function') {
+      if (is_array(handler)) {
+        each(handler, (fn) => {
+          if (tof(fn) === 'function') {
             evt.addEventListener(type, fn);
           }
         });
-      } else if (typeof handler === 'function') {
+      } else if (tof(handler) === 'function') {
         evt.addEventListener(type, handler);
       }
     });

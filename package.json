@@ -1,6 +1,6 @@
 {
   "name": "news_crawler",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "A web crawler for news articles with navigation detection",
   "main": "src/crawl.js",
   "scripts": {
@@ -37,9 +37,10 @@
     "express": "^5.0.0",
     "fast-xml-parser": "^4.3.6",
     "jsdom": "^24.0.0",
-    "lang-tools": "^0.0.36",
+    "lang-tools": "^0.0.39",
     "node-fetch": "^3.3.2",
-    "robots-parser": "^3.0.1"
+    "robots-parser": "^3.0.1",
+    "tar-stream": "^3.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.23.9",
@@ -62,6 +63,7 @@
       "<rootDir>/jest-reporter-truncate.js"
     ],
     "maxWorkers": 8,
+    "testTimeout": 10000,
     "transform": {
       "^.+\\.js$": "babel-jest"
     }

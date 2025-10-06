@@ -1,3 +1,5 @@
+const { each } = require('lang-tools');
+
 class RobotsAndSitemapCoordinator {
   constructor({
     baseUrl,
@@ -132,13 +134,13 @@ class RobotsAndSitemapCoordinator {
           if (entry) discovered.add(entry);
         }
       } else if (robotsTxt) {
-        robotsTxt
+        const sitemapLines = robotsTxt
           .split(/\r?\n/)
           .map((line) => line.trim())
           .filter((line) => /^sitemap\s*:/i.test(line))
           .map((line) => line.replace(/^sitemap\s*:/i, '').trim())
-          .filter(Boolean)
-          .forEach((entry) => discovered.add(entry));
+          .filter(Boolean);
+        each(sitemapLines, (entry) => discovered.add(entry));
       }
 
       if (discovered.size === 0) {

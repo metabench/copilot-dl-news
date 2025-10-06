@@ -1,0 +1,207 @@
+/**
+ * Article Compression Utilities
+ * 
+ * Helper functions for compressing and decompressing article HTML content
+ * Supports both individual compression and compression bucket storage
+ */
+
+const { compress, decompress, getCompressionType } = require('./compression');
+const { retrieveFromBucket } = require('./compressionBuckets');
+const { getGlobalCache } = require('./bucketCache');
+
+/**
+ * Decompress article HTML (supports both individual and bucket compression)
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} articleId - Article ID
+ * @param {Object} options - Decompression options
+ * @param {boolean} [options.useCache] - Use bucket cache for bucket-compressed articles
+ * @returns {Promise<string|null>} Decompressed HTML content
+ */
+async function decompressArticleHtml(db, articleId, options = {}) {
+  const { useCache = true } = options;
+  
+  try {
+    const article = db.prepare(`
+      SELECT 
+        compressed_html,
+        compression_type_id,
+        compression_bucket_id,
+        compression_bucket_key,
+        html
+      FROM articles
+      WHERE id = ?
+    `).get(articleId);
+    
+    if (!article) {
+      return null;
+    }
+    
+    // If stored in compression bucket
+    if (article.compression_bucket_id && article.compression_bucket_key) {
+      const cache = useCache ? getGlobalCache() : null;
+      const cachedTarBuffer = cache ? cache.get(db, article.compression_bucket_id).tarBuffer : null;
+      
+      const result = await retrieveFromBucket(
+        db,
+        article.compression_bucket_id,
+        article.compression_bucket_key,
+        cachedTarBuffer
+      );
+      
+      return result.content.toString('utf8');
+    }
+    
+    // If stored individually compressed
+    if (article.compressed_html && article.compression_type_id) {
+      const compressionType = db.prepare(
+        'SELECT algorithm FROM compression_types WHERE id = ?'
+      ).get(article.compression_type_id);
+      
+      if (!compressionType) {
+        throw new Error(`Compression type not found: ${article.compression_type_id}`);
+      }
+      
+      const decompressed = decompress(article.compressed_html, compressionType.algorithm);
+      return decompressed.toString('utf8');
+    }
+    
+    // Not compressed, return original
+    return article.html;
+    
+  } catch (error) {
+    console.error(`[articleCompression] Error decompressing article ${articleId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Compress article HTML and store it (individual compression only for now)
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} articleId - Article ID
+ * @param {Object} options - Compression options
+ * @param {string} [options.compressionType] - Compression type name (default: 'brotli_10')
+ * @returns {Object} Compression result with statistics
+ */
+function compressAndStoreArticleHtml(db, articleId, options = {}) {
+  const { compressionType: compressionTypeName = 'brotli_10' } = options;
+  
+  try {
+    // Get article HTML
+    const article = db.prepare('SELECT html FROM articles WHERE id = ?').get(articleId);
+    
+    if (!article || !article.html) {
+      throw new Error(`Article ${articleId} not found or has no HTML`);
+    }
+    
+    // Get compression type
+    const compressionType = getCompressionType(db, compressionTypeName);
+    
+    // Compress HTML
+    const result = compress(article.html, {
+      algorithm: compressionType.algorithm,
+      level: compressionType.level,
+      windowBits: compressionType.window_bits,
+      blockBits: compressionType.block_bits
+    });
+    
+    // Store compressed HTML
+    db.prepare(`
+      UPDATE articles
+      SET compressed_html = ?,
+          compression_type_id = ?,
+          original_size = ?,
+          compressed_size = ?,
+          compression_ratio = ?
+      WHERE id = ?
+    `).run(
+      result.compressed,
+      compressionType.id,
+      result.uncompressedSize,
+      result.compressedSize,
+      result.ratio,
+      articleId
+    );
+    
+    return {
+      articleId,
+      compressionType: compressionType.name,
+      originalSize: result.uncompressedSize,
+      compressedSize: result.compressedSize,
+      ratio: result.ratio,
+      spaceSaved: result.uncompressedSize - result.compressedSize,
+      spaceSavedPercent: (1 - result.ratio) * 100
+    };
+    
+  } catch (error) {
+    console.error(`[articleCompression] Error compressing article ${articleId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get compression status for an article
+ * 
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {number} articleId - Article ID
+ * @returns {Object|null} Compression status
+ */
+function getArticleCompressionStatus(db, articleId) {
+  try {
+    const article = db.prepare(`
+      SELECT 
+        id,
+        compressed_html IS NOT NULL as is_individually_compressed,
+        compression_bucket_id IS NOT NULL as is_bucket_compressed,
+        compression_type_id,
+        compression_bucket_id,
+        compression_bucket_key,
+        original_size,
+        compressed_size,
+        compression_ratio
+      FROM articles
+      WHERE id = ?
+    `).get(articleId);
+    
+    if (!article) {
+      return null;
+    }
+    
+    let compressionType = null;
+    if (article.compression_type_id) {
+      const typeRow = db.prepare('SELECT name FROM compression_types WHERE id = ?')
+        .get(article.compression_type_id);
+      compressionType = typeRow ? typeRow.name : null;
+    }
+    
+    return {
+      articleId: article.id,
+      isCompressed: article.is_individually_compressed || article.is_bucket_compressed,
+      method: article.is_bucket_compressed ? 'bucket' : 
+              article.is_individually_compressed ? 'individual' : 'uncompressed',
+      compressionType,
+      bucketId: article.compression_bucket_id,
+      bucketKey: article.compression_bucket_key,
+      originalSize: article.original_size,
+      compressedSize: article.compressed_size,
+      compressionRatio: article.compression_ratio,
+      spaceSaved: article.original_size && article.compressed_size 
+        ? article.original_size - article.compressed_size 
+        : null,
+      spaceSavedPercent: article.compression_ratio 
+        ? (1 - article.compression_ratio) * 100 
+        : null
+    };
+    
+  } catch (error) {
+    console.error(`[articleCompression] Error getting compression status for article ${articleId}:`, error);
+    return null;
+  }
+}
+
+module.exports = {
+  decompressArticleHtml,
+  compressAndStoreArticleHtml,
+  getArticleCompressionStatus
+};
