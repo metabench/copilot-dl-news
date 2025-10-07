@@ -1,5 +1,6 @@
 const express = require('express');
 const { fetchProblems } = require('../data/problems');
+const { InternalServerError } = require('../errors/HttpError');
 
 // Problems APIs (read-only; best-effort when DB available)
 function createProblemsApiRouter({ getDbRW }) {
@@ -9,7 +10,7 @@ function createProblemsApiRouter({ getDbRW }) {
   // GET /api/problems
   // Query: job (id), kind, scope, limit (default 100, max 500), before (id), after (id)
   // Returns newest-first by id with cursors { nextBefore, prevAfter }
-  router.get('/api/problems', (req, res) => {
+  router.get('/api/problems', (req, res, next) => {
     try {
       const db = getDbRW();
       if (!db) return res.json({ total: 0, items: [] });
@@ -37,7 +38,7 @@ function createProblemsApiRouter({ getDbRW }) {
       }
       return res.json(result);
     } catch (e) {
-      return res.status(500).json({ error: e.message });
+      next(new InternalServerError(e.message));
     }
   });
 

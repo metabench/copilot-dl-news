@@ -107,3 +107,30 @@
     console.error = origError;
   });
 })();
+
+// Set default timeout for all tests to 10 seconds
+// Individual tests can override with jest.setTimeout() or test(..., timeout)
+jest.setTimeout(10000);
+
+// Helper function for fast unit tests to opt into shorter timeouts (1 second)
+// Usage: describe('my fast tests', fastTest(() => { ... }));
+global.fastTest = (callback) => {
+  return () => {
+    jest.setTimeout(1000);
+    callback();
+  };
+};
+
+// Alternative: decorator pattern for individual tests
+// Usage: test('my fast test', fastTestTimeout(() => { ... }));
+global.fastTestTimeout = (testFn, timeout = 1000) => {
+  return async (...args) => {
+    const originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL || 10000;
+    jest.setTimeout(timeout);
+    try {
+      return await testFn(...args);
+    } finally {
+      jest.setTimeout(originalTimeout);
+    }
+  };
+};

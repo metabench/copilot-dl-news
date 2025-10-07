@@ -6,7 +6,7 @@
  * Patterns used: each() for form field iteration, is_defined() for safety checks.
  */
 
-import { each, is_defined } from '@metabench/lang-tools';
+import { each, is_defined } from 'lang-tools';
 
 /**
  * Creates crawl control handlers with full dependency injection
@@ -235,8 +235,9 @@ export function createCrawlControls(deps) {
       body.useSitemap = sitemapOnly ? true : useSitemap;
       body.sitemapOnly = sitemapOnly;
 
-      // Only include startUrl if not gazetteer type
-      if (selectedType !== 'gazetteer' && is_defined(formElements.startUrl)) {
+      // Only include startUrl if not a gazetteer-type crawl (gazetteer/geography/wikidata use external data sources)
+      const isGazetteerType = selectedType === 'gazetteer' || selectedType === 'geography' || selectedType === 'wikidata';
+      if (!isGazetteerType && is_defined(formElements.startUrl)) {
         body.startUrl = formElements.startUrl.value;
       }
 

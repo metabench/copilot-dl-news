@@ -4,7 +4,8 @@
 
 const { buildOptions, buildOptionsStrict } = require('../optionsBuilder');
 
-describe('optionsBuilder', () => {
+// Fast unit tests - use 1-second timeout
+describe('optionsBuilder', fastTest(() => {
   describe('buildOptions', () => {
     test('uses provided values when type matches', () => {
       const schema = {
@@ -480,4 +481,4 @@ describe('optionsBuilder', () => {
       expect(result.value).toBe(NaN);
     });
   });
-});
+}));

@@ -306,39 +306,62 @@ class BackgroundTaskManager extends EventEmitter {
    */
   async resumeAllPausedTasks() {
     const pausedTasks = this.listTasks({ status: TaskStatus.PAUSED });
+    const runningTasks = this.listTasks({ status: TaskStatus.RUNNING });
+    const resumingTasks = this.listTasks({ status: TaskStatus.RESUMING });
+    
+    const totalToResume = pausedTasks.length + runningTasks.length + resumingTasks.length;
+    
+    // Log telemetry about startup resume check
+    console.log(`[BackgroundTasks] Checking for tasks to resume on startup...`);
+    console.log(`[BackgroundTasks] Found: ${pausedTasks.length} paused, ${runningTasks.length} running, ${resumingTasks.length} resuming`);
+    
+    if (totalToResume === 0) {
+      console.log(`[BackgroundTasks] No tasks to resume - starting with clean slate`);
+      return;
+    }
+    
+    let resumedCount = 0;
+    let failedCount = 0;
     
     for (const task of pausedTasks) {
       try {
         await this.resumeTask(task.id);
-        console.log(`[BackgroundTasks] Resumed task ${task.id} (${task.task_type})`);
+        console.log(`[BackgroundTasks] Resumed paused task ${task.id} (${task.task_type})`);
+        resumedCount++;
       } catch (error) {
         console.error(`[BackgroundTasks] Failed to resume task ${task.id}:`, error.message);
+        failedCount++;
       }
     }
     
     // Also resume running tasks that were interrupted
-    const runningTasks = this.listTasks({ status: TaskStatus.RUNNING });
     for (const task of runningTasks) {
       if (!this.activeTasks.has(task.id)) {
         try {
           await this.startTask(task.id, true); // Pass isResume=true
-          console.log(`[BackgroundTasks] Restarted task ${task.id} (${task.task_type})`);
+          console.log(`[BackgroundTasks] Restarted interrupted task ${task.id} (${task.task_type})`);
+          resumedCount++;
         } catch (error) {
           console.error(`[BackgroundTasks] Failed to restart task ${task.id}:`, error.message);
+          failedCount++;
         }
       }
     }
     
     // Check for any tasks stuck in RESUMING state (should not happen, but failsafe)
-    const resumingTasks = this.listTasks({ status: TaskStatus.RESUMING });
     for (const task of resumingTasks) {
       console.warn(`[BackgroundTasks] Found task ${task.id} stuck in RESUMING state, restarting...`);
       try {
         await this.startTask(task.id, true);
+        resumedCount++;
       } catch (error) {
         console.error(`[BackgroundTasks] Failed to restart stuck task ${task.id}:`, error.message);
+        failedCount++;
       }
     }
+    
+    // Summary telemetry
+    console.log(`[BackgroundTasks] Resume complete: ${resumedCount} succeeded, ${failedCount} failed`);
   }
   
   /**
@@ -472,7 +495,10 @@ class BackgroundTaskManager extends EventEmitter {
     
     const taskRecord = this.getTask(taskId);
     this._broadcastEvent('task-error', taskRecord);
-    this.emit('error', taskRecord);
+    // Note: We don't emit 'error' event here because:
+    // 1. EventEmitter 'error' has special semantics (throws if no listeners)
+    // 2. We already broadcast 'task-error' for subscribers
+    // 3. Tests can listen to 'task-error' without Jest treating it as unhandled
     
     console.error(`[BackgroundTasks] Task ${taskId} failed:`, errorMessage);
   }

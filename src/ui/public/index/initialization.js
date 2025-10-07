@@ -200,8 +200,10 @@ export function createInitialization(deps) {
 
       if (!useEl || !soEl) return;
 
-      // Handle gazetteer type: disable startUrl and depth fields
-      if (v === 'gazetteer') {
+      // Handle gazetteer/geography/wikidata types: these crawl data sources, not traditional websites
+      const isGazetteerType = v === 'gazetteer' || v === 'geography' || v === 'wikidata';
+      
+      if (isGazetteerType) {
         if (startUrlField) startUrlField.classList.add('control-field--hidden');
         if (startUrlInput) {
           startUrlInput.disabled = true;
@@ -209,7 +211,17 @@ export function createInitialization(deps) {
         }
         if (depthField) depthField.classList.add('control-field--hidden');
         if (depthInput) depthInput.disabled = true;
-        if (gazetteerNote) gazetteerNote.classList.remove('control-field--hidden');
+        if (gazetteerNote) {
+          gazetteerNote.classList.remove('control-field--hidden');
+          // Update note text based on specific type
+          if (v === 'wikidata') {
+            gazetteerNote.textContent = 'Wikidata crawl: Ingests gazetteer data from Wikidata SPARQL endpoint';
+          } else if (v === 'geography') {
+            gazetteerNote.textContent = 'Geography crawl: Aggregates gazetteer data from Wikidata and OpenStreetMap boundaries';
+          } else {
+            gazetteerNote.textContent = 'Gazetteer crawl: Ingests geographic place data';
+          }
+        }
         
         useEl.checked = false;
         useEl.disabled = false;

@@ -1,6 +1,17 @@
 # Refactoring Plan: Intelligent Navigation-First Crawling
 
-_Created: 2025-10-03_
+**Status**: 🔮 **FUTURE VISION** — Not yet implemented  
+**Created**: October 3, 2025  
+**Last Reviewed**: October 7, 2025  
+**Dependencies**: Requires Phase 3 service layer foundation (✅ Complete Oct 7, 2025)
+
+> **⚠️ Important**: This document describes a **planned architectural evolution**, not the current system state.  
+> For current architecture, see:
+> - `SERVICE_LAYER_ARCHITECTURE.md` — Current service layer architecture (Phase 3, complete)
+> - `PHASE_3_REFACTORING_COMPLETE.md` — Recent refactoring completion summary
+> - `ARCHITECTURE_ANALYSIS_AND_IMPROVEMENTS.md` — Overall improvement roadmap
+
+---
 
 ## Vision
 

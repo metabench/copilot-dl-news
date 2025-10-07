@@ -1,0 +1,681 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>News Websites</title>
+    <link rel="stylesheet" href="/ui.css"/>
+    <link rel="stylesheet" href="/ui-dark.css"/>
+    <script type="module" src="/assets/theme/init.js"></script>
+    <script type="module" src="/assets/global-nav.js"></script>
+    <style>
+      .news-websites-layout {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1rem;
+      }
+      
+      .news-websites-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      
+      .news-websites-grid {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 1.5rem;
+        min-height: 600px;
+      }
+      
+      .news-websites-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .news-websites-add-btn {
+        padding: 0.75rem 1.5rem;
+        background: var(--accent-color, #0066cc);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      
+      .news-websites-add-btn:hover {
+        background: var(--accent-hover, #0052a3);
+      }
+      
+      .news-websites-search {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        background: var(--input-bg, #fff);
+        color: var(--text-color, #333);
+      }
+      
+      .news-websites-list {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        background: var(--bg-secondary, #f9f9f9);
+      }
+      
+      .news-websites-list__item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color, #e5e5e5);
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      
+      .news-websites-list__item:hover {
+        background: var(--hover-bg, #f0f0f0);
+      }
+      
+      .news-websites-list__item--active {
+        background: var(--active-bg, #e3f2fd);
+        font-weight: 600;
+      }
+      
+      .news-websites-list__url {
+        font-size: 0.95rem;
+        color: var(--text-color, #333);
+        word-break: break-all;
+      }
+      
+      .news-websites-list__type {
+        font-size: 0.8rem;
+        color: var(--muted-color, #666);
+        text-transform: uppercase;
+        margin-top: 0.25rem;
+      }
+      
+      .news-websites-content {
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        background: var(--bg-primary, #fff);
+        padding: 2rem;
+      }
+      
+      .news-websites-placeholder {
+        text-align: center;
+        color: var(--muted-color, #999);
+        padding: 4rem 2rem;
+      }
+      
+      .news-websites-details__title {
+        font-size: 1.75rem;
+        margin: 0 0 1rem;
+        color: var(--heading-color, #222);
+      }
+      
+      .news-websites-details__meta {
+        font-size: 0.9rem;
+        color: var(--muted-color, #666);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+      }
+      
+      .news-websites-details__actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+      
+      .news-websites-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+      }
+      
+      .news-websites-btn--danger {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+      }
+      
+      .news-websites-btn--danger:hover {
+        background: #c82333;
+      }
+      
+      .news-websites-btn--secondary {
+        background: var(--bg-secondary, #f0f0f0);
+        color: var(--text-color, #333);
+      }
+      
+      .news-websites-btn--secondary:hover {
+        background: var(--hover-bg, #e0e0e0);
+      }
+      
+      .news-websites-details__section {
+        margin-top: 2rem;
+      }
+      
+      .news-websites-details__heading {
+        font-size: 1.2rem;
+        margin: 0 0 1rem;
+        color: var(--heading-color, #333);
+      }
+      
+      .news-websites-details__list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      
+      .news-websites-details__item {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color, #f0f0f0);
+      }
+      
+      .news-websites-details__link {
+        color: var(--link-color, #0066cc);
+        text-decoration: none;
+      }
+      
+      .news-websites-details__link:hover {
+        text-decoration: underline;
+      }
+      
+      /* Modal styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .modal-overlay.active {
+        display: flex;
+      }
+      
+      .modal {
+        background: var(--bg-primary, #fff);
+        border-radius: 8px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+      
+      .modal__title {
+        margin: 0 0 1.5rem;
+        font-size: 1.5rem;
+        color: var(--heading-color, #222);
+      }
+      
+      .modal__form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .modal__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .modal__label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-color, #333);
+      }
+      
+      .modal__input,
+      .modal__select {
+        padding: 0.75rem;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        background: var(--input-bg, #fff);
+        color: var(--text-color, #333);
+        font-size: 1rem;
+      }
+      
+      .modal__hint {
+        font-size: 0.85rem;
+        color: var(--muted-color, #666);
+      }
+      
+      .modal__actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+      
+      .modal__btn {
+        flex: 1;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      
+      .modal__btn--primary {
+        background: var(--accent-color, #0066cc);
+        color: white;
+      }
+      
+      .modal__btn--primary:hover {
+        background: var(--accent-hover, #0052a3);
+      }
+      
+      .modal__btn--secondary {
+        background: var(--bg-secondary, #f0f0f0);
+        color: var(--text-color, #333);
+      }
+      
+      .modal__btn--secondary:hover {
+        background: var(--hover-bg, #e0e0e0);
+      }
+      
+      .error-message {
+        color: #dc3545;
+        background: #f8d7da;
+        padding: 0.75rem;
+        border-radius: 4px;
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body class="ui-page news-websites-page">
+    <div data-global-nav data-active="news-websites" data-variant="bar"></div>
+    <main class="ui-container news-websites-layout">
+      <header class="news-websites-header">
+        <div>
+          <h1 class="ui-header__title">News Websites</h1>
+          <p class="text-muted">Manage curated news websites. Supports subdomains (news.sky.com) and path-based sites (bbc.com/news).</p>
+        </div>
+        <button id="addBtn" class="news-websites-add-btn">+ Add News Website</button>
+      </header>
+      
+      <div class="news-websites-grid">
+        <aside class="news-websites-sidebar">
+          <input id="searchInput" class="news-websites-search" type="text" placeholder="Filter websites…" />
+          <div id="websitesList" class="news-websites-list">Loading…</div>
+        </aside>
+        
+        <section class="news-websites-content">
+          <div id="detailsPanel" class="news-websites-placeholder text-muted">
+            Select a website to view details, or click "Add News Website" to register a new one.
+          </div>
+        </section>
+      </div>
+    </main>
+    
+    <!-- Add Website Modal -->
+    <div id="addModal" class="modal-overlay">
+      <div class="modal">
+        <h2 class="modal__title">Add News Website</h2>
+        <form id="addForm" class="modal__form">
+          <div class="modal__field">
+            <label class="modal__label" for="addUrl">Website URL *</label>
+            <input 
+              id="addUrl" 
+              class="modal__input" 
+              type="url" 
+              required 
+              placeholder="https://news.sky.com/" 
+            />
+            <span class="modal__hint">Full URL including protocol (https://)</span>
+          </div>
+          
+          <div class="modal__field">
+            <label class="modal__label" for="addLabel">Display Name</label>
+            <input 
+              id="addLabel" 
+              class="modal__input" 
+              type="text" 
+              placeholder="Sky News (optional)" 
+            />
+          </div>
+          
+          <div class="modal__field">
+            <label class="modal__label" for="addParentDomain">Parent Domain *</label>
+            <input 
+              id="addParentDomain" 
+              class="modal__input" 
+              type="text" 
+              required 
+              placeholder="sky.com" 
+            />
+            <span class="modal__hint">Base domain without protocol or subdomain</span>
+          </div>
+          
+          <div class="modal__field">
+            <label class="modal__label" for="addType">Website Type *</label>
+            <select id="addType" class="modal__select" required>
+              <option value="">Select type…</option>
+              <option value="subdomain">Subdomain (e.g., news.sky.com)</option>
+              <option value="path">Path-based (e.g., bbc.com/news)</option>
+              <option value="domain">Full domain (e.g., theguardian.com)</option>
+            </select>
+          </div>
+          
+          <div id="addError" class="error-message" style="display:none;"></div>
+          
+          <div class="modal__actions">
+            <button type="button" id="cancelAddBtn" class="modal__btn modal__btn--secondary">Cancel</button>
+            <button type="submit" class="modal__btn modal__btn--primary">Add Website</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <script>
+      // State
+      let WEBSITES = [];
+      let ACTIVE_ID = null;
+      
+      // Elements
+      const searchInput = document.getElementById('searchInput');
+      const websitesList = document.getElementById('websitesList');
+      const detailsPanel = document.getElementById('detailsPanel');
+      const addBtn = document.getElementById('addBtn');
+      const addModal = document.getElementById('addModal');
+      const addForm = document.getElementById('addForm');
+      const cancelAddBtn = document.getElementById('cancelAddBtn');
+      const addError = document.getElementById('addError');
+      
+      // Render list
+      function renderList(filter = '') {
+        const query = filter.toLowerCase().trim();
+        const items = WEBSITES.filter(w => 
+          !query || 
+          w.url.toLowerCase().includes(query) || 
+          (w.label && w.label.toLowerCase().includes(query)) ||
+          w.parent_domain.toLowerCase().includes(query)
+        );
+        
+        if (!items.length) {
+          websitesList.textContent = 'No websites found.';
+          return;
+        }
+        
+        const frag = document.createDocumentFragment();
+        for (const w of items) {
+          const div = document.createElement('div');
+          div.className = 'news-websites-list__item' + 
+            (ACTIVE_ID === w.id ? ' news-websites-list__item--active' : '');
+          
+          const urlDiv = document.createElement('div');
+          urlDiv.className = 'news-websites-list__url';
+          urlDiv.textContent = w.label || w.url;
+          
+          const typeDiv = document.createElement('div');
+          typeDiv.className = 'news-websites-list__type';
+          typeDiv.textContent = w.website_type;
+          
+          div.appendChild(urlDiv);
+          div.appendChild(typeDiv);
+          div.onclick = () => selectWebsite(w.id);
+          frag.appendChild(div);
+        }
+        
+        websitesList.innerHTML = '';
+        websitesList.appendChild(frag);
+      }
+      
+      // Select website
+      async function selectWebsite(id) {
+        ACTIVE_ID = id;
+        renderList(searchInput.value);
+        detailsPanel.textContent = 'Loading…';
+        
+        try {
+          const r = await fetch(`/api/news-websites/${id}`);
+          if (!r.ok) {
+            detailsPanel.textContent = `Failed to load website details (HTTP ${r.status})`;
+            return;
+          }
+          
+          const data = await r.json();
+          const w = data.website;
+          const stats = data.stats || {};
+          const articles = data.recentArticles || [];
+          const domain = data.domainBreakdown || [];
+          const cacheAge = data.cacheAge;
+          
+          // Format cache age
+          let cacheInfo = '';
+          if (cacheAge !== undefined) {
+            if (cacheAge < 60) {
+              cacheInfo = `<span style="color: #28a745;">● Live (${cacheAge}s old)</span>`;
+            } else if (cacheAge < 3600) {
+              cacheInfo = `<span style="color: #ffc107;">● Cached (${Math.round(cacheAge / 60)}m old)</span>`;
+            } else {
+              cacheInfo = `<span style="color: #dc3545;">● Stale (${Math.round(cacheAge / 3600)}h old)</span>`;
+            }
+          }
+          
+          detailsPanel.innerHTML = `
+            <h2 class="news-websites-details__title">${w.label || w.url}</h2>
+            <div class="news-websites-details__meta">
+              <div><strong>URL:</strong> ${w.url}</div>
+              <div><strong>Parent Domain:</strong> ${w.parent_domain}</div>
+              <div><strong>Type:</strong> ${w.website_type}</div>
+              <div><strong>Pattern:</strong> <code>${w.url_pattern}</code></div>
+              <div><strong>Added:</strong> ${new Date(w.added_at).toLocaleString()}</div>
+              ${cacheInfo ? `<div><strong>Cache Status:</strong> ${cacheInfo}</div>` : ''}
+            </div>
+            
+            <div class="news-websites-details__actions">
+              <button class="news-websites-btn news-websites-btn--danger" onclick="removeWebsite(${w.id})">
+                Remove Website
+              </button>
+              ${cacheAge > 300 ? `
+                <button class="news-websites-btn news-websites-btn--secondary" onclick="rebuildCache(${w.id})">
+                  Rebuild Cache
+                </button>
+              ` : ''}
+              <a href="/urls?url=${encodeURIComponent(w.url_pattern)}" 
+                 class="news-websites-btn news-websites-btn--secondary" 
+                 target="_blank">
+                View All URLs
+              </a>
+            </div>
+            
+            <div class="news-websites-details__meta">
+              <strong>Article Statistics:</strong><br/>
+              Total: ${stats.article_count || 0} · 
+              First seen: ${stats.article_first_seen_at ? new Date(stats.article_first_seen_at).toLocaleDateString() : 'n/a'} · 
+              Latest: ${stats.article_latest_date ? new Date(stats.article_latest_date).toLocaleDateString() : 'n/a'}<br/>
+              Last crawled: ${stats.article_latest_crawled_at ? new Date(stats.article_latest_crawled_at).toLocaleString() : 'never'}
+            </div>
+            
+            <div class="news-websites-details__meta">
+              <strong>Fetch Statistics:</strong><br/>
+              Total: ${stats.fetch_count || 0} · 
+              Success: <span style="color: #28a745;">${stats.fetch_ok_count || 0}</span> · 
+              Errors: <span style="color: #dc3545;">${stats.fetch_error_count || 0}</span><br/>
+              First: ${stats.fetch_first_at ? new Date(stats.fetch_first_at).toLocaleDateString() : 'n/a'} · 
+              Last: ${stats.fetch_last_at ? new Date(stats.fetch_last_at).toLocaleString() : 'never'}
+            </div>
+            
+            <div class="news-websites-details__meta">
+              <strong>HTTP Status Distribution:</strong><br/>
+              <span style="color: #28a745;">200 OK: ${stats.status_200_count || 0}</span> · 
+              <span style="color: #ffc107;">404: ${stats.status_404_count || 0}</span> · 
+              <span style="color: #dc3545;">403: ${stats.status_403_count || 0}</span> · 
+              <span style="color: #dc3545;">500: ${stats.status_500_count || 0}</span> · 
+              <span style="color: #dc3545;">503: ${stats.status_503_count || 0}</span>
+            </div>
+            
+            <div class="news-websites-details__meta">
+              <strong>Performance Metrics:</strong><br/>
+              Avg fetch time: ${stats.avg_fetch_time_ms ? Math.round(stats.avg_fetch_time_ms) + 'ms' : 'n/a'} · 
+              Avg content size: ${stats.avg_article_size_bytes ? Math.round(stats.avg_article_size_bytes / 1024) + ' KB' : 'n/a'}<br/>
+              Total content: ${stats.total_content_bytes ? (stats.total_content_bytes / 1024 / 1024).toFixed(2) + ' MB' : 'n/a'} · 
+              Success rate: ${stats.fetch_count > 0 ? Math.round((stats.successful_crawls || 0) / stats.fetch_count * 100) + '%' : 'n/a'}
+            </div>
+            
+            <div class="news-websites-details__section">
+              <h3 class="news-websites-details__heading">Recent Articles</h3>
+              <ul class="news-websites-details__list">
+                ${articles.length > 0 ? articles.map(a => `
+                  <li class="news-websites-details__item">
+                    <a href="/url?url=${encodeURIComponent(a.url)}" class="news-websites-details__link">
+                      ${a.title || a.url}
+                    </a>
+                    <span class="text-muted"> · ${a.date || a.crawled_at || ''}</span>
+                  </li>
+                `).join('') : '<li class="news-websites-details__item text-muted">No articles yet</li>'}
+              </ul>
+            </div>
+            
+            ${domain.length > 0 ? `
+            <div class="news-websites-details__section">
+              <h3 class="news-websites-details__heading">Domain Breakdown</h3>
+              <ul class="news-websites-details__list">
+                ${domain.map(d => `
+                  <li class="news-websites-details__item">
+                    ${d.domain}: ${d.count} articles
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+            ` : ''}
+          `;
+        } catch (e) {
+          console.error('Failed to load website details:', e);
+          detailsPanel.textContent = 'Failed to load website details';
+        }
+      }
+      
+      // Remove website
+      window.removeWebsite = async function(id) {
+        if (!confirm('Are you sure you want to remove this news website?')) return;
+        
+        try {
+          const r = await fetch(`/api/news-websites/${id}`, { method: 'DELETE' });
+          if (!r.ok) {
+            alert('Failed to remove website');
+            return;
+          }
+          
+          // Reload list
+          await loadWebsites();
+          detailsPanel.innerHTML = '<div class="news-websites-placeholder text-muted">Select a website to view details.</div>';
+          ACTIVE_ID = null;
+        } catch (e) {
+          console.error('Failed to remove website:', e);
+          alert('Failed to remove website');
+        }
+      };
+      
+      // Rebuild cache for a website
+      window.rebuildCache = async function(id) {
+        try {
+          const r = await fetch(`/api/news-websites/${id}/rebuild-cache`, { method: 'POST' });
+          if (!r.ok) {
+            alert('Failed to rebuild cache');
+            return;
+          }
+          
+          // Reload details to show updated cache
+          await selectWebsite(id);
+        } catch (e) {
+          console.error('Failed to rebuild cache:', e);
+          alert('Failed to rebuild cache');
+        }
+      };
+      
+      // Load websites
+      async function loadWebsites() {
+        try {
+          const r = await fetch('/api/news-websites');
+          if (!r.ok) {
+            websitesList.textContent = 'Failed to load websites';
+            return;
+          }
+          
+          const data = await r.json();
+          WEBSITES = data.websites || [];
+          renderList('');
+          
+          if (WEBSITES.length && !ACTIVE_ID) {
+            selectWebsite(WEBSITES[0].id);
+          }
+        } catch (e) {
+          console.error('Failed to load websites:', e);
+          websitesList.textContent = 'Failed to load websites';
+        }
+      }
+      
+      // Modal controls
+      addBtn.onclick = () => {
+        addModal.classList.add('active');
+        addForm.reset();
+        addError.style.display = 'none';
+      };
+      
+      cancelAddBtn.onclick = () => {
+        addModal.classList.remove('active');
+      };
+      
+      addModal.onclick = (e) => {
+        if (e.target === addModal) {
+          addModal.classList.remove('active');
+        }
+      };
+      
+      // Add form submission
+      addForm.onsubmit = async (e) => {
+        e.preventDefault();
+        addError.style.display = 'none';
+        
+        const url = document.getElementById('addUrl').value.trim();
+        const label = document.getElementById('addLabel').value.trim() || null;
+        const parent_domain = document.getElementById('addParentDomain').value.trim();
+        const website_type = document.getElementById('addType').value;
+        
+        try {
+          const r = await fetch('/api/news-websites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, label, parent_domain, website_type })
+          });
+          
+          if (!r.ok) {
+            const err = await r.json();
+            addError.textContent = err.error || 'Failed to add website';
+            addError.style.display = 'block';
+            return;
+          }
+          
+          // Success - close modal and reload
+          addModal.classList.remove('active');
+          await loadWebsites();
+        } catch (e) {
+          console.error('Failed to add website:', e);
+          addError.textContent = 'Failed to add website';
+          addError.style.display = 'block';
+        }
+      };
+      
+      // Search filter
+      searchInput.addEventListener('input', () => renderList(searchInput.value));
+      
+      // Initialize
+      loadWebsites();
+    </script>
+  </body>
+</html>

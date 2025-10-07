@@ -4,7 +4,8 @@
 
 const { AttributeBuilder } = require('../attributeBuilder');
 
-describe('AttributeBuilder', () => {
+// Fast unit tests - use 1-second timeout
+describe('AttributeBuilder', fastTest(() => {
   describe('basic functionality', () => {
     test('creates empty builder with source', () => {
       const builder = new AttributeBuilder('wikidata');
@@ -311,4 +312,4 @@ describe('AttributeBuilder', () => {
       expect(builder.build()).toHaveLength(1);
     });
   });
-});
+}));

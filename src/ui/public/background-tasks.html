@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Background Tasks - News Crawler</title>
+  <link rel="stylesheet" href="/crawler.css" />
+  <script type="module" src="/assets/global-nav.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -411,12 +413,31 @@
   </style>
 </head>
 <body>
-  <h1>📋 Background Tasks</h1>
+  <header class="page-header panel--full-width" style="margin: 0 0 20px 0; padding: 15px 20px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div class="page-header__primary">
+      <h1 style="margin: 0; font-size: 1.5em;">📋 Background Tasks</h1>
+      <div class="page-header__nav" data-nav-container>
+        <div data-global-nav data-active="background-tasks" data-variant="bar"></div>
+      </div>
+    </div>
+  </header>
   
-  <div id="background-tasks-container">
-    <!-- UI will be rendered here by backgroundTasksUI.js -->
+  <div id="background-tasks-container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+    <!-- Create Task Button -->
+    <div style="margin-bottom: 20px;">
+      <button class="btn btn-primary" data-action="create-task">
+        ➕ Create New Task
+      </button>
+    </div>
+    
+    <!-- Task list will be rendered here by backgroundTasksUI.js -->
   </div>
   
+  <!-- Include property editor (isomorphic) -->
+  <script src="/js/propertyEditor.js"></script>
+  <!-- Include task creation UI -->
+  <script src="/js/taskCreation.js"></script>
+  <!-- Include existing background tasks UI -->
   <script src="/js/backgroundTasksUI.js"></script>
   <script>
     // SSE connection for real-time updates

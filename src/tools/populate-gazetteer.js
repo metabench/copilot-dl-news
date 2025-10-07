@@ -11,7 +11,8 @@
 */
 
 const { is_array, tof } = require('lang-tools');
-
+const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { ensureDb, ensureGazetteer } = require('../db/sqlite');
@@ -410,7 +411,6 @@ function getArg(name, fallback) {
 
   // Save cache after load when running full dataset
   try {
-    const fs = require('fs');
     if (!countriesFilter.length) {
       if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
       const cachePath = path.join(cacheDir, 'restcountries.v3.1.all.json');
@@ -436,8 +436,6 @@ function getArg(name, fallback) {
   async function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
 
   // Simple on-disk cache for SPARQL GET queries
-  const crypto = require('crypto');
-  const fs = require('fs');
   function sparqlCachePath(query) {
     const dir = path.join(cacheDir, 'sparql');
     try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); } catch (_) {}

@@ -10,7 +10,8 @@ const {
   normalizeDomain
 } = require('../domainUtils');
 
-describe('domainUtils', () => {
+// Fast unit tests - use 1-second timeout
+describe('domainUtils', fastTest(() => {
   describe('extractDomain', () => {
     test('extracts hostname from valid URL', () => {
       expect(extractDomain('https://www.example.com/path')).toBe('www.example.com');
@@ -278,4 +279,4 @@ describe('domainUtils', () => {
       expect(normalizeDomain(undefined)).toBe('');
     });
   });
-});
+}));

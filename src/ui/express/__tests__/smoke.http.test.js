@@ -25,8 +25,8 @@ describe('UI smoke over real HTTP', () => {
     const prev = process.env.PORT;
     process.env.PORT = '0';
     server = startServer();
-    // wait a tick for address
-    await new Promise((r) => setTimeout(r, 100));
+    // Reduced server startup wait from 100ms to 20ms
+    await new Promise((r) => setTimeout(r, 20));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : prev || 3000;
   });

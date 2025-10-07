@@ -327,6 +327,25 @@ class NewsDatabase {
       CREATE INDEX IF NOT EXISTS idx_article_places_url ON article_places(article_url);
     `);
 
+    // News websites registry (manually curated news sites)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS news_websites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL UNIQUE,
+        label TEXT,
+        parent_domain TEXT,
+        url_pattern TEXT NOT NULL,
+        website_type TEXT NOT NULL,
+        added_at TEXT NOT NULL,
+        added_by TEXT,
+        enabled INTEGER DEFAULT 1,
+        metadata TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_news_websites_enabled ON news_websites(enabled);
+      CREATE INDEX IF NOT EXISTS idx_news_websites_parent ON news_websites(parent_domain);
+      CREATE INDEX IF NOT EXISTS idx_news_websites_type ON news_websites(website_type);
+    `);
+
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS crawl_jobs (
         id TEXT PRIMARY KEY,
@@ -804,6 +823,9 @@ class NewsDatabase {
         checked_at = excluded.checked_at,
         metadata = excluded.metadata
     `);
+    
+    // Seed default crawl types
+    this.ensureCrawlTypesSeeded();
   }
 
   upsertArticle(article) {
@@ -1657,6 +1679,266 @@ class NewsDatabase {
         spaceSavedPercent: 0
       };
     }
+  }
+
+  // News Websites Management
+  
+  /**
+   * Add a news website to the registry
+   * @param {Object} website
+   * @param {string} website.url - Full URL (e.g., 'https://news.sky.com/')
+   * @param {string} [website.label] - Display name
+   * @param {string} website.parent_domain - Base domain (e.g., 'sky.com')
+   * @param {string} website.url_pattern - SQL LIKE pattern (e.g., 'https://news.sky.com/%')
+   * @param {string} website.website_type - 'subdomain', 'path', or 'domain'
+   * @param {string} [website.added_by] - User/source
+   * @param {Object} [website.metadata] - Additional data
+   * @returns {number} - ID of inserted row
+   */
+  addNewsWebsite({ url, label = null, parent_domain, url_pattern, website_type, added_by = 'manual', metadata = null }) {
+    const added_at = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      INSERT INTO news_websites (url, label, parent_domain, url_pattern, website_type, added_at, added_by, enabled, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+    `);
+    const result = stmt.run(
+      url,
+      label,
+      parent_domain,
+      url_pattern,
+      website_type,
+      added_at,
+      added_by,
+      metadata ? JSON.stringify(metadata) : null
+    );
+    return result.lastInsertRowid;
+  }
+
+  /**
+   * Remove a news website from the registry
+   * @param {number} id - Website ID
+   * @returns {boolean} - True if deleted
+   */
+  removeNewsWebsite(id) {
+    const stmt = this.db.prepare('DELETE FROM news_websites WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get all news websites
+   * @param {boolean} [enabledOnly=true] - Only return enabled websites
+   * @returns {Array<Object>} - List of news websites
+   */
+  getNewsWebsites(enabledOnly = true) {
+    const query = enabledOnly
+      ? 'SELECT * FROM news_websites WHERE enabled = 1 ORDER BY url'
+      : 'SELECT * FROM news_websites ORDER BY url';
+    return this.db.prepare(query).all();
+  }
+
+  /**
+   * Get a single news website by ID
+   * @param {number} id - Website ID
+   * @returns {Object|null} - Website object or null
+   */
+  getNewsWebsite(id) {
+    return this.db.prepare('SELECT * FROM news_websites WHERE id = ?').get(id);
+  }
+
+  /**
+   * Update news website enabled status
+   * @param {number} id - Website ID
+   * @param {boolean} enabled - Enabled status
+   * @returns {boolean} - True if updated
+   */
+  setNewsWebsiteEnabled(id, enabled) {
+    const stmt = this.db.prepare('UPDATE news_websites SET enabled = ? WHERE id = ?');
+    const result = stmt.run(enabled ? 1 : 0, id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get stats for a news website (article count, fetches, etc.)
+   * @param {number} id - Website ID
+   * @returns {Object} - Statistics object
+   */
+  getNewsWebsiteStats(id) {
+    const website = this.getNewsWebsite(id);
+    if (!website) return null;
+
+    const pattern = website.url_pattern;
+    
+    // Count articles matching the pattern
+    const articlesCount = this.db.prepare(`
+      SELECT COUNT(*) as count FROM articles WHERE url LIKE ?
+    `).get(pattern);
+
+    // Count fetches matching the pattern
+    const fetchesCount = this.db.prepare(`
+      SELECT COUNT(*) as count FROM fetches WHERE url LIKE ?
+    `).get(pattern);
+
+    // Get recent articles
+    const recentArticles = this.db.prepare(`
+      SELECT url, title, date, crawled_at 
+      FROM articles 
+      WHERE url LIKE ? 
+      ORDER BY crawled_at DESC 
+      LIMIT 10
+    `).all(pattern);
+
+    // Get fetch stats
+    const fetchStats = this.db.prepare(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN http_status >= 200 AND http_status < 300 THEN 1 ELSE 0 END) as ok_count,
+        SUM(CASE WHEN http_status >= 400 THEN 1 ELSE 0 END) as err_count,
+        MAX(fetched_at) as last_fetch_at
+      FROM fetches 
+      WHERE url LIKE ?
+    `).get(pattern);
+
+    return {
+      website,
+      articles: {
+        total: articlesCount.count,
+        recent: recentArticles
+      },
+      fetches: fetchStats
+    };
+  }
+
+  /**
+   * Get enhanced stats for a news website (uses cache if available)
+   * @param {number} id - Website ID
+   * @param {boolean} [useCache=true] - Use cached stats if available
+   * @returns {Object} - Enhanced statistics object
+   */
+  getNewsWebsiteEnhancedStats(id, useCache = true) {
+    const website = this.getNewsWebsite(id);
+    if (!website) return null;
+
+    // Try to get cached stats first
+    let stats = null;
+    if (useCache) {
+      stats = this.db.prepare(`
+        SELECT * FROM news_websites_stats_cache WHERE website_id = ?
+      `).get(id);
+    }
+
+    // If no cache, compute on-demand
+    if (!stats) {
+      const pattern = website.url_pattern;
+      stats = this._computeBasicStats(pattern);
+    }
+
+    // Get recent articles (always fresh, small query)
+    const recentArticles = this.db.prepare(`
+      SELECT url, title, date, crawled_at 
+      FROM articles 
+      WHERE url LIKE ? 
+      ORDER BY crawled_at DESC 
+      LIMIT 10
+    `).all(website.url_pattern);
+
+    // Get domain breakdown
+    const domainBreakdown = this.db.prepare(`
+      SELECT 
+        SUBSTR(url, 1, INSTR(SUBSTR(url, 9), '/') + 8) as domain,
+        COUNT(*) as count
+      FROM articles
+      WHERE url LIKE ?
+      GROUP BY domain
+      ORDER BY count DESC
+      LIMIT 5
+    `).all(website.url_pattern);
+
+    return {
+      website,
+      stats,
+      recentArticles,
+      domainBreakdown,
+      cacheAge: stats.last_updated_at ? this._getCacheAge(stats.last_updated_at) : null
+    };
+  }
+
+  /**
+   * Compute basic stats for a pattern (lighter than full stats)
+   * @param {string} pattern - URL pattern
+   * @returns {Object} - Basic statistics
+   * @private
+   */
+  _computeBasicStats(pattern) {
+    const articleCount = this.db.prepare(`
+      SELECT COUNT(*) as count FROM articles WHERE url LIKE ?
+    `).get(pattern);
+
+    const fetchCount = this.db.prepare(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN http_status >= 200 AND http_status < 300 THEN 1 ELSE 0 END) as ok_count,
+        SUM(CASE WHEN http_status >= 400 THEN 1 ELSE 0 END) as error_count,
+        MAX(fetched_at) as last_at
+      FROM fetches 
+      WHERE url LIKE ?
+    `).get(pattern);
+
+    return {
+      article_count: articleCount.count || 0,
+      fetch_count: fetchCount.total || 0,
+      fetch_ok_count: fetchCount.ok_count || 0,
+      fetch_error_count: fetchCount.error_count || 0,
+      fetch_last_at: fetchCount.last_at || null
+    };
+  }
+
+  /**
+   * Get cache age in seconds
+   * @param {string} timestamp - ISO timestamp
+   * @returns {number} - Age in seconds
+   * @private
+   */
+  _getCacheAge(timestamp) {
+    const updated = new Date(timestamp);
+    const now = new Date();
+    return Math.floor((now - updated) / 1000);
+  }
+
+  /**
+   * Get all news websites with their cached stats (very fast)
+   * @param {boolean} [enabledOnly=true] - Only return enabled websites
+   * @returns {Array<Object>} - Websites with stats
+   */
+  getNewsWebsitesWithStats(enabledOnly = true) {
+    const query = enabledOnly
+      ? `SELECT 
+           w.*,
+           s.article_count,
+           s.fetch_count,
+           s.fetch_ok_count,
+           s.fetch_error_count,
+           s.fetch_last_at,
+           s.article_latest_date,
+           s.last_updated_at as stats_updated_at
+         FROM news_websites w
+         LEFT JOIN news_websites_stats_cache s ON w.id = s.website_id
+         WHERE w.enabled = 1
+         ORDER BY w.url`
+      : `SELECT 
+           w.*,
+           s.article_count,
+           s.fetch_count,
+           s.fetch_ok_count,
+           s.fetch_error_count,
+           s.fetch_last_at,
+           s.article_latest_date,
+           s.last_updated_at as stats_updated_at
+         FROM news_websites w
+         LEFT JOIN news_websites_stats_cache s ON w.id = s.website_id
+         ORDER BY w.url`;
+    
+    return this.db.prepare(query).all();
   }
 }
 

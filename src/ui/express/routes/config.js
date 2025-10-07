@@ -4,12 +4,13 @@
  */
 
 const express = require('express');
+const { BadRequestError, NotFoundError, InternalServerError } = require('../errors/HttpError');
 
 function createConfigAPI(configManager) {
   const router = express.Router();
 
   // Get current configuration
-  router.get('/', (req, res) => {
+  router.get('/', (req, res, next) => {
     try {
       const config = configManager.getConfig();
       res.json({
@@ -18,15 +19,12 @@ function createConfigAPI(configManager) {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Update configuration
-  router.post('/', (req, res) => {
+  router.post('/', (req, res, next) => {
     try {
       const updates = req.body;
       const result = configManager.updateConfig(updates) || {};
@@ -39,22 +37,15 @@ function createConfigAPI(configManager) {
           timestamp: new Date().toISOString()
         });
       } else {
-        res.status(400).json({
-          success: false,
-          error: 'Configuration update failed',
-          errors: Array.isArray(result.errors) ? result.errors : []
-        });
+        return next(new BadRequestError('Configuration update failed'));
       }
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Get feature flags
-  router.get('/features', (req, res) => {
+  router.get('/features', (req, res, next) => {
     try {
       const features = configManager.getFeatureFlags();
       res.json({
@@ -63,15 +54,12 @@ function createConfigAPI(configManager) {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Update feature flags
-  router.put('/features', (req, res) => {
+  router.put('/features', (req, res, next) => {
     try {
       const features = req.body;
       const result = configManager.updateConfig({ features }) || {};
@@ -84,22 +72,15 @@ function createConfigAPI(configManager) {
           timestamp: new Date().toISOString()
         });
       } else {
-        res.status(400).json({
-          success: false,
-          error: 'Failed to update feature flags',
-          errors: Array.isArray(result.errors) ? result.errors : []
-        });
+        return next(new BadRequestError('Failed to update feature flags'));
       }
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Get priority bonuses only
-  router.get('/queue/bonuses', (req, res) => {
+  router.get('/queue/bonuses', (req, res, next) => {
     try {
       const bonuses = configManager.getBonuses();
       res.json({
@@ -108,15 +89,12 @@ function createConfigAPI(configManager) {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Update priority bonuses
-  router.put('/queue/bonuses', (req, res) => {
+  router.put('/queue/bonuses', (req, res, next) => {
     try {
       const bonuses = req.body;
       const updates = {
@@ -138,31 +116,21 @@ function createConfigAPI(configManager) {
           timestamp: new Date().toISOString()
         });
       } else {
-        res.status(400).json({
-          success: false,
-          error: 'Failed to update priority bonuses',
-          errors: Array.isArray(result.errors) ? result.errors : []
-        });
+        return next(new BadRequestError('Failed to update priority bonuses'));
       }
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Get specific configuration section
-  router.get('/:section', (req, res) => {
+  router.get('/:section', (req, res, next) => {
     try {
       const { section } = req.params;
       const config = configManager.getConfig();
       
       if (!Object.prototype.hasOwnProperty.call(config, section)) {
-        return res.status(404).json({
-          success: false,
-          error: `Configuration section '${section}' not found`
-        });
+        return next(new NotFoundError(`Configuration section '${section}' not found`, 'section'));
       }
 
       res.json({
@@ -172,15 +140,12 @@ function createConfigAPI(configManager) {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Update specific configuration section
-  router.put('/:section', (req, res) => {
+  router.put('/:section', (req, res, next) => {
     try {
       const { section } = req.params;
       const updates = { [section]: req.body };
@@ -197,22 +162,15 @@ function createConfigAPI(configManager) {
           timestamp: new Date().toISOString()
         });
       } else {
-        res.status(400).json({
-          success: false,
-          error: `Failed to update section '${section}'`,
-          errors: Array.isArray(result.errors) ? result.errors : []
-        });
+        return next(new BadRequestError(`Failed to update section '${section}'`));
       }
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 
   // Configuration validation endpoint
-  router.post('/validate', (req, res) => {
+  router.post('/validate', (req, res, next) => {
     try {
       const config = req.body;
       
@@ -252,10 +210,7 @@ function createConfigAPI(configManager) {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message
-      });
+      next(new InternalServerError(error.message));
     }
   });
 

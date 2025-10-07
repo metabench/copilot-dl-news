@@ -30,9 +30,11 @@ const NAV_LINKS = [
   { key: 'coverage', label: 'Coverage Analytics', href: '/coverage-dashboard.html' },
   { key: 'priority', label: 'Priority Config', href: '/priority-config.html' },
   { key: 'bootstrap-db', label: 'Bootstrap DB', href: '/bootstrap-db' },
+  { key: 'background-tasks', label: 'Background Tasks', href: '/background-tasks' },
   { key: 'gazetteer', label: 'Gazetteer', href: '/gazetteer' },
   { key: 'gazetteer-progress', label: 'Gazetteer Progress', href: '/gazetteer/progress' },
   { key: 'domains', label: 'Domains', href: '/domains' },
+  { key: 'news-websites', label: 'News Websites', href: '/news-websites.html' },
   { key: 'errors', label: 'Errors', href: '/errors' },
   { key: 'urls', label: 'URLs', href: '/urls' }
 ];

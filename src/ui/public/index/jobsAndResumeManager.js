@@ -12,7 +12,7 @@
  * Patterns used: each() for iteration, is_defined() for safety checks.
  */
 
-import { each, is_defined } from '@metabench/lang-tools';
+import { each, is_defined } from 'lang-tools';
 
 // Resume state priority weights for sorting (lower = higher priority)
 const RESUME_STATE_WEIGHT = {

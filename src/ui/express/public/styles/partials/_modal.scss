@@ -1,0 +1,280 @@
+/**
+ * Modal Dialog Component
+ * 
+ * Provides overlay modal dialogs with backdrop, close button, header, body, footer
+ */
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  
+  &.is-visible {
+    display: flex;
+  }
+  
+  // Backdrop overlay
+  &__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
+  
+  // Content container
+  &__content {
+    position: relative;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+  }
+  
+  // Modal header
+  &__header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  &__title {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  &__close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    color: #95a5a6;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: #ecf0f1;
+      color: #7f8c8d;
+    }
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  // Modal body
+  &__body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  // Modal footer (optional)
+  &__footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  
+  // Task creation modal specific styles
+  &--task-creation {
+    .task-type-selection {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .task-type-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #555;
+      font-size: 14px;
+    }
+    
+    .task-type-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+      
+      &:focus {
+        outline: none;
+        border-color: #2196F3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+      }
+    }
+    
+    .property-editor-container {
+      &.is-hidden {
+        display: none;
+      }
+    }
+  }
+}
+
+// Error styling for property editor in modal
+.prop-field--invalid {
+  .prop-input,
+  .prop-input-wrapper input,
+  .prop-input-wrapper select,
+  .prop-input-wrapper textarea {
+    border-color: #e74c3c !important;
+    background-color: #fff5f5 !important;
+  }
+}
+
+.prop-error {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+// Animations
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .modal {
+    &__content {
+      width: 95%;
+      max-height: 95vh;
+    }
+    
+    &__header {
+      padding: 16px 20px;
+    }
+    
+    &__title {
+      font-size: 1.25em;
+    }
+    
+    &__body {
+      padding: 20px;
+    }
+    
+    &__footer {
+      padding: 12px 20px;
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .modal {
+    &__backdrop {
+      background: rgba(0, 0, 0, 0.7);
+    }
+    
+    &__content {
+      background: #2d2d2d;
+      color: #e0e0e0;
+    }
+    
+    &__header {
+      border-bottom-color: #444;
+    }
+    
+    &__title {
+      color: #e0e0e0;
+    }
+    
+    &__close {
+      color: #95a5a6;
+      
+      &:hover {
+        background: #444;
+        color: #bdc3c7;
+      }
+    }
+    
+    &__footer {
+      border-top-color: #444;
+    }
+    
+    &--task-creation {
+      .task-type-selection {
+        border-bottom-color: #444;
+      }
+      
+      .task-type-label {
+        color: #bdc3c7;
+      }
+      
+      .task-type-select {
+        background: #444;
+        border-color: #555;
+        color: #e0e0e0;
+        
+        &:focus {
+          border-color: #2196F3;
+        }
+      }
+    }
+  }
+  
+  .prop-field--invalid {
+    .prop-input,
+    .prop-input-wrapper input,
+    .prop-input-wrapper select,
+    .prop-input-wrapper textarea {
+      background-color: #3a1f1f !important;
+      border-color: #e74c3c !important;
+    }
+  }
+}

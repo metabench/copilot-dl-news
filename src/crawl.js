@@ -6,6 +6,7 @@ const fetch = (...args) => import('node-fetch').then(({
 const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
 const path = require('path');
+const readline = require('readline');
 const { tof, is_array } = require('lang-tools');
 const { buildOptions } = require('./utils/optionsBuilder');
 const {
@@ -1726,7 +1727,6 @@ class NewsCrawler {
 
 // CLI interface
 if (require.main === module) {
-  const readline = require('readline');
   const args = process.argv.slice(2);
   const startUrl = args[0] || 'https://www.theguardian.com';
   const enableDb = !args.includes('--no-db');

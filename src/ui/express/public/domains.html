@@ -82,7 +82,7 @@
 
       async function init() {
         try {
-          const r = await fetch('/api/news-domains');
+          const r = await fetch('/api/recent-domains?limit=100');
           if (!r.ok) { listEl.textContent = 'Failed to load'; return; }
           const j = await r.json();
           DOMAINS = (j.domains || []).map(x => ({ host: String(x.host).toLowerCase() }));

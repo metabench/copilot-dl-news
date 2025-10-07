@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const { recordPlaceHubSeed } = require('./data/placeHubs');
+const NewsWebsiteService = require('../services/NewsWebsiteService');
 
 let NewsDatabase = null;
 
@@ -32,6 +33,7 @@ class CrawlerDb {
     this.onFatalIssue = typeof onFatalIssue === 'function' ? onFatalIssue : null;
     this.db = null;
     this._stats = null;
+    this.newsWebsiteService = null; // Service facade for news website operations
   }
 
   _log(message) {
@@ -70,6 +72,15 @@ class CrawlerDb {
     try {
       const DatabaseCtor = loadNewsDatabase();
       this.db = new DatabaseCtor(this.dbPath);
+      
+      // Initialize news website service for cache updates
+      try {
+        this.newsWebsiteService = new NewsWebsiteService(this.db);
+      } catch (err) {
+        this._log(`Failed to initialize NewsWebsiteService: ${err.message}`);
+        this.newsWebsiteService = null;
+      }
+      
       if (this.cache && typeof this.cache.setDb === 'function') {
         try { this.cache.setDb(this.db); } catch (_) {}
       }
@@ -131,11 +142,21 @@ class CrawlerDb {
   }
 
   upsertArticle(article) {
+    // Use service facade if available (handles cache updates)
+    if (this.newsWebsiteService) {
+      try { return this.newsWebsiteService.upsertArticle(article); } catch (_) { return null; }
+    }
+    // Fallback to direct DB access (no cache updates)
     if (!this.db || typeof this.db.upsertArticle !== 'function') return null;
     try { return this.db.upsertArticle(article); } catch (_) { return null; }
   }
 
   insertFetch(fetchRow) {
+    // Use service facade if available (handles cache updates)
+    if (this.newsWebsiteService) {
+      try { return this.newsWebsiteService.insertFetch(fetchRow); } catch (_) { return null; }
+    }
+    // Fallback to direct DB access (no cache updates)
     if (!this.db || typeof this.db.insertFetch !== 'function') return null;
     try { return this.db.insertFetch(fetchRow); } catch (_) { return null; }
   }

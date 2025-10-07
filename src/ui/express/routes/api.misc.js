@@ -1,6 +1,7 @@
 const express = require('express');
 const { listRecentErrors } = require('../data/errors');
 const { listCrawlTypes } = require('../data/crawlTypes');
+const { ServiceUnavailableError, InternalServerError } = require('../errors/HttpError');
 
 function createMiscApiRouter(options = {}) {
   const {
@@ -77,7 +78,7 @@ function createMiscApiRouter(options = {}) {
     res.type('text/plain').send(lines.join('\n'));
   });
 
-  router.get('/api/recent-errors', (req, res) => {
+  router.get('/api/recent-errors', (req, res, next) => {
     try {
       const db = getDbRW();
       if (!db) return res.json({ errors: [] });
@@ -134,17 +135,15 @@ function createMiscApiRouter(options = {}) {
 
       return res.json({ errors });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      next(new InternalServerError(err.message));
     }
   });
 
-  router.get('/api/crawl-types', (req, res) => {
+  router.get('/api/crawl-types', (req, res, next) => {
     try {
       const db = getDbRW();
       if (!db) {
-        return res.status(503).json({
-          error: 'Database unavailable'
-        });
+        return next(new ServiceUnavailableError('Database unavailable'));
       }
       const raw = listCrawlTypes(db);
       const items = raw.map((row) => {
@@ -157,9 +156,7 @@ function createMiscApiRouter(options = {}) {
         items
       });
     } catch (err) {
-      res.status(500).json({
-        error: err.message
-      });
+      next(new InternalServerError(err.message));
     }
   });
 

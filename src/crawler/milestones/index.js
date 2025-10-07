@@ -168,7 +168,9 @@ function createIdentifiedCountryHubsMilestone({
     if (state.getSeededHubSet && typeof state.getSeededHubSet === 'function') {
       const seededSet = state.getSeededHubSet();
       if (seededSet && typeof seededSet.forEach === 'function') {
-        each(seededSet, (url) => {
+        // Convert Set to Array for reliable iteration with each()
+        const seededArray = Array.from(seededSet);
+        each(seededArray, (url) => {
           if (missingSample.length >= maxMissingSample) {
             return;
           }

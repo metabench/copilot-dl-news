@@ -21,15 +21,15 @@ class MockTask {
   }
 
   async execute() {
-    // Simulate some work
+    // Simulate some work - optimized for faster testing
     for (let i = 0; i < 5; i++) {
       if (this.signal.aborted) {
         throw new Error('Task aborted');
       }
       
       if (this.paused) {
-        // Wait for resume
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for resume (reduced from 100ms to 10ms)
+        await new Promise(resolve => setTimeout(resolve, 10));
         continue;
       }
 
@@ -39,7 +39,8 @@ class MockTask {
         message: `Processing step ${i + 1}`
       });
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Reduced from 50ms to 5ms - still allows async behavior but 10x faster
+      await new Promise(resolve => setTimeout(resolve, 5));
     }
   }
 
@@ -155,8 +156,8 @@ describe('BackgroundTaskManager', () => {
 
       await manager.startTask(taskId);
 
-      // Wait a bit for task to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for task completion (5 steps × 5ms + 10ms pause checks + overhead = ~100ms needed)
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const task = manager.getTask(taskId);
       expect(task.status).toBe('completed');
@@ -169,8 +170,8 @@ describe('BackgroundTaskManager', () => {
 
       await manager.startTask(taskId);
 
-      // Wait for some progress
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for some progress (reduced from 200ms to 20ms)
+      await new Promise(resolve => setTimeout(resolve, 20));
 
       const task = manager.getTask(taskId);
       // Task should have made some progress
@@ -182,7 +183,8 @@ describe('BackgroundTaskManager', () => {
 
       await manager.startTask(taskId);
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for completion (reduced from 500ms to 50ms)
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       const progressEvents = broadcastEvents.filter(e => e.type === 'task-progress');
       expect(progressEvents.length).toBeGreaterThan(0);
@@ -193,7 +195,8 @@ describe('BackgroundTaskManager', () => {
 
       await manager.startTask(taskId);
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for completion (reduced from 500ms to 50ms)
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       expect(metricsUpdates.length).toBeGreaterThan(0);
       const lastUpdate = metricsUpdates[metricsUpdates.length - 1];
@@ -318,7 +321,8 @@ describe('BackgroundTaskManager', () => {
       const taskId = manager.createTask('mock-task', {});
 
       await manager.startTask(taskId);
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for progress (reduced from 200ms to 20ms)
+      await new Promise(resolve => setTimeout(resolve, 20));
 
       const row = db.prepare('SELECT * FROM background_tasks WHERE id = ?').get(taskId);
       expect(row.progress_current).toBeGreaterThan(0);
@@ -342,8 +346,10 @@ describe('BackgroundTaskManager', () => {
 
       await newManager.resumeAllPausedTasks();
 
-      // Wait for task to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for task completion
+      // MockTask: 5 steps × 5ms = 25ms, plus async overhead
+      // Increased to 150ms for reliability (was 60ms)
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       const task = newManager.getTask(taskId);
       expect(task.status).toBe('completed');
@@ -374,8 +380,8 @@ describe('BackgroundTaskManager', () => {
 
       await manager.startTask(taskId);
 
-      // Wait for task to fail
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for task to fail (reduced from 200ms to 20ms)
+      await new Promise(resolve => setTimeout(resolve, 20));
 
       const task = manager.getTask(taskId);
       expect(task.status).toBe('failed');
@@ -387,7 +393,8 @@ describe('BackgroundTaskManager', () => {
       const taskId = manager.createTask('failing-task', {});
 
       await manager.startTask(taskId);
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for failure (reduced from 200ms to 20ms)
+      await new Promise(resolve => setTimeout(resolve, 20));
 
       const errorEvents = broadcastEvents.filter(e => e.type === 'task-error');
       expect(errorEvents.length).toBeGreaterThan(0);
@@ -398,7 +405,8 @@ describe('BackgroundTaskManager', () => {
       const taskId = manager.createTask('failing-task', {});
 
       await manager.startTask(taskId);
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for failure (reduced from 200ms to 20ms)
+      await new Promise(resolve => setTimeout(resolve, 20));
 
       const lastUpdate = metricsUpdates[metricsUpdates.length - 1];
       expect(lastUpdate.tasksFailed).toBe(1);

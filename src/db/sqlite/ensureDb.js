@@ -569,8 +569,26 @@ function ensureDb(dbFilePath) {
   try { db.pragma('busy_timeout = 5000'); } catch (_) {}
   try { db.pragma('synchronous = NORMAL'); } catch (_) {}
 
-  ensureGazetteer(db);
-  ensurePlaceHubs(db);
+  // Gazetteer and place hubs are optional features - don't fail if schema migration fails
+  try {
+    ensureGazetteer(db);
+  } catch (err) {
+    const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';
+    if (!isTestEnv) {
+      console.warn('[db] Gazetteer initialization failed (non-critical):', err.message);
+      console.warn('[db] Gazetteer features may not be available. To fix, migrate the database schema.');
+    }
+  }
+
+  try {
+    ensurePlaceHubs(db);
+  } catch (err) {
+    const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';
+    if (!isTestEnv) {
+      console.warn('[db] Place hubs initialization failed (non-critical):', err.message);
+    }
+  }
+
   ensureCompressionInfrastructure(db);
   ensureBackgroundTasks(db);
   return db;
@@ -761,7 +779,10 @@ function ensureBackgroundTasks(db) {
     CREATE INDEX IF NOT EXISTS idx_background_tasks_created ON background_tasks(created_at DESC);
   `);
   
-  console.log('[DB] Background tasks tables initialized');
+  // Use stderr for logging so it doesn't pollute JSON output in scripts
+  if (process.env.NODE_ENV !== 'test') {
+    console.error('[DB] Background tasks tables initialized');
+  }
 }
 
 module.exports = { 

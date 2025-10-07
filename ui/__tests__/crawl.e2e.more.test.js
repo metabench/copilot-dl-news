@@ -143,7 +143,8 @@ describe('e2e http: more precise coverage', () => {
     } finally {
       try { cp.kill('SIGINT'); } catch (_) {}
     }
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Wait for server shutdown (500ms) + margin to ensure database is released
+    await new Promise((resolve) => setTimeout(resolve, 600));
     const db = new Database(dbPath, { readonly: true });
     const rows = db.prepare('SELECT stage, status FROM planner_stage_events').all();
     db.close();

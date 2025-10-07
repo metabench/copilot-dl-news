@@ -1,0 +1,450 @@
+// Property Editor Component (Visual Studio-style)
+// Compact, two-column layout with labels and inputs
+
+.property-editor {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 13px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  &__header {
+    padding: 10px 12px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+  }
+
+  &__help-icon {
+    color: #888;
+    font-size: 14px;
+    cursor: help;
+    
+    &:hover {
+      color: #333;
+    }
+  }
+
+  &__body {
+    padding: 0;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    border-bottom: 1px solid #f0f0f0;
+    min-height: 28px;
+    align-items: center;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: #fafafa;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &--invalid {
+      background-color: #fff5f5;
+      
+      .property-editor__input {
+        border-color: #e74c3c;
+        
+        &:focus {
+          border-color: #c0392b;
+          box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+        }
+      }
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      
+      &:hover {
+        background-color: transparent;
+      }
+      
+      .property-editor__label,
+      .property-editor__input {
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__label {
+    padding: 6px 12px;
+    background: #f8f8f8;
+    color: #555;
+    font-weight: 500;
+    border-right: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    
+    &--required::after {
+      content: '*';
+      color: #e74c3c;
+      margin-left: 2px;
+    }
+  }
+
+  &__label-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__tooltip-icon {
+    color: #888;
+    font-size: 12px;
+    cursor: help;
+    flex-shrink: 0;
+    
+    &:hover {
+      color: #333;
+    }
+  }
+
+  &__value {
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__input {
+    flex: 1;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-height: 24px;
+
+    &:focus {
+      outline: none;
+      border-color: #2196F3;
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+    }
+
+    &:disabled {
+      background: #f5f5f5;
+      color: #999;
+      cursor: not-allowed;
+    }
+
+    &--number {
+      width: 100px;
+    }
+
+    &--checkbox {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    &--select {
+      cursor: pointer;
+    }
+  }
+
+  &__textarea {
+    @extend .property-editor__input;
+    min-height: 60px;
+    resize: vertical;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    line-height: 1.5;
+  }
+
+  &__error {
+    font-size: 11px;
+    color: #e74c3c;
+    padding: 2px 8px;
+    display: none;
+
+    .property-editor__row--invalid & {
+      display: block;
+    }
+  }
+
+  &__description {
+    font-size: 11px;
+    color: #888;
+    font-style: italic;
+    padding: 2px 8px;
+    line-height: 1.4;
+  }
+
+  &__footer {
+    padding: 12px;
+    background: #f8f8f8;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  &__button {
+    padding: 6px 16px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: #fff;
+    color: #333;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: #f0f0f0;
+      border-color: #b0b0b0;
+    }
+
+    &:active:not(:disabled) {
+      background: #e0e0e0;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--primary {
+      background: #2196F3;
+      color: #fff;
+      border-color: #2196F3;
+
+      &:hover:not(:disabled) {
+        background: #1976D2;
+        border-color: #1976D2;
+      }
+
+      &:active:not(:disabled) {
+        background: #1565C0;
+      }
+    }
+
+    &--danger {
+      background: #e74c3c;
+      color: #fff;
+      border-color: #e74c3c;
+
+      &:hover:not(:disabled) {
+        background: #c0392b;
+        border-color: #c0392b;
+      }
+
+      &:active:not(:disabled) {
+        background: #a93226;
+      }
+    }
+  }
+
+  // Compact variant for smaller spaces
+  &--compact {
+    .property-editor__header {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .property-editor__row {
+      grid-template-columns: 120px 1fr;
+      min-height: 24px;
+    }
+
+    .property-editor__label {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+
+    .property-editor__value {
+      padding: 2px 6px;
+    }
+
+    .property-editor__input {
+      padding: 3px 6px;
+      font-size: 12px;
+      min-height: 20px;
+    }
+
+    .property-editor__footer {
+      padding: 8px 10px;
+    }
+
+    .property-editor__button {
+      padding: 4px 12px;
+      font-size: 12px;
+    }
+  }
+}
+
+// Property group (collapsible section)
+.property-group {
+  &__header {
+    padding: 8px 12px;
+    background: #f0f0f0;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+    font-weight: 600;
+    color: #555;
+
+    &:hover {
+      background: #e8e8e8;
+    }
+  }
+
+  &__icon {
+    font-size: 10px;
+    transition: transform 0.2s ease;
+
+    .property-group--collapsed & {
+      transform: rotate(-90deg);
+    }
+  }
+
+  &__title {
+    flex: 1;
+    font-size: 12px;
+  }
+
+  &__body {
+    display: block;
+
+    .property-group--collapsed & {
+      display: none;
+    }
+  }
+}
+
+// Dark theme support
+@media (prefers-color-scheme: dark) {
+  .property-editor {
+    background: #2d2d2d;
+    border-color: #3d3d3d;
+
+    &__header {
+      background: #252525;
+      border-bottom-color: #3d3d3d;
+      color: #e0e0e0;
+    }
+
+    &__title {
+      color: #e0e0e0;
+    }
+
+    &__row {
+      border-bottom-color: #3d3d3d;
+
+      &:hover {
+        background-color: #333;
+      }
+
+      &--invalid {
+        background-color: #4a2929;
+      }
+    }
+
+    &__label {
+      background: #2a2a2a;
+      color: #b0b0b0;
+      border-right-color: #3d3d3d;
+    }
+
+    &__input {
+      background: #1e1e1e;
+      border-color: #3d3d3d;
+      color: #e0e0e0;
+
+      &:focus {
+        border-color: #2196F3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+      }
+
+      &:disabled {
+        background: #2a2a2a;
+        color: #666;
+      }
+    }
+
+    &__description {
+      color: #888;
+    }
+
+    &__footer {
+      background: #252525;
+      border-top-color: #3d3d3d;
+    }
+
+    &__button {
+      background: #2d2d2d;
+      color: #e0e0e0;
+      border-color: #3d3d3d;
+
+      &:hover:not(:disabled) {
+        background: #3d3d3d;
+        border-color: #4d4d4d;
+      }
+
+      &:active:not(:disabled) {
+        background: #4d4d4d;
+      }
+    }
+  }
+
+  .property-group {
+    &__header {
+      background: #252525;
+      border-bottom-color: #3d3d3d;
+      color: #b0b0b0;
+
+      &:hover {
+        background: #2d2d2d;
+      }
+    }
+  }
+}
+
+// Mobile responsive
+@media (max-width: 600px) {
+  .property-editor {
+    &__row {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    &__label {
+      border-right: none;
+      border-bottom: 1px solid #f0f0f0;
+      padding: 6px 12px 4px;
+    }
+
+    &__value {
+      padding: 4px 12px 6px;
+    }
+  }
+}

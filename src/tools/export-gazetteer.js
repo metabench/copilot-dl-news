@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { is_array, tof } = require('lang-tools');
-const { openDbReadOnly } = require('../db/sqlite');
+const { openDbReadOnly, ensureDb } = require('../db/sqlite');
 const {
   iteratePlaceSources,
   iteratePlaces,
@@ -76,7 +76,6 @@ function main() {
   } catch (e) {
     // Best-effort: create/ensure schema and proceed (useful in CI where path may not exist yet)
     try {
-  const { ensureDb } = require('../db/sqlite');
       db = ensureDb(dbPath);
     } catch (e2) {
       // Close FD and rethrow to maintain failure semantics

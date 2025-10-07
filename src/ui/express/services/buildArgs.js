@@ -4,9 +4,17 @@
 
 function buildArgs(body = {}) {
   const args = ['src/crawl.js'];
-  const url = body.startUrl || 'https://www.theguardian.com';
-  args.push(url);
+  
+  // For gazetteer-type crawls (gazetteer/geography/wikidata), use a placeholder URL
+  // since these crawl external data sources, not traditional websites
   const ctypeRaw = (body.crawlType || '').toString().toLowerCase();
+  const isGazetteerType = ctypeRaw === 'gazetteer' || ctypeRaw === 'geography' || ctypeRaw === 'wikidata';
+  const url = isGazetteerType 
+    ? 'https://placeholder.example.com' 
+    : (body.startUrl || 'https://www.theguardian.com');
+  
+  args.push(url);
+  
   if (ctypeRaw) {
     args.push(`--crawl-type=${ctypeRaw}`);
   }

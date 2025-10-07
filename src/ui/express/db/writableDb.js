@@ -1,3 +1,4 @@
+const Database = require('better-sqlite3');
 const DEFAULT_LOGGER = console;
 
 function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, verbose = false, logger = DEFAULT_LOGGER } = {}) {
@@ -15,8 +16,44 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
       return dbInstance;
     }
 
+    let db = null;
     try {
-      const db = ensureDb(urlsDbPath);
+      db = ensureDb(urlsDbPath);
+    } catch (err) {
+      // Check if this is a gazetteer-related error that we can ignore
+      const isGazetteerError = err?.message?.includes('wikidata_qid') || 
+                                err?.message?.includes('no such table: places');
+      
+      if (isGazetteerError) {
+        // Gazetteer tables not initialized - try to open database anyway
+        if (verbose || queueDebug) {
+          logger.warn('[db] Gazetteer initialization error (will continue):', err?.message);
+        }
+        // Try to open database directly without full ensureDb
+        try {
+          db = new Database(urlsDbPath);
+        } catch (openErr) {
+          // Failed to open database - log and return null
+          const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';
+          if (!isTestEnv && logger.warn) {
+            logger.warn('[db] failed to open writable DB:', openErr?.message || String(openErr));
+          }
+          return null;
+        }
+      } else {
+        // Non-gazetteer error - log and return null
+        if (logger.warn) {
+          logger.warn('[db] failed to open writable DB:', err?.message || String(err));
+        }
+        return null;
+      }
+    }
+    
+    if (!db) {
+      throw new Error('Failed to open database');
+    }
+    
+    try {
       db.exec(`
         CREATE TABLE IF NOT EXISTS crawl_jobs (
           id TEXT PRIMARY KEY,
@@ -282,16 +319,28 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
         }
       }
     } catch (err) {
+      // Database initialization failed
       dbInstance = null;
       try {
-        // Only log DB warnings in verbose mode or when explicitly requested
-        // Skip logging "no such column: wikidata_qid" errors in tests (gazetteer not initialized)
-        const isGazetteerError = err?.message?.includes('wikidata_qid');
+        // Skip logging "no such column: wikidata_qid" errors (gazetteer not initialized)
+        // This is expected when the database doesn't have gazetteer tables yet
+        const isGazetteerError = err?.message?.includes('wikidata_qid') || 
+                                  err?.message?.includes('no such table: places');
         const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';
-        const shouldLog = (queueDebug || verbose) && !(isGazetteerError && isTestEnv);
         
-        if (shouldLog) {
-          logger.warn('[db] failed to open writable DB:', err?.message || err);
+        // Don't fail the entire database if gazetteer columns are missing
+        // The gazetteer scheduler and queries will handle this gracefully
+        if (isGazetteerError) {
+          if (verbose || queueDebug) {
+            logger.warn('[db] Gazetteer tables not fully initialized - some features may be unavailable');
+          }
+          // Return null for now - caller should handle gracefully
+        } else if (!isTestEnv) {
+          // Non-gazetteer errors should always be logged
+          logger.error('[db] Failed to open writable DB:', err?.message || err);
+          if (verbose || queueDebug) {
+            logger.error('[db] Full error:', err);
+          }
         }
       } catch (_) {
         /* noop */

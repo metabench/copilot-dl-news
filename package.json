@@ -5,7 +5,15 @@
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles --reporters=default --reporters=./jest-timing-reporter.js",
+    "test:timing": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles --reporters=default --reporters=./jest-timing-reporter.js",
+    "test:file": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles --reporters=default --reporters=./jest-timing-reporter.js --testPathPattern",
+    "test:fast": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathIgnorePatterns='e2e|online|puppeteer|http.test.js' --maxWorkers=4",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathIgnorePatterns='e2e|online|puppeteer|http'",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='http.test.js'",
+    "test:e2e": "UI_E2E=1 node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='e2e|puppeteer'",
+    "test:online": "ONLINE_TESTS=1 node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='online'",
+    "test:all": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
     "gui": "node src/ui/express/server.js",
     "ui:capture-screens": "node src/tools/capture-ui-screenshots.js",
     "backfill:dates": "node src/tools/backfill-dates.js",
@@ -64,6 +72,7 @@
     ],
     "maxWorkers": 8,
     "testTimeout": 10000,
+    "slowTestThreshold": 2,
     "transform": {
       "^.+\\.js$": "babel-jest"
     }

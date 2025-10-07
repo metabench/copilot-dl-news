@@ -68,7 +68,8 @@ const E2E_ENABLED = !process.env.CI || process.env.E2E_HTTP === '1';
   });
   afterAll(async () => {
     if (cp) try { cp.kill('SIGINT'); } catch (_) {}
-    await new Promise(r => setTimeout(r, 300));
+    // Reduced cleanup delay from 300ms to 50ms
+    await new Promise(r => setTimeout(r, 50));
   });
 
   test('POST /api/crawl responds 202 and SSE shows activity', async () => {

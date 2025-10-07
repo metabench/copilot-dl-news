@@ -4,7 +4,8 @@
 
 const { compact, pluck, pipeline } = require('../pipelines');
 
-describe('pipelines', () => {
+// Fast unit tests - use 1-second timeout
+describe('pipelines', fastTest(() => {
   describe('compact', () => {
     test('filters out falsy values without mapping', () => {
       const input = [1, null, 2, undefined, 3, false, 4, '', 5, 0];
@@ -267,4 +268,4 @@ describe('pipelines', () => {
       expect(process(input)).toEqual([150, 200]);
     });
   });
-});
+}));

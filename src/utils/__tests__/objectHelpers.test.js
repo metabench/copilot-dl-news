@@ -4,7 +4,8 @@
 
 const { firstDefined, numberOr, stringOr, getDeep } = require('../objectHelpers');
 
-describe('objectHelpers', () => {
+// Fast unit tests - use 1-second timeout
+describe('objectHelpers', fastTest(() => {
   describe('firstDefined', () => {
     test('returns first defined value', () => {
       expect(firstDefined(undefined, null, 'hello')).toBe('hello');
@@ -274,4 +275,4 @@ describe('objectHelpers', () => {
       expect(port).toBe(5432);
     });
   });
-});
+}));

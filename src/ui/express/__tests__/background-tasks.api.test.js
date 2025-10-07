@@ -11,6 +11,16 @@ const fs = require('fs');
 const { createApp } = require('../server');
 const { ensureDb } = require('../../../db/sqlite');
 
+// Valid parameters for article-compression tasks (required by schema)
+const VALID_COMPRESSION_PARAMS = {
+  quality: 10,
+  lgwin: 24,
+  compressionMethod: 'brotli',
+  targetArticles: 'uncompressed',
+  batchSize: 50,
+  enableBucketCompression: false
+};
+
 // Mock task for testing (doesn't require articles table)
 class MockCompressionTask {
   constructor(options) {
@@ -39,7 +49,8 @@ class MockCompressionTask {
         if (Date.now() - pauseStartTime > maxPauseWaitMs) {
           throw new Error('Task paused timeout exceeded (5s) - possible test hang');
         }
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Reduced from 50ms to 10ms for faster pause/resume testing
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
       
       // Report progress
@@ -51,8 +62,8 @@ class MockCompressionTask {
         });
       }
       
-      // Simulate work
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Simulate work (reduced from 50ms to 5ms - 10x faster)
+      await new Promise(resolve => setTimeout(resolve, 5));
     }
   }
 
@@ -88,18 +99,23 @@ describe('Background Tasks API Integration', () => {
     });
 
     // Replace CompressionTask with mock
+    // NOTE: taskRegistry expects { TaskClass, options } format
     const manager = app.locals.backgroundTaskManager;
-    manager.taskRegistry.set('article-compression', MockCompressionTask);
-    
-    // Add error listener to prevent unhandled errors in tests
-    manager.on('error', () => {
-      // Silently catch errors during testing
+    manager.taskRegistry.set('article-compression', { 
+      TaskClass: MockCompressionTask, 
+      options: {} 
     });
     
-    // Mock getCompressionStats if it doesn't exist
+    // NOTE: BackgroundTaskManager no longer emits 'error' events
+    // It only broadcasts 'task-error' through SSE, which doesn't throw
+    // This prevents Jest from treating task failures as unhandled errors
+    
+    // Mock getCompressionStats on the DB instance
+    // The stats route calls getDbRW() which is captured in the route's closure
+    // So we need to mock it on the actual DB instance, not wrap the function
     if (app.locals.getDbRW) {
       const db = app.locals.getDbRW();
-      if (!db.getCompressionStats) {
+      if (db && !db.getCompressionStats) {
         db.getCompressionStats = () => ({
           totalArticles: 0,
           individuallyCompressed: 0,
@@ -113,6 +129,32 @@ describe('Background Tasks API Integration', () => {
     }
 
     cleanup = () => {
+      // Stop all active tasks
+      if (app.locals.backgroundTaskManager) {
+        const manager = app.locals.backgroundTaskManager;
+        const activeTasks = Array.from(manager.activeTasks.keys());
+        for (const taskId of activeTasks) {
+          try {
+            manager.stopTask(taskId);
+          } catch (e) {
+            // Ignore errors during cleanup
+          }
+        }
+        
+        // Clear any resuming timeout monitors
+        if (manager.resumingTasks) {
+          manager.resumingTasks.clear();
+        }
+        
+        // Remove all listeners to prevent memory leaks
+        manager.removeAllListeners();
+      }
+      
+      // DO NOT close database connections between tests - the DB is shared
+      // across all tests in this suite and closing it causes 500 errors
+      // in subsequent tests. The DB will be cleaned up when the test file exits.
+      
+      // Clean up database files
       const suffixes = ['', '-shm', '-wal'];
       for (const suffix of suffixes) {
         try {
@@ -122,8 +164,12 @@ describe('Background Tasks API Integration', () => {
     };
   });
 
-  afterEach(() => {
-    if (cleanup) cleanup();
+  afterEach(async () => {
+    if (cleanup) {
+      cleanup();
+    }
+    // Reduced cleanup delay from 50ms to 10ms
+    await new Promise(resolve => setTimeout(resolve, 10));
   });
 
   describe('Initialization', () => {
@@ -170,9 +216,7 @@ describe('Background Tasks API Integration', () => {
         .post('/api/background-tasks')
         .send({
           taskType: 'article-compression',
-          config: {
-            batchSize: 50
-          }
+          parameters: VALID_COMPRESSION_PARAMS
         });
 
       // Log the actual response for debugging
@@ -202,6 +246,7 @@ describe('Background Tasks API Integration', () => {
         .post('/api/background-tasks')
         .send({
           taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS,
           autoStart: true
         })
         .expect(201);
@@ -216,7 +261,10 @@ describe('Background Tasks API Integration', () => {
       // Create a task first
       const createRes = await request(app)
         .post('/api/background-tasks')
-        .send({ taskType: 'article-compression' })
+        .send({
+          taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS
+        })
         .expect(201);
 
       const taskId = createRes.body.task.id;
@@ -255,7 +303,10 @@ describe('Background Tasks API Integration', () => {
       // Create a task
       const createRes = await request(app)
         .post('/api/background-tasks')
-        .send({ taskType: 'article-compression' })
+        .send({ 
+          taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS
+        })
         .expect(201);
 
       const taskId = createRes.body.task.id;
@@ -277,6 +328,7 @@ describe('Background Tasks API Integration', () => {
         .post('/api/background-tasks')
         .send({ 
           taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS,
           autoStart: true
         })
         .expect(201);
@@ -301,6 +353,7 @@ describe('Background Tasks API Integration', () => {
         .post('/api/background-tasks')
         .send({ 
           taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS,
           autoStart: true
         })
         .expect(201);
@@ -327,6 +380,7 @@ describe('Background Tasks API Integration', () => {
         .post('/api/background-tasks')
         .send({ 
           taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS,
           autoStart: true
         })
         .expect(201);
@@ -351,14 +405,35 @@ describe('Background Tasks API Integration', () => {
         .post('/api/background-tasks')
         .send({ 
           taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS,
           autoStart: true
         })
         .expect(201);
 
       const taskId = createRes.body.task.id;
 
-      // Wait a bit for task to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Poll for task completion instead of fixed wait
+      // Mock task: 50 steps × 5ms = 250ms expected, but async overhead varies
+      const maxWaitMs = 2000; // 2 second timeout
+      const pollIntervalMs = 50;
+      const startTime = Date.now();
+      
+      let task;
+      while (Date.now() - startTime < maxWaitMs) {
+        const statusRes = await request(app)
+          .get(`/api/background-tasks/${taskId}`)
+          .expect(200);
+        
+        task = statusRes.body.task;
+        if (task.status === 'completed' || task.status === 'failed') {
+          break;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+      }
+
+      // Verify task completed
+      expect(task.status).toBe('completed');
 
       // Delete the task
       const res = await request(app)
@@ -373,7 +448,10 @@ describe('Background Tasks API Integration', () => {
       // Create and start a task
       const createRes = await request(app)
         .post('/api/background-tasks')
-        .send({ taskType: 'article-compression' })
+        .send({ 
+          taskType: 'article-compression',
+          parameters: VALID_COMPRESSION_PARAMS
+        })
         .expect(201);
 
       const taskId = createRes.body.task.id;
@@ -398,6 +476,24 @@ describe('Background Tasks API Integration', () => {
 
   describe('GET /api/background-tasks/stats/compression', () => {
     it('should get compression statistics', async () => {
+      // Ensure the mock is still in place (in case DB was recreated)
+      // The route calls getDbRW() which is closure-captured, so we need to mock on the instance
+      if (app.locals.getDbRW) {
+        const db = app.locals.getDbRW();
+        if (db) {
+          // Always re-apply the mock in case DB was recreated
+          db.getCompressionStats = () => ({
+            totalArticles: 0,
+            individuallyCompressed: 0,
+            bucketCompressed: 0,
+            uncompressed: 0,
+            totalCompressedSize: 0,
+            totalOriginalSize: 0,
+            averageCompressionRatio: 0
+          });
+        }
+      }
+      
       const res = await request(app)
         .get('/api/background-tasks/stats/compression')
         .expect(200);

@@ -1,5 +1,7 @@
 const express = require('express');
 const { fetchDomainSummary } = require('../data/domainSummary');
+const { withNewsDb } = require('../../../db/dbAccess');
+const { BadRequestError, InternalServerError } = require('../errors/HttpError');
 
 function createDomainSummaryApiRouter({ urlsDbPath }) {
   if (!urlsDbPath) {
@@ -8,41 +10,19 @@ function createDomainSummaryApiRouter({ urlsDbPath }) {
 
   const router = express.Router();
 
-  router.get('/api/domain-summary', (req, res) => {
+  router.get('/api/domain-summary', (req, res, next) => {
     const host = String(req.query.host || '').trim().toLowerCase();
     if (!host) {
-      return res.status(400).json({ error: 'Missing host' });
+      return next(new BadRequestError('Missing host'));
     }
 
-    let NewsDatabase;
     try {
-      NewsDatabase = require('../../../db');
-    } catch (err) {
-      return res.status(503).json({
-        error: 'Database unavailable',
-        detail: err && err.message ? err.message : String(err)
+      withNewsDb(urlsDbPath, (db) => {
+        const summary = fetchDomainSummary(db.db, host);
+        res.json(summary);
       });
-    }
-
-    let db;
-    try {
-      db = new NewsDatabase(urlsDbPath);
-
-      const summary = fetchDomainSummary(db.db, host);
-
-      return res.json(summary);
     } catch (err) {
-      return res.status(500).json({
-        error: err && err.message ? err.message : String(err)
-      });
-    } finally {
-      if (db && typeof db.close === 'function') {
-        try {
-          db.close();
-        } catch (_) {
-          // ignore close failures
-        }
-      }
+      return next(new InternalServerError(err && err.message ? err.message : String(err)));
     }
   });
 

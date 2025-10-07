@@ -12,6 +12,7 @@ import { createInitialization } from './index/initialization.js';
 import { createApp } from './index/app.js';
 import { showElement, hideElement, setElementVisibility } from './index/domUtils.js';
 import { createBrowserThemeController } from './theme/browserController.js';
+import { createBackgroundTasksWidget } from './index/backgroundTasksWidget.js';
 import {
   compactDetails,
   formatFeatureName,
@@ -318,6 +319,25 @@ const logs = document.getElementById('logs');
   const sseClient = createSseClient({ badgeEl: badgeConn });
   const markSseLive = () => sseClient.markLive();
 
+  // ========================================
+  // Background Tasks Widget
+  // ========================================
+  const backgroundTasksWidget = createBackgroundTasksWidget({
+    widgetSection: document.getElementById('backgroundTasksWidget'),
+    tasksList: document.getElementById('activeTasksList')
+  });
+  
+  // Initialize the widget to load current tasks
+  backgroundTasksWidget.init();
+  
+  // Connect widget to SSE when available (after sseClient.open is called)
+  // The widget will listen for task-* events from the global window.evt EventSource
+  setTimeout(() => {
+    if (window.evt) {
+      backgroundTasksWidget.connectSSE(window.evt);
+    }
+  }, 1000);
+
   // Rendering helper functions extracted to ./index/renderingHelpers.js
   // Pure functions: compactDetails, formatFeatureName, numericValue, describeEntry
   // Rendering functions (require DOM elements passed): renderFeatureFlags, renderAnalysisStatus,
@@ -454,6 +474,23 @@ const logs = document.getElementById('logs');
     try {
       setInterval(() => loadAdvancedCapabilities({ quiet: true }), 60000);
     } catch (_) {}
+  }
+
+  // ========================================
+  // SSE Event Stream
+  // ========================================
+  function openEventStream(enableLogs = true) {
+    // Close existing connection if any
+    sseClient.close();
+    
+    // Open new SSE connection with logs parameter  
+    const url = `/events?logs=${enableLogs ? '1' : '0'}`;
+    const source = sseClient.open({
+      url,
+      listeners: {} // Listeners can be attached later if needed
+    });
+    
+    return source;
   }
 
   // ========================================

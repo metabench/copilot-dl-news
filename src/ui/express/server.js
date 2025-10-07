@@ -55,6 +55,9 @@ const {
   createDomainSummaryApiRouter
 } = require('./routes/api.domain-summary');
 const {
+  createNewsWebsitesRouter
+} = require('./routes/api.news-websites');
+const {
   createGazetteerApiRouter
 } = require('./routes/api.gazetteer');
 const {
@@ -148,6 +151,10 @@ const {
 const {
   createRequestTimingMiddleware
 } = require('./middleware/requestTiming');
+const {
+  errorHandler,
+  notFoundHandler
+} = require('./middleware/errorHandler');
 const {
   startServer: bootstrapServer
 } = require('./services/shutdown');
@@ -371,25 +378,53 @@ function createApp(options = {}) {
   let compressionWorkerPool = null;
   
   try {
-    // Initialize worker pool for compression tasks (async initialization deferred)
-    compressionWorkerPool = new CompressionWorkerPool({
-      poolSize: 1, // Start with 1 worker as requested
-      brotliQuality: 10, // High quality Brotli compression
-      lgwin: 24 // 256MB window size for best compression
-    });
+    // Get database handle and verify it's valid
+    const taskDb = getDbRW();
     
-    // Initialize pool asynchronously (don't block app creation)
-    compressionWorkerPool.initialize().then(() => {
+    if (!taskDb) {
+      // Database failed to initialize - log more details
+      console.warn('[server] Database initialization returned null - BackgroundTaskManager will not be available');
+      console.warn('[server] Database path:', urlsDbPath);
+      console.warn('[server] Check if the database file exists and is readable');
+      throw new Error('Database not available');
+    }
+    
+    if (verbose) {
+      console.log('[server] Database initialized successfully for background tasks');
+    }
+    
+    // Skip worker pool initialization in test environment to prevent hanging
+    const isTestEnv = process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test';
+    
+    if (!isTestEnv) {
+      // Initialize worker pool for compression tasks (async initialization deferred)
+      compressionWorkerPool = new CompressionWorkerPool({
+        poolSize: 1, // Start with 1 worker as requested
+        brotliQuality: 10, // High quality Brotli compression
+        lgwin: 24 // 256MB window size for best compression
+      });
+      
+      // Initialize pool asynchronously (don't block app creation)
+      compressionWorkerPool.initialize().then(() => {
+        if (verbose) {
+          console.log('[server] Initialized compression worker pool with 1 worker');
+        }
+      }).catch(err => {
+        console.error('[server] Failed to initialize compression worker pool:', err.message);
+      });
+    } else {
       if (verbose) {
-        console.log('[server] Initialized compression worker pool with 1 worker');
+        console.log('[server] Skipping CompressionWorkerPool initialization in test environment');
       }
-    }).catch(err => {
-      console.error('[server] Failed to initialize compression worker pool:', err.message);
-    });
+    }
     
-    const db = getDbRW();
+    // Only initialize BackgroundTaskManager if we have a valid database
+    if (!taskDb) {
+      throw new Error('Database not available - cannot initialize BackgroundTaskManager');
+    }
+    
     backgroundTaskManager = new BackgroundTaskManager({
-      db,
+      db: taskDb,
       broadcastEvent: (eventType, data) => {
         // Broadcast background task events via SSE with specific event types
         // This allows clients to listen for 'task-progress', 'task-created', etc.
@@ -405,18 +440,25 @@ function createApp(options = {}) {
       }
     });
 
-    // Register task types with worker pool injected
-    backgroundTaskManager.registerTaskType('article-compression', CompressionTask, {
-      workerPool: compressionWorkerPool
-    });
+    // Register task types with worker pool injected (only if worker pool exists)
+    if (compressionWorkerPool) {
+      backgroundTaskManager.registerTaskType('article-compression', CompressionTask, {
+        workerPool: compressionWorkerPool
+      });
+    } else if (verbose) {
+      console.log('[server] Skipping compression task registration (no worker pool in test environment)');
+    }
 
     // Resume paused tasks on startup (after a delay to ensure server is ready)
     if (!process.env.JEST_WORKER_ID) {
       setTimeout(async () => {
         try {
-          await backgroundTaskManager.resumeAllPausedTasks();
-          if (verbose) {
-            console.log('[server] Resumed paused background tasks');
+          // Double-check backgroundTaskManager exists before calling
+          if (backgroundTaskManager) {
+            await backgroundTaskManager.resumeAllPausedTasks();
+            if (verbose) {
+              console.log('[server] Resumed paused background tasks');
+            }
           }
         } catch (err) {
           console.error('[server] Failed to resume paused tasks:', err);
@@ -574,6 +616,10 @@ function createApp(options = {}) {
   app.use(createDomainSummaryApiRouter({
     urlsDbPath
   }));
+  // Mount News Websites API
+  app.use(createNewsWebsitesRouter({
+    getDbRW
+  }));
   // Mount Analysis APIs (read-only history)
   app.use(createAnalysisApiRouter({
     getDbRW: getDbRW
@@ -726,6 +772,9 @@ function createApp(options = {}) {
 </body>
 </html>`);
   });
+
+  // Global error handler (must be last)
+  app.use(errorHandler);
 
   return app;
 }
