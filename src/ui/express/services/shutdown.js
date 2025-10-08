@@ -39,6 +39,7 @@ function attachSignalHandlers(server, {
   configManager = null,
   benchmarkManager = null,
   compressionWorkerPool = null,
+  analysisRunManager = null,
   quiet = false
 } = {}) {
   if (!server) return;
@@ -74,6 +75,10 @@ function attachSignalHandlers(server, {
     try {
       // Shutdown compression worker pool
       compressionWorkerPool?.shutdown?.();
+    } catch (_) {}
+    try {
+      // Stop analysis run monitoring
+      analysisRunManager?.stopMonitoring?.();
     } catch (_) {}
     try {
       cleanupTempDb?.();
@@ -123,6 +128,7 @@ function startServer(app, {
   configManager = null,
   benchmarkManager = null,
   compressionWorkerPool = null,
+  analysisRunManager = null,
   cleanupTempDb = null,
   detached = false,
   autoShutdownMs = null,
@@ -238,7 +244,7 @@ function startServer(app, {
   
   // In detached mode, disable SIGINT/SIGTERM handlers so the terminal can be released
   if (!detached) {
-    attachSignalHandlers(server, { jobRegistry, realtime, cleanupTempDb, configManager, benchmarkManager, compressionWorkerPool, quiet });
+    attachSignalHandlers(server, { jobRegistry, realtime, cleanupTempDb, configManager, benchmarkManager, compressionWorkerPool, analysisRunManager, quiet });
   }
   
   return server;

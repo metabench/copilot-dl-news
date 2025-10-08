@@ -131,6 +131,9 @@ const {
   isTruthyFlag
 } = require('./services/runnerFactory');
 const {
+  autoBuild
+} = require('./auto-build-components');
+const {
   JobRegistry
 } = require('./services/jobRegistry');
 const {
@@ -177,8 +180,14 @@ const {
   CompressionTask
 } = require('../../background/tasks/CompressionTask');
 const {
+  AnalysisTask
+} = require('../../background/tasks/AnalysisTask');
+const {
   CompressionWorkerPool
 } = require('../../background/workers/CompressionWorkerPool');
+const {
+  AnalysisRunManager
+} = require('./services/AnalysisRunManager');
 
 // Quiet test mode: suppress certain async logs that can fire after Jest completes
 const QUIET = !!process.env.JEST_WORKER_ID || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_TEST_QUIET || '').toLowerCase());
@@ -449,6 +458,15 @@ function createApp(options = {}) {
       console.log('[server] Skipping compression task registration (no worker pool in test environment)');
     }
 
+    // Register analysis task type (no worker pool needed - analysis is CPU-light)
+    backgroundTaskManager.registerTaskType('analysis-run', AnalysisTask, {
+      dbPath: urlsDbPath
+    });
+    
+    if (verbose) {
+      console.log('[server] Registered analysis-run task type');
+    }
+
     // Resume paused tasks on startup (after a delay to ensure server is ready)
     if (!process.env.JEST_WORKER_ID) {
       setTimeout(async () => {
@@ -472,6 +490,32 @@ function createApp(options = {}) {
     // Only log in verbose mode or non-test environments to reduce test noise
     if (verbose || !process.env.JEST_WORKER_ID) {
       console.error('[server] Failed to initialize backgroundTaskManager:', err.message);
+    }
+  }
+
+  // Initialize Analysis Run Manager
+  let analysisRunManager = null;
+  try {
+    if (!process.env.JEST_WORKER_ID) {
+      analysisRunManager = new AnalysisRunManager({
+        getDbRW,
+        logger: verbose ? console : { 
+          log: () => {}, 
+          warn: console.warn, 
+          error: console.error 
+        },
+        autoStart: true
+      });
+      
+      app.locals.analysisRunManager = analysisRunManager;
+      
+      if (verbose) {
+        console.log('[server] Initialized AnalysisRunManager with stuck run monitoring');
+      }
+    }
+  } catch (err) {
+    if (verbose || !process.env.JEST_WORKER_ID) {
+      console.error('[server] Failed to initialize AnalysisRunManager:', err.message);
     }
   }
 
@@ -816,7 +860,15 @@ function parseServerArgs(argv = process.argv) {
   return args;
 }
 
-function startServer(appOptions = {}) {
+async function startServer(appOptions = {}) {
+  // Auto-build components if needed (fast check, only rebuilds if sources are newer)
+  try {
+    await autoBuild();
+  } catch (err) {
+    console.error('[server] Failed to auto-build components:', err);
+    // Continue anyway - components might already be built
+  }
+
   const app = createApp(appOptions);
   const serverArgs = parseServerArgs(appOptions.argv);
   
@@ -827,6 +879,7 @@ function startServer(appOptions = {}) {
     configManager: app.locals?.configManager || null,
     benchmarkManager: app.locals?.benchmarkManager || null,
     compressionWorkerPool: app.locals?.compressionWorkerPool || null,
+    analysisRunManager: app.locals?.analysisRunManager || null,
     cleanupTempDb: app.locals?._cleanupTempDb || null,
     detached: serverArgs.detached,
     autoShutdownMs: serverArgs.autoShutdownMs

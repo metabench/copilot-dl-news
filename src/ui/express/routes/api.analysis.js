@@ -4,6 +4,10 @@ const {
   listAnalysisRuns,
   getAnalysisRun
 } = require('../services/analysisRuns');
+const {
+  countArticlesNeedingAnalysis,
+  getAnalysisStatusCounts
+} = require('../../../db/queries/analysisQueries');
 
 function createAnalysisApiRouter({ getDbRW }) {
   if (typeof getDbRW !== 'function') throw new Error('createAnalysisApiRouter requires getDbRW function');
@@ -18,8 +22,43 @@ function createAnalysisApiRouter({ getDbRW }) {
       ensureAnalysisRunSchema(db);
       const limit = req.query.limit != null ? req.query.limit : undefined;
       const offset = req.query.offset != null ? req.query.offset : undefined;
-      const result = listAnalysisRuns(db, { limit, offset });
+      const includeDetailsParam = req.query.includeDetails;
+      const includeDetails = includeDetailsParam == null
+        ? true
+        : includeDetailsParam === 'true' || includeDetailsParam === true;
+  const result = listAnalysisRuns(db, { limit, offset, includeDetails });
       res.json({ total: result.total, items: result.items });
+    } catch (err) {
+      res.status(500).json({ error: err.message || String(err) });
+    }
+  });
+
+  // Get analysis status counts (total, analyzed, pending)
+  router.get('/api/analysis/status', (req, res) => {
+    try {
+      const db = getDbRW();
+      if (!db) {
+        return res.json({ total: 0, analyzed: 0, pending: 0 });
+      }
+      const counts = getAnalysisStatusCounts(db);
+      res.json(counts);
+    } catch (err) {
+      res.status(500).json({ error: err.message || String(err) });
+    }
+  });
+
+  // Count articles needing analysis for specific version
+  router.get('/api/analysis/count', (req, res) => {
+    try {
+      const db = getDbRW();
+      if (!db) {
+        return res.json({ count: 0, analysisVersion: 1 });
+      }
+      const version = req.query.version != null 
+        ? parseInt(req.query.version, 10) || 1
+        : 1;
+      const count = countArticlesNeedingAnalysis(db, version);
+      res.json({ count, analysisVersion: version });
     } catch (err) {
       res.status(500).json({ error: err.message || String(err) });
     }

@@ -1,0 +1,250 @@
+/**
+ * Analysis Progress Bar Styles
+ * Compact, modern progress visualization
+ */
+
+.analysis-progress-bar {
+  background: var(--ui-surface-bg, #ffffff);
+  border: 1px solid var(--ui-border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.analysis-progress-bar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.analysis-progress-bar__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.analysis-progress-bar__run-id {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ui-text-primary, #1a1a1a);
+}
+
+.analysis-progress-bar__status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.analysis-progress-bar__status[data-status="running"] {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.analysis-progress-bar__status[data-status="completed"] {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.analysis-progress-bar__status[data-status="failed"] {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.analysis-progress-bar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.analysis-progress-bar__cancel-btn {
+  background: transparent;
+  border: 1px solid var(--ui-border-color, #e0e0e0);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--ui-text-secondary, #666);
+  transition: all 0.2s ease;
+}
+
+.analysis-progress-bar__cancel-btn:hover {
+  background: #ffebee;
+  border-color: #ef5350;
+  color: #c62828;
+}
+
+.analysis-progress-bar__bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.analysis-progress-bar__bar {
+  flex: 1;
+  height: 24px;
+  background: var(--ui-bg-subtle, #f5f5f5);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.analysis-progress-bar__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 12px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+/* Animated gradient for running state */
+.analysis-progress-bar__status[data-status="running"] ~ .analysis-progress-bar__bar-container .analysis-progress-bar__bar-fill {
+  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 50%, #1976d2 100%);
+  background-size: 200% 100%;
+  animation: progressShimmer 2s linear infinite;
+}
+
+@keyframes progressShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.analysis-progress-bar__percentage {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ui-text-primary, #1a1a1a);
+  min-width: 48px;
+  text-align: right;
+}
+
+.analysis-progress-bar__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.analysis-progress-bar__metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.analysis-progress-bar__metric-label {
+  color: var(--ui-text-secondary, #666);
+  font-weight: 500;
+}
+
+.analysis-progress-bar__metric-value {
+  color: var(--ui-text-primary, #1a1a1a);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .analysis-progress-bar {
+    background: var(--ui-surface-bg, #1e1e1e);
+    border-color: var(--ui-border-color, #333);
+  }
+  
+  .analysis-progress-bar__run-id {
+    color: var(--ui-text-primary, #e0e0e0);
+  }
+  
+  .analysis-progress-bar__bar {
+    background: var(--ui-bg-subtle, #2a2a2a);
+  }
+  
+  .analysis-progress-bar__percentage {
+    color: var(--ui-text-primary, #e0e0e0);
+  }
+  
+  .analysis-progress-bar__metric-label {
+    color: var(--ui-text-secondary, #999);
+  }
+  
+  .analysis-progress-bar__metric-value {
+    color: var(--ui-text-primary, #e0e0e0);
+  }
+  
+  .analysis-progress-bar__cancel-btn {
+    border-color: var(--ui-border-color, #333);
+    color: var(--ui-text-secondary, #999);
+  }
+  
+  .analysis-progress-bar__cancel-btn:hover {
+    background: #3d1f1f;
+    border-color: #ef5350;
+    color: #ef5350;
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .analysis-progress-bar__metrics {
+    gap: 12px;
+  }
+  
+  .analysis-progress-bar__metric {
+    flex: 0 0 calc(50% - 6px);
+  }
+}
+
+/* Compact mode for inline display in tables */
+.analysis-progress-bar--compact {
+  margin: 0;
+  padding: 8px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__header {
+  display: none;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__bar-container {
+  margin-bottom: 6px;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__bar {
+  height: 16px;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__percentage {
+  font-size: 12px;
+  min-width: 36px;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__metrics {
+  gap: 8px;
+  font-size: 11px;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__metric {
+  flex: 0 0 auto;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__metric-label {
+  display: none;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__metric-value {
+  font-size: 11px;
+}
+
+.analysis-progress-bar--compact .analysis-progress-bar__metric-value::before {
+  content: attr(data-label) ': ';
+  color: var(--ui-text-secondary, #666);
+  font-weight: 400;
+}
+

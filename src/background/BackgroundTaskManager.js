@@ -7,6 +7,9 @@
 
 const { EventEmitter } = require('events');
 const { each, tof, is_defined } = require('lang-tools');
+const { RateLimitError } = require('./errors/RateLimitError');
+const { Action } = require('./actions/Action');
+const { ProposedAction } = require('./actions/ProposedAction');
 
 /**
  * Task status enum
@@ -43,6 +46,10 @@ class BackgroundTaskManager extends EventEmitter {
     
     // Active task instances: taskId -> { task, controller }
     this.activeTasks = new Map();
+    
+    // Rate limiting: taskType -> last start timestamp
+    this.lastStartTimes = new Map();
+    this.rateLimitWindowMs = 5000; // 5 seconds
     
     // Telemetry
     this.stats = {
@@ -140,12 +147,22 @@ class BackgroundTaskManager extends EventEmitter {
       throw new Error(`Unknown task type: ${taskRecord.task_type}`);
     }
     
+    // Rate limiting check (skip for resumes)
+    if (!isResume && taskRecord.status === TaskStatus.PENDING) {
+      this._checkRateLimit(taskRecord.task_type, { newTaskId: taskId });
+    }
+    
     const { TaskClass, options: registrationOptions } = registration;
     
     // Determine initial status
     const hasProgress = taskRecord.progress?.current > 0;
     const isActuallyResuming = isResume || hasProgress || taskRecord.status === TaskStatus.PAUSED;
     const initialStatus = isActuallyResuming ? TaskStatus.RESUMING : TaskStatus.RUNNING;
+    
+    // Record start time for rate limiting
+    if (!isActuallyResuming) {
+      this.lastStartTimes.set(taskRecord.task_type, Date.now());
+    }
     
     // Create task instance with merged options
     const controller = new AbortController();
@@ -186,7 +203,7 @@ class BackgroundTaskManager extends EventEmitter {
     if (isActuallyResuming) {
       setTimeout(() => {
         const currentTask = this.getTask(taskId);
-        if (currentTask && currentTask.status === TaskStatus.RESUMING) {
+        if (currentTask && currentTask.status === TaskStatus.RUNNING) {
           this._updateTaskStatus(taskId, TaskStatus.RUNNING);
         }
       }, 100);
@@ -420,6 +437,26 @@ class BackgroundTaskManager extends EventEmitter {
    */
   _handleProgress(taskId, progress) {
     const { current, total, message, metadata } = progress;
+    const currentValue = typeof current === 'number' ? current : 0;
+    let totalValue = typeof total === 'number' && total > 0 ? total : 0;
+
+    if ((!totalValue || Number.isNaN(totalValue)) && metadata) {
+      if (typeof metadata.total === 'number' && metadata.total > 0) {
+        totalValue = metadata.total;
+      } else if (metadata.stats && typeof metadata.stats.pagesProcessed === 'number' && metadata.final) {
+        totalValue = Math.max(metadata.stats.pagesProcessed, 1);
+      }
+    }
+
+    if (!totalValue && metadata && metadata.final) {
+      totalValue = Math.max(currentValue, 1);
+    }
+    
+    const messageValue = message || null;
+    let currentStored = currentValue;
+    if (metadata && metadata.final && totalValue && currentStored < totalValue) {
+      currentStored = totalValue;
+    }
     
     // Auto-transition from RESUMING to RUNNING on first progress update
     const taskRecord = this.getTask(taskId);
@@ -428,17 +465,17 @@ class BackgroundTaskManager extends EventEmitter {
     }
     
     this.db.prepare(`
-      UPDATE background_tasks 
-      SET progress_current = ?,
-          progress_total = ?,
-          progress_message = ?,
+    UPDATE background_tasks 
+    SET progress_current = ?,
+      progress_total = ?,
+      progress_message = ?,
           metadata = ?,
           updated_at = ?
       WHERE id = ?
     `).run(
-      current,
-      total,
-      message || null,
+  currentStored,
+  totalValue,
+  messageValue,
       metadata ? JSON.stringify(metadata) : null,
       new Date().toISOString(),
       taskId
@@ -591,6 +628,80 @@ class BackgroundTaskManager extends EventEmitter {
         this.updateMetrics(metricsData);
       } catch (error) {
         console.error('[BackgroundTasks] Metrics update error:', error);
+      }
+    }
+  }
+  
+  /**
+   * Check rate limiting for task type
+   * @private
+   * @throws {RateLimitError} If rate limit exceeded
+   */
+  _checkRateLimit(taskType, options = {}) {
+    const { newTaskId } = options;
+    const lastStartTime = this.lastStartTimes.get(taskType);
+    
+    if (!lastStartTime) {
+      return; // First task of this type
+    }
+    
+    const timeSinceLastStart = Date.now() - lastStartTime;
+    const remainingTime = this.rateLimitWindowMs - timeSinceLastStart;
+    
+    if (timeSinceLastStart < this.rateLimitWindowMs) {
+      // Find the currently running task of this type
+      const runningTasks = this.listTasks({ 
+        task_type: taskType, 
+        status: TaskStatus.RUNNING 
+      });
+      
+      const resumingTasks = this.listTasks({
+        task_type: taskType,
+        status: TaskStatus.RESUMING
+      });
+      
+      const activeTasks = [...runningTasks, ...resumingTasks];
+      
+      if (activeTasks.length > 0) {
+        const activeTask = activeTasks[0]; // Get first active task
+        
+        // Create proposed action to stop existing task
+        const stopAction = new Action({
+          id: `stop-task-${activeTask.id}`,
+          type: 'stop-task',
+          label: `Stop ${activeTask.task_type} task #${activeTask.id}`,
+          parameters: {
+            taskId: activeTask.id
+          },
+          metadata: {
+            taskType: activeTask.task_type,
+            taskStatus: activeTask.status
+          }
+        });
+        
+        const proposedAction = new ProposedAction({
+          action: stopAction,
+          reason: `A ${taskType} task is already running. Stop it to start a new one.`,
+          description: `Task #${activeTask.id} started ${Math.round(timeSinceLastStart / 1000)}s ago.`,
+          severity: 'warning',
+          priority: 100
+        });
+        
+        throw new RateLimitError(
+          `Cannot start ${taskType} task: another task of this type started ${Math.round(timeSinceLastStart / 1000)}s ago. Please wait ${Math.max(1, Math.ceil(remainingTime / 1000))}s or stop the existing task.`,
+          {
+            proposedActions: [proposedAction],
+            retryAfter: Math.max(1, Math.ceil(remainingTime / 1000)),
+            context: {
+              taskType,
+              timeSinceLastStart,
+              remainingTime,
+              runningTaskId: activeTask.id,
+              newTaskId: newTaskId ?? null,
+              windowMs: this.rateLimitWindowMs
+            }
+          }
+        );
       }
     }
   }

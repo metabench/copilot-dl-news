@@ -13,9 +13,9 @@
  */
 
 const express = require('express');
-const router = express.Router();
 const { getTaskDefinition, getTaskSummaries, validateTaskParameters } = require('../../../background/tasks/taskDefinitions');
 const { BadRequestError, NotFoundError, InternalServerError, ServiceUnavailableError } = require('../errors/HttpError');
+const { RateLimitError } = require('../../../background/errors/RateLimitError');
 
 /**
  * Create background tasks router
@@ -24,6 +24,7 @@ const { BadRequestError, NotFoundError, InternalServerError, ServiceUnavailableE
  * @returns {express.Router} Express router
  */
 function createBackgroundTasksRouter(taskManager, getDbRW) {
+  const router = express.Router(); // Create router per invocation
   
   /**
    * GET /api/background-tasks/types - Get available task types
@@ -193,6 +194,19 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
       });
       
     } catch (error) {
+      if (error instanceof RateLimitError) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            message: error.message,
+            statusCode: 429,
+            retryAfter: error.retryAfter,
+            context: error.context
+          },
+          proposedActions: error.proposedActions.map(pa => pa.toJSON())
+        });
+      }
+      
       next(new InternalServerError(error.message));
     }
   });
@@ -342,6 +356,79 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
         success: true,
         stats
       });
+      
+    } catch (error) {
+      next(new InternalServerError(error.message));
+    }
+  });
+  
+  /**
+   * POST /api/background-tasks/actions/execute - Execute a proposed action
+   * 
+   * Body:
+   * - action: Action object with { id, type, label, parameters }
+   */
+  router.post('/actions/execute', async (req, res, next) => {
+    try {
+      const { action } = req.body;
+      
+      if (!action || !action.type || !action.parameters) {
+        return next(new BadRequestError('Invalid action format'));
+      }
+      
+      // Execute action based on type
+      switch (action.type) {
+        case 'stop-task':
+          if (!action.parameters.taskId) {
+            return next(new BadRequestError('Missing taskId parameter'));
+          }
+          taskManager.stopTask(action.parameters.taskId);
+          const stoppedTask = taskManager.getTask(action.parameters.taskId);
+          return res.json({
+            success: true,
+            message: 'Task stopped',
+            task: stoppedTask
+          });
+          
+        case 'pause-task':
+          if (!action.parameters.taskId) {
+            return next(new BadRequestError('Missing taskId parameter'));
+          }
+          taskManager.pauseTask(action.parameters.taskId);
+          const pausedTask = taskManager.getTask(action.parameters.taskId);
+          return res.json({
+            success: true,
+            message: 'Task paused',
+            task: pausedTask
+          });
+          
+        case 'resume-task':
+          if (!action.parameters.taskId) {
+            return next(new BadRequestError('Missing taskId parameter'));
+          }
+          await taskManager.resumeTask(action.parameters.taskId);
+          const resumedTask = taskManager.getTask(action.parameters.taskId);
+          return res.json({
+            success: true,
+            message: 'Task resumed',
+            task: resumedTask
+          });
+          
+        case 'start-task':
+          if (!action.parameters.taskId) {
+            return next(new BadRequestError('Missing taskId parameter'));
+          }
+          await taskManager.startTask(action.parameters.taskId);
+          const startedTask = taskManager.getTask(action.parameters.taskId);
+          return res.json({
+            success: true,
+            message: 'Task started',
+            task: startedTask
+          });
+          
+        default:
+          return next(new BadRequestError(`Unknown action type: ${action.type}`));
+      }
       
     } catch (error) {
       next(new InternalServerError(error.message));

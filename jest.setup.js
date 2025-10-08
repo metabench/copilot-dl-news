@@ -1,15 +1,18 @@
 // Limit noisy console output during tests by capping lines per test and truncating long lines.
 (() => {
-  const MAX_LINES = parseInt(process.env.JEST_MAX_CONSOLE_LINES || '40', 10); // total lines per test
-  const MAX_LINE_LEN = parseInt(process.env.JEST_MAX_CONSOLE_COLS || '200', 10);
-  const MAX_TOTAL_CHARS = parseInt(process.env.JEST_MAX_CONSOLE_CHARS || '2000', 10);
+  const MAX_LINES = parseInt(process.env.JEST_MAX_CONSOLE_LINES || '15', 10); // total lines per test (reduced from 40)
+  const MAX_LINE_LEN = parseInt(process.env.JEST_MAX_CONSOLE_COLS || '150', 10); // reduced from 200
+  const MAX_TOTAL_CHARS = parseInt(process.env.JEST_MAX_CONSOLE_CHARS || '800', 10); // reduced from 2000
   const ALLOW_NOISY_LOGS = process.env.JEST_ALLOW_NOISY_LOGS === '1';
   const DROP_PATTERNS = ALLOW_NOISY_LOGS ? [] : [
     /^\[req\]/i,
     /^\[api\]/i,
     /^\[sse\]/i,
     /^\[analysis-run\]/i,
+    /^\[AnalysisTask\]/i,  // Drop AnalysisTask logs
+    /^\[BackgroundTaskManager\]/i,  // Drop task manager logs
     /^\[server\]/i,
+    /^\[auto-build\]/i,
     /^GUI server listening/i,
     /^Priority config loaded/i,
     /^Priority scorer configuration updated/i,
@@ -22,7 +25,21 @@
     /^Using cached page/i,
     /^Saved article/i,
     /^Found \d+ navigation links/i,
-    /^FOUND \d+ NAVIGATION LINKS/i
+    /^FOUND \d+ NAVIGATION LINKS/i,
+    /Could not count articles/i,  // Drop AnalysisTask error logs
+    /Page analysis failed/i,  // Drop analysis error logs
+    /at .* \(.*:\d+:\d+\)$/,  // Drop stack trace lines
+    /at async /,  // Drop async stack traces
+    /at Object\./,  // Drop test framework traces
+    /at Layer\.handleRequest/,  // Drop Express router traces
+    /at processParams/,  // Drop Express internal traces
+    /at next \(/,  // Drop Express middleware traces
+    /at Function\.handle/,  // Drop Express handler traces
+    /at trimPrefix/,  // Drop Express path handling
+    /at Route\.dispatch/,  // Drop Express route dispatch
+    /at IncomingMessage\./,  // Drop HTTP message traces
+    /at invokeCallback/,  // Drop callback traces
+    /at done \(/  // Drop completion handler traces
   ];
   const shouldDrop = (msg) => DROP_PATTERNS.some((re) => re.test(msg));
   const origLog = console.log.bind(console);

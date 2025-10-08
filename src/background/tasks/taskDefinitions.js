@@ -222,6 +222,71 @@ const TASK_DEFINITIONS = {
     ]
   },
 
+  'analysis-run': {
+    taskType: 'analysis-run',
+    title: 'Run Content Analysis',
+    description: 'Analyze article content for places, topics, quality metrics, and award milestones',
+    icon: '🔍',
+    fields: [
+      {
+        name: 'analysisVersion',
+        label: 'Analysis Version',
+        type: FieldType.NUMBER,
+        default: 1,
+        min: 1,
+        max: 10,
+        required: true,
+        description: 'Analysis algorithm version to use'
+      },
+      {
+        name: 'pageLimit',
+        label: 'Page Limit (0 = all)',
+        type: FieldType.NUMBER,
+        default: 0,
+        min: 0,
+        max: 100000,
+        description: 'Maximum pages to analyze (0 for unlimited)'
+      },
+      {
+        name: 'domainLimit',
+        label: 'Domain Limit (0 = all)',
+        type: FieldType.NUMBER,
+        default: 0,
+        min: 0,
+        max: 10000,
+        description: 'Maximum domains to analyze (0 for unlimited)'
+      },
+      {
+        name: 'skipPages',
+        label: 'Skip Page Analysis',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Skip individual article analysis (only domains & milestones)'
+      },
+      {
+        name: 'skipDomains',
+        label: 'Skip Domain Analysis',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Skip domain-level aggregation (only pages & milestones)'
+      },
+      {
+        name: 'skipMilestones',
+        label: 'Skip Milestone Awarding',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Skip awarding achievement milestones for domains'
+      },
+      {
+        name: 'verbose',
+        label: 'Verbose Logging',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Enable detailed progress logging'
+      }
+    ]
+  },
+
   'crawl-site': {
     taskType: 'crawl-site',
     title: 'Crawl News Site',

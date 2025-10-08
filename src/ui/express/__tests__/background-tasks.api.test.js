@@ -506,4 +506,457 @@ describe('Background Tasks API Integration', () => {
       expect(res.body.stats).toHaveProperty('uncompressed');
     });
   });
+
+  describe('Rate Limiting and Proposed Actions', () => {
+    describe('POST /api/background-tasks/:id/start - Rate Limiting', () => {
+      it('should return 429 when starting same task type within 5s window', async () => {
+        // Create and start first task
+        const createRes1 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId1 = createRes1.body.task.id;
+
+        // Create second task
+        const createRes2 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId2 = createRes2.body.task.id;
+
+        // Try to start second task immediately (should be rate limited)
+        const res = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(429);
+
+        expect(res.body).toHaveProperty('success', false);
+        expect(res.body).toHaveProperty('error');
+        expect(res.body.error).toHaveProperty('message');
+        expect(res.body.error.message).toContain('article-compression');
+      });
+
+      it('should include proposedActions in 429 response', async () => {
+        // Create and start first task
+        const createRes1 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        // Create second task
+        const createRes2 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId2 = createRes2.body.task.id;
+
+        // Try to start second task (should be rate limited)
+        const res = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(429);
+
+        expect(res.body).toHaveProperty('proposedActions');
+        expect(Array.isArray(res.body.proposedActions)).toBe(true);
+        expect(res.body.proposedActions.length).toBeGreaterThan(0);
+
+        const proposedAction = res.body.proposedActions[0];
+        expect(proposedAction).toHaveProperty('action');
+        expect(proposedAction).toHaveProperty('reason');
+        expect(proposedAction).toHaveProperty('severity');
+        expect(proposedAction.action).toHaveProperty('type', 'stop-task');
+      });
+
+      it('should include retryAfter in 429 response', async () => {
+        // Create and start first task
+        await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        // Create second task
+        const createRes2 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId2 = createRes2.body.task.id;
+
+        // Try to start second task
+        const res = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(429);
+
+        expect(res.body).toHaveProperty('retryAfter');
+        expect(typeof res.body.retryAfter).toBe('number');
+        expect(res.body.retryAfter).toBeGreaterThan(0);
+        expect(res.body.retryAfter).toBeLessThanOrEqual(5);
+      });
+
+      it('should include context information in 429 response', async () => {
+        // Create and start first task
+        const createRes1 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId1 = createRes1.body.task.id;
+
+        // Create second task
+        const createRes2 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId2 = createRes2.body.task.id;
+
+        // Try to start second task
+        const res = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(429);
+
+        expect(res.body).toHaveProperty('context');
+        expect(res.body.context).toHaveProperty('taskType', 'article-compression');
+        expect(res.body.context).toHaveProperty('newTaskId', taskId2);
+        expect(res.body.context).toHaveProperty('runningTaskId', taskId1);
+        expect(res.body.context).toHaveProperty('windowMs', 5000);
+      });
+
+      it('should allow starting task after first completes', async () => {
+        // Create and start first task
+        const createRes1 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId1 = createRes1.body.task.id;
+
+        // Wait for first task to complete
+        const maxWaitMs = 2000;
+        const pollIntervalMs = 50;
+        const startTime = Date.now();
+
+        let task1;
+        while (Date.now() - startTime < maxWaitMs) {
+          const statusRes = await request(app)
+            .get(`/api/background-tasks/${taskId1}`)
+            .expect(200);
+
+          task1 = statusRes.body.task;
+          if (task1.status === 'completed' || task1.status === 'failed') {
+            break;
+          }
+
+          await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+        }
+
+        expect(task1.status).toBe('completed');
+
+        // Create second task
+        const createRes2 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId2 = createRes2.body.task.id;
+
+        // Should be able to start second task now
+        const res = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(200);
+
+        expect(res.body).toHaveProperty('success', true);
+      });
+    });
+
+    describe('POST /api/background-tasks/actions/execute', () => {
+      it('should execute stop-task action', async () => {
+        // Create and start a task
+        const createRes = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId = createRes.body.task.id;
+
+        // Execute stop-task action
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: `stop-task-${taskId}`,
+              type: 'stop-task',
+              label: 'Stop Task',
+              parameters: { taskId }
+            }
+          })
+          .expect(200);
+
+        expect(res.body).toHaveProperty('success', true);
+        expect(res.body).toHaveProperty('message', 'Task stopped successfully');
+
+        // Verify task was stopped
+        const statusRes = await request(app)
+          .get(`/api/background-tasks/${taskId}`)
+          .expect(200);
+
+        expect(statusRes.body.task.status).toMatch(/^(cancelled|completed|failed)$/);
+      });
+
+      it('should execute pause-task action', async () => {
+        // Create and start a task
+        const createRes = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId = createRes.body.task.id;
+
+        // Execute pause-task action
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: `pause-task-${taskId}`,
+              type: 'pause-task',
+              label: 'Pause Task',
+              parameters: { taskId }
+            }
+          })
+          .expect(200);
+
+        expect(res.body).toHaveProperty('success', true);
+        expect(res.body).toHaveProperty('message', 'Task paused successfully');
+      });
+
+      it('should execute resume-task action', async () => {
+        // Create, start, and pause a task
+        const createRes = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId = createRes.body.task.id;
+
+        await request(app)
+          .post(`/api/background-tasks/${taskId}/pause`)
+          .expect(200);
+
+        // Execute resume-task action
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: `resume-task-${taskId}`,
+              type: 'resume-task',
+              label: 'Resume Task',
+              parameters: { taskId }
+            }
+          })
+          .expect(200);
+
+        expect(res.body).toHaveProperty('success', true);
+        expect(res.body).toHaveProperty('message', 'Task resumed successfully');
+      });
+
+      it('should execute start-task action', async () => {
+        // Create a pending task
+        const createRes = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId = createRes.body.task.id;
+
+        // Execute start-task action
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: `start-task-${taskId}`,
+              type: 'start-task',
+              label: 'Start Task',
+              parameters: { taskId }
+            }
+          })
+          .expect(200);
+
+        expect(res.body).toHaveProperty('success', true);
+        expect(res.body).toHaveProperty('message', 'Task started successfully');
+      });
+
+      it('should return 400 for missing action', async () => {
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({})
+          .expect(400);
+
+        expect(res.body).toHaveProperty('success', false);
+        expect(res.body).toHaveProperty('error');
+        expect(res.body.error).toHaveProperty('message');
+      });
+
+      it('should return 400 for invalid action type', async () => {
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: 'invalid',
+              type: 'invalid-action-type',
+              label: 'Invalid',
+              parameters: {}
+            }
+          })
+          .expect(400);
+
+        expect(res.body).toHaveProperty('success', false);
+        expect(res.body).toHaveProperty('error');
+      });
+
+      it('should return 400 for missing required parameters', async () => {
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: 'stop',
+              type: 'stop-task',
+              label: 'Stop',
+              parameters: {} // missing taskId
+            }
+          })
+          .expect(400);
+
+        expect(res.body).toHaveProperty('success', false);
+        expect(res.body).toHaveProperty('error');
+        expect(res.body.error.message).toContain('taskId');
+      });
+
+      it('should return 404 for non-existent task', async () => {
+        const res = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({
+            action: {
+              id: 'stop-999999',
+              type: 'stop-task',
+              label: 'Stop',
+              parameters: { taskId: 999999 }
+            }
+          })
+          .expect(404);
+
+        expect(res.body).toHaveProperty('success', false);
+        expect(res.body).toHaveProperty('error');
+      });
+    });
+
+    describe('End-to-End Rate Limiting Flow', () => {
+      it('should provide working stop-task action when rate limited', async () => {
+        // Create and start first task
+        const createRes1 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS,
+            autoStart: true
+          })
+          .expect(201);
+
+        const taskId1 = createRes1.body.task.id;
+
+        // Create second task
+        const createRes2 = await request(app)
+          .post('/api/background-tasks')
+          .send({
+            taskType: 'article-compression',
+            parameters: VALID_COMPRESSION_PARAMS
+          })
+          .expect(201);
+
+        const taskId2 = createRes2.body.task.id;
+
+        // Try to start second task (should be rate limited with proposed action)
+        const rateLimitRes = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(429);
+
+        expect(rateLimitRes.body.proposedActions).toBeDefined();
+        const proposedAction = rateLimitRes.body.proposedActions[0];
+        expect(proposedAction.action.type).toBe('stop-task');
+        expect(proposedAction.action.parameters.taskId).toBe(taskId1);
+
+        // Execute the proposed stop-task action
+        const executeRes = await request(app)
+          .post('/api/background-tasks/actions/execute')
+          .send({ action: proposedAction.action })
+          .expect(200);
+
+        expect(executeRes.body).toHaveProperty('success', true);
+
+        // Verify first task was stopped
+        const statusRes = await request(app)
+          .get(`/api/background-tasks/${taskId1}`)
+          .expect(200);
+
+        expect(statusRes.body.task.status).toMatch(/^(cancelled|completed|failed)$/);
+
+        // Now second task should be able to start
+        const startRes = await request(app)
+          .post(`/api/background-tasks/${taskId2}/start`)
+          .expect(200);
+
+        expect(startRes.body).toHaveProperty('success', true);
+      });
+    });
+  });
 });

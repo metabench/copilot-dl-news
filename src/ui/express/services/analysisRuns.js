@@ -80,6 +80,7 @@ function normalizeRunRow(row) {
   if (!row) return null;
   const summary = safeParse(row.summary);
   const lastProgress = safeParse(row.last_progress);
+  const diagnostics = summary?.diagnostics || lastProgress?.diagnostics || null;
   const startedAt = row.started_at || null;
   const endedAt = row.ended_at || null;
   return {
@@ -98,6 +99,7 @@ function normalizeRunRow(row) {
     verbose: !!row.verbose,
     summary,
     lastProgress,
+    diagnostics: diagnostics || null,
     error: row.error || null
   };
 }
@@ -210,13 +212,31 @@ function addAnalysisRunEvent(db, data) {
   return normalizeEventRow(db.prepare('SELECT * FROM analysis_run_events WHERE rowid = last_insert_rowid()').get());
 }
 
-function listAnalysisRuns(db, { limit = DEFAULT_LIST_LIMIT, offset = 0 } = {}) {
+function listAnalysisRuns(db, { limit = DEFAULT_LIST_LIMIT, offset = 0, includeDetails = false } = {}) {
   ensureAnalysisRunSchema(db);
   const safeLimit = Math.max(1, Math.min(200, parseInt(limit, 10) || DEFAULT_LIST_LIMIT));
   const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
   const totalRow = db.prepare('SELECT COUNT(*) AS c FROM analysis_runs').get();
+  const selectColumns = includeDetails
+    ? '*'
+    : [
+        'id',
+        'status',
+        'stage',
+        'started_at',
+        'ended_at',
+        'analysis_version',
+        'page_limit',
+        'domain_limit',
+        'skip_pages',
+        'skip_domains',
+        'dry_run',
+        'verbose',
+        'error',
+        'last_progress'
+      ].join(', ');
   const rows = db.prepare(`
-    SELECT *
+    SELECT ${selectColumns}
     FROM analysis_runs
     ORDER BY started_at DESC
     LIMIT ? OFFSET ?

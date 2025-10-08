@@ -17,6 +17,7 @@ const {
 } = require('../ui/express/services/analysisRuns');
 const { awardMilestones } = require('./milestones');
 const { analysePages } = require('./analyse-pages-core');
+const { countArticlesNeedingAnalysis } = require('../db/queries/analysisQueries');
 let NewsDatabase;
 
 function parseArgs(argv = []) {
@@ -499,6 +500,89 @@ async function runAnalysis(rawOptions = {}) {
     },
     steps: {}
   };
+  const diagnosticsState = {
+    currentStage: 'starting',
+    lastCompletedStage: null,
+    failure: null,
+    timeline: []
+  };
+
+  const cloneDiagnostics = () => {
+    const limit = 25;
+    const timeline = Array.isArray(diagnosticsState.timeline)
+      ? diagnosticsState.timeline.slice(-limit)
+      : [];
+    const base = {
+      currentStage: diagnosticsState.currentStage || null,
+      lastCompletedStage: diagnosticsState.lastCompletedStage || null,
+      failure: diagnosticsState.failure || null,
+      timeline
+    };
+    return JSON.parse(JSON.stringify(base));
+  };
+
+  const applyDiagnostics = () => {
+    runSummary.diagnostics = cloneDiagnostics();
+  };
+
+  const pushTimelineEntry = (stage, status, details) => {
+    const entry = {
+      stage: stage || 'unknown',
+      status,
+      ts: new Date().toISOString()
+    };
+    if (details && Object.keys(details).length) {
+      try {
+        entry.details = JSON.parse(JSON.stringify(details));
+      } catch (_) {
+        entry.details = details;
+      }
+    }
+    diagnosticsState.timeline.push(entry);
+    if (diagnosticsState.timeline.length > 60) {
+      diagnosticsState.timeline.splice(0, diagnosticsState.timeline.length - 60);
+    }
+    applyDiagnostics();
+  };
+
+  const beginStage = (stage, details) => {
+    diagnosticsState.currentStage = stage || null;
+    pushTimelineEntry(stage, 'started', details);
+  };
+
+  const completeStage = (stage, details) => {
+    diagnosticsState.lastCompletedStage = stage || diagnosticsState.lastCompletedStage;
+    if (diagnosticsState.currentStage === stage) {
+      diagnosticsState.currentStage = null;
+    }
+    pushTimelineEntry(stage, 'completed', details);
+  };
+
+  const skipStage = (stage, details) => {
+    if (diagnosticsState.currentStage === stage) {
+      diagnosticsState.currentStage = null;
+    }
+    pushTimelineEntry(stage, 'skipped', details);
+  };
+
+  const failStage = (stage, err) => {
+    const message = err?.message || String(err);
+    const stack = typeof err?.stack === 'string'
+      ? err.stack.split('\n').slice(0, 12).join('\n')
+      : null;
+    diagnosticsState.failure = {
+      stage: stage || diagnosticsState.currentStage || 'unknown',
+      message,
+      stack,
+      ts: new Date().toISOString()
+    };
+    pushTimelineEntry(diagnosticsState.failure.stage, 'failed', {
+      message,
+      stack
+    });
+  };
+
+  applyDiagnostics();
   const progressSink = typeof options.progressSink === 'function' ? options.progressSink : null;
   const progressState = {
     runId,
@@ -558,6 +642,14 @@ async function runAnalysis(rawOptions = {}) {
     } else if (progressState.progress) {
       payload.progress = { ...progressState.progress };
     }
+    if (runSummary.diagnostics) {
+      try {
+        payload.diagnostics = JSON.parse(JSON.stringify(runSummary.diagnostics));
+      } catch (_) {
+        payload.diagnostics = runSummary.diagnostics;
+      }
+      progressState.diagnostics = payload.diagnostics;
+    }
     if (is_array(payload.analysisHighlights)) {
       progressState.analysisHighlights = payload.analysisHighlights.slice();
     }
@@ -582,7 +674,7 @@ async function runAnalysis(rawOptions = {}) {
     dryRun,
     verbose,
     summary: runSummary,
-    lastProgress: { stage: 'starting' },
+  lastProgress: { stage: 'starting', diagnostics: runSummary.diagnostics },
     details: runSummary.config
   }, { verbose });
 
@@ -602,13 +694,15 @@ async function runAnalysis(rawOptions = {}) {
 
   let awarded = [];
   try {
-    tracker.update({ stage: 'db-setup', lastProgress: { stage: 'db-setup' } });
+  beginStage('db-setup', { dbPath });
+  tracker.update({ stage: 'db-setup', lastProgress: { stage: 'db-setup', diagnostics: runSummary.diagnostics } });
     tracker.event('db-setup', 'Ensuring primary database schema', { dbPath });
     logInfo('Ensuring primary database schema', { runId, dbPath });
   emitProgress({ stage: 'db-setup', status: 'running', summary: 'Preparing database schema…' });
     ensureDatabasePrepared(dbPath, { verbose });
     runSummary.steps.dbSetup = { ensured: true };
-    tracker.update({ summary: runSummary, lastProgress: { stage: 'db-setup', ensured: true } });
+  completeStage('db-setup', { ensured: true });
+  tracker.update({ summary: runSummary, lastProgress: { stage: 'db-setup', ensured: true, diagnostics: runSummary.diagnostics } });
     tracker.event('db-setup', 'Database schema ready', { dbPath });
     logInfo('Database schema ready', { runId, dbPath });
   emitProgress({ stage: 'db-setup', status: 'completed', summary: 'Database schema ready.' });
@@ -619,16 +713,46 @@ async function runAnalysis(rawOptions = {}) {
         analysisVersion: safeAnalysisVersion ?? null,
         pageLimit: safeLimit ?? null
       });
-      tracker.update({ stage: 'page-analysis', lastProgress: { stage: 'page-analysis' } });
+      
+      // Count total articles needing analysis for progress tracking
+      let totalToAnalyze = 0;
+      try {
+        if (!NewsDatabase) {
+          NewsDatabase = require('../db');
+        }
+        const tempDb = new NewsDatabase(dbPath);
+        try {
+          totalToAnalyze = countArticlesNeedingAnalysis(tempDb.db, safeAnalysisVersion ?? 1);
+          // Apply limit if specified
+          if (safeLimit && totalToAnalyze > safeLimit) {
+            totalToAnalyze = safeLimit;
+          }
+        } finally {
+          tempDb.close();
+        }
+      } catch (countErr) {
+        logInfo('Could not count articles for progress tracking', { error: countErr?.message || String(countErr) });
+      }
+      
+      beginStage('page-analysis', {
+        analysisVersion: safeAnalysisVersion ?? null,
+        limit: safeLimit ?? null,
+        totalToAnalyze: totalToAnalyze || null
+      });
+      tracker.update({ stage: 'page-analysis', lastProgress: { stage: 'page-analysis', diagnostics: runSummary.diagnostics } });
       tracker.event('page-analysis', 'Starting page analysis', {
         analysisVersion: safeAnalysisVersion ?? null,
-        limit: safeLimit ?? null
+        limit: safeLimit ?? null,
+        totalToAnalyze
       });
       emitProgress({
         stage: 'page-analysis',
         status: 'running',
-        summary: 'Page analysis running…',
-        progress: { processed: 0, updated: 0 }
+        summary: totalToAnalyze > 0 
+          ? `Page analysis running (${totalToAnalyze} articles to process)…` 
+          : 'Page analysis running…',
+        progress: { processed: 0, updated: 0, total: totalToAnalyze },
+        total: totalToAnalyze
       });
       const progressLogger = createRollingRateLogger('analyse-pages');
       const progressReporter = progressLoggingEnabled
@@ -657,13 +781,25 @@ async function runAnalysis(rawOptions = {}) {
             if (userProgressHandler) {
               try { userProgressHandler(payload); } catch (_) {}
             }
+            
+            // Calculate percentage if total is known
+            let percentage = null;
+            if (totalToAnalyze > 0 && processedTotal != null) {
+              percentage = Math.min(100, Math.round((processedTotal / totalToAnalyze) * 100));
+            }
+            
             emitProgress({
               stage: 'page-analysis',
               status: 'running',
               progress: {
                 processed: processedTotal != null ? processedTotal : undefined,
-                updated: updatedTotal != null ? updatedTotal : undefined
-              }
+                updated: updatedTotal != null ? updatedTotal : undefined,
+                total: totalToAnalyze > 0 ? totalToAnalyze : undefined,
+                percentage: percentage != null ? percentage : undefined
+              },
+              summary: totalToAnalyze > 0 && processedTotal != null
+                ? `Analyzing articles: ${processedTotal}/${totalToAnalyze} (${percentage}%)`
+                : undefined
             }, { throttleMs: 600 });
           }
         });
@@ -677,7 +813,8 @@ async function runAnalysis(rawOptions = {}) {
       }
       const pageSummary = summary || { analysed: null, updated: null, placesInserted: null };
       runSummary.steps.pages = pageSummary;
-      tracker.update({ summary: runSummary, lastProgress: { stage: 'page-analysis', summary: pageSummary } });
+  completeStage('page-analysis', pageSummary);
+  tracker.update({ summary: runSummary, lastProgress: { stage: 'page-analysis', summary: pageSummary, diagnostics: runSummary.diagnostics } });
       tracker.event('page-analysis', 'Completed page analysis', { summary: pageSummary });
       if (summary && verbose) {
         console.log(`[analysis-run] analyse-pages summary: ${JSON.stringify(summary)}`);
@@ -716,11 +853,12 @@ async function runAnalysis(rawOptions = {}) {
       }
       logInfo('Skipping page analysis', { runId, reason: 'skip-pages flag' });
       runSummary.steps.pages = { skipped: true };
+      skipStage('page-analysis', { reason: 'skip-pages flag' });
       tracker.event('page-analysis', 'Skipped page analysis', { reason: 'skip-pages flag' });
       tracker.update({
         summary: runSummary,
         stage: skipDomains ? 'awarding-milestones' : 'domain-analysis',
-        lastProgress: { stage: 'page-analysis', skipped: true }
+        lastProgress: { stage: 'page-analysis', skipped: true, diagnostics: runSummary.diagnostics }
       });
       emitProgress({
         stage: 'page-analysis',
@@ -733,7 +871,8 @@ async function runAnalysis(rawOptions = {}) {
 
     if (!skipDomains) {
       logInfo('Running domain analysis', { runId, domainLimit: safeDomainLimit ?? null });
-      tracker.update({ stage: 'domain-analysis', lastProgress: { stage: 'domain-analysis' } });
+      beginStage('domain-analysis', { domainLimit: safeDomainLimit ?? null });
+      tracker.update({ stage: 'domain-analysis', lastProgress: { stage: 'domain-analysis', diagnostics: runSummary.diagnostics } });
       tracker.event('domain-analysis', 'Starting domain analysis', { domainLimit: safeDomainLimit ?? null });
       emitProgress({
         stage: 'domain-analysis',
@@ -745,7 +884,8 @@ async function runAnalysis(rawOptions = {}) {
         domainLimit: safeDomainLimit
       });
       runSummary.steps.domains = { completed: true, limit: safeDomainLimit ?? null };
-      tracker.update({ summary: runSummary, lastProgress: { stage: 'domain-analysis', completed: true } });
+  completeStage('domain-analysis', { completed: true, limit: safeDomainLimit ?? null });
+  tracker.update({ summary: runSummary, lastProgress: { stage: 'domain-analysis', completed: true, diagnostics: runSummary.diagnostics } });
       tracker.event('domain-analysis', 'Completed domain analysis', { domainLimit: safeDomainLimit ?? null });
       logInfo('Domain analysis completed', { runId, domainLimit: safeDomainLimit ?? null });
       const domainHighlights = buildRunHighlights({ steps: { domains: runSummary.steps.domains } });
@@ -765,11 +905,12 @@ async function runAnalysis(rawOptions = {}) {
       }
       logInfo('Skipping domain analysis', { runId, reason: 'skip-domains flag' });
       runSummary.steps.domains = { skipped: true };
+      skipStage('domain-analysis', { reason: 'skip-domains flag' });
       tracker.event('domain-analysis', 'Skipped domain analysis', { reason: 'skip-domains flag' });
       tracker.update({
         summary: runSummary,
         stage: 'awarding-milestones',
-        lastProgress: { stage: 'domain-analysis', skipped: true }
+        lastProgress: { stage: 'domain-analysis', skipped: true, diagnostics: runSummary.diagnostics }
       });
       emitProgress({
         stage: 'domain-analysis',
@@ -780,7 +921,8 @@ async function runAnalysis(rawOptions = {}) {
       });
     }
 
-    tracker.update({ stage: 'awarding-milestones', lastProgress: { stage: 'awarding-milestones' } });
+  beginStage('awarding-milestones', { dryRun });
+  tracker.update({ stage: 'awarding-milestones', lastProgress: { stage: 'awarding-milestones', diagnostics: runSummary.diagnostics } });
     tracker.event('awarding-milestones', 'Awarding milestones', { dryRun });
     logInfo('Awarding milestones', { runId, dryRun });
   emitProgress({ stage: 'awarding-milestones', status: 'running', summary: 'Awarding milestones…' });
@@ -807,7 +949,8 @@ async function runAnalysis(rawOptions = {}) {
         details: m.details
       }))
     };
-    tracker.update({ summary: runSummary, lastProgress: { stage: 'awarding-milestones', count: awarded.length } });
+  completeStage('awarding-milestones', { count: awarded.length, dryRun });
+  tracker.update({ summary: runSummary, lastProgress: { stage: 'awarding-milestones', count: awarded.length, diagnostics: runSummary.diagnostics } });
     tracker.event('awarding-milestones', awarded.length ? 'Awarded milestones' : 'No new milestones to award', {
       count: awarded.length,
       dryRun,
@@ -833,12 +976,16 @@ async function runAnalysis(rawOptions = {}) {
 
     const runHighlights = buildRunHighlights(runSummary);
     runSummary.analysisHighlights = runHighlights;
+    pushTimelineEntry('run', 'completed', {
+      awardedCount: awarded.length,
+      durationMs: runSummary.durationMs ?? null
+    });
     tracker.update({
       status: 'completed',
       stage: 'completed',
       endedAt: endedAtIso,
       summary: runSummary,
-      lastProgress: { stage: 'completed', count: awarded.length }
+      lastProgress: { stage: 'completed', count: awarded.length, diagnostics: runSummary.diagnostics }
     });
     tracker.event('completed', 'Analysis run completed', {
       count: awarded.length,
@@ -866,6 +1013,12 @@ async function runAnalysis(rawOptions = {}) {
     runSummary.error = err && err.message ? err.message : String(err);
     const duration = Date.parse(endedAtIso) - Date.parse(startedAtIso);
     runSummary.durationMs = Number.isFinite(duration) ? duration : null;
+    const failureStage = diagnosticsState.currentStage || progressState.stage || 'unknown';
+    failStage(failureStage, err);
+    pushTimelineEntry('run', 'failed', {
+      stage: failureStage,
+      message: runSummary.error
+    });
 
     tracker.update({
       status: 'failed',
@@ -873,10 +1026,11 @@ async function runAnalysis(rawOptions = {}) {
       endedAt: endedAtIso,
       error: runSummary.error,
       summary: runSummary,
-      lastProgress: { stage: 'failed', error: runSummary.error }
+      lastProgress: { stage: 'failed', error: runSummary.error, diagnostics: runSummary.diagnostics }
     });
     tracker.event('failed', 'Analysis run failed', {
-      error: runSummary.error
+      error: runSummary.error,
+      stage: failureStage
     });
     logInfo('Run failed', { runId, error: runSummary.error });
     emitProgress({

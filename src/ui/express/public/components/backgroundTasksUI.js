@@ -9,6 +9,9 @@
  */
 
 const { each, tof } = require('lang-tools');
+const { createAnalysisProgressBar } = require('./AnalysisProgressBar');
+
+const analysisProgressControllers = new Map();
 
 /**
  * Initialize background tasks UI
@@ -226,37 +229,39 @@ function addTaskToListOptimistically(task) {
   const taskList = document.getElementById('task-list');
   if (!taskList) return;
   
-  // Check if task already exists
-  const existingRow = taskList.querySelector(`tr[data-task-id="${task.id}"]`);
-  if (existingRow) {
-    // Update existing row with new data
-    const statusCell = existingRow.querySelector('.task-status');
-    const progressCell = existingRow.querySelector('.task-progress');
-    
-    if (statusCell) statusCell.textContent = task.status || 'running';
-    if (progressCell) progressCell.textContent = task.progress ? `${task.progress}%` : '0%';
+  const existingCard = taskList.querySelector(`.task-card[data-task-id="${task.id}"]`);
+  if (existingCard) {
+    updateTaskCard(task);
     return;
   }
-  
-  // Create new row and prepend (latest tasks first)
-  const row = document.createElement('tr');
-  row.setAttribute('data-task-id', task.id);
-  row.innerHTML = `
-    <td>${task.id}</td>
-    <td>${task.task_type || task.taskType || 'unknown'}</td>
-    <td class="task-status">${task.status || 'running'}</td>
-    <td class="task-progress">${task.progress ? `${task.progress}%` : '0%'}</td>
-    <td>${new Date(task.created_at || task.createdAt || Date.now()).toLocaleString()}</td>
-    <td>
-      <button onclick="startTask('${task.id}')" ${task.status === 'running' ? 'disabled' : ''}>Start</button>
-      <button onclick="pauseTask('${task.id}')" ${task.status !== 'running' ? 'disabled' : ''}>Pause</button>
-      <button onclick="stopTask('${task.id}')" ${task.status === 'completed' || task.status === 'stopped' ? 'disabled' : ''}>Stop</button>
-    </td>
-  `;
-  
-  // Prepend to list (latest first)
-  const tbody = taskList.querySelector('tbody') || taskList;
-  tbody.insertBefore(row, tbody.firstChild);
+
+  // Ensure container exists
+  let tasksContainer = taskList.querySelector('.tasks');
+  if (!tasksContainer) {
+    taskList.innerHTML = '<div class="tasks"></div>';
+    tasksContainer = taskList.querySelector('.tasks');
+  }
+
+  const defaults = {
+    progress: {
+      current: 0,
+      total: 0,
+      percent: 0,
+      message: null
+    },
+    metadata: null
+  };
+
+  const cardHtml = renderTaskCard({ ...defaults, ...task });
+  const temp = document.createElement('div');
+  temp.innerHTML = cardHtml;
+  const card = temp.firstElementChild;
+  tasksContainer.prepend(card);
+  attachTaskControlListeners();
+
+  if (task.task_type === 'analysis-run') {
+    ensureAnalysisProgressBar({ ...defaults, ...task });
+  }
 }
 
 /**
@@ -367,6 +372,7 @@ function renderTaskList(tasks) {
   
   if (tasks.length === 0) {
     taskList.innerHTML = '<p class="no-tasks">No tasks yet. Create one above!</p>';
+    cleanupAnalysisProgressBars(new Set());
     return;
   }
   
@@ -381,6 +387,17 @@ function renderTaskList(tasks) {
   
   // Attach event listeners to task controls
   attachTaskControlListeners();
+
+  const activeAnalysisIds = new Set();
+  each(tasks, (task) => {
+    if (task.task_type === 'analysis-run') {
+      activeAnalysisIds.add(task.id);
+      ensureAnalysisProgressBar(task);
+    } else {
+      destroyAnalysisProgressBar(task.id);
+    }
+  });
+  cleanupAnalysisProgressBars(activeAnalysisIds);
 }
 
 /**
@@ -416,20 +433,29 @@ function renderTaskCard(task) {
     statusIcon = '🛑 ';
   }
   
+  const isAnalysisTask = task.task_type === 'analysis-run';
   // Enhanced progress display
   const hasValidProgress = progress.total > 0;
   const progressPercent = hasValidProgress ? progress.percent : 0;
   const progressText = hasValidProgress 
     ? `${progress.current} / ${progress.total} (${progressPercent}%)`
     : (task.status === 'resuming' ? 'Loading progress...' : 'Starting...');
-  
-  return `
-    <div class="task-card ${statusClass}" data-task-id="${task.id}">
-      <div class="task-header">
-        <span class="task-type">${task.task_type}</span>
-        <span class="task-status badge badge-${task.status}">${statusIcon}${statusDisplay}</span>
+
+  const analysisProgressExtras = [];
+  if (progress.message) {
+    analysisProgressExtras.push(`<div class="progress-message">${progress.message}</div>`);
+  }
+  if (task.status === 'resuming' && !hasValidProgress) {
+    analysisProgressExtras.push('<div class="progress-message resuming-hint">Resuming from previous session...</div>');
+  }
+
+  const progressSection = isAnalysisTask ? `
+      <div class="task-progress analysis-task-progress" data-task-id="${task.id}">
+        <div class="analysis-progress-bar-host" data-task-id="${task.id}"></div>
+        <div class="progress-text">${progressText}</div>
+        ${analysisProgressExtras.join('')}
       </div>
-      
+    ` : `
       <div class="task-progress">
         <div class="progress-bar-container">
           <div class="progress-bar ${task.status === 'resuming' ? 'progress-bar-resuming' : ''}" style="width: ${progressPercent}%"></div>
@@ -440,6 +466,16 @@ function renderTaskCard(task) {
         ${progress.message ? `<div class="progress-message">${progress.message}</div>` : ''}
         ${task.status === 'resuming' && !hasValidProgress ? `<div class="progress-message resuming-hint">Resuming from previous session...</div>` : ''}
       </div>
+    `;
+  
+  return `
+    <div class="task-card ${statusClass}" data-task-id="${task.id}">
+      <div class="task-header">
+        <span class="task-type">${task.task_type}</span>
+        <span class="task-status badge badge-${task.status}">${statusIcon}${statusDisplay}</span>
+      </div>
+      
+      ${progressSection}
       
       <div class="task-metadata">
         <div><strong>Created:</strong> ${formatDate(task.created_at)}</div>
@@ -546,6 +582,11 @@ async function refreshSingleTask(taskId) {
         newCard.innerHTML = renderTaskCard(result.task);
         taskCard.replaceWith(newCard.firstElementChild);
         attachTaskControlListeners();
+        if (result.task.task_type === 'analysis-run') {
+          ensureAnalysisProgressBar(result.task);
+        } else {
+          destroyAnalysisProgressBar(result.task.id);
+        }
       }
     }
   } catch (error) {
@@ -600,10 +641,68 @@ function updateTaskCard(taskData) {
     
     existingCard.replaceWith(newCard);
     attachTaskControlListeners();
+    if (taskData.task_type === 'analysis-run') {
+      ensureAnalysisProgressBar(taskData);
+    } else {
+      destroyAnalysisProgressBar(taskData.id);
+    }
   } else {
     // Card doesn't exist, refresh entire list
     refreshTaskList();
   }
+}
+
+function ensureAnalysisProgressBar(task) {
+  if (task.task_type !== 'analysis-run') {
+    destroyAnalysisProgressBar(task.id);
+    return;
+  }
+  const host = document.querySelector(`.analysis-progress-bar-host[data-task-id="${task.id}"]`);
+  if (!host) {
+    destroyAnalysisProgressBar(task.id);
+    return;
+  }
+  let controller = analysisProgressControllers.get(task.id);
+  if (!controller || !controller.getElement || controller.getElement().parentNode !== host) {
+    if (controller) {
+      controller.destroy();
+    }
+    controller = createAnalysisProgressBar(host, {
+      runId: `Analysis #${task.id}`,
+      startedAt: task.started_at ? Date.parse(task.started_at) : Date.now(),
+      onCancel: () => performTaskAction('stop', task.id),
+      compact: false
+    });
+    analysisProgressControllers.set(task.id, controller);
+  }
+  const stats = (task.metadata && task.metadata.stats) || {};
+  controller.updateStatus(task.status);
+  controller.updateProgress({
+    processed: stats.pagesProcessed ?? task.progress.current ?? 0,
+    updated: stats.pagesUpdated ?? 0,
+    total: task.progress.total ?? 0,
+    percentage: task.progress.percent ?? 0
+  });
+  if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+    controller.updateStatus(task.status);
+  }
+}
+
+function destroyAnalysisProgressBar(taskId) {
+  const controller = analysisProgressControllers.get(taskId);
+  if (controller) {
+    controller.destroy();
+    analysisProgressControllers.delete(taskId);
+  }
+}
+
+function cleanupAnalysisProgressBars(activeIds) {
+  analysisProgressControllers.forEach((controller, taskId) => {
+    if (!activeIds.has(taskId)) {
+      controller.destroy();
+      analysisProgressControllers.delete(taskId);
+    }
+  });
 }
 
 // Export for module usage

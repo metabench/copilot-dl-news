@@ -165,6 +165,76 @@ describe('BackgroundTaskManager', () => {
       expect(task.progress.total).toBe(5);
     });
 
+      it('should derive totals from metadata when missing', async () => {
+        class FinalProgressTask {
+          constructor(options) {
+            this.onProgress = options.onProgress;
+            this.onError = options.onError;
+          }
+
+          async execute() {
+            this.onProgress({
+              current: 0,
+              total: 0,
+              message: 'Analysis run completed',
+              metadata: {
+                final: true,
+                stats: { pagesProcessed: 0 }
+              }
+            });
+          }
+
+          pause() {}
+          resume() {}
+        }
+
+        manager.registerTaskType('final-progress-task', FinalProgressTask);
+        const taskId = manager.createTask('final-progress-task', {});
+
+        await manager.startTask(taskId);
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        const task = manager.getTask(taskId);
+        expect(task.progress.total).toBeGreaterThan(0);
+        expect(task.progress.percent).toBe(100);
+      });
+
+      it('should respect metadata totals when provided', async () => {
+        class MetadataTotalTask {
+          constructor(options) {
+            this.onProgress = options.onProgress;
+            this.onError = options.onError;
+          }
+
+          async execute() {
+            this.onProgress({
+              current: 21,
+              total: 0,
+              message: 'Finalizing',
+              metadata: {
+                final: true,
+                stats: { pagesProcessed: 21 },
+                total: 21
+              }
+            });
+          }
+
+          pause() {}
+          resume() {}
+        }
+
+        manager.registerTaskType('metadata-total-task', MetadataTotalTask);
+        const taskId = manager.createTask('metadata-total-task', {});
+
+        await manager.startTask(taskId);
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        const task = manager.getTask(taskId);
+        expect(task.progress.total).toBe(21);
+        expect(task.progress.current).toBe(21);
+        expect(task.progress.percent).toBe(100);
+      });
+
     it('should track progress during execution', async () => {
       const taskId = manager.createTask('mock-task', {});
 
@@ -410,6 +480,217 @@ describe('BackgroundTaskManager', () => {
 
       const lastUpdate = metricsUpdates[metricsUpdates.length - 1];
       expect(lastUpdate.tasksFailed).toBe(1);
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    it('should allow starting task of same type after rate limit window expires', async () => {
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      // Wait for rate limit window to expire (5s + buffer)
+      await new Promise(resolve => setTimeout(resolve, 5100));
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      // Should not throw - rate limit expired
+      await expect(manager.startTask(taskId2)).resolves.not.toThrow();
+    });
+    
+    it('should throw RateLimitError when starting same task type within 5s window', async () => {
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      // Should throw RateLimitError
+  await expect(manager.startTask(taskId2)).rejects.toThrow(/Cannot start mock-task task/);
+    });
+    
+    it('should include proposedActions in RateLimitError', async () => {
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      try {
+        await manager.startTask(taskId2);
+        fail('Should have thrown RateLimitError');
+      } catch (error) {
+        expect(error.name).toBe('RateLimitError');
+        expect(error.proposedActions).toBeDefined();
+        expect(error.proposedActions.length).toBeGreaterThan(0);
+        
+        const stopAction = error.proposedActions[0];
+        expect(stopAction.action.type).toBe('stop-task');
+        expect(stopAction.action.parameters.taskId).toBe(taskId1);
+  expect(stopAction.reason).toContain('mock-task');
+  expect(stopAction.reason.toLowerCase()).toContain('already running');
+      }
+    });
+    
+    it('should include retryAfter in RateLimitError', async () => {
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      try {
+        await manager.startTask(taskId2);
+        fail('Should have thrown RateLimitError');
+      } catch (error) {
+        expect(error.retryAfter).toBeDefined();
+        expect(error.retryAfter).toBeGreaterThan(0);
+        expect(error.retryAfter).toBeLessThanOrEqual(5);
+      }
+    });
+    
+    it('should include context information in RateLimitError', async () => {
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      try {
+        await manager.startTask(taskId2);
+        fail('Should have thrown RateLimitError');
+      } catch (error) {
+        expect(error.context).toBeDefined();
+        expect(error.context.taskType).toBe('mock-task');
+  expect(error.context.newTaskId).toBe(taskId2);
+        expect(error.context.runningTaskId).toBe(taskId1);
+  expect(error.context.windowMs).toBe(5000);
+  expect(typeof error.context.timeSinceLastStart).toBe('number');
+  expect(typeof error.context.remainingTime).toBe('number');
+      }
+    });
+    
+    it('should not rate limit different task types', async () => {
+      manager.registerTaskType('another-task', MockTask);
+      
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      const taskId2 = manager.createTask('another-task', {});
+      
+      // Should not throw - different task type
+      await expect(manager.startTask(taskId2)).resolves.not.toThrow();
+    });
+    
+    it('should not rate limit task resumes', async () => {
+      const taskId = manager.createTask('mock-task', {});
+      await manager.startTask(taskId);
+      await manager.pauseTask(taskId);
+      
+      // Resume should not be rate limited
+      await expect(manager.resumeTask(taskId)).resolves.not.toThrow();
+    });
+    
+    it('should update lastStartTimes map when task starts', async () => {
+      const taskId = manager.createTask('mock-task', {});
+      const beforeTime = Date.now();
+      
+      await manager.startTask(taskId);
+      
+      const afterTime = Date.now();
+      
+      // Check internal lastStartTimes map (if accessible)
+      // This verifies the timestamp was recorded
+      const lastStartTime = manager.lastStartTimes?.get('mock-task');
+      if (lastStartTime !== undefined) {
+        expect(lastStartTime).toBeGreaterThanOrEqual(beforeTime);
+        expect(lastStartTime).toBeLessThanOrEqual(afterTime);
+      }
+    });
+    
+    it('should allow multiple tasks of same type if first completes', async () => {
+      const taskId1 = manager.createTask('mock-task', {});
+      await manager.startTask(taskId1);
+      
+      // Wait for first task to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const task1 = manager.getTask(taskId1);
+      expect(task1.status).toBe('completed');
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      // Should not throw - first task completed (not running)
+      await expect(manager.startTask(taskId2)).resolves.not.toThrow();
+    });
+    
+    it('should calculate retryAfter based on elapsed time', async () => {
+      class SlowMockTask {
+        constructor(options) {
+          this.signal = options.signal;
+          this.onProgress = options.onProgress;
+          this.onError = options.onError;
+        }
+
+        async execute() {
+          for (let i = 0; i < 10; i++) {
+            if (this.signal.aborted) {
+              throw new Error('Task aborted');
+            }
+
+            this.onProgress({
+              current: i + 1,
+              total: 10,
+              message: `Slow step ${i + 1}`
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 400));
+          }
+        }
+
+        pause() {}
+        resume() {}
+      }
+
+      manager.registerTaskType('slow-mock-task', SlowMockTask);
+
+      const taskId1 = manager.createTask('slow-mock-task', {});
+      await manager.startTask(taskId1);
+
+      // Wait 2 seconds while the slow task is still running
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const taskId2 = manager.createTask('slow-mock-task', {});
+
+      try {
+        await manager.startTask(taskId2);
+        fail('Should have thrown RateLimitError');
+      } catch (error) {
+        // Retry after should be ~3 seconds (5s window - 2s elapsed)
+        expect(typeof error.retryAfter).toBe('number');
+        expect(error.retryAfter).toBeGreaterThan(2.5);
+        expect(error.retryAfter).toBeLessThanOrEqual(3.5);
+      } finally {
+        manager.stopTask(taskId1);
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    });
+    
+    it('should propose correct stop-task action in RateLimitError', async () => {
+      const taskId1 = manager.createTask('mock-task', { important: true });
+      await manager.startTask(taskId1);
+      
+      const taskId2 = manager.createTask('mock-task', {});
+      
+      try {
+        await manager.startTask(taskId2);
+        fail('Should have thrown RateLimitError');
+      } catch (error) {
+        const proposedAction = error.proposedActions[0];
+        
+        expect(proposedAction.action.id).toContain('stop-task');
+        expect(proposedAction.action.type).toBe('stop-task');
+        expect(proposedAction.action.label).toContain('Stop');
+        expect(proposedAction.action.parameters.taskId).toBe(taskId1);
+        expect(proposedAction.severity).toBe('warning');
+  expect(proposedAction.reason).toContain('mock-task');
+  expect(proposedAction.reason.toLowerCase()).toContain('already running');
+      }
     });
   });
 });

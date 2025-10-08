@@ -1,102 +1,121 @@
-# AGENTS.md — Performance Optimization Priority
+# AGENTS.md — AI Agent Workflow & Project Structure
+
+_Implementation approach: defend the data boundaries while staying resilience-oriented and observability-focused via the live diagnostics pipeline._
+
+## 🎯 **CRITICAL: Project Structure Analysis FIRST**
+
+**Before implementing ANY feature, UI component, or change, ALWAYS analyze project structure:**
+
+### Mandatory Pre-Implementation Checklist
+
+```
+FOR EVERY TASK:
+
+1. ✅ CHECK AGENTS.MD FIRST
+   - Is this area documented? Read existing guidance
+   - Is structure information current? Verify with files
+   - Update AGENTS.md with discoveries
+
+2. ✅ ANALYZE PROJECT STRUCTURE
+   - Search for similar files: file_search for patterns
+   - Check package.json for build scripts
+   - Examine existing code structure
+   - Identify conventions (naming, organization)
+
+3. ✅ MATCH EXISTING PATTERNS
+   - Don't invent new patterns when one exists
+   - Follow established conventions exactly
+   - Ask "How would existing code do this?"
+
+4. ✅ DOCUMENT DISCOVERIES
+   - Add missing structure info to AGENTS.md
+   - Update outdated information
+   - Keep AGENTS.md focused on methodology
+```
+
+### Example: Adding UI Styles (Mistake Analysis)
+
+**❌ WRONG APPROACH** (What happened in ProposedActionsPopup):
+```
+1. Implement component JavaScript
+2. Create CSS file directly
+3. No analysis of existing styling system
+4. Result: Wrong file format, wrong location
+```
+
+**✅ CORRECT APPROACH**:
+```
+1. Search for existing styles: file_search "**/*.scss"
+2. Check package.json: grep for "sass", "styles", "css"
+3. Examine style directory structure
+4. Read main style file to understand imports
+5. Create _proposed-actions-popup.scss in partials/
+6. Import in main ui.scss file
+7. Run sass:build to compile
+```
+
+### Project Structure Knowledge Base
+
+**UI Styling System**:
+- **Source**: `src/ui/express/public/styles/*.scss`
+- **Build**: `npm run sass:build` (compiles to CSS)
+- **Watch**: `npm run sass:watch` (auto-compile on changes)
+- **Pattern**: Create `_partial-name.scss` in `partials/`, import in main `ui.scss`
+- **Output**: `src/ui/express/public/*.css` (compiled, don't edit)
+
+**Component Organization**:
+- **JS Components**: `src/ui/public/components/*.js` OR `src/ui/express/public/components/*.js`
+- **Build**: Auto-build on server start (see auto-build-components.js)
+- **Pattern**: ES6 modules with esbuild bundling
+
+**Test Organization**:
+- **Unit tests**: `src/**/__tests__/*.test.js`
+- **Integration tests**: `src/ui/express/__tests__/*.api.test.js`
+- **E2E tests**: `src/ui/express/__tests__/*.e2e.test.js`
+
+**Background Tasks**:
+- **Task classes**: `src/background/tasks/*.js`
+- **Actions**: `src/background/actions/*.js`
+- **Errors**: `src/background/errors/*.js`
+
+### Keeping AGENTS.md Current
+
+**When to Update AGENTS.md**:
+1. ✅ Discovered new project structure pattern
+2. ✅ Found outdated information in AGENTS.md
+3. ✅ Completed a major feature (remove detailed implementation tasks)
+4. ✅ Learned a workflow lesson from a mistake
+
+**What to Remove from AGENTS.md**:
+1. ❌ Detailed implementation steps for COMPLETED features
+2. ❌ Phase-by-phase plans where all phases are ✅ COMPLETE
+3. ❌ Code examples for finished implementations
+4. ❌ Historical task tracking with all items checked
+
+**What to Keep in AGENTS.md**:
+1. ✅ Methodology and workflow principles
+2. ✅ Project structure information
+3. ✅ Incomplete tasks and roadmaps
+4. ✅ Critical patterns and anti-patterns
+5. ✅ Testing strategies and tools
+
+---
 
 ## 🚀 CURRENT PRIORITY: Performance Optimization (October 2025)
 
-**Status**: ✅ Major breakthrough - tests now complete in 70 seconds!  
+**Status**: ✅ Tests complete in 70 seconds (major improvement)  
 **Goal**: Further optimize to 30-40 seconds for development workflow
 
-### Performance Investigation Results
+**Key Achievements**:
+- Fixed CompressionWorkerPool hanging in test environment
+- 96.8% test pass rate (633/654 tests)
+- No tests taking >5 seconds
 
-#### 1. Test Suite Performance ⏱️ **ACTUAL RESULTS**
-
-**Current State**: ✅ **70 seconds** (excellent improvement from expected 6-10 minutes!)
-
-**Breakthrough Fix**:
-- ✅ Disabled CompressionWorkerPool in test environment
-- ✅ Tests were hanging on Worker thread creation
-- ✅ Now skip worker pool when `JEST_WORKER_ID` or `NODE_ENV=test`
-
-**Actual Metrics** (from test-timing-2025-10-07T14-08-47-901Z.log):
-- **Total Test Files**: 126
-- **Total Runtime**: 70.0 seconds
-- **Average per File**: 0.52 seconds
-- **Tests >5s**: 0 (perfect!)
-- **Tests >2s**: 6 (4.8%) - minor optimization opportunity
-- **Pass Rate**: 633/654 (96.8%)
-
-**Category Breakdown** (actual):
-- E2E/Puppeteer: 6.5s (9.9%) - Most skipped by default ✅
-- HTTP Server: 10.8s (16.4%) - Reasonable ✅
-- Online API: 0.24s (0.4%) - Minimal impact ✅
-
-**Top 6 Slowest Tests**:
-1. `populate-gazetteer.test.js` - 4.29s (2 tests failed) ⚠️
-2. `BackgroundTaskManager.test.js` - 3.72s (26 tests, all passing) ✅
-3. `background-tasks.api.test.js` - 2.61s (10 tests failed) ❌
-4. `crawl.e2e.more.test.js` - 2.54s (E2E, reasonable) ✅
-5. `crawler-outcome.test.js` - 2.20s (integration, acceptable) ✅
-6. `analysis.api.ssr.test.js` - 2.03s (SSR, acceptable) ✅
-
-**Investigation Tasks**:
-- [x] Run full suite with timing, analyze output
-- [x] Identify tests taking >10 seconds - **NONE FOUND** ✅
-- [x] Identify worker thread issues - **FIXED** ✅
-- [ ] Fix 16 failing tests (6 test files with failures)
-- [ ] Optimize top 3 slowest tests (4.29s → ~1.5s possible)
+**Remaining Work**:
+- [ ] Fix 16 failing tests (6 test files)
 - [ ] Implement shared test infrastructure (save 8-12s)
 - [ ] Use in-memory DB for unit tests (save 3-5s)
-
-**Performance Optimization Strategies**:
-- ✅ **Worker Threads**: Disabled in test environment - **CRITICAL FIX**
-- ⏳ **Shared Server**: Reuse Express server across HTTP tests (save 5-8s)
-- ⏳ **In-Memory DB**: Use `:memory:` for unit tests (save 3-5s)
-- ⏳ **Event-Driven Waits**: Replace setTimeout with server.on('listening') (save 1.5-2s)
-- ⏳ **Transaction Rollback**: Use transactions instead of recreating DB (save 2-3s)
-
-**Target**: 30-40 seconds for development workflow, 40-50s for full CI suite
-
-#### 2. Application Performance 🎯 **REVEALED BY TESTS**
-
-**Hypothesis Confirmed**: Tests reveal production bottlenecks!
-
-**Server Performance Insights**:
-1. **Server Startup Time**: ~100-300ms in tests
-   - Reasonable for Express initialization
-   - CompressionWorkerPool was blocking startup (now fixed)
-
-2. **Database Operations**: HTTP tests show query patterns
-   - Gazetteer queries: 200-500ms (needs indexes)
-   - Analysis queries: 200-400ms (can optimize)
-   - Most queries <100ms ✅
-
-3. **Gazetteer Endpoints**: `/api/gazetteer/*` 
-   - Taking 200-500ms in tests
-   - **Recommendation**: Add indexes on `country_id`, `kind` columns
-   - **Recommendation**: Implement in-memory cache for country list
-
-4. **Failing Tests Reveal Issues**:
-   - `populate-gazetteer.test.js`: 2 failures - logic issue?
-   - `background-tasks.api.test.js`: 10 failures - API contract broken?
-   - These indicate potential production bugs!
-
-**Performance Profiling Recommendations**:
-```bash
-# Profile slow gazetteer operations
-sqlite3 data/news.db "EXPLAIN QUERY PLAN SELECT * FROM gazetteer_places WHERE country_id = ?;"
-
-# Check for missing indexes
-sqlite3 data/news.db ".indexes gazetteer_places"
-
-# Profile server endpoints
-node --inspect src/ui/express/server.js
-# Use Chrome DevTools to profile API requests
-```
-
-**Optimization Priorities**:
-1. **Fix failing tests** (quality & reliability)
-2. **Add database indexes** (production speed)
-3. **Implement caching** (reduce DB load)
-4. **Shared test infrastructure** (test speed)
+- [ ] Add database indexes for production speed
 
 ### Test Execution Workflow and Logging
 
@@ -111,16 +130,27 @@ Tests take ~56 seconds to complete. Always check existing timing logs before run
 
 **Example log analysis commands**:
 ```powershell
-# Get latest test results
-$file = Get-ChildItem test-timing-*.log | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-Get-Content $file.FullName | Select-String "FAIL" -Context 0,15
+# Get latest test results (simple, fast)
+Get-Content test-timing-*.log | Select-Object -Last 50
 
-# Get test summary
-Get-Content $file.FullName | Select-String "Test Suites:|Tests:" | Select-Object -First 2
+# Get test summary (simple, fast)
+Get-Content test-timing-*.log | Select-String "Test Suites:|Tests:"
 
-# Get failing test files
-Get-Content $file.FullName | Select-String "failed\)" | Select-String "\d+ failed"
+# Get failing test files (simple, fast)
+Get-Content test-timing-*.log | Select-String "FAIL "
 ```
+
+**CRITICAL: User Will Ctrl+C If Impatient**
+
+The user will press Ctrl+C if a command takes too long or appears to hang. Agents must:
+- ❌ **AVOID** starting servers (can hang on port conflicts, initialization issues)
+- ❌ **AVOID** making API calls to servers (requires server to be running, can timeout)
+- ❌ **AVOID** long-running processes without clear progress indicators
+- ❌ **AVOID** complex `node -e` commands that require approval
+- ✅ **PREFER** reading log files instead of running commands
+- ✅ **PREFER** checking file existence with `Test-Path` instead of trying to access files
+- ✅ **PREFER** static analysis over dynamic testing when investigating issues
+- ✅ **PREFER** starting the server directly to test auto-build (logs show if build occurred)
 
 **IMPORTANT**: Tests that hang or run too long may be interrupted with **Ctrl+C** during development.
 
@@ -177,6 +207,84 @@ npm test
 - Reference timing logs if console is unavailable
 - Document hanging tests immediately for investigation
 - Add timeouts or skip flags to problematic tests
+
+---
+
+## Build Process
+
+**CRITICAL**: Browser components must be built before the server can serve them correctly.
+
+### Automatic Build on Server Start ✅
+
+**The server automatically checks and rebuilds components if needed when it starts.**
+
+- **Fast Check**: Compares source file timestamps with built file timestamps
+- **Only Rebuilds When Necessary**: If sources are newer than outputs, rebuilds automatically
+- **Quick**: esbuild makes rebuilds nearly instant (~100-300ms)
+- **Zero Manual Intervention**: Just start the server, components are built automatically
+
+**Implementation**: `src/ui/express/auto-build-components.js`
+- Checks if `src/ui/express/public/components/*.js` is newer than `public/assets/components/*.js`
+- Rebuilds only if needed
+- Runs automatically in `startServer()` function
+
+### Manual Build (Optional)
+
+You can still manually build components if needed:
+
+```bash
+# Build components once (usually not needed due to auto-build)
+npm run components:build
+
+# Watch mode (auto-rebuild on changes) - NOT YET IMPLEMENTED
+npm run components:watch
+```
+
+### When Auto-Build Triggers
+
+**Auto-build runs automatically when server starts if**:
+- Output directory doesn't exist
+- Any source file is missing its corresponding output file
+- Any source file is newer than its output file
+
+**Example server startup with auto-build**:
+```
+[auto-build] Components need rebuilding...
+[auto-build] Building 2 component(s)...
+[auto-build] ✓ All components built successfully
+[server] Components rebuilt
+GUI server listening on http://localhost:41000
+```
+
+### Build Output
+
+- **Source**: `src/ui/express/public/components/*.js` (ES6 with imports)
+- **Built**: `src/ui/express/public/assets/components/*.js` (bundled with dependencies)
+
+### Troubleshooting
+
+**Symptom**: "Failed to resolve module specifier" errors in browser console
+
+**Cause**: Auto-build failed silently, or import paths incorrect
+
+**Fix**:
+1. Check server startup logs for auto-build errors
+2. Run `npm run components:build` manually to see detailed errors
+3. Verify import paths use `/assets/components/` (not `/components/`)
+4. Restart server to trigger auto-build again
+
+### Architecture Details
+
+**Why This Works**:
+- esbuild is extremely fast (~100-300ms for small projects)
+- Timestamp comparison is instant (filesystem metadata only)
+- Auto-build happens asynchronously - doesn't block server startup
+- If build fails, server continues anyway (components might already be built)
+
+**Trade-offs**:
+- Small startup delay (100-300ms) if rebuild needed
+- No delay if components are already up-to-date
+- Better than forgetting to build manually and getting runtime errors
 
 ---
 
@@ -345,795 +453,1261 @@ describe('myFastTests', fastTest(() => {
 - Tests with network requests
 - Tests requiring resource cleanup
 
-### Deliverables from Performance Investigation
+---
 
-**Phase 1: Measurement** ✅ **COMPLETED**
-- [x] Complete timing analysis of test suite - **70 seconds total**
-- [x] Document which tests are slowest and why - **See docs/TEST_PERFORMANCE_RESULTS.md**
-- [x] Identify optimization opportunities - **10-15s savings possible**
-- [x] Fix critical blocker (CompressionWorkerPool hanging)
+### Timeout Optimization Strategy for Development
 
-**Phase 2: Quick Wins** ✅ **COMPLETED** (October 2025)
-- [x] Skip CompressionWorkerPool in test environment (infinite hang → 70s) ✅
-- [x] Replace setTimeout delays with optimized waits (saved 3.5s) ✅
-- [x] Fix 11 failing tests across 4 test files ✅
-  - BackgroundTaskManager.test.js: Adjusted timing (80ms → 100ms)
-  - background-tasks.api.test.js: Removed premature db.close() in cleanup
-  - milestoneTracker.test.js: Fixed Set iteration (convert to Array)
-  - db.writableDb.test.js: Return null instead of re-throwing errors
-- [x] Add database indexes for slow queries (production benefit)
+**CRITICAL: Choose Minimal Timeouts for Rapid Development Iteration**
 
-**Phase 3: Structural Improvements** ⏳ **NEXT WEEK**
-- [ ] Create shared test infrastructure helper (save 8-12s)
-- [ ] Implement transaction rollback pattern for DB tests (save 2-3s)
-- [ ] Add performance budgets to CI (fail if tests >90s)
-- [ ] Document test categorization (unit/integration/e2e)
-- [ ] Profile and optimize slow server endpoints
+When testing functionality during development (not in test suites), always use the **shortest timeout that safely validates the behavior**.
 
-**Phase 4: Production Optimizations** ⏳ **ONGOING**
-- [ ] Add indexes: `gazetteer_places(country_id)`, `gazetteer_places(kind)`
-- [ ] Implement caching for gazetteer country list
-- [ ] Optimize analysis queries (use prepared statements)
-- [ ] Monitor endpoint performance in production
+**Development Testing Timeout Guidelines**:
 
-**Final Target**:
-- Development workflow: 30-40 seconds (unit + fast integration)
-- CI full suite: 40-50 seconds
-- Zero tests >2 seconds
-- 100% pass rate
-- Production API responses <200ms (p95)
+```
+FOR MANUAL/AD-HOC TESTING (like server startup verification):
+
+✅ PREFERRED: 2-4 seconds
+- Validates basic functionality quickly
+- Allows 5-10 iterations per minute
+- Sufficient for most server startup checks
+- Example: node server.js --auto-shutdown-seconds 2
+
+⚠️ ACCEPTABLE: 5-8 seconds
+- Use when testing slower operations
+- Still allows rapid iteration (2-3 tests per minute)
+- Example: Testing database migrations
+
+❌ TOO SLOW: 10+ seconds
+- Only use for genuine long-running operations
+- Slows development iteration significantly
+- Example: Testing bulk data imports
+
+AVOID ENTIRELY: 20-60 seconds
+- Only justified for production-like scenarios
+- Wastes developer time during iteration
+- Use event-driven verification instead
+```
+
+**Examples of Optimal Development Timeouts**:
+
+```bash
+# ✅ GOOD: Quick server startup verification (2s is plenty)
+node server.js --detached --auto-shutdown-seconds 2
+
+# ✅ GOOD: Test auto-shutdown mechanism (3s validates it works)
+node server.js --detached --auto-shutdown-seconds 3
+
+# ⚠️ ACCEPTABLE: Longer test for specific timing validation
+node server.js --detached --auto-shutdown-seconds 8
+
+# ❌ BAD: Unnecessarily long timeout for simple verification
+node server.js --detached --auto-shutdown-seconds 30
+```
+
+**Rule of Thumb**:
+- **Server startup check**: 2-3 seconds
+- **Feature validation**: 2-5 seconds
+- **Timing verification**: Use actual timeout needed + 1 second margin
+- **Production simulation**: 10-30 seconds (rare, only when needed)
 
 ---
 
-## 📚 Secondary Priority: Lang-Tools Idiomaticity Refactoring
+### Event-Driven Testing vs Timeout-Based Testing
 
-**Status**: Paused while focusing on performance  
-**Resume After**: Performance optimization phase complete
+**CRITICAL: Prefer Event-Driven Waits Over setTimeout in Tests**
 
-## Lang-Tools Package Architecture
+Many tests use `setTimeout` or arbitrary delays when they should use event-driven architecture for faster, more reliable testing.
 
-**CRITICAL**: `lang-tools` (aliased from `@metabench/lang-tools` v0.0.36) is a comprehensive toolkit that **includes lang-mini** functionality. Always import from `'lang-tools'` (NOT `'lang-mini'` or `'@metabench/lang-mini'`).
-
-### Available Exports from lang-tools
-
+**❌ Timeout-Based Testing (Slow & Fragile)**:
 ```javascript
-// Basic utilities (lang-mini core)
-const { each, tof, is_array, is_defined, clone } = require('lang-tools');
-
-// Functional programming (lang-mini polymorphism)
-const { fp, mfp } = require('lang-tools');
-
-// Additional lang-tools features
-const { compact, pluck, firstDefined, numberOr } = require('lang-tools');
-```
-
-**Key Point**: `fp` and `mfp` (functional/multi-function polymorphism from lang-mini) are available directly from `lang-tools`. No need to import `lang-mini` separately.
-
-## Single Priority: Adopt Lang-Tools Patterns Across the Codebase
-
-The refactoring has two complementary tracks:
-
-1. **Individual Pattern Replacements** (231+ opportunities identified):
-   - Replace `forEach` → `each()` for collection iteration
-   - Replace `typeof x === 'type'` → `tof(x) === 'type'` for type checking
-   - Replace `Array.isArray()` → `is_array()` for array detection
-   - Replace manual `undefined` checks → `is_defined()` for existence testing
-   - Replace polymorphic type-checking functions → `fp()` for signature-based dispatch
-
-2. **Architectural Pattern Introduction** (7 major patterns designed):
-   - Data transformation pipelines (`compact()`, `pluck()`, `pipeline()`)
-   - Nullish coalescing chains (`firstDefined()`, `numberOr()`)
-   - Schema-driven configuration builders
-   - Fluent attribute builders
-   - Functional polymorphism (`fp()`, `mfp()`)
-   - Composable middleware patterns
-   - Optional: Result types for error handling
-
-Both tracks work together: individual replacements improve readability line-by-line, while architectural patterns eliminate entire categories of boilerplate.
-
-## Lang-Tools Patterns Reference
-
-This section documents the patterns we're adopting. For comprehensive examples and implementation details, see `docs/LANG_TOOLS_PATTERNS.md` and `docs/LANG_TOOLS_ARCHITECTURAL_PATTERNS.md`.
-
-### Individual Replacement Patterns
-
-**Pattern 1: Collection Iteration with `each()`**
-```javascript
-// Before
-array.forEach(item => processItem(item));
-Object.keys(obj).forEach(key => processKey(key, obj[key]));
-
-// After
-each(array, item => processItem(item));
-each(obj, (value, key) => processKey(key, value));
-```
-**Benefits**: Unified interface for arrays and objects; handles null/undefined gracefully.
-
-**Pattern 2: Type Checking with `tof()`**
-```javascript
-// Before
-if (typeof value === 'string') { ... }
-if (typeof callback === 'function') { ... }
-
-// After
-if (tof(value) === 'string') { ... }
-if (tof(callback) === 'function') { ... }
-```
-**Benefits**: Shorter, more readable; consistent with lang-tools ecosystem.
-
-**Pattern 3: Array Detection with `is_array()`**
-```javascript
-// Before
-if (Array.isArray(value)) { ... }
-const arr = Array.isArray(value) ? value : [value];
-
-// After
-if (is_array(value)) { ... }
-const arr = is_array(value) ? value : [value];
-```
-**Benefits**: Consistent naming convention; pairs with `is_defined()`, `is_string()`, etc.
-
-**Pattern 4: Existence Checking with `is_defined()`**
-```javascript
-// Before
-if (value !== undefined && value !== null) { ... }
-const result = data != null ? data : fallback;
-
-// After
-if (is_defined(value)) { ... }
-const result = is_defined(data) ? data : fallback;
-```
-**Benefits**: Readable intent; handles both `undefined` and `null`.
-
-### Architectural Patterns
-
-**Pattern 5: Data Transformation Pipelines (★★★★★ Priority)**
-
-Create `src/utils/pipelines.js` with utilities for common transformation chains:
-
-```javascript
-// Before (26 occurrences)
-const qids = bindings
-  .map(b => this._extractQid(b.country?.value))
-  .filter(Boolean);
-
-const names = places
-  .map(p => p.name)
-  .filter(n => n && n.length > 0);
-
-// After
-const qids = compact(bindings, b => this._extractQid(b.country?.value));
-const names = pluck(places, 'name').filter(n => n.length > 0);
-```
-
-**Implementation**:
-```javascript
-// src/utils/pipelines.js
-const { each, is_defined } = require('lang-tools');
-
-function compact(array, mapFn) {
-  const results = [];
-  each(array, item => {
-    const mapped = mapFn ? mapFn(item) : item;
-    if (is_defined(mapped) && mapped !== false && mapped !== '') {
-      results.push(mapped);
-    }
-  });
-  return results;
-}
-
-function pluck(array, key) {
-  const results = [];
-  each(array, item => {
-    if (is_defined(item) && is_defined(item[key])) {
-      results.push(item[key]);
-    }
-  });
-  return results;
-}
-
-module.exports = { compact, pluck };
-```
-
-**Where to apply**: 
-- `src/crawler/gazetteer/ingestors/WikidataCountryIngestor.js` (4 occurrences)
-- `src/crawler/gazetteer/populate-gazetteer.js` (6 occurrences)
-- `src/crawler/IntelligentPlanRunner.js` (2 occurrences)
-- `src/analysis/ProblemClusteringService.js` (3 occurrences)
-- `src/crawler/robots.js` (4 occurrences)
-
-**Pattern 6: Nullish Coalescing Chains (★★★★☆ Priority)**
-
-Create `src/utils/objectHelpers.js` for fallback value resolution:
-
-```javascript
-// Before (30+ occurrences)
-const processed = Number(progressInfo.processed ?? progressInfo.updated ?? progressInfo.analysed ?? 0);
-const count = seeded.unique ?? seeded.requested ?? seeded.count ?? seeded.visited ?? null;
-
-// After
-const processed = numberOr(progressInfo, ['processed', 'updated', 'analysed'], 0);
-const count = firstDefined(seeded.unique, seeded.requested, seeded.count, seeded.visited);
-```
-
-**Implementation**:
-```javascript
-// src/utils/objectHelpers.js
-const { is_defined, tof } = require('lang-tools');
-
-function firstDefined(...values) {
-  for (const val of values) {
-    if (is_defined(val)) return val;
-  }
-  return undefined;
-}
-
-function numberOr(obj, keys, fallback = 0) {
-  if (tof(keys) === 'string') keys = [keys];
-  for (const key of keys) {
-    const val = obj?.[key];
-    if (is_defined(val) && tof(val) === 'number') return val;
-  }
-  return fallback;
-}
-
-module.exports = { firstDefined, numberOr };
-```
-
-**Where to apply**:
-- `src/ui/public/index/analysisHandlers.js` (lines 122, 190-192)
-- `src/ui/public/index/state/reducers.js` (multiple occurrences)
-- `src/ui/public/index/metricsView.js`
-- `src/ui/public/index/jobsAndResumeManager.js`
-
-**Pattern 7: Functional Polymorphism with `fp()` (★★★★★ Priority)**
-
-Replace imperative type-checking chains with signature-based dispatch using `fp()` from lang-tools:
-
-```javascript
-// Before (analysis-run.js lines 63-74, imperative style)
-function boolArg(value, fallback = false) {
-  if (value === null || value === undefined) return fallback;
-  if (tof(value) === 'boolean') return value;
-  if (tof(value) === 'number') return value !== 0;
-  if (tof(value) === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) return fallback;
-    if (['true', 't', 'yes', 'y', 'on', '1'].includes(normalized)) return true;
-    if (['false', 'f', 'no', 'n', 'off', '0'].includes(normalized)) return false;
-  }
-  return Boolean(value);
-}
-
-// After (functional polymorphic style)
-const boolArg = fp((a, sig) => {
-  const fallback = a.l >= 2 ? a[1] : false;
+beforeEach(async () => {
+  app = createApp({ dbPath });
+  server = app.listen(port);
   
-  // Signature handlers for different types
-  if (sig === '[u]' || sig === '[N]' || sig === '[u,b]' || sig === '[N,b]') {
-    return fallback; // undefined/null → fallback
-  }
-  if (sig === '[b]' || sig === '[b,b]') {
-    return a[0]; // boolean → as-is
-  }
-  if (sig === '[n]' || sig === '[n,b]') {
-    return a[0] !== 0; // number → truthy conversion
-  }
-  if (sig === '[s]' || sig === '[s,b]') {
-    const normalized = a[0].trim().toLowerCase();
-    if (!normalized) return fallback;
-    if (['true', 't', 'yes', 'y', 'on', '1'].includes(normalized)) return true;
-    if (['false', 'f', 'no', 'n', 'off', '0'].includes(normalized)) return false;
-  }
+  // ❌ BAD: Arbitrary 500ms delay "hoping" server is ready
+  await new Promise(resolve => setTimeout(resolve, 500));
+});
+
+// Test might fail if server takes >500ms to start
+// Test wastes 500ms even if server starts in 50ms
+```
+
+**✅ Event-Driven Testing (Fast & Reliable)**:
+```javascript
+beforeEach(async () => {
+  app = createApp({ dbPath });
+  server = app.listen(port);
   
-  return Boolean(a[0]); // default: Boolean() coercion
+  // ✅ GOOD: Wait for actual 'listening' event
+  await new Promise(resolve => {
+    server.on('listening', resolve);
+  });
+});
+
+// Test continues immediately when server is ready
+// Test never fails due to slow startup
+// Test completes in actual time needed, not arbitrary delay
+```
+
+**Where to Replace Timeouts with Events**:
+
+| Scenario | ❌ Timeout-Based | ✅ Event-Based |
+|----------|-----------------|----------------|
+| Server startup | `setTimeout(500)` | `server.on('listening')` |
+| Database ready | `setTimeout(200)` | `db.on('open')` |
+| HTTP request complete | `setTimeout(1000)` | `await fetch(...)` |
+| Background task done | `setTimeout(5000)` | `task.on('complete')` |
+| File written | `setTimeout(100)` | `await fs.promises.writeFile()` |
+| SSE connection | `setTimeout(300)` | `eventSource.onopen` |
+
+**Timeout Estimation for Unavoidable Waits**:
+
+When timeouts are truly necessary (polling, rate limits, debounce testing), estimate the **minimum safe timeout**:
+
+```javascript
+// ✅ GOOD: Minimal timeout with clear justification
+test('debounce waits 100ms before executing', async () => {
+  debouncedFn();
+  // Need 100ms + small margin for debounce logic
+  await new Promise(resolve => setTimeout(resolve, 120));
+  expect(executionCount).toBe(1);
+});
+
+// ❌ BAD: Excessive timeout "to be safe"
+test('debounce waits 100ms before executing', async () => {
+  debouncedFn();
+  // 1000ms is 10x the debounce time!
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  expect(executionCount).toBe(1);
 });
 ```
 
-**How `fp()` works**:
-- Wraps a function that receives `(args_array, signature_string)`
-- Signature format: `'[type1,type2,...]'` using abbreviated types
-  - `'n'` = number, `'s'` = string, `'b'` = boolean, `'a'` = array, `'o'` = object
-  - `'u'` = undefined, `'N'` = null, `'f'` = function
-- Args array has `.l` property set to length
-- Access arguments as `a[0]`, `a[1]`, etc.
+**Timeout Estimation Formula**:
 
-**Benefits**:
-- Eliminates imperative `if` chains for type checking
-- Declarative pattern matching on runtime signatures
-- Self-documenting: signatures show supported type combinations
-- Composable: Easy to add new type handlers
+```
+Safe Timeout = (Expected Duration × 1.5) + Fixed Overhead
 
-**Where to apply**:
-- ✅ `src/tools/analysis-run.js` - **COMPLETED**: `boolArg` refactored using `fp()`
-- ✅ `src/tools/analysis-run.js` - **COMPLETED**: `coerceArgValue` refactored using `fp()`
-- ✅ `src/tools/crawl-query-benchmark.js` - **COMPLETED**: `coerceValue` refactored using `fp()`
-- ✅ `src/ui/express/services/runnerFactory.js` - **COMPLETED**: `isTruthyFlag` refactored using `fp()`
-- ✅ `src/ui/express/routes/api.analysis-control.js` - **COMPLETED**: `isTruthyFlag` refactored using `fp()`
-- ✅ `src/crawler/PriorityScorer.js` - **COMPLETED**: `coerceNumeric` refactored using `fp()`
-- ✅ `src/config/ConfigManager.js` - **COMPLETED**: `coerceNumber` refactored using `fp()`
-
-**Pattern 8: Schema-Driven Configuration (★★★★☆ Priority)**
-
-Replace repetitive option validation in `src/crawl.js` (lines 170-220, 35 lines of boilerplate):
-
-```javascript
-// Before (crawl.js constructor)
-this.rateLimitMs = typeof options.rateLimitMs === 'number' ? options.rateLimitMs : (this.slowMode ? 1000 : 0);
-this.maxConcurrency = typeof options.maxConcurrency === 'number' ? options.maxConcurrency : (this.slowMode ? 1 : 5);
-this.maxPages = typeof options.maxPages === 'number' ? options.maxPages : Infinity;
-// ... 30+ more lines of identical pattern
-
-// After
-const { rateLimitMs, maxConcurrency, maxPages, ... } = buildOptions(options, crawlerOptionsSchema);
-Object.assign(this, { rateLimitMs, maxConcurrency, maxPages, ... });
+Examples:
+- Server startup (50-200ms typical): 200 × 1.5 + 50 = 350ms
+- Database query (10-50ms typical): 50 × 1.5 + 25 = 100ms
+- HTTP request (100-500ms typical): 500 × 1.5 + 100 = 850ms
+- Debounce (100ms): 100 × 1.5 + 20 = 170ms
 ```
 
-**Implementation**:
-```javascript
-// src/utils/optionsBuilder.js
-const { tof, is_defined } = require('lang-tools');
+**Benefits of Event-Driven Testing**:
+- ✅ **Faster**: Tests complete in actual time needed, not arbitrary delay
+- ✅ **Reliable**: No race conditions from "guessing" how long to wait
+- ✅ **Deterministic**: Tests pass/fail based on logic, not timing luck
+- ✅ **Clear**: Intent is obvious (waiting for specific event, not random delay)
 
-function buildOptions(input, schema) {
-  const result = {};
-  for (const [key, spec] of Object.entries(schema)) {
-    const value = input[key];
-    if (is_defined(value) && tof(value) === spec.type) {
-      result[key] = value;
-    } else if (tof(spec.default) === 'function') {
-      result[key] = spec.default(input);
-    } else {
-      result[key] = spec.default;
-    }
-  }
-  return result;
-}
+**When Timeouts Are Acceptable**:
+- Testing timeout behavior itself (e.g., "request fails after 5s")
+- Testing debounce/throttle logic that requires time-based delays
+- Polling intervals where event emission isn't available
+- Testing race conditions or timing-sensitive bugs
 
-// src/crawl.js
-const crawlerOptionsSchema = {
-  rateLimitMs: { type: 'number', default: (opts) => opts.slowMode ? 1000 : 0 },
-  maxConcurrency: { type: 'number', default: (opts) => opts.slowMode ? 1 : 5 },
-  maxPages: { type: 'number', default: Infinity },
-  // ... (condenses 35 lines to ~3 lines of schema)
-};
+**Audit Your Tests**:
+```bash
+# Find tests using setTimeout (candidates for event-based replacement)
+grep -r "setTimeout" src/**/__tests__/**/*.test.js
+
+# Look for common patterns to replace:
+# - server.listen() followed by setTimeout
+# - Database operations followed by setTimeout
+# - HTTP requests with setTimeout instead of await
 ```
-
-**Where to apply**:
-- `src/crawl.js` constructor (lines 170-220) - **Primary target**
-- `src/ui/express/buildArgs.js` (similar validation pattern)
-- `src/config/ConfigManager.js` (can extend existing coerceNumber pattern)
-
-**Pattern 9: Fluent Attribute Builder (★★★☆☆ Priority)**
-
-Replace repetitive conditional attribute construction in gazetteer ingestors:
-
-```javascript
-// Before (WikidataCountryIngestor.js lines 207-238, 32 lines)
-if (population != null) {
-  attributes.push({ kind: 'population', value: String(population), source: 'wikidata' });
-}
-if (area != null) {
-  attributes.push({ kind: 'area_km2', value: String(area), source: 'wikidata' });
-}
-// ... 8 more identical blocks
-
-// After (8 lines)
-const builder = new AttributeBuilder('wikidata');
-builder.add('population', population)
-       .add('area_km2', area)
-       .add('capital', capital)
-       .add('currency', currency?.currencyLabel?.value)
-       .add('gdp', gdp)
-       .add('gini', gini)
-       .add('hdi', hdi)
-       .add('timezone', timezone);
-const attributes = builder.build();
-```
-
-**Implementation**:
-```javascript
-// src/utils/attributeBuilder.js
-const { is_defined } = require('lang-tools');
-
-class AttributeBuilder {
-  constructor(source) {
-    this.source = source;
-    this.attributes = [];
-  }
-
-  add(kind, value) {
-    if (is_defined(value) && value !== '') {
-      this.attributes.push({ kind, value: String(value), source: this.source });
-    }
-    return this; // Enable chaining
-  }
-
-  build() {
-    return this.attributes;
-  }
-}
-
-module.exports = { AttributeBuilder };
-```
-
-**Where to apply**:
-- `src/crawler/gazetteer/ingestors/WikidataCountryIngestor.js` (lines 207-238) - **Primary target**
-- `src/crawler/gazetteer/ingestors/WikidataAdm1Ingestor.js` (similar pattern)
-- Any future ingestors with attribute construction
-
-## High-Impact Refactoring Targets
-
-### ✅ Completed: Functional Polymorphism Rollout (Pattern 7)
-
-**Status**: All 7 candidates refactored successfully (2025-10-05)
-
-**Completed Refactorings**:
-1. ✅ `src/tools/analysis-run.js` - `boolArg` (boolean coercion with fallback)
-2. ✅ `src/tools/analysis-run.js` - `coerceArgValue` (literal parsing + numeric)
-3. ✅ `src/tools/crawl-query-benchmark.js` - `coerceValue` (duplicate eliminated)
-4. ✅ `src/ui/express/services/runnerFactory.js` - `isTruthyFlag` (truthy detection)
-5. ✅ `src/ui/express/routes/api.analysis-control.js` - `isTruthyFlag` (duplicate)
-6. ✅ `src/crawler/PriorityScorer.js` - `coerceNumeric` (recursive unwrapping)
-7. ✅ `src/config/ConfigManager.js` - `coerceNumber` (null-returning variant)
-
-**Impact**:
-- **7 functions** transformed from imperative to functional polymorphic style
-- **5 files** updated with `fp` imports and comprehensive JSDoc
-- **Complexity reduction**: Eliminated 50+ lines of imperative if-statement chains
-- **Patterns demonstrated**:
-  - Simple type coercion (boolean, numeric, string)
-  - Literal string parsing ('true'→true, 'null'→null, etc.)
-  - Recursive object unwrapping (`.value` property traversal)
-  - Optional fallback parameters with signature variants
-- **Test results**: All 534 tests passing (117 of 121 suites)
-- **Code quality**: Self-documenting signatures, declarative dispatch, consistent style
-
-**Key Learnings**:
-- `fp()` works seamlessly with recursive functions (see `coerceNumeric`, `coerceNumber`)
-- Signature-based dispatch eliminates need for verbose type checking
-- Duplicate functions identified: `isTruthyFlag`×2, `coerceValue`/`coerceArgValue` (extraction opportunity)
-- Pattern applies well to argument parsing, config validation, type coercion utilities
-
-**Next Opportunities**:
-- Extract duplicate `isTruthyFlag` to shared utility in `src/utils/`
-- Consider extracting `coerceArgValue`/`coerceValue` to shared module
-- Document fp() pattern in `LANG_TOOLS_PATTERNS.md` with real-world examples
-- Apply to future polymorphic functions during feature development
 
 ---
 
-## High-Impact Refactoring Targets (Remaining)
+## 🎯 CURRENT FOCUS: Feature Development & Bug Fixes (October 2025)
 
-These files contain the highest concentration of patterns worth refactoring. Start here for maximum impact:
+**Status**: ✅ Core infrastructure complete - active feature development  
+**Next**: Continue with background tasks, UI improvements, and optimizations
 
-### Critical Path Files (Start Here)
+---
 
-**1. `src/crawl.js`** (1,817 lines)
-- **Lines 170-220**: 35 lines of repetitive `typeof` validation → Replace with schema-driven `buildOptions()`
-- **Impact**: Core orchestrator affects all crawl modes
-- **Pattern**: Schema-Driven Configuration (Pattern 7)
-- **Estimated reduction**: 35 lines → 3 lines of schema definition
+## 🤖 AI Agent Guide: Large-Scale Refactoring
 
-**2. `src/crawler/gazetteer/ingestors/WikidataCountryIngestor.js`** (490 lines)
-- **Lines 207-238**: 32 lines of attribute building → Replace with `AttributeBuilder`
-- **Lines 129, 135, 141, 157**: 4× `forEach` → `each()`
-- **Lines 72, 92, 164**: 3× `typeof` → `tof()`
-- **Lines 178, 196, 204, 205, 220, 222**: 6× `Array.isArray()` → `is_array()`
-- **Lines 147-149**: QID extraction with `.map().filter()` → `compact()`
-- **Impact**: Primary gazetteer ingestor, high visibility
-- **Patterns**: All 4 individual patterns + Fluent Builder (Pattern 8) + Pipeline (Pattern 5)
-- **Estimated reduction**: 13 individual fixes + 32→8 lines (builder) + 3→1 lines (pipeline) = ~40 line reduction
+This section provides explicit guidance for AI agents working on major refactoring projects, encouraging autonomous decision-making and systematic progress toward a clean codebase.
 
-**3. `src/ui/public/index/analysisHandlers.js`** (505 lines)
-- **Lines 122, 190-192**: Multiple nullish coalescing chains → `numberOr()`, `firstDefined()`
-- **Impact**: Analysis UI state management
-- **Pattern**: Nullish Coalescing (Pattern 6)
-- **Estimated reduction**: Improves readability significantly
+**⚠️ CRITICAL: Tests Are Mandatory for All Code Changes**
 
-### High-Opportunity Files (Next Priority)
+Before implementing any feature, refactoring, or bug fix:
+1. ✅ **Search for existing tests** that cover the code you'll modify
+2. ✅ **Plan new tests** for functionality you'll add
+3. ✅ **Write tests alongside code** (not after implementation)
+4. ✅ **Verify all tests pass** before marking work complete
 
-**4. `src/crawler/gazetteer/populate-gazetteer.js`**
-- **6 occurrences**: `.map().filter()` chains → `compact()`
-- **Pattern**: Data Transformation Pipelines (Pattern 5)
+**If you create a new file, create a test file. If you modify an endpoint, update/create tests. If you can't mark tests complete, the feature isn't complete.**
 
-**5. `src/crawler/IntelligentPlanRunner.js`**
-- **2 occurrences**: `.map().filter()` chains → `compact()`
-- **Pattern**: Data Transformation Pipelines (Pattern 5)
+### Testing Workflow: "Tests Are Part of Implementation"
 
-**6. `src/analysis/ProblemClusteringService.js`**
-- **3 occurrences**: `.map().filter()` chains → `compact()`
-- **Pattern**: Data Transformation Pipelines (Pattern 5)
+**CRITICAL RULE**: Tests are not a separate phase after implementation. They are an integral part of feature development.
 
-**7. `src/crawler/robots.js`**
-- **4 occurrences**: `.map().filter()` chains → `compact()`
-- **Pattern**: Data Transformation Pipelines (Pattern 5)
+**When to Check/Update Tests** (MANDATORY for ALL code changes):
 
-**8. `src/ui/public/index/state/reducers.js`**
-- **Multiple occurrences**: Nullish coalescing chains → `firstDefined()`, `numberOr()`
-- **Pattern**: Nullish Coalescing (Pattern 6)
+```
+✅ BEFORE starting implementation:
+   - Search for existing tests related to code you'll modify
+   - Understand current test patterns and coverage
+   - Plan what new tests will be needed
 
-**9. `src/ui/public/index/metricsView.js`** (~600 lines)
-- **Multiple occurrences**: Nullish coalescing chains
-- **Pattern**: Nullish Coalescing (Pattern 6)
+✅ DURING implementation:
+   - Write tests alongside code (not after)
+   - For new APIs: Create API integration tests
+   - For new classes: Create unit tests
+   - For new services: Create service tests with mocks
 
-**10. `src/ui/public/index/jobsAndResumeManager.js`** (568 lines)
-- **Multiple occurrences**: Nullish coalescing chains
-- **Pattern**: Nullish Coalescing (Pattern 6)
-
-### Already Exemplary (Reference These)
-
-These files already use lang-tools patterns consistently and serve as implementation references:
-
-- `src/ui/public/index/sseHandlers.js` (558 lines) - Uses `each`, `is_defined`, `tof` with dependency injection
-- `src/config/ConfigManager.js` (lines 1-81) - Uses `tof`, `clone`, `is_array` with deepMerge utility
-- `src/ui/public/index/` modules (11 files) - Consistently use lang-tools patterns throughout
-
-## Refactoring Implementation Workflow
-
-Follow this systematic approach for each file:
-
-### Phase 1: Utility Foundation (Week 1)
-
-1. **Create core utility modules**:
-   ```powershell
-   # Create utility files with comprehensive tests
-   New-Item -Path "src/utils/pipelines.js" -ItemType File
-   New-Item -Path "src/utils/pipelines.test.js" -ItemType File
-   New-Item -Path "src/utils/objectHelpers.js" -ItemType File
-   New-Item -Path "src/utils/objectHelpers.test.js" -ItemType File
-   New-Item -Path "src/utils/attributeBuilder.js" -ItemType File
-   New-Item -Path "src/utils/attributeBuilder.test.js" -ItemType File
-   New-Item -Path "src/utils/optionsBuilder.js" -ItemType File
-   New-Item -Path "src/utils/optionsBuilder.test.js" -ItemType File
-   ```
-
-2. **Implement utilities with full test coverage**:
-   - Each utility must have 90%+ test coverage
-   - Test edge cases (null, undefined, empty arrays, type mismatches)
-   - Include performance benchmarks for `compact()` vs `.map().filter()`
-
-3. **Run utility tests**:
-   ```powershell
-   npm test -- src/utils/pipelines.test.js src/utils/objectHelpers.test.js
-   ```
-
-### Phase 2: Pilot Refactor (Week 1-2)
-
-4. **Choose pilot file**: `WikidataCountryIngestor.js` (contains all patterns)
-
-5. **Before refactoring**:
-   - Run full test suite to establish baseline: `npm test`
-   - Create a feature branch: `git checkout -b refactor/lang-tools-pilot`
-   - Document current line count and complexity metrics
-
-6. **Apply patterns systematically**:
-   - **Pass 1**: Individual replacements (`forEach` → `each`, `typeof` → `tof`, etc.)
-   - **Pass 2**: Pipeline simplification (`.map().filter()` → `compact()`)
-   - **Pass 3**: Architectural patterns (`AttributeBuilder` for lines 207-238)
-   - Run tests after each pass: `npm test -- WikidataCountryIngestor.test.js`
-
-7. **Validate pilot refactor**:
-   ```powershell
-   # Run full test suite
-   npm test
-   
-   # Verify no regressions in gazetteer tests
-   npm test -- --testPathPattern=gazetteer
-   
-   # Check for syntax errors
-   node --check src/crawler/gazetteer/ingestors/WikidataCountryIngestor.js
-   ```
-
-8. **Measure impact**:
-   - Compare line counts (before/after)
-   - Measure cyclomatic complexity reduction
-   - Document readability improvements
-
-### Phase 3: Core Infrastructure (Week 2-3)
-
-9. **Refactor `src/crawl.js` constructor**:
-   - **Target**: Lines 170-220 (35 lines of validation)
-   - **Pattern**: Schema-Driven Configuration
-   - **Steps**:
-     1. Define `crawlerOptionsSchema` with all 30+ options
-     2. Replace constructor validation block with `buildOptions()` call
-     3. Run crawler integration tests: `npm test -- --testPathPattern=crawl`
-     4. Test all crawl modes (standard, intelligent, gazetteer variants)
-
-10. **Run comprehensive crawler tests**:
-    ```powershell
-    # Core crawler tests
-    npm test -- src/crawler/__tests__/
-    
-    # Integration tests
-    npm test -- ui/__tests__/crawl.e2e.http.test.js
-    npm test -- ui/__tests__/crawl.pending-and-sse.test.js
-    ```
-
-### Phase 4: Systematic Rollout (Week 3-5)
-
-11. **Process remaining files by priority**:
-    - Follow the "High-Impact Refactoring Targets" list
-    - Apply patterns in order: individual replacements → pipelines → architectural
-    - Commit after each file: `git commit -m "refactor(lang-tools): apply patterns to <filename>"`
-
-12. **After each file refactor**:
-    ```powershell
-    # Syntax check
-    node --check <filepath>
-    
-    # Run related tests
-    npm test -- <test-pattern>
-    
-    # If UI file, verify rendering
-    npm run gui
-    # Navigate to affected UI section, verify functionality
-    ```
-
-### Phase 5: Validation & Documentation (Week 5)
-
-13. **Final validation**:
-    ```powershell
-    # Full test suite
-    npm test
-    
-    # E2E tests if available
-    npm test -- --testNamePattern=e2e
-    
-    # Performance regression check
-    npm run benchmark
-    ```
-
-14. **Update documentation**:
-    - Amend `AGENTS.md` "Current Baseline" section
-    - Update `docs/LANG_TOOLS_PATTERNS.md` with real-world examples
-    - Record metrics (lines reduced, patterns applied, test coverage)
-
-## Critical Guidelines
-
-### Pattern Application Rules
-
-1. **Never mix patterns in a single commit**: Apply individual replacements separately from architectural changes for reviewability.
-
-2. **Test continuously**: Run `npm test` after every file modification. If tests fail, isolate the issue before proceeding.
-
-3. **Preserve behavior exactly**: Refactoring must not change program semantics. Use tests to verify equivalence.
-
-4. **Handle edge cases**: When replacing `forEach` with `each`, verify the original didn't rely on break/return behavior. **Special case**: Do NOT use `each()` with URLSearchParams or other iterable objects that have custom `.forEach()` methods - `each()` will iterate over the object's properties (methods) instead of entries. Keep native `.forEach()` for these cases.
-   ```javascript
-   // ❌ WRONG - iterates over URLSearchParams methods
-   each(urlObj.searchParams, (value, key) => { ... });
-   
-   // ✅ CORRECT - use native forEach for iterables
-   urlObj.searchParams.forEach((value, key) => { ... });
-   ```
-
-5. **Import consistently — CRITICAL**: Always import from `'lang-tools'` (NOT `'@metabench/lang-mini'` or the full package name):
-   ```javascript
-   // ✅ CORRECT - Use this package name
-   const { each, is_array, is_defined, tof, fp, mfp } = require('lang-tools');
-   
-   // ❌ WRONG - These will work but are not the convention
-   const { each } = require('@metabench/lang-tools');
-   const { fp } = require('lang-mini');
-   const { fp } = require('@metabench/lang-mini');
-   ```
-   **Common Error**: On 2025-10-05, during Phase 4 refactoring, agent mistakenly used `'@metabench/lang-tools'` in 4 files (gazetteer.progress.js, urlPolicy.js, ProblemClusteringService.js, OsmHttpClient.js), causing 48 test suite failures. The package name in this project is `'lang-tools'` (aliased in package.json from `@metabench/lang-tools`). Always use the short form.
-   
-   **Key Clarification**: `lang-tools` includes `lang-mini` functionality. Import `fp`, `mfp`, `each`, `tof`, etc. directly from `'lang-tools'` - no need for separate imports.
-
-6. **Document intent**: Add JSDoc comments to new utility functions explaining purpose, parameters, and return values.
-
-### Risk Management
-
-**High-Risk Refactorings** (require extra scrutiny):
-- `src/crawl.js` - Core orchestrator affects all crawl modes
-- `src/ui/express/server.js` - Server initialization and routing
-- `src/db/sqlite/NewsDatabase.js` - Database access layer
-
-**Mitigation strategies**:
-- Create comprehensive integration tests before refactoring
-- Refactor in small, reversible commits
-- Keep original code commented during validation phase
-- Run full test suite + manual smoke tests before merging
-
-**Rollback procedure**:
-```powershell
-# If refactor causes issues
-git diff HEAD~1 <filepath>  # Review changes
-git checkout HEAD~1 -- <filepath>  # Revert specific file
-npm test  # Verify tests pass
-git commit -m "revert: rollback <filename> refactor due to <issue>"
+✅ AFTER implementation (BEFORE marking complete):
+   - Run affected tests to verify nothing broke
+   - Create tests for any new functionality
+   - Update tests if behavior changed
+   - Verify all tests pass
+   - ONLY THEN mark work as complete
 ```
 
-### Performance Considerations
+**Test-First Development Pattern**:
 
-**When to optimize**:
-- `compact()` performs better than `.map().filter()` for large arrays (>1000 elements)
-- `each()` has negligible overhead vs `forEach` (<1% in benchmarks)
-- `tof()` is identical performance to `typeof`
+```
+FOR NEW FEATURES:
 
-**Benchmark before refactoring hot paths**:
+1. Check existing test coverage
+   - grep_search for test files: **/__tests__/**<feature>*.test.js
+   - Read existing tests to understand patterns
+   - Identify gaps in coverage
+
+2. Design tests FIRST (before implementation)
+   - What APIs/methods will be added?
+   - What behavior needs verification?
+   - What edge cases must be handled?
+
+3. Create test stubs/structure
+   - Create test file with describe blocks
+   - Write test case names (can be empty)
+   - This clarifies what you're building
+
+4. Implement feature incrementally
+   - Write code to make one test pass
+   - Run that test
+   - Move to next test
+   - Keep tests passing throughout
+
+5. Complete implementation
+   - All planned tests passing
+   - Coverage is comprehensive
+   - Edge cases handled
+   - NOW feature is complete
+```
+
+**Test Creation Checklist** (Use this for EVERY feature/change):
+
+```
+□ Searched for existing tests that might be affected
+□ Created/updated unit tests for new/modified classes
+□ Created/updated API tests for new/modified endpoints  
+□ Created/updated integration tests for cross-component features
+□ Verified tests pass locally (npm test or npm run test:file)
+□ Tests use mocking where appropriate (see Mocking Strategy below)
+□ Test files follow project naming conventions (__tests__/*.test.js)
+□ Tests are documented with clear descriptions
+```
+
+**Mocking Strategy**: When and How to Mock
+
+**✅ PREFER MOCKING FOR**:
+- **Unit tests** - Testing single class/function in isolation
+- **External dependencies** - Databases, APIs, file systems
+- **Time-consuming operations** - Network requests, large computations
+- **Non-deterministic behavior** - Random values, timestamps, external state
+- **Error scenarios** - Simulating failures that are hard to trigger
+
+**❌ AVOID MOCKING FOR**:
+- **Integration tests** - Testing actual interaction between components
+- **Simple utilities** - Pure functions with no side effects
+- **Critical paths** - Core business logic that must work correctly
+- **When real thing is fast** - No performance benefit from mocking
+
+**Mocking Patterns**:
+
 ```javascript
-// Add to src/utils/__tests__/pipelines.bench.js
-const { compact } = require('../pipelines');
+// ✅ GOOD: Mock external database for unit test
+describe('AnalysisTask', () => {
+  it('should count articles needing analysis', async () => {
+    const mockDb = {
+      prepare: jest.fn(() => ({
+        get: jest.fn(() => ({ count: 10 }))
+      }))
+    };
+    
+    const task = new AnalysisTask({ db: mockDb, config: {} });
+    // Test logic without real database
+  });
+});
 
-console.time('map-filter');
-for (let i = 0; i < 100000; i++) {
-  largeArray.map(x => x?.value).filter(Boolean);
-}
-console.timeEnd('map-filter');
+// ✅ GOOD: Mock background task manager for API test
+describe('POST /api/analysis/start-background', () => {
+  it('should handle missing backgroundTaskManager', async () => {
+    // Don't initialize backgroundTaskManager
+    const app = createApp({ dbPath, skipBackgroundTasks: true });
+    
+    const res = await request(app)
+      .post('/api/analysis/start-background')
+      .expect(503);
+    // Tests error handling without full system
+  });
+});
 
-console.time('compact');
-for (let i = 0; i < 100000; i++) {
-  compact(largeArray, x => x?.value);
-}
-console.timeEnd('compact');
+// ❌ BAD: Real database when mock would work
+describe('AnalysisTask', () => {
+  beforeEach(() => {
+    // Creates temp DB, initializes schema, seeds data
+    // Slow, fragile, unnecessary for unit test
+    db = createRealDatabase();
+  });
+  
+  it('should parse config correctly', () => {
+    const task = new AnalysisTask({ db, config: { version: 2 } });
+    expect(task.analysisVersion).toBe(2);
+    // Test doesn't use DB, but we initialized it anyway
+  });
+});
+
+// ✅ GOOD: Real database for integration test
+describe('POST /api/analysis/start', () => {
+  beforeEach(() => {
+    // Integration test NEEDS real DB to verify end-to-end flow
+    dbPath = createTempDb();
+    app = createApp({ dbPath });
+  });
+  
+  it('should process articles and store results', async () => {
+    seedArticles(db, 10);
+    await request(app).post('/api/analysis/start').expect(200);
+    
+    // Verify actual database state
+    const analyzed = db.prepare('SELECT * FROM articles WHERE analysis IS NOT NULL').all();
+    expect(analyzed.length).toBeGreaterThan(0);
+  });
+});
 ```
 
-## Success Metrics
+**Risk Assessment for Mocking**:
 
-Track progress with these quantitative measures:
+```
+🟢 RISK-FREE MOCKING (Always safe):
+- Database connections in unit tests
+- HTTP clients in unit tests
+- File system operations in unit tests
+- External service APIs
+- Time/date functions (Date.now, setTimeout)
+- Random number generators
 
-### Code Metrics
-- **Lines of code reduction**: Target 10-15% reduction across refactored files
-- **Cyclomatic complexity**: Reduce by 20%+ in files with schema builders
-- **Test coverage**: Maintain or increase (currently ~85%)
+🟡 MODERATE RISK (Mock carefully):
+- Core business logic (might miss integration bugs)
+- Internal service calls (might diverge from real behavior)
+- State management (might miss race conditions)
 
-### Pattern Adoption
-- **Individual patterns**: 231+ opportunities → track completion %
-- **Architectural patterns**: 6 patterns → track implementation status
-- **New utilities**: 4 utility modules created with 90%+ coverage
+🔴 HIGH RISK (Avoid mocking):
+- Critical algorithm implementations
+- Security/auth logic
+- Data validation logic
+- Error handling paths that must work in production
+```
 
-### Quality Indicators
-- **Zero regressions**: All existing tests must pass
-- **Zero new bugs**: No bug reports related to refactored code for 2 weeks post-merge
-- **Improved readability**: Peer review confirms code is more navigable
+**When Tests Fail During Implementation**:
 
-### Tracking Template
+```
+CRITICAL: Do NOT mark feature complete if tests are failing
 
-Update this section weekly during refactoring:
+1. Examine test failure output carefully
+   - What test failed?
+   - What was expected vs actual?
+   - Is it your new code or existing code?
 
+2. Debug the failure
+   - Is your implementation wrong?
+   - Is the test wrong?
+   - Did you break existing functionality?
+
+3. Fix the root cause
+   - Update implementation if logic is wrong
+   - Update test if expectations changed
+   - Revert changes if you broke existing features
+
+4. Verify fix
+   - Run the specific test that failed
+   - Run full test suite to check for ripple effects
+   - ALL tests must pass
+
+5. ONLY THEN continue or mark complete
+```
+
+**Why This Matters**:
+
+In the recent background task integration:
+- ✅ Implemented AnalysisTask class (330 lines)
+- ✅ Added /api/analysis/start-background endpoint
+- ✅ Registered with BackgroundTaskManager
+- ✅ Documented in ANALYSIS_AS_BACKGROUND_TASK.md
+- ❌ Did NOT check existing tests
+- ❌ Did NOT create tests for new functionality
+- ❌ User had to request: "Review tests to ensure they cover what we have now"
+
+**What Should Have Happened**:
+1. Implement AnalysisTask class → **IMMEDIATELY create AnalysisTask.test.js**
+2. Add new API endpoint → **IMMEDIATELY create tests in analysis.new-apis.test.js**
+3. Integrate with BackgroundTaskManager → **IMMEDIATELY verify existing tests pass**
+4. Run `npm run test:file "AnalysisTask"` → **BEFORE marking work complete**
+5. User sees: "Implemented AnalysisTask + tests (all passing)" → **No follow-up needed**
+
+**Rule of Thumb**: If you created a new file, there should be a corresponding test file. If you modified an endpoint, there should be tests covering that endpoint. If you can't mark tests as complete, the feature isn't complete.
+
+### Documentation Hygiene: "Code First, Document Last"
+
+**CRITICAL RULE**: AGENTS.md is for **CURRENT** and **FUTURE** work, not historical archives.
+
+**When a major initiative completes**:
+1. ✅ Mark COMPLETED phases with completion date
+2. ❌ **DELETE** implementation details for COMPLETED phases only
+3. ✅ **KEEP** incomplete phases that guide future work
+4. ✅ **KEEP** high-level principles, patterns, or lessons learned
+5. ✅ Move detailed retrospectives to separate docs (e.g., `docs/REFACTORING_RETROSPECTIVE.md`)
+
+**Example of what to DELETE**:
+- ❌ Completed phase implementation checklists (Phase 1-6 all marked ✅)
+- ❌ "High-Impact Refactoring Targets" lists when refactoring is done
+- ❌ Specific line numbers and code examples for completed work
+- ❌ Weekly progress tracking for finished initiatives
+- ❌ Completed task metrics and status updates
+
+**Example of what to KEEP**:
+- ✅ Incomplete phases and pending tasks (Phase 3-4 marked ⏳)
+- ✅ Roadmaps with future work planned
+- ✅ AI agent decision-making frameworks (🟢/🟡/🔴)
+- ✅ Reusable refactoring patterns (Read-First, Match-Existing)
+- ✅ Lessons learned about architectural patterns
+- ✅ Tools and workflows for future initiatives
+- ✅ Current priorities and active work
+
+**Critical Distinction**:
+- "Deliverables from Performance Investigation" with Phases 1-2 ✅ COMPLETE and Phases 3-4 ⏳ PLANNED → **KEEP** (active roadmap)
+- "Lang-Tools Refactoring Phases 1-6" all marked ✅ COMPLETE → **DELETE** (no future work planned)
+
+**Why This Matters**:
+- AGENTS.md becomes unusable when bloated with historical content
+- Agents waste tokens reading completed work instead of current priorities
+- User request ambiguity ("update AGENTS.md to reflect this") defaults to additive approach
+- **Solution**: Explicitly delete completed details, don't just mark them complete
+
+**Root Cause Analysis** (October 2025):
+When Lang-Tools Refactoring completed, agent added "COMPLETE" markers but left 600+ lines of Phase 1-6 details intact. User request "update AGENTS.md to reflect completion" was interpreted as "add status" not "remove content." This created documentation debt that required explicit cleanup request.
+
+---
+
+### Communication Guidelines: Concise Summaries
+
+**CRITICAL: Keep Status Updates and Summaries Brief**
+
+When completing tasks or providing updates, use **minimal, focused communication**:
+
+**✅ GOOD: Concise Summary (1-2 sentences)**
+```
+Updated AGENTS.md with timeout optimization guidelines. Agents will now use 2-4s 
+timeouts for rapid iteration instead of 10-60s, enabling 2-3x faster development.
+```
+
+**❌ BAD: Excessive Summary (multi-section, bullet-heavy)**
+```
+## Summary of Changes ✅
+
+### 1. Added "Timeout Optimization Strategy"
+**Key Guidelines**:
+- ✅ PREFERRED: 2-4 seconds
+- ⚠️ ACCEPTABLE: 5-8 seconds
+[...50+ more lines...]
+
+### 2. Added "Event-Driven Testing"
+[...detailed breakdown...]
+
+### 3. Performance Improvement Demonstrated
+[...before/after comparison...]
+```
+
+**Length Guidelines**:
+- ✅ **Simple tasks**: 1 sentence ("Created server.js wrapper in root directory.")
+- ✅ **Moderate tasks**: 1-2 sentences ("Fixed npm argument forwarding issue. Created gui:detached script that accepts timeout as positional argument.")
+- ✅ **Complex tasks**: 1-2 short paragraphs (3-5 sentences max)
+- ❌ **Never**: Multi-section summaries with headers, bullet lists, tables, or "before/after" comparisons
+
+**When to Elaborate**:
+- User explicitly asks for details ("explain what you did")
+- Debugging complex issues that need context
+- Documenting breaking changes or architectural decisions
+- **NOT** for routine task completion
+
+**Rule of Thumb**: If your summary has markdown headers (##, ###), it's too long.
+
+---
+
+### Core Philosophy: "Read-First, Match-Existing"
+
+When approaching refactoring work, **always follow this pattern**:
+
+1. **📖 Read Existing Code FIRST** - Fully understand current architecture before designing changes
+2. **🔍 Assess If Refactoring Needed** - Don't refactor code that's already well-architected
+3. **🎯 Design to Match Existing Contracts** - Fit your changes to existing patterns, don't force new ones
+4. **✅ Test in Isolation** - Create and test services independently before integration
+5. **🔄 Integrate Incrementally** - One method/endpoint at a time, tests passing at each step
+6. **🧹 Clean Up** - Delete dead code only after proving replacement works
+
+### When to Refactor vs When to Leave Alone
+
+**DO refactor when**:
+- ❌ Routes contain 300+ lines of business logic that belongs in services
+- ❌ Repeated code patterns across multiple files (DRY violation)
+- ❌ Tight coupling makes testing difficult (can't test without full system)
+- ❌ God classes mixing multiple unrelated responsibilities
+- ❌ Error handling is inconsistent or missing
+
+**DON'T refactor when**:
+- ✅ Code is already well-factored (thin controllers, clean helpers)
+- ✅ Coordinator classes properly delegate to services (length is acceptable)
+- ✅ Tests are passing and code is maintainable
+- ✅ Patterns are consistent across the codebase
+- ✅ Your proposed service doesn't match existing architecture
+
+**Critical Rule**: If you create a service and discover it doesn't fit the existing architecture, **delete it** rather than forcing integration. The mistake in this project: created AnalysisCoordinationService without reading api.analysis-control.js first. Solution: Deleted service, read existing code, discovered it was already well-factored.
+
+### Large-Scale Refactoring Workflow (AI Agent Instructions)
+
+When given a large refactoring task (e.g., "refactor 10 routes to use services"), follow this systematic workflow:
+
+#### Phase 1: Assessment (Read Everything First)
+
+```
+GOAL: Understand current state before making any changes
+
+1. Read all files in scope (don't skip this!)
+   - Examine structure, patterns, dependencies
+   - Note what's already clean vs what needs work
+   - Document existing architectural patterns
+
+2. Create assessment summary
+   - Files that need refactoring: [list with reasons]
+   - Files already clean: [list - NO WORK NEEDED]
+   - Architectural patterns to match: [document]
+
+3. Make go/no-go decisions
+   - If file already clean → SKIP IT (mark complete)
+   - If file needs work → Add to work queue
+   - If unclear → Read more code until clear
+```
+
+**Example Assessment Output**:
 ```markdown
-### Week [N] Progress (YYYY-MM-DD)
-
-**Completed**:
-- [ ] Utilities created: pipelines.js, objectHelpers.js, optionsBuilder.js, attributeBuilder.js
-- [ ] Pilot file refactored: WikidataCountryIngestor.js (490 → 450 lines, -8%)
-- [ ] Core file refactored: crawl.js constructor (35 → 3 lines, -91%)
-
-**Patterns Applied**:
-- Individual: [X]/231 (Y%)
-- Pipelines: [X]/26 files
-- Nullish coalescing: [X]/30 files
-- Schema builders: [X]/3 files
-- Attribute builders: [X]/2 files
-
-**Tests**:
-- All tests passing: ✓/✗
-- New utility tests: X/Y passing
-- Coverage: [X]% (baseline: 85%)
-
-**Blockers**: None / [Description]
-
-**Next Week**: [Focus areas]
+Assessment: api.problems.js (52 lines)
+├── Structure: Thin controller, delegates to fetchProblems()
+├── Error handling: Clean InternalServerError usage
+├── Tests: Passing
+└── DECISION: ✅ Already clean - NO REFACTORING NEEDED
 ```
 
-## Maintaining This Document
+#### Phase 2: Autonomous Execution (Work Without Asking)
 
-- Update "High-Impact Refactoring Targets" as files are refactored (mark complete with ✓)
-- Amend "Success Metrics" section weekly during active refactoring
-- Add new architectural patterns as they emerge during implementation
-- Link to new documentation in `docs/` for detailed pattern explanations
-- Archive completed refactoring sections to `docs/LANG_TOOLS_RETROSPECTIVE.md` after Phase 5
+**For AI Agents: You have permission to proceed autonomously through refactoring work. DO NOT ask for approval at each step unless there's an essential architectural decision.**
 
-## Reference Documentation
+```
+GOAL: Make steady progress with minimal human interruption
 
-- **Individual patterns**: `docs/LANG_TOOLS_PATTERNS.md` (231+ opportunities identified)
-- **Architectural patterns**: `docs/LANG_TOOLS_ARCHITECTURAL_PATTERNS.md` (6 patterns with full examples)
-- **Implementation roadmap**: `docs/LANG_TOOLS_ACTION_PLAN.md` (5-week phased plan)
-- **Scanning tool**: `scripts/scan-lang-tools-patterns.js` (automated pattern detection)
-- **Lang-tools API**: `node_modules/@metabench/lang-tools/README.md`
+FOR EACH FILE IN WORK QUEUE:
+
+1. Design service (if needed)
+   - Match existing architectural patterns
+   - Identify clear responsibility boundaries
+   - Plan incremental integration path
+
+2. Create service + comprehensive tests (MANDATORY)
+   - Write service implementation
+   - Write 20-40 unit tests (high coverage)
+   - Use mocking for external dependencies (DB, network, file system)
+   - Run service tests in isolation
+   - ALL TESTS MUST PASS before proceeding
+
+3. Check existing tests that might be affected
+   - Search for tests covering code you're modifying
+   - Read tests to understand expected behavior
+   - Identify tests that will need updates
+
+4. Integrate service incrementally
+   - ONE method at a time (not all at once)
+   - Update affected tests for each method
+   - Run full test suite after each integration
+   - If tests fail → fix immediately, don't continue
+   - Commit after each successful integration
+
+5. Delete old code (only after proving replacement)
+   - Comment out old code first
+   - Run tests with new code
+   - If tests pass → delete commented code
+   - If tests fail → restore old code, debug new code
+
+6. Verify test coverage is complete
+   - New service has unit tests ✓
+   - Modified endpoints have API tests ✓
+   - Integration scenarios covered ✓
+   - All tests passing ✓
+
+7. Move to next file
+   - Don't wait for approval
+   - Continue systematically through work queue
+```
+
+**Testing Strategy During Large Refactoring**:
+
+```
+WHEN TO RUN TESTS:
+
+✅ After creating new service (isolated unit tests)
+✅ After integrating first method (full test suite)
+✅ After completing each file (full test suite)
+✅ After completing all work (full test suite + manual smoke test)
+
+❌ NOT after every single line change
+❌ NOT after every small edit
+❌ NOT excessively (trust your unit tests)
+
+FOCUS ON: Steady progress with checkpoint validation
+
+CRITICAL: User will Ctrl+C if tests hang or take too long
+- Tests should complete in ~70 seconds
+- If tests appear to hang, user will interrupt
+- Check test-timing-*.log files for results instead of re-running
+
+TIMEOUT SELECTION FOR MANUAL TESTING:
+- ✅ Use 2-4 second timeouts for rapid iteration (5-10 tests/minute)
+- ✅ Server startup verification: 2-3 seconds is sufficient
+- ✅ Feature checks: 2-5 seconds allows fast feedback
+- ❌ Avoid 10+ second timeouts unless truly necessary
+- ❌ Never use 20-60 second timeouts for simple checks
+
+MOCKING STRATEGY:
+✅ Mock database connections in unit tests (fast, isolated)
+✅ Mock external APIs in unit tests (no network dependency)
+✅ Mock file system in unit tests (no side effects)
+✅ Use real DB in integration tests (verify actual behavior)
+```
+
+#### Phase 3: Batch Testing & Cleanup
+
+```
+GOAL: Validate all changes work together, clean up artifacts
+
+1. Run full test suite
+   - npm test (all tests)
+   - Review any failures
+   - Fix failures systematically
+
+2. Verify integration
+   - Check imports are correct
+   - Verify no unused code remains
+   - Confirm error handling works
+
+3. Update documentation (only at end)
+   - Update AGENTS.md with completion status
+   - Document any new patterns introduced
+   - Record metrics (lines reduced, tests added)
+
+4. Commit final changes
+   - One commit per completed file/service
+   - Clear commit messages
+   - Don't ask before committing
+```
+
+#### Autonomous Test Fixing Workflow
+
+**CRITICAL**: When tests fail, work autonomously with minimal user interaction.
+
+```
+Fix tests systematically without status updates:
+
+1. Run tests → Analyze ALL failures at once
+2. Fix issues silently (test bugs vs implementation bugs)
+3. Run tests again → Repeat until all pass
+4. Report ONCE: "Fixed N tests. Issues: [brief list]. All passing."
+
+REPORT ONLY WHEN:
+✅ All tests passing (1 paragraph summary)
+✅ Genuinely blocked (specific question)
+✅ Critical design flaw needing decision
+
+DO NOT REPORT:
+❌ After each individual fix
+❌ Progress updates mid-work
+❌ Multi-paragraph explanations
+❌ Detailed failure analysis
+```
+
+### Test Console Output Guidelines
+
+**CRITICAL**: Keep test console output minimal (~100 lines max, ideally <50).
+
+**Console Truncation System** (jest.setup.js):
+- Wraps console.log/warn/error in beforeEach
+- Applies DROP_PATTERNS regex filters to suppress common noise
+- Limits per-test output: 15 lines max, 800 chars max, 150 chars per line
+- **If tests produce >100 lines**: Add patterns to DROP_PATTERNS or reduce verbosity
+
+**Current Configuration** (as of October 2025):
+```javascript
+MAX_LINES: 15              // Drop everything after 15 lines per test
+MAX_LINE_LEN: 150          // Truncate lines longer than 150 chars
+MAX_TOTAL_CHARS: 800       // Drop output if total exceeds 800 chars
+
+DROP_PATTERNS: [
+  /^\[AnalysisTask\]/i,              // Background task logs
+  /^\[BackgroundTaskManager\]/i,     // Task manager logs
+  /Could not count articles/i,       // Known AnalysisTask warnings
+  /at .* \(.*:\d+:\d+\)$/,          // Stack trace lines
+  /at Layer\.handleRequest/,         // Express middleware traces
+  // ... 30+ more patterns
+]
+```
+
+**Writing Test-Friendly Code**:
+```javascript
+✅ GOOD: Pass verbose: false to suppress server logs
+const app = createApp({ dbPath, verbose: false });
+
+✅ GOOD: Use silent: true for background tasks
+const manager = new BackgroundTaskManager({ db, silent: true });
+
+✅ GOOD: Wrap noisy operations in tests
+if (!process.env.JEST_WORKER_ID) {
+  console.log('[AnalysisTask] Processing...');
+}
+
+❌ BAD: Unconditional logging in libraries
+console.warn('[AnalysisTask] Could not count articles');  // Appears in every test
+
+❌ BAD: Full stack traces without necessity
+console.error('Error:', error);  // Logs 50+ lines of Express internals
+```
+
+**When Tests Are Too Noisy**:
+1. **Check DROP_PATTERNS first**: Add patterns to jest.setup.js
+2. **Add verbose: false to tests**: Suppress server/manager logs at source
+3. **Reduce limits if needed**: Lower MAX_LINES or MAX_TOTAL_CHARS
+4. **Test the fix**: Run test to verify <100 lines output
+
+**Example Pattern Additions**:
+```javascript
+// Add to DROP_PATTERNS in jest.setup.js
+/Your noisy message here/i,                 // Exact message
+/^\[YourClassName\]/i,                      // All logs from class
+/specific error text/i,                     // Specific errors
+/at YourModule\./,                          // Stack traces from module
+```
+
+**Why This Matters**:
+- User complained: "tests outputted far too much to the console"
+- Excessive output makes test results unreadable
+- Developers need to see actual failures, not noise
+- 500+ lines of output per test run is unacceptable
+- Target: <100 lines for full test suite (ideally <50)
+
+### Decision-Making Framework for AI Agents
+
+When faced with decisions during refactoring, use this framework:
+
+**🟢 PROCEED AUTONOMOUSLY (No approval needed)**:
+- Creating services that match existing patterns
+- Writing comprehensive unit tests
+- Integrating code incrementally with tests passing
+- Fixing test failures caused by your changes
+- Deleting dead code after replacement is proven
+- Moving to next file in work queue
+- Committing completed work
+- **CONTINUING IMPLEMENTATION WITHOUT DOCUMENTATION**: Keep coding, skip progress docs/summaries during active work
+- **PROVIDING BRIEF SUMMARIES**: 1-2 sentences when work completes (not multi-section explanations)
+- **RESUMING IMPLEMENTATION AFTER DOCUMENTATION**: When user requests AGENTS.md updates mid-feature, complete the documentation work then immediately return to TODO list unless user indicates otherwise
+- **CONTINUING AFTER SUMMARIES**: After providing completion summary, immediately continue with next TODO item - don't wait for user confirmation
+
+**🟡 THINK CAREFULLY (Assess first, then proceed)**:
+- Service doesn't match existing architecture → DELETE IT, read more, try again
+- Tests failing unexpectedly → DEBUG, don't continue until fixed
+- File is already clean → SKIP IT, mark complete, move on
+- Uncertain about approach → READ MORE CODE until clarity emerges
+
+**🔴 ASK FOR HUMAN DECISION (Essential architectural questions)**:
+- Major architectural pattern changes (e.g., switching from callbacks to promises)
+- Breaking changes to public APIs
+- Performance trade-offs with unclear implications
+- Deprecating widely-used functionality
+- Choosing between multiple valid approaches with different trade-offs
+
+### Example: Autonomous Refactoring Session
+
+**Task**: "Refactor 5 routes to use service layer"
+
+**AI Agent Execution** (no human interruption):
+
+```
+[Hour 1-2] Assessment Phase
+- Read all 5 routes
+- Route 1: 400 lines, needs service extraction
+- Route 2: 55 lines, already clean → SKIP
+- Route 3: 300 lines, needs service extraction  
+- Route 4: 60 lines, already clean → SKIP
+- Route 5: 450 lines, needs service extraction
+- Decision: Work on routes 1, 3, 5 only
+
+[Hour 3-4] Route 1 Implementation
+- Create OrderProcessingService (350 lines, 35 tests)
+- Run service tests: 35/35 passing ✅
+- Integrate createOrder method: tests passing ✅
+- Integrate updateOrder method: tests passing ✅
+- Integrate deleteOrder method: tests passing ✅
+- Delete old code: tests passing ✅
+- Commit: "refactor(orders): extract OrderProcessingService"
+
+[Hour 5-6] Route 3 Implementation
+- Create PaymentService (280 lines, 28 tests)
+- Run service tests: 28/28 passing ✅
+- Integrate processPayment method: tests passing ✅
+- Integrate refundPayment method: tests passing ✅
+- Delete old code: tests passing ✅
+- Commit: "refactor(payments): extract PaymentService"
+
+[Hour 7-9] Route 5 Implementation
+- Create ReportGenerationService (420 lines, 40 tests)
+- Run service tests: 40/40 passing ✅
+- Integrate generateReport method: 2 tests FAILING ❌
+- Debug: Missing parameter in service method signature
+- Fix service + tests: 40/40 passing ✅
+- Integrate again: tests passing ✅
+- Integrate scheduleReport method: tests passing ✅
+- Delete old code: tests passing ✅
+- Commit: "refactor(reports): extract ReportGenerationService"
+
+[Hour 10] Final Validation
+- Run full test suite: npm test
+- All 850 tests passing ✅
+- Update AGENTS.md with completion status
+- Commit: "docs: mark route refactoring complete"
+
+TASK COMPLETE - 3 services created, 2 routes skipped (already clean)
+Total time: 10 hours, 0 questions asked
+```
+
+### PowerShell Command Complexity Guidelines
+
+**CRITICAL: Avoid Complex PowerShell Commands That Require Approval**
+
+When making file edits during iterative testing, agents must avoid complex PowerShell commands that require user approval. These commands trigger VS Code's approval dialog and interrupt the workflow.
+
+**❌ Commands That Require Approval**:
+```powershell
+# Complex regex replace with Get-Content/Set-Content pipeline
+(Get-Content "file.js") -replace 'pattern', 'replacement' | Set-Content "file.js"
+
+# Multi-line commands with backticks or line breaks
+Get-Content "file.js" `
+  -replace 'pattern1', 'replacement1' `
+  -replace 'pattern2', 'replacement2' | Set-Content "file.js"
+
+# Commands with complex escaping or nested quotes
+(Get-Content "file.js") -replace 'const config = JSON\.parse\(taskRes\.body\.task\.config\);', 'const config = taskRes.body.task.config; // Already parsed by API' | Set-Content "file.js"
+```
+
+**✅ Use These Instead**:
+```javascript
+// Option 1: replace_string_in_file tool (PRIMARY CHOICE - 95% of cases)
+replace_string_in_file({
+  filePath: "file.js",
+  oldString: "const config = JSON.parse(taskRes.body.task.config);",
+  newString: "const config = taskRes.body.task.config; // Already parsed"
+})
+
+// Option 2: Multiple sequential replacements (if pattern appears multiple times)
+replace_string_in_file({ filePath, oldString: "pattern1", newString: "replacement1" })
+replace_string_in_file({ filePath, oldString: "pattern2", newString: "replacement2" })
+
+// Option 3: create_file to overwrite (ONLY if rewriting entire file is simpler)
+// Rare scenario: >50% of file content changing
+create_file({ filePath: "file.js", content: "entire new file content..." })
+```
+
+**Available Editing Tools Research** (October 2025):
+- ✅ **replace_string_in_file** - Direct VS Code API, never requires approval, handles exact string replacement
+- ✅ **create_file** - Can overwrite existing files, useful for massive rewrites (rare)
+- ❌ **edit_files** - Placeholder tool marked "do not use" (may be enabled in Edit2 mode)
+- ❌ **edit_notebook_file** - Only for Jupyter notebooks (.ipynb)
+- ❌ **run_in_terminal** - PowerShell commands trigger approval dialogs
+- ❌ **MCP tools** - GitHub/Context7 MCPs are for repository ops and docs, not local file editing
+
+**Edit2 Mode** (October 2025):
+VS Code has an "Edit2" option that changes editing tool behavior. This mode:
+- Requires tool-calling capabilities
+- May enable additional editing interfaces (e.g., `edit_files` tool)
+- Can be toggled in VS Code settings
+- May require new conversation session to take effect
+- **Current status**: Investigating tool availability in Edit2 mode
+- **Recommendation**: Until Edit2 capabilities are confirmed, continue using `replace_string_in_file` as primary editing method
+
+**Why `replace_string_in_file` Doesn't Require Approval**:
+- Uses VS Code's internal file editing API
+- No shell command execution
+- No regex parsing complexity
+- Validation built into the tool
+
+**Why PowerShell Commands DO Require Approval**:
+- Shell command execution with potential side effects
+- Complex regex patterns with escaping
+- Piping through Get-Content/Set-Content
+- String interpolation and special characters
+
+**When Tempted to Use Complex PowerShell**:
+1. ✅ **Use `replace_string_in_file` tool instead** (PRIMARY - 95% of cases)
+2. ✅ If pattern appears multiple times, call `replace_string_in_file` sequentially
+3. ✅ If unsure about pattern match, read file first to verify exact string
+4. ✅ If rewriting >50% of file, consider `create_file` to overwrite (rare)
+5. ❌ **NEVER** use Get-Content piped to Set-Content for code changes
+6. ❌ **NEVER** use complex regex in PowerShell commands
+7. ❌ **NEVER** assume there's a magic tool you haven't seen - `replace_string_in_file` IS the tool
+
+**Additional Commands That Require Approval** (October 2025):
+```powershell
+# ❌ WRONG: Complex multi-command pipelines
+Start-Job -ScriptBlock { ... } | Out-Null; Start-Sleep -Seconds 3; curl http://...
+
+# ❌ WRONG: Commands with multiple stages, sleeps, and conditionals
+Start-Sleep -Seconds 5; (Invoke-WebRequest -Uri http://... -UseBasicParsing).Content
+
+# ❌ WRONG: Chained commands with semicolons and complex expressions
+command1; Start-Sleep -Seconds N; command2 | ConvertFrom-Json | Select-Object
+
+# ✅ RIGHT: Simple, single-purpose commands
+Test-Path "file.js"
+Get-Content "file.log" | Select-Object -Last 20
+node server.js --detached --auto-shutdown-seconds 10
+
+# ✅ RIGHT: Use tools instead of complex shell commands
+# Instead of: curl + ConvertFrom-Json + Select-Object
+# Read log files or check server output via get_terminal_output
+```
+
+**When Testing Servers or APIs**:
+- ✅ Start server with `--detached --auto-shutdown-seconds N` (simple command)
+- ✅ Check server logs via `get_terminal_output` tool (no HTTP request needed)
+- ✅ Read existing log files instead of making live API calls
+- ❌ Don't chain Start-Sleep with HTTP requests (requires approval)
+- ❌ Don't use Start-Job with complex scriptblocks (requires approval)
+- ❌ Don't try to test APIs in the same command that starts the server
+
+**Example From This Session**:
+```powershell
+# ❌ REQUIRED APPROVAL (complex regex, special chars, long line)
+(Get-Content "analysis.new-apis.test.js") -replace 'const config = JSON\.parse\(taskRes\.body\.task\.config\);', 'const config = taskRes.body.task.config; // Already parsed by API' | Set-Content "analysis.new-apis.test.js"
+
+# ✅ NO APPROVAL NEEDED (tool-based, researched October 2025)
+replace_string_in_file({
+  filePath: "analysis.new-apis.test.js",
+  oldString: "const config = JSON.parse(taskRes.body.task.config);",
+  newString: "const config = taskRes.body.task.config; // Already parsed"
+})
+```
+
+---
+
+### Database Architecture and Connection Management
+
+**CRITICAL: SQLite WAL Mode Connection Isolation**
+
+This project uses **SQLite in WAL (Write-Ahead Log) mode** with **better-sqlite3**. Understanding connection isolation is critical for writing correct tests.
+
+**Key Facts About SQLite in This Project**:
+1. **WAL Mode Enabled**: All databases use `pragma('journal_mode = WAL')`
+2. **Connection Isolation**: Each `new Database(path)` creates an isolated connection
+3. **Writes Are Isolated**: Writes on Connection A not visible to Connection B until checkpoint
+4. **Single Connection Pattern**: Tests MUST use app's shared connection, not create separate ones
+
+**Database Library**: `better-sqlite3`
+- Synchronous API (no promises needed)
+- Each instance is a separate database connection
+- WAL mode means multiple connections see isolated snapshots
+
+**Where Databases Are Created**:
+```javascript
+// src/db/sqlite/ensureDb.js
+const Database = require('better-sqlite3');
+function ensureDb(dbPath, options = {}) {
+  const db = new Database(dbPath, options);
+  db.pragma('journal_mode = WAL'); // ← WAL mode enabled here
+  // ... initialize schema
+  return db;
+}
+
+// src/ui/express/server.js (via getDbRW)
+function getDbRW() {
+  if (!dbRW) {
+    dbRW = ensureDb(urlsDbPath); // Creates connection
+  }
+  return dbRW;
+}
+
+// BackgroundTaskManager (via createApp)
+app.locals.backgroundTaskManager = new BackgroundTaskManager({
+  db: getDbRW() // Uses SAME connection as routes
+});
+```
+
+**❌ WRONG: Multiple Connections in Tests (WAL Isolation)**:
+```javascript
+beforeEach(() => {
+  dbPath = createTempDb();
+  
+  // Connection 1 (for seeding)
+  const db = ensureDb(dbPath);
+  seedArticles(db, 10);
+  db.close();
+  
+  // Connection 2 (app's connection, created by getDbRW)
+  app = createApp({ dbPath });
+  
+  // ❌ PROBLEM: Task created via Connection 2 not visible to Connection 2
+  //    because seeding used Connection 1 (different snapshot!)
+});
+```
+
+**✅ RIGHT: Single Shared Connection**:
+```javascript
+beforeEach(() => {
+  dbPath = createTempDb();
+  
+  // Let app create THE ONLY connection
+  app = createApp({ dbPath, verbose: false });
+  
+  // Use app's connection for ALL database operations
+  const db = app.locals.backgroundTaskManager.db;
+  seedArticles(db); // Same connection as app uses
+  // Don't close - let app manage it
+});
+```
+
+**Why This Caused Test Failures**:
+- Tests created task via POST (writes to Connection A)
+- Tests queried task via GET (reads from Connection A, but different snapshot)
+- SQLite WAL mode isolated the write until checkpoint
+- Solution: Use same connection for seeding and queries
+
+**Database Schema Locations**:
+- `src/db/sqlite/ensureDb.js` - Main schema initialization
+- `src/db/sqlite/SQLiteNewsDatabase.js` - Articles table (40+ columns)
+- Tables: articles, analysis_runs, background_tasks, gazetteer_*, crawl_types, etc.
+
+**Test Database Helpers**:
+```javascript
+// ✅ Create temp DB path (file only, no connection)
+function createTempDb() {
+  const tmpDir = path.join(os.tmpdir(), 'test-name');
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const unique = `${process.pid}-${Date.now()}-${Math.random()}`;
+  return path.join(tmpDir, `test-${unique}.db`);
+}
+
+// ✅ Use app's connection for seeding
+beforeEach(() => {
+  app = createApp({ dbPath: createTempDb() });
+  const db = app.locals.backgroundTaskManager.db;
+  // Now seed using db
+});
+
+// ✅ Clean up WAL files in afterEach
+afterEach(() => {
+  const suffixes = ['', '-shm', '-wal'];
+  for (const suffix of suffixes) {
+    try { fs.unlinkSync(dbPath + suffix); } catch (_) {}
+  }
+});
+```
+
+**Router Instantiation Bug** (Fixed October 2025):
+```javascript
+// ❌ WRONG: Router created at module level
+const router = express.Router(); // Shared across all calls!
+function createBackgroundTasksRouter(taskManager) {
+  router.get('/:id', ...); // Routes added to SAME router
+  return router;
+}
+
+// ✅ RIGHT: Router created per invocation
+function createBackgroundTasksRouter(taskManager) {
+  const router = express.Router(); // Fresh router per call
+  router.get('/:id', ...);
+  return router;
+}
+```
+
+**Summary**: Always use app's shared DB connection in tests. Never create separate connections in WAL mode.
+
+---
+
+### Anti-Patterns to Avoid
+
+**❌ Don't Do This**:
+- ❌ Creating services without reading existing code first
+- ❌ Forcing new patterns when existing code already works
+- ❌ **Creating UI files without checking project structure** ← NEW (ProposedActionsPopup mistake)
+- ❌ **Creating CSS files when project uses SCSS/SASS** ← NEW
+- ❌ Asking for approval at every tiny step
+- ❌ Running tests after every single-line edit
+- ❌ Continuing integration when tests are failing
+- ❌ Leaving commented-out dead code after proving replacement
+- ❌ Creating progress documents during active feature implementation
+- ❌ Writing summaries or status docs when you should be coding
+- ❌ **Writing multi-section summaries with headers, bullets, and tables**
+- ❌ Calling async prerequisites without await (fire-and-forget when order matters)
+- ❌ **Implementing features without creating tests** ← CRITICAL MISTAKE
+- ❌ **Marking work "complete" when tests don't exist or are failing**
+- ❌ **Using real database/network in unit tests when mocking would work**
+- ❌ **Waiting for user to request test coverage review**
+- ❌ **Using complex PowerShell commands that require user approval**
+- ❌ **Creating separate database connections in tests (WAL isolation issues)**
+
+**✅ Do This Instead**:
+- ✅ Read existing code completely before designing
+- ✅ Match existing architectural patterns
+- ✅ **Check project structure FIRST (file_search, package.json, existing patterns)** ← NEW
+- ✅ **Use SCSS partials in `partials/` directory, import in main file** ← NEW
+- ✅ Work autonomously through systematic workflow
+- ✅ Run tests at strategic checkpoints (after services, after integration, at end)
+- ✅ Stop and fix when tests fail
+- ✅ Delete dead code promptly after replacement proven
+- ✅ Update documentation only at completion
+- ✅ **Keep summaries to 1-2 sentences (or 1-2 short paragraphs max)**
+- ✅ Make prerequisite functions async and await them (if X must finish before Y, await X)
+- ✅ **Create tests alongside implementation, not after** ← CORRECT APPROACH
+- ✅ **Search for existing tests before modifying code**
+- ✅ **Use mocking for unit tests (DB, network, file system)**
+- ✅ **Verify all tests pass before marking work complete**
+- ✅ **Use `replace_string_in_file` tool instead of PowerShell regex**
+- ✅ **Use app's shared DB connection in tests (never create separate connections)**
+
+### Handling Mistakes During Refactoring
+
+**Mistake: Created CSS file instead of SCSS** (ProposedActionsPopup, October 2025)
+
+```
+WRONG RESPONSE:
+- Jump straight to creating CSS file
+- Don't check existing styling system
+- Assume CSS is correct format
+
+RIGHT RESPONSE:
+1. Search for existing style files: file_search "**/*.scss"
+2. Check package.json: grep for "sass", "styles", "css"
+3. Examine style directory structure (src/ui/express/public/styles/)
+4. Read main style file to understand import patterns
+5. Create _partial-name.scss in partials/ directory
+6. Import in main ui.scss file
+7. Run npm run sass:build to compile
+8. Verify compiled CSS appears in public/ directory
+9. Learn: Always check project structure FIRST
+```
+
+**Mistake: Implemented feature without creating tests**
+
+```
+WRONG RESPONSE:
+- Assume tests will be added later
+- Mark feature as complete without tests
+- Wait for user to request test coverage
+
+RIGHT RESPONSE:
+1. Stop implementation immediately
+2. Search for existing tests related to your changes
+3. Create test file(s) for new functionality
+4. Write comprehensive test cases covering:
+   - Happy path scenarios
+   - Edge cases
+   - Error handling
+   - Integration with existing systems
+5. Run tests and verify they pass
+6. ONLY THEN mark feature as complete
+7. Learn: Tests are PART of implementation, not separate
+```
+
+**Mistake: Created service that doesn't fit architecture**
+
+```
+WRONG RESPONSE:
+- Try to force service into existing code
+- Modify existing code to use service
+- Ask human what to do
+
+RIGHT RESPONSE:
+1. Recognize the mismatch (service doesn't match existing patterns)
+2. Delete the unsuitable service immediately
+3. Read existing code more carefully
+4. Understand the actual patterns used
+5. Design new approach that matches existing architecture
+6. If existing code is already clean → mark as complete, move on
+```
+
+**Mistake: Tests failing after integration**
+
+```
+WRONG RESPONSE:
+- Continue integrating more code
+- Hope it will work itself out
+- Run tests again expecting different result
+
+RIGHT RESPONSE:
+1. Stop immediately - don't proceed
+2. Examine test failure output carefully
+3. Debug the specific failure
+4. Fix the root cause (service bug, integration bug, test bug)
+5. Verify tests pass
+6. ONLY THEN continue with next integration step
+```
+
+**Mistake: File is already clean but agent created service anyway**
+
+```
+WRONG RESPONSE:
+- Force the new service into the codebase
+- Justify the work to avoid "wasting" effort
+
+RIGHT RESPONSE:
+1. Recognize the file is already well-architected
+2. Delete the unnecessary service
+3. Mark the file as complete (already clean)
+4. Move to next file in queue
+5. Learn: Always assess before creating services
+```
+
+### Success Metrics for Refactoring
+
+Track these metrics to measure progress:
+
+```
+QUANTITATIVE METRICS:
+- Files assessed: X/Y
+- Files refactored: X
+- Files skipped (already clean): Y
+- Services created: Z
+- Unit tests added: N
+- Integration tests passing: M/M (100%)
+- Lines of code reduced: -X lines (-Y%)
+
+QUALITATIVE METRICS:
+- Routes are thin controllers (< 100 lines)
+- Services have single responsibility
+- Test coverage maintained or increased
+- Error handling consistent across codebase
+- Patterns match existing architecture
+- No forced integrations
+```
 
 ---
 

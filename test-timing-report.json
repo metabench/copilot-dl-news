@@ -1,8 +1,8 @@
 {
-  "timestamp": "2025-10-07T19:49:24.120Z",
-  "totalTime": 0.759,
+  "timestamp": "2025-10-08T00:40:29.123Z",
+  "totalTime": 3.531,
   "totalTestFiles": 1,
-  "avgTestTime": 0.695,
+  "avgTestTime": 3.485,
   "slowTests": 0,
   "verySlowTests": 0,
   "categoryTimes": {
@@ -12,17 +12,17 @@
   },
   "testResults": [
     {
-      "filePath": "src\\ui\\express\\services\\analysis\\__tests__\\AnalysisCoordinationService.test.js",
-      "runtime": 0.695,
-      "numTests": 25,
-      "numPassing": 25,
+      "filePath": "src\\ui\\express\\__tests__\\analysis.api.ssr.test.js",
+      "runtime": 3.485,
+      "numTests": 3,
+      "numPassing": 3,
       "numFailing": 0,
       "numPending": 0,
       "perfStats": {
-        "end": 1759866564104,
-        "runtime": 695,
-        "slow": false,
-        "start": 1759866563409
+        "end": 1759884029115,
+        "runtime": 3485,
+        "slow": true,
+        "start": 1759884025630
       }
     }
   ]

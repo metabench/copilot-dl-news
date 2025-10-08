@@ -262,6 +262,95 @@ function createAnalysisControlRouter({
     }
   });
 
+  /**
+   * POST /api/analysis/start-background - Start analysis as background task
+   * 
+   * Alternative to /api/analysis/start that uses the BackgroundTaskManager
+   * for better progress tracking, pause/resume support, and persistence.
+   * 
+   * Request body (all optional):
+   * - analysisVersion: number (default: 1)
+   * - pageLimit: number
+   * - domainLimit: number
+   * - skipPages: boolean (default: false)
+   * - skipDomains: boolean (default: false)
+   * - skipMilestones: boolean (default: false)
+   * - verbose: boolean (default: false)
+   * 
+   * Returns:
+   * - taskId: Background task ID
+   * - runId: Analysis run ID (for compatibility)
+   * - taskUrl: URL to monitor task progress
+   */
+  router.post('/api/analysis/start-background', (req, res) => {
+    try {
+      // Get backgroundTaskManager from app.locals
+      const backgroundTaskManager = req.app.locals?.backgroundTaskManager;
+      
+      if (!backgroundTaskManager) {
+        return res.status(503).json({ 
+          error: 'Background task manager not available' 
+        });
+      }
+      
+      const body = req.body || {};
+      const runId = runIdFactory(body.runId);
+      
+      // Build task configuration from request body
+      const config = {
+        dbPath: urlsDbPath,
+        analysisVersion: body.analysisVersion != null && body.analysisVersion !== '' 
+          ? Number(body.analysisVersion) 
+          : 1,
+        skipPages: isTruthyFlag(body.skipPages),
+        skipDomains: isTruthyFlag(body.skipDomains),
+        skipMilestones: isTruthyFlag(body.skipMilestones),
+        verbose: isTruthyFlag(body.verbose),
+        runId // Include runId for tracking
+      };
+      
+      // Add optional limits if provided
+      if (body.pageLimit != null && body.pageLimit !== '') {
+        const v = Number(body.pageLimit);
+        if (Number.isFinite(v)) {
+          config.pageLimit = v;
+        }
+      }
+      
+      if (body.domainLimit != null && body.domainLimit !== '') {
+        const v = Number(body.domainLimit);
+        if (Number.isFinite(v)) {
+          config.domainLimit = v;
+        }
+      }
+      
+      // Create background task
+      const taskId = backgroundTaskManager.createTask('analysis-run', config);
+      
+      // Start task immediately (async, doesn't wait for completion)
+      backgroundTaskManager.startTask(taskId).catch(err => {
+        if (!QUIET) {
+          console.error(`[analysis-control] Background task ${taskId} failed:`, err);
+        }
+      });
+      
+      res.status(202).json({
+        success: true,
+        taskId,
+        runId, // For compatibility with existing UI
+        taskUrl: `/api/background-tasks/${taskId}`,
+        detailUrl: `/analysis/${runId}/ssr`,
+        apiUrl: `/api/analysis/${runId}`,
+        message: 'Analysis started as background task'
+      });
+      
+    } catch (err) {
+      res.status(500).json({ 
+        error: err?.message || String(err) 
+      });
+    }
+  });
+
   return router;
 }
 
