@@ -40,6 +40,12 @@ class BackgroundTaskManager extends EventEmitter {
     this.db = options.db;
     this.broadcastEvent = options.broadcastEvent || null;
     this.updateMetrics = options.updateMetrics || null;
+    this.emitTelemetry = typeof options.emitTelemetry === 'function' ? options.emitTelemetry : null;
+    this.telemetryProgressState = new Map();
+    this.telemetryConfig = {
+      progressMinDeltaPct: 5,
+      progressMinIntervalMs: 1500
+    };
     
     // Task registry: taskType -> TaskClass
     this.taskRegistry = new Map();
@@ -60,6 +66,86 @@ class BackgroundTaskManager extends EventEmitter {
     };
   }
   
+  _telemetry(event, payload = {}, options = {}) {
+    if (!this.emitTelemetry) return;
+    if (!event) return;
+    const nowIso = new Date().toISOString();
+    const entry = {
+      event,
+      ts: payload.ts || nowIso,
+      taskId: payload.taskId,
+      taskType: payload.taskType,
+      status: payload.status,
+      severity: options.severity || payload.severity || 'info',
+      message: payload.message,
+      details: payload.details,
+      data: payload.data
+    };
+    if (!entry.message) {
+      const fallbackParts = [payload.taskType, payload.status, event];
+      entry.message = fallbackParts.filter(Boolean).join(' · ');
+    }
+    try {
+      this.emitTelemetry(entry);
+    } catch (err) {
+      console.error('[BackgroundTasks] Telemetry dispatch failed:', err && err.message ? err.message : err);
+    }
+  }
+
+  _summarizeConfig(config) {
+    if (!config || typeof config !== 'object') return undefined;
+    const summary = {};
+    const keys = Object.keys(config).slice(0, 12);
+    for (const key of keys) {
+      const value = config[key];
+      if (value == null) continue;
+      if (typeof value === 'string' && value.length > 120) {
+        summary[key] = `${value.slice(0, 117)}…`;
+      } else if (typeof value === 'object') {
+        continue;
+      } else {
+        summary[key] = value;
+      }
+    }
+    return Object.keys(summary).length ? summary : undefined;
+  }
+
+  _recordProgressTelemetry(taskRecord) {
+    if (!this.emitTelemetry || !taskRecord) return;
+    const now = Date.now();
+    const prev = this.telemetryProgressState.get(taskRecord.id);
+    const progress = taskRecord.progress || { percent: 0 };
+    const stage = taskRecord.metadata?.stage || taskRecord.progress?.message || null;
+    const nextState = {
+      percent: Number.isFinite(progress.percent) ? progress.percent : 0,
+      stage: stage || null,
+      message: taskRecord.progress?.message || null,
+      ts: now
+    };
+    if (prev) {
+      const delta = Math.abs(nextState.percent - prev.percent);
+      const elapsed = now - prev.ts;
+      const messageChanged = nextState.message !== prev.message;
+      const stageChanged = nextState.stage !== prev.stage;
+      if (delta < this.telemetryConfig.progressMinDeltaPct && !messageChanged && !stageChanged && elapsed < this.telemetryConfig.progressMinIntervalMs) {
+        return;
+      }
+    }
+    this.telemetryProgressState.set(taskRecord.id, nextState);
+    this._telemetry('task-progress', {
+      taskId: taskRecord.id,
+      taskType: taskRecord.task_type,
+      status: taskRecord.status,
+      message: taskRecord.progress?.message || undefined,
+      data: {
+        current: taskRecord.progress?.current || 0,
+        total: taskRecord.progress?.total || 0,
+        percent: progress.percent || 0,
+        stage: taskRecord.metadata?.stage || null
+      }
+    }, { severity: 'debug' });
+  }
+
   /**
    * Register a task type
    * 
@@ -121,6 +207,15 @@ class BackgroundTaskManager extends EventEmitter {
     
     const task = this.getTask(taskId);
     this._broadcastEvent('task-created', task);
+    this._telemetry('task-created', {
+      taskId,
+      taskType,
+      status: TaskStatus.PENDING,
+      message: `Created ${taskType} task #${taskId}`,
+      data: {
+        config: this._summarizeConfig(config)
+      }
+    });
     
     return taskId;
   }
@@ -184,6 +279,14 @@ class BackgroundTaskManager extends EventEmitter {
       statusUpdate.resume_started_at = new Date().toISOString();
     }
     this._updateTaskStatus(taskId, initialStatus, statusUpdate);
+    this._telemetry(isActuallyResuming ? 'task-resume-begin' : 'task-start', {
+      taskId,
+      taskType: taskRecord.task_type,
+      status: initialStatus,
+      message: isActuallyResuming
+        ? `Resuming ${taskRecord.task_type} task #${taskId}`
+        : `Starting ${taskRecord.task_type} task #${taskId}`
+    });
     
     // Start monitoring for stuck resuming state
     if (isActuallyResuming) {
@@ -227,6 +330,12 @@ class BackgroundTaskManager extends EventEmitter {
     }
     
     this._updateTaskStatus(taskId, TaskStatus.PAUSED);
+    this._telemetry('task-paused', {
+      taskId,
+      taskType: this.getTask(taskId)?.task_type,
+      status: TaskStatus.PAUSED,
+      message: `Paused task #${taskId}`
+    });
   }
   
   /**
@@ -250,6 +359,12 @@ class BackgroundTaskManager extends EventEmitter {
     if (active && tof(active.task.resume) === 'function') {
       active.task.resume();
       this._updateTaskStatus(taskId, TaskStatus.RUNNING);
+      this._telemetry('task-resume', {
+        taskId,
+        taskType: taskRecord.task_type,
+        status: TaskStatus.RUNNING,
+        message: `Resumed task #${taskId}`
+      });
       return;
     }
     
@@ -272,6 +387,13 @@ class BackgroundTaskManager extends EventEmitter {
     this._updateTaskStatus(taskId, TaskStatus.CANCELLED);
     this.stats.tasksCancelled++;
     this._updateMetrics();
+    this.telemetryProgressState.delete(taskId);
+    this._telemetry('task-cancelled', {
+      taskId,
+      taskType: this.getTask(taskId)?.task_type,
+      status: TaskStatus.CANCELLED,
+      message: `Cancelled task #${taskId}`
+    });
   }
   
   /**
@@ -379,6 +501,16 @@ class BackgroundTaskManager extends EventEmitter {
     
     // Summary telemetry
     console.log(`[BackgroundTasks] Resume complete: ${resumedCount} succeeded, ${failedCount} failed`);
+    this._telemetry('resume-summary', {
+      message: `Resume complete: ${resumedCount} succeeded, ${failedCount} failed`,
+      data: {
+        resumed: resumedCount,
+        failed: failedCount,
+        pausedTasks: pausedTasks.length,
+        runningTasks: runningTasks.length,
+        resumingTasks: resumingTasks.length
+      }
+    }, { severity: failedCount > 0 ? 'warning' : 'info' });
   }
   
   /**
@@ -419,6 +551,13 @@ class BackgroundTaskManager extends EventEmitter {
         
         // Broadcast via telemetry
         this._broadcastEvent('task-problem', { task: taskRecord, problem });
+        this._telemetry('task-resume-stuck', {
+          taskId,
+          taskType: taskRecord.task_type,
+          status: TaskStatus.RESUMING,
+          message: problem.message,
+          details: { elapsedMs: elapsed }
+        }, { severity: 'warning' });
         
         // Update metrics
         if (this.updateMetrics) {
@@ -484,6 +623,7 @@ class BackgroundTaskManager extends EventEmitter {
     const updatedTaskRecord = this.getTask(taskId);
     this._broadcastEvent('task-progress', updatedTaskRecord);
     this.emit('progress', updatedTaskRecord);
+    this._recordProgressTelemetry(updatedTaskRecord);
   }
   
   /**
@@ -496,6 +636,7 @@ class BackgroundTaskManager extends EventEmitter {
     this._updateTaskStatus(taskId, TaskStatus.COMPLETED, {
       completed_at: new Date().toISOString()
     });
+    this.telemetryProgressState.delete(taskId);
     
     this.stats.tasksCompleted++;
     this._updateMetrics();
@@ -503,6 +644,15 @@ class BackgroundTaskManager extends EventEmitter {
     const taskRecord = this.getTask(taskId);
     this._broadcastEvent('task-completed', taskRecord);
     this.emit('completed', taskRecord);
+    this._telemetry('task-completed', {
+      taskId,
+      taskType: taskRecord?.task_type,
+      status: TaskStatus.COMPLETED,
+      message: `Completed ${taskRecord?.task_type || 'task'} #${taskId}`,
+      data: {
+        durationMs: taskRecord?.started_at ? (Date.now() - new Date(taskRecord.started_at).getTime()) : undefined
+      }
+    });
   }
   
   /**
@@ -511,6 +661,7 @@ class BackgroundTaskManager extends EventEmitter {
    */
   _handleError(taskId, error) {
     this.activeTasks.delete(taskId);
+    this.telemetryProgressState.delete(taskId);
     
     const errorMessage = error?.message || String(error);
     
@@ -538,6 +689,16 @@ class BackgroundTaskManager extends EventEmitter {
     // 3. Tests can listen to 'task-error' without Jest treating it as unhandled
     
     console.error(`[BackgroundTasks] Task ${taskId} failed:`, errorMessage);
+    this._telemetry('task-error', {
+      taskId,
+      taskType: taskRecord?.task_type,
+      status: TaskStatus.FAILED,
+      message: `Task #${taskId} failed: ${errorMessage}`,
+      details: errorMessage,
+      data: {
+        stack: error && error.stack ? error.stack.split('\n').slice(0, 5).join('\n') : undefined
+      }
+    }, { severity: 'error' });
   }
   
   /**
@@ -560,6 +721,12 @@ class BackgroundTaskManager extends EventEmitter {
     const taskRecord = this.getTask(taskId);
     this._broadcastEvent('task-status-changed', taskRecord);
     this.emit('status-changed', taskRecord);
+    this._telemetry('task-status', {
+      taskId,
+      taskType: taskRecord?.task_type,
+      status,
+      message: `Task #${taskId} status → ${status}`
+    }, { severity: status === TaskStatus.FAILED ? 'error' : status === TaskStatus.CANCELLED ? 'warning' : 'info' });
   }
   
   /**
@@ -686,6 +853,17 @@ class BackgroundTaskManager extends EventEmitter {
           severity: 'warning',
           priority: 100
         });
+        this._telemetry('task-rate-limited', {
+          taskId: newTaskId || undefined,
+          taskType,
+          status: TaskStatus.PENDING,
+          message: `Rate limit active for ${taskType} tasks`,
+          data: {
+            timeSinceLastStart,
+            remainingTime,
+            runningTaskId: activeTask.id
+          }
+        }, { severity: 'warning' });
         
         throw new RateLimitError(
           `Cannot start ${taskType} task: another task of this type started ${Math.round(timeSinceLastStart / 1000)}s ago. Please wait ${Math.max(1, Math.ceil(remainingTime / 1000))}s or stop the existing task.`,

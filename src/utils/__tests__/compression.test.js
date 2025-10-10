@@ -15,8 +15,8 @@ describe('compression', () => {
     db = new Database(':memory:');
     
     // Create schema
-    const { ensureCompressionInfrastructure } = require('../../db/sqlite/ensureDb');
-    ensureCompressionInfrastructure(db);
+    const { initCompressionTables } = require('../../db/sqlite/schema');
+    initCompressionTables(db, { verbose: false, logger: console });
   });
   
   afterEach(() => {

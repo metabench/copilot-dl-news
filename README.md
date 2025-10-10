@@ -1,6 +1,14 @@
 # News Crawler
 
+**When to Read**: This is the main README for the project. Read this first to get a high-level overview of the project's features, how to install and run it, and the available configuration options. It's the best starting point for new developers.
+
 A focused crawler for news sites: detects navigation, finds articles, and saves structured data to SQLite with a live UI.
+
+## Testing
+
+**GOLDEN RULE**: Tests must never hang silently. All async tests require explicit timeouts and progress logging.
+
+See [AGENTS.md Testing Guidelines](./AGENTS.md#testing-guidelines) and [Testing Async Cleanup Guide](./docs/TESTING_ASYNC_CLEANUP_GUIDE.md) for comprehensive patterns.
 
 ## Features
 
@@ -14,7 +22,6 @@ A focused crawler for news sites: detects navigation, finds articles, and saves 
   - Even token spacing across the minute; small pacer jitter (defaults 25–50ms)
 - Networking safety: request timeout (default 10s), keep-alive agents
 - Live UI (Express): streaming logs (SSE), real-time metrics (req/s, dl/s ≤15s avg, MB/s), ETA, recent errors and domains, per-host “RATE LIMITED” badges
-- Live UI (Express): streaming logs (SSE), real-time metrics (req/s, dl/s ≤15s avg, MB/s), ETA, recent errors and domains, per-host “RATE LIMITED” badges
 - Multi-job capable UI (opt-in via `UI_ALLOW_MULTI_JOBS=1`) with job-scoped controls and `/events?job=` filtering
 - Queue event tracking (enqueued / dequeued / retry / drop) with real-time `queue` SSE events & SSR queue pages
 - Intelligent crawl (planner) that seeds hubs, detects expectation gaps (Problems) and achievements (Milestones)
@@ -22,6 +29,8 @@ A focused crawler for news sites: detects navigation, finds articles, and saves 
 - Crawl type presets (basic / sitemap-only / basic-with-sitemap / intelligent / discover-structure) via `/api/crawl-types`
 - Gazetteer-enhanced page analysis (places + hub detection) & per-place hub inference
 - Observability: Prometheus `/metrics`, health endpoints, and a system health strip (CPU/memory and SQLite WAL info)
+
+**Database Migration**: Schema is actively evolving. See `docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md` for current state and migration procedures.
 
 ## Installation
 
@@ -72,13 +81,10 @@ node src/crawl.js https://www.theguardian.com --depth=1 --concurrency=4 --max-qu
 - `--max-pages=N`       Limit number of network downloads
 - `--max-age=30s|10m|2h|1d` Prefer cached articles when fresh within window
 - `--no-prefer-cache`   Force network fetches even when cache is fresh
-- `--concurrency=N`     Number of workers (default: 1)
+- `--concurrency=N`     Number of parallel workers (default: 1). For specialized crawls (gazetteer, geography), this sets the maximum allowed concurrency; actual parallelism may be less due to API limits.
 - `--max-queue=N`       Bounded queue size (default: 10000)
-- `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck “Use sitemap”)
-- `--sitemap-only`      Crawl only sitemap URLs (don’t seed start URL)
-- `--sitemap-max=N`     Cap number of sitemap URLs (default: 5000). In the GUI, this mirrors Max Pages.
-- `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck “Use sitemap”)
-- `--sitemap-only`      Crawl only sitemap URLs (don’t seed start URL)
+- `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck "Use sitemap")
+- `--sitemap-only`      Crawl only sitemap URLs (don't seed start URL)
 - `--sitemap-max=N`     Cap number of sitemap URLs (default: 5000). In the GUI, this mirrors Max Pages.
 - `--crawl-type=<name>`  Pick a crawl preset (`basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`). Planner features activate automatically when the type starts with `intelligent`.
 - Intelligent crawl flags (forwarded only when provided):
@@ -124,12 +130,10 @@ npm run gui
 
 What you’ll see:
 
-- Start/Stop/Pause/Resume controls; sitemap toggles
 - Start/Stop/Pause/Resume controls; sitemap toggles & crawl type selector
 - Live logs via Server-Sent Events (SSE), unbuffered with heartbeats
 - Metrics: req/s, dl/s (≤15s avg), MB/s; queue sparkline; ETA
 - Badges: robots/sitemap status, global and per-host rate‑limited indicators
-- Panels: Recent Errors, Recent Domains; URLs and Domain pages with details
 - Panels: Recent Errors, Recent Domains; URLs and Domain pages with details; Queues, Problems, Milestones, Gazetteer
 - Analysis pipeline card that streams `ANALYSIS_PROGRESS` updates (stage, processed counts, highlights) with quick links to the latest run
 - Intelligent pipeline summary that reflects planner-stage telemetry and live coverage/goal insights
@@ -453,8 +457,20 @@ The CLI tool `npm run analyze:domains` will compute metrics per domain, write a 
 Run the test suite:
 
 ```bash
+# Full test suite (excludes expensive E2E tests)
 npm test --silent
+
+# Fast unit tests only
+npm run test:fast
+
+# Basic E2E tests (quick smoke tests)
+npm test -- geography.crawl.e2e
+
+# Full geography E2E (5-15 min, requires network)
+npm run test:geography-full
 ```
+
+**See**: `docs/GEOGRAPHY_E2E_TESTING.md` for detailed E2E test documentation.
 
 ## License
 

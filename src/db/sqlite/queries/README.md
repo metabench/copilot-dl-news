@@ -1,5 +1,7 @@
 # SQLite Query Modules
 
+**When to Read**: Read this if you are adding or modifying a database query. This document explains the pattern for organizing SQL queries into reusable modules.
+
 This directory hosts query helpers that wrap raw SQL statements for the SQLite adapter. Each module:
 
 - Accepts an active `better-sqlite3` handle.

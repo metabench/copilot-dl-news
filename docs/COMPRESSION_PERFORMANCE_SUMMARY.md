@@ -1,5 +1,10 @@
 # Compression Performance Summary
 
+**When to Read**:
+- To understand the performance trade-offs between different compression algorithms (gzip, brotli, zstd).
+- For data-driven recommendations on which compression levels to use for hot, warm, and cold data.
+- To review the cost-benefit analysis and expected storage savings.
+
 **Date**: 2025-10-06  
 **Status**: Design Complete, Ready for Implementation
 

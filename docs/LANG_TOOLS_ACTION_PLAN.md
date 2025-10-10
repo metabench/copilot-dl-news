@@ -2,6 +2,7 @@
 
 _Date: 2025-10-05_  
 _Status: Ready for Implementation_  
+_When to Read: Read this when working on language detection and tool integration features. This covers URL filtering, language detection, and multi-host language support. Cross-reference with LANG_TOOLS_PATTERNS.md for implementation patterns._  
 _Combines: Individual pattern replacements + Architectural improvements_
 
 This document provides a **complete, sequenced action plan** for improving code idiomaticity using lang-tools patterns, combining both micro-level replacements and macro-level architectural changes.

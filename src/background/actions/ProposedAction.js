@@ -30,7 +30,7 @@ class ProposedAction {
   constructor(options) {
     this.action = options.action;
     this.reason = options.reason;
-    this.description = options.description || '';
+    this.description = options.description !== undefined ? options.description : null;
     this.severity = options.severity || 'info';
     this.priority = options.priority || 0;
     
@@ -46,8 +46,15 @@ class ProposedAction {
       throw new Error('ProposedAction action must be an Action instance');
     }
     
-    if (!this.reason || tof(this.reason) !== 'string') {
-      throw new Error('ProposedAction reason must be a non-empty string');
+    if (!this.reason) {
+      throw new Error('ProposedAction reason is required');
+    }
+    if (tof(this.reason) !== 'string') {
+      throw new Error('ProposedAction reason must be a string');
+    }
+    
+    if (this.description !== null && tof(this.description) !== 'string') {
+      throw new Error('ProposedAction description must be a string');
     }
     
     const validSeverities = ['info', 'warning', 'error'];
@@ -116,6 +123,15 @@ class ProposedAction {
    */
   getActionLabel() {
     return this.action.label;
+  }
+  
+  /**
+   * Get action parameters
+   * 
+   * @returns {Object} Action parameters
+   */
+  getActionParameters() {
+    return this.action.parameters;
   }
 }
 

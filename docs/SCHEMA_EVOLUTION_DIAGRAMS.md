@@ -1,6 +1,7 @@
 # Database Schema Evolution - Architecture Diagrams
 
 **Date**: 2025-10-06  
+**When to Read**: Read this when planning database migrations, understanding schema evolution strategy, or visualizing the transition from denormalized to normalized schema. Use these diagrams to communicate schema changes to team members or understand the big picture before implementation.  
 **Related Documents**: 
 - `DATABASE_NORMALIZATION_PLAN.md` (full 80+ page plan)
 - `SCHEMA_NORMALIZATION_SUMMARY.md` (executive summary)

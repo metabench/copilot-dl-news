@@ -1,5 +1,6 @@
 # Compression Tables Migration Guide
 
+**When to Read**: Read this when adding compression infrastructure to the database. This is the quick-start guide for creating compression_types, compression_buckets, and content_storage tables. For full compression implementation details, see COMPRESSION_IMPLEMENTATION_FULL.md.  
 **Goal**: Add compression infrastructure (compression_types, compression_buckets, content_storage) WITHOUT breaking existing schema.
 
 **Strategy**: Add new tables alongside existing tables. Application can use new tables incrementally without requiring migration of existing data.

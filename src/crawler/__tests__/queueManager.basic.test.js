@@ -200,4 +200,33 @@ describe('QueueManager basic', () => {
     const snapshotUnchanged = qm.getHeatmapSnapshot();
     expect(snapshotUnchanged.cells.planner.article).toBe(1);
   });
+
+  test('bypasses max depth when predicate returns true', () => {
+    const emitQueueEvent = jest.fn();
+    const urlEligibilityService = {
+      evaluate: ({ url }) => ({
+        status: 'allow',
+        normalized: url,
+        kind: 'hub',
+        queueKey: url,
+        meta: { mode: 'gazetteer', depthPolicy: 'ignore' }
+      })
+    };
+
+    const qm = new QueueManager({
+      urlEligibilityService,
+      maxDepth: 1,
+      shouldBypassDepth: ({ meta }) => meta?.mode === 'gazetteer',
+      emitQueueEvent
+    });
+
+    const accepted = qm.enqueue({ url: 'http://example.com/gazetteer', depth: 5, type: 'hub' });
+    expect(accepted).toBe(true);
+
+    expect(emitQueueEvent).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'depth-bypass',
+      url: 'http://example.com/gazetteer',
+      reason: 'max-depth-bypassed'
+    }));
+  });
 });

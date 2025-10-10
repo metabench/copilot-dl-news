@@ -1,5 +1,9 @@
 # RUNBOOK.md — Operational guide for agents
 
+**Status**: COMPLETE  
+**Last Updated**: September 29, 2025  
+**When to Read**: You need to run the server, trigger crawls, run tests, or understand operational workflows
+
 This handbook collects workflow reminders so `AGENTS.md` can stay focused on architecture and contracts.
 
 ## Weekly focus
@@ -12,6 +16,7 @@ This handbook collects workflow reminders so `AGENTS.md` can stay focused on arc
 
 - Install dependencies once per checkout: `npm install`.
 - Start the UI server from the project root when needed: `node src/ui/express/server.js`.
+- **Database migrations**: Check schema status before starting work. See `docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md` for migration procedures.
 - The server auto-selects an available high-numbered port (41000+ range by default); watch the `GUI server listening ...` log or set `PORT` to override.
 - Trigger a deterministic crawl preview (no network) by posting to `POST /api/crawl` with `UI_FAKE_RUNNER=1`.
 - Run a focused Jest suite: `npm test -- --runTestsByPath ui/__tests__/server.test.js`. For the full suite, drop the `--runTestsByPath` flag.

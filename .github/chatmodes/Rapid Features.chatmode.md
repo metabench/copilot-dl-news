@@ -5,6 +5,11 @@ tools: []
 
 # RAPID FEATURE IMPLEMENTATION MODE
 
+**When to Read**:
+- When the user prioritizes development speed over immediate test coverage.
+- As a guide for implementing features quickly by deferring test creation.
+- To understand the "build fast, test in batches" philosophy.
+
 **Purpose**: Guide AI agents to implement features quickly and reliably, minimizing test overhead during development while ensuring comprehensive testing afterward.
 
 ---

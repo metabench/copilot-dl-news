@@ -1,3 +1,17 @@
+/**
+ * @fileoverview HTTP integration tests for bootstrap database functionality
+ * 
+ * CRITICAL TESTING RULES:
+ * - Tests must NEVER hang silently (GOLDEN RULE)
+ * - Always add explicit timeouts: test('name', async () => {...}, 30000)
+ * - Add progress logging for operations >5s
+ * - Use timeout guards from src/test-utils/timeoutGuards.js
+ * 
+ * See: docs/TESTING_ASYNC_CLEANUP_GUIDE.md for complete patterns
+ * See: docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md for utilities
+ * See: AGENTS.md "Testing Guidelines" section
+ */
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -118,7 +132,7 @@ describe('bootstrap-db management surface', () => {
     process.env.DB_PATH = tmpDb;
     process.env.PORT = '0';
     process.env.UI_BOOTSTRAP_DATASET_PATH = datasetPath;
-    server = startServer();
+    server = await startServer();
     await new Promise((resolve) => setTimeout(resolve, 150));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : 0;
@@ -126,7 +140,26 @@ describe('bootstrap-db management surface', () => {
 
   afterAll(async () => {
     if (server) {
+      // Shutdown background services
+      if (server.locals?.backgroundTaskManager) {
+        await server.locals.backgroundTaskManager.shutdown();
+      }
+      if (server.locals?.compressionWorkerPool) {
+        await server.locals.compressionWorkerPool.shutdown();
+      }
+      if (server.locals?.configManager?.stopWatching) {
+        server.locals.configManager.stopWatching();
+      }
+      
+      // Close database connection
+      const db = server.locals?.getDb?.();
+      if (db?.close) db.close();
+      
+      // Close HTTP server
       await new Promise((resolve) => server.close(resolve));
+      
+      // Allow async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     delete process.env.DB_PATH;
     delete process.env.PORT;
@@ -147,6 +180,9 @@ describe('bootstrap-db management surface', () => {
 
   test('run endpoint seeds dataset and refreshes counts', async () => {
     const res = await requestJson({ hostname: '127.0.0.1', port, path: '/api/bootstrap-db/run', method: 'POST', body: {} });
+    if (res.status !== 200) {
+      console.error('Bootstrap run failed:', res.json);
+    }
     expect(res.status).toBe(200);
     expect(res.json?.summary?.countries?.inserted).toBeGreaterThanOrEqual(1);
     expect(res.json?.summary?.skipTerms?.totalTerms).toBeGreaterThanOrEqual(2);
@@ -187,7 +223,7 @@ describe('bootstrap-db guard against existing data', () => {
     process.env.DB_PATH = tmpDb;
     process.env.PORT = '0';
     process.env.UI_BOOTSTRAP_DATASET_PATH = datasetPath;
-    server = startServer();
+    server = await startServer();
     await new Promise((resolve) => setTimeout(resolve, 150));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : 0;
@@ -195,7 +231,26 @@ describe('bootstrap-db guard against existing data', () => {
 
   afterAll(async () => {
     if (server) {
+      // Shutdown background services
+      if (server.locals?.backgroundTaskManager) {
+        await server.locals.backgroundTaskManager.shutdown();
+      }
+      if (server.locals?.compressionWorkerPool) {
+        await server.locals.compressionWorkerPool.shutdown();
+      }
+      if (server.locals?.configManager?.stopWatching) {
+        server.locals.configManager.stopWatching();
+      }
+      
+      // Close database connection
+      const db = server.locals?.getDb?.();
+      if (db?.close) db.close();
+      
+      // Close HTTP server
       await new Promise((resolve) => server.close(resolve));
+      
+      // Allow async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     delete process.env.DB_PATH;
     delete process.env.PORT;

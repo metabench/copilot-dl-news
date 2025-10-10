@@ -387,7 +387,7 @@ export function createJobsAndResumeManager(deps) {
       el.setAttribute('aria-busy', 'true');
       
       if (!jobs || !Array.isArray(jobs.items) || jobs.items.length === 0) {
-        el.textContent = 'None';
+        el.innerHTML = '<div class="jobs-empty-state"><span class="jobs-empty-icon">📭</span><p>No active crawls</p></div>';
         actions.setStage('idle');
         actions.hidePausedBadge();
         scheduleResumeInventoryRefresh(600);
@@ -395,32 +395,96 @@ export function createJobsAndResumeManager(deps) {
         return;
       }
       
-      const rows = [];
+      const cards = [];
       each(jobs.items, (it) => {
         const url = it.url || '(unknown)';
         const v = it.visited ?? 0;
         const d = it.downloaded ?? 0;
         const e = it.errors ?? 0;
         const q = it.queueSize ?? 0;
-        const act = it.lastActivityAt ? ` · active ${Math.round((Date.now() - it.lastActivityAt) / 1000)}s ago` : '';
-        const pid = it.pid ? ` · pid ${it.pid}` : '';
         const stage = it.stage || '';
         const status = it.status || stage || 'running';
-        const stageHint = stage && stage !== status ? ` (${stage})` : '';
-        const statusLine = [];
+        const pid = it.pid ? it.pid : null;
         
-        if (it.statusText) statusLine.push(it.statusText);
+        // Format timestamps
+        const startedAt = it.startedAt ? new Date(it.startedAt).toLocaleString() : 'Unknown';
+        const lastActivity = it.lastActivityAt ? Math.round((Date.now() - it.lastActivityAt) / 1000) : null;
+        const activityClass = lastActivity && lastActivity < 10 ? 'activity-recent' : lastActivity && lastActivity < 60 ? 'activity-active' : 'activity-stale';
+        const activityText = lastActivity !== null ? `${lastActivity}s ago` : 'No recent activity';
         
+        // Status badge styling
+        let statusBadgeClass = 'status-badge';
+        if (status === 'running' && !it.paused) statusBadgeClass += ' status-badge--running';
+        else if (it.paused) statusBadgeClass += ' status-badge--paused';
+        else if (status === 'done') statusBadgeClass += ' status-badge--done';
+        else statusBadgeClass += ' status-badge--neutral';
+        
+        // Startup progress
         const startupSummary = it.startup && typeof it.startup === 'object' ? it.startup.summary : null;
-        if (startupSummary && startupSummary.done === false && Number.isFinite(startupSummary.progress)) {
-          statusLine.push(`startup ${(Math.round(Math.max(0, Math.min(1, startupSummary.progress)) * 100))}%`);
-        }
+        const startupProgress = startupSummary && startupSummary.done === false && Number.isFinite(startupSummary.progress)
+          ? Math.round(Math.max(0, Math.min(1, startupSummary.progress)) * 100)
+          : null;
         
-        const statusMeta = statusLine.length ? ` · ${statusLine.join(' · ')}` : '';
-        rows.push(`<div><strong>${status}${stageHint}</strong>${pid}${statusMeta} — <a href="/url?url=${encodeURIComponent(url)}">${url}</a> — v:${v} d:${d} e:${e} q:${q}${act}</div>`);
+        const startupHtml = startupProgress !== null
+          ? `<div class="job-card-startup"><span class="job-card-startup-label">Startup:</span><span class="job-card-startup-value">${startupProgress}%</span></div>`
+          : '';
+        
+        const statusTextHtml = it.statusText
+          ? `<div class="job-card-status-text">${it.statusText}</div>`
+          : '';
+        
+        cards.push(`
+          <div class="job-card">
+            <div class="job-card-header">
+              <div class="job-card-status">
+                <span class="${statusBadgeClass}">${status}</span>
+                ${stage && stage !== status ? `<span class="job-card-stage">${stage}</span>` : ''}
+                ${it.paused ? '<span class="job-card-paused-indicator">⏸ Paused</span>' : ''}
+              </div>
+              ${pid ? `<span class="job-card-pid">PID: ${pid}</span>` : ''}
+            </div>
+            
+            <div class="job-card-url">
+              <a href="/url?url=${encodeURIComponent(url)}" class="job-card-link" title="${url}">${url}</a>
+            </div>
+            
+            ${statusTextHtml}
+            ${startupHtml}
+            
+            <div class="job-card-metrics">
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Visited</span>
+                <span class="job-card-metric-value">${v.toLocaleString()}</span>
+              </div>
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Downloaded</span>
+                <span class="job-card-metric-value">${d.toLocaleString()}</span>
+              </div>
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Errors</span>
+                <span class="job-card-metric-value ${e > 0 ? 'job-card-metric-value--error' : ''}">${e.toLocaleString()}</span>
+              </div>
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Queue</span>
+                <span class="job-card-metric-value">${q.toLocaleString()}</span>
+              </div>
+            </div>
+            
+            <div class="job-card-footer">
+              <div class="job-card-time">
+                <span class="job-card-time-label">Started:</span>
+                <span class="job-card-time-value">${startedAt}</span>
+              </div>
+              <div class="job-card-activity ${activityClass}">
+                <span class="job-card-activity-indicator">●</span>
+                <span class="job-card-activity-text">${activityText}</span>
+              </div>
+            </div>
+          </div>
+        `);
       });
       
-      el.innerHTML = rows.join('');
+      el.innerHTML = cards.join('');
       el.setAttribute('aria-busy', 'false');
       
       if (jobs.items.length === 1) {

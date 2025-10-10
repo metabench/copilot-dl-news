@@ -1,5 +1,14 @@
 // Limit noisy console output during tests by capping lines per test and truncating long lines.
 (() => {
+  // Suppress ALL console output during E2E tests to keep output clean
+  if (process.env.GEOGRAPHY_FULL_E2E === '1') {
+    console.log = () => {};
+    console.warn = () => {};
+    console.info = () => {};
+    console.error = () => {};
+    return; // Skip all the truncation logic
+  }
+  
   const MAX_LINES = parseInt(process.env.JEST_MAX_CONSOLE_LINES || '15', 10); // total lines per test (reduced from 40)
   const MAX_LINE_LEN = parseInt(process.env.JEST_MAX_CONSOLE_COLS || '150', 10); // reduced from 200
   const MAX_TOTAL_CHARS = parseInt(process.env.JEST_MAX_CONSOLE_CHARS || '800', 10); // reduced from 2000
@@ -42,6 +51,12 @@
     /at done \(/  // Drop completion handler traces
   ];
   const shouldDrop = (msg) => DROP_PATTERNS.some((re) => re.test(msg));
+  
+  // Skip truncation if disabled by environment variable
+  if (process.env.JEST_DISABLE_TRUNCATE === '1') {
+    return; // Don't wrap console methods
+  }
+  
   const origLog = console.log.bind(console);
   const origWarn = console.warn.bind(console);
   const origError = console.error.bind(console);

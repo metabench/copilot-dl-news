@@ -60,6 +60,7 @@ describe('BackgroundTaskManager', () => {
   let cleanup;
   let broadcastEvents;
   let metricsUpdates;
+  let telemetryEvents;
 
   beforeEach(() => {
     // Create temporary database
@@ -74,6 +75,7 @@ describe('BackgroundTaskManager', () => {
     // Track broadcast events and metrics
     broadcastEvents = [];
     metricsUpdates = [];
+  telemetryEvents = [];
 
     // Create manager
     manager = new BackgroundTaskManager({
@@ -83,6 +85,9 @@ describe('BackgroundTaskManager', () => {
       },
       updateMetrics: (stats) => {
         metricsUpdates.push(stats);
+      },
+      emitTelemetry: (entry) => {
+        telemetryEvents.push(entry);
       }
     });
 
@@ -133,6 +138,8 @@ describe('BackgroundTaskManager', () => {
       expect(task.task_type).toBe('mock-task');
       expect(task.status).toBe('pending');
       expect(task.config).toEqual({ param: 'value' });
+      const telemetry = telemetryEvents.find((e) => e.event === 'task-created' && e.taskId === taskId);
+      expect(telemetry).toBeDefined();
     });
 
     it('should throw error for unregistered task type', () => {
@@ -163,6 +170,7 @@ describe('BackgroundTaskManager', () => {
       expect(task.status).toBe('completed');
       expect(task.progress.current).toBe(5);
       expect(task.progress.total).toBe(5);
+      expect(telemetryEvents.some((e) => e.event === 'task-completed' && e.taskId === taskId)).toBe(true);
     });
 
       it('should derive totals from metadata when missing', async () => {
@@ -246,6 +254,7 @@ describe('BackgroundTaskManager', () => {
       const task = manager.getTask(taskId);
       // Task should have made some progress
       expect(task.progress.current).toBeGreaterThan(0);
+      expect(telemetryEvents.some((e) => e.event === 'task-progress' && e.taskId === taskId)).toBe(true);
     });
 
     it('should broadcast progress events', async () => {

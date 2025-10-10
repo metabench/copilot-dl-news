@@ -388,6 +388,154 @@
       background: #e74c3c;
       color: white;
     }
+
+    .telemetry-container {
+      margin-top: 30px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+
+    .telemetry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .telemetry-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .telemetry-control {
+      font-size: 13px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .telemetry-stream {
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding: 12px;
+      position: relative;
+    }
+
+    .telemetry-stream.is-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    .telemetry-stream[data-paused="1"]::after {
+      content: 'Paused';
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 12px;
+      color: #facc15;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .telemetry-row {
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 8px 0;
+    }
+
+    .telemetry-row:last-child {
+      border-bottom: none;
+    }
+
+    .telemetry-row__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .telemetry-badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .telemetry-badge--error {
+      background: rgba(248, 113, 113, 0.2);
+      color: #fca5a5;
+    }
+
+    .telemetry-badge--warning {
+      background: rgba(250, 204, 21, 0.2);
+      color: #fde68a;
+    }
+
+    .telemetry-badge--info {
+      background: rgba(96, 165, 250, 0.2);
+      color: #bfdbfe;
+    }
+
+    .telemetry-badge--debug {
+      background: rgba(165, 180, 252, 0.2);
+      color: #c7d2fe;
+    }
+
+    .telemetry-title {
+      flex: 1;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .telemetry-timestamp {
+      color: #94a3b8;
+      font-feature-settings: 'tnum';
+    }
+
+    .telemetry-summary {
+      font-size: 13px;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .telemetry-meta {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .telemetry-details {
+      margin: 0;
+      padding: 8px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 4px;
+      max-height: 160px;
+      overflow: auto;
+      font-size: 12px;
+      color: #cbd5f5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     
     @media (max-width: 768px) {
       body {
@@ -408,6 +556,15 @@
       
       .btn {
         width: 100%;
+      }
+
+      .telemetry-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .telemetry-stream {
+        max-height: 240px;
       }
     }
   </style>
@@ -498,6 +655,17 @@
         console.warn('[BackgroundTasks] Task problem:', data);
         if (typeof showNotification === 'function') {
           showNotification(`Task ${data.task.id} problem: ${data.problem.message}`, 'error');
+        }
+      });
+
+      eventSource.addEventListener('telemetry', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (typeof window.appendBackgroundTelemetry === 'function') {
+            window.appendBackgroundTelemetry(data);
+          }
+        } catch (err) {
+          console.error('[BackgroundTasks] Telemetry parse error:', err);
         }
       });
       

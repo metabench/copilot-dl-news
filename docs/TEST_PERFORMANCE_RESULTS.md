@@ -2,7 +2,8 @@
 
 **Date**: October 7, 2025  
 **Total Runtime**: 70.0 seconds  
-**Status**: ✅ Tests running efficiently after CompressionWorkerPool fix
+**Status**: ✅ Tests running efficiently after CompressionWorkerPool fix  
+**When to Read**: Read this when investigating test suite performance, optimizing slow tests, or understanding test runtime characteristics. Reference before making changes that might impact test speed.
 
 ---
 

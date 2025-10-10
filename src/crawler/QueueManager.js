@@ -47,7 +47,8 @@ class QueueManager {
   constructor(opts = {}) {
     this.usePriorityQueue = opts.usePriorityQueue !== false;
     this.maxQueue = typeof opts.maxQueue === 'number' ? opts.maxQueue : 10000;
-    this.maxDepth = typeof opts.maxDepth === 'number' ? opts.maxDepth : 10;
+  this.maxDepth = typeof opts.maxDepth === 'number' ? opts.maxDepth : 10;
+  this.shouldBypassDepth = typeof opts.shouldBypassDepth === 'function' ? opts.shouldBypassDepth : null;
 
     this.urlEligibilityService = opts.urlEligibilityService;
     this.safeHostFromUrl = opts.safeHostFromUrl || (() => null);
@@ -131,9 +132,30 @@ class QueueManager {
     const decision = evaluation.decision;
     const allowRevisit = evaluation.allowRevisit;
 
-    if (depth > this.maxDepth) {
+    const bypassDepthLimit = this.shouldBypassDepth ? this.shouldBypassDepth({
+      url: normalized,
+      rawUrl: url,
+      depth,
+      host,
+      kind,
+      meta: evaluationMeta,
+      decision,
+      queueKey
+    }) : false;
+
+    if (!bypassDepthLimit && depth > this.maxDepth) {
       this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'max-depth', queueSize: currentSize });
       return false;
+    }
+    if (bypassDepthLimit && depth > this.maxDepth) {
+      this.emitQueueEvent({
+        action: 'depth-bypass',
+        url: normalized,
+        depth,
+        host,
+        queueSize: currentSize,
+        reason: 'max-depth-bypassed'
+      });
     }
     if (currentSize >= this.maxQueue) {
       this.emitQueueEvent({ action: 'drop', url: normalized, depth, host, reason: 'overflow', queueSize: currentSize });

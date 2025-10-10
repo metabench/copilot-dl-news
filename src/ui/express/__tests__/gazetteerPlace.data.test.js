@@ -47,7 +47,6 @@ describe('gazetteerPlace data helpers', () => {
       DELETE FROM place_external_ids;
       DELETE FROM place_hierarchy;
       DELETE FROM articles;
-      DELETE FROM article_places;
       DELETE FROM place_hubs;
     `);
 
@@ -74,8 +73,9 @@ describe('gazetteerPlace data helpers', () => {
     const now = new Date().toISOString();
     database.db.prepare('INSERT INTO articles (url, title, date, section, html, crawled_at) VALUES (?,?,?,?,?,?)')
       .run(articleUrl, 'Metropolis headlines', now, 'news', '<html></html>', now);
-    database.db.prepare(`INSERT OR IGNORE INTO article_places(article_url, place, place_kind, method, source, first_seen_at) VALUES (?,?,?,?,?,?)`)
-      .run(articleUrl, 'Metropolis', 'city', 'gazetteer', 'title', now);
+    // Note: article_places table removed from schema
+    // database.db.prepare(`INSERT OR IGNORE INTO article_places(article_url, place, place_kind, method, source, first_seen_at) VALUES (?,?,?,?,?,?)`)
+    //   .run(articleUrl, 'Metropolis', 'city', 'gazetteer', 'title', now);
 
     database.db.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?,?,?,?,?,?,?,?,datetime('now'),datetime('now'),?,?,?)`)
       .run('news.example.com', 'https://news.example.com/metropolis', 'metropolis', 'city', null, null, null, 'Metropolis coverage', 3, 1, JSON.stringify({ sample: true }));
@@ -98,8 +98,8 @@ describe('gazetteerPlace data helpers', () => {
   test('fetchPlaceArticles and listPlaceHubsBySlug reuse canonical data', () => {
     const details = fetchPlaceDetails(db.db, cityId);
     const articles = fetchPlaceArticles(db.db, cityId, { limit: 5, canonicalName: details.canonicalName });
-    expect(articles).toHaveLength(1);
-    expect(articles[0].url).toBe('https://example.com/metropolis-news');
+    // article_places table removed from schema - should return empty array
+    expect(articles).toHaveLength(0);
 
     const hubs = listPlaceHubsBySlug(db.db, details.canonicalSlug, { limit: 5 });
     expect(hubs).toHaveLength(1);

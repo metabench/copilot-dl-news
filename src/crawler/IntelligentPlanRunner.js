@@ -1,3 +1,5 @@
+const { PlanBlueprintBuilder } = require('./planner/PlanBlueprintBuilder');
+
 class IntelligentPlanRunner {
   constructor({
     telemetry,
@@ -24,7 +26,10 @@ class IntelligentPlanRunner {
     HubSeeder,
     TargetedAnalysisRunner,
     NavigationDiscoveryRunner,
-    enableTargetedAnalysis = true
+    enableTargetedAnalysis = true,
+    planPreview = false,
+    planCapture = null,
+    planBlueprintBuilder = null
   } = {}) {
     if (!telemetry || !domain || !baseUrl || !startUrl) {
       throw new Error('IntelligentPlanRunner requires telemetry, domain, baseUrl, and startUrl');
@@ -71,9 +76,27 @@ class IntelligentPlanRunner {
     this.TargetedAnalysisRunner = TargetedAnalysisRunner;
     this.NavigationDiscoveryRunner = NavigationDiscoveryRunner;
     this.enableTargetedAnalysis = enableTargetedAnalysis !== false;
+
+    this.planPreview = !!planPreview;
+    this.planBlueprintBuilderInstance = planBlueprintBuilder instanceof PlanBlueprintBuilder
+      ? planBlueprintBuilder
+      : null;
+
+    if (this.planBlueprintBuilderInstance) {
+      this.planCaptureOptions = null;
+    } else if (planCapture && typeof planCapture === 'object') {
+      this.planCaptureOptions = { ...planCapture };
+    } else if (planBlueprintBuilder && typeof planBlueprintBuilder === 'object') {
+      this.planCaptureOptions = { ...planBlueprintBuilder };
+    } else if (this.planPreview) {
+      this.planCaptureOptions = {};
+    } else {
+      this.planCaptureOptions = null;
+    }
   }
 
   async run() {
+    const blueprintBuilder = this._createPlanBlueprintBuilder();
     const host = this.domain.toLowerCase();
     this._log(`Intelligent crawl planning for host=${host}`);
 
@@ -122,6 +145,7 @@ class IntelligentPlanRunner {
     });
 
     if (bootstrapResult?.skipPlan) {
+      blueprintBuilder?.recordBootstrap(bootstrapResult);
       const summary = orchestrator.buildSummary({
         seededCount: 0,
         requestedCount: 0,
@@ -133,9 +157,15 @@ class IntelligentPlanRunner {
       });
       return {
         plannerSummary: summary,
-        intelligentSummary: summary
+        intelligentSummary: summary,
+        planBlueprint: blueprintBuilder ? blueprintBuilder.build({
+          plannerSummary: summary,
+          intelligentSummary: summary
+        }) : null
       };
     }
+
+    blueprintBuilder?.recordBootstrap(bootstrapResult);
 
     const patternInference = new this.PatternInference({
       fetchPage: this.fetchPage,
@@ -173,6 +203,7 @@ class IntelligentPlanRunner {
     });
 
     const learnedSections = Array.isArray(patternResult?.learned?.sections) ? patternResult.learned.sections : [];
+    blueprintBuilder?.recordPatternInference(patternResult);
 
     let navigationDiscoveryResult = null;
     let navigationLinkCandidates = [];
@@ -214,6 +245,7 @@ class IntelligentPlanRunner {
         ? navigationDiscoveryResult.merged.links.slice(0, Math.max(6, Math.min(20, this.intMaxSeeds)))
         : [];
     }
+    blueprintBuilder?.recordNavigation(navigationDiscoveryResult, navigationLinkCandidates);
 
     const countryHubPlanner = new this.CountryHubPlanner({
       baseUrl: this.baseUrl,
@@ -240,6 +272,7 @@ class IntelligentPlanRunner {
         countryCandidates: Array.isArray(res) ? res : []
       })
     }) || [];
+  blueprintBuilder?.recordCountryCandidates(countryCandidates);
 
     const maxSeeds = this.intMaxSeeds;
     const hubSeeder = new this.HubSeeder({
@@ -249,7 +282,9 @@ class IntelligentPlanRunner {
       telemetry: telemetryBridge,
       db: this.dbAdapter,
       baseUrl: this.baseUrl,
-      logger: this.logger
+      logger: this.logger,
+      planCapture: blueprintBuilder,
+      disableDbRecording: this.planPreview || this.planCaptureOptions?.disableDbRecording
     });
 
     const seedResult = await orchestrator.runStage('seed-hubs', {
@@ -281,6 +316,7 @@ class IntelligentPlanRunner {
         seedResult: res || null
       })
     });
+  blueprintBuilder?.recordSeedResult(seedResult);
 
     let targetedAnalysisResult = null;
 
@@ -315,6 +351,7 @@ class IntelligentPlanRunner {
         })
       });
     }
+    blueprintBuilder?.recordTargetedAnalysis(targetedAnalysisResult);
 
     const plannerSummary = orchestrator.buildSummary({
       learnedSectionCount: learnedSections.length,
@@ -345,9 +382,15 @@ class IntelligentPlanRunner {
       ...plannerSummary
     };
 
-    return {
+    const planBlueprint = blueprintBuilder ? blueprintBuilder.build({
       plannerSummary,
       intelligentSummary
+    }) : null;
+
+    return {
+      plannerSummary,
+      intelligentSummary,
+      planBlueprint
     };
   }
 
@@ -600,6 +643,26 @@ class IntelligentPlanRunner {
       }))
     };
     return summary;
+  }
+
+  _createPlanBlueprintBuilder() {
+    if (this.planBlueprintBuilderInstance) {
+      if (!this.planBlueprintBuilderInstance.domain && this.domain) {
+        this.planBlueprintBuilderInstance.domain = this.domain;
+      }
+      return this.planBlueprintBuilderInstance;
+    }
+    if (!this.planPreview && !this.planCaptureOptions) {
+      return null;
+    }
+    const baseConfig = this.planCaptureOptions ? { ...this.planCaptureOptions } : {};
+    if (!baseConfig.domain) {
+      baseConfig.domain = this.domain;
+    }
+    if (!baseConfig.sessionId && this.planCaptureOptions?.sessionId) {
+      baseConfig.sessionId = this.planCaptureOptions.sessionId;
+    }
+    return new PlanBlueprintBuilder(baseConfig);
   }
 }
 

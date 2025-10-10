@@ -1,3 +1,17 @@
+/**
+ * @fileoverview HTTP smoke tests for basic server functionality
+ * 
+ * CRITICAL TESTING RULES:
+ * - Tests must NEVER hang silently (GOLDEN RULE)
+ * - Always add explicit timeouts: test('name', async () => {...}, 30000)
+ * - Add progress logging for operations >5s
+ * - Use timeout guards from src/test-utils/timeoutGuards.js
+ * 
+ * See: docs/TESTING_ASYNC_CLEANUP_GUIDE.md for complete patterns
+ * See: docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md for utilities
+ * See: AGENTS.md "Testing Guidelines" section
+ */
+
 const http = require('http');
 const { startServer } = require('../server');
 
@@ -24,14 +38,35 @@ describe('UI smoke over real HTTP', () => {
   beforeAll(async () => {
     const prev = process.env.PORT;
     process.env.PORT = '0';
-    server = startServer();
+    server = await startServer();
     // Reduced server startup wait from 100ms to 20ms
     await new Promise((r) => setTimeout(r, 20));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : prev || 3000;
   });
   afterAll(async () => {
-    if (server) await new Promise((r) => server.close(r));
+    if (server) {
+      // Shutdown background services
+      if (server.locals?.backgroundTaskManager) {
+        await server.locals.backgroundTaskManager.shutdown();
+      }
+      if (server.locals?.compressionWorkerPool) {
+        await server.locals.compressionWorkerPool.shutdown();
+      }
+      if (server.locals?.configManager?.stopWatching) {
+        server.locals.configManager.stopWatching();
+      }
+      
+      // Close database connection
+      const db = server.locals?.getDb?.();
+      if (db?.close) db.close();
+      
+      // Close HTTP server
+      await new Promise((r) => server.close(r));
+      
+      // Allow async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   });
 
   test('serves index and basic pages', async () => {

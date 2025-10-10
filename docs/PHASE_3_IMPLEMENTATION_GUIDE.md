@@ -1,5 +1,7 @@
 # Phase 3 Implementation Guide: Service Layer
 
+**When to Read**: This guide is for developers starting the service layer refactoring (Phase 3). Read this to understand the "why" and "how" of extracting business logic from Express routes into testable, reusable services. It provides the context for the first implemented service (`CrawlOrchestrationService`) and the roadmap for the rest.
+
 **Status**: Ready for Implementation  
 **Date**: October 7, 2025  
 **Goal**: Extract business logic from routes into testable services

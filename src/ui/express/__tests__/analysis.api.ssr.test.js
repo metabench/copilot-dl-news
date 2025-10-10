@@ -192,6 +192,11 @@ describe('Analysis API and SSR', () => {
       dbPath
     });
 
+    // ✅ FIXED: Ensure analysis_runs schema on app's database connection
+    // The app opened the database separately and needs schema initialization
+    const appDb = app.locals.backgroundTaskManager?.db || app.locals.getDb?.();
+    ensureAnalysisRunSchema(appDb);
+
     const res = await request(app)
       .post('/api/analysis/start')
       .send({ skipDomains: true, dryRun: true, pageLimit: 5 });
@@ -200,12 +205,14 @@ describe('Analysis API and SSR', () => {
     const runId = res.body.runId;
     expect(runId).toMatch(/^analysis-/);
 
-    const pollDb = new Database(dbPath, { readonly: false });
+    // appDb already defined above
+    expect(appDb).toBeTruthy();
+    
     try {
       const start = Date.now();
       let status = null;
       while (Date.now() - start < 15000) {
-        const row = pollDb.prepare('SELECT status FROM analysis_runs WHERE id = ?').get(runId);
+        const row = appDb.prepare('SELECT status FROM analysis_runs WHERE id = ?').get(runId);
         if (row) {
           status = row.status;
           if (status === 'completed' || status === 'failed') break;
@@ -214,11 +221,11 @@ describe('Analysis API and SSR', () => {
       }
 
       expect(status).toBe('completed');
-      const article = pollDb.prepare('SELECT analysis FROM articles WHERE url = ?').get(articleUrl);
+      const article = appDb.prepare('SELECT analysis FROM articles WHERE url = ?').get(articleUrl);
       expect(article).toBeTruthy();
       expect(article.analysis).toBeTruthy();
     } finally {
-      pollDb.close();
+      // Don't close the database - app owns it
       if (prevFast === undefined) delete process.env.TEST_FAST;
       else process.env.TEST_FAST = prevFast;
     }

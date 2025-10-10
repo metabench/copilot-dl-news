@@ -1,5 +1,16 @@
 'use strict';
 
+/**
+ * GazetteerIngestionCoordinator - Sequential processing of gazetteer data stages
+ * 
+ * CONCURRENCY: This coordinator processes ingestors sequentially, one at a time.
+ * It does NOT parallelize work across stages or ingestors. The crawler's
+ * concurrency parameter is ignored by design - gazetteer operations depend on:
+ * - External API rate limits (Wikidata, Overpass)
+ * - Database transaction ordering (parent places before children)
+ * - Sequential dependency chains (countries → regions → boundaries)
+ */
+
 class GazetteerIngestionCoordinator {
   constructor({ ingestors = [], telemetry = null, logger = console } = {}) {
     this.logger = logger || console;
@@ -26,10 +37,14 @@ class GazetteerIngestionCoordinator {
   async execute({ signal = null, onProgress = null } = {}) {
     const startedAt = Date.now();
     const snapshots = [];
+    const totalIngestors = this._ingestors.length;
+    
     this._emitProgress(onProgress, {
       phase: 'start',
       startedAt,
-      ingestorCount: this._ingestors.length
+      ingestorCount: totalIngestors,
+      totalIngestors: totalIngestors,
+      currentIngestor: 0
     });
 
     const totals = {
@@ -50,7 +65,10 @@ class GazetteerIngestionCoordinator {
       totals.ingestorsAttempted += 1;
       this._emitProgress(onProgress, {
         phase: 'ingestor-start',
-        ingestor: ingestorId
+        ingestor: ingestorId,
+        currentIngestor: totals.ingestorsAttempted,
+        totalIngestors: totalIngestors,
+        totals: { ...totals }
       });
       const startedAtMs = Date.now();
       let result = null;

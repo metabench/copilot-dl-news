@@ -3,7 +3,7 @@
  */
 
 const { ActionRegistry, createActionRegistry } = require('../ActionRegistry');
-const Action = require('../Action');
+const { Action } = require('../Action');
 
 describe('ActionRegistry', () => {
   let registry;
@@ -311,7 +311,7 @@ describe('createActionRegistry', () => {
   describe('error handling', () => {
     test('should propagate errors from task manager methods', async () => {
       const mockManager = {
-        stopTask: jest.fn().mockRejectedValue(new Error('Task not found'))
+        cancelTask: jest.fn().mockRejectedValue(new Error('Task not found'))
       };
       
       const registry = createActionRegistry();

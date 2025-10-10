@@ -4,6 +4,11 @@ _Last updated: 2025-01-05_
 
 This document captures interesting and immediately useful patterns from the lang-tools library that can be applied to our client-side refactoring.
 
+**When to Read**:
+- Planning refactors for `ui/` modules where lang-tools helpers can replace ad-hoc DOM or collection logic
+- Reviewing production-safe idioms before introducing new `lang-tools` utilities into shared code
+- Evaluating whether a proposed transformation belongs in lang-tools or a bespoke module
+
 **⚠️ IMPORTANT**: This document refers to `collective()` (the **function**), not `Collection` (the **class**):
 - ✅ `collective(array)` or `collect(array)` - Proxy utility for bulk operations (what this doc covers)
 - ❌ `new Collection()` - Reactive array-like data structure with events/indexing (different thing entirely)

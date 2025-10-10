@@ -7,7 +7,7 @@ describe('UI rate-limited badge presence', () => {
   beforeAll(async () => {
     const prev = process.env.PORT;
     process.env.PORT = '0';
-    server = startServer();
+    server = await startServer();
     await new Promise((r) => setTimeout(r, 100));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : prev || 3000;

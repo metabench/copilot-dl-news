@@ -8,7 +8,7 @@ describe('logs colorization CSS', () => {
   beforeAll(async () => {
     const prev = process.env.PORT;
     process.env.PORT = '0';
-    server = startServer();
+    server = await startServer();
     
     // Wait for server to be listening with timeout
     await Promise.race([

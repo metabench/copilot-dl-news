@@ -31,6 +31,9 @@ const {
   createMiscApiRouter
 } = require('./routes/api.misc');
 const {
+  createPlanningApiRouter
+} = require('./routes/api.plan');
+const {
   createUrlsApiRouter
 } = require('./routes/api.urls');
 const {
@@ -42,6 +45,12 @@ const {
 const {
   createCoverageApiRouter
 } = require('./routes/coverage');
+const {
+  EnhancedDbAdapter
+} = require('./services/coverageAdapter');
+const {
+  createJobDetailRouter
+} = require('./routes/ssr.job');
 const {
   createConfigApiRouter
 } = require('./routes/config');
@@ -97,8 +106,14 @@ const {
   createGazetteerKindRouter
 } = require('./routes/ssr.gazetteer.kind');
 const {
+  createGeographyFlowchartRouter
+} = require('./routes/geographyFlowchart');
+const {
   createQueuesSsrRouter
 } = require('./routes/ssr.queues');
+const {
+  createCrawlsSsrRouter
+} = require('./routes/ssr.crawls');
 const {
   createProblemsSsrRouter
 } = require('./routes/ssr.problems');
@@ -124,7 +139,9 @@ const {
   ConfigManager
 } = require('../../config/ConfigManager');
 const {
-  ensureDb
+  ensureDb,
+  ensureDatabase,
+  wrapWithTelemetry
 } = require('../../db/sqlite');
 const {
   createRunnerFactory,
@@ -188,6 +205,28 @@ const {
 const {
   AnalysisRunManager
 } = require('./services/AnalysisRunManager');
+const {
+  PlanningSessionManager
+} = require('./services/planning/PlanningSessionManager');
+const {
+  AsyncPlanRunner
+} = require('./services/planning/AsyncPlanRunner');
+const {
+  JobEventHandlerService
+} = require('./services/core/JobEventHandlerService');
+const {
+  CrawlOrchestrationService
+} = require('./services/core/CrawlOrchestrationService');
+const {
+  recordCrawlJobStart,
+  markCrawlJobStatus
+} = require('./data/crawlJobs');
+const {
+  insertQueueEvent,
+  insertCrawlProblem,
+  insertPlannerStageEvent,
+  insertCrawlMilestone
+} = require('./data/crawlEvents');
 
 // Quiet test mode: suppress certain async logs that can fire after Jest completes
 const QUIET = !!process.env.JEST_WORKER_ID || ['1', 'true', 'yes', 'on'].includes(String(process.env.UI_TEST_QUIET || '').toLowerCase());
@@ -313,13 +352,27 @@ function createApp(options = {}) {
   const broadcast = (...args) => realtime.broadcast(...args);
   const broadcastJobs = (force = false) => realtime.broadcastJobs(force);
   const broadcastProgress = realtime.getBroadcastProgress();
+  const broadcastTelemetry = realtime.getBroadcastTelemetry();
 
-  app.locals._sseClients = sseClients;
-  app.locals._broadcaster = realtime.getBroadcaster();
-  app.locals.realtime = realtime;
-  app.locals.jobRegistry = jobRegistry;
-  app.locals.analysisProgress = analysisProgress;
-  app.locals.crawlerManager = crawlerManager;
+  const planningSessionManager = options.planningSessionManager && typeof options.planningSessionManager.createSession === 'function'
+    ? options.planningSessionManager
+    : new PlanningSessionManager({
+        logger: verbose ? console : {
+          error: console.error,
+          warn: () => {},
+          log: () => {}
+        }
+      });
+
+  const plannerLogger = verbose ? console : {
+    error: console.error,
+    warn: () => {},
+    log: () => {}
+  };
+
+  let asyncPlanRunner = options.asyncPlanRunner && typeof options.asyncPlanRunner.startPreview === 'function'
+    ? options.asyncPlanRunner
+    : null;
 
   // Initialize benchmark manager
   const benchmarkManager = options.benchmarkManager || new BenchmarkManager({
@@ -355,16 +408,149 @@ function createApp(options = {}) {
     };
     return { pre, end };
   }
-  const getDbRW = createWritableDbAccessor({
-    ensureDb: ensureDbFactory,
-    urlsDbPath,
-    queueDebug,
-    verbose,
-    logger: console
-  });
+  // SIMPLIFIED DATABASE INITIALIZATION (2 layers instead of 4)
+  // Layer 1: Open database with schema initialization
+  // For backward compatibility, use legacy ensureDbFactory if provided
+  let dbInstance = null;
+  const getDb = () => {
+    if (dbInstance) return dbInstance;
+    
+    // Use legacy ensureDb if provided (maintains compatibility during migration)
+    const rawDb = typeof ensureDbFactory === 'function' 
+      ? ensureDbFactory(urlsDbPath)
+      : ensureDatabase(urlsDbPath, { verbose, logger: console });
+    
+    // Layer 2: Optional telemetry instrumentation for query cost estimation
+    dbInstance = wrapWithTelemetry(rawDb, {
+      trackQueries: options.trackQueries !== false,
+      logger: verbose ? console : { warn: () => {} }
+    });
+    
+    return dbInstance;
+  };
+  Object.defineProperty(getDb, 'name', { value: 'getDb' });
+  app.locals.getDb = getDb;
   
-  // Alias for read-only access (same connection can be used for reading)
-  const getDbRO = getDbRW;
+  // Legacy aliases for backward compatibility during migration
+  const getDbRW = getDb;
+  const getDbRO = getDb;
+
+  let plannerDbAdapter = null;
+  try {
+    // Planner uses instrumented DB for cost estimation (telemetry tracked)
+    plannerDbAdapter = getDbRO();
+  } catch (err) {
+    if (verbose) {
+      console.warn('[server] Failed to acquire database for advanced planning suite:', err?.message || err);
+    }
+  }
+
+  if (!asyncPlanRunner) {
+    asyncPlanRunner = new AsyncPlanRunner({
+      planningSessionManager,
+      logger: plannerLogger,
+      emitEvent: (event, payload) => broadcast(event, payload),
+      usePlannerHost: false,
+      dbAdapter: plannerDbAdapter
+    });
+  } else if (plannerDbAdapter) {
+    asyncPlanRunner.dbAdapter = plannerDbAdapter;
+  }
+
+  const applyAdvancedPlanningFeature = (configSnapshot) => {
+    if (!asyncPlanRunner) return;
+    const features = (configSnapshot && configSnapshot.features) || {};
+    const enabled = features.advancedPlanningSuite ?? features['advanced-planning-suite'];
+    asyncPlanRunner.usePlannerHost = Boolean(enabled);
+  };
+
+  try {
+    applyAdvancedPlanningFeature(configManager.getConfig());
+  } catch (err) {
+    if (verbose) {
+      console.warn('[server] Failed to apply advanced planning configuration during startup:', err?.message || err);
+    }
+  }
+
+  configManager.addWatcher((updatedConfig) => {
+    try {
+      applyAdvancedPlanningFeature(updatedConfig);
+    } catch (err) {
+      if (verbose) {
+        console.warn('[server] Failed to apply advanced planning configuration update:', err?.message || err);
+      }
+    }
+  });
+
+  planningSessionManager.subscribe(({ type, session }) => {
+    if (!session || !session.id) return;
+    if (type === 'expired') {
+      const status = session.status === 'confirmed'
+        ? 'confirmed'
+        : 'expired';
+      broadcast('plan-status', {
+        sessionId: session.id,
+        status,
+        session
+      });
+    }
+  });
+
+  // Create enhanced DB adapter for coverage API (after getDbRW is defined)
+  const enhancedDbAdapter = new EnhancedDbAdapter({
+    jobRegistry,
+    db: getDbRW(),
+    logger: verbose ? console : { error: console.error, warn: () => {}, log: () => {} }
+  });
+
+  app.locals._sseClients = sseClients;
+  app.locals._broadcaster = realtime.getBroadcaster();
+  app.locals.realtime = realtime;
+  app.locals.jobRegistry = jobRegistry;
+  app.locals.analysisProgress = analysisProgress;
+  app.locals.crawlerManager = crawlerManager;
+  app.locals.broadcastTelemetry = broadcastTelemetry;
+  app.locals.planningSessionManager = planningSessionManager;
+  app.locals.asyncPlanRunner = asyncPlanRunner;
+
+  const eventHandlerService = options.eventHandlerService instanceof JobEventHandlerService
+    ? options.eventHandlerService
+    : new JobEventHandlerService({
+        jobRegistry,
+        broadcast,
+        broadcastJobs,
+        broadcastProgress,
+        broadcastTelemetry,
+        getDbRW,
+        dbOperations: {
+          markCrawlJobStatus,
+          insertQueueEvent,
+          insertCrawlProblem,
+          insertPlannerStageEvent,
+          insertCrawlMilestone
+        },
+        QUIET,
+        queueDebug,
+        traceStart,
+        crawlerManager
+      });
+
+  const crawlOrchestrationService = options.crawlOrchestrationService instanceof CrawlOrchestrationService
+    ? options.crawlOrchestrationService
+    : new CrawlOrchestrationService({
+        jobRegistry,
+        runner,
+        buildArgs,
+        urlsDbPath,
+        getDbRW,
+        recordJobStart: recordCrawlJobStart,
+        eventHandler: eventHandlerService,
+        broadcastJobs,
+        QUIET
+      });
+
+  app.locals.eventHandlerService = eventHandlerService;
+  app.locals.crawlOrchestrationService = crawlOrchestrationService;
   
   // Initialize gazetteer priority scheduler
   let gazetteerScheduler = null;
@@ -446,6 +632,18 @@ function createApp(options = {}) {
         } else if (metrics) {
           metrics.backgroundTasks = stats;
         }
+      },
+      emitTelemetry: (entry) => {
+        try {
+          broadcastTelemetry({
+            source: 'background-task',
+            ...entry
+          });
+        } catch (err) {
+          if (verbose) {
+            console.error('[server] Failed to broadcast background task telemetry:', err.message);
+          }
+        }
       }
     });
 
@@ -487,9 +685,14 @@ function createApp(options = {}) {
     app.locals.backgroundTaskManager = backgroundTaskManager;
     app.locals.compressionWorkerPool = compressionWorkerPool;
   } catch (err) {
-    // Only log in verbose mode or non-test environments to reduce test noise
-    if (verbose || !process.env.JEST_WORKER_ID) {
-      console.error('[server] Failed to initialize backgroundTaskManager:', err.message);
+    // ALWAYS log initialization errors so tests can diagnose issues
+    console.error('[server] Failed to initialize backgroundTaskManager:', err.message);
+    if (verbose) {
+      console.error('[server] Stack:', err.stack);
+    }
+    // In test mode, throw the error so tests fail fast with clear diagnostics
+    if (process.env.JEST_WORKER_ID) {
+      throw err;
     }
   }
 
@@ -552,7 +755,16 @@ function createApp(options = {}) {
     lastModified: true
   }));
 
+  // Serve theme directory (needed for dynamic imports from bundled assets)
+  app.use('/theme', express.static(path.join(__dirname, '..', 'public', 'theme'), {
+    maxAge: '1h',
+    etag: true,
+    lastModified: true
+  }));
+
   app.use('/api/config', createConfigApiRouter(configManager));
+  // Mount coverage analytics API
+  app.use('/api/coverage', createCoverageApiRouter(enhancedDbAdapter));
 
   const generateAnalysisRunId = (explicit) => {
     if (explicit) {
@@ -570,6 +782,15 @@ function createApp(options = {}) {
     analysisProgress,
     QUIET
   }));
+  app.use(createPlanningApiRouter({
+    planningSessionManager,
+    asyncPlanRunner,
+    jobRegistry,
+    crawlOrchestrationService,
+    broadcast,
+    crawlerManager,
+    allowMultiJobs
+  }));
   app.use(createCrawlStartRouter({
     jobRegistry,
     allowMultiJobs,
@@ -579,12 +800,15 @@ function createApp(options = {}) {
     broadcast,
     broadcastJobs,
     broadcastProgress,
+    broadcastTelemetry,
     getDbRW,
     queueDebug,
     metrics,
     QUIET,
     traceStart,
-    crawlerManager
+    crawlerManager,
+    eventHandlerService,
+    crawlOrchestrationService
   }));
   // Mount crawls API router (list, detail, and job-scoped controls)
   app.use(createCrawlsApiRouter({
@@ -643,7 +867,7 @@ function createApp(options = {}) {
   }));
   // Mount background tasks API router
   if (backgroundTaskManager) {
-    app.use('/api/background-tasks', createBackgroundTasksRouter(backgroundTaskManager, getDbRW));
+    app.use('/api/background-tasks', createBackgroundTasksRouter(backgroundTaskManager, getDb));
     
     // Serve background tasks UI page
     app.get('/background-tasks', (req, res) => {
@@ -717,6 +941,16 @@ function createApp(options = {}) {
     jobRegistry,
     logger: queueDebug ? console : null
   }));
+  // Crawls SSR page (list of active/completed crawls)
+  app.use(createCrawlsSsrRouter({
+    jobRegistry,
+    renderNav
+  }));
+  // Mount job detail SSR router
+  app.use(createJobDetailRouter({
+    jobRegistry,
+    renderNav
+  }));
   // Gazetteer SSR surface
   app.use(createGazetteerRouter({
     urlsDbPath,
@@ -766,6 +1000,8 @@ function createApp(options = {}) {
   app.use(createGazetteerKindRouter({ urlsDbPath, startTrace }));
 
   app.use(createMilestonesSsrRouter({ getDbRW: getDbRW, renderNav }));
+  
+  app.use(createGeographyFlowchartRouter({ getDbRW: getDbRW, renderNav }));
 
   // /api/evaluate: now in createMiscApiRouter
 

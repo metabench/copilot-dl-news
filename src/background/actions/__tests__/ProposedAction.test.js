@@ -2,8 +2,8 @@
  * Tests for ProposedAction class
  */
 
-const ProposedAction = require('../ProposedAction');
-const Action = require('../Action');
+const { ProposedAction } = require('../ProposedAction');
+const { Action } = require('../Action');
 
 describe('ProposedAction', () => {
   describe('constructor', () => {

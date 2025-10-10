@@ -1,6 +1,9 @@
 # Gazetteer Breadth-First Enhancement - Implementation Summary
 
-**Date:** October 5, 2025  
+# Gazetteer Breadth-First Implementation
+
+**Date**: October 2025  
+**When to Read**: Read this when implementing or debugging the gazetteer breadth-first crawl strategy, understanding how geography data is queued and processed, or modifying priority-based crawl ordering.  
 **Status:** Implementation Complete, Testing in Progress
 
 ## Overview

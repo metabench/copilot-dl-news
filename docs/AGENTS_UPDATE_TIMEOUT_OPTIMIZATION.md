@@ -1,5 +1,7 @@
 # AGENTS.md Update: Timeout Optimization Guidelines
 
+**When to Read**: Read this when debugging timeout issues in crawls or background tasks, understanding timeout tuning strategy, or implementing defensive timeout patterns. Documents lessons learned about timeout discipline and error context.
+
 ## Changes Made (October 8, 2025)
 
 ### 1. Added "Timeout Optimization Strategy for Development"

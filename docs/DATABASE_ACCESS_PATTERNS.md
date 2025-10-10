@@ -4,6 +4,11 @@
 **Status**: ✅ Standardized  
 **Module**: `src/db/dbAccess.js`
 
+**When to Read**:
+- Wiring database access inside services, routes, or CLI scripts and choosing the correct helper
+- Debugging connection lifecycle issues (dangling handles, WAL isolation) or test flakiness
+- Auditing new code for consistency with the unified `dbAccess` patterns before review
+
 ## Problem Statement
 
 Previously, the codebase had **three conflicting patterns** for database access:

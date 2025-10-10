@@ -1,5 +1,7 @@
 # Phase 4 Refactoring Complete ✅
 
+**When to Read**: This document is a historical summary of the Phase 4 refactoring effort. Read it to understand which services (`QueuePlannerService`, `JobControlService`) were created and how they improved the codebase. It serves as a record of the project's architectural evolution.
+
 **Date**: October 7, 2025  
 **Status**: ✅ Complete — All tests passing (766/771)  
 **Duration**: ~2 hours

@@ -1,5 +1,7 @@
 # Client-Side Modularization Plan
 
+**When to Read**: Read this when refactoring UI JavaScript, creating new client-side modules, or understanding the browser component architecture. Covers module boundaries, dependency patterns, and build process for UI code.
+
 _Inspired by jsgui3-html patterns from metabench/jsgui3-html_
 
 ## Current State

@@ -137,6 +137,17 @@
                 <div class="config-group">
                     <div class="config-item">
                         <div>
+                            <div class="config-label">Advanced Planning Suite (GOFAI)</div>
+                            <div class="config-description">Enable GOFAI-based planning with cost estimation and meta-coordination</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="advanced-planning-suite">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="config-item">
+                        <div>
                             <div class="config-label">Gap-Driven Prioritization</div>
                             <div class="config-description">Boost priority based on coverage gaps</div>
                         </div>
@@ -305,13 +316,14 @@
                 this.setInputValue('gap-score', weights['gap-score']);
                 this.setInputValue('problem-clusters', weights['problem-clusters']);
 
-                // Feature flags
+                // Feature flags (check both kebab-case and camelCase)
                 const features = config.features || {};
-                this.setCheckboxValue('gap-driven-prioritization', features['gap-driven-prioritization']);
-                this.setCheckboxValue('problem-clustering', features['problem-clustering']);
-                this.setCheckboxValue('planner-knowledge-reuse', features['planner-knowledge-reuse']);
-                this.setCheckboxValue('coverage-analytics', features['coverage-analytics']);
-                this.setCheckboxValue('priority-debugging', features['priority-debugging']);
+                this.setCheckboxValue('advanced-planning-suite', features['advanced-planning-suite'] ?? features.advancedPlanningSuite);
+                this.setCheckboxValue('gap-driven-prioritization', features['gap-driven-prioritization'] ?? features.gapDrivenPrioritization);
+                this.setCheckboxValue('problem-clustering', features['problem-clustering'] ?? features.problemClustering);
+                this.setCheckboxValue('planner-knowledge-reuse', features['planner-knowledge-reuse'] ?? features.plannerKnowledgeReuse);
+                this.setCheckboxValue('coverage-analytics', features['coverage-analytics'] ?? features.realTimeCoverageAnalytics);
+                this.setCheckboxValue('priority-debugging', features['priority-debugging'] ?? features.problemResolution);
 
                 // Clustering parameters
                 const clustering = config.clustering || {};
@@ -381,6 +393,7 @@
                         'problem-clusters': parseFloat(document.getElementById('problem-clusters').value) || 0
                     },
                     features: {
+                        'advanced-planning-suite': document.getElementById('advanced-planning-suite').checked,
                         'gap-driven-prioritization': document.getElementById('gap-driven-prioritization').checked,
                         'problem-clustering': document.getElementById('problem-clustering').checked,
                         'planner-knowledge-reuse': document.getElementById('planner-knowledge-reuse').checked,

@@ -16,15 +16,8 @@ function prepareStatements(db) {
     `),
     listQueues: handle.prepare(`
       SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
-             COALESCE(
-               NULLIF((SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id), 0),
-               (SELECT COUNT(*) FROM queue_events_enhanced ee WHERE ee.job_id = j.id),
-               0
-             ) AS events,
-             COALESCE(
-               (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id),
-               (SELECT MAX(ts) FROM queue_events_enhanced ee WHERE ee.job_id = j.id)
-             ) AS lastEventAt
+             (SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id) AS events,
+             (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id) AS lastEventAt
       FROM crawl_jobs j
       ORDER BY COALESCE(j.ended_at, j.started_at) DESC
       LIMIT ?
@@ -44,12 +37,6 @@ function prepareStatements(db) {
     `),
     queueBoundsAction: handle.prepare(`
       SELECT MIN(id) AS minId, MAX(id) AS maxId FROM queue_events WHERE job_id = ? AND action = ?
-    `),
-    queueBoundsEnhanced: handle.prepare(`
-      SELECT MIN(id) AS minId, MAX(id) AS maxId FROM queue_events_enhanced WHERE job_id = ?
-    `),
-    queueBoundsEnhancedAction: handle.prepare(`
-      SELECT MIN(id) AS minId, MAX(id) AS maxId FROM queue_events_enhanced WHERE job_id = ? AND action = ?
     `),
     queueNeighbors: handle.prepare(`
       WITH ordered AS (
@@ -91,15 +78,10 @@ function getQueueJob(db, id) {
 
 function getQueueEventBounds(db, id, action) {
   const stmts = prepareStatements(db);
-  const primary = action ? stmts.queueBoundsAction : stmts.queueBounds;
-  const fallback = action ? stmts.queueBoundsEnhancedAction : stmts.queueBoundsEnhanced;
+  const stmt = action ? stmts.queueBoundsAction : stmts.queueBounds;
   const params = action ? [id, action] : [id];
-  const row = primary.get(...params);
-  if (row?.minId != null || row?.maxId != null) {
-    return { minId: row.minId ?? null, maxId: row.maxId ?? null };
-  }
-  const fallbackRow = fallback.get(...params);
-  return { minId: fallbackRow?.minId ?? null, maxId: fallbackRow?.maxId ?? null };
+  const row = stmt.get(...params);
+  return { minId: row?.minId ?? null, maxId: row?.maxId ?? null };
 }
 
 function getQueueNeighbors(db, id) {
@@ -156,28 +138,16 @@ function fetchQueueEvents(db, { id, action, before, after, limit } = {}) {
   const order = beforeId ? "DESC" : afterId ? "ASC" : "DESC";
   const safeLimit = sanitizeLimit(limit, { fallback: 200 });
   const baseParams = [id];
-  const first = buildQueueEventsQuery({
+  const query = buildQueueEventsQuery({
     table: "queue_events",
     action: normalizedAction,
     beforeId,
     afterId,
     order
   });
-  let stmt = db.prepare(first.sql);
-  let rows = stmt.all(...baseParams, ...first.params, safeLimit);
+  const stmt = db.prepare(query.sql);
+  let rows = stmt.all(...baseParams, ...query.params, safeLimit);
   if (order === "ASC") rows = rows.reverse();
-  if (!rows.length) {
-    const fallback = buildQueueEventsQuery({
-      table: "queue_events_enhanced",
-      action: normalizedAction,
-      beforeId,
-      afterId,
-      order
-    });
-    stmt = db.prepare(fallback.sql);
-    rows = stmt.all(...baseParams, ...fallback.params, safeLimit);
-    if (order === "ASC") rows = rows.reverse();
-  }
   return {
     events: rows,
     newestId: rows.length ? rows[0].id : null,

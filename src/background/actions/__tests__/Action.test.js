@@ -2,7 +2,7 @@
  * Tests for Action class
  */
 
-const Action = require('../Action');
+const { Action } = require('../Action');
 
 describe('Action', () => {
   describe('constructor', () => {

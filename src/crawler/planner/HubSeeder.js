@@ -10,7 +10,9 @@ class HubSeeder {
     telemetry,
     db,
     baseUrl,
-    logger = console
+    logger = console,
+    planCapture = null,
+    disableDbRecording = false
   } = {}) {
     this.enqueueRequest = typeof enqueueRequest === 'function' ? enqueueRequest : null;
     this.normalizeUrl = typeof normalizeUrl === 'function' ? normalizeUrl : null;
@@ -19,6 +21,8 @@ class HubSeeder {
     this.db = db || null;
     this.baseUrl = baseUrl;
     this.logger = logger;
+    this.planCapture = planCapture || null;
+    this.disableDbRecording = !!disableDbRecording;
   }
 
   async seedPlan({ host, sectionSlugs = [], countryCandidates = [], navigationLinks = [], maxSeeds = 50 }) {
@@ -39,6 +43,12 @@ class HubSeeder {
     const entries = this._buildHubEntries({ sectionSlugs, countryCandidates, navigationLinks });
     const cap = typeof maxSeeds === 'number' && maxSeeds > 0 ? maxSeeds : 50;
     const hubs = entries.slice(0, cap);
+
+    if (this.planCapture && typeof this.planCapture.recordSeedCandidates === 'function') {
+      try {
+        this.planCapture.recordSeedCandidates(entries);
+      } catch (_) {}
+    }
 
     const seeded = [];
     const navigationSeeded = [];
@@ -69,6 +79,15 @@ class HubSeeder {
         if (entry.meta.kind === 'navigation') {
           navigationSeeded.push(entry.url);
         }
+        if (this.planCapture && typeof this.planCapture.recordSeedOutcome === 'function') {
+          try {
+            this.planCapture.recordSeedOutcome({ entry, enqueued: true, normalized });
+          } catch (_) {}
+        }
+      } else if (this.planCapture && typeof this.planCapture.recordSeedOutcome === 'function') {
+        try {
+          this.planCapture.recordSeedOutcome({ entry, enqueued: false, normalized: null });
+        } catch (_) {}
       }
       this._recordSeedInDatabase(host, entry.url, entry.meta);
     }
@@ -283,7 +302,7 @@ class HubSeeder {
   }
 
   _recordSeedInDatabase(host, hubUrl, meta = null) {
-    if (!this.db) return;
+    if (!this.db || this.disableDbRecording) return;
     try {
       recordPlaceHubSeed(this.db, {
         host,

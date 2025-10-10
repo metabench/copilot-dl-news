@@ -39,8 +39,7 @@ describe('/gazetteer/places pager storage propagation', () => {
     seedDb(tmpDb, 80);
     process.env.DB_PATH = tmpDb;
     process.env.PORT = '0';
-    server = startServer();
-    await new Promise(r => setTimeout(r, 120));
+    server = await startServer();
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : 0;
   });

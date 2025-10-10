@@ -2,7 +2,12 @@
 
 **Scope**: Bucket storage infrastructure only (no assignment logic, no benchmarks)  
 **Goal**: Create tables and utilities to store/retrieve compressed buckets  
-**Status**: Ready to implement
+**Status**: ✅ Complete (Implemented on 2025-10-08)
+
+**When to Read**:
+- Implementing or reviewing the compression bucket schema/utility modules prior to coding
+- Coordinating Phase 0/1 normalization work where bucket storage interacts with new content tables
+- Planning tests, migrations, or follow-on tasks for compressed content retrieval
 
 ---
 

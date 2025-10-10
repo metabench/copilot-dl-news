@@ -4,6 +4,11 @@
 **Created**: 2025-10-06  
 **Goal**: Normalize database schema, add compression infrastructure, and establish migration groundwork WITHOUT requiring immediate schema changes to existing tables.
 
+**When to Read**:
+- Planning schema evolution, migration phases, or dual-write strategies for the SQLite database
+- Estimating effort or sequencing for normalization and compression initiatives
+- Coordinating with Phase 0 migration tooling before implementing structural changes
+
 ---
 
 ## Executive Summary

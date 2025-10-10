@@ -5,6 +5,11 @@
 **Time Estimate**: 1-2 days  
 **Prerequisites**: None (can start immediately)
 
+**When to Read**:
+- Spinning up the migration tooling before touching existing schema or adding new tables
+- Estimating effort, sequencing, or staffing for the normalization roadmap
+- Reviewing reference implementations for exporter/importer/validator modules prior to coding
+
 ---
 
 ## Overview

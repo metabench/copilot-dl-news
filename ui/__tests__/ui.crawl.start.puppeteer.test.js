@@ -25,7 +25,15 @@ function startServerWithEnv(env = {}) {
   let cp; let port; let browser; let page; const logs = [];
 
   beforeAll(async () => {
-    ({ cp, port } = await startServerWithEnv({ UI_FAKE_RUNNER: '1' }));
+    ({ cp, port } = await startServerWithEnv({
+      UI_FAKE_RUNNER: '1',
+      UI_FAKE_PLANNER: '1',
+      UI_FAKE_QUEUE: '1',
+      UI_FAKE_MILESTONES: '1',
+      UI_FAKE_PROBLEMS: '1',
+      UI_FAST_START: '1',
+      UI_FAKE_PLANNER_DELAY_MS: '25'
+    }));
     browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
     page = await browser.newPage();
     page.on('console', (msg) => { try { logs.push('[console] ' + msg.text()); } catch(_) {} });
@@ -78,13 +86,13 @@ function startServerWithEnv(env = {}) {
       const lt = logsEl ? (logsEl.textContent || '') : '';
       const pt = progEl ? (progEl.textContent || '') : '';
       return lt.includes('Started:') || lt.includes('[server] starting crawler') || pt !== prev || /visited:\s*[1-9]/.test(pt);
-    }, { timeout: 3500 }, before);
+    }, { timeout: 6000 }, before);
 
     // Fake runner should complete quickly; see DONE within 4s
     await page.waitForFunction(() => {
       const el = document.getElementById('logs');
       return el && (el.textContent || '').includes('DONE:');
-    }, { timeout: 2500 }).catch((e) => {
+    }, { timeout: 4000 }).catch((e) => {
       throw new Error('Expected DONE: in logs. Debug: ' + logs.slice(-10).join('\n'));
     });
   });

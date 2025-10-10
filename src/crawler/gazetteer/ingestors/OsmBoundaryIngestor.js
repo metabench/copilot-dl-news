@@ -16,6 +16,7 @@ class OsmBoundaryIngestor {
     batchSize = 10,
     overpassTimeout = 60
   } = {}) {
+    process.stderr.write('[OsmBoundaryIngestor] Constructor starting...\n');
     if (!db) {
       throw new Error('OsmBoundaryIngestor requires a database handle');
     }
@@ -24,7 +25,9 @@ class OsmBoundaryIngestor {
     this.batchSize = batchSize;
     this.overpassTimeout = overpassTimeout;
     this.client = client || new OsmHttpClient({ logger: this.logger });
+    process.stderr.write('[OsmBoundaryIngestor] Creating boundary statements...\n');
     this.statements = createOsmBoundaryStatements(this.db);
+    process.stderr.write('[OsmBoundaryIngestor] Statements created\n');
     this.id = 'osm-boundaries';
     this.name = 'OpenStreetMap Boundary Ingestor';
 
@@ -36,6 +39,7 @@ class OsmBoundaryIngestor {
     } catch (err) {
       this.logger.warn('[OsmBoundaryIngestor] Failed to register source metadata:', err.message);
     }
+    process.stderr.write('[OsmBoundaryIngestor] Constructor complete\n');
   }
 
   async execute({ limit = this.batchSize, signal = null, emitProgress = null } = {}) {
@@ -55,7 +59,8 @@ class OsmBoundaryIngestor {
 
     this._emitProgress(emitProgress, {
       phase: 'discovery',
-      totalRecords: candidates.length
+      totalItems: candidates.length,
+      current: 0
     });
 
     for (const candidate of candidates) {
@@ -113,6 +118,8 @@ class OsmBoundaryIngestor {
         summary.recordsUpserted++;
         this._emitProgress(emitProgress, {
           phase: 'processing',
+          current: summary.recordsProcessed,
+          totalItems: candidates.length,
           recordsProcessed: summary.recordsProcessed,
           recordsUpserted: summary.recordsUpserted,
           candidateId: candidate.id,
@@ -202,6 +209,22 @@ class OsmBoundaryIngestor {
       }
     }
   }
+  
+  _emitTelemetry(handler, type, message, context = {}) {
+    if (tof(handler) === 'function') {
+      try {
+        handler({
+          type,
+          stage: 'boundaries',
+          message,
+          timestamp: Date.now(),
+          context
+        });
+      } catch (err) {
+        // Best effort
+      }
+    }
+  }
 }
 
-module.exports = { OsmBoundaryIngestor };
+module.exports = OsmBoundaryIngestor;

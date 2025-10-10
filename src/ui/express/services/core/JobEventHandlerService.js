@@ -25,6 +25,7 @@ class JobEventHandlerService {
    * @param {Function} dependencies.broadcast - Function to broadcast events
    * @param {Function} dependencies.broadcastJobs - Function to broadcast job list updates
    * @param {Function} dependencies.broadcastProgress - Function to broadcast progress updates
+   * @param {Function} [dependencies.broadcastTelemetry] - Function to broadcast telemetry events
    * @param {Function} dependencies.getDbRW - Database getter function
    * @param {Object} dependencies.dbOperations - Database operation functions
    * @param {Function} dependencies.dbOperations.markCrawlJobStatus - Mark job status in DB
@@ -42,6 +43,7 @@ class JobEventHandlerService {
     broadcast,
     broadcastJobs,
     broadcastProgress,
+    broadcastTelemetry = null,
     getDbRW,
     dbOperations,
     QUIET = false,
@@ -72,6 +74,7 @@ class JobEventHandlerService {
     this.broadcast = broadcast;
     this.broadcastJobs = broadcastJobs;
     this.broadcastProgress = broadcastProgress;
+    this.broadcastTelemetry = broadcastTelemetry;
     this.getDbRW = getDbRW;
     this.dbOperations = dbOperations;
     this.QUIET = QUIET;
@@ -424,6 +427,11 @@ class JobEventHandlerService {
       return this._handleMilestoneMessage(line, job);
     }
 
+    // TELEMETRY messages
+    if (line.startsWith('TELEMETRY ')) {
+      return this._handleTelemetryMessage(line, job);
+    }
+
     // Final stats pattern
     const m = line.match(/Final stats: (\d+) pages visited, (\d+) pages downloaded, (\d+) articles found, (\d+) articles saved/);
     if (m) {
@@ -665,6 +673,38 @@ class JobEventHandlerService {
           );
         }
       } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /**
+   * Handle TELEMETRY message
+   * 
+   * @param {string} line - Output line
+   * @param {Object} job - Job descriptor
+   * @returns {boolean} True if handled successfully
+   * @private
+   */
+  _handleTelemetryMessage(line, job) {
+    try {
+      const obj = JSON.parse(line.slice('TELEMETRY '.length));
+      
+      // Enrich with job context
+      const telemetryEntry = {
+        ...obj,
+        source: obj.source || 'crawler',
+        jobId: job.id,
+        taskType: job.crawlType || 'crawl',
+        ts: obj.ts || new Date().toISOString()
+      };
+
+      // Broadcast via telemetry channel if available
+      if (this.broadcastTelemetry && typeof this.broadcastTelemetry === 'function') {
+        this.broadcastTelemetry(telemetryEntry);
+      }
+
       return true;
     } catch (_) {
       return false;

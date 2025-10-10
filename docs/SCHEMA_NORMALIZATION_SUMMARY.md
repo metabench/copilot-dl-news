@@ -2,7 +2,8 @@
 
 **Date**: 2025-10-06  
 **Author**: GitHub Copilot (at user request)  
-**Full Details**: See `DATABASE_NORMALIZATION_PLAN.md`
+**Full Details**: See `DATABASE_NORMALIZATION_PLAN.md`  
+**When to Read**: Read this for a high-level overview of database normalization opportunities and priorities. Use this to understand which tables have issues and their severity. For detailed implementation, see DATABASE_NORMALIZATION_PLAN.md.
 
 ---
 

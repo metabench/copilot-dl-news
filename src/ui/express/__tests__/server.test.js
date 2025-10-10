@@ -99,7 +99,8 @@ describe('GUI server API', () => {
     const fakeConfigManager = {
       getConfig: () => config,
       getFeatureFlags: () => config.features,
-      updateConfig: () => false
+      updateConfig: () => false,
+      addWatcher: () => {}
     };
     const app = createApp({ runner: makeFakeRunner([], 0, 5), configManager: fakeConfigManager });
     const featuresRes = await request(app).get('/api/config/features');

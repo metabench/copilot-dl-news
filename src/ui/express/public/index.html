@@ -57,7 +57,7 @@
           </div>
           <div class="control-field">
             <label for="concurrency">Concurrency</label>
-            <input id="concurrency" type="number" value="1" />
+            <input id="concurrency" type="number" value="1" title="For web crawls: number of parallel workers. For geography/gazetteer crawls: maximum allowed (may use less)." />
           </div>
           <div class="control-field">
             <label for="requestTimeoutMs">Timeout (ms)</label>
@@ -113,7 +113,7 @@
 
         <div class="control-actions">
           <div class="control-buttons">
-            <button id="startBtn" class="button button--primary" type="button">Start</button>
+                        <button id="startBtn" data-testid="start-crawl-button" class="button button--primary" type="button">Start</button>
             <button id="stopBtn" class="button" type="button">Stop</button>
             <button id="pauseBtn" class="button" type="button">Pause</button>
             <button id="resumeBtn" class="button" type="button" disabled>Resume</button>
@@ -129,6 +129,28 @@
         </div>
       </section>
       
+      <!-- Ongoing Crawls (moved to top with integrated progress) -->
+      <section id="jobsSection" class="panel panel--full-width">
+        <div class="panel-head">
+          <h3>Ongoing crawls</h3>
+          <label class="toggle-control">
+            <input type="checkbox" id="showLogs" />
+            <span>Show logs</span>
+          </label>
+        </div>
+        <div id="jobsList" class="muted text-sm">None</div>
+        
+        <!-- Crawl Progress Indicator (integrated within ongoing crawls) -->
+        <div id="crawlProgressSection" class="crawl-progress-section is-hidden" data-active="0">
+          <div class="crawl-progress-header">
+            <h4>📊 Current Crawl Progress</h4>
+          </div>
+          <div id="crawlProgressContainer" class="crawl-progress-container">
+            <!-- CrawlProgressIndicator will be rendered here -->
+          </div>
+        </div>
+      </section>
+
       <!-- Background Tasks Widget -->
       <section id="backgroundTasksWidget" class="panel panel--full-width is-hidden" data-has-tasks="0">
         <div class="summary-head">
@@ -364,16 +386,6 @@
       </div>
       <div id="insightAnalysisHighlights" class="analysis-highlights"></div>
     </section>
-    <section id="jobsSection" class="panel panel--compact panel--half-width">
-      <div class="panel-head">
-        <h3>Ongoing crawls</h3>
-        <label class="toggle-control">
-          <input type="checkbox" id="showLogs" />
-          <span>Show logs</span>
-        </label>
-      </div>
-      <div id="jobsList" class="muted text-sm">None</div>
-    </section>
 
     <section id="resumeSection" class="panel panel--compact panel--half-width resume-panel" data-has-data="0">
       <div class="panel-head resume-panel__head">
@@ -457,6 +469,12 @@
         <summary><strong>Planner timeline</strong></summary>
         <div id="plannerStagesList" class="timeline-list muted">Planner telemetry appears when intelligent crawls run.</div>
       </details>
+      <details id="secTelemetry" open>
+        <summary><strong>Crawl Telemetry</strong></summary>
+        <div id="crawlTelemetryContainer" class="telemetry-container">
+          <!-- TelemetryDisplay will be rendered here -->
+        </div>
+      </details>
       <details id="secDomains" open>
         <summary><strong>Recent Domains</strong></summary>
         <div id="domains" class="meta text-sm">Loading…</div>
@@ -492,6 +510,6 @@
       </div>
     </section>
     </main>
-    <script type="module" src="/assets/index.js"></script>
+    <script type="module" src="/assets/index.js?v=20251009-2245"></script>
   </body>
-  </html>
+</html>

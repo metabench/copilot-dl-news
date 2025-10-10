@@ -1,5 +1,9 @@
 # Enhanced Crawler Features
 
+**Status**: COMPLETE  
+**Last Updated**: September 28, 2025  
+**When to Read**: You're working with the intelligent crawler, priority system, coverage analytics, or gap-driven prioritization
+
 This document describes the comprehensive enhanced crawler features implemented for intelligent crawling with configurable priority systems, modular database architecture, and robust operation capabilities.
 
 ## Overview

@@ -12,6 +12,19 @@ const { each, tof } = require('lang-tools');
 const { createAnalysisProgressBar } = require('./AnalysisProgressBar');
 
 const analysisProgressControllers = new Map();
+const telemetryState = {
+  events: [],
+  maxEntries: 200,
+  paused: false,
+  autoScroll: true,
+  container: null
+};
+const severityLabels = {
+  error: 'Error',
+  warning: 'Warning',
+  info: 'Info',
+  debug: 'Debug'
+};
 
 /**
  * Initialize background tasks UI
@@ -25,6 +38,9 @@ function initBackgroundTasksUI(sseManager) {
   
   // Render UI
   container.innerHTML = renderTaskManagerUI();
+  telemetryState.container = document.getElementById('telemetry-stream');
+  setTelemetryEmptyState(true);
+  updateTelemetryPausedUi();
   
   // Setup event listeners
   setupEventListeners(sseManager);
@@ -78,6 +94,22 @@ function renderTaskManagerUI() {
         <h3>Active & Recent Tasks</h3>
         <div id="task-list" class="task-list">
           <p class="loading">Loading tasks...</p>
+        </div>
+      </div>
+
+      <div class="telemetry-container" id="telemetry-container">
+        <div class="telemetry-header">
+          <h3>Diagnostics Telemetry</h3>
+          <div class="telemetry-controls">
+            <label class="telemetry-control">
+              <input type="checkbox" id="telemetry-autoscroll" checked /> Auto-scroll
+            </label>
+            <button class="btn btn-secondary btn-sm" id="telemetry-pause-btn" data-paused="0">Pause</button>
+            <button class="btn btn-sm" id="telemetry-clear-btn">Clear</button>
+          </div>
+        </div>
+        <div class="telemetry-stream is-empty" id="telemetry-stream">
+          <div class="telemetry-empty">Telemetry events will appear once background tasks or crawls emit diagnostics.</div>
         </div>
       </div>
     </div>
@@ -189,6 +221,20 @@ function setupEventListeners(sseManager) {
   
   document.getElementById('create-and-start-btn')?.addEventListener('click', () => {
     createTask(true);
+  });
+
+  const telemetryClearBtn = document.getElementById('telemetry-clear-btn');
+  telemetryClearBtn?.addEventListener('click', () => clearTelemetryEvents());
+
+  const telemetryPauseBtn = document.getElementById('telemetry-pause-btn');
+  telemetryPauseBtn?.addEventListener('click', () => toggleTelemetryPaused());
+
+  const telemetryAutoScroll = document.getElementById('telemetry-autoscroll');
+  telemetryAutoScroll?.addEventListener('change', (e) => {
+    telemetryState.autoScroll = !!e.target.checked;
+    if (telemetryState.autoScroll && !telemetryState.paused) {
+      scrollTelemetryToBottom();
+    }
   });
 }
 
@@ -705,7 +751,163 @@ function cleanupAnalysisProgressBars(activeIds) {
   });
 }
 
+function normalizeTelemetryEntry(entry = {}) {
+  const ts = entry.ts || entry.timestamp || new Date().toISOString();
+  const severity = (entry.severity || '').toLowerCase();
+  const allowedSeverity = ['error', 'warning', 'info', 'debug'];
+  return {
+    id: entry.id || `telemetry-${ts}-${Math.random().toString(16).slice(2, 6)}`,
+    ts,
+    source: entry.source || 'unknown',
+    event: entry.event || entry.type || 'log',
+    severity: allowedSeverity.includes(severity) ? severity : 'info',
+    message: entry.message || entry.msg || '',
+    details: entry.details,
+    data: entry.data,
+    taskId: entry.taskId,
+    taskType: entry.taskType,
+    status: entry.status
+  };
+}
+
+function formatTelemetryTimestamp(ts) {
+  try {
+    const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return ts;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch (_) {
+    return ts;
+  }
+}
+
+function renderTelemetryRow(entry) {
+  const row = document.createElement('div');
+  row.className = `telemetry-row severity-${entry.severity}`;
+  row.dataset.eventId = entry.id;
+
+  const header = document.createElement('div');
+  header.className = 'telemetry-row__header';
+
+  const badge = document.createElement('span');
+  badge.className = `telemetry-badge telemetry-badge--${entry.severity}`;
+  badge.textContent = severityLabels[entry.severity] || entry.severity;
+  header.appendChild(badge);
+
+  const title = document.createElement('span');
+  title.className = 'telemetry-title';
+  const parts = [entry.source, entry.event, entry.status].filter(Boolean);
+  title.textContent = parts.join(' · ') || 'telemetry';
+  header.appendChild(title);
+
+  const time = document.createElement('span');
+  time.className = 'telemetry-timestamp';
+  time.textContent = formatTelemetryTimestamp(entry.ts);
+  header.appendChild(time);
+
+  row.appendChild(header);
+
+  const summary = document.createElement('div');
+  summary.className = 'telemetry-summary';
+  summary.textContent = entry.message || '(no message)';
+  row.appendChild(summary);
+
+  if (entry.taskId || entry.taskType) {
+    const meta = document.createElement('div');
+    meta.className = 'telemetry-meta';
+    const metaParts = [];
+    if (entry.taskId) metaParts.push(`task #${entry.taskId}`);
+    if (entry.taskType) metaParts.push(entry.taskType);
+    meta.textContent = metaParts.join(' · ');
+    row.appendChild(meta);
+  }
+
+  if (entry.details || entry.data) {
+    const detailsBlock = document.createElement('pre');
+    detailsBlock.className = 'telemetry-details';
+    let payload = entry.details;
+    if (!payload && typeof entry.data !== 'undefined') {
+      try {
+        payload = JSON.stringify(entry.data, null, 2);
+      } catch (_) {
+        payload = String(entry.data);
+      }
+    }
+    const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+    detailsBlock.textContent = text.length > 600 ? `${text.slice(0, 597)}…` : text;
+    row.appendChild(detailsBlock);
+  }
+
+  return row;
+}
+
+function setTelemetryEmptyState(isEmpty) {
+  if (!telemetryState.container) return;
+  telemetryState.container.classList.toggle('is-empty', !!isEmpty);
+  if (isEmpty) {
+    telemetryState.container.innerHTML = '<div class="telemetry-empty">Telemetry events will appear once background tasks or crawls emit diagnostics.</div>';
+  }
+}
+
+function scrollTelemetryToBottom() {
+  if (!telemetryState.container) return;
+  telemetryState.container.scrollTop = telemetryState.container.scrollHeight;
+}
+
+function updateTelemetryPausedUi() {
+  const pauseBtn = document.getElementById('telemetry-pause-btn');
+  if (pauseBtn) {
+    pauseBtn.dataset.paused = telemetryState.paused ? '1' : '0';
+    pauseBtn.textContent = telemetryState.paused ? 'Resume' : 'Pause';
+  }
+  if (telemetryState.container) {
+    telemetryState.container.dataset.paused = telemetryState.paused ? '1' : '0';
+  }
+}
+
+function appendTelemetryEvent(entry) {
+  if (!telemetryState.container) return;
+  const normalized = normalizeTelemetryEntry(entry);
+  telemetryState.events.push(normalized);
+  if (telemetryState.events.length > telemetryState.maxEntries) {
+    telemetryState.events.shift();
+    const firstRow = telemetryState.container.querySelector('.telemetry-row');
+    firstRow?.remove();
+  }
+
+  if (telemetryState.container.classList.contains('is-empty')) {
+    telemetryState.container.innerHTML = '';
+    telemetryState.container.classList.remove('is-empty');
+  }
+
+  const row = renderTelemetryRow(normalized);
+  telemetryState.container.appendChild(row);
+
+  if (!telemetryState.paused && telemetryState.autoScroll) {
+    scrollTelemetryToBottom();
+  }
+}
+
+function clearTelemetryEvents() {
+  telemetryState.events = [];
+  setTelemetryEmptyState(true);
+}
+
+function toggleTelemetryPaused(forceValue) {
+  const next = typeof forceValue === 'boolean' ? forceValue : !telemetryState.paused;
+  telemetryState.paused = next;
+  updateTelemetryPausedUi();
+  if (!telemetryState.paused && telemetryState.autoScroll) {
+    scrollTelemetryToBottom();
+  }
+}
+
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { initBackgroundTasksUI, updateTaskCard };
+  module.exports = { initBackgroundTasksUI, updateTaskCard, appendTelemetryEvent, clearTelemetryEvents, toggleTelemetryPaused };
+}
+
+if (typeof window !== 'undefined') {
+  window.appendBackgroundTelemetry = appendTelemetryEvent;
+  window.clearBackgroundTelemetry = clearTelemetryEvents;
+  window.toggleBackgroundTelemetryPaused = toggleTelemetryPaused;
 }

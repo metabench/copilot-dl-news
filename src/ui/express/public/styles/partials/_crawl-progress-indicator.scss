@@ -1,0 +1,186 @@
+// Crawl Progress Indicator Component
+// Dual-level progress bars for crawl tasks with stage indicators
+
+.crawl-progress-indicator {
+  background: var(--color-bg-elevated, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 16px;
+}
+
+.crawl-progress-indicator__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.crawl-progress-indicator__stage-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  flex: 1;
+}
+
+.crawl-progress-indicator__status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  
+  &[data-status="running"] {
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+  }
+  
+  &[data-status="paused"] {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+  }
+  
+  &[data-status="completed"],
+  &[data-status="success"] {
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+  }
+  
+  &[data-status="active"] {
+    background: rgba(59, 130, 246, 0.15);
+    color: #2563eb;
+  }
+  
+  &[data-status="failed"] {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+  }
+  
+  &[data-status="initializing"] {
+    background: rgba(148, 163, 184, 0.15);
+    color: #64748b;
+  }
+}
+
+.crawl-progress-indicator__main-progress {
+  margin-bottom: 12px;
+}
+
+.crawl-progress-indicator__sub-progress {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-light, #f1f5f9);
+}
+
+.crawl-progress-indicator__sub-label {
+  font-size: 13px;
+  color: var(--color-text-muted, #64748b);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.progress-bar-container {
+  position: relative;
+  height: 32px;
+  background: var(--color-bg-secondary, #f1f5f9);
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.progress-bar-container--small {
+  height: 24px;
+}
+
+.progress-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+  transition: width 0.3s ease-out;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.progress-bar-fill--sub {
+  background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.progress-bar-fill--indeterminate {
+  width: 40% !important;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+  background: linear-gradient(90deg, 
+    rgba(59, 130, 246, 0.3) 0%, 
+    #3b82f6 50%, 
+    rgba(59, 130, 246, 0.3) 100%
+  );
+  
+  &.progress-bar-fill--sub {
+    background: linear-gradient(90deg, 
+      rgba(139, 92, 246, 0.3) 0%, 
+      #8b5cf6 50%, 
+      rgba(139, 92, 246, 0.3) 100%
+    );
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.progress-bar-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, #1e293b);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.progress-bar-label--small {
+  font-size: 12px;
+}
+
+// Dark theme support
+@media (prefers-color-scheme: dark) {
+  .crawl-progress-indicator {
+    background: var(--color-bg-elevated-dark, #1e293b);
+    border-color: var(--color-border-dark, #334155);
+  }
+  
+  .crawl-progress-indicator__stage-label {
+    color: var(--color-text-dark, #f1f5f9);
+  }
+  
+  .progress-bar-container {
+    background: var(--color-bg-secondary-dark, #0f172a);
+  }
+  
+  .progress-bar-label {
+    color: var(--color-text-dark, #f1f5f9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  .crawl-progress-indicator__sub-progress {
+    border-top-color: var(--color-border-dark, #334155);
+  }
+  
+  .crawl-progress-indicator__sub-label {
+    color: var(--color-text-muted-dark, #94a3b8);
+  }
+}

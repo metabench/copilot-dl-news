@@ -2,6 +2,7 @@
 
 **Date**: October 7, 2025  
 **Status**: ✅ Complete  
+**When to Read**: When you need to understand the service-oriented architecture pattern used for managing news websites, their statistics, and caching. Read this if you are working on the news website API, the corresponding database logic, or the stats cache.
 **Principle**: Separation of Concerns
 
 ## Problem Statement
@@ -245,6 +246,19 @@ async function main() {
 - All `require()` statements at top of files
 - No lazy loading of modules in methods
 - Clear module dependencies
+
+## Performance Impact
+
+The original `getNewsWebsiteStats()` method, which performed expensive queries on-demand, has been retained in the `NewsDatabase` class for situations where non-cached data is explicitly required. 
+
+However, for UI and general use, it has been effectively superseded by new, much faster methods in the `NewsWebsiteService` that leverage the pre-calculated statistics in the `news_websites_stats_cache` table:
+- `getNewsWebsitesWithStats()`: Retrieves a list of all websites with their cached stats (very fast).
+- `getNewsWebsiteEnhancedStats()`: Retrieves detailed stats for a single website, using the cache first.
+
+This change ensures that:
+✅ **UI performance is high**: The main news websites page loads instantly.
+✅ **On-demand stats are available**: Direct, non-cached queries can still be run when needed.
+✅ **No performance degradation**: The new cached methods provide significant speed improvements for common operations.
 
 ## Migration Impact
 

@@ -1,9 +1,19 @@
 /**
- * Unit tests for CrawlOrchestrationService
+ * @fileoverview Unit tests for CrawlOrchestrationService
  * 
  * These tests demonstrate service-level testing:
  * - No Express server required
  * - Easy to mock dependencies
+ * 
+ * CRITICAL TESTING RULES:
+ * - Tests must NEVER hang silently (GOLDEN RULE)
+ * - Always add explicit timeouts: test('name', async () => {...}, 30000)
+ * - Add progress logging for operations >5s
+ * - Use timeout guards from src/test-utils/timeoutGuards.js
+ * 
+ * See: docs/TESTING_ASYNC_CLEANUP_GUIDE.md for complete patterns
+ * See: docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md for utilities
+ * See: AGENTS.md "Testing Guidelines" section
  * - Fast execution
  * - Clear business logic validation
  */
@@ -71,6 +81,9 @@ describe('CrawlOrchestrationService', () => {
 
   describe('startCrawl', () => {
     beforeEach(() => {
+      // Reset all mocks first to avoid state leakage
+      jest.clearAllMocks();
+      
       // Setup successful default mocks
       mockDependencies.jobRegistry.checkStartAllowed.mockReturnValue({ ok: true });
       mockDependencies.jobRegistry.reserveJobId.mockReturnValue('test-job-123');
@@ -86,10 +99,13 @@ describe('CrawlOrchestrationService', () => {
         run: jest.fn(),
         prepare: jest.fn()
       });
+      
+      // Recreate service instance to ensure fresh state
+      service = new CrawlOrchestrationService(mockDependencies);
     });
 
-    it('should start a crawl successfully', () => {
-      const result = service.startCrawl({ url: 'https://example.com' });
+    it('should start a crawl successfully', async () => {
+      const result = await service.startCrawl({ url: 'https://example.com' });
 
       expect(result).toMatchObject({
         jobId: 'test-job-123',
@@ -112,45 +128,50 @@ describe('CrawlOrchestrationService', () => {
         reason: 'Crawler already active'
       });
 
-      expect(() => {
-        service.startCrawl({ url: 'https://example.com' });
-      }).toThrow(CrawlAlreadyRunningError);
+      expect(() => service.startCrawl({ url: 'https://example.com' })).toThrow(CrawlAlreadyRunningError);
     });
 
     it('should throw InvalidCrawlOptionsError if buildArgs returns empty', () => {
       mockDependencies.buildArgs.mockReturnValue([]);
 
-      expect(() => {
-        service.startCrawl({ url: 'https://example.com' });
-      }).toThrow(InvalidCrawlOptionsError);
+      expect(() => service.startCrawl({ url: 'https://example.com' })).toThrow(InvalidCrawlOptionsError);
     });
 
-    it('should enhance arguments with --db flag', () => {
+    it('should enhance arguments with --db flag', async () => {
       mockDependencies.buildArgs.mockReturnValue(['src/crawl.js', 'https://example.com']);
 
-      service.startCrawl({ url: 'https://example.com' });
+      await service.startCrawl({ url: 'https://example.com' });
+      
+      // Wait for async setTimeout to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const startArgs = mockDependencies.runner.start.mock.calls[0][0];
       expect(startArgs).toContain('--db=/test/path/to/news.db');
     });
 
-    it('should enhance arguments with --job-id flag', () => {
+    it('should enhance arguments with --job-id flag', async () => {
       mockDependencies.buildArgs.mockReturnValue(['src/crawl.js', 'https://example.com']);
 
-      service.startCrawl({ url: 'https://example.com' });
+      await service.startCrawl({ url: 'https://example.com' });
+      
+      // Wait for async setTimeout to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const startArgs = mockDependencies.runner.start.mock.calls[0][0];
       expect(startArgs).toContain('--job-id=test-job-123');
     });
 
-    it('should not duplicate --db flag if already present', () => {
+    it('should not duplicate --db flag if already present', async () => {
       mockDependencies.buildArgs.mockReturnValue([
         'src/crawl.js',
         'https://example.com',
         '--db=/custom/path/db.db'
       ]);
 
-      service.startCrawl({ url: 'https://example.com' });
+      await service.startCrawl({ url: 'https://example.com' });
+      
+      // Wait for async setTimeout to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       const startArgs = mockDependencies.runner.start.mock.calls[0][0];
       const dbFlags = startArgs.filter(arg => arg.startsWith('--db='));
@@ -158,8 +179,8 @@ describe('CrawlOrchestrationService', () => {
       expect(dbFlags[0]).toBe('--db=/custom/path/db.db');
     });
 
-    it('should register job in registry', () => {
-      service.startCrawl({ url: 'https://example.com' });
+    it('should register job in registry', async () => {
+      await service.startCrawl({ url: 'https://example.com' });
 
       expect(mockDependencies.jobRegistry.registerJob).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -170,8 +191,11 @@ describe('CrawlOrchestrationService', () => {
       );
     });
 
-    it('should record job start in database', () => {
-      service.startCrawl({ url: 'https://example.com' });
+    it('should record job start in database', async () => {
+      await service.startCrawl({ url: 'https://example.com' });
+      
+      // Wait for async setTimeout to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(mockDependencies.recordJobStart).toHaveBeenCalledWith(
         expect.anything(), // db
@@ -182,21 +206,24 @@ describe('CrawlOrchestrationService', () => {
       );
     });
 
-    it('should attach event handlers to job', () => {
-      service.startCrawl({ url: 'https://example.com' });
+    it('should attach event handlers to job', async () => {
+      await service.startCrawl({ url: 'https://example.com' });
+      
+      // Wait for async setTimeout to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(mockDependencies.eventHandler.attachEventHandlers).toHaveBeenCalled();
       expect(mockDependencies.eventHandler.setupInitialBroadcast).toHaveBeenCalled();
     });
 
-    it('should broadcast job list update', () => {
-      service.startCrawl({ url: 'https://example.com' });
+    it('should broadcast job list update', async () => {
+      await service.startCrawl({ url: 'https://example.com' });
 
       expect(mockDependencies.broadcastJobs).toHaveBeenCalledWith(true);
     });
 
-    it('should create job with initial metrics', () => {
-      service.startCrawl({ url: 'https://example.com' });
+    it('should create job with initial metrics', async () => {
+      await service.startCrawl({ url: 'https://example.com' });
 
       const registeredJob = mockDependencies.jobRegistry.registerJob.mock.calls[0][0];
       expect(registeredJob.metrics).toMatchObject({
@@ -220,35 +247,33 @@ describe('CrawlOrchestrationService', () => {
       });
 
       // Should not throw - DB failure is logged but doesn't stop crawl
-      expect(() => {
-        service.startCrawl({ url: 'https://example.com' });
-      }).not.toThrow();
+      expect(() => service.startCrawl({ url: 'https://example.com' })).not.toThrow();
     });
 
-    it('should extract URL from arguments', () => {
+    it('should extract URL from arguments', async () => {
       mockDependencies.buildArgs.mockReturnValue(['src/crawl.js', 'https://example.com']);
 
-      const result = service.startCrawl({ url: 'https://example.com' });
+      const result = await service.startCrawl({ url: 'https://example.com' });
 
       expect(result.url).toBe('https://example.com');
     });
 
-    it('should handle missing URL gracefully', () => {
+    it('should handle missing URL gracefully', async () => {
       mockDependencies.buildArgs.mockReturnValue(['src/crawl.js', '--depth=2']);
 
-      const result = service.startCrawl({ depth: 2 });
+      const result = await service.startCrawl({ depth: 2 });
 
       expect(result.url).toBeNull();
     });
 
-    it('should pass options to buildArgs', () => {
+    it('should pass options to buildArgs', async () => {
       const options = {
         url: 'https://example.com',
         depth: 3,
         maxPages: 100
       };
 
-      service.startCrawl(options);
+      await service.startCrawl(options);
 
       expect(mockDependencies.buildArgs).toHaveBeenCalledWith(options);
     });

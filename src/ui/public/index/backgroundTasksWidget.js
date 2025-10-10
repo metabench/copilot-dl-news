@@ -16,6 +16,7 @@ import { each, is_defined } from 'lang-tools';
 export function createBackgroundTasksWidget({ widgetSection, tasksList, eventSource } = {}) {
   let activeTasks = new Map(); // taskId -> task data
   let sseConnection = eventSource;
+  let listenerCleanup = [];
 
   /**
    * Render a compact task card for the widget
@@ -137,12 +138,87 @@ export function createBackgroundTasksWidget({ widgetSection, tasksList, eventSou
   /**
    * Set SSE connection and register event listeners
    */
+  function detachListeners() {
+    if (!listenerCleanup.length) return;
+    for (const cleanup of listenerCleanup) {
+      try {
+        cleanup();
+      } catch (err) {
+        console.error('[BackgroundTasksWidget] Failed to remove previous SSE listener:', err);
+      }
+    }
+    listenerCleanup = [];
+  }
+
+  function createListenerAdapter(source) {
+    if (!source) return null;
+
+    if (typeof source.addEventListener === 'function') {
+      return {
+        add(type, handler) {
+          source.addEventListener(type, handler);
+          const remove = typeof source.removeEventListener === 'function'
+            ? () => source.removeEventListener(type, handler)
+            : null;
+          return remove;
+        }
+      };
+    }
+
+    if (typeof source.on === 'function') {
+      return {
+        add(type, handler) {
+          source.on(type, handler);
+          const remove = typeof source.off === 'function'
+            ? () => source.off(type, handler)
+            : (typeof source.removeListener === 'function'
+              ? () => source.removeListener(type, handler)
+              : null);
+          return remove;
+        }
+      };
+    }
+
+    if (typeof source.addListener === 'function') {
+      return {
+        add(type, handler) {
+          source.addListener(type, handler);
+          const remove = typeof source.removeListener === 'function'
+            ? () => source.removeListener(type, handler)
+            : null;
+          return remove;
+        }
+      };
+    }
+
+    return null;
+  }
+
   function connectSSE(eventSourceInstance) {
+    if (eventSourceInstance === sseConnection && listenerCleanup.length) {
+      // Already connected to this instance with listeners
+      return;
+    }
+
+    detachListeners();
     sseConnection = eventSourceInstance;
     if (!sseConnection) return;
 
+    const adapter = createListenerAdapter(sseConnection);
+    if (!adapter) {
+      console.warn('[BackgroundTasksWidget] Provided event source does not support event listeners; skipping SSE binding.');
+      return;
+    }
+
+    const register = (type, handler) => {
+      const remove = adapter.add(type, handler);
+      if (typeof remove === 'function') {
+        listenerCleanup.push(remove);
+      }
+    };
+
     // Listen for task events
-    sseConnection.addEventListener('task-created', (e) => {
+    register('task-created', (e) => {
       try {
         const task = JSON.parse(e.data);
         updateTask(task);
@@ -151,7 +227,7 @@ export function createBackgroundTasksWidget({ widgetSection, tasksList, eventSou
       }
     });
 
-    sseConnection.addEventListener('task-progress', (e) => {
+    register('task-progress', (e) => {
       try {
         const task = JSON.parse(e.data);
         updateTask(task);
@@ -160,7 +236,7 @@ export function createBackgroundTasksWidget({ widgetSection, tasksList, eventSou
       }
     });
 
-    sseConnection.addEventListener('task-status-changed', (e) => {
+    register('task-status-changed', (e) => {
       try {
         const task = JSON.parse(e.data);
         updateTask(task);
@@ -169,7 +245,7 @@ export function createBackgroundTasksWidget({ widgetSection, tasksList, eventSou
       }
     });
 
-    sseConnection.addEventListener('task-completed', (e) => {
+    register('task-completed', (e) => {
       try {
         const data = JSON.parse(e.data);
         removeTask(data.task?.id || data.id);

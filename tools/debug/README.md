@@ -1,5 +1,7 @@
 # Debugging Utilities
 
+**When to Read**: Read this guide when you need to use one of the specialized debugging scripts in this directory. For example, if you are working on queue persistence and need to use `queue-persistence-probe.js` to quickly test the API and database state.
+
 This directory hosts small, developer-oriented scripts that make it easier to debug the UI surface without wiring the full browser.
 
 ## `queue-persistence-probe.js`

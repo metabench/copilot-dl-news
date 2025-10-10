@@ -132,9 +132,19 @@ class TimingReporter {
     
     // Write text log file with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const logPath = path.join(process.cwd(), `test-timing-${timestamp}.log`);
+    const testlogsDir = path.join(process.cwd(), 'testlogs');
+    
+    // Ensure testlogs directory exists
+    if (!fs.existsSync(testlogsDir)) {
+      fs.mkdirSync(testlogsDir, { recursive: true });
+    }
+    
+    // Get suite name from environment or use 'ALL'
+    const suiteName = process.env.TEST_SUITE_NAME || 'ALL';
+    const logPath = path.join(testlogsDir, `${timestamp}_${suiteName}.log`);
     const logContent = [
       `Test Timing Report - ${new Date().toISOString()}`,
+      `Suite: ${suiteName}`,
       '='.repeat(80),
       '',
       ...output,

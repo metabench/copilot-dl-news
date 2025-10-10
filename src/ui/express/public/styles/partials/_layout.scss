@@ -360,6 +360,31 @@
   overscroll-behavior: contain;
 }
 
+// Integrated crawl progress section within jobs panel
+.crawl-progress-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  
+  &.is-hidden {
+    display: none;
+  }
+}
+
+.crawl-progress-header {
+  margin-bottom: 16px;
+  
+  h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-fg, #1e293b);
+    margin: 0;
+  }
+}
+
+// Container styles for CrawlProgressIndicator component
+// Additional styles in _crawl-progress-indicator.scss
+
 #eventsSection .expando-body {
   gap: 10px;
 }

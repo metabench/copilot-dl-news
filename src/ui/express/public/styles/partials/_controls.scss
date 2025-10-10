@@ -65,6 +65,28 @@
   }
 }
 
+.control-field--hidden {
+  display: none;
+}
+
+.control-field--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  
+  label {
+    color: var(--color-text-disabled, #94a3b8);
+  }
+  
+  input,
+  select,
+  textarea {
+    background-color: var(--color-input-disabled-bg, #f1f5f9);
+    border-color: var(--color-input-disabled-border, #cbd5e1);
+    color: var(--color-text-disabled, #94a3b8);
+    cursor: not-allowed;
+  }
+}
+
 .control-field--inline .control-inline {
   display: flex;
   align-items: center;

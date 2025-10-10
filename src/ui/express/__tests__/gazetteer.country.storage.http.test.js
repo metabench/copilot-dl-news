@@ -42,7 +42,7 @@ describe('Country page storage toggle', () => {
     seedDb(tmpDb);
     process.env.DB_PATH = tmpDb;
     process.env.PORT = '0';
-    server = startServer();
+    server = await startServer();
     await new Promise((r) => setTimeout(r, 120));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : 3000;

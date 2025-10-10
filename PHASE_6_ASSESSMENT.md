@@ -1,8 +1,12 @@
 # Phase 6: Final Assessment - Index.js Modularization
 
+**When to Read**: This document is a historical assessment of the successful `index.js` modularization effort. Read this to understand the final outcome, the modules that were created, and the architectural benefits gained. It serves as a final report on a major refactoring project.
+
 **Date**: January 5, 2025  
-**Final Result**: **512 lines** (down from 2,073 lines)  
+**Final Result (Jan 2025)**: **512 lines** (down from 2,073 lines)  
 **Total Reduction**: **1,561 lines removed (75% reduction)** ✅
+
+> **Update — October 10, 2025**: Continued feature work has grown `src/ui/public/index.js` to ~827 lines. The modularization benefits still apply, but a follow-up clean-up (Phase 6.1) may be warranted to reverse this regression. The rest of this document captures the original January 2025 assessment.
 
 ## Executive Summary
 

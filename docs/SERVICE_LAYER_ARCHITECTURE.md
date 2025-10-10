@@ -4,6 +4,11 @@
 **Created**: October 7, 2025  
 **Goal**: Extract business logic from route handlers into testable, reusable service classes
 
+**When to Read**:
+- Planning or executing service-layer refactors for Express routes
+- Designing new services that must integrate with existing dependency injection patterns
+- Assessing which migration phase the service layer effort is currently in
+
 ---
 
 ## Table of Contents

@@ -1,5 +1,7 @@
 # Geography Crawl Type
 
+**When to Read**: When working with geography crawls, understanding Wikidata integration, gazetteer breadth-first traversal, or debugging country/ADM1/city discovery issues.
+
 ## Overview
 
 The **geography** crawl type is a specialized mode that ingests geographic place data from external data sources (Wikidata and OpenStreetMap) rather than crawling traditional websites. It populates the gazetteer database with countries, administrative divisions, and geographic boundaries.
@@ -167,15 +169,19 @@ Legacy alias for geography mode. Maintained for backward compatibility.
 
 ## Performance Considerations
 
-- **Concurrency**: Higher concurrency speeds up API requests but may hit rate limits (recommended: 3-5)
+- **Concurrency**: Parameter is treated as MAXIMUM allowed, not a requirement. Geography crawls currently process data sequentially (effectively concurrency=1) due to API rate limits and database transaction ordering. Setting higher values (3-5) establishes an upper bound for future optimizations but does not currently increase speed.
 - **Max Pages**: Controls total places ingested (countries first, then subdivisions by hierarchy)
-- **API Rate Limits**: Wikidata SPARQL has generous limits but may throttle at very high concurrency
+- **API Rate Limits**: Wikidata SPARQL (~60 req/min) and Overpass API have rate limits that necessitate sequential processing
 - **Database Size**: Each country ~50 KB, each admin division ~5 KB (rough estimates)
+- **Processing Time**: Expect ~5-10 minutes for full global dataset (195 countries + ~5000 subdivisions)
+
+**Note**: See `docs/SPECIALIZED_CRAWL_CONCURRENCY.md` for detailed explanation of why geography crawls ignore the concurrency parameter.
 
 ## Future Enhancements
 
+- **Limited Parallelism**: Run independent ingestors simultaneously (within concurrency maximum)
+- **Batched API Requests**: Fetch multiple entities per SPARQL query to reduce round-trips
 - **Incremental Updates**: Only fetch places modified since last crawl
 - **Boundary Simplification**: Reduce GeoJSON complexity for faster rendering
-- **Parallel Ingestors**: Run Wikidata and OSM ingestors simultaneously
 - **Progress Granularity**: Show per-country/per-admin-level progress
 - **Provenance Tracking**: Record which specific SPARQL query returned each place

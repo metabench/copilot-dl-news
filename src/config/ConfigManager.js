@@ -184,6 +184,7 @@ class ConfigManager {
         }
       },
       features: {
+        advancedPlanningSuite: false,
         gapDrivenPrioritization: true,
         plannerKnowledgeReuse: true,
         realTimeCoverageAnalytics: true,

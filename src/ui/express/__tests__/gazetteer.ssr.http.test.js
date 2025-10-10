@@ -18,7 +18,7 @@ function getText(hostname, port, pathStr) {
 
 function seedDb(p) {
   const db = new NewsDatabase(p);
-  db.db.exec(`DELETE FROM places; DELETE FROM place_names; DELETE FROM place_hierarchy; DELETE FROM place_external_ids; DELETE FROM articles; DELETE FROM article_places; DELETE FROM place_hubs;`);
+  db.db.exec(`DELETE FROM places; DELETE FROM place_names; DELETE FROM place_hierarchy; DELETE FROM place_external_ids; DELETE FROM articles; DELETE FROM place_hubs;`);
   const city = db.db.prepare(`INSERT INTO places(kind, country_code, adm1_code, population) VALUES ('city','GB','ENG',900000)`);
   const placeId = city.run().lastInsertRowid;
   const nameId = db.db.prepare(`INSERT INTO place_names(place_id, name, normalized, lang, name_kind, is_preferred, is_official) VALUES (?,?,?,?,?,?,?)`).run(placeId, 'London', 'london', 'en', 'common', 1, 1).lastInsertRowid;
@@ -35,7 +35,7 @@ describe('Gazetteer SSR pages', () => {
     seedDb(tmpDb);
     process.env.DB_PATH = tmpDb;
     process.env.PORT = '0';
-    server = startServer();
+    server = await startServer();
     await new Promise((r) => setTimeout(r, 120));
     const addr = server.address();
     port = typeof addr === 'object' ? addr.port : 3000;

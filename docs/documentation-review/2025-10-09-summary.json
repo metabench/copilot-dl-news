@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2025-10-09T23:55:42.621Z",
+  "totalDocs": 80,
+  "byCategory": {
+    "feature": 36,
+    "reference": 8,
+    "investigation": 4,
+    "planning": 22,
+    "architecture": 10
+  },
+  "discoverabilityRate": 0.6125,
+  "whenToReadRate": 0.3,
+  "timelyRate": 1,
+  "focusedRate": 1,
+  "codeExampleRate": 0.8625,
+  "visualAidRate": 0.475
+}

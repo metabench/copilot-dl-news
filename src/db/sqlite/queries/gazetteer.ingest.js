@@ -18,8 +18,10 @@ const {
  * @returns {object} Object with prepared statement functions
  */
 function createIngestionStatements(db) {
+  process.stderr.write('[createIngestionStatements] Starting to create prepared statements...\n');
   const attributeStatements = createAttributeStatements(db);
-  return {
+  process.stderr.write('[createIngestionStatements] Attribute statements created\n');
+  const statements = {
     getPlaceByWikidataQid: db.prepare(`
       SELECT id FROM places WHERE wikidata_qid = ?
     `),
@@ -39,30 +41,31 @@ function createIngestionStatements(db) {
     
     insertPlace: db.prepare(`
       INSERT INTO places (
-        kind, country_code, population, timezone, lat, lng, bbox,
+        kind, country_code, adm1_code, adm2_code, population, timezone, lat, lng, bbox,
         canonical_name_id, source, extra,
-        wikidata_qid, area, gdp_usd, admin_level, wikidata_props,
-        crawl_depth, priority_score, last_crawled_at,
-        osm_type, osm_id, osm_tags
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        wikidata_qid, osm_type, osm_id, area, gdp_usd, admin_level, wikidata_props, osm_tags,
+        crawl_depth, priority_score, last_crawled_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     
     updatePlace: db.prepare(`
       UPDATE places SET
+        adm1_code = COALESCE(adm1_code, ?),
+        adm2_code = COALESCE(adm2_code, ?),
         population = COALESCE(population, ?),
         timezone = COALESCE(timezone, ?),
         lat = COALESCE(lat, ?),
         lng = COALESCE(lng, ?),
         bbox = COALESCE(bbox, ?),
-        area = COALESCE(area, ?),
-        gdp_usd = COALESCE(gdp_usd, ?),
-        wikidata_props = COALESCE(wikidata_props, ?),
-        admin_level = COALESCE(admin_level, ?),
-        crawl_depth = COALESCE(crawl_depth, ?),
-        priority_score = COALESCE(priority_score, ?),
         osm_type = COALESCE(osm_type, ?),
         osm_id = COALESCE(osm_id, ?),
+        area = COALESCE(area, ?),
+        gdp_usd = COALESCE(gdp_usd, ?),
+        admin_level = COALESCE(admin_level, ?),
+        wikidata_props = COALESCE(wikidata_props, ?),
         osm_tags = COALESCE(osm_tags, ?),
+        crawl_depth = COALESCE(crawl_depth, ?),
+        priority_score = COALESCE(priority_score, ?),
         last_crawled_at = ?
       WHERE id = ?
     `),
@@ -103,6 +106,8 @@ function createIngestionStatements(db) {
 
     attributeStatements
   };
+  process.stderr.write('[createIngestionStatements] All statements created successfully\n');
+  return statements;
 }
 
 /**
@@ -117,6 +122,8 @@ function upsertPlace(db, statements, placeData) {
     wikidataQid = null,
     kind,
     countryCode = null,
+    adm1Code = null,
+    adm2Code = null,
     population = null,
     timezone = null,
     lat = null,
@@ -133,8 +140,7 @@ function upsertPlace(db, statements, placeData) {
     osmType = null,
     osmId = null,
     osmTags = null,
-    attributes = [],
-    adm1Code = null
+    attributes = []
   } = placeData;
 
   const now = Date.now();
@@ -166,20 +172,22 @@ function upsertPlace(db, statements, placeData) {
   if (existing) {
     placeId = existing.id;
     statements.updatePlace.run(
+      adm1Code,
+      adm2Code,
       population,
       timezone,
       lat,
       lng,
       bbox,
-      area,
-      gdpUsd,
-      wikidataProps ? JSON.stringify(wikidataProps) : null,
-      adminLevel,
-      crawlDepth,
-      priorityScore,
       osmType || null,
       osmId || null,
+      area,
+      gdpUsd,
+      adminLevel,
+      wikidataProps ? JSON.stringify(wikidataProps) : null,
       osmTags ? JSON.stringify(osmTags) : null,
+      crawlDepth,
+      priorityScore,
       now,
       placeId
     );
@@ -194,6 +202,8 @@ function upsertPlace(db, statements, placeData) {
     const insertResult = statements.insertPlace.run(
       kind,
       countryCode,
+      adm1Code,
+      adm2Code,
       population,
       timezone,
       lat,
@@ -203,16 +213,16 @@ function upsertPlace(db, statements, placeData) {
       normalizedSource,
       extra,
       wikidataQid,
+      osmType || null,
+      osmId || null,
       area,
       gdpUsd,
       adminLevel,
       wikidataProps ? JSON.stringify(wikidataProps) : null,
+      osmTags ? JSON.stringify(osmTags) : null,
       crawlDepth,
       priorityScore,
-      now,
-      osmType || null,
-      osmId || null,
-      osmTags ? JSON.stringify(osmTags) : null
+      now
     );
     placeId = insertResult.lastInsertRowid;
     if (wikidataQid) {

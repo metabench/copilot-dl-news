@@ -18,7 +18,10 @@ function buildArgs(body = {}) {
   if (ctypeRaw) {
     args.push(`--crawl-type=${ctypeRaw}`);
   }
-  if (body.depth != null) args.push(`--depth=${parseInt(body.depth, 10)}`);
+  // Depth doesn't apply to gazetteer-type crawls (they have their own traversal logic)
+  if (body.depth != null && !isGazetteerType) {
+    args.push(`--depth=${parseInt(body.depth, 10)}`);
+  }
   if (body.maxPages != null) args.push(`--max-pages=${parseInt(body.maxPages, 10)}`);
   // Back-compat: accept either refetchIfOlderThan or legacy maxAge
   const refetch = body.refetchIfOlderThan || body.maxAge;
@@ -32,6 +35,10 @@ function buildArgs(body = {}) {
   if (body.refetchHubIfOlderThan) {
     args.push(`--refetch-hub-if-older-than=${String(body.refetchHubIfOlderThan)}`);
   }
+  // Concurrency: For regular web crawls, this sets the number of parallel workers.
+  // For specialized crawls (gazetteer/geography/wikidata), this sets the MAXIMUM
+  // allowed concurrency. Specialized crawls may process sequentially (effectively
+  // concurrency=1) regardless of this value due to API rate limits and data dependencies.
   if (body.concurrency != null) args.push(`--concurrency=${parseInt(body.concurrency, 10)}`);
   if (body.maxQueue != null) args.push(`--max-queue=${parseInt(body.maxQueue, 10)}`);
   if (body.noDb === true) args.push('--no-db');

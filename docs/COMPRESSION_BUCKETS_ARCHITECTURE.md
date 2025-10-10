@@ -1,6 +1,7 @@
 # Compression Buckets Architecture
 
-**Quick Reference**: How compression buckets work with the unified `compression_type_id` system.
+**Quick Reference**: How compression buckets work with the unified `compression_type_id` system.  
+**When to Read**: When implementing bucket compression for similar content (20x+ compression ratios), working with compression storage tables, or optimizing database size for archival content.
 
 ---
 

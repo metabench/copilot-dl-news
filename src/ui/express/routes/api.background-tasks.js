@@ -203,7 +203,9 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
             retryAfter: error.retryAfter,
             context: error.context
           },
-          proposedActions: error.proposedActions.map(pa => pa.toJSON())
+          proposedActions: error.proposedActions.map(pa => pa.toJSON()),
+          retryAfter: error.retryAfter,
+          context: error.context
         });
       }
       
@@ -386,7 +388,7 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
           const stoppedTask = taskManager.getTask(action.parameters.taskId);
           return res.json({
             success: true,
-            message: 'Task stopped',
+            message: 'Task stopped successfully',
             task: stoppedTask
           });
           
@@ -398,7 +400,7 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
           const pausedTask = taskManager.getTask(action.parameters.taskId);
           return res.json({
             success: true,
-            message: 'Task paused',
+            message: 'Task paused successfully',
             task: pausedTask
           });
           
@@ -410,7 +412,7 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
           const resumedTask = taskManager.getTask(action.parameters.taskId);
           return res.json({
             success: true,
-            message: 'Task resumed',
+            message: 'Task resumed successfully',
             task: resumedTask
           });
           
@@ -422,7 +424,7 @@ function createBackgroundTasksRouter(taskManager, getDbRW) {
           const startedTask = taskManager.getTask(action.parameters.taskId);
           return res.json({
             success: true,
-            message: 'Task started',
+            message: 'Task started successfully',
             task: startedTask
           });
           

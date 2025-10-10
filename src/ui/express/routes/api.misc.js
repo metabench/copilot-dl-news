@@ -160,6 +160,19 @@ function createMiscApiRouter(options = {}) {
     }
   });
 
+  router.get('/api/insights', (req, res) => {
+    // Stub endpoint for pattern insights
+    // TODO: Implement proper pattern insights aggregation
+    res.json({
+      details: {
+        patterns: [],
+        sections: [],
+        hints: [],
+        lastUpdated: null
+      }
+    });
+  });
+
   return router;
 }
 

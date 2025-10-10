@@ -1,7 +1,10 @@
 # News Websites Statistics Cache
 
 **Created**: October 7, 2025  
-**Status**: ✅ Implemented and integrated
+# News Website Statistics Caching
+
+**Status**: Implemented and Active  
+**When to Read**: When optimizing news website list page performance, understanding stats calculation caching, or debugging stale statistics issues.
 
 ## Overview
 

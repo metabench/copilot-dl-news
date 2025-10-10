@@ -1,5 +1,9 @@
 # System Components Overview
 
+**Status**: COMPLETE  
+**Last Updated**: October 10, 2025  
+**When to Read**: You need a high-level overview of system architecture and main components
+
 This document describes the main components of the crawl news system and their responsibilities.
 
 ## UI Server (`src/ui/express/server.js`)

@@ -25,12 +25,15 @@ function createCrawlStartRouter(options = {}) {
     broadcast,
     broadcastJobs,
     broadcastProgress,
+    broadcastTelemetry = null,
     getDbRW,
     queueDebug = false,
     metrics,
     QUIET = false,
     traceStart = false,
-    crawlerManager = null
+    crawlerManager = null,
+    eventHandlerService: providedEventHandler,
+    crawlOrchestrationService: providedCrawlService
   } = options;
 
   if (!jobRegistry) {
@@ -61,44 +64,48 @@ function createCrawlStartRouter(options = {}) {
     throw new Error('createCrawlStartRouter requires metrics object');
   }
 
-  // Create services
-  const eventHandlerService = new JobEventHandlerService({
-    jobRegistry,
-    broadcast,
-    broadcastJobs,
-    broadcastProgress,
-    getDbRW,
-    dbOperations: {
-      markCrawlJobStatus,
-      insertQueueEvent,
-      insertCrawlProblem,
-      insertPlannerStageEvent,
-      insertCrawlMilestone
-    },
-    QUIET,
-    queueDebug,
-    traceStart,
-    crawlerManager
-  });
+  const eventHandlerService = providedEventHandler instanceof JobEventHandlerService
+    ? providedEventHandler
+    : new JobEventHandlerService({
+        jobRegistry,
+        broadcast,
+        broadcastJobs,
+        broadcastProgress,
+        broadcastTelemetry,
+        getDbRW,
+        dbOperations: {
+          markCrawlJobStatus,
+          insertQueueEvent,
+          insertCrawlProblem,
+          insertPlannerStageEvent,
+          insertCrawlMilestone
+        },
+        QUIET,
+        queueDebug,
+        traceStart,
+        crawlerManager
+      });
 
-  const crawlOrchestrationService = new CrawlOrchestrationService({
-    jobRegistry,
-    runner,
-    buildArgs,
-    urlsDbPath,
-    getDbRW,
-    recordJobStart: recordCrawlJobStart,
-    eventHandler: eventHandlerService,
-    broadcastJobs,
-    QUIET
-  });
+  const crawlOrchestrationService = providedCrawlService instanceof CrawlOrchestrationService
+    ? providedCrawlService
+    : new CrawlOrchestrationService({
+        jobRegistry,
+        runner,
+        buildArgs,
+        urlsDbPath,
+        getDbRW,
+        recordJobStart: recordCrawlJobStart,
+        eventHandler: eventHandlerService,
+        broadcastJobs,
+        QUIET
+      });
 
   const jobs = jobRegistry.getJobs();
   const crawlState = jobRegistry.getCrawlState();
 
   const router = express.Router();
 
-  router.post('/api/crawl', (req, res, next) => {
+  router.post('/api/crawl', async (req, res, next) => {
     const perfStart = performance.now();
     const t0 = Date.now();
 
@@ -108,7 +115,7 @@ function createCrawlStartRouter(options = {}) {
 
     try {
       // Use service to start crawl
-      const result = crawlOrchestrationService.startCrawl(req.body || {}, { 
+      const result = await crawlOrchestrationService.startCrawl(req.body || {}, { 
         crawlerManager, 
         t0 
       });
@@ -134,6 +141,7 @@ function createCrawlStartRouter(options = {}) {
         args: result.args, 
         jobId: result.jobId, 
         stage: result.stage, 
+        message: 'Crawl started',
         durationMs 
       });
 

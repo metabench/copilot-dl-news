@@ -28,33 +28,23 @@ function makeRunnerWithStdin(lines = [], exitCode = 0, delayMs = 50) {
   return runner;
 }
 
+// Helper to get database from app (handles different locations)
+function getDbFromApp(app) {
+  return app.locals.backgroundTaskManager?.db || app.locals.getDb?.() || null;
+}
+
 describe('resume-all API integration', () => {
   let tempDbPath;
-  let db;
 
   beforeEach(() => {
     const tmpDir = path.join(os.tmpdir(), 'copilot-ui-tests');
     try { fs.mkdirSync(tmpDir, { recursive: true }); } catch (_) {}
     const unique = `${process.pid}-${Date.now()}-${Math.random()}`;
     tempDbPath = path.join(tmpDir, `test-resume-all-${unique}.db`);
-    
-    db = new Database(tempDbPath);
-    
-    // Create crawl_jobs table
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS crawl_jobs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        url TEXT NOT NULL,
-        args TEXT,
-        status TEXT,
-        started_at INTEGER,
-        ended_at INTEGER
-      )
-    `);
   });
 
   afterEach(() => {
-    try { db.close(); } catch (_) {}
+    // Clean up WAL files
     const suffixes = ['', '-shm', '-wal'];
     for (const suffix of suffixes) {
       try { fs.unlinkSync(tempDbPath + suffix); } catch (_) {}
@@ -75,6 +65,14 @@ describe('resume-all API integration', () => {
 
   test('resume-all GET returns resumable inventory with domain conflicts flagged', async () => {
     const now = Date.now();
+    
+    // Create app first to get database connection
+    const testApp = createApp({
+      runner: makeRunnerWithStdin([], 0, 50),
+      dbPath: tempDbPath
+    });
+    const db = getDbFromApp(testApp);
+    
     // Two queues on the same domain so the second is blocked by domain guard
     db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
       'https://inventory.example.com',
@@ -89,12 +87,7 @@ describe('resume-all API integration', () => {
       now - 2000
     );
 
-    const app = createApp({
-      runner: makeRunnerWithStdin([], 0, 50),
-      dbPath: tempDbPath
-    });
-
-    const res = await request(app).get('/api/resume-all');
+    const res = await request(testApp).get('/api/resume-all');
     expect(res.statusCode).toBe(200);
     expect(res.body.total).toBe(2);
     expect(res.body.runningJobs).toBe(0);
@@ -112,6 +105,16 @@ describe('resume-all API integration', () => {
   });
 
   test('resume-all resumes incomplete queues', async () => {
+    // Create app with runner first
+    const runner = makeRunnerWithStdin(['PROGRESS {"visited":10}'], 0, 500);
+    const testApp = createApp({
+      runner,
+      dbPath: tempDbPath
+    });
+    
+    // Get db from app
+    const db = getDbFromApp(testApp);
+    
     // Insert incomplete queue
     db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
       'https://news1.example.com',
@@ -119,14 +122,8 @@ describe('resume-all API integration', () => {
       'running',
       Date.now() - 3600000
     );
-
-    const runner = makeRunnerWithStdin(['PROGRESS {"visited":10}'], 0, 500);
-    const app = createApp({ 
-      runner,
-      dbPath: tempDbPath
-    });
     
-    const res = await request(app).post('/api/resume-all').send({ maxConcurrent: 8 });
+    const res = await request(testApp).post('/api/resume-all').send({ maxConcurrent: 8 });
     expect(res.statusCode).toBe(200);
     expect(res.body.resumed).toBe(1);
     expect(res.body.queues).toHaveLength(1);
@@ -140,6 +137,14 @@ describe('resume-all API integration', () => {
   });
 
   test('resume-all preserves existing fast-start flag without duplicates', async () => {
+    const runner = makeRunnerWithStdin([], 0, 100);
+    const testApp = createApp({
+      runner,
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
+    
     db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
       'https://fast.example.com',
       JSON.stringify(['src/crawl.js', 'https://fast.example.com', '--fast-start']),
@@ -147,13 +152,7 @@ describe('resume-all API integration', () => {
       Date.now() - 720000
     );
 
-    const runner = makeRunnerWithStdin([], 0, 100);
-    const app = createApp({
-      runner,
-      dbPath: tempDbPath
-    });
-
-    const res = await request(app).post('/api/resume-all').send({});
+    const res = await request(testApp).post('/api/resume-all').send({});
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(runner.lastArgs)).toBe(true);
     const fastStartOccurrences = runner.lastArgs.filter((arg) => /^--fast-start(?:=|$)/.test(arg)).length;
@@ -161,6 +160,13 @@ describe('resume-all API integration', () => {
   });
 
   test('resume-all respects maxConcurrent limit', async () => {
+    const testApp = createApp({ 
+      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
+    
     // Insert 5 incomplete queues
     for (let i = 1; i <= 5; i++) {
       db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
@@ -170,19 +176,21 @@ describe('resume-all API integration', () => {
         Date.now() - 3600000
       );
     }
-
-    const app = createApp({ 
-      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
-      dbPath: tempDbPath
-    });
     
-    const res = await request(app).post('/api/resume-all').send({ maxConcurrent: 2 });
+    const res = await request(testApp).post('/api/resume-all').send({ maxConcurrent: 2 });
     expect(res.statusCode).toBe(200);
     expect(res.body.resumed).toBe(2);
     expect(res.body.queues).toHaveLength(2);
   });
 
   test('resume-all prevents multiple crawls per domain', async () => {
+    const testApp = createApp({ 
+      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
+    
     // Insert 3 queues from same domain
     db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
       'https://example.com',
@@ -202,13 +210,8 @@ describe('resume-all API integration', () => {
       'running',
       Date.now() - 3600000
     );
-
-    const app = createApp({ 
-      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
-      dbPath: tempDbPath
-    });
     
-    const res = await request(app).post('/api/resume-all').send({ maxConcurrent: 10 });
+    const res = await request(testApp).post('/api/resume-all').send({ maxConcurrent: 10 });
     expect(res.statusCode).toBe(200);
     // Should only resume 2: one from example.com and one from other.com
     expect(res.body.resumed).toBe(2);
@@ -221,6 +224,13 @@ describe('resume-all API integration', () => {
   });
 
   test('resume-all handles args parsing errors gracefully', async () => {
+    const testApp = createApp({ 
+      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
+    
     // Insert queue with invalid JSON args but valid URL
     db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
       'https://bad.example.com',
@@ -242,13 +252,8 @@ describe('resume-all API integration', () => {
       'running',
       Date.now() - 3600000
     );
-
-    const app = createApp({ 
-      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
-      dbPath: tempDbPath
-    });
     
-    const res = await request(app).post('/api/resume-all').send({});
+    const res = await request(testApp).post('/api/resume-all').send({});
     expect(res.statusCode).toBe(200);
     // Both valid and bad-but-has-url should resume (resilient fallback to buildArgs)
     expect(res.body.resumed).toBe(2);
@@ -258,6 +263,13 @@ describe('resume-all API integration', () => {
   });
 
   test('resume-all defaults maxConcurrent to 8', async () => {
+    const testApp = createApp({ 
+      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
+    
     // Insert 10 incomplete queues on different domains
     for (let i = 1; i <= 10; i++) {
       db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)').run(
@@ -267,20 +279,22 @@ describe('resume-all API integration', () => {
         Date.now() - 3600000
       );
     }
-
-    const app = createApp({ 
-      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
-      dbPath: tempDbPath
-    });
     
     // Don't provide maxConcurrent
-    const res = await request(app).post('/api/resume-all').send({});
+    const res = await request(testApp).post('/api/resume-all').send({});
     expect(res.statusCode).toBe(200);
     // Should default to 8
     expect(res.body.resumed).toBe(8);
   });
 
   test('resume-all skips queues already completed', async () => {
+    const testApp = createApp({ 
+      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
+    
     // Insert completed queue
     db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at, ended_at) VALUES (?, ?, ?, ?, ?)').run(
       'https://completed.example.com',
@@ -296,19 +310,20 @@ describe('resume-all API integration', () => {
       'running',
       Date.now() - 3600000
     );
-
-    const app = createApp({ 
-      runner: makeRunnerWithStdin(['PROGRESS {"visited":0}'], 0, 500),
-      dbPath: tempDbPath
-    });
     
-    const res = await request(app).post('/api/resume-all').send({});
+    const res = await request(testApp).post('/api/resume-all').send({});
     expect(res.statusCode).toBe(200);
     expect(res.body.resumed).toBe(1);
     expect(res.body.queues[0].url).toBe('https://incomplete.example.com');
   });
 
   test('resume-all resumes only requested queue ids', async () => {
+    const testApp = createApp({
+      runner: makeRunnerWithStdin(['PROGRESS {"visited":1}'], 0, 50),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
     const now = Date.now();
     const first = db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)')
       .run('https://request.example.com', JSON.stringify(['--db', tempDbPath, '--start-url', 'https://request.example.com']), 'running', now - 5000)
@@ -317,12 +332,7 @@ describe('resume-all API integration', () => {
       .run('https://request-two.example.com', JSON.stringify(['--db', tempDbPath, '--start-url', 'https://request-two.example.com']), 'running', now - 2000)
       .lastInsertRowid;
 
-    const app = createApp({
-      runner: makeRunnerWithStdin(['PROGRESS {"visited":1}'], 0, 50),
-      dbPath: tempDbPath
-    });
-
-    const res = await request(app).post('/api/resume-all').send({ queueIds: [second] });
+    const res = await request(testApp).post('/api/resume-all').send({ queueIds: [second] });
     expect(res.statusCode).toBe(200);
     expect(res.body.resumed).toBe(1);
     expect(res.body.queues).toHaveLength(1);
@@ -333,16 +343,17 @@ describe('resume-all API integration', () => {
   });
 
   test('resume-all reports skipped reasons for queues without resume inputs', async () => {
+    const testApp = createApp({
+      runner: makeRunnerWithStdin([], 0, 20),
+      dbPath: tempDbPath
+    });
+    
+    const db = getDbFromApp(testApp);
     const badId = db.prepare('INSERT INTO crawl_jobs (url, args, status, started_at) VALUES (?, ?, ?, ?)')
       .run('', null, 'running', Date.now() - 1000)
       .lastInsertRowid;
 
-    const app = createApp({
-      runner: makeRunnerWithStdin([], 0, 20),
-      dbPath: tempDbPath
-    });
-
-    const res = await request(app).post('/api/resume-all').send({ queueIds: [badId] });
+    const res = await request(testApp).post('/api/resume-all').send({ queueIds: [badId] });
     expect(res.statusCode).toBe(200);
     expect(res.body.resumed).toBe(0);
     expect(res.body.message).toContain('could not be resumed');

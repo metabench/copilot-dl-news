@@ -4,6 +4,9 @@
 @use 'partials/core';
 @use 'partials/utilities';
 @use 'partials/layout';
+@use 'partials/themes';
 @use 'partials/ui-pages';
 @use 'partials/proposed-actions-popup';
 @use 'partials/analysis-progress-bar';
+@use 'partials/crawl-progress-indicator';
+@use 'partials/telemetry';

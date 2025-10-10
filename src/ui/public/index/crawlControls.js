@@ -7,49 +7,216 @@
  */
 
 import { each, is_defined } from 'lang-tools';
+import { createCrawlProgressIntegration } from './crawlProgressIntegration.js';
 
-/**
- * Creates crawl control handlers with full dependency injection
- * 
- * @param {Object} deps - Dependencies object
- * @param {Object} deps.elements - DOM elements
- * @param {HTMLButtonElement} deps.elements.startBtn - Start crawl button
- * @param {HTMLButtonElement} deps.elements.stopBtn - Stop crawl button
- * @param {HTMLButtonElement} deps.elements.pauseBtn - Pause crawl button
- * @param {HTMLButtonElement} deps.elements.resumeBtn - Resume crawl button
- * @param {HTMLButtonElement} deps.elements.analysisBtn - Start analysis button
- * @param {HTMLInputElement} deps.elements.showLogsCheckbox - Show logs checkbox
- * @param {HTMLElement} deps.elements.logs - Logs display area
- * @param {HTMLElement} deps.elements.progress - Progress display area
- * @param {HTMLElement} deps.elements.analysisLink - Analysis link display
- * @param {HTMLElement} deps.elements.analysisStatus - Analysis status display
- * @param {Object} deps.formElements - Form input elements for crawl configuration
- * @param {HTMLSelectElement} deps.formElements.crawlType - Crawl type selector
- * @param {HTMLInputElement} deps.formElements.startUrl - Start URL input
- * @param {HTMLInputElement} deps.formElements.depth - Depth input
- * @param {HTMLInputElement} deps.formElements.maxPages - Max pages input
- * @param {HTMLInputElement} deps.formElements.concurrency - Concurrency input
- * @param {HTMLInputElement} deps.formElements.slowMode - Slow mode checkbox
- * @param {HTMLInputElement} deps.formElements.useSitemap - Use sitemap checkbox
- * @param {HTMLInputElement} deps.formElements.sitemapOnly - Sitemap only checkbox
- * @param {Object} deps.actions - Action functions
- * @param {Function} deps.actions.setCrawlType - Set current crawl type
- * @param {Function} deps.actions.resetInsights - Reset insights display
- * @param {Function} deps.actions.renderAnalysisLink - Render analysis link
- * @param {Function} deps.actions.renderAnalysisStatus - Render analysis status
- * @param {Function} deps.actions.updateStartupStatus - Update startup status
- * @param {Function} deps.actions.patchPipeline - Patch pipeline state
- * @param {Function} deps.actions.openEventStream - Open/reopen SSE stream
- * @param {Function} deps.formatters.formatRelativeTime - Format timestamp as relative time
- * @returns {void} Attaches event handlers to control buttons
- */
-export function createCrawlControls(deps) {
+async function performCrawl(elements, formElements, actions) {
+  console.log('[performCrawl] ===== FUNCTION CALLED =====');
+  console.log('[performCrawl] elements:', elements);
+  console.log('[performCrawl] formElements:', formElements);
+  console.log('[performCrawl] actions:', actions);
+  
+  const prevLabel = elements.startBtn.textContent;
+  console.log('[performCrawl] Previous button label:', prevLabel);
+  
+  try {
+    const selectedType = formElements.crawlType?.value || '';
+    console.log('[performCrawl] Selected crawl type:', selectedType);
+    actions.resetInsights();
+    
+    if (selectedType) {
+      actions.setCrawlType(selectedType);
+    } else {
+      actions.setCrawlType('');
+    }
+
+    // Build request body from form elements using lang-tools patterns
+    const body = {};
+    
+    // Parse numeric fields
+    const numericFields = [
+      { key: 'depth', element: formElements.depth, required: true },
+      { key: 'maxPages', element: formElements.maxPages },
+      { key: 'concurrency', element: formElements.concurrency, required: true },
+      { key: 'requestTimeoutMs', element: formElements.requestTimeoutMs },
+      { key: 'pacerJitterMinMs', element: formElements.pacerJitterMinMs },
+      { key: 'pacerJitterMaxMs', element: formElements.pacerJitterMaxMs }
+    ];
+    
+    each(numericFields, (field) => {
+      if (is_defined(field.element) && field.element.value) {
+        body[field.key] = parseInt(field.element.value, 10);
+      } else if (field.required && is_defined(field.element)) {
+        body[field.key] = parseInt(field.element.value, 10);
+      }
+    });
+
+    // Parse string fields
+    const stringFields = [
+      { key: 'refetchIfOlderThan', element: formElements.refetchIfOlderThan },
+      { key: 'refetchArticleIfOlderThan', element: formElements.refetchArticleIfOlderThan },
+      { key: 'refetchHubIfOlderThan', element: formElements.refetchHubIfOlderThan }
+    ];
+    
+    each(stringFields, (field) => {
+      if (is_defined(field.element) && field.element.value) {
+        body[field.key] = field.element.value;
+      }
+    });
+
+    // Set crawl type
+    if (selectedType) {
+      body.crawlType = selectedType;
+    }
+
+    // Boolean flags
+    if (is_defined(formElements.slowMode)) {
+      body.slow = formElements.slowMode.checked;
+    }
+
+    // Sitemap handling: if sitemapOnly is checked, useSitemap must be true
+    const sitemapOnly = is_defined(formElements.sitemapOnly) && formElements.sitemapOnly.checked;
+    const useSitemap = is_defined(formElements.useSitemap) && formElements.useSitemap.checked;
+    body.useSitemap = sitemapOnly ? true : useSitemap;
+    body.sitemapOnly = sitemapOnly;
+
+    // Only include startUrl if not a gazetteer-type crawl (gazetteer/geography/wikidata use external data sources)
+    const isGazetteerType = selectedType === 'gazetteer' || selectedType === 'geography' || selectedType === 'wikidata';
+    if (!isGazetteerType && is_defined(formElements.startUrl)) {
+      body.startUrl = formElements.startUrl.value;
+    }
+
+    const r = await fetch('/api/crawl', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    let payload = null;
+    try { 
+      payload = await r.json(); 
+    } catch (_) {}
+
+    if (!r.ok) {
+      const detail = payload?.error || `HTTP ${r.status}`;
+
+      if (r.status === 409) {
+        elements.logs.textContent += `\nStart: already running (409)\n`;
+        try {
+          elements.progress.textContent = 'running (already in progress)…';
+          
+          // Keep button disabled while crawl is running
+          elements.startBtn.textContent = 'Running';
+          elements.startBtn.disabled = true;
+          
+          // Briefly poll status to reflect activity
+          const until = Date.now() + 4000;
+          (async function poll() {
+            try {
+              const rs = await fetch('/api/status');
+              if (rs.ok) {
+                const js = await rs.json();
+                if (js.running) {
+                  elements.progress.textContent = 'running…';
+                }
+              }
+            } catch {}
+            if (Date.now() < until) setTimeout(poll, 300);
+          })();
+        } catch (_) {}
+      } else {
+        // Failed to start - reset button
+        elements.logs.textContent += `\nStart failed: ${detail}\n`;
+        elements.startBtn.disabled = false;
+        elements.startBtn.textContent = prevLabel;
+      }
+    } else {
+      elements.logs.textContent += `\nStarted: ${JSON.stringify(payload)}\n`;
+      
+      // Keep button disabled and update text to "Running"
+      elements.startBtn.textContent = 'Running';
+      elements.startBtn.disabled = true;
+      
+      // Notify crawl progress integration
+      if (window.__crawlProgress && typeof window.__crawlProgress.handleCrawlStart === 'function') {
+        window.__crawlProgress.handleCrawlStart({
+          jobId: payload?.jobId || payload?.id || 'unknown',
+          maxPages: body.maxPages || 0,
+          crawlType: body.crawlType || '',
+          startUrl: body.startUrl || ''
+        });
+      }
+      
+      // Immediate UI feedback
+      try {
+        elements.progress.textContent = 'starting… (visited: 0, downloaded: 0, found: 0, saved: 0)';
+        actions.updateStartupStatus(null, 'Starting crawler…');
+        
+        // Kick a short status poll
+        window.__startPollUntil = Date.now() + 4000;
+        (async function pollOnce() {
+          try {
+            const now = Date.now();
+            if (now > (window.__startPollUntil || 0)) return;
+            
+            const rs = await fetch('/api/status');
+            if (rs.ok) {
+              const js = await rs.json();
+              if (js && js.running) {
+                if ((window.__lastProgress?.visited || 0) === 0) {
+                  elements.progress.textContent = 'running… (visited: 0, downloaded: 0, found: 0, saved: 0)';
+                }
+              }
+            }
+          } catch (_) {}
+          setTimeout(pollOnce, 250);
+        })();
+      } catch (_) {}
+    }
+  } catch (e) {
+    elements.logs.textContent += `\nStart error: ${e?.message || e}\n`;
+    // On error, reset button
+    elements.startBtn.disabled = false;
+    elements.startBtn.textContent = prevLabel;
+  }
+}
+
+export function createCrawlControls({ elements, formElements, actions, formatters }) {
+  console.log('[createCrawlControls] ===== FUNCTION ENTRY =====');
+  console.log('[createCrawlControls] Received elements:', elements);
+  console.log('[createCrawlControls] Received formElements:', formElements);
+  console.log('[createCrawlControls] Received actions:', actions);
+  
   const {
-    elements,
-    formElements,
-    actions,
-    formatters
-  } = deps;
+    startBtn,
+    stopBtn,
+    pauseBtn,
+    resumeBtn,
+    analysisBtn,
+    logs,
+    progress,
+    // Form elements
+    crawlType,
+    depth,
+    maxPages,
+    concurrency,
+    requestTimeoutMs,
+    pacerJitterMinMs,
+    pacerJitterMaxMs,
+    refetchIfOlderThan,
+    refetchArticleIfOlderThan,
+    refetchHubIfOlderThan,
+    slowMode,
+    sitemapOnly,
+    useSitemap,
+    startUrl,
+    // Analysis elements
+    analysisLink,
+    analysisStatus
+  } = elements;
+  
+  console.log('[createCrawlControls] Destructured startBtn:', startBtn);
+  console.log('[createCrawlControls] startBtn ID:', startBtn?.id);
+  console.log('[createCrawlControls] startBtn exists:', !!startBtn);
 
   // Analysis button handler
   if (is_defined(elements.analysisBtn)) {
@@ -174,151 +341,38 @@ export function createCrawlControls(deps) {
   }
 
   // Start button handler
+  console.log('[crawlControls] Setting up start button handler');
+  console.log('[crawlControls] elements.startBtn:', elements.startBtn);
+  console.log('[crawlControls] is_defined(elements.startBtn):', is_defined(elements.startBtn));
+  
   if (is_defined(elements.startBtn)) {
-    elements.startBtn.onclick = async () => {
-      const selectedType = formElements.crawlType?.value || '';
-      actions.resetInsights();
+    console.log('[crawlControls] Start button is defined, attaching onclick handler');
+    
+    const handler = () => {
+      console.log('[crawlControls] ===== START BUTTON CLICKED! =====');
+      console.log('[crawlControls] Timestamp:', new Date().toISOString());
+      console.log('[crawlControls] Button element:', elements.startBtn);
+      console.log('[crawlControls] Button text before:', elements.startBtn.textContent);
+      console.log('[crawlControls] Button disabled before:', elements.startBtn.disabled);
       
-      if (selectedType) {
-        actions.setCrawlType(selectedType);
-      } else {
-        actions.setCrawlType('');
-      }
-
-      // Build request body from form elements using lang-tools patterns
-      const body = {};
-      
-      // Parse numeric fields
-      const numericFields = [
-        { key: 'depth', element: formElements.depth, required: true },
-        { key: 'maxPages', element: formElements.maxPages },
-        { key: 'concurrency', element: formElements.concurrency, required: true },
-        { key: 'requestTimeoutMs', element: formElements.requestTimeoutMs },
-        { key: 'pacerJitterMinMs', element: formElements.pacerJitterMinMs },
-        { key: 'pacerJitterMaxMs', element: formElements.pacerJitterMaxMs }
-      ];
-      
-      each(numericFields, (field) => {
-        if (is_defined(field.element) && field.element.value) {
-          body[field.key] = parseInt(field.element.value, 10);
-        } else if (field.required && is_defined(field.element)) {
-          body[field.key] = parseInt(field.element.value, 10);
-        }
-      });
-
-      // Parse string fields
-      const stringFields = [
-        { key: 'refetchIfOlderThan', element: formElements.refetchIfOlderThan },
-        { key: 'refetchArticleIfOlderThan', element: formElements.refetchArticleIfOlderThan },
-        { key: 'refetchHubIfOlderThan', element: formElements.refetchHubIfOlderThan }
-      ];
-      
-      each(stringFields, (field) => {
-        if (is_defined(field.element) && field.element.value) {
-          body[field.key] = field.element.value;
-        }
-      });
-
-      // Set crawl type
-      if (selectedType) {
-        body.crawlType = selectedType;
-      }
-
-      // Boolean flags
-      if (is_defined(formElements.slowMode)) {
-        body.slow = formElements.slowMode.checked;
-      }
-
-      // Sitemap handling: if sitemapOnly is checked, useSitemap must be true
-      const sitemapOnly = is_defined(formElements.sitemapOnly) && formElements.sitemapOnly.checked;
-      const useSitemap = is_defined(formElements.useSitemap) && formElements.useSitemap.checked;
-      body.useSitemap = sitemapOnly ? true : useSitemap;
-      body.sitemapOnly = sitemapOnly;
-
-      // Only include startUrl if not a gazetteer-type crawl (gazetteer/geography/wikidata use external data sources)
-      const isGazetteerType = selectedType === 'gazetteer' || selectedType === 'geography' || selectedType === 'wikidata';
-      if (!isGazetteerType && is_defined(formElements.startUrl)) {
-        body.startUrl = formElements.startUrl.value;
-      }
-
-      const prevLabel = elements.startBtn.textContent;
       elements.startBtn.disabled = true;
       elements.startBtn.textContent = 'Starting…';
-
-      try {
-        const r = await fetch('/api/crawl', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-
-        let payload = null;
-        try { 
-          payload = await r.json(); 
-        } catch (_) {}
-
-        if (!r.ok) {
-          const detail = payload?.error || `HTTP ${r.status}`;
-
-          if (r.status === 409) {
-            elements.logs.textContent += `\nStart: already running (409)\n`;
-            try {
-              elements.progress.textContent = 'running (already in progress)…';
-              
-              // Briefly poll status to reflect activity
-              const until = Date.now() + 4000;
-              (async function poll() {
-                try {
-                  const rs = await fetch('/api/status');
-                  if (rs.ok) {
-                    const js = await rs.json();
-                    if (js.running) {
-                      elements.progress.textContent = 'running…';
-                    }
-                  }
-                } catch {}
-                if (Date.now() < until) setTimeout(poll, 300);
-              })();
-            } catch (_) {}
-          } else {
-            elements.logs.textContent += `\nStart failed: ${detail}\n`;
-          }
-        } else {
-          elements.logs.textContent += `\nStarted: ${JSON.stringify(payload)}\n`;
-          
-          // Immediate UI feedback
-          try {
-            elements.progress.textContent = 'starting… (visited: 0, downloaded: 0, found: 0, saved: 0)';
-            actions.updateStartupStatus(null, 'Starting crawler…');
-            
-            // Kick a short status poll
-            window.__startPollUntil = Date.now() + 4000;
-            (async function pollOnce() {
-              try {
-                const now = Date.now();
-                if (now > (window.__startPollUntil || 0)) return;
-                
-                const rs = await fetch('/api/status');
-                if (rs.ok) {
-                  const js = await rs.json();
-                  if (js && js.running) {
-                    if ((window.__lastProgress?.visited || 0) === 0) {
-                      elements.progress.textContent = 'running… (visited: 0, downloaded: 0, found: 0, saved: 0)';
-                    }
-                  }
-                }
-              } catch (_) {}
-              setTimeout(pollOnce, 250);
-            })();
-          } catch (_) {}
-        }
-      } catch (e) {
-        elements.logs.textContent += `\nStart error: ${e?.message || e}\n`;
-      } finally {
-        elements.startBtn.disabled = false;
-        elements.startBtn.textContent = prevLabel;
-      }
+      
+      console.log('[crawlControls] Button text after:', elements.startBtn.textContent);
+      console.log('[crawlControls] Button disabled after:', elements.startBtn.disabled);
+      console.log('[crawlControls] About to call performCrawl');
+      
+      setTimeout(() => {
+        console.log('[crawlControls] Timeout fired, calling performCrawl now');
+        performCrawl(elements, formElements, actions);
+      }, 0);
     };
+    
+    elements.startBtn.onclick = handler;
+    console.log('[crawlControls] onclick handler attached successfully');
+    console.log('[crawlControls] Verifying attachment:', typeof elements.startBtn.onclick);
+  } else {
+    console.error('[crawlControls] Start button is NOT defined! Cannot attach handler.');
   }
 
   // Stop button handler
@@ -407,4 +461,12 @@ export function createCrawlControls(deps) {
       actions.openEventStream(enabled);
     };
   }
+  
+  console.log('[createCrawlControls] ===== FUNCTION EXIT =====');
+  console.log('[createCrawlControls] All handlers should be attached now');
+  
+  return {
+    initialized: true,
+    timestamp: Date.now()
+  };
 }

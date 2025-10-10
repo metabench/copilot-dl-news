@@ -1,7 +1,7 @@
 'use strict';
 
 const Database = require('better-sqlite3');
-const { ensureGazetteer } = require('../ensureDb');
+const { initGazetteerTables } = require('../schema');
 const {
   createAttributeStatements,
   recordAttribute,
@@ -13,7 +13,7 @@ describe('gazetteer.attributes helpers', () => {
 
   beforeEach(() => {
     db = new Database(':memory:');
-    ensureGazetteer(db);
+    initGazetteerTables(db, { verbose: false, logger: console });
     db.prepare(`INSERT INTO places(kind, country_code, source) VALUES ('country', 'TL', 'test')`).run();
   });
 

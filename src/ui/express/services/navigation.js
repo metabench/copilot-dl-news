@@ -22,6 +22,7 @@ const BAR_SHELL_CLASSNAME = 'global-nav-shell';
 /** @type {NavigationLink[]} */
 const NAV_LINKS = [
   { key: 'crawler', label: 'Crawler', href: '/' },
+  { key: 'crawls', label: 'Crawls', href: '/crawls/ssr' },
   { key: 'queues', label: 'Queues', href: '/queues/ssr' },
   { key: 'analysis', label: 'Analysis', href: '/analysis/ssr' },
   { key: 'benchmarks', label: 'Benchmarks', href: '/benchmarks/ssr' },

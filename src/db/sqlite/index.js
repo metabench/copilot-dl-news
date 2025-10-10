@@ -1,7 +1,12 @@
 "use strict";
 
 const NewsDatabase = require("./SQLiteNewsDatabase");
-const ensureExports = require("./ensureDb");
+const { ensureDb } = require("./ensureDb");
+const { openDatabase, ensureDatabase } = require("./connection");
+const { wrapWithTelemetry } = require("./instrumentation");
+const { createInstrumentedDb } = require("./instrumentedDb");
+const { initializeSchema, initGazetteerTables } = require("./schema");
+const { dedupePlaceSources } = require("./tools/dedupePlaceSources");
 
 function normalizeSQLiteOptions(options = {}) {
   if (typeof options === "string") {
@@ -23,9 +28,20 @@ function createSQLiteDatabase(inputOptions = {}) {
   const normalized = normalizeSQLiteOptions(inputOptions);
   const dbPath = resolveDbPath(normalized);
   if (dbPath) {
-    return new NewsDatabase(dbPath);
+    // Use ensureDb to open the database and create/verify schema
+    const dbHandle = ensureDb(dbPath);
+    return new NewsDatabase(dbHandle);
   }
-  return new NewsDatabase();
+  throw new Error('createSQLiteDatabase requires a dbPath');
+}
+
+/**
+ * Open database in read-only mode (helper for backward compatibility)
+ * @param {string} dbPath - Path to database file
+ * @returns {Database} Read-only database instance
+ */
+function openDbReadOnly(dbPath) {
+  return openDatabase(dbPath, { readonly: true, fileMustExist: true });
 }
 
 module.exports = {
@@ -34,5 +50,18 @@ module.exports = {
   createSQLiteDatabase,
   normalizeSQLiteOptions,
   resolveDbPath,
-  ...ensureExports
+  // Legacy API (backward compatibility)
+  ensureDb,
+  ensureGazetteer: (db) => initGazetteerTables(db, { verbose: false, logger: console }),
+  createInstrumentedDb,
+  openDbReadOnly,
+  // New simplified API
+  openDatabase,
+  ensureDatabase,
+  wrapWithTelemetry,
+  initializeSchema,
+  initGazetteerTables,
+  // Maintenance tools
+  dedupePlaceSources
 };
+

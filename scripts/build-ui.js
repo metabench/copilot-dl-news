@@ -21,7 +21,9 @@ async function build() {
   const entryPoints = [
     path.join(projectRoot, 'src', 'ui', 'public', 'index.js'),
     path.join(projectRoot, 'src', 'ui', 'public', 'global-nav.js'),
-    path.join(projectRoot, 'src', 'ui', 'public', 'theme', 'init.js')
+    path.join(projectRoot, 'src', 'ui', 'public', 'theme', 'init.js'),
+    path.join(projectRoot, 'src', 'ui', 'public', 'theme', 'browserController.js'),
+    path.join(projectRoot, 'src', 'ui', 'public', 'components', 'geographyFlowchart.js')
   ];
 
   await esbuild.build({

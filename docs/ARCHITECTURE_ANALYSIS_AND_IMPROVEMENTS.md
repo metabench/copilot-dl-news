@@ -4,6 +4,11 @@
 **Status**: Phases 1-3 Complete, Phase 4+ In Progress  
 **Last Updated**: October 7, 2025, 20:30
 
+**When to Read**:
+- Reviewing architecture refactoring progress across phases and identifying next steps
+- Deciding which services or infrastructure pieces require attention next
+- Gathering metrics and outcomes from previous architecture work for planning or reporting
+
 ## Progress Summary
 
 | Phase | Status | Completion Date | Key Results |

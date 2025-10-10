@@ -1,8 +1,8 @@
 'use strict';
 
 const Database = require('better-sqlite3');
-const { ensureGazetteer } = require('../../db/sqlite/ensureDb');
-const { OsmBoundaryIngestor } = require('../gazetteer/ingestors/OsmBoundaryIngestor');
+const { initGazetteerTables } = require('../../db/sqlite/schema');
+const OsmBoundaryIngestor = require('../gazetteer/ingestors/OsmBoundaryIngestor');
 
 describe('OsmBoundaryIngestor', () => {
   let db;
@@ -10,7 +10,7 @@ describe('OsmBoundaryIngestor', () => {
 
   beforeEach(() => {
     db = new Database(':memory:');
-    ensureGazetteer(db);
+    initGazetteerTables(db, { verbose: false, logger: console });
     logger = {
       info: jest.fn(),
       warn: jest.fn(),

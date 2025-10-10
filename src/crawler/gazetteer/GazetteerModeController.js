@@ -3,6 +3,18 @@
 const { tof, is_array } = require('lang-tools');
 const { GazetteerIngestionCoordinator, sanitizeSummary } = require('./GazetteerIngestionCoordinator');
 
+/**
+ * GazetteerModeController - Controls gazetteer/geography crawl execution
+ * 
+ * CONCURRENCY NOTE: Gazetteer crawls process data sequentially and do NOT use
+ * the concurrency parameter. The concurrency setting from the crawler is treated
+ * as a maximum allowed limit, but gazetteer operations are inherently sequential
+ * due to their reliance on external API rate limits (Wikidata SPARQL, Overpass API)
+ * and database transaction ordering requirements.
+ * 
+ * Future optimizations may add limited parallelism within stages, but the
+ * concurrency parameter will always be treated as an upper bound, not a requirement.
+ */
 class GazetteerModeController {
   constructor({
     telemetry,
@@ -48,10 +60,14 @@ class GazetteerModeController {
     }
     this._status = 'initializing';
     this._startedAt = Date.now();
+    
+    // Emit progress immediately
     this._emitProgress({
       status: 'initializing',
       startedAt: this._startedAt
     }, { force: true });
+    
+    // Emit milestone with more detail
     this.telemetry.milestoneOnce('gazetteer-mode:init', {
       kind: 'gazetteer-mode',
       message: 'Gazetteer crawl mode initializing',
@@ -61,6 +77,8 @@ class GazetteerModeController {
         mode: this.mode
       }
     });
+    
+    // Update state early
     if (this.state && !this.state.gazetteer) {
       this.state.gazetteer = {
         status: 'initializing',
@@ -68,7 +86,21 @@ class GazetteerModeController {
         mode: this.mode
       };
     }
+    
     this._initialized = true;
+    
+    // Emit completion milestone
+    try {
+      this.telemetry.milestoneOnce('gazetteer-mode:init-complete', {
+        kind: 'gazetteer-init-complete',
+        message: 'Gazetteer mode controller initialized',
+        details: {
+          jobId: this.jobId,
+          durationMs: Date.now() - this._startedAt,
+          mode: this.mode
+        }
+      });
+    } catch (_) {}
   }
 
   async run({ signal = null, emitProgress = null } = {}) {
@@ -108,6 +140,7 @@ class GazetteerModeController {
           jobId: this.jobId,
           durationMs: summary?.durationMs || (this._completedAt - (this._startedAt || this._completedAt)),
           totals: summary?.totals || null,
+          plan: compactPlan(summary?.plan) || null,
           mode: this.mode
         }
       });
@@ -242,10 +275,52 @@ function compactGazetteerSummary(summary) {
   if (summary.finishedAt) {
     base.finishedAt = summary.finishedAt;
   }
+  if (summary.plan) {
+    const plan = compactPlan(summary.plan);
+    if (plan) {
+      base.plan = plan;
+    }
+  }
   return base;
+}
+
+function compactPlan(plan) {
+  if (!plan || typeof plan !== 'object') {
+    return null;
+  }
+  const output = {};
+  if (Number.isFinite(plan.totalStages)) {
+    output.totalStages = plan.totalStages;
+  }
+  if (Number.isFinite(plan.completedStages)) {
+    output.completedStages = plan.completedStages;
+  }
+  if (Number.isFinite(plan.failedStages)) {
+    output.failedStages = plan.failedStages;
+  }
+  if (Number.isFinite(plan.recordsProcessed)) {
+    output.recordsProcessed = plan.recordsProcessed;
+  }
+  if (Number.isFinite(plan.recordsUpserted)) {
+    output.recordsUpserted = plan.recordsUpserted;
+  }
+  if (Array.isArray(plan.stages)) {
+    output.stages = plan.stages.map((stage) => ({
+      stage: stage.stage,
+      status: stage.status,
+      durationMs: stage.durationMs || null,
+      totals: stage.totals ? {
+        recordsProcessed: stage.totals.recordsProcessed || 0,
+        recordsUpserted: stage.totals.recordsUpserted || 0,
+        errors: stage.totals.errors || 0
+      } : undefined
+    }));
+  }
+  return Object.keys(output).length ? output : null;
 }
 
 module.exports = {
   GazetteerModeController,
-  compactGazetteerSummary
+  compactGazetteerSummary,
+  compactPlan
 };

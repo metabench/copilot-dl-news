@@ -1,5 +1,7 @@
 # Root Directory Server Verification
 
+**When to Read**: Read this when debugging server startup issues, understanding server root directory detection, or fixing path resolution problems in tests. Documents the server root verification mechanism.
+
 ## Summary
 
 A simple `server.js` wrapper has been created in the root directory that successfully starts the Express UI server.

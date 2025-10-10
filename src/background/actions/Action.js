@@ -40,16 +40,25 @@ class Action {
    * @private
    */
   _validate() {
-    if (!this.id || tof(this.id) !== 'string') {
-      throw new Error('Action id must be a non-empty string');
+    if (!this.id) {
+      throw new Error('Action id is required');
+    }
+    if (tof(this.id) !== 'string') {
+      throw new Error('Action id must be a string');
     }
     
-    if (!this.type || tof(this.type) !== 'string') {
-      throw new Error('Action type must be a non-empty string');
+    if (!this.type) {
+      throw new Error('Action type is required');
+    }
+    if (tof(this.type) !== 'string') {
+      throw new Error('Action type must be a string');
     }
     
-    if (!this.label || tof(this.label) !== 'string') {
-      throw new Error('Action label must be a non-empty string');
+    if (!this.label) {
+      throw new Error('Action label is required');
+    }
+    if (tof(this.label) !== 'string') {
+      throw new Error('Action label must be a string');
     }
     
     if (tof(this.parameters) !== 'object') {
@@ -67,8 +76,7 @@ class Action {
       id: this.id,
       type: this.type,
       label: this.label,
-      parameters: this.parameters,
-      metadata: this.metadata
+      parameters: this.parameters
     };
   }
   

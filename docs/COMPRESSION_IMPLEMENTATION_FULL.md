@@ -7,6 +7,11 @@
 - **Brotli**: Levels 0-11 (including ultra-high quality with large memory windows)
 - **Zstd**: Levels 1-22 (optional, for dictionary compression in buckets)
 
+**When to Read**:
+- Building or extending compression pipelines for article storage or exports
+- Updating database schema objects related to `compression_types`, buckets, or storage tables
+- Comparing algorithm trade-offs (speed, memory, ratios) before choosing defaults
+
 ---
 
 ## Part 1: Expanded `compression_types` Table

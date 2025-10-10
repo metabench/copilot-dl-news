@@ -1,4 +1,4 @@
-const { each, tof } = require('lang-tools');
+import { each, tof } from 'lang-tools';
 
 const DEFAULT_THEMES = Object.freeze([
   { name: 'light', classes: [] },
@@ -264,7 +264,7 @@ function createThemeController(options = {}) {
   };
 }
 
-module.exports = {
+export {
   DEFAULT_THEMES,
   createThemeController,
   parseThemeFromHash,

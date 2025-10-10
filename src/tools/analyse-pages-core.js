@@ -82,19 +82,28 @@ async function analysePages({
        LIMIT 1
     `);
     const upsertArticleAnalysis = db.db.prepare('UPDATE articles SET analysis = ? WHERE url = ?');
-    const insertPlace = db.db.prepare(`
-      INSERT OR IGNORE INTO article_places(
-        article_url,
-        place,
-        place_kind,
-        method,
-        source,
-        offset_start,
-        offset_end,
-        context,
-        first_seen_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `);
+    // article_places table removed from schema - prepare statement only if table exists
+    let insertPlace = null;
+    try {
+      const tableExists = db.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='article_places'").get();
+      if (tableExists) {
+        insertPlace = db.db.prepare(`
+          INSERT OR IGNORE INTO article_places(
+            article_url,
+            place,
+            place_kind,
+            method,
+            source,
+            offset_start,
+            offset_end,
+            context,
+            first_seen_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        `);
+      }
+    } catch (_) {
+      // Table doesn't exist - skip place insertion
+    }
     const upsertPlaceHubInsert = db.db.prepare(`
       INSERT OR IGNORE INTO place_hubs(
         host,
@@ -207,7 +216,7 @@ async function analysePages({
         emit(logger, 'warn', `[analyse-pages] Failed to persist analysis for ${row.url}`, verbose ? error : error?.message);
       }
 
-      if (is_array(places)) {
+      if (is_array(places) && insertPlace) {
         for (const place of places) {
           try {
             insertPlace.run(

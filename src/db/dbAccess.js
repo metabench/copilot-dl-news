@@ -28,6 +28,7 @@
 
 const path = require('path');
 const NewsDatabase = require('./sqlite/SQLiteNewsDatabase');
+const { ensureDb } = require('./sqlite/ensureDb');
 
 /**
  * Open a NewsDatabase connection
@@ -46,7 +47,9 @@ const NewsDatabase = require('./sqlite/SQLiteNewsDatabase');
  */
 function openNewsDb(dbPath) {
   const resolvedPath = dbPath || path.join(process.cwd(), 'data', 'news.db');
-  return new NewsDatabase(resolvedPath);
+  // Open database with ensureDb to get proper better-sqlite3 handle
+  const dbHandle = ensureDb(resolvedPath);
+  return new NewsDatabase(dbHandle);
 }
 
 /**

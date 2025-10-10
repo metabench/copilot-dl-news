@@ -1,8 +1,12 @@
 # Background Tasks Manager - Implementation Complete
 
+**When to Read**: When creating new background task types, understanding task lifecycle (pending/running/paused/complete/failed), or integrating background processing into the system.
+
 ## Overview
 
 The background tasks management system is now fully functional with progress bars, real-time updates via SSE, and support for the compression worker pool. This document summarizes what was implemented and how to use the system.
+
+**⚠️ IMPORTANT**: Background tasks are **separate from crawls**. See `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` for the architectural distinction. Background tasks process data already in the database (compress, analyze, export), while crawls fetch new data from external websites (BBC, Wikidata, etc.).
 
 ## Features Implemented
 

@@ -3,6 +3,13 @@
 **Status**: ✅ **Implemented** (October 2025)  
 **Integration**: Analysis runs can now execute as background tasks with full pause/resume support
 
+**⚠️ IMPORTANT**: Background tasks are **separate from crawls** (see `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`). Analysis tasks process existing article data, while crawls fetch new articles from websites.
+
+**When to Read**:
+- Planning or maintaining analysis workflows that should run through `BackgroundTaskManager`
+- Extending the analysis task UI/API (pause/resume, status pages) or triaging related bugs
+- Auditing how legacy child-process analysis compares to the background-task implementation
+
 ---
 
 ## Overview

@@ -275,6 +275,12 @@ function createAnalysisProgressBar(container, options = {}) {
   };
 }
 
-module.exports = {
-  createAnalysisProgressBar
-};
+// Support both CommonJS and ES6 imports
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { createAnalysisProgressBar };
+}
+if (typeof window !== 'undefined') {
+  window.createAnalysisProgressBar = createAnalysisProgressBar;
+}
+
+export { createAnalysisProgressBar };

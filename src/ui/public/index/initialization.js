@@ -153,18 +153,27 @@ export function createInitialization(deps) {
    * Loads crawl types and initializes the dropdown
    */
   async function initCrawlTypes() {
+    console.log('[init] initCrawlTypes: Starting crawl types initialization');
     const sel = document.getElementById('crawlType');
-    if (!sel) return;
+    if (!sel) {
+      console.warn('[init] initCrawlTypes: crawlType dropdown not found');
+      return;
+    }
+    console.log('[init] initCrawlTypes: Found crawlType dropdown');
 
     const storedType = localStorage.getItem('ctrl_crawlType') || '';
     const legacyMode = localStorage.getItem('ctrl_mode');
     const saved = storedType || (legacyMode === 'intelligent' ? 'intelligent' : '');
 
     try {
+      console.log('[init] initCrawlTypes: Fetching /api/crawl-types');
       const r = await fetch('/api/crawl-types');
+      console.log('[init] initCrawlTypes: Fetch response status:', r.status, r.ok);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
+      console.log('[init] initCrawlTypes: Received data:', j);
       const items = Array.isArray(j.items) ? j.items : [];
+      console.log('[init] initCrawlTypes: Crawl types count:', items.length);
       sel.innerHTML = '';
       
       for (const it of items) {
@@ -179,9 +188,14 @@ export function createInitialization(deps) {
         ? 'basic-with-sitemap' 
         : (items[0]?.name || 'basic');
       sel.value = saved && items.some(x => x.name === saved) ? saved : def;
+      console.log('[init] initCrawlTypes: Dropdown populated successfully with', items.length, 'types');
     } catch (e) {
+      console.error('[init] initCrawlTypes: Error loading crawl types:', e);
+      console.error('[init] initCrawlTypes: Error message:', e.message);
+      console.error('[init] initCrawlTypes: Error stack:', e.stack);
       // Fallback options if API call fails
       sel.innerHTML = '<option value="basic-with-sitemap">basic-with-sitemap</option><option value="intelligent">intelligent</option><option value="basic">basic</option><option value="sitemap-only">sitemap-only</option>';
+      console.warn('[init] initCrawlTypes: Using fallback options');
       if (saved && Array.from(sel.options).some(opt => opt.value === saved)) {
         sel.value = saved;
       }
@@ -204,12 +218,18 @@ export function createInitialization(deps) {
       const isGazetteerType = v === 'gazetteer' || v === 'geography' || v === 'wikidata';
       
       if (isGazetteerType) {
-        if (startUrlField) startUrlField.classList.add('control-field--hidden');
+        if (startUrlField) {
+          startUrlField.classList.add('control-field--hidden');
+          startUrlField.classList.add('control-field--disabled');
+        }
         if (startUrlInput) {
           startUrlInput.disabled = true;
           startUrlInput.removeAttribute('required');
         }
-        if (depthField) depthField.classList.add('control-field--hidden');
+        if (depthField) {
+          depthField.classList.add('control-field--hidden');
+          depthField.classList.add('control-field--disabled');
+        }
         if (depthInput) depthInput.disabled = true;
         if (gazetteerNote) {
           gazetteerNote.classList.remove('control-field--hidden');
@@ -229,9 +249,15 @@ export function createInitialization(deps) {
         soEl.disabled = false;
       } else {
         // Show startUrl and depth fields for other types
-        if (startUrlField) startUrlField.classList.remove('control-field--hidden');
+        if (startUrlField) {
+          startUrlField.classList.remove('control-field--hidden');
+          startUrlField.classList.remove('control-field--disabled');
+        }
         if (startUrlInput) startUrlInput.disabled = false;
-        if (depthField) depthField.classList.remove('control-field--hidden');
+        if (depthField) {
+          depthField.classList.remove('control-field--hidden');
+          depthField.classList.remove('control-field--disabled');
+        }
         if (depthInput) depthInput.disabled = false;
         if (gazetteerNote) gazetteerNote.classList.add('control-field--hidden');
 
@@ -318,9 +344,24 @@ export function createInitialization(deps) {
 
     try {
       const r = await fetch('/api/system-health');
-      if (!r.ok) return;
+      if (!r.ok) {
+        console.debug('[initialization] System health endpoint not available:', r.status);
+        return;
+      }
       
-      const j = await r.json();
+      const contentType = r.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.debug('[initialization] System health endpoint returned non-JSON response');
+        return;
+      }
+      
+      let j;
+      try {
+        j = await r.json();
+      } catch (parseErr) {
+        console.debug('[initialization] Failed to parse system health JSON:', parseErr.message);
+        return;
+      }
       const fmt = (b) => b == null 
         ? 'n/a' 
         : (b >= 1073741824 
@@ -353,18 +394,30 @@ export function createInitialization(deps) {
    * Runs all initialization tasks
    */
   async function initialize() {
+    console.log('[init] initialize: Starting full initialization sequence');
+    
     // Logs setup
+    console.log('[init] initialize: Restoring logs height');
     restoreLogsHeight();
+    console.log('[init] initialize: Setting up logs font controls');
     setupLogsFontControls();
+    console.log('[init] initialize: Setting up logs resizer');
     setupLogsResizer();
+    console.log('[init] initialize: Initializing logs toggle');
     initLogsToggle();
 
     // UI initialization
+    console.log('[init] initialize: About to call initCrawlTypes');
     await initCrawlTypes();
+    console.log('[init] initialize: initCrawlTypes completed');
+    
+    console.log('[init] initialize: Persisting panels');
     persistPanels();
+    console.log('[init] initialize: Setting up theme controller');
     const themeController = setupThemeController();
 
     // Load health data
+    console.log('[init] initialize: Loading health strip');
     await loadHealthStrip();
 
     return { themeController, scheduleLogFlush };

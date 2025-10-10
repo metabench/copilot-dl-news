@@ -34,7 +34,7 @@ describe('DeepUrlAnalyzer', () => {
       expect(result.exists).toBe(true);
       expect(result.recorded).toBe(true);
 
-      const row = db.db.prepare('SELECT url, alias_url, [exists] AS exists_flag FROM url_aliases WHERE url = ?').get(decision.analysis.normalized);
+      const row = db.db.prepare('SELECT url, alias_url, url_exists AS exists_flag FROM url_aliases WHERE url = ?').get(decision.analysis.normalized);
       expect(row).toBeDefined();
       expect(row.alias_url).toBe(existingUrl);
       expect(row.exists_flag).toBe(1);

@@ -1,5 +1,7 @@
 # Refactoring Plan: Intelligent Navigation-First Crawling
 
+**When to Read**: This document outlines a **future vision** for a major architectural refactoring of the crawler. Read this to understand the long-term direction of the project, including the move to a phased "discover then acquire" model. It is a planning document, not a description of the current system.
+
 **Status**: 🔮 **FUTURE VISION** — Not yet implemented  
 **Created**: October 3, 2025  
 **Last Reviewed**: October 7, 2025  

@@ -101,6 +101,38 @@ function createEventsRouter({ realtime, jobRegistry, QUIET, analysisProgress }) 
       }
     } catch (_) {}
 
+    // Seed telemetry history so new clients see recent diagnostics
+    try {
+      if (typeof realtime.getTelemetryHistory === 'function') {
+        const history = realtime.getTelemetryHistory();
+        if (Array.isArray(history) && history.length) {
+          for (const entry of history) {
+            broadcast('telemetry', entry);
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Seed plan preview/status history for new clients
+    try {
+      if (typeof realtime.getPlanStatusHistory === 'function') {
+        const statuses = realtime.getPlanStatusHistory();
+        if (Array.isArray(statuses)) {
+          for (const status of statuses) {
+            broadcast('plan-status', status);
+          }
+        }
+      }
+      if (typeof realtime.getPlanPreviewHistory === 'function') {
+        const previews = realtime.getPlanPreviewHistory();
+        if (Array.isArray(previews)) {
+          for (const preview of previews) {
+            broadcast('plan-preview', preview);
+          }
+        }
+      }
+    } catch (_) {}
+
     // Seed terminal snapshot(s) for jobs that have already exited (client-local to avoid duplicates)
     try {
       if (jobs.size > 0) {

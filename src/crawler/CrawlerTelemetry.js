@@ -78,6 +78,28 @@ class CrawlerTelemetry {
     }
   }
 
+  telemetry(entry = {}) {
+    if (!entry || typeof entry !== 'object') return;
+    if (this.events && typeof this.events.emitTelemetry === 'function') {
+      this.events.emitTelemetry({
+        ts: new Date().toISOString(),
+        source: 'crawler',
+        severity: 'info',
+        ...entry
+      });
+    } else {
+      // Fallback: emit as console message so it gets picked up
+      try {
+        console.log('TELEMETRY ' + JSON.stringify({
+          ts: new Date().toISOString(),
+          source: 'crawler',
+          severity: 'info',
+          ...entry
+        }));
+      } catch (_) {}
+    }
+  }
+
   getProblemSummary() {
     if (this.events && typeof this.events.getProblemSummary === 'function') {
       return this.events.getProblemSummary() || null;

@@ -46,6 +46,12 @@ class RealtimeBroadcaster {
     this.metrics = this.progress.metrics;
     this.broadcastProgress = this.progress.broadcastProgress;
     this.jobsLastSentAt = 0;
+    this.telemetryHistory = [];
+    this.telemetryMaxEntries = 200;
+    this.planStatusHistory = [];
+    this.planPreviewHistory = [];
+    this.planStatusHistoryLimit = 50;
+    this.planPreviewHistoryLimit = 20;
   }
 
   getMetrics() {
@@ -69,6 +75,12 @@ class RealtimeBroadcaster {
   }
 
   broadcast(event, data, forcedJobId = null) {
+    if (event === 'plan-status') {
+      this._recordPlanEvent(this.planStatusHistory, data, this.planStatusHistoryLimit);
+    } else if (event === 'plan-preview') {
+      this._recordPlanEvent(this.planPreviewHistory, data, this.planPreviewHistoryLimit);
+    }
+
     return this.broadcaster.broadcast(event, data, forcedJobId);
   }
 
@@ -88,6 +100,67 @@ class RealtimeBroadcaster {
 
   removeClient(client) {
     this.sseClients.delete(client);
+  }
+
+  getTelemetryHistory() {
+    return this.telemetryHistory.slice();
+  }
+
+  getPlanStatusHistory() {
+    return this.planStatusHistory.slice();
+  }
+
+  getPlanPreviewHistory() {
+    return this.planPreviewHistory.slice();
+  }
+
+  broadcastTelemetry(entry = {}) {
+    if (!entry || typeof entry !== 'object') return;
+    const now = new Date();
+    const telemetryEntry = {
+      id: entry.id || `telemetry-${now.getTime()}-${Math.random().toString(16).slice(2, 8)}`,
+      ts: entry.ts || now.toISOString(),
+      source: entry.source || 'unknown',
+      event: entry.event || 'log',
+      severity: entry.severity || 'info',
+      message: entry.message || '',
+      details: entry.details || undefined,
+      data: entry.data || undefined,
+      taskId: entry.taskId || undefined,
+      taskType: entry.taskType || undefined,
+      status: entry.status || undefined
+    };
+    if (!telemetryEntry.message && telemetryEntry.details && typeof telemetryEntry.details === 'string') {
+      telemetryEntry.message = telemetryEntry.details;
+    }
+    this.telemetryHistory.push(telemetryEntry);
+    if (this.telemetryHistory.length > this.telemetryMaxEntries) {
+      this.telemetryHistory.splice(0, this.telemetryHistory.length - this.telemetryMaxEntries);
+    }
+    this.broadcast('telemetry', telemetryEntry);
+  }
+
+  getBroadcastTelemetry() {
+    return (entry) => this.broadcastTelemetry(entry);
+  }
+
+  _recordPlanEvent(collection, payload, limit) {
+    if (!payload || typeof payload !== 'object') return;
+    const clone = { ...payload };
+    if (clone.session && typeof clone.session === 'object') {
+      clone.session = { ...clone.session };
+    }
+    const sessionId = clone.sessionId || null;
+    if (sessionId) {
+      const existingIndex = collection.findIndex((entry) => entry.sessionId === sessionId);
+      if (existingIndex !== -1) {
+        collection.splice(existingIndex, 1);
+      }
+    }
+    collection.push(clone);
+    if (collection.length > limit) {
+      collection.splice(0, collection.length - limit);
+    }
   }
 }
 

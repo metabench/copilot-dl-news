@@ -1,5 +1,9 @@
 # ROADMAP.md — Strategic priorities
 
+**Status**: COMPLETE  
+**Last Updated**: October 3, 2025  
+**When to Read**: You need to understand project direction, planned features, or want to pick up new work
+
 This document tracks medium-term priorities, milestones, and open investigations. Update entries as work begins or lands.
 
 ## Intelligent crawl & analysis priorities (Q4 2025)

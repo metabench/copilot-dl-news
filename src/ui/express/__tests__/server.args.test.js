@@ -44,6 +44,31 @@ describe('server buildArgs mapping', () => {
     expect(args).not.toContain('--no-sitemap');
   });
 
+  test('omits depth flag for geography/gazetteer crawls', async () => {
+    const started = [];
+    const fakeRunner = {
+      start(args) {
+        started.push(args);
+        return { pid: 5678, stdout: { on() {} }, stderr: { on() {} }, on() {} };
+      }
+    };
+    const app = createApp({ runner: fakeRunner });
+    const body = {
+      crawlType: 'geography',
+      depth: 9,
+      maxPages: 20
+    };
+    const res = await request(app).post('/api/crawl').send(body).set('Content-Type', 'application/json');
+    expect(res.status).toBe(202);
+    const args = started[0];
+    expect(args).toEqual(expect.arrayContaining([
+      'src/crawl.js',
+      'https://placeholder.example.com',
+      '--crawl-type=geography'
+    ]));
+    expect(args).not.toContain('--depth=9');
+  });
+
   test('allows query URLs when explicitly requested', async () => {
     const started = [];
     const fakeRunner = {

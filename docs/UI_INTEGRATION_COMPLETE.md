@@ -1,6 +1,9 @@
 # Background Tasks UI Integration - Completion Report
 
-## Date: October 6, 2025
+## UI Integration Complete
+
+**Date**: October 2025  
+**When to Read**: Read this when understanding SSE integration patterns, implementing real-time UI updates, or debugging event stream handling. Documents Server-Sent Events (SSE) architecture and UI integration patterns.
 
 ## Overview
 Successfully integrated the Background Tasks system into the main crawler UI with global navigation and real-time task visibility.

@@ -264,7 +264,38 @@ export function createSseHandlers({
       const stageLabel = payload.stage ? String(payload.stage).replace(/[_-]+/g, ' ') : '';
       const statusLabel = payload.statusText || stageLabel;
       const prefix = statusLabel ? `${statusLabel} · ` : '';
-      if (progress) {
+      
+      // Handle gazetteer-specific progress
+      if (payload.gazetteer && progress) {
+        const gaz = payload.gazetteer;
+        const phase = gaz.phase || gaz.status || 'running';
+        let progressText = '';
+        
+        if (gaz.payload) {
+          const p = gaz.payload;
+          if (p.phase === 'processing' && is_defined(p.current) && is_defined(p.totalItems)) {
+            const percent = Math.round((p.current / p.totalItems) * 100);
+            progressText = `Processing: ${p.current}/${p.totalItems} (${percent}%) ${p.message || ''}`;
+          } else if (p.phase === 'discovery-complete' && is_defined(p.totalItems)) {
+            progressText = `Discovered ${p.totalItems} countries, starting processing...`;
+          } else if (p.phase === 'ingestor-start') {
+            progressText = `Starting ${p.ingestor || 'ingestor'}...`;
+          } else if (p.phase === 'ingestor-complete') {
+            progressText = `Completed ${p.ingestor || 'ingestor'} (${p.durationMs}ms)`;
+          } else if (p.message) {
+            progressText = p.message;
+          } else {
+            progressText = `${phase} · ${p.phase || ''}`;
+          }
+        } else if (gaz.status) {
+          progressText = `Gazetteer: ${gaz.status}`;
+        }
+        
+        if (progressText) {
+          progress.textContent = progressText;
+        }
+      } else if (progress) {
+        // Regular crawler progress
         progress.textContent = `${prefix}visited: ${payload.visited || 0}, downloaded: ${payload.downloaded || 0}, found: ${payload.found || 0}, saved: ${payload.saved || 0}`;
       }
 
@@ -433,6 +464,12 @@ export function createSseHandlers({
     
     if (logs) {
       logs.textContent += `\nDONE: ${e.data}\n`;
+    }
+    
+    // Re-enable start button when crawl completes
+    if (elements?.startBtn) {
+      elements.startBtn.disabled = false;
+      elements.startBtn.textContent = 'Start';
     }
   }
 

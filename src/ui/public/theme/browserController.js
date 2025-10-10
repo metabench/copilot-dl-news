@@ -1,8 +1,7 @@
-const { each } = require('lang-tools');
-const {
+import {
   createThemeController,
   DEFAULT_THEMES
-} = require('../../shared/theme/themeController.js');
+} from '../../shared/theme/themeController.js';
 
 function createBrowserThemeController(options = {}) {
   if (typeof window === 'undefined') {
@@ -66,12 +65,12 @@ function createBrowserThemeController(options = {}) {
       if (!root || !root.classList) {
         return;
       }
-      each(allClasses, (cls) => {
+      allClasses.forEach((cls) => {
         if (cls) {
           root.classList.remove(cls);
         }
       });
-      each(classes, (cls) => {
+      classes.forEach((cls) => {
         if (cls) {
           root.classList.add(cls);
         }
@@ -85,6 +84,6 @@ function createBrowserThemeController(options = {}) {
   return controller;
 }
 
-module.exports = {
+export {
   createBrowserThemeController
 };

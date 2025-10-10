@@ -1,5 +1,7 @@
 # HTML Composition Architecture
 
+**When to Read**: When building server-side rendered pages, understanding template composition patterns, or working with the page rendering system.
+
 _Inspired by jsgui3-html and jsgui3-server patterns, adapted for server-side rendering_
 
 ## Overview

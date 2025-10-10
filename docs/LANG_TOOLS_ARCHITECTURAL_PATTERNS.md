@@ -3,6 +3,11 @@
 _Date: 2025-10-05_  
 _Focus: Beyond individual replacements—architectural patterns for idiomatic code_
 
+**When to Read**:
+- Introducing higher-order helpers or utilities that wrap lang-tools primitives
+- Planning refactors that touch multiple sites of repetitive data transformation logic
+- Evaluating whether a prospective pattern belongs in lang-tools versus bespoke module code
+
 This document identifies **larger architectural patterns** that could make the codebase more idiomatic and maintainable, beyond the individual `forEach`/`typeof` replacements covered in `LANG_TOOLS_AUDIT.md`.
 
 ---

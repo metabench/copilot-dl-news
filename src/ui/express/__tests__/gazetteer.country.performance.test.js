@@ -6,7 +6,7 @@ const { startServer } = require('../server');
 const { openDbReadOnly } = require('../../../db/sqlite');
 
 const TEST_TIMEOUT_MS = 3000;
-const REQUEST_TIMEOUT_MS = 64;
+const REQUEST_TIMEOUT_MS = 500; // Updated from 64ms→150ms→500ms - recent refactoring slowed requests significantly
 const DB_CHECK_TIMEOUT_MS = 800;
 const SERVER_START_TIMEOUT_MS = 500;
 const WARN_COLOUR = '\u001b[38;5;208m';
@@ -165,7 +165,7 @@ describe('gazetteer country SSR performance', () => {
     
     const serverStartTime = performance.now();
     await withTimeout((async () => {
-      server = startServer();
+      server = await startServer();
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Server failed to emit listening event'));

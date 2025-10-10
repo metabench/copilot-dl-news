@@ -20,37 +20,38 @@ const { Action } = require('./Action');
  */
 class ActionRegistry {
   constructor() {
-    // Map: actionType -> handler function
-    this.handlers = new Map();
+    // Plain object for handler storage (tests expect object syntax)
+    this.handlers = {};
   }
   
   /**
    * Register an action handler
    * 
    * @param {string} actionType - Action type identifier
-   * @param {Function} handler - Handler function (params, context) => Promise<any>
-   * @param {Object} [options] - Registration options
-   * @param {string} [options.description] - Description of what the action does
-   * @param {Array<string>} [options.requiredParams] - Required parameter names
+   * @param {Function} handler - Handler function (action, context) => Promise<any>
+   * @param {Array<string>} [requiredParams] - Required parameter names
    */
-  register(actionType, handler, options = {}) {
-    if (!actionType || tof(actionType) !== 'string') {
-      throw new Error('Action type must be a non-empty string');
+  register(actionType, handler, requiredParams = []) {
+    if (!actionType) {
+      throw new Error('Action type is required');
+    }
+    if (tof(actionType) !== 'string') {
+      throw new Error('Action type must be a string');
     }
     
     if (tof(handler) !== 'function') {
-      throw new Error('Action handler must be a function');
+      throw new Error('Handler must be a function');
     }
     
-    if (this.handlers.has(actionType)) {
-      throw new Error(`Action type already registered: ${actionType}`);
+    if (requiredParams && !Array.isArray(requiredParams)) {
+      throw new Error('Required parameters must be an array');
     }
     
-    this.handlers.set(actionType, {
+    // Allow overwriting (remove the check)
+    this.handlers[actionType] = {
       handler,
-      description: options.description || '',
-      requiredParams: options.requiredParams || []
-    });
+      requiredParams: requiredParams || []
+    };
   }
   
   /**
@@ -60,7 +61,7 @@ class ActionRegistry {
    * @returns {boolean} True if action type is registered
    */
   isRegistered(actionType) {
-    return this.handlers.has(actionType);
+    return this.handlers.hasOwnProperty(actionType);
   }
   
   /**
@@ -70,7 +71,7 @@ class ActionRegistry {
    * @returns {Object|null} Handler info or null if not found
    */
   getHandlerInfo(actionType) {
-    const info = this.handlers.get(actionType);
+    const info = this.handlers[actionType];
     if (!info) return null;
     
     return {
@@ -91,7 +92,7 @@ class ActionRegistry {
       throw new Error('Execute requires an Action instance');
     }
     
-    const handlerInfo = this.handlers.get(action.type);
+    const handlerInfo = this.handlers[action.type];
     if (!handlerInfo) {
       throw new Error(`No handler registered for action type: ${action.type}`);
     }
@@ -102,17 +103,14 @@ class ActionRegistry {
     );
     
     if (missingParams.length > 0) {
+      const paramWord = missingParams.length === 1 ? 'parameter' : 'parameters';
       throw new Error(
-        `Action ${action.type} missing required parameters: ${missingParams.join(', ')}`
+        `Action ${action.type} missing required ${paramWord}: ${missingParams.join(', ')}`
       );
     }
     
-    // Execute handler
-    try {
-      return await handlerInfo.handler(action.parameters, context);
-    } catch (error) {
-      throw new Error(`Action execution failed (${action.type}): ${error.message}`);
-    }
+    // Execute handler - pass full action object, not just parameters
+    return await handlerInfo.handler(action, context);
   }
   
   /**
@@ -121,7 +119,16 @@ class ActionRegistry {
    * @returns {Array<string>} Array of action type identifiers
    */
   listActionTypes() {
-    return Array.from(this.handlers.keys());
+    return Object.keys(this.handlers);
+  }
+  
+  /**
+   * Get all registered action types (alias for listActionTypes)
+   * 
+   * @returns {Array<string>} Array of action type identifiers
+   */
+  getRegisteredTypes() {
+    return this.listActionTypes();
   }
   
   /**
@@ -132,7 +139,7 @@ class ActionRegistry {
   getAllHandlerInfo() {
     const result = [];
     
-    for (const [type, info] of this.handlers.entries()) {
+    for (const [type, info] of Object.entries(this.handlers)) {
       result.push({
         type,
         description: info.description,
@@ -157,57 +164,57 @@ function createActionRegistry(context) {
   // Register: stop-task
   registry.register(
     'stop-task',
-    async (params, ctx) => {
-      const { taskId } = params;
-      ctx.taskManager.stopTask(taskId);
-      return { success: true, taskId };
+    async (action, ctx) => {
+      if (!ctx.backgroundTaskManager) {
+        throw new Error('BackgroundTaskManager not found in context');
+      }
+      const { taskId } = action.parameters;
+      await ctx.backgroundTaskManager.cancelTask(taskId);
+      return { success: true, message: 'Task stopped successfully' };
     },
-    {
-      description: 'Stop a running or paused background task',
-      requiredParams: ['taskId']
-    }
+    ['taskId']
   );
   
   // Register: pause-task
   registry.register(
     'pause-task',
-    async (params, ctx) => {
-      const { taskId } = params;
-      ctx.taskManager.pauseTask(taskId);
-      return { success: true, taskId };
+    async (action, ctx) => {
+      if (!ctx.backgroundTaskManager) {
+        throw new Error('BackgroundTaskManager not found in context');
+      }
+      const { taskId } = action.parameters;
+      await ctx.backgroundTaskManager.pauseTask(taskId);
+      return { success: true, message: 'Task paused successfully' };
     },
-    {
-      description: 'Pause a running background task',
-      requiredParams: ['taskId']
-    }
+    ['taskId']
   );
   
   // Register: resume-task
   registry.register(
     'resume-task',
-    async (params, ctx) => {
-      const { taskId } = params;
-      await ctx.taskManager.resumeTask(taskId);
-      return { success: true, taskId };
+    async (action, ctx) => {
+      if (!ctx.backgroundTaskManager) {
+        throw new Error('BackgroundTaskManager not found in context');
+      }
+      const { taskId } = action.parameters;
+      await ctx.backgroundTaskManager.resumeTask(taskId);
+      return { success: true, message: 'Task resumed successfully' };
     },
-    {
-      description: 'Resume a paused background task',
-      requiredParams: ['taskId']
-    }
+    ['taskId']
   );
   
   // Register: start-task
   registry.register(
     'start-task',
-    async (params, ctx) => {
-      const { taskId } = params;
-      await ctx.taskManager.startTask(taskId);
-      return { success: true, taskId };
+    async (action, ctx) => {
+      if (!ctx.backgroundTaskManager) {
+        throw new Error('BackgroundTaskManager not found in context');
+      }
+      const { taskId } = action.parameters;
+      await ctx.backgroundTaskManager.startTask(taskId);
+      return { success: true, message: 'Task started successfully' };
     },
-    {
-      description: 'Start a pending background task',
-      requiredParams: ['taskId']
-    }
+    ['taskId']
   );
   
   return registry;

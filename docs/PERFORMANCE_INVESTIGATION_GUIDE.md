@@ -1,5 +1,7 @@
 # Performance Investigation Guide
 
+**When to Read**: When diagnosing slow queries, investigating memory leaks, optimizing database operations, or profiling system performance.
+
 **Created**: October 7, 2025  
 **Purpose**: Systematic investigation of test suite and application performance  
 **Goal**: Reduce test time from 6-10 minutes to <2 minutes, identify production bottlenecks

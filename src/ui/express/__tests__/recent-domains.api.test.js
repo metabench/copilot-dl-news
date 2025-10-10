@@ -6,9 +6,23 @@ const request = require('supertest');
 const DB_ABS = path.resolve(__dirname, '../../../db');
 
 describe('/api/recent-domains', () => {
+  const tmp = path.join(__dirname, 'tmp_recent_domains.db');
+  
   beforeEach(() => {
     jest.resetModules();
     try { jest.unmock(DB_ABS); } catch (_) {}
+    
+    // CRITICAL: Delete temp DB BEFORE test runs to ensure fresh schema
+    try { fs.unlinkSync(tmp); } catch (_) {}
+    try { fs.unlinkSync(tmp + '-wal'); } catch (_) {}
+    try { fs.unlinkSync(tmp + '-shm'); } catch (_) {}
+  });
+  
+  afterEach(() => {
+    // Clean up temp DB and WAL files after test
+    try { fs.unlinkSync(tmp); } catch (_) {}
+    try { fs.unlinkSync(tmp + '-wal'); } catch (_) {}
+    try { fs.unlinkSync(tmp + '-shm'); } catch (_) {}
   });
 
   test('returns empty list when DB is unavailable (fallback)', async () => {
@@ -30,8 +44,7 @@ describe('/api/recent-domains', () => {
     try { jest.unmock(DB_ABS); } catch (_) {}
     const { createApp } = require('../server');
     const NewsDatabase = require('../../../db');
-    const tmp = path.join(__dirname, 'tmp_recent_domains.db');
-    try { fs.unlinkSync(tmp); } catch (_) {}
+    
     const db = new NewsDatabase(tmp);
     const now = new Date().toISOString();
     db.upsertArticle({
@@ -54,6 +67,10 @@ describe('/api/recent-domains', () => {
     expect(res.body.count).toBeGreaterThanOrEqual(2);
     const hosts = (res.body.domains || []).map(d => d.host);
     expect(hosts).toEqual(expect.arrayContaining(['sitea.example.com', 'siteb.example.com']));
+    
+    // Clean up app's database connection
+    const appDb = app.locals.backgroundTaskManager?.db || app.locals.getDbRW?.();
+    if (appDb && appDb.close) appDb.close();
   });
 
   test('data helper returns empty on DB failure', () => {
