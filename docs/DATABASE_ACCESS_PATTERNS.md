@@ -528,6 +528,134 @@ describe('Database Integration', () => {
 
 ---
 
+## Query Optimization Case Study: Queues Page (October 2025)
+
+**Problem**: The `/queues` page was extremely slow to load (2-5 seconds for 50 jobs).
+
+**Root Cause**: N+1 query pattern in `listQueues()` function:
+
+```javascript
+// ❌ BEFORE - N+1 query pattern (100+ queries for 50 jobs)
+const jobs = db.prepare(`
+  SELECT 
+    id, url, startedAt,
+    (SELECT COUNT(*) FROM queue_events WHERE job_id = j.id) as events,
+    (SELECT MAX(ts) FROM queue_events WHERE job_id = j.id) as lastEventAt
+  FROM crawl_jobs j
+  ORDER BY COALESCE(ended_at, started_at) DESC
+  LIMIT ?
+`).all(limit);
+```
+
+Each correlated subquery (`SELECT ... WHERE job_id = j.id`) executes once per job:
+- 50 jobs = 100 subqueries (2 per job) + 1 main query = **101 total queries**
+- Without indexes: ~20-50ms per subquery = **2-5 seconds total**
+
+**Solution 1**: JOIN with GROUP BY (eliminates N+1)
+
+```javascript
+// ✅ AFTER - Single query with LEFT JOIN
+const jobs = db.prepare(`
+  SELECT 
+    j.id, j.url, j.started_at AS startedAt,
+    COALESCE(e.events, 0) AS events,
+    e.lastEventAt
+  FROM crawl_jobs j
+  LEFT JOIN (
+    SELECT job_id, COUNT(*) AS events, MAX(ts) AS lastEventAt
+    FROM queue_events
+    GROUP BY job_id
+  ) e ON e.job_id = j.id
+  ORDER BY COALESCE(j.ended_at, j.started_at) DESC
+  LIMIT ?
+`).all(limit);
+```
+
+**Result**: 101 queries → **1 query**
+
+**Solution 2**: Add composite indexes for sorting and aggregation
+
+```javascript
+// In schema-definitions.js
+`CREATE INDEX IF NOT EXISTS idx_crawl_jobs_timeline 
+ ON crawl_jobs(ended_at DESC, started_at DESC)`,
+
+`CREATE INDEX IF NOT EXISTS idx_queue_events_job_ts 
+ ON queue_events(job_id, ts DESC)`
+```
+
+**Solution 3**: Client-side optimizations (⚠️ CRITICAL - always required)
+
+```javascript
+// ❌ BEFORE - No limits, no caching, excessive data
+async function loadJobs() {
+  const res = await fetch('/api/queues'); // Fetches ALL jobs
+  const data = await res.json();
+  // ... populate dropdown
+}
+
+async function loadEvents(jobId) {
+  const res = await fetch(`/api/queues/${jobId}/events?limit=200`); // 200 events
+  // ... render table
+}
+
+// ✅ AFTER - Limits, caching, optimized payloads
+let jobsCache = null;
+let jobsCacheTime = 0;
+const JOBS_CACHE_TTL = 5000; // 5 seconds
+
+async function loadJobs(forceRefresh = false) {
+  // Return cached data if still valid
+  const now = Date.now();
+  if (!forceRefresh && jobsCache && (now - jobsCacheTime) < JOBS_CACHE_TTL) {
+    return jobsCache;
+  }
+
+  const res = await fetch('/api/queues?limit=50'); // Only 50 most recent
+  const data = await res.json();
+  jobsCache = data.items;
+  jobsCacheTime = now;
+  // ... populate dropdown
+}
+
+async function loadEvents(jobId) {
+  const res = await fetch(`/api/queues/${jobId}/events?limit=100`); // Reduced to 100
+  // ... render table
+}
+```
+
+**Client-side optimization benefits**:
+- ✅ Reduced API payload: 50 jobs vs unlimited (smaller JSON, faster parse)
+- ✅ Client-side caching: Avoid redundant API calls within 5 seconds
+- ✅ Fewer events: 100 vs 200 (sufficient for debugging, 50% payload reduction)
+- ✅ Loading states: Prevent double-clicks and race conditions
+
+**Performance Impact**:
+- **Before**: 2-5 seconds for 50 jobs (server-side), large JSON payloads, no caching
+- **After**: **2ms for 50 jobs** (100 jobs, 10k events), optimized payloads, client-side caching
+- **Server improvement**: ~1000x faster query execution
+- **Client improvement**: 50% smaller payloads, eliminated redundant requests
+
+**Key Lessons**:
+1. ✅ Avoid correlated subqueries in SELECT list (N+1 pattern)
+2. ✅ Use JOIN + GROUP BY for aggregations
+3. ✅ Add composite indexes on columns used in ORDER BY and JOIN conditions
+4. ✅ **ALWAYS optimize client-side code alongside server-side** (limits, caching, loading states)
+5. ✅ Test with realistic data volumes (100+ jobs, 10k+ events)
+
+**⚠️ CRITICAL RULE**: When asked to optimize a page, **BOTH server-side AND client-side optimizations are required**:
+- Server: Query optimization, indexes, efficient data structures
+- Client: Request limits, caching, reduced payloads, loading states, debouncing
+
+**Test Coverage**: See `src/db/sqlite/queries/ui/__tests__/queues.performance.test.js`
+
+**Related Files**:
+- Query: `src/db/sqlite/queries/ui/queues.js` (lines 17-29)
+- Schema: `src/db/sqlite/schema-definitions.js` (lines 209, 234)
+- Tests: `src/db/sqlite/queries/ui/__tests__/queues.performance.test.js`
+
+---
+
 ## Troubleshooting
 
 ### Issue: "Database is locked"

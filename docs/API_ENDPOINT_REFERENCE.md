@@ -1422,6 +1422,11 @@ Get navigation bar configuration.
 
 Get list of job queues.
 
+**Performance Notes**:
+- Optimized with JOIN + GROUP BY aggregation (eliminates N+1 queries)
+- Uses composite indexes for fast sorting (`idx_crawl_jobs_timeline`, `idx_queue_events_job_ts`)
+- Can handle 100+ jobs with 10k+ events in ~2ms (see `DATABASE_ACCESS_PATTERNS.md` case study)
+
 **Response** (200 OK):
 ```json
 {

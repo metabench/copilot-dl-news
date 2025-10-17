@@ -18,7 +18,8 @@ function analyzePage({
   html = null,
   gazetteer = null,
   db,
-  targetVersion = 1
+  targetVersion = 1,
+  nonGeoTopicSlugs = null
 }) {
   if (!url) throw new Error('analyzePage requires a url');
 
@@ -60,7 +61,9 @@ function analyzePage({
     fetchClassification: fetchRow?.classification || null,
     navLinksCount: fetchRow?.nav_links_count ?? null,
     articleLinksCount: fetchRow?.article_links_count ?? null,
-    wordCount: latestWordCount
+    wordCount: latestWordCount,
+    gazetteerPlaceNames: gazetteer?.placeNames || null,
+    nonGeoTopicSlugs
   });
 
   const deepAnalysis = performDeepAnalysis({

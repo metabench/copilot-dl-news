@@ -111,19 +111,28 @@ node tests/analyze-test-logs.js --summary
    ```
 
 2. **`get-failing-tests.js`** - List only failing tests (5s)
-   ```bash
-   node tests/get-failing-tests.js           # List all failing tests
-   node tests/get-failing-tests.js --count   # Count: 3
-   node tests/get-failing-tests.js --simple  # Just file paths
-   # Exit code: 0 = no failures, 1 = failures exist
-   ```
+  ```bash
+  node tests/get-failing-tests.js           # List all failing tests + latest message
+  node tests/get-failing-tests.js --count   # Count: 3
+  node tests/get-failing-tests.js --simple  # Just file paths
+  node tests/get-failing-tests.js --history          # Last 5 runs (latest suite)
+  node tests/get-failing-tests.js --history --logs 8 # Last 8 runs
+  node tests/get-failing-tests.js --history --test crawl.e2e # Track a specific test
+  # Exit code: 0 = no failures, 1 = failures exist (latest run)
+  ```
+  - Pulls the most recent failure message for each file from `test-failure-summary.json`.
+  - The reporter now saves per-run snapshots (`testlogs/<timestamp>_<suite>.failures.json`), enabling history queries to show original failure messages when available.
 
 3. **`get-test-summary.js`** - Quick status overview (5s)
    ```bash
    node tests/get-test-summary.js            # Human-readable
    node tests/get-test-summary.js --json     # JSON output
-   # Shows: Files, tests, runtime, failures, slow tests
+  node tests/get-test-summary.js --compact  # One-line status snapshot
+  # Shows: Files, tests, runtime, failures, slow tests, follow-up fixes, quarantined tests
    ```
+  - Ignores `imported_*` logs, verifies `_ALL` runs include ≥50 suites, and automatically rolls back to the most recent real full-suite log when needed.
+  - Replays every baseline failure across newer logs so newly passing tests appear under **Fixed since baseline** instead of the failing list.
+  - Tags anything under `tests/broken/**` with `[broken-suite]` and surfaces a broken count to steer agents away from quarantined suites.
 
 4. **`get-slow-tests.js`** - Find performance bottlenecks (5s)
    ```bash
@@ -135,12 +144,12 @@ node tests/analyze-test-logs.js --summary
 **Quick Workflow Example**:
 ```bash
 # 1. Check status (5s)
-node tests/get-test-summary.js
+node tests/get-test-summary.js --compact
 # Output: 129 tests, 3 failed
 
 # 2. List failures (5s)
 node tests/get-failing-tests.js
-# Output: analyze.api.test.js, sitemap.test.js, migration.test.js
+# Output: analyze.api.test.js (Latest failure: Expected 200 but received 500)
 
 # 3. Get log path for detailed reading (2s)
 node tests/get-latest-log.js
@@ -150,9 +159,177 @@ node tests/get-latest-log.js
 # Total: 12 seconds vs. 30-60+ seconds with PowerShell
 ```
 
-**Design Principles**: Single-purpose, simple output, fast execution (<5s), no approval dialogs, meaningful exit codes.
+**Design Principles**: Single-purpose, simple output, fast execution (<5s), no approval dialogs, meaningful exit codes. Failure text is captured once per run by the custom reporter, so AI agents can read context without rerunning suites.
 
 **Complete Tool Documentation**: See `tests/SIMPLE_TOOLS_README.md` for full usage examples and integration patterns.
+
+### Telemetry & Timeline Workflow (October 2025)
+
+**Purpose**: Ensure crawl telemetry, SSE problem propagation, and timeline renderers stay aligned while keeping the verification loop fast.
+
+**When to Use**:
+- Intelligent crawl telemetry changes (timeline, milestones, problem feeds)
+- SSE/API regressions reported by `telemetry-flow.*`, `start-button.*`, or `problems.api.*` suites
+- Any change that touches `analyse-pages-core`, crawl stop/start controls, or server boot announcements
+
+**Workflow Overview**:
+1. **Get current state in <15s**
+  ```bash
+  node tests/get-test-summary.js --compact
+  node tests/get-failing-tests.js --history --test "telemetry"
+  ```
+  - Confirms which telemetry suites failed last, and surfaces the exact failure text without rerunning anything.
+2. **Inspect most recent full log once**
+  ```bash
+  node tests/get-latest-log.js ALL
+  ```
+  - Use `read_file` on the returned path to validate the timeline payload and note missing milestones or problem events.
+3. **Instrument or adjust telemetry**
+  - Ensure every external API or SSE branch emits `telemetry.problem()` when payloads are missing or invalid.
+  - Emit one-line `milestone` events for crawl start/stop, server boot, and timeline hydration so tests have deterministic checkpoints.
+  - Keep `analyse-pages-core.js` outputs structured: `nonGeoTopicSlugs`, `timelineEvents`, and `problemSummaries` must be populated even when empty.
+4. **Run the focused verification set (≈15s total)**
+  ```bash
+  npm run test:file "telemetry-flow.http.test"
+  npm run test:file "telemetry-flow.e2e.test"
+  npm run test:file "start-button.e2e.test"
+  npm run test:file "problems.api.ssr.test"
+  ```
+  - Tests cover HTTP telemetry wiring, SSE end-to-end flow, crawl control regressions, and SSR/problem APIs respectively.
+  - Use `terminal_last_command` after each run to confirm exit code `0`.
+5. **Validate analyzer captured the fix**
+  ```bash
+  node tests/analyze-test-logs.js --test "telemetry-flow"
+  node tests/analyze-test-logs.js --test "problems.api"
+  ```
+  - Confirms the latest log records the passing state and that regressions cleared.
+6. **Document the outcome**
+  - Update `docs/TESTING_STATUS.md` (if active) and add any new telemetry expectations back into `AGENTS.md` Testing Guidelines.
+
+**Key Principles**:
+- Always fail fast when telemetry payloads are missing—emit `telemetry.problem()` with structured details instead of relying on console output.
+- Keep timeline arrays stable: prefer empty arrays over `undefined` to avoid snapshot drift.
+- Use the same four focused tests as a regression pack before and after telemetry changes; they are intentionally fast and complementary.
+- Never run the full suite to validate telemetry—stick to targeted files and rely on the analyzer for historical confirmation.
+
+---
+
+## Test Log Management (October 2025)
+
+**Purpose**: Keep `testlogs/` directory organized and manageable while preserving important historical data.
+
+### Migration Tool: `tools/migrate-test-logs.js`
+
+**When to Use**:
+- Repository root has many old `test-timing-*.log` files (>50 files)
+- Before major cleanup sessions (safely preserve logs)
+- When testlogs has suspicious "ALL" labels (tool detects mislabeled suites)
+- After test suite reconfigurations (ensure correct suite names)
+
+**Features**:
+- ✅ Smart import: Only imports most recent root log (ignores old logs as outdated)
+- ✅ Hash-based duplicate detection: SHA256 comparison prevents re-importing identical files
+- ✅ Suite validation: Checks if "ALL" suite logs actually test comprehensively (≥100 tests, ≥50 files)
+- ✅ Safe by default: Dry-run mode unless `--execute` flag provided
+- ✅ Audit mode: Reviews existing testlogs for mislabeled suites
+
+**Common Commands**:
+```bash
+# Audit existing testlogs (validate suite claims, detect issues)
+node tools/migrate-test-logs.js --audit
+
+# Dry run - see what would be migrated
+node tools/migrate-test-logs.js
+
+# Execute migration and cleanup (DESTRUCTIVE - deletes root logs)
+node tools/migrate-test-logs.js --execute
+
+# Verbose mode (detailed analysis)
+node tools/migrate-test-logs.js --verbose
+```
+
+**Typical Workflow**:
+```bash
+# 1. Check what's in root
+(Get-ChildItem test-timing-*.log).Count  # e.g., 805 files
+
+# 2. Audit testlogs to find issues
+node tools/migrate-test-logs.js --audit
+# Shows: Many "ALL" logs with only 1-30 tests (mislabeled)
+
+# 3. Dry run to preview migration
+node tools/migrate-test-logs.js
+# Shows: Would import most recent, delete 804 old logs
+
+# 4. Execute if satisfied
+node tools/migrate-test-logs.js --execute
+# Imports recent log, deletes old root logs
+```
+
+### Cleanup Tool: `tools/cleanup-test-logs.js`
+
+**Aggressive Strategy** (October 2025):
+- Default: Keep only **2 most recent logs per suite type** (not 20)
+- NO time-based retention (ignore age, focus on suite coverage)
+- Parallel processing: Worker threads scan 1,000+ files in <5 seconds
+- Rationale: Large testlogs directory slows AI code scanning and git operations
+
+**Common Commands**:
+```bash
+# Preview deletions (dry run, default: keep 2 per suite)
+node tools/cleanup-test-logs.js --stats
+
+# Execute cleanup (DESTRUCTIVE - removes ~99% of old files)
+node tools/cleanup-test-logs.js --execute
+
+# Custom retention (keep 5 most recent per suite instead of 2)
+node tools/cleanup-test-logs.js --keep 5 --execute
+
+# Only "ALL" suite logs (for aggressive archival)
+node tools/cleanup-test-logs.js --all-only --execute
+
+# Parallel options (default: auto-detect CPU count, max 2 workers)
+node tools/cleanup-test-logs.js --parallel 4 --execute
+```
+
+**Performance**:
+- Scans: ~1,250 logs/thread in parallel
+- Runtime: <5 seconds for 2,000+ files
+- Cleanup result: 99.6% reduction (2,290 → 10 files typical)
+
+**Typical Workflow**:
+```bash
+# 1. Check what will be deleted
+node tools/cleanup-test-logs.js --stats
+# Shows: X files found, Y to keep, Z to delete, space freed
+
+# 2. Execute cleanup
+node tools/cleanup-test-logs.js --execute
+# Fast deletion with parallel processing
+
+# 3. Verify result
+node tools/count-testlogs.js --breakdown
+# Confirms only 2-3 recent logs remain
+```
+- ❌ After major milestones (preserve baseline logs)
+- ❌ All logs are recent (<7 days) and count is reasonable (<50)
+
+**Integration with Test Log Analyzer**:
+```bash
+# Before cleanup: Check what test history would be lost
+node tests/analyze-test-logs.js --summary
+# Shows: Current test status across all logs
+
+# After cleanup: Verify important history preserved
+node tests/analyze-test-logs.js --summary
+# Should still show recent test status
+```
+
+**Aggressive Strategy** (October 2025):
+- **Default**: Keep only 2 most recent logs per suite type
+- **Custom**: Use `--keep N` to adjust per suite retention
+- **All Options**: Run `node tools/cleanup-test-logs.js --help` for complete options (--parallel, --all-only, --stats)
+- **Result**: Typically keeps 3-5 logs total, deletes 99% of old files (saves 12+ MB, speeds AI scanning)
 
 ---
 
@@ -591,8 +768,9 @@ node tests/analyze-test-logs.js --summary
 
 ```bash
 # Option 1: Simple query tools (NO APPROVAL NEEDED - FASTEST)
-node tests/get-test-summary.js            # Quick overview (5s)
-node tests/get-failing-tests.js           # List failures (5s)
+node tests/get-test-summary.js --compact  # Quick overview (5s)
+node tests/get-failing-tests.js           # List failures + message (5s)
+node tests/get-failing-tests.js --history --test <pattern>  # Confirm specific test pass/fail history
 
 # Option 2: Direct file reading (NO APPROVAL NEEDED - DETAILED)
 node tests/get-latest-log.js              # Get log path (2s)
@@ -1570,8 +1748,9 @@ See `docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md` for complete template.
 **Common Commands**:
 ```bash
 # CHECK STATUS FIRST ⭐
-node tests/get-test-summary.js            # Quick overview (5s, NO APPROVAL)
-node tests/get-failing-tests.js           # List failures (5s, NO APPROVAL)
+node tests/get-test-summary.js --compact  # Quick overview (5s, NO APPROVAL)
+node tests/get-failing-tests.js           # List failures + message (5s, NO APPROVAL)
+node tests/get-failing-tests.js --history --test <pattern>  # Confirm fix history fast
 
 # GET LOG PATH FOR DETAILED READING
 node tests/get-latest-log.js              # Returns path (2s, NO APPROVAL)

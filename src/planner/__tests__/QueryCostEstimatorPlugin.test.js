@@ -1,37 +1,36 @@
 'use strict';
 
+const Database = require('better-sqlite3');
 const { PlannerHost } = require('../PlannerHost');
 const { GraphReasonerPlugin } = require('../plugins/GraphReasonerPlugin');
 const { QueryCostEstimatorPlugin } = require('../plugins/QueryCostEstimatorPlugin');
 const { ensureDb } = require('../../db/sqlite/ensureDb');
-const { recordQuery } = require('../../db/queryTelemetry');
+const { recordQuery, _getWriterForDb } = require('../../db/queryTelemetry');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 describe('QueryCostEstimatorPlugin', () => {
   let db;
-  let dbPath;
+  let writer;
 
-  beforeEach(() => {
-    const tmpDir = path.join(os.tmpdir(), 'test-cost-estimator');
-    fs.mkdirSync(tmpDir, { recursive: true });
-    dbPath = path.join(tmpDir, `test-${process.pid}-${Date.now()}.db`);
-    db = ensureDb(dbPath);
+  beforeEach(async () => {
+    db = new Database(':memory:');
+    const { initializeSchema } = require('../../db/sqlite/schema');
+    initializeSchema(db);
 
-    // Seed some query telemetry
-    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 50, resultCount: 10 });
-    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 100, resultCount: 20 });
-    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 150, resultCount: 30 });
+    writer = _getWriterForDb(db);
+
+    // Seed some query telemetry that meets the new recording criteria
+    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 50, resultCount: 10, complexity: 'simple' });
+    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 100, resultCount: 20, complexity: 'simple' });
+    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 150, resultCount: 30, complexity: 'complex' });
+    await writer.flush();
   });
 
   afterEach(() => {
     if (db) {
       db.close();
-    }
-    const suffixes = ['', '-shm', '-wal'];
-    for (const suffix of suffixes) {
-      try { fs.unlinkSync(dbPath + suffix); } catch (_) {}
     }
   });
 
@@ -77,7 +76,8 @@ describe('QueryCostEstimatorPlugin', () => {
 
   it('should warn about high-cost hubs', async () => {
     // Seed expensive query telemetry
-    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 1000, resultCount: 100 });
+    recordQuery(db, { queryType: 'fetch_articles', operation: 'SELECT', durationMs: 1000, resultCount: 100, complexity: 'complex' });
+    await writer.flush();
 
     const graphPlugin = new GraphReasonerPlugin();
     const costPlugin = new QueryCostEstimatorPlugin({ budgetThresholdMs: 200 });

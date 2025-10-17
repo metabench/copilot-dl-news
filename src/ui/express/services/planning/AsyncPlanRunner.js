@@ -12,6 +12,7 @@ const { TargetedAnalysisRunner } = require('../../../../crawler/planner/Targeted
 const { NavigationDiscoveryRunner } = require('../../../../crawler/planner/navigation/NavigationDiscoveryRunner');
 const { createPlannerHost } = require('../../../../planner/register');
 const { MetaPlanCoordinator } = require('../../../../planner/meta/MetaPlanCoordinator');
+const { HierarchicalPlanner } = require('../../../../crawler/HierarchicalPlanner');
 
 const DEFAULT_FETCH_TIMEOUT_MS = 15000;
 const DEFAULT_PLAN_TIMEOUT_MS = 120000;
@@ -47,7 +48,8 @@ class AsyncPlanRunner {
     planTimeoutMs = DEFAULT_PLAN_TIMEOUT_MS,
     cacheTtlMs = DEFAULT_CACHE_TTL_MS,
     usePlannerHost = false,
-    dbAdapter = null
+    dbAdapter = null,
+    countryHubGapService = null
   } = {}) {
     if (!planningSessionManager) {
       throw new Error('AsyncPlanRunner requires planningSessionManager');
@@ -67,6 +69,7 @@ class AsyncPlanRunner {
       : DEFAULT_CACHE_TTL_MS;
     this.usePlannerHost = !!usePlannerHost;
     this.dbAdapter = dbAdapter;
+    this.countryHubGapService = countryHubGapService;
 
     this.activeRuns = new Map();
     this._fetchImplPromise = null;
@@ -227,7 +230,9 @@ class AsyncPlanRunner {
       dbAdapter: this.dbAdapter,
       logger: this.logger,
       budgetMs: Math.min(this.planTimeoutMs || 120000, 120000),
-      preview: true
+      preview: true,
+      countryHubGapService: this.countryHubGapService,
+      useGazetteerAwareness: true
     });
 
     let result;
@@ -269,6 +274,81 @@ class AsyncPlanRunner {
       costEstimates: result.blackboard.costEstimates || null,
       rationale: result.blackboard.rationale || []
     };
+
+    // Generate strategic plan using HierarchicalPlanner
+    try {
+      // Phase 1-3: Read all feature flags from config
+      const features = {
+        // Phase 1: Cost-Aware Priority + Pattern Discovery
+        patternDiscovery: this.configManager?.get('features.patternDiscovery') ?? false,
+        costAwarePriority: this.configManager?.get('features.costAwarePriority') ?? false,
+        // Phase 2: Adaptive Systems
+        adaptiveBranching: this.configManager?.get('features.adaptiveBranching') ?? false,
+        realTimePlanAdjustment: this.configManager?.get('features.realTimePlanAdjustment') ?? false,
+        // Phase 3: Dynamic Optimization
+        dynamicReplanning: this.configManager?.get('features.dynamicReplanning') ?? false,
+        crossDomainSharing: this.configManager?.get('features.crossDomainSharing') ?? false
+      };
+
+      const hierarchicalPlanner = new HierarchicalPlanner({
+        db: this.dbAdapter,
+        logger: this.logger,
+        maxLookahead: 5,
+        maxBranches: 10,
+        features // Phase 1-3: Pass all feature flags
+      });
+
+      const goal = {
+        hubsTarget: options.intMaxSeeds || 100,
+        articlesTarget: options.maxPages || 5000,
+        coverageTarget: 0.85
+      };
+
+      const initialState = {
+        hubsDiscovered: 0,
+        articlesCollected: 0,
+        requestsMade: 0,
+        momentum: 0,
+        knownSections: (result.blackboard.proposedHubs || []).map(h => h.url)
+      };
+
+      const candidates = (result.blackboard.proposedHubs || []).map(hub => ({
+        type: 'explore-hub',
+        url: hub.url,
+        estimatedArticles: hub.estimatedDiscoveriesPerHub || 50,
+        estimatedRequests: 10,
+        confidence: (hub.score || 50) / 100,
+        estimatedCostMs: hub.estimatedCostMs || 100 // Phase 1: Add cost estimates from QueryCostEstimatorPlugin
+      }));
+
+      const plan = await hierarchicalPlanner.generatePlan(
+        initialState,
+        goal,
+        { domain: runContext.domain, candidates, lookahead: 5 }
+      );
+
+      if (plan) {
+        blueprint.strategicPlan = {
+          steps: plan.steps.length,
+          estimatedValue: plan.totalValue,
+          estimatedCost: plan.totalCost,
+          probability: plan.probability,
+          actions: plan.steps.map(s => ({
+            type: s.action.type,
+            target: s.action.url,
+            expectedValue: s.expectedValue,
+            cost: s.cost,
+            probability: s.probability
+          }))
+        };
+        blueprint.rationale.push(
+          `Strategic plan: ${plan.steps.length} steps, estimated ${Math.round(plan.totalValue)} articles, probability ${(plan.probability * 100).toFixed(1)}%`
+        );
+      }
+    } catch (error) {
+      this._log('warn', '[AsyncPlanRunner] HierarchicalPlanner failed', error?.message || error);
+      blueprint.rationale.push('Strategic planning unavailable: ' + (error?.message || 'unknown error'));
+    }
 
     // Run meta-planning pipeline (Validator → Evaluator → Arbitrator)
     // NOTE: MicroProlog is DISABLED - microprologPlan always passed as null

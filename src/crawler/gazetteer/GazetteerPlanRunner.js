@@ -2,6 +2,9 @@
 
 const { PlannerOrchestrator } = require('../planner/PlannerOrchestrator');
 const { PlannerTelemetryBridge } = require('../planner/PlannerTelemetryBridge');
+const { PlannerHost } = require('../../planner/PlannerHost');
+const { GazetteerReasonerPlugin } = require('../../planner/plugins/GazetteerReasonerPlugin');
+const { MetaPlanCoordinator } = require('../../planner/meta/MetaPlanCoordinator');
 
 /**
  * GazetteerPlanRunner provides planning capabilities for geography/gazetteer data ingestion.
@@ -25,11 +28,14 @@ class GazetteerPlanRunner {
     telemetry,
     logger = console,
     config = {},
-    useAdvancedPlanning = false
+    useAdvancedPlanning = false,
+    dbAdapter = null
   } = {}) {
     this.logger = logger;
     this.config = config;
     this.useAdvancedPlanning = !!useAdvancedPlanning;
+    this.dbAdapter = dbAdapter;
+    this.telemetry = telemetry;
     
     // Create telemetry bridge for planner events
     const telemetryBridge = telemetry
@@ -43,10 +49,24 @@ class GazetteerPlanRunner {
       enabled: true
     });
     
+    // Initialize PlannerHost for advanced planning (GOFAI meta-planning)
+    if (this.useAdvancedPlanning) {
+      this.plannerHost = this._createPlannerHost();
+      this.metaCoordinator = new MetaPlanCoordinator({
+        logger,
+        dbAdapter: this.dbAdapter
+      });
+      this.logger.info('[GazetteerPlanRunner] Advanced planning enabled: PlannerHost + MetaPlanCoordinator initialized');
+    } else {
+      this.plannerHost = null;
+      this.metaCoordinator = null;
+    }
+    
     this._summaryData = {
       stages: {},
       totalDurationMs: 0,
-      totalStages: 0
+      totalStages: 0,
+      metaPlanResults: null
     };
   }
 
@@ -127,6 +147,136 @@ class GazetteerPlanRunner {
    */
   registerSummaryReducer(reducer) {
     this.orchestrator.registerSummaryReducer(reducer);
+  }
+
+  /**
+   * Create PlannerHost with gazetteer-specific plugins.
+   * Used in advanced planning mode for meta-planning coordination.
+   * 
+   * @private
+   * @returns {PlannerHost}
+   */
+  _createPlannerHost() {
+    const plugins = [
+      new GazetteerReasonerPlugin({ priority: 85 })
+    ];
+
+    const emit = (type, data) => {
+      if (this.telemetry) {
+        this.telemetry.plannerStage({ type, ...data });
+      }
+    };
+
+    return new PlannerHost({
+      plugins,
+      options: this.config || {},
+      emit,
+      fetchPage: null, // Gazetteer doesn't fetch pages
+      dbAdapter: this.dbAdapter,
+      logger: this.logger,
+      budgetMs: 3500,
+      preview: false
+    });
+  }
+
+  /**
+   * Run meta-planning analysis before stage execution.
+   * Uses PlannerHost (GOFAI reasoning) + MetaPlanCoordinator (validation/evaluation).
+   * 
+   * @param {Array} stages - Stage definitions to analyze
+   * @returns {Promise<Object>} Meta-plan results with prioritization recommendations
+   */
+  async runMetaPlanning(stages = []) {
+    if (!this.useAdvancedPlanning || !this.plannerHost || !this.metaCoordinator) {
+      this.logger.info('[GazetteerPlanRunner] Advanced planning disabled, skipping meta-planning');
+      return null;
+    }
+
+    try {
+      this.logger.info('[GazetteerPlanRunner] Running meta-planning analysis...');
+      
+      // Phase 1: Run PlannerHost to generate proposals
+      const hostResult = await this.plannerHost.run();
+      
+      if (!hostResult || !hostResult.blackboard) {
+        this.logger.warn('[GazetteerPlanRunner] PlannerHost returned empty result');
+        return null;
+      }
+
+      // Build blueprint from PlannerHost output
+      const blueprint = {
+        proposedHubs: hostResult.blackboard.proposedHubs || [],
+        gapAnalysis: hostResult.blackboard.gapAnalysis || {},
+        stageOrdering: hostResult.blackboard.stageOrdering || [],
+        rationale: hostResult.blackboard.rationale || [],
+        gazetteerState: hostResult.blackboard.gazetteerState || {}
+      };
+
+      this.logger.info('[GazetteerPlanRunner] PlannerHost proposed:', {
+        hubsCount: blueprint.proposedHubs.length,
+        stagesCount: blueprint.stageOrdering.length
+      });
+
+      // Phase 2: Run MetaPlanCoordinator for validation/evaluation
+      const metaResult = await this.metaCoordinator.process({
+        blueprint,
+        context: {
+          options: { jobId: 'gazetteer-meta-plan' },
+          history: {},
+          telemetry: {}
+        },
+        alternativePlans: [] // No alternatives for gazetteer planning yet
+      });
+
+      if (metaResult) {
+        this.logger.info('[GazetteerPlanRunner] Meta-planning complete:', {
+          validatorResult: metaResult.validatorResult?.valid,
+          decision: metaResult.decision?.verdict
+        });
+      }
+
+      // Store results for summary
+      this._summaryData.metaPlanResults = {
+        blueprint,
+        metaResult,
+        hostElapsedMs: hostResult.elapsedMs
+      };
+
+      return {
+        blueprint,
+        metaResult,
+        proposedPriorities: this._extractPriorities(blueprint)
+      };
+    } catch (err) {
+      this.logger.error('[GazetteerPlanRunner] Meta-planning failed:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Extract priority recommendations from meta-planning blueprint.
+   * @private
+   */
+  _extractPriorities(blueprint) {
+    const priorities = {};
+    
+    if (blueprint.proposedHubs) {
+      for (const hub of blueprint.proposedHubs) {
+        if (hub.type && hub.priority) {
+          priorities[hub.type] = hub.priority;
+        }
+      }
+    }
+
+    if (blueprint.stageOrdering) {
+      for (const stage of blueprint.stageOrdering) {
+        if (stage.name && stage.priority) {
+          priorities[stage.name] = stage.priority;
+        }
+      }
+    }
+
+    return priorities;
   }
 }
 

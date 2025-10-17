@@ -30,7 +30,13 @@ class TimingReporter {
       numPassing: testResult.numPassingTests,
       numFailing: testResult.numFailingTests,
       numPending: testResult.numPendingTests,
-      perfStats: testResult.perfStats
+      perfStats: testResult.perfStats,
+      failures: testResult.testResults
+        .filter(caseResult => caseResult.status === 'failed')
+        .map(caseResult => ({
+          title: caseResult.fullName,
+          message: this._condenseFailureMessage(caseResult.failureMessages?.[0] || '')
+        }))
     };
     
     this._testResults.push(result);
@@ -44,6 +50,9 @@ class TimingReporter {
 
   onRunComplete(contexts, aggregatedResult) {
     const totalTime = (Date.now() - this._startTime) / 1000;
+    const runIsoTimestamp = new Date().toISOString();
+    const fileTimestamp = runIsoTimestamp.replace(/[:.]/g, '-');
+    const suiteName = this._resolveSuiteName(aggregatedResult);
     
     // Sort by runtime (slowest first)
     this._testResults.sort((a, b) => b.runtime - a.runtime);
@@ -110,28 +119,21 @@ class TimingReporter {
     console.log(`Online API Tests:     ${onlineTime.toFixed(2)}s (${((onlineTime/totalTestTime)*100).toFixed(1)}%)`);
     
     // Write JSON report
-    const reportPath = path.join(process.cwd(), 'test-timing-report.json');
-    const report = {
-      timestamp: new Date().toISOString(),
-      totalTime: totalTime,
-      totalTestFiles: this._testResults.length,
-      avgTestTime: avgTestTime,
-      slowTests: slowTests,
-      verySlowTests: verySlowTests,
-      categoryTimes: {
-        e2e: puppeteerTime,
-        http: httpTime,
-        online: onlineTime
-      },
-      testResults: this._testResults
+    const failureSummary = this._collectFailureSummary();
+    const failureSummaryPayload = {
+      timestamp: runIsoTimestamp,
+      suite: suiteName,
+      failures: failureSummary
     };
-    
-    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
-    console.log(`\n📄 Full timing report written to: ${reportPath}\n`);
-    output.push(`\n📄 Full timing report written to: ${reportPath}\n`);
-    
+
+    const failureSummaryPath = path.join(process.cwd(), 'test-failure-summary.json');
+    fs.writeFileSync(failureSummaryPath, JSON.stringify(failureSummaryPayload, null, 2), 'utf8');
+    if (failureSummary.length > 0) {
+      console.log(`❌ Failure details saved to: ${failureSummaryPath}`);
+    }
+    console.log('ℹ️  Quick status: node tests/get-test-summary.js --compact');
+
     // Write text log file with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const testlogsDir = path.join(process.cwd(), 'testlogs');
     
     // Ensure testlogs directory exists
@@ -139,11 +141,10 @@ class TimingReporter {
       fs.mkdirSync(testlogsDir, { recursive: true });
     }
     
-    // Get suite name from environment or use 'ALL'
-    const suiteName = process.env.TEST_SUITE_NAME || 'ALL';
-    const logPath = path.join(testlogsDir, `${timestamp}_${suiteName}.log`);
+    const logBaseName = `${fileTimestamp}_${suiteName}`;
+    const logPath = path.join(testlogsDir, `${logBaseName}.log`);
     const logContent = [
-      `Test Timing Report - ${new Date().toISOString()}`,
+      `Test Timing Report - ${runIsoTimestamp}`,
       `Suite: ${suiteName}`,
       '='.repeat(80),
       '',
@@ -155,10 +156,31 @@ class TimingReporter {
       '',
       ...this._testResults.map((r, i) => 
         `${i + 1}. ${r.runtime.toFixed(2)}s - ${r.filePath} (${r.numTests} tests, ${r.numPassing} passed, ${r.numFailing} failed)`
-      )
+      ),
+      '',
+      'Tip: node tests/get-test-summary.js --compact',
+      ...(failureSummary.length > 0 ? [
+        '',
+        '='.repeat(80),
+        'Failure Details:',
+        '='.repeat(80),
+        '',
+        ...failureSummary.flatMap((item, index) => {
+          const header = `${index + 1}. ${item.filePath}`;
+          const entries = item.entries.length === 0
+            ? ['   (No failure messages captured)']
+            : item.entries.map(entry => `   • ${entry.title}
+     ${entry.message}`);
+          return [header, ...entries, ''];
+        })
+      ] : [])
     ].join('\n');
     
     fs.writeFileSync(logPath, logContent, 'utf8');
+    if (failureSummary.length > 0) {
+      const historicalFailurePath = path.join(testlogsDir, `${logBaseName}.failures.json`);
+      fs.writeFileSync(historicalFailurePath, JSON.stringify(failureSummaryPayload, null, 2), 'utf8');
+    }
     console.log(`📋 Text log written to: ${logPath}\n`);
   }
 
@@ -168,6 +190,69 @@ class TimingReporter {
     if (seconds > 5) return '🐌';      // Slow
     if (seconds > 2) return '⏳';      // Medium
     return '⚡';                        // Fast
+  }
+
+  _collectFailureSummary() {
+    return this._testResults
+      .filter(result => result.numFailing > 0)
+      .map(result => ({
+        filePath: result.filePath,
+        runtime: result.runtime,
+        numFailing: result.numFailing,
+        entries: result.failures
+      }));
+  }
+
+  _condenseFailureMessage(message) {
+    if (!message) {
+      return '';
+    }
+    const stripped = this._stripAnsi(message)
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(' ');
+    if (stripped.length > 240) {
+      return `${stripped.slice(0, 237)}...`;
+    }
+    return stripped;
+  }
+
+  _stripAnsi(value) {
+    return (value || '').replace(/\u001b\[[0-9;]*m/g, '');
+  }
+
+  _resolveSuiteName(aggregatedResult) {
+    const explicit = process.env.TEST_SUITE_NAME;
+    if (explicit && explicit.trim()) {
+      return this._sanitizeLabel(explicit.trim());
+    }
+
+    const pattern = this._globalConfig?.testPathPattern;
+    if (pattern) {
+      return this._sanitizeLabel(`pattern-${pattern}`);
+    }
+
+    const namePattern = this._globalConfig?.testNamePattern;
+    if (namePattern) {
+      return this._sanitizeLabel(`name-${namePattern}`);
+    }
+
+    if (aggregatedResult?.numTotalTestSuites === 1 && this._testResults?.length === 1) {
+      const single = path.basename(this._testResults[0].filePath).replace(/\..+$/, '');
+      return this._sanitizeLabel(`single-${single}`);
+    }
+
+    return 'ALL';
+  }
+
+  _sanitizeLabel(value) {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      || 'all';
   }
 }
 

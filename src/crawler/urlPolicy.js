@@ -39,6 +39,16 @@ class UrlPolicy {
     try {
       const urlObj = new URL(rawUrl, this.baseUrl || undefined);
       urlObj.hash = '';
+      
+      // Intelligent protocol correction: force https: for known https-only domains
+      if (urlObj.protocol === 'http:') {
+        const host = urlObj.hostname.toLowerCase();
+        const httpsOnlyDomains = ['theguardian.com', 'bbc.co.uk', 'bbc.com'];
+        if (httpsOnlyDomains.some(domain => host.includes(domain))) {
+          urlObj.protocol = 'https:';
+        }
+      }
+      
       const normalized = urlObj.href;
       const query = urlObj.searchParams;
       const queryEntries = [];

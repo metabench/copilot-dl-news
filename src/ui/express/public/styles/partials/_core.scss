@@ -181,6 +181,32 @@ button:disabled {
   color: #bfdbfe;
 }
 
+.button--danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #dc2626;
+}
+
+.dark .button--danger {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}
+
+.button--danger:hover,
+.button--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
+.dark .button--danger:hover,
+.dark .button--danger:focus-visible {
+  background: rgba(248, 113, 113, 0.24);
+  border-color: #f87171;
+  color: #fecaca;
+}
+
 .button--ghost {
   padding-inline: 12px;
   border-color: transparent;

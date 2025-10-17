@@ -122,6 +122,12 @@ function createFakeRunner(env) {
           if (String(env.UI_FAKE_MILESTONES || '').toLowerCase() === '1') {
             const milestones = [
               {
+                kind: 'startup-complete',
+                scope: 'fake-runner',
+                message: 'Fake runner startup complete',
+                details: {}
+              },
+              {
                 kind: 'patterns-learned',
                 scope: 'guardian',
                 message: 'Homepage sections inferred',

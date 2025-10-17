@@ -123,6 +123,9 @@ class OsmBoundaryIngestor {
           recordsProcessed: summary.recordsProcessed,
           recordsUpserted: summary.recordsUpserted,
           candidateId: candidate.id,
+          canonicalName: candidate.canonicalName,
+          countryCode: candidate.countryCode,
+          kind: candidate.kind,
           osmType,
           osmId
         });

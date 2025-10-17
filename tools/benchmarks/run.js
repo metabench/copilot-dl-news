@@ -19,6 +19,8 @@ const {
   createGazetteerCountryRouter
 } = require('../../src/ui/express/routes/ssr.gazetteer.country');
 
+const DEFAULT_OUTPUT_PATH = path.join(__dirname, 'results', 'benchmark-results.json');
+
 function parseArgs(argv) {
   const args = { output: null, iterations: 5 };
   for (let i = 2; i < argv.length; i += 1) {
@@ -36,9 +38,12 @@ function parseArgs(argv) {
     }
   }
   if (!args.output) {
-    args.output = path.join(process.cwd(), 'benchmark-results.json');
+    args.output = DEFAULT_OUTPUT_PATH;
   }
-  return args;
+  return {
+    ...args,
+    output: path.resolve(args.output)
+  };
 }
 
 function resolveDbPath() {

@@ -4,6 +4,7 @@ let NewsDatabase = null;
 const { analyzePage } = require('../analysis/page-analyzer');
 const { buildGazetteerMatchers } = require('../analysis/place-extraction');
 const { findProjectRoot } = require('../utils/project-root');
+const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 
 function toNumber(value, fallback) {
   const num = Number(value);
@@ -25,7 +26,11 @@ async function analysePages({
   limit = 10000,
   verbose = false,
   onProgress = null,
-  logger = console
+  logger = console,
+  dryRun = false,
+  collectHubSummary = false,
+  hubSummaryLimit = 100,
+  includeHubEvidence = false
 } = {}) {
   if (!dbPath) {
     const projectRoot = findProjectRoot(__dirname);
@@ -44,6 +49,14 @@ async function analysePages({
       // best-effort pragmas only
     }
 
+    const nonGeoTopicSlugs = loadNonGeoTopicSlugs(db.db).slugs;
+
+    const shouldPersist = !dryRun;
+    const captureHubSummaries = collectHubSummary === true;
+    const hubLimit = Number.isFinite(Number(hubSummaryLimit)) && Number(hubSummaryLimit) >= 0
+      ? Number(hubSummaryLimit)
+      : 0;
+
     let gazetteer = null;
     try {
       gazetteer = buildGazetteerMatchers(db.db);
@@ -52,7 +65,7 @@ async function analysePages({
       gazetteer = null;
     }
 
-    const rowsStmt = db.db.prepare(`
+  const rowsStmt = db.db.prepare(`
       SELECT a.url AS url,
              a.title AS title,
              a.section AS section,
@@ -135,23 +148,71 @@ async function analysePages({
              evidence = COALESCE(?, evidence)
        WHERE url = ?
     `);
+    let upsertUnknownTerm = null;
+    try {
+      upsertUnknownTerm = db.db.prepare(`
+        INSERT INTO place_hub_unknown_terms(
+          host,
+          url,
+          canonical_url,
+          term_slug,
+          term_label,
+          source,
+          reason,
+          confidence,
+          evidence,
+          occurrences,
+          first_seen_at,
+          last_seen_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+        ON CONFLICT(host, canonical_url, term_slug) DO UPDATE SET
+          term_label = COALESCE(excluded.term_label, term_label),
+          source = COALESCE(excluded.source, source),
+          reason = COALESCE(excluded.reason, reason),
+          confidence = COALESCE(excluded.confidence, confidence),
+          evidence = COALESCE(excluded.evidence, evidence),
+          occurrences = occurrences + 1,
+          last_seen_at = datetime('now')
+      `);
+    } catch (_) {
+      upsertUnknownTerm = null;
+    }
+    let selectHubByUrl = null;
+    try {
+      selectHubByUrl = db.db.prepare('SELECT id, place_slug, topic_slug, topic_label FROM place_hubs WHERE url = ?');
+    } catch (_) {
+      selectHubByUrl = null;
+    }
 
     let processed = 0;
     let updated = 0;
     let placesInserted = 0;
+    let hubsInserted = 0;
+    let hubsUpdated = 0;
+    let unknownInserted = 0;
+    const hubAssignments = captureHubSummaries ? [] : null;
     let lastProgressAt = Date.now();
 
     const emitProgress = () => {
       if (typeof onProgress !== 'function') return;
       try {
-        onProgress({ processed, updated, ts: Date.now() });
+        onProgress({
+          processed,
+          updated,
+          placesInserted,
+          hubsInserted,
+          hubsUpdated,
+          unknownInserted,
+          dryRun,
+          ts: Date.now()
+        });
       } catch (_) {
         // ignore consumer errors
       }
     };
 
-  const rows = rowsStmt.all(analysisVersion, limit);
-  for (const row of rows) {
+    const rows = rowsStmt.all(analysisVersion, limit);
+    for (const row of rows) {
       processed += 1;
 
       const articleRow = {
@@ -195,7 +256,8 @@ async function analysePages({
           html,
           gazetteer,
           db: db.db,
-          targetVersion: analysisVersion
+          targetVersion: analysisVersion,
+          nonGeoTopicSlugs: nonGeoTopicSlugs
         });
       } catch (error) {
         emit(logger, 'warn', `[analyse-pages] Failed to analyse ${row.url}`, verbose ? error : error?.message);
@@ -209,71 +271,153 @@ async function analysePages({
         analysis.meta.deepAnalysis = deepAnalysis;
       }
 
-      try {
-        upsertArticleAnalysis.run(JSON.stringify(analysis), row.url);
+      if (shouldPersist) {
+        try {
+          upsertArticleAnalysis.run(JSON.stringify(analysis), row.url);
+          updated += 1;
+        } catch (error) {
+          emit(logger, 'warn', `[analyse-pages] Failed to persist analysis for ${row.url}`, verbose ? error : error?.message);
+        }
+      } else {
         updated += 1;
-      } catch (error) {
-        emit(logger, 'warn', `[analyse-pages] Failed to persist analysis for ${row.url}`, verbose ? error : error?.message);
       }
 
       if (is_array(places) && insertPlace) {
         for (const place of places) {
-          try {
-            insertPlace.run(
-              row.url,
-              place.place,
-              place.place_kind || null,
-              place.method || null,
-              place.source || null,
-              place.offset_start ?? null,
-              place.offset_end ?? null,
-              null
-            );
+          if (shouldPersist) {
+            try {
+              insertPlace.run(
+                row.url,
+                place.place,
+                place.place_kind || null,
+                place.method || null,
+                place.source || null,
+                place.offset_start ?? null,
+                place.offset_end ?? null,
+                null
+              );
+              placesInserted += 1;
+            } catch (error) {
+              emit(logger, 'warn', `[analyse-pages] Failed to persist place detection for ${row.url}`, verbose ? error : error?.message);
+            }
+          } else {
             placesInserted += 1;
-          } catch (error) {
-            emit(logger, 'warn', `[analyse-pages] Failed to persist place detection for ${row.url}`, verbose ? error : error?.message);
           }
         }
       }
 
       if (hubCandidate) {
-        try {
-          upsertPlaceHubInsert.run(
-            hubCandidate.host,
-            row.url,
-            hubCandidate.placeSlug,
-            hubCandidate.placeKind,
-            hubCandidate.topic?.slug ?? null,
-            hubCandidate.topic?.label ?? null,
-            hubCandidate.topic?.kind ?? null,
-            row.title || null,
-            hubCandidate.navLinksCount,
-            hubCandidate.articleLinksCount,
-            JSON.stringify(hubCandidate.evidence)
-          );
+        if (hubCandidate.kind === 'unknown') {
+          if (Array.isArray(hubCandidate.unknownTerms) && hubCandidate.unknownTerms.length) {
+            for (const term of hubCandidate.unknownTerms) {
+              if (shouldPersist && upsertUnknownTerm) {
+                try {
+                  upsertUnknownTerm.run(
+                    hubCandidate.host,
+                    row.url,
+                    hubCandidate.canonicalUrl || row.url,
+                    term.slug,
+                    term.label || null,
+                    term.source || null,
+                    term.reason || null,
+                    term.confidence || null,
+                    hubCandidate.evidence ? JSON.stringify(hubCandidate.evidence) : null
+                  );
+                  unknownInserted += 1;
+                } catch (error) {
+                  emit(logger, 'warn', `[analyse-pages] Failed to persist unknown term for ${row.url}`, verbose ? error : error?.message);
+                }
+              } else if (!shouldPersist) {
+                unknownInserted += 1;
+              }
+            }
+          }
+          continue;
+        }
 
-          upsertPlaceHubUpdate.run(
-            hubCandidate.placeSlug,
-            hubCandidate.placeKind,
-            hubCandidate.topic?.slug ?? null,
-            hubCandidate.topic?.label ?? null,
-            hubCandidate.topic?.kind ?? null,
-            row.title || null,
-            hubCandidate.navLinksCount,
-            hubCandidate.articleLinksCount,
-            JSON.stringify(hubCandidate.evidence),
-            row.url
-          );
-        } catch (error) {
-          emit(logger, 'warn', `[analyse-pages] Failed to persist place hub for ${row.url}`, verbose ? error : error?.message);
+        if (hubCandidate.kind !== 'place') {
+          continue;
+        }
+
+        let existingHub = null;
+        if (selectHubByUrl) {
+          try {
+            existingHub = selectHubByUrl.get(row.url) || null;
+          } catch (_) {
+            existingHub = null;
+          }
+        }
+        const isNewHub = !existingHub;
+
+        let hubPersisted = !shouldPersist;
+        if (shouldPersist) {
+          try {
+            upsertPlaceHubInsert.run(
+              hubCandidate.host,
+              row.url,
+              hubCandidate.placeSlug,
+              hubCandidate.placeKind,
+              hubCandidate.topic?.slug ?? null,
+              hubCandidate.topic?.label ?? null,
+              hubCandidate.topic?.kind ?? null,
+              row.title || null,
+              hubCandidate.navLinksCount,
+              hubCandidate.articleLinksCount,
+              JSON.stringify(hubCandidate.evidence)
+            );
+
+            upsertPlaceHubUpdate.run(
+              hubCandidate.placeSlug,
+              hubCandidate.placeKind,
+              hubCandidate.topic?.slug ?? null,
+              hubCandidate.topic?.label ?? null,
+              hubCandidate.topic?.kind ?? null,
+              row.title || null,
+              hubCandidate.navLinksCount,
+              hubCandidate.articleLinksCount,
+              JSON.stringify(hubCandidate.evidence),
+              row.url
+            );
+            hubPersisted = true;
+          } catch (error) {
+            emit(logger, 'warn', `[analyse-pages] Failed to persist place hub for ${row.url}`, verbose ? error : error?.message);
+            hubPersisted = false;
+          }
+        }
+
+        if (hubPersisted) {
+          if (isNewHub) hubsInserted += 1;
+          else hubsUpdated += 1;
+        }
+
+        if (hubAssignments && (hubLimit === 0 || hubAssignments.length < hubLimit)) {
+          const entry = {
+            host: hubCandidate.host,
+            url: row.url,
+            title: row.title || null,
+            place_slug: hubCandidate.placeSlug,
+            place_label: hubCandidate.placeLabel || null,
+            place_kind: hubCandidate.placeKind || null,
+            topic_slug: hubCandidate.topic?.slug ?? null,
+            topic_label: hubCandidate.topic?.label ?? null,
+            topic_kind: hubCandidate.topic?.kind ?? null,
+            nav_links_count: hubCandidate.navLinksCount,
+            article_links_count: hubCandidate.articleLinksCount,
+            word_count: hubCandidate.wordCount,
+            action: isNewHub ? 'insert' : 'update'
+          };
+          if (includeHubEvidence && hubCandidate.evidence) {
+            entry.evidence = hubCandidate.evidence;
+          }
+          hubAssignments.push(entry);
         }
       }
 
-      if (Date.now() - lastProgressAt >= 250) {
-        emitProgress();
-        lastProgressAt = Date.now();
+        if (Date.now() - lastProgressAt >= 250) {
+          emitProgress();
+          lastProgressAt = Date.now();
+        }
       }
-    }
 
     if (processed > 0) emitProgress();
 
@@ -282,7 +426,12 @@ async function analysePages({
       processed,
       updated,
       placesInserted,
-      version: analysisVersion
+      hubsInserted,
+      hubsUpdated,
+      unknownInserted,
+      version: analysisVersion,
+      dryRun,
+      hubAssignments: hubAssignments || undefined
     };
   } finally {
     try { db.close(); } catch (_) {}

@@ -21,17 +21,24 @@ async function performCrawl(elements, formElements, actions) {
   try {
     const selectedType = formElements.crawlType?.value || '';
     console.log('[performCrawl] Selected crawl type:', selectedType);
+    console.log('[performCrawl] About to call actions.resetInsights()');
     actions.resetInsights();
+    console.log('[performCrawl] resetInsights() completed');
     
     if (selectedType) {
+      console.log('[performCrawl] Calling actions.setCrawlType with:', selectedType);
       actions.setCrawlType(selectedType);
+      console.log('[performCrawl] setCrawlType() completed');
     } else {
       actions.setCrawlType('');
     }
+    
+    console.log('[performCrawl] Starting to build request body');
 
     // Build request body from form elements using lang-tools patterns
     const body = {};
     
+    console.log('[performCrawl] About to parse numeric fields');
     // Parse numeric fields
     const numericFields = [
       { key: 'depth', element: formElements.depth, required: true },
@@ -42,13 +49,21 @@ async function performCrawl(elements, formElements, actions) {
       { key: 'pacerJitterMaxMs', element: formElements.pacerJitterMaxMs }
     ];
     
-    each(numericFields, (field) => {
-      if (is_defined(field.element) && field.element.value) {
-        body[field.key] = parseInt(field.element.value, 10);
-      } else if (field.required && is_defined(field.element)) {
-        body[field.key] = parseInt(field.element.value, 10);
-      }
-    });
+    console.log('[performCrawl] numericFields array created, length:', numericFields.length);
+    
+  each(numericFields, (field) => {
+    // Skip if element doesn't exist at all (null/undefined)
+    if (!field.element) {
+      return; // Continue to next field
+    }
+    
+    // Now safe to access .value since we know element exists
+    if (field.element.value) {
+      body[field.key] = parseInt(field.element.value, 10);
+    } else if (field.required) {
+      body[field.key] = parseInt(field.element.value, 10);
+    }
+  });    console.log('[performCrawl] Numeric fields parsed, body so far:', body);
 
     // Parse string fields
     const stringFields = [
@@ -85,16 +100,21 @@ async function performCrawl(elements, formElements, actions) {
       body.startUrl = formElements.startUrl.value;
     }
 
+    console.log('[performCrawl] About to POST /api/crawl with body:', body);
     const r = await fetch('/api/crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
+    console.log('[performCrawl] Fetch completed. Status:', r.status, 'OK:', r.ok);
 
     let payload = null;
     try { 
-      payload = await r.json(); 
-    } catch (_) {}
+      payload = await r.json();
+      console.log('[performCrawl] Response payload:', payload);
+    } catch (parseErr) {
+      console.error('[performCrawl] Failed to parse JSON:', parseErr);
+    }
 
     if (!r.ok) {
       const detail = payload?.error || `HTTP ${r.status}`;
@@ -173,6 +193,7 @@ async function performCrawl(elements, formElements, actions) {
       } catch (_) {}
     }
   } catch (e) {
+    console.error('[performCrawl] Encountered error during start request:', e);
     elements.logs.textContent += `\nStart error: ${e?.message || e}\n`;
     // On error, reset button
     elements.startBtn.disabled = false;
@@ -219,7 +240,7 @@ export function createCrawlControls({ elements, formElements, actions, formatter
   console.log('[createCrawlControls] startBtn exists:', !!startBtn);
 
   // Analysis button handler
-  if (is_defined(elements.analysisBtn)) {
+  if (elements.analysisBtn) {
     elements.analysisBtn.onclick = async () => {
       const prevLabel = elements.analysisBtn.textContent;
       elements.analysisBtn.disabled = true;

@@ -23,6 +23,9 @@ class PageExecutionService {
     computeContentSignals,
     computeUrlSignals,
     combineSignals,
+    countryHubGapService = null,
+    jobId = null,
+    domain = null,
     structureOnly = false
   } = {}) {
     if (!fetchPipeline) {
@@ -65,6 +68,9 @@ class PageExecutionService {
     this.computeContentSignals = typeof computeContentSignals === 'function' ? computeContentSignals : null;
     this.computeUrlSignals = typeof computeUrlSignals === 'function' ? computeUrlSignals : null;
     this.combineSignals = typeof combineSignals === 'function' ? combineSignals : null;
+    this.getCountryHubGapService = typeof countryHubGapService === 'function' ? countryHubGapService : () => countryHubGapService;
+    this.jobId = jobId || null;
+    this.domain = domain || null;
     this.structureOnly = !!structureOnly;
   }
 
@@ -131,7 +137,7 @@ class PageExecutionService {
         this.state.incrementPagesVisited();
       } catch (_) {}
       if (this.emitProgress) this.emitProgress();
-      this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: 'cache' });
+      await this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: 'cache' });
 
       const looksLikeArticle = this.looksLikeArticle ? this.looksLikeArticle(normalizedUrl || resolvedUrl) : false;
       if (looksLikeArticle) {
@@ -203,7 +209,7 @@ class PageExecutionService {
         this.state.incrementPagesVisited();
       } catch (_) {}
       if (this.emitProgress) this.emitProgress();
-      this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: 'not-modified' });
+      await this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: 'not-modified' });
 
       const dbAdapter = this.getDbAdapter();
       if (dbAdapter && typeof dbAdapter.isEnabled === 'function' && dbAdapter.isEnabled() && fetchMeta) {
@@ -273,7 +279,7 @@ class PageExecutionService {
     } catch (_) {}
 
     if (this.emitProgress) this.emitProgress();
-    this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: source });
+    await this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: source });
 
     let discovery = null;
     try {
@@ -437,7 +443,7 @@ class PageExecutionService {
     };
   }
 
-  _noteSeededHubVisit(normalizedUrl, { depth = null, fetchSource = null } = {}) {
+  async _noteSeededHubVisit(normalizedUrl, { depth = null, fetchSource = null } = {}) {
     if (!normalizedUrl) return;
     if (!this.state?.hasSeededHub || !this.state.hasSeededHub(normalizedUrl)) {
       return;
@@ -478,6 +484,35 @@ class PageExecutionService {
           }
         });
       } catch (_) {}
+    }
+
+    // Country hub gap detection integration
+    if (hubKind === 'country') {
+      const countryHubGapService = this.getCountryHubGapService?.();
+      if (countryHubGapService) {
+        try {
+          // Learn pattern from this country hub
+          const countryName = meta?.name || countryHubGapService._extractCountryNameFromUrl(normalizedUrl);
+          if (countryName) {
+            await countryHubGapService.learnCountryHubPattern(normalizedUrl, countryName, 'hub-visited');
+          }
+
+          // Check if all country hubs are now complete
+          const isComplete = countryHubGapService.checkCountryHubCompletion(this.jobId, this.domain);
+          
+          if (!isComplete) {
+            // Generate gap predictions for remaining missing hubs
+            const analysis = countryHubGapService.analyzeCountryHubGaps(this.jobId);
+            if (analysis.missing > 0 && analysis.missing < 20) {
+              // Only generate predictions if we have a manageable number of missing hubs
+              await countryHubGapService.generateGapPredictions(analysis, this.jobId, this.domain);
+            }
+          }
+        } catch (error) {
+          // Non-critical - don't fail the crawl if gap detection fails
+          console.warn('[PageExecutionService] Country hub gap detection failed:', error);
+        }
+      }
     }
   }
 }

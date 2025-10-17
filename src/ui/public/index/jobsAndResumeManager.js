@@ -33,7 +33,10 @@ const RESUME_REASON_LABELS = {
 };
 
 /**
- * Creates jobs and resume queue manager with full dependency injection
+ * Creates jobs and resume crawl manager with full dependency injection
+ *
+ * Note: Despite variable names containing "queue", this manages crawl jobs.
+ * The term "queue" in API responses refers to incomplete crawl jobs that can be resumed.
  * 
  * @param {Object} deps - Dependencies object
  * @param {Object} deps.elements - DOM elements
@@ -138,7 +141,7 @@ export function createJobsAndResumeManager(deps) {
     
     if (is_defined(elements.resumeSummary)) {
       const summaryParts = [];
-      summaryParts.push(recommendedCount ? `${recommendedCount} ready to resume` : 'No resumable queues detected');
+      summaryParts.push(recommendedCount ? `${recommendedCount} ready to resume` : 'No resumable crawls detected');
       if (availableSlots != null) {
         summaryParts.push(`slots free: ${availableSlots}`);
       }
@@ -149,18 +152,19 @@ export function createJobsAndResumeManager(deps) {
     if (is_defined(elements.resumeAllBtn)) {
       elements.resumeAllBtn.disabled = recommendedCount === 0 || resumeActionPending;
       elements.resumeAllBtn.textContent = recommendedCount
-        ? `Resume ${recommendedCount} queue${recommendedCount === 1 ? '' : 's'}`
+        ? `Resume ${recommendedCount} crawl${recommendedCount === 1 ? '' : 's'}`
         : 'Resume suggestions';
     }
 
     if (!is_defined(elements.resumeList)) return;
     elements.resumeList.innerHTML = '';
+    // Note: "queues" here are actually incomplete crawl jobs (legacy API naming)
     const queues = Array.isArray(data?.queues) ? data.queues.slice() : [];
     
     if (queues.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'resume-item resume-item--empty';
-      empty.textContent = 'No paused or incomplete queues.';
+      empty.textContent = 'No paused or incomplete crawls.';
       elements.resumeList.appendChild(empty);
       return;
     }
@@ -186,7 +190,7 @@ export function createJobsAndResumeManager(deps) {
       const title = document.createElement('div');
       title.className = 'resume-item__title';
       const domain = queue?.domain || extractHostname(queue?.url);
-      title.textContent = domain || queue?.url || `Queue ${queue?.id}`;
+      title.textContent = domain || queue?.url || `Crawl ${queue?.id}`;
       header.appendChild(title);
 
       const link = document.createElement('a');
@@ -203,7 +207,7 @@ export function createJobsAndResumeManager(deps) {
       meta.className = 'resume-item__meta';
       const metaParts = [];
       if (queue?.state) metaParts.push(`state: ${queue.state}`);
-      if (Number.isFinite(queue?.queueSize)) metaParts.push(`queue: ${queue.queueSize}`);
+      if (Number.isFinite(queue?.queueSize)) metaParts.push(`pending: ${queue.queueSize}`);
       if (Number.isFinite(queue?.visited)) metaParts.push(`visited: ${queue.visited}`);
       meta.textContent = metaParts.join(' · ');
       li.appendChild(meta);
@@ -263,7 +267,7 @@ export function createJobsAndResumeManager(deps) {
     resumeInventoryState.loading = true;
     
     if (!silent) {
-      setResumeStatus('Checking paused queues…', { busy: true });
+      setResumeStatus('Checking paused crawls…', { busy: true });
     }
     
     try {
@@ -291,7 +295,8 @@ export function createJobsAndResumeManager(deps) {
   }
 
   /**
-   * Trigger resume request for selected queues or all recommended queues
+   * Trigger resume request for selected crawls or all recommended crawls
+   * @param {string[]|null} queueIds - Crawl job IDs to resume (legacy param name)
    */
   async function triggerResumeRequest({ queueIds = null, sourceButton = null } = {}) {
     if (resumeActionPending) return;
@@ -300,7 +305,7 @@ export function createJobsAndResumeManager(deps) {
     if (sourceButton) sourceButton.disabled = true;
     if (is_defined(elements.resumeAllBtn)) elements.resumeAllBtn.disabled = true;
     
-    setResumeStatus('Resuming crawl queue…', { busy: true });
+    setResumeStatus('Resuming crawl…', { busy: true });
     
     try {
       const body = {};
@@ -522,7 +527,37 @@ export function createJobsAndResumeManager(deps) {
   function setupResumeControls() {
     if (is_defined(elements.resumeRefreshBtn)) {
       elements.resumeRefreshBtn.addEventListener('click', () => {
-        fetchResumeInventory().catch(() => {});
+        fetchResumeInventory();
+      });
+    }
+
+    if (is_defined(elements.clearQueuesBtn)) {
+      elements.clearQueuesBtn.addEventListener('click', async () => {
+        if (!confirm('Clear all incomplete crawls? This will remove all paused/incomplete crawl records. This cannot be undone.')) {
+          return;
+        }
+        
+        elements.clearQueuesBtn.disabled = true;
+        elements.clearQueuesBtn.textContent = 'Clearing...';
+        
+        try {
+          const response = await fetch('/api/resume-all', { method: 'DELETE' });
+          const data = await response.json();
+          
+          if (response.ok) {
+            logs.info(`Cleared ${data.deleted} crawl${data.deleted === 1 ? '' : 's'}`);
+            // Force refresh by resetting loading state
+            resumeInventoryState.loading = false;
+            await fetchResumeInventory();
+          } else {
+            logs.error(`Failed to clear crawls: ${data.message || 'Unknown error'}`);
+          }
+        } catch (err) {
+          logs.error(`Error clearing crawls: ${err.message}`);
+        } finally {
+          elements.clearQueuesBtn.disabled = false;
+          elements.clearQueuesBtn.textContent = 'Clear Crawls';
+        }
       });
     }
 

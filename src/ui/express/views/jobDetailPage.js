@@ -4,7 +4,7 @@ const { escapeHtml } = require('../utils/html');
 
 /**
  * Renders the job detail SSR page with isomorphic components
- * Supports progressive enhancement with client-side hydration
+ * Supports progressive enhancement with client-side activation
  */
 function renderJobDetailPage({ job, renderNav }) {
   const jobId = escapeHtml(job.id || 'unknown');

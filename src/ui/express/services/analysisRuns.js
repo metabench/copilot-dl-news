@@ -20,11 +20,46 @@ function ensureAnalysisRunSchema(db) {
       verbose INTEGER,
       summary TEXT,
       last_progress TEXT,
-      error TEXT
+      error TEXT,
+      background_task_id INTEGER,
+      background_task_status TEXT
     );
+  `);
+
+  const columns = db.prepare(`PRAGMA table_info('analysis_runs')`).all();
+  const columnNames = new Set(columns.map((col) => col.name));
+  if (!columnNames.has('background_task_id')) {
+    try {
+      db.exec('ALTER TABLE analysis_runs ADD COLUMN background_task_id INTEGER');
+      columnNames.add('background_task_id');
+    } catch (err) {
+      if (!/duplicate column name/i.test(String(err && err.message))) {
+        throw err;
+      }
+      columnNames.add('background_task_id');
+    }
+  }
+  if (!columnNames.has('background_task_status')) {
+    try {
+      db.exec('ALTER TABLE analysis_runs ADD COLUMN background_task_status TEXT');
+      columnNames.add('background_task_status');
+    } catch (err) {
+      if (!/duplicate column name/i.test(String(err && err.message))) {
+        throw err;
+      }
+      columnNames.add('background_task_status');
+    }
+  }
+
+  db.exec(`
     CREATE INDEX IF NOT EXISTS idx_analysis_runs_started_at ON analysis_runs(started_at DESC);
     CREATE INDEX IF NOT EXISTS idx_analysis_runs_status ON analysis_runs(status, started_at DESC);
+  `);
+  if (columnNames.has('background_task_id')) {
+    db.exec('CREATE INDEX IF NOT EXISTS idx_analysis_runs_background_task ON analysis_runs(background_task_id)');
+  }
 
+  db.exec(`
     CREATE TABLE IF NOT EXISTS analysis_run_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       run_id TEXT NOT NULL,
@@ -100,7 +135,9 @@ function normalizeRunRow(row) {
     summary,
     lastProgress,
     diagnostics: diagnostics || null,
-    error: row.error || null
+    error: row.error || null,
+    backgroundTaskId: row.background_task_id != null ? Number(row.background_task_id) : null,
+    backgroundTaskStatus: row.background_task_status || null
   };
 }
 
@@ -136,11 +173,13 @@ function createAnalysisRun(db, data) {
     verbose: toBoolInt(data.verbose),
     summary: safeStringify(data.summary),
     last_progress: safeStringify(data.lastProgress),
-    error: data.error || null
+    error: data.error || null,
+    background_task_id: data.backgroundTaskId != null ? Number(data.backgroundTaskId) : null,
+    background_task_status: data.backgroundTaskStatus || null
   };
   const stmt = db.prepare(`
-    INSERT INTO analysis_runs (id, started_at, ended_at, status, stage, analysis_version, page_limit, domain_limit, skip_pages, skip_domains, dry_run, verbose, summary, last_progress, error)
-    VALUES (@id, @started_at, @ended_at, @status, @stage, @analysis_version, @page_limit, @domain_limit, @skip_pages, @skip_domains, @dry_run, @verbose, @summary, @last_progress, @error)
+    INSERT INTO analysis_runs (id, started_at, ended_at, status, stage, analysis_version, page_limit, domain_limit, skip_pages, skip_domains, dry_run, verbose, summary, last_progress, error, background_task_id, background_task_status)
+    VALUES (@id, @started_at, @ended_at, @status, @stage, @analysis_version, @page_limit, @domain_limit, @skip_pages, @skip_domains, @dry_run, @verbose, @summary, @last_progress, @error, @background_task_id, @background_task_status)
   `);
   stmt.run(record);
   return normalizeRunRow(db.prepare('SELECT * FROM analysis_runs WHERE id = ?').get(record.id));
@@ -164,7 +203,9 @@ function updateAnalysisRun(db, id, patch = {}) {
     verbose: 'verbose',
     summary: 'summary',
     lastProgress: 'last_progress',
-    error: 'error'
+    error: 'error',
+    backgroundTaskId: 'background_task_id',
+    backgroundTaskStatus: 'background_task_status'
   };
   const params = { id: String(id) };
   const sets = [];
@@ -178,6 +219,9 @@ function updateAnalysisRun(db, id, patch = {}) {
       value = toBoolInt(value);
     } else if (key === 'summary' || key === 'lastProgress') {
       value = safeStringify(value);
+    } else if (key === 'backgroundTaskId') {
+      value = value == null ? null : Number(value);
+      if (!Number.isFinite(value)) value = null;
     } else if (value !== null && value !== undefined) {
       value = String(value);
     } else {
@@ -233,7 +277,9 @@ function listAnalysisRuns(db, { limit = DEFAULT_LIST_LIMIT, offset = 0, includeD
         'dry_run',
         'verbose',
         'error',
-        'last_progress'
+        'last_progress',
+        'background_task_id',
+        'background_task_status'
       ].join(', ');
   const rows = db.prepare(`
     SELECT ${selectColumns}

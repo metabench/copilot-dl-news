@@ -7,17 +7,32 @@ applyTo: "**"
 
 **When to Read**: This document contains critical, repository-specific instructions for the GitHub Copilot agent. It should be reviewed by the agent at the beginning of any complex task to ensure its behavior aligns with project standards and best practices.
 
+**Primary Documentation**: **`AGENTS.md`** is the main document for all AI agents working in this repository. It contains core patterns, workflows, and project structure that apply to all AI assistants.
+
+**This Document's Purpose**: These Copilot-specific instructions supplement AGENTS.md with:
+1. **Command Execution Rules** - How to avoid VS Code approval dialogs in PowerShell
+2. **Documentation Index** - Quick navigation to specialized guides for specific tasks
+3. **Copilot-Specific Workflows** - Patterns optimized for GitHub Copilot's capabilities
+
 These instructions apply when GitHub Copilot is running with the **GPT-5-Codex** or **GPT-5-Codex (Preview)** models inside this repository. Treat them as additional constraints on top of the workspace-wide guidance in `AGENTS.md`.
 
+**CRITICAL CHANGE (October 2025)**: AGENTS.md has been modularized. It's now a navigation hub (~1200 lines, target ~800) that delegates to specialized quick references:
+- `docs/COMMAND_EXECUTION_GUIDE.md` - Before ANY terminal operations
+- `docs/TESTING_QUICK_REFERENCE.md` - Before running/writing tests  
+- `docs/DATABASE_QUICK_REFERENCE.md` - Before database operations
+
+Read AGENTS.md Topic Index FIRST to understand available docs, then jump to relevant specialized references.
+
 - ✅ **Accept the role**: Identify yourself as GitHub Copilot, assume full autonomy, and only stop when the task is complete or genuinely blocked.
-- ✅ **Read first (right-sized)**: For multi-file or novel work, skim `AGENTS.md` sections that govern the area plus the relevant modules to mirror existing patterns. For single-file changes under ~50 lines or when the required edit is already well understood, rely on the immediate context instead of re-reading the entire file or playbook.
-- ✅ **Analysis triage**: Default to the minimum reconnaissance that keeps you safe—reuse past knowledge when the situation is unchanged, expand your scan only when you detect ambiguity, architectural impact, or new surfaces.
-- ✅ **STOP RESEARCHING EARLY**: If you've read >5 files or searched >3 times without starting implementation, you're in analysis paralysis. Start coding with what you know, iterate based on feedback.
-- ✅ **Attachments are gold**: User-provided attachments contain the exact context you need. Don't re-read them from disk. Check them FIRST.
-- ✅ **One search, one read, start coding**: For UI features, one search for similar patterns + one read of example file = enough to start. Don't map the entire codebase.
-- ✅ **Simple first, refine later**: Implement the simplest version that works, test it, then iterate. Don't design the perfect solution before writing code.
-- ✅ **Adhere to the "no mid-task confirmation" rule**: Proceed without pausing for approval unless critical details are missing. Summaries at completion must stay within 1–2 concise sentences.
-- ✅ **Documentation alignment**: When repository rules change, update `AGENTS.md` (or relevant docs) so future GPT-5 Codex sessions inherit the latest workflow expectations.
+- ✅ **Read first (right-sized)**: For multi-file or novel work, check AGENTS.md Topic Index (30 seconds), then read relevant quick reference (2-5 min). For single-file changes under ~50 lines, rely on immediate context.
+- ✅ **Analysis triage**: Default to minimum reconnaissance—check quick references first, expand to complete guides only when needed.
+- ✅ **STOP RESEARCHING EARLY**: If you've read >3 docs or searched >3 times without starting, you're in analysis paralysis. Start coding with what you know.
+- ✅ **Attachments are gold**: User-provided attachments contain exact context. Don't re-read from disk. Check them FIRST.
+- ✅ **One search, one read, start coding**: For UI features, one search + one example = enough to start. Don't map entire codebase.
+- ✅ **Simple first, refine later**: Implement simplest version, test, then iterate. Don't design perfect solution before coding.
+- ✅ **Adhere to "no mid-task confirmation" rule**: Proceed without pausing unless critical details missing. Summaries: 1–2 sentences max.
+- ✅ **Documentation alignment**: When rules change, update specialized docs (not AGENTS.md unless navigation-related). Keep AGENTS.md <500 lines.
+- ✅ **No standalone documents**: Always integrate into existing docs, never create new standalone guides
 
 If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to the latest `AGENTS.md` guidance and note the discrepancy in your summary.
 
@@ -95,7 +110,8 @@ If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to
 1. **Check what's failing** (5 seconds, NO APPROVAL):
    ```bash
    node tests/get-failing-tests.js           # List all failures
-   node tests/get-test-summary.js            # Or get full overview
+  node tests/get-failing-tests.js --history --test <pattern>  # Confirm fixes via log history
+  node tests/get-test-summary.js --compact  # Or get full overview
    ```
 2. **Identify 4-6 simplest failures** (runtime <5s, ≤2 failures each)
 3. **Run batch test** to see current state:
@@ -122,8 +138,9 @@ If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to
 
 #### "What tests are currently failing?" → Use simple query tools:
 ```bash
-node tests/get-failing-tests.js           # List all failures (5s, NO APPROVAL)
-node tests/get-test-summary.js            # Full overview (5s, NO APPROVAL)
+node tests/get-failing-tests.js           # List all failures + latest message (5s, NO APPROVAL)
+node tests/get-failing-tests.js --history --test <pattern>  # Show recent status for a specific test
+node tests/get-test-summary.js --compact  # Full overview (5s, NO APPROVAL)
 node tests/analyze-test-logs.js --summary # Detailed analysis (10s)
 ```
 
@@ -137,8 +154,9 @@ node tests/run-tests.js e2e-quick  # Quick E2E smoke tests (1 min)
 
 #### "Check test status" or "What's broken?" → Simple query tools first:
 ```bash
-node tests/get-test-summary.js            # Quick status (5s, NO APPROVAL)
-node tests/get-failing-tests.js           # List failures (5s, NO APPROVAL)
+node tests/get-test-summary.js --compact  # Quick status (5s, NO APPROVAL)
+node tests/get-failing-tests.js           # List failures + latest message (5s, NO APPROVAL)
+node tests/get-failing-tests.js --history --logs 6 --test <pattern>  # Verify fix without rerun
 node tests/analyze-test-logs.js --summary # Full analysis (10s)
 ```
 - Shows latest results by suite (ALL, unit, e2e, integration)
@@ -286,11 +304,13 @@ node tests/analyze-test-logs.js --test "partial-test-name"
 
 **Quick Reference**:
 ```bash
-node tests/get-test-summary.js            # Status overview (5s)
-node tests/get-failing-tests.js           # List failures (5s)
+node tests/get-test-summary.js --compact  # Status overview (5s)
+node tests/get-failing-tests.js           # List failures + latest message (5s)
 node tests/get-latest-log.js              # Get log path (2s)
 node tests/get-slow-tests.js              # Performance check (5s)
 ```
+
+- `get-failing-tests.js` reads `test-failure-summary.json`, and the reporter also writes per-run snapshots to `testlogs/<timestamp>_<suite>.failures.json`, so history queries surface the original failure messages for older runs.
 
 **All tools**:
 - ✅ No PowerShell complexity (no approval dialogs)
@@ -317,7 +337,7 @@ node tests/get-slow-tests.js              # Performance check (5s)
 
 ### ⚠️ Critical Testing Rules
 
-1. ✅ **CHECK LOGS FIRST - MANDATORY**: Use `node tests/get-test-summary.js` or `node tests/analyze-test-logs.js --summary` before ANY test run
+1. ✅ **CHECK LOGS FIRST - MANDATORY**: Use `node tests/get-test-summary.js --compact` or `node tests/analyze-test-logs.js --summary` before ANY test run
 2. ✅ **Prefer static analysis**: Mine existing logs before running expensive tests
 3. ✅ **Verify exit codes**: ALWAYS check exit code (0=pass, 1=fail). Task messages are UNRELIABLE.
 4. ✅ **Use configuration runner**: `node tests/run-tests.js <suite>` avoids PowerShell confirmations

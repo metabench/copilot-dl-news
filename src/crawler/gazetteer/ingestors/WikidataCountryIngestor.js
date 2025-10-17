@@ -3,6 +3,7 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const chalk = require('chalk');
 const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const { AttributeBuilder } = require('../../../utils/attributeBuilder');
@@ -30,10 +31,38 @@ class WikidataCountryIngestor {
     sleepMs = 250,
     useCache = true,
     maxRetries = 3,
-    maxCountries = null
+    maxCountries = null,
+    targetCountries = null,
+    verbose = false
   } = {}) {
-    this.logger = logger;
-    this.logger.info('[WikidataCountryIngestor] Constructor starting...');
+    const baseLogger = logger || console;
+    const globalVerbose = global.__COPILOT_GAZETTEER_VERBOSE === true;
+    const verboseMode = verbose === true || globalVerbose;
+    const noop = () => {};
+
+    this.verbose = verboseMode;
+    this.logger = {
+      info: verboseMode
+        ? (...args) => (baseLogger.info || baseLogger.log || console.log).call(baseLogger, ...args)
+        : noop,
+      log: verboseMode
+        ? (...args) => (baseLogger.log || baseLogger.info || console.log).call(baseLogger, ...args)
+        : noop,
+      warn: (...args) => (baseLogger.warn || baseLogger.error || console.warn).call(baseLogger, ...args),
+      error: (...args) => (baseLogger.error || baseLogger.warn || console.error).call(baseLogger, ...args)
+    };
+    this._debugInfo = (...args) => {
+      if (this.verbose) {
+        (baseLogger.info || baseLogger.log || console.log).call(baseLogger, ...args);
+      }
+    };
+    this._debugStderr = (...args) => {
+      if (this.verbose) {
+        console.error(...args);
+      }
+    };
+
+    if (this.verbose) this.logger.info('[WikidataCountryIngestor] Constructor starting...');
     if (!db) {
       throw new Error('WikidataCountryIngestor requires a database handle (pass backgroundTaskManager.db or getDbRW())');
     }
@@ -48,6 +77,8 @@ class WikidataCountryIngestor {
     this.maxRetries = maxRetries;
     this.maxCountries = maxCountries;
     this.cacheDir = cacheDir || path.join(process.cwd(), 'data', 'cache', 'sparql');
+    this.targetCountries = Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null;
+    this.countryFilter = this.targetCountries ? this._buildCountryFilter(this.targetCountries) : null;
 
     this.id = 'wikidata-countries';
     this.name = 'Wikidata Country Ingestor';
@@ -75,38 +106,41 @@ class WikidataCountryIngestor {
     }
 
     // Create prepared statements from data layer
-    this.logger.info('[WikidataCountryIngestor] Creating prepared statements...');
+    if (this.verbose) this.logger.info('[WikidataCountryIngestor] Creating prepared statements...');
     this.stmts = ingestQueries.createIngestionStatements(this.db);
-    this.logger.info('[WikidataCountryIngestor] Constructor complete');
-    console.error('[WikidataCountryIngestor] CONSTRUCTOR COMPLETE - Ingestor ready');
-    console.error('[WikidataCountryIngestor] Config:', { maxCountries: this.maxCountries, useCache: this.useCache, cacheDir: this.cacheDir });
+    if (this.verbose) {
+      this.logger.info('[WikidataCountryIngestor] Constructor complete');
+      this._debugStderr('[WikidataCountryIngestor] CONSTRUCTOR COMPLETE - Ingestor ready');
+      this._debugStderr('[WikidataCountryIngestor] Config:', { maxCountries: this.maxCountries, useCache: this.useCache, cacheDir: this.cacheDir });
+    }
   }
 
   async execute({ signal = null, emitProgress = null } = {}) {
-    console.error('[WikidataCountryIngestor] execute() CALLED - starting country ingestion');
+    if (this.verbose) {
+      this._debugStderr('[WikidataCountryIngestor] execute() CALLED - starting country ingestion');
+      this.logger.info('[WikidataCountryIngestor] Starting country ingestion...');
+      this._debugStderr('[WikidataCountryIngestor] About to emit telemetry');
+    }
     const startedAt = Date.now();
     const queryStart = Date.now();  // Track query/processing start time for progress reporting
     let recordsProcessed = 0;
     let recordsUpserted = 0;
     let errors = 0;
-
-    this.logger.info('[WikidataCountryIngestor] Starting country ingestion...');
-    console.error('[WikidataCountryIngestor] About to emit telemetry');
     this._emitTelemetry(emitProgress, 'info', 'Starting Wikidata country discovery', {
       maxCountries: this.maxCountries,
       timeout: this.timeoutMs,
       retries: this.maxRetries,
       cacheEnabled: this.useCache
     });
-    console.error('[WikidataCountryIngestor] Telemetry emitted, proceeding to SPARQL query');
+    if (this.verbose) this._debugStderr('[WikidataCountryIngestor] Telemetry emitted, proceeding to SPARQL query');
 
     try {
       // Step 1: Fetch all country QIDs via SPARQL
-      console.error('[WikidataCountryIngestor] Step 1: Building SPARQL query');
+      if (this.verbose) this._debugStderr('[WikidataCountryIngestor] Step 1: Building SPARQL query');
       this._emitProgress(emitProgress, { phase: 'discovery', message: 'Querying Wikidata SPARQL endpoint for countries' });
       
       const limitClause = this.maxCountries ? `LIMIT ${this.maxCountries}` : '';
-      console.error('[WikidataCountryIngestor] Limit clause:', limitClause);
+      if (this.verbose) this._debugStderr('[WikidataCountryIngestor] Limit clause:', limitClause);
       
       const sparql = `SELECT DISTINCT ?country ?countryLabel ?iso2 ?coord WHERE {
   ?country wdt:P31 wd:Q3624078 .
@@ -117,8 +151,10 @@ class WikidataCountryIngestor {
 ORDER BY ?countryLabel
 ${limitClause}`.trim();
 
-      console.error('[WikidataCountryIngestor] SPARQL query built, length:', sparql.length);
-      console.error('[WikidataCountryIngestor] Query preview:', sparql.substring(0, 200));
+      if (this.verbose) {
+        this._debugStderr('[WikidataCountryIngestor] SPARQL query built, length:', sparql.length);
+        this._debugStderr('[WikidataCountryIngestor] Query preview:', sparql.substring(0, 200));
+      }
       
       this._emitTelemetry(emitProgress, 'debug', 'SPARQL query prepared', {
         queryLength: sparql.length,
@@ -127,14 +163,16 @@ ${limitClause}`.trim();
         queryPreview: sparql.substring(0, 150)
       });
 
-      console.error('[WikidataCountryIngestor] About to call _fetchSparql');
+      if (this.verbose) this._debugStderr('[WikidataCountryIngestor] About to call _fetchSparql');
       const sparqlResult = await this._fetchSparql(sparql, emitProgress);
-      console.error('[WikidataCountryIngestor] _fetchSparql returned');
-      console.error('[WikidataCountryIngestor] SPARQL result structure:', {
-        hasResults: !!sparqlResult?.results,
-        hasBindings: !!sparqlResult?.results?.bindings,
-        bindingsLength: sparqlResult?.results?.bindings?.length
-      });
+      if (this.verbose) {
+        this._debugStderr('[WikidataCountryIngestor] _fetchSparql returned');
+        this._debugStderr('[WikidataCountryIngestor] SPARQL result structure:', {
+          hasResults: !!sparqlResult?.results,
+          hasBindings: !!sparqlResult?.results?.bindings,
+          bindingsLength: sparqlResult?.results?.bindings?.length
+        });
+      }
       
       // Defensive: Validate SPARQL response structure
       if (!sparqlResult || typeof sparqlResult !== 'object') {
@@ -147,13 +185,15 @@ ${limitClause}`.trim();
         throw new Error('SPARQL query returned invalid response (results.bindings is not an array)');
       }
       
-      const bindings = sparqlResult.results.bindings;
-      
-      this.logger.info(`[WikidataCountryIngestor] SPARQL returned ${bindings.length} bindings`);
-      console.error('[WikidataCountryIngestor] CRITICAL: bindings.length =', bindings.length);
-      
-      this._emitTelemetry(emitProgress, 'info', `SPARQL query completed: ${bindings.length} countries found`, {
-        resultCount: bindings.length,
+      const originalBindings = sparqlResult.results.bindings;
+      let bindings = originalBindings;
+      const originalBindingCount = bindings.length;
+
+      this.logger.info(`[WikidataCountryIngestor] SPARQL returned ${originalBindingCount} bindings`);
+  this._debugStderr('[WikidataCountryIngestor] CRITICAL: bindings.length =', originalBindingCount);
+
+      this._emitTelemetry(emitProgress, 'info', `SPARQL query completed: ${originalBindingCount} countries found`, {
+        resultCount: originalBindingCount,
         hasResults: !!sparqlResult?.results,
         hasBindings: !!sparqlResult?.results?.bindings,
         bindingsIsArray: Array.isArray(sparqlResult?.results?.bindings),
@@ -168,8 +208,8 @@ ${limitClause}`.trim();
           labelValue: bindings[0].countryLabel?.value
         } : null
       });
-      this._emitTelemetry(emitProgress, 'info', `SPARQL query completed: ${bindings.length} countries found`, {
-        resultCount: bindings.length,
+      this._emitTelemetry(emitProgress, 'info', `SPARQL query completed: ${originalBindingCount} countries found`, {
+        resultCount: originalBindingCount,
         hasHead: !!sparqlResult?.head,
         headVars: sparqlResult?.head?.vars || [],
         firstResult: bindings[0] ? {
@@ -181,10 +221,50 @@ ${limitClause}`.trim();
           labelValue: bindings[0].countryLabel?.value
         } : null
       });
+
+      if (this.countryFilter) {
+        const { filteredBindings, matchDetails, unmatchedSpecifiers } = this._filterBindingsByCountry(bindings);
+        const filteredCount = filteredBindings.length;
+        this.logger.info(`[WikidataCountryIngestor] Country filter applied: ${filteredCount}/${originalBindingCount} bindings retained`);
+        if (this.verbose) {
+          this._debugStderr('[WikidataCountryIngestor] Country filter stats:', {
+            originalBindingCount,
+            filteredCount,
+            matchDetails,
+            unmatchedSpecifiers: unmatchedSpecifiers.map(spec => spec.raw || spec.value || spec.key)
+          });
+        }
+
+        this._emitTelemetry(emitProgress, 'info', 'Applied target country filter to SPARQL bindings', {
+          originalCount: originalBindingCount,
+          filteredCount,
+          matchedSpecifiers: matchDetails.map(detail => detail.specKey),
+          unmatchedSpecifiers: unmatchedSpecifiers.map(spec => spec.raw || spec.value || spec.key),
+          targetSpecifierCount: this.countryFilter.specifiers.length
+        });
+
+        bindings = filteredBindings;
+
+        if (filteredCount === 0) {
+          this.logger.warn('[WikidataCountryIngestor] Country filter removed all SPARQL bindings');
+          this._emitTelemetry(emitProgress, 'warning', 'Country filter removed all SPARQL bindings', {
+            originalCount: originalBindingCount,
+            targetSpecifierCount: this.countryFilter.specifiers.length,
+            unmatchedSpecifiers: unmatchedSpecifiers.map(spec => spec.raw || spec.value || spec.key)
+          });
+          return { recordsProcessed: 0, recordsUpserted: 0, errors: 0 };
+        }
+
+        if (unmatchedSpecifiers.length > 0) {
+          this.logger.warn('[WikidataCountryIngestor] Some target countries were not matched in SPARQL results:', unmatchedSpecifiers.map(spec => spec.raw || spec.value || spec.key));
+        }
+      }
       
       if (bindings.length === 0) {
-        console.error('[WikidataCountryIngestor] EARLY RETURN: Zero bindings from SPARQL!');
-        console.error('[WikidataCountryIngestor] Query was:', sparql.substring(0, 300));
+        if (this.verbose) {
+          this._debugStderr('[WikidataCountryIngestor] EARLY RETURN: Zero bindings from SPARQL!');
+          this._debugStderr('[WikidataCountryIngestor] Query was:', sparql.substring(0, 300));
+        }
         this.logger.warn('[WikidataCountryIngestor] No countries found in SPARQL query');
         this._emitTelemetry(emitProgress, 'warning', 'SPARQL query returned zero results', {
           sparqlQuery: sparql.substring(0, 200),
@@ -194,7 +274,7 @@ ${limitClause}`.trim();
         return { recordsProcessed: 0, recordsUpserted: 0, errors: 0 };
       }
 
-      this.logger.info(`[WikidataCountryIngestor] Found ${bindings.length} countries`);
+  this.logger.info(`[WikidataCountryIngestor] Found ${bindings.length} countries${this.countryFilter ? ` (filtered from ${originalBindingCount})` : ''}`);
       this._emitProgress(emitProgress, { 
         phase: 'discovery-complete', 
         message: `Discovered ${bindings.length} countries`,
@@ -218,18 +298,18 @@ ${limitClause}`.trim();
       
       const entities = await this._fetchEntities(qids, emitProgress);
       
-      console.error('[WikidataCountryIngestor] Entity fetch returned. Type:', typeof entities);
-      console.error('[WikidataCountryIngestor] Has .entities property:', !!entities?.entities);
-      console.error('[WikidataCountryIngestor] Entity keys:', Object.keys(entities || {}).slice(0, 10));
+  this._debugStderr('[WikidataCountryIngestor] Entity fetch returned. Type:', typeof entities);
+  this._debugStderr('[WikidataCountryIngestor] Has .entities property:', !!entities?.entities);
+  this._debugStderr('[WikidataCountryIngestor] Entity keys:', Object.keys(entities || {}).slice(0, 10));
       if (entities?.error) {
-        console.error('[WikidataCountryIngestor] API ERROR:', JSON.stringify(entities.error));
+  this._debugStderr('[WikidataCountryIngestor] API ERROR:', JSON.stringify(entities.error));
       }
       if (entities?.entities) {
-        console.error('[WikidataCountryIngestor] entities.entities keys:', Object.keys(entities.entities).slice(0, 5));
+  this._debugStderr('[WikidataCountryIngestor] entities.entities keys:', Object.keys(entities.entities).slice(0, 5));
       } else {
-        console.error('[WikidataCountryIngestor] CRITICAL: No .entities property in response!');
+  this._debugStderr('[WikidataCountryIngestor] CRITICAL: No .entities property in response!');
       }
-      console.error('[WikidataCountryIngestor] Sample entity for', qids[0], ':', JSON.stringify(entities?.entities?.[qids[0]] || null)?.substring(0, 200));
+  this._debugStderr('[WikidataCountryIngestor] Sample entity for', qids[0], ':', JSON.stringify(entities?.entities?.[qids[0]] || null)?.substring(0, 200));
       
       // Defensive: Validate entity fetch response
       if (!entities || typeof entities !== 'object') {
@@ -321,7 +401,7 @@ ${limitClause}`.trim();
         durationMs: finishedAt - startedAt
       };
 
-      this.logger.info('[WikidataCountryIngestor] Completed:', summary);
+      this.logger.info(`[WikidataCountryIngestor] Completed: ${JSON.stringify(summary)}`);
       this._emitProgress(emitProgress, { phase: 'complete', summary });
 
       return summary;
@@ -351,7 +431,7 @@ ${limitClause}`.trim();
     // Skip entities without valid 2-letter ISO codes (historical territories, special regions, etc.)
     if (!iso2 || iso2.length !== 2) {
       const label = entity.labels?.en?.value || entity.labels?.[Object.keys(entity.labels)[0]]?.value || qid;
-      console.error(`[WikidataCountryIngestor] Skipping ${qid} (${label}): missing or invalid ISO-3166 alpha-2 code (got: ${iso2 || 'null'})`);
+  this._debugStderr(`[WikidataCountryIngestor] Skipping ${qid} (${label}): missing or invalid ISO-3166 alpha-2 code (got: ${iso2 || 'null'})`);
       return false;
     }
     const population = this._extractQuantityClaim(claims.P1082);
@@ -411,6 +491,8 @@ ${limitClause}`.trim();
       attributes.push({ attr: 'geonames.id', value: geonamesId, metadata: { property: 'P1566' } });
     }
 
+    const wikidataAdminLevel = 2;
+
     const placeData = {
       wikidataQid: qid,
       kind: 'country',
@@ -424,7 +506,7 @@ ${limitClause}`.trim();
       extra: null,
       area,
       gdpUsd: gdp,
-      adminLevel: 2,
+      wikidataAdminLevel,
       wikidataProps,
       crawlDepth: 0,
       priorityScore: 1000,
@@ -438,7 +520,7 @@ ${limitClause}`.trim();
       throw new Error(`_upsertCountry: attributes for ${qid} must be an array`);
     }
 
-    const placeId = ingestQueries.upsertPlace(this.db, this.stmts, placeData);
+    const { placeId } = ingestQueries.upsertPlace(this.db, this.stmts, placeData);
     
     // Defensive: Validate upsert returned a valid place ID
     if (!placeId || (typeof placeId !== 'number' && typeof placeId !== 'string')) {
@@ -526,6 +608,156 @@ ${limitClause}`.trim();
     return names;
   }
 
+  _buildCountryFilter(specifiers) {
+    const normalizedSpecs = [];
+    const qids = new Set();
+    const qidKeys = new Map();
+    const isoCodes = new Set();
+    const isoKeys = new Map();
+    const namesLower = new Set();
+    const nameKeys = new Map();
+    const normalizedNames = new Set();
+    const normalizedNameKeys = new Map();
+
+    if (Array.isArray(specifiers)) {
+      for (const spec of specifiers) {
+        if (!spec || typeof spec !== 'object') continue;
+
+        if (spec.qid) {
+          const value = String(spec.qid).toUpperCase();
+          const key = `qid:${value}`;
+          if (!qidKeys.has(value)) {
+            qids.add(value);
+            qidKeys.set(value, key);
+            normalizedSpecs.push({ type: 'qid', value, key, raw: spec.raw || spec.qid });
+          }
+          continue;
+        }
+
+        if (spec.code) {
+          const value = String(spec.code).toUpperCase();
+          const key = `code:${value}`;
+          if (!isoKeys.has(value)) {
+            isoCodes.add(value);
+            isoKeys.set(value, key);
+            normalizedSpecs.push({ type: 'code', value, key, raw: spec.raw || spec.code });
+          }
+          continue;
+        }
+
+        const rawName = spec.name || spec.raw;
+        const lowerName = spec.nameLower || (rawName ? String(rawName).toLowerCase() : null);
+        if (lowerName) {
+          const key = `name:${lowerName}`;
+          if (!nameKeys.has(lowerName)) {
+            namesLower.add(lowerName);
+            nameKeys.set(lowerName, key);
+            normalizedSpecs.push({ type: 'name', value: lowerName, key, raw: rawName || lowerName });
+          }
+          const normalizedName = this._normalizeName(rawName || lowerName);
+          if (normalizedName && !normalizedNameKeys.has(normalizedName)) {
+            normalizedNames.add(normalizedName);
+            normalizedNameKeys.set(normalizedName, key);
+          }
+        }
+      }
+    }
+
+    return {
+      specifiers: normalizedSpecs,
+      qids,
+      isoCodes,
+      namesLower,
+      normalizedNames,
+      qidKeys,
+      isoKeys,
+      nameKeys,
+      normalizedNameKeys
+    };
+  }
+
+  _filterBindingsByCountry(bindings) {
+    if (!Array.isArray(bindings)) {
+      return { filteredBindings: [], matchDetails: [], unmatchedSpecifiers: this.countryFilter?.specifiers || [] };
+    }
+    if (!this.countryFilter) {
+      return { filteredBindings: [...bindings], matchDetails: [], unmatchedSpecifiers: [] };
+    }
+
+    const filteredBindings = [];
+    const matchDetails = [];
+    const matchedKeys = new Set();
+
+    for (const binding of bindings) {
+      const match = this._bindingMatchesCountryFilter(binding, this.countryFilter);
+      if (match) {
+        filteredBindings.push(binding);
+        matchDetails.push({
+          specKey: match.specKey,
+          matchedBy: match.matchedBy,
+          qid: match.qid || null,
+          iso2: match.iso2 || null,
+          label: match.label || null,
+          normalizedLabel: match.normalizedLabel || null,
+          countryValue: binding?.country?.value || null
+        });
+        if (match.specKey) {
+          matchedKeys.add(match.specKey);
+        }
+      }
+    }
+
+    const unmatchedSpecifiers = (this.countryFilter.specifiers || []).filter(spec => !matchedKeys.has(spec.key));
+    return { filteredBindings, matchDetails, unmatchedSpecifiers };
+  }
+
+  _bindingMatchesCountryFilter(binding, filter) {
+    if (!binding || !filter) return null;
+
+    const qid = this._extractQid(binding?.country?.value);
+    if (qid && filter.qids.has(qid)) {
+      return {
+        matchedBy: 'qid',
+        qid,
+        specKey: filter.qidKeys.get(qid) || `qid:${qid}`
+      };
+    }
+
+    const iso2Raw = binding?.iso2?.value;
+    const iso2 = iso2Raw ? String(iso2Raw).trim().toUpperCase() : null;
+    if (iso2 && filter.isoCodes.has(iso2)) {
+      return {
+        matchedBy: 'iso2',
+        iso2,
+        specKey: filter.isoKeys.get(iso2) || `code:${iso2}`
+      };
+    }
+
+    const labelRaw = binding?.countryLabel?.value ? String(binding.countryLabel.value).trim() : '';
+    if (labelRaw) {
+      const lowerLabel = labelRaw.toLowerCase();
+      if (filter.namesLower.has(lowerLabel)) {
+        return {
+          matchedBy: 'name',
+          label: labelRaw,
+          normalizedLabel: lowerLabel,
+          specKey: filter.nameKeys.get(lowerLabel) || `name:${lowerLabel}`
+        };
+      }
+      const normalizedLabel = this._normalizeName(labelRaw);
+      if (normalizedLabel && filter.normalizedNames.has(normalizedLabel)) {
+        return {
+          matchedBy: 'name-normalized',
+          label: labelRaw,
+          normalizedLabel,
+          specKey: filter.normalizedNameKeys.get(normalizedLabel) || `name:${normalizedLabel}`
+        };
+      }
+    }
+
+    return null;
+  }
+
   _normalizeName(text) {
     if (!text) return null;
     return text.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase();
@@ -586,26 +818,25 @@ ${limitClause}`.trim();
   }
 
   async _fetchSparql(query, emitProgress = null) {
-    console.error('[WikidataCountryIngestor] _fetchSparql CALLED');
+  this._debugStderr('[WikidataCountryIngestor] _fetchSparql CALLED');
     const queryStartTime = Date.now();
     const cacheKey = crypto.createHash('sha1').update(query).digest('hex');
     const cachePath = path.join(this.cacheDir, `${cacheKey}.json`);
-    console.error('[WikidataCountryIngestor] Cache key:', cacheKey.substring(0, 12), 'Path:', cachePath);
+  this._debugStderr('[WikidataCountryIngestor] Cache key:', cacheKey.substring(0, 12), 'Path:', cachePath);
 
     // Try cache first
     if (this.useCache) {
-      console.error('[WikidataCountryIngestor] Checking cache at:', cachePath);
+  this._debugStderr('[WikidataCountryIngestor] Checking cache at:', cachePath);
       try {
         if (fs.existsSync(cachePath)) {
-          console.error('[WikidataCountryIngestor] CACHE HIT!');
           const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-          console.error('[WikidataCountryIngestor] Cached data has', cached?.results?.bindings?.length, 'bindings');
+          const resultCount = cached?.results?.bindings?.length || 0;
           const cacheReadTime = Date.now() - queryStartTime;
-          this.logger.info('[WikidataCountryIngestor] SPARQL cache hit');
+          console.log(chalk.cyan('⚡'), `SPARQL cache hit (${resultCount} results, ${cacheReadTime}ms)`);
           this._emitTelemetry(emitProgress, 'performance', 'SPARQL cache hit', { 
             cacheKey,
             cacheReadTimeMs: cacheReadTime,
-            resultCount: cached?.results?.bindings?.length || 0
+            resultCount
           });
           return cached;
         }
@@ -616,11 +847,9 @@ ${limitClause}`.trim();
     }
 
     // Fetch from Wikidata with retries
-    console.error('[WikidataCountryIngestor] CACHE MISS - Making network request');
     const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`;
     const networkStartTime = Date.now();
-    console.error('[WikidataCountryIngestor] URL:', url.substring(0, 150));
-    this.logger.info('[WikidataCountryIngestor] Fetching SPARQL:', url.substring(0, 100) + '...');
+    console.log(chalk.yellow('⏳'), 'SPARQL cache miss - querying Wikidata...');
     
     this._emitTelemetry(emitProgress, 'query-start', 'Querying Wikidata SPARQL endpoint', {
       queryType: 'sparql',
@@ -700,6 +929,7 @@ ${limitClause}`.trim();
             try {
               fs.writeFileSync(cachePath, JSON.stringify(data));
               const cacheWriteDuration = Date.now() - cacheWriteStart;
+              console.log(chalk.green('✓'), `Cached SPARQL result (${(JSON.stringify(data).length / 1024).toFixed(1)}KB, ${cacheWriteDuration}ms)`);
               
               this._emitTelemetry(emitProgress, 'performance', 'SPARQL result cached', {
                 cacheKey: cacheKey.substring(0, 8),
@@ -794,7 +1024,7 @@ ${limitClause}`.trim();
       batches.push(qids.slice(i, i + BATCH_SIZE));
     }
     
-    console.error(`[WikidataCountryIngestor] Split ${qids.length} QIDs into ${batches.length} batches`);
+  this._debugStderr(`[WikidataCountryIngestor] Split ${qids.length} QIDs into ${batches.length} batches`);
     
     this._emitTelemetry(emitProgress, 'info', `Starting entity fetch: ${batches.length} batches`, {
       totalQids: qids.length,
@@ -807,7 +1037,7 @@ ${limitClause}`.trim();
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       const elapsed = Math.round((Date.now() - fetchStartTime) / 1000);
-      console.error(`[WikidataCountryIngestor] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} entities, ${elapsed}s elapsed)`);
+  this._debugStderr(`[WikidataCountryIngestor] Fetching batch ${batchIndex + 1}/${batches.length} (${batch.length} entities, ${elapsed}s elapsed)`);
       
       this._emitProgress(emitProgress, {
         phase: 'fetching-entities',
@@ -824,7 +1054,7 @@ ${limitClause}`.trim();
           Object.assign(allEntities, batchData.entities);
         }
       } catch (error) {
-        console.error(`[WikidataCountryIngestor] Batch ${batchIndex + 1} failed:`, error.message);
+  this._debugStderr(`[WikidataCountryIngestor] Batch ${batchIndex + 1} failed:`, error.message);
         this._emitTelemetry(emitProgress, 'error', `Failed to fetch entity batch ${batchIndex + 1}/${batches.length}`, {
           batchIndex: batchIndex + 1,
           totalBatches: batches.length,
@@ -843,7 +1073,7 @@ ${limitClause}`.trim();
     }
     
     const fetchDurationMs = Date.now() - fetchStartTime;
-    console.error(`[WikidataCountryIngestor] Completed fetching ${Object.keys(allEntities).length}/${qids.length} entities in ${fetchDurationMs}ms`);
+  this._debugStderr(`[WikidataCountryIngestor] Completed fetching ${Object.keys(allEntities).length}/${qids.length} entities in ${fetchDurationMs}ms`);
     
     return { entities: allEntities };
   }
@@ -865,6 +1095,32 @@ ${limitClause}`.trim();
     const props = 'labels|aliases|descriptions|claims|sitelinks';
     const languages = 'en|fr|de|es|ru|zh|ar|pt|it|ja|ko';
     const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${encodeURIComponent(ids)}&props=${props}&languages=${languages}&format=json`;
+    
+    // Check cache first (cache by sorted QIDs to handle same entities in different order)
+    const cacheKey = crypto.createHash('sha1').update(qids.sort().join('|')).digest('hex');
+    const cachePath = path.join(this.cacheDir, `entities-${cacheKey}.json`);
+    
+    if (this.useCache) {
+      try {
+        if (fs.existsSync(cachePath)) {
+          const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+          const entityCount = Object.keys(cached?.entities || {}).length;
+          const cacheReadTime = Date.now() - batchStartTime;
+          console.log(chalk.cyan('⚡'), `Entity batch cache hit (${entityCount} entities, ${cacheReadTime}ms)`);
+          this._emitTelemetry(emitProgress, 'performance', 'Entity batch cache hit', {
+            cacheKey: cacheKey.substring(0, 8),
+            cacheReadTimeMs: cacheReadTime,
+            entityCount,
+            requestedCount: qids.length
+          });
+          return cached;
+        }
+      } catch (err) {
+        this.logger.warn('[WikidataCountryIngestor] Entity batch cache read error:', err.message);
+      }
+    }
+    
+    console.log(chalk.yellow('⏳'), `Entity batch cache miss - querying Wikidata API (${qids.length} entities)...`);
     
     this._emitTelemetry(emitProgress, 'query-start', 'Fetching entity batch from Wikidata API', {
       queryType: 'wikidata-api',
@@ -938,6 +1194,17 @@ ${limitClause}`.trim();
         entitiesPerSecond: Math.round((entityCount / fetchDurationMs) * 1000),
         bytesPerEntity: entityCount > 0 ? Math.round(responseSizeBytes / entityCount) : 0
       });
+
+      // Cache the result
+      if (this.useCache) {
+        try {
+          fs.writeFileSync(cachePath, JSON.stringify(data));
+          const sizeKB = (responseSizeBytes / 1024).toFixed(1);
+          console.log(chalk.green('✓'), `Cached entity batch (${sizeKB}KB, ${entityCount} entities)`);
+        } catch (err) {
+          this.logger.warn('[WikidataCountryIngestor] Entity batch cache write error:', err.message);
+        }
+      }
 
       return data;
     } catch (error) {

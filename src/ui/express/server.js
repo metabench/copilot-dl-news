@@ -49,6 +49,9 @@ const {
   EnhancedDbAdapter
 } = require('./services/coverageAdapter');
 const {
+  CountryHubGapAnalyzer
+} = require('../../services/CountryHubGapAnalyzer');
+const {
   createJobDetailRouter
 } = require('./routes/ssr.job');
 const {
@@ -309,10 +312,26 @@ function createApp(options = {}) {
     ? options.crawlerManager.baseSummaryFn || ((jobs) => originalSummaryFn(jobs))
     : (jobs) => originalSummaryFn(jobs);
 
+  // Load intelligent crawl feature flags from config
+  const config = configManager.getConfig();
+  const intelligentCrawlFeatures = {
+    // Phase 1: Cost-Aware Priority + Pattern Discovery
+    costAwarePriority: config?.features?.costAwarePriority ?? false,
+    patternDiscovery: config?.features?.patternDiscovery ?? false,
+    // Phase 2: Adaptive Systems
+    adaptiveBranching: config?.features?.adaptiveBranching ?? false,
+    realTimePlanAdjustment: config?.features?.realTimePlanAdjustment ?? false,
+    // Phase 3: Dynamic Optimization
+    dynamicReplanning: config?.features?.dynamicReplanning ?? false,
+    crossDomainSharing: config?.features?.crossDomainSharing ?? false
+  };
+
   const crawlerManager = options.crawlerManager instanceof IntelligentCrawlerManager
     ? options.crawlerManager
     : new IntelligentCrawlerManager({
-        baseSummaryFn
+        baseSummaryFn,
+        features: intelligentCrawlFeatures,
+        logger: verbose ? console : { error: console.error, warn: () => {}, log: () => {} }
       });
 
   let jobRegistry;
@@ -436,9 +455,16 @@ function createApp(options = {}) {
   const getDbRO = getDb;
 
   let plannerDbAdapter = null;
+  let countryHubGapAnalyzer = null;
   try {
     // Planner uses instrumented DB for cost estimation (telemetry tracked)
     plannerDbAdapter = getDbRO();
+    
+    // Create CountryHubGapAnalyzer for gazetteer-aware planning
+    countryHubGapAnalyzer = new CountryHubGapAnalyzer({
+      db: plannerDbAdapter,
+      logger: plannerLogger
+    });
   } catch (err) {
     if (verbose) {
       console.warn('[server] Failed to acquire database for advanced planning suite:', err?.message || err);
@@ -451,10 +477,14 @@ function createApp(options = {}) {
       logger: plannerLogger,
       emitEvent: (event, payload) => broadcast(event, payload),
       usePlannerHost: false,
-      dbAdapter: plannerDbAdapter
+      dbAdapter: plannerDbAdapter,
+      countryHubGapService: countryHubGapAnalyzer
     });
   } else if (plannerDbAdapter) {
     asyncPlanRunner.dbAdapter = plannerDbAdapter;
+    if (countryHubGapAnalyzer) {
+      asyncPlanRunner.countryHubGapService = countryHubGapAnalyzer;
+    }
   }
 
   const applyAdvancedPlanningFeature = (configSnapshot) => {
@@ -944,7 +974,8 @@ function createApp(options = {}) {
   // Crawls SSR page (list of active/completed crawls)
   app.use(createCrawlsSsrRouter({
     jobRegistry,
-    renderNav
+    renderNav,
+    getDbRW
   }));
   // Mount job detail SSR router
   app.use(createJobDetailRouter({

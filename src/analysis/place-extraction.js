@@ -1,10 +1,23 @@
 const { URL } = require('url');
 
-const DEFAULT_TOPIC_TOKENS = new Set([
-  'news', 'world', 'politics', 'sport', 'sports', 'culture', 'business', 'money',
-  'travel', 'opinion', 'technology', 'tech', 'science', 'health', 'environment',
-  'lifestyle', 'education', 'finance', 'economy', 'markets', 'analysis'
-]);
+// Default topic tokens - loaded from database on first use
+let DEFAULT_TOPIC_TOKENS = null;
+
+function getDefaultTopicTokens(db) {
+  if (!DEFAULT_TOPIC_TOKENS && db) {
+    const { getTopicTermsForLanguage } = require('../db/sqlite/queries/topicKeywords');
+    DEFAULT_TOPIC_TOKENS = getTopicTermsForLanguage(db, 'en');
+  }
+  // Fallback to minimal set if no database provided
+  if (!DEFAULT_TOPIC_TOKENS) {
+    DEFAULT_TOPIC_TOKENS = new Set([
+      'news', 'world', 'politics', 'sport', 'sports', 'culture', 'business', 'money',
+      'travel', 'opinion', 'technology', 'tech', 'science', 'health', 'environment',
+      'lifestyle', 'education', 'finance', 'economy', 'markets', 'analysis'
+    ]);
+  }
+  return DEFAULT_TOPIC_TOKENS;
+}
 
 const COUNTRY_CODE_SYNONYMS = {
   US: ['usa', 'u.s', 'u.s.', 'u-s', 'america', 'american', 'united-states'],
@@ -228,7 +241,7 @@ function buildGazetteerMatchers(db, options = {}) {
     nameMap: new Map(),
     slugMap: new Map(),
     placeIndex: new Map(),
-    topicTokens: options.topicTokens instanceof Set ? options.topicTokens : DEFAULT_TOPIC_TOKENS
+    topicTokens: options.topicTokens instanceof Set ? options.topicTokens : getDefaultTopicTokens(db)
   };
 
   const TEST_FAST = process.env.TEST_FAST === '1' || process.env.TEST_FAST === 'true';

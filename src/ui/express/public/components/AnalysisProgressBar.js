@@ -53,6 +53,133 @@ function calculateETA(progress, elapsedMs) {
   return Math.ceil(remaining / rate);
 }
 
+function clampPercentage(value) {
+  if (!Number.isFinite(value)) return null;
+  if (value < 0) return 0;
+  if (value > 100) return 100;
+  return Math.round(value);
+}
+
+function pickNumber(source, fields) {
+  if (!source || typeof source !== 'object') return null;
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(source, field)) {
+      const raw = source[field];
+      const num = Number(raw);
+      if (Number.isFinite(num)) return num;
+    }
+  }
+  return null;
+}
+
+const SUB_PROGRESS_KEYS = [
+  'subProgress',
+  'subprogress',
+  'subTask',
+  'subtask',
+  'sub_task',
+  'secondaryProgress',
+  'secondary',
+  'childProgress',
+  'nestedProgress'
+];
+
+function findSubProgressCandidate(source) {
+  if (!source || typeof source !== 'object') {
+    return { found: false, value: null };
+  }
+  for (const key of SUB_PROGRESS_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      return { found: true, value: source[key] };
+    }
+  }
+  return { found: false, value: null };
+}
+
+function normalizeSubProgress(source) {
+  if (!source || typeof source !== 'object') return null;
+  const composite = source.progress && typeof source.progress === 'object'
+    ? { ...source, ...source.progress }
+    : { ...source };
+
+  const normalized = {};
+
+  const label = composite.label
+    ?? composite.name
+    ?? composite.stageLabel
+    ?? composite.stage
+    ?? composite.summary
+    ?? composite.message
+    ?? composite.title;
+  if (label != null) {
+    normalized.label = String(label);
+  }
+
+  const processed = pickNumber(composite, ['processed', 'current', 'done', 'completed', 'count', 'value']);
+  if (processed != null) {
+    normalized.processed = processed;
+  }
+
+  const updated = pickNumber(composite, ['updated', 'delta']);
+  if (updated != null) {
+    normalized.updated = updated;
+  }
+
+  const total = pickNumber(composite, ['total', 'expected', 'max', 'goal', 'target']);
+  if (total != null) {
+    normalized.total = total;
+  }
+
+  let percentage = pickNumber(composite, ['percentage', 'percent', 'pct']);
+  if (percentage != null) {
+    percentage = clampPercentage(percentage);
+  }
+  if (percentage == null) {
+    const fraction = pickNumber(composite, ['fraction']);
+    if (fraction != null) {
+      percentage = clampPercentage(fraction * 100);
+    }
+  }
+  if (percentage == null && Number.isFinite(processed) && Number.isFinite(total) && total > 0) {
+    percentage = clampPercentage((processed / total) * 100);
+  }
+  if (percentage != null) {
+    normalized.percentage = percentage;
+  }
+
+  if (composite.status != null) {
+    normalized.status = String(composite.status);
+  }
+  if (composite.summary != null && normalized.label == null) {
+    normalized.label = String(composite.summary);
+  }
+  if (composite.message != null) {
+    normalized.message = String(composite.message);
+  }
+
+  if (Object.keys(normalized).length === 0) {
+    return null;
+  }
+  return normalized;
+}
+
+function resolveSubProgress(progress) {
+  if (!progress || typeof progress !== 'object') {
+    return { found: false, normalized: null };
+  }
+  const direct = findSubProgressCandidate(progress);
+  if (direct.found) {
+    return { found: true, normalized: normalizeSubProgress(direct.value) };
+  }
+  if (progress.progress && typeof progress.progress === 'object') {
+    const nested = findSubProgressCandidate(progress.progress);
+    if (nested.found) {
+      return { found: true, normalized: normalizeSubProgress(nested.value) };
+    }
+  }
+  return { found: false, normalized: null };
+}
+
 /**
  * Create and render analysis progress bar
  * @param {HTMLElement} container - Container element
@@ -70,6 +197,7 @@ function createAnalysisProgressBar(container, options = {}) {
   // State
   let currentProgress = null;
   let currentStatus = 'running';
+  let currentSubProgress = null;
   let updateTimer = null;
   
   // Create elements
@@ -95,6 +223,15 @@ function createAnalysisProgressBar(container, options = {}) {
         <div class="analysis-progress-bar__bar-fill" style="width: 0%"></div>
       </div>
       <div class="analysis-progress-bar__percentage">0%</div>
+    </div>
+    <div class="analysis-progress-bar__subtask" style="display: none;">
+      <div class="analysis-progress-bar__subtask-header">
+        <span class="analysis-progress-bar__subtask-label"></span>
+        <span class="analysis-progress-bar__subtask-percentage">0%</span>
+      </div>
+      <div class="analysis-progress-bar__subtask-bar">
+        <div class="analysis-progress-bar__subtask-fill" style="width: 0%"></div>
+      </div>
     </div>
     
     <div class="analysis-progress-bar__metrics">
@@ -135,6 +272,12 @@ function createAnalysisProgressBar(container, options = {}) {
     total: wrapper.querySelector('[data-metric="total"]'),
     elapsed: wrapper.querySelector('[data-metric="elapsed"]'),
     eta: wrapper.querySelector('[data-metric="eta"]')
+  };
+  const subtaskEls = {
+    container: wrapper.querySelector('.analysis-progress-bar__subtask'),
+    label: wrapper.querySelector('.analysis-progress-bar__subtask-label'),
+    percentage: wrapper.querySelector('.analysis-progress-bar__subtask-percentage'),
+    fill: wrapper.querySelector('.analysis-progress-bar__subtask-fill')
   };
   
   // Cancel button handler
@@ -200,6 +343,60 @@ function createAnalysisProgressBar(container, options = {}) {
                             currentStatus;
       statusEl.setAttribute('data-status', currentStatus);
     }
+
+    if (subtaskEls.container && subtaskEls.label && subtaskEls.percentage && subtaskEls.fill) {
+      if (currentSubProgress) {
+        subtaskEls.container.style.display = 'flex';
+
+        const labelParts = [];
+        if (currentSubProgress.label) {
+          labelParts.push(String(currentSubProgress.label));
+        }
+        if (currentSubProgress.status) {
+          labelParts.push(String(currentSubProgress.status));
+        }
+        subtaskEls.label.textContent = labelParts.length ? labelParts.join(' · ') : 'Sub-task';
+        subtaskEls.label.title = currentSubProgress.message || '';
+
+        let pct = Number.isFinite(currentSubProgress.percentage) ? clampPercentage(currentSubProgress.percentage) : null;
+        const processed = Number.isFinite(currentSubProgress.processed) ? currentSubProgress.processed : null;
+        const total = Number.isFinite(currentSubProgress.total) ? currentSubProgress.total : null;
+        const summaryText = currentSubProgress.message || null;
+
+        if (pct == null && processed != null && total != null && total > 0) {
+          pct = clampPercentage((processed / total) * 100);
+        }
+
+        subtaskEls.fill.classList.remove('analysis-progress-bar__subtask-fill--indeterminate');
+
+        if (pct != null) {
+          subtaskEls.fill.style.width = `${pct}%`;
+          subtaskEls.percentage.textContent = `${pct}%`;
+        } else if (processed != null && total != null && total > 0) {
+          const ratioPct = clampPercentage((processed / total) * 100) ?? 0;
+          subtaskEls.fill.style.width = `${ratioPct}%`;
+          subtaskEls.percentage.textContent = `${formatNumber(processed)} / ${formatNumber(total)}`;
+        } else if (processed != null) {
+          subtaskEls.fill.style.width = '100%';
+          subtaskEls.fill.classList.add('analysis-progress-bar__subtask-fill--indeterminate');
+          subtaskEls.percentage.textContent = formatNumber(processed);
+        } else if (summaryText) {
+          subtaskEls.fill.style.width = '100%';
+          subtaskEls.fill.classList.add('analysis-progress-bar__subtask-fill--indeterminate');
+          subtaskEls.percentage.textContent = summaryText;
+        } else {
+          subtaskEls.fill.style.width = '100%';
+          subtaskEls.fill.classList.add('analysis-progress-bar__subtask-fill--indeterminate');
+          subtaskEls.percentage.textContent = 'Processing…';
+        }
+      } else {
+        subtaskEls.container.style.display = 'none';
+        subtaskEls.label.textContent = '';
+        subtaskEls.percentage.textContent = '0%';
+        subtaskEls.fill.style.width = '0%';
+        subtaskEls.fill.classList.remove('analysis-progress-bar__subtask-fill--indeterminate');
+      }
+    }
   }
   
   /**
@@ -237,7 +434,14 @@ function createAnalysisProgressBar(container, options = {}) {
      */
     updateProgress(progress) {
       if (!progress) return;
-      currentProgress = { ...progress };
+      currentProgress = { ...currentProgress, ...progress };
+
+      const subCandidate = resolveSubProgress(progress);
+      if (subCandidate.found) {
+        currentSubProgress = subCandidate.normalized
+          ? { ...currentSubProgress, ...subCandidate.normalized }
+          : null;
+      }
       render();
     },
     
@@ -271,6 +475,22 @@ function createAnalysisProgressBar(container, options = {}) {
      */
     getElement() {
       return wrapper;
+    },
+
+    /**
+     * Update sub-task progress independently
+     * @param {Object|null} subProgress
+     */
+    updateSubProgress(subProgress) {
+      if (subProgress === undefined) return;
+      if (subProgress === null) {
+        currentSubProgress = null;
+        render();
+        return;
+      }
+      const normalized = normalizeSubProgress(subProgress);
+      currentSubProgress = normalized ? { ...currentSubProgress, ...normalized } : null;
+      render();
     }
   };
 }

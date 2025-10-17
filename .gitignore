@@ -34,6 +34,9 @@ build/
 # Data directory (crawled content)
 data/
 
+# Test logs directory (can grow to thousands of files)
+testlogs/
+
 # UI review artefacts
 screenshots/
 
@@ -48,3 +51,5 @@ src/ui/express/public/assets/**/*.js
 *.db-shm
 *.db-wal
 *.db
+test-failure-summary.json
+test-timing-report.json

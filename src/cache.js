@@ -19,10 +19,25 @@ class ArticleCache {
     if (this.db) {
       try {
         const row = (this.db.getArticleByUrlOrCanonical ? this.db.getArticleByUrlOrCanonical(norm) : this.db.getArticleByUrl(norm));
-        if (row && row.html && row.crawled_at) {
-      const val = { html: row.html, crawledAt: row.crawled_at, source: 'db' };
-      this._memo.set(norm, val);
-      return val;
+        if (row) {
+          // Return cached content if available
+          if (row.html && row.crawled_at) {
+            const val = { html: row.html, crawledAt: row.crawled_at, source: 'db' };
+            this._memo.set(norm, val);
+            return val;
+          }
+          
+          // Return special marker for known 404s (prevents wasteful re-fetches)
+          if (row.http_status === 404 && row.fetched_at) {
+            const val = { 
+              html: null, 
+              crawledAt: row.fetched_at, 
+              source: 'db-404',
+              httpStatus: 404 
+            };
+            this._memo.set(norm, val);
+            return val;
+          }
         }
       } catch (_) {}
     }

@@ -19,7 +19,8 @@ npm test
 # This now automatically:
 # 1. Shows timing on screen during execution
 # 2. Writes timestamped log file: test-timing-YYYY-MM-DDTHH-MM-SS-sssZ.log
-# 3. Writes JSON report: test-timing-report.json
+# 3. Updates failure summary: test-failure-summary.json
+# 4. Enables quick status via: node tests/get-test-summary.js --compact
 ```
 
 **What to Look For**:
@@ -34,8 +35,8 @@ npm test
 # View the latest log file
 ls test-timing-*.log | Sort-Object -Descending | Select-Object -First 1 | Get-Content
 
-# Parse JSON for programmatic analysis
-node -e "const r=require('./test-timing-report.json');console.log('Total:',r.totalTime+'s','Avg:',r.avgTestTime.toFixed(2)+'s','Slow:',r.slowTests,'Very Slow:',r.verySlowTests)"
+# Programmatic summary (JSON)
+node tests/get-test-summary.js --json
 ```
 
 **Key Questions**:
@@ -346,8 +347,8 @@ npm test
 # View latest timing log
 Get-Content (Get-ChildItem test-timing-*.log | Sort-Object -Descending | Select-Object -First 1).Name
 
-# Parse JSON report
-node -e "const r=require('./test-timing-report.json');r.testResults.slice(0,10).forEach((t,i)=>console.log(`${i+1}. ${t.runtime.toFixed(2)}s - ${t.filePath}`))"
+# Show slowest tests (>5s by default)
+node tests/get-slow-tests.js
 ```
 
 ### Node.js Profiling

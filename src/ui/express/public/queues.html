@@ -412,11 +412,27 @@
         renderPlannerEvents();
       }
 
-      async function loadJobs() {
+      // Cache for job list to avoid redundant API calls
+      let jobsCache = null;
+      let jobsCacheTime = 0;
+      const JOBS_CACHE_TTL = 5000; // 5 seconds
+
+      async function loadJobs(forceRefresh = false) {
+        // Return cached data if still valid
+        const now = Date.now();
+        if (!forceRefresh && jobsCache && (now - jobsCacheTime) < JOBS_CACHE_TTL) {
+          return jobsCache;
+        }
+
         try {
-          const res = await fetch('/api/queues');
+          // Limit to 50 most recent jobs (sufficient for dropdown)
+          const res = await fetch('/api/queues?limit=50');
           const data = await res.json();
           const items = Array.isArray(data.items) ? data.items : [];
+          
+          // Cache the result
+          jobsCache = items;
+          jobsCacheTime = now;
           jobSelect.innerHTML = '';
           const opt0 = document.createElement('option');
           opt0.value = '';
@@ -433,7 +449,10 @@
             option.dataset.status = j.status || '';
             jobSelect.appendChild(option);
           }
-        } catch (_) {}
+          return items;
+        } catch (_) {
+          return [];
+        }
       }
 
       function renderPersistMeta(opt) {
@@ -452,7 +471,8 @@
       async function loadEvents(jobId) {
         if (!jobId) return;
         try {
-          const res = await fetch(`/api/queues/${encodeURIComponent(jobId)}/events?limit=200`);
+          // Limit to 100 events (sufficient for most debugging, reduces payload)
+          const res = await fetch(`/api/queues/${encodeURIComponent(jobId)}/events?limit=100`);
           if (!res.ok) return;
           const data = await res.json();
           tbody.innerHTML = '';
@@ -546,9 +566,18 @@
         renderPlannerEvents();
       });
 
-      loadBtn.addEventListener('click', () => {
+      loadBtn.addEventListener('click', async () => {
         const id = jobSelect.value;
-        if (id) loadEvents(id);
+        if (id) {
+          loadBtn.disabled = true;
+          loadBtn.textContent = 'Loading...';
+          try {
+            await loadEvents(id);
+          } finally {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load';
+          }
+        }
       });
       jobSelect.addEventListener('change', () => {
         const opt = jobSelect.options[jobSelect.selectedIndex];

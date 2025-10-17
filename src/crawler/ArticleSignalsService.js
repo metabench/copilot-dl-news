@@ -1,3 +1,5 @@
+const { extractSchemaSignals } = require('./schemaSignals');
+
 class ArticleSignalsService {
   constructor({ baseUrl = null, logger = console } = {}) {
     this.baseUrl = baseUrl;
@@ -76,7 +78,8 @@ class ArticleSignalsService {
         h2: null,
         h3: null,
         a: null,
-        p: null
+        p: null,
+        schema: null
       };
     }
 
@@ -85,6 +88,7 @@ class ArticleSignalsService {
     let h3 = null;
     let aCount = null;
     let pCount = null;
+    let schema = null;
 
     try {
       const bodyText = (($('body').text() || '').replace(/\s+/g, ' ').trim());
@@ -99,6 +103,11 @@ class ArticleSignalsService {
       h3 = $('h3').length;
       aCount = $('a').length;
       pCount = $('p').length;
+      try {
+        schema = extractSchemaSignals({ $, html: html || '' });
+      } catch (schemaError) {
+        this._warn('computeContentSignals schema extraction failed', schemaError);
+      }
     } catch (error) {
       this._warn('computeContentSignals failed', error);
     }
@@ -108,7 +117,8 @@ class ArticleSignalsService {
       h2,
       h3,
       a: aCount,
-      p: pCount
+      p: pCount,
+      schema
     };
   }
 
@@ -140,6 +150,29 @@ class ArticleSignalsService {
       if (cs.linkDensity < 0.08 && (cs.p || 0) >= 3) {
         votes.article++;
         consider.push('content-text-heavy');
+      }
+    }
+
+    if (cs.schema) {
+      const schemaScore = typeof cs.schema.score === 'number' ? cs.schema.score : 0;
+      if (schemaScore >= 6) {
+        votes.article += 3;
+        consider.push('schema-strong');
+      } else if (schemaScore >= 3.5) {
+        votes.article += 2;
+        consider.push('schema-medium');
+      } else if (schemaScore > 0.5) {
+        votes.article++;
+        consider.push('schema-weak');
+      }
+
+      if (cs.schema.ogTypeArticle && schemaScore < 3.5) {
+        votes.article++;
+        consider.push('og-article');
+      }
+
+      if (schemaScore >= 3.5 && votes.nav > 0) {
+        votes.nav -= 1;
       }
     }
 

@@ -236,7 +236,7 @@ Red Flags:
 - Identifies hanging tests before running them (🐌🐌🐌 611.80s indicators)
 - Shows which E2E tests passed/failed in last run
 - Categorizes tests (E2E/Puppeteer, HTTP Server, Online API)
-- JSON report available at `test-timing-report.json`
+- One-line status available via `node tests/get-test-summary.js --compact`
 
 ---
 

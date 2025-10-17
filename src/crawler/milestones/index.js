@@ -149,7 +149,8 @@ function createIdentifiedCountryHubsMilestone({
   kind = 'country-hubs-identified',
   goalId = 'goal-identify-country-hubs',
   description = 'Identify nearly every country hub available on the site',
-  maxMissingSample = 5
+  maxMissingSample = 5,
+  maxPlanActions = 25
 } = {}) {
   const buildSummary = (state) => {
     if (!state || typeof state.getHubVisitStats !== 'function') {
@@ -165,15 +166,13 @@ function createIdentifiedCountryHubsMilestone({
     const missingCount = Math.max(seeded - visited, 0);
 
     const missingSample = [];
+    const missingUrls = [];
     if (state.getSeededHubSet && typeof state.getSeededHubSet === 'function') {
       const seededSet = state.getSeededHubSet();
       if (seededSet && typeof seededSet.forEach === 'function') {
         // Convert Set to Array for reliable iteration with each()
         const seededArray = Array.from(seededSet);
         each(seededArray, (url) => {
-          if (missingSample.length >= maxMissingSample) {
-            return;
-          }
           if (!url) {
             return;
           }
@@ -196,7 +195,10 @@ function createIdentifiedCountryHubsMilestone({
           } catch (_) {
             // fall through, treat as unvisited if error
           }
-          missingSample.push(url);
+          missingUrls.push(url);
+          if (missingSample.length < maxMissingSample) {
+            missingSample.push(url);
+          }
         });
       }
     }
@@ -207,7 +209,8 @@ function createIdentifiedCountryHubsMilestone({
       visited,
       missingCount,
       ratio,
-      missingSample
+      missingSample,
+      missingUrls
     };
   };
 
@@ -219,7 +222,11 @@ function createIdentifiedCountryHubsMilestone({
       if (!summary) {
         return null;
       }
-      const { seeded, visited, missingCount, ratio, missingSample } = summary;
+      const { seeded, visited, missingCount, ratio, missingSample, missingUrls } = summary;
+      const planTargets = missingUrls.length ? missingUrls : missingSample;
+      const nextTargetUrls = Number.isFinite(maxPlanActions) && maxPlanActions > 0
+        ? planTargets.slice(0, maxPlanActions)
+        : planTargets;
       return {
         completed: seeded >= minSeeded && (missingCount === 0 || ratio >= visitRatioThreshold),
         progress: seeded > 0 ? Math.min(1, ratio) : 0,
@@ -229,9 +236,11 @@ function createIdentifiedCountryHubsMilestone({
           missingCount,
           ratio,
           threshold: visitRatioThreshold,
-          minSeeded
+          minSeeded,
+          missingSample,
+          missingUrlsCount: missingUrls.length
         },
-        nextSteps: missingSample.map((url) => ({
+        nextSteps: nextTargetUrls.map((url) => ({
           type: 'fetch-country-hub',
           url,
           depth: 1
@@ -243,13 +252,20 @@ function createIdentifiedCountryHubsMilestone({
       if (!summary || summary.missingCount === 0) {
         return null;
       }
+      const planTargets = summary.missingUrls.length ? summary.missingUrls : summary.missingSample;
+      if (!planTargets.length) {
+        return null;
+      }
+      const targetUrls = Number.isFinite(maxPlanActions) && maxPlanActions > 0
+        ? planTargets.slice(0, maxPlanActions)
+        : planTargets;
       return {
-        actions: summary.missingSample.map((url) => ({
+        actions: targetUrls.map((url) => ({
           type: 'enqueue-hub-fetch',
           url,
           depth: 1
         })),
-        rationale: 'Fetch remaining country hub pages to satisfy the goal.'
+        rationale: `Fetch remaining country hub pages to satisfy the goal (targeting ${targetUrls.length} of ${summary.missingCount}).`
       };
     }
   };
@@ -263,7 +279,7 @@ function createIdentifiedCountryHubsMilestone({
       if (!summary) {
         return null;
       }
-      const { seeded, visited, missingCount, ratio, missingSample } = summary;
+      const { seeded, visited, missingCount, ratio, missingSample, missingUrls } = summary;
       if (seeded < minSeeded) {
         return null;
       }
@@ -284,7 +300,8 @@ function createIdentifiedCountryHubsMilestone({
             ratio,
             threshold: visitRatioThreshold,
             minSeeded,
-            missingSample
+            missingSample,
+            missingUrlsCount: missingUrls.length
           }
         },
         details: {
@@ -294,7 +311,8 @@ function createIdentifiedCountryHubsMilestone({
           ratio,
           threshold: visitRatioThreshold,
           minSeeded,
-          missingSample
+          missingSample,
+          missingUrlsCount: missingUrls.length
         }
       };
     }

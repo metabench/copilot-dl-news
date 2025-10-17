@@ -1,6 +1,6 @@
 const express = require('express');
 const { extractDomain } = require('../../../utils/domainUtils');
-const { listIncompleteCrawlJobs } = require('../data/queues');
+const { listIncompleteCrawlJobs, clearIncompleteCrawlJobs } = require('../data/queues');
 const { markCrawlJobStatus } = require('../data/crawlJobs');
 const { ServiceUnavailableError, InternalServerError } = require('../errors/HttpError');
 const { QueuePlannerService } = require('../services/queue/QueuePlannerService');
@@ -124,9 +124,12 @@ function createResumeAllRouter(options = {}) {
           : [];
       const ids = new Set();
       for (const value of values) {
-        const n = Number(value);
-        if (Number.isFinite(n) && n > 0) {
-          ids.add(n);
+        // Support both numeric and string IDs (schema changed from INTEGER to TEXT)
+        if (value != null) {
+          const str = String(value).trim();
+          if (str.length > 0) {
+            ids.add(str);
+          }
         }
       }
       return ids.size ? ids : null;
@@ -465,6 +468,33 @@ function createResumeAllRouter(options = {}) {
 
     } catch (err) {
       next(new InternalServerError(err?.message || 'Internal server error'));
+    }
+  });
+
+  router.delete('/api/resume-all', (req, res, next) => {
+    try {
+      if (!QUIET) {
+        console.log('[api] DELETE /api/resume-all - clearing incomplete crawls');
+      }
+
+      const db = getDbRW();
+      if (!db) {
+        return next(new ServiceUnavailableError('Database unavailable'));
+      }
+
+      const result = clearIncompleteCrawlJobs(db);
+      
+      if (!QUIET) {
+        console.log(`[api] Cleared ${result.deleted} incomplete crawl(s)`);
+      }
+
+      res.json({
+        success: true,
+        deleted: result.deleted,
+        message: `Cleared ${result.deleted} incomplete crawl${result.deleted === 1 ? '' : 's'}`
+      });
+    } catch (err) {
+      next(new InternalServerError(err?.message || 'Failed to clear crawls'));
     }
   });
 

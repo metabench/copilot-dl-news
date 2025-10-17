@@ -188,6 +188,7 @@ class CrawlerEvents {
       }
     }
 
+    // Emit full JSON for server/child process parsing
     this._log('log', `PROGRESS ${JSON.stringify(payload)}`);
   }
 

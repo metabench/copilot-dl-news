@@ -43,25 +43,36 @@ describe('/api/recent-domains', () => {
     // Ensure real DB is used
     try { jest.unmock(DB_ABS); } catch (_) {}
     const { createApp } = require('../server');
-    const NewsDatabase = require('../../../db');
     
-    const db = new NewsDatabase(tmp);
+    // CRITICAL: Create app FIRST to initialize schema
+    const app = createApp({ dbPath: tmp, verbose: false });
+    
+    // CRITICAL: Use app's shared DB connection (WAL mode single connection pattern)
+    const db = app.locals.backgroundTaskManager?.db || app.locals.getDb?.();
+    
     const now = new Date().toISOString();
-    db.upsertArticle({
-      url: 'https://sitea.example.com/news/a', title: 'a', date: null, section: 'news', html: '<html/>', crawled_at: now,
-      canonical_url: null, referrer_url: null, discovered_at: now, crawl_depth: 0, fetched_at: now, request_started_at: now,
-      http_status: 200, content_type: 'text/html', content_length: 0, etag: null, last_modified: null, redirect_chain: null,
-      ttfb_ms: 1, download_ms: 1, total_ms: 2, bytes_downloaded: 10, transfer_kbps: 10, html_sha256: null, text: 'x', word_count: 1, language: 'en'
-    });
-    db.upsertArticle({
-      url: 'https://siteb.example.com/post/b', title: 'b', date: null, section: 'post', html: '<html/>', crawled_at: now,
-      canonical_url: null, referrer_url: null, discovered_at: now, crawl_depth: 0, fetched_at: now, request_started_at: now,
-      http_status: 200, content_type: 'text/html', content_length: 0, etag: null, last_modified: null, redirect_chain: null,
-      ttfb_ms: 1, download_ms: 1, total_ms: 2, bytes_downloaded: 10, transfer_kbps: 10, html_sha256: null, text: 'x', word_count: 1, language: 'en'
-    });
-    db.close();
-
-    const app = createApp({ dbPath: tmp });
+    
+    // Insert URLs first (required for join in selectRecentDomains)
+    const urlStmt = db.prepare('INSERT OR IGNORE INTO urls (url, host) VALUES (?, ?)');
+    urlStmt.run('https://sitea.example.com/news/a', 'sitea.example.com');
+    urlStmt.run('https://siteb.example.com/post/b', 'siteb.example.com');
+    
+    // Insert articles using shared connection
+    const stmt = db.prepare(`
+      INSERT INTO articles (url, title, date, section, html, crawled_at, host,
+        canonical_url, referrer_url, discovered_at, crawl_depth, fetched_at, request_started_at,
+        http_status, content_type, content_length, etag, last_modified, redirect_chain,
+        ttfb_ms, download_ms, total_ms, bytes_downloaded, transfer_kbps, html_sha256, text, word_count, language)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run('https://sitea.example.com/news/a', 'a', null, 'news', '<html/>', now, 'sitea.example.com',
+      null, null, now, 0, now, now, 200, 'text/html', 0, null, null, null,
+      1, 1, 2, 10, 10, null, 'x', 1, 'en');
+    stmt.run('https://siteb.example.com/post/b', 'b', null, 'post', '<html/>', now, 'siteb.example.com',
+      null, null, now, 0, now, now, 200, 'text/html', 0, null, null, null,
+      1, 1, 2, 10, 10, null, 'x', 1, 'en');
+    
     const res = await request(app).get('/api/recent-domains?limit=20');
     expect(res.status).toBe(200);
     expect(res.body.count).toBeGreaterThanOrEqual(2);
@@ -69,8 +80,7 @@ describe('/api/recent-domains', () => {
     expect(hosts).toEqual(expect.arrayContaining(['sitea.example.com', 'siteb.example.com']));
     
     // Clean up app's database connection
-    const appDb = app.locals.backgroundTaskManager?.db || app.locals.getDbRW?.();
-    if (appDb && appDb.close) appDb.close();
+    if (db && db.close) db.close();
   });
 
   test('data helper returns empty on DB failure', () => {

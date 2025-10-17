@@ -14,11 +14,21 @@ function prepareStatements(db) {
       ORDER BY started_at DESC
       LIMIT ?
     `),
+    clearIncompleteJobs: handle.prepare(`
+      DELETE FROM crawl_jobs
+      WHERE (status = 'running' AND ended_at IS NULL)
+         OR (status IS NULL AND ended_at IS NULL)
+    `),
     listQueues: handle.prepare(`
       SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
-             (SELECT COUNT(*) FROM queue_events e WHERE e.job_id = j.id) AS events,
-             (SELECT MAX(ts) FROM queue_events e WHERE e.job_id = j.id) AS lastEventAt
+             COALESCE(e.events, 0) AS events,
+             e.lastEventAt
       FROM crawl_jobs j
+      LEFT JOIN (
+        SELECT job_id, COUNT(*) AS events, MAX(ts) AS lastEventAt
+        FROM queue_events
+        GROUP BY job_id
+      ) e ON e.job_id = j.id
       ORDER BY COALESCE(j.ended_at, j.started_at) DESC
       LIMIT ?
     `),
@@ -55,6 +65,12 @@ function listIncompleteCrawlJobs(db, options = {}) {
   const { listIncompleteJobs } = prepareStatements(db);
   const safeLimit = sanitizeLimit(options.limit, { max: 200, fallback: 50 });
   return listIncompleteJobs.all(safeLimit);
+}
+
+function clearIncompleteCrawlJobs(db) {
+  const { clearIncompleteJobs } = prepareStatements(db);
+  const result = clearIncompleteJobs.run();
+  return { deleted: result.changes };
 }
 
 function listQueues(db, options = {}) {
@@ -190,6 +206,7 @@ function getQueueDetail(db, options = {}) {
 
 module.exports = {
   listIncompleteCrawlJobs,
+  clearIncompleteCrawlJobs,
   listQueues,
   getLatestQueueId,
   getQueueJob,

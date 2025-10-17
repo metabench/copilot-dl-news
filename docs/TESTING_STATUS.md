@@ -65,15 +65,15 @@ node tests/analyze-test-logs.js
 - Complete test results with pass/fail counts per file
 - Test timings (identifies hanging tests like "🐌🐌🐌 611.80s")
 - Top 20 slowest tests (performance indicators)
-- JSON report at `test-timing-report.json`
+- Run `node tests/get-test-summary.js --compact` for a one-line status snapshot
 
 **⚠️ USE ANALYZER BEFORE RUNNING TESTS**: `node tests/analyze-test-logs.js --summary` shows current status in 5s!
 
 **Log Management**:
-- 📅 **Cleanup**: Delete logs older than 7 days after major milestones (50+ tests fixed)
-- � **Current**: ~90 logs imported from legacy system
-- �️ **Keep**: 10-20 most recent logs for diagnostics
-- 📖 **Procedure**: See `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` Phase 4
+- �️ **Aggressive Cleanup**: Default keeps only 2 most recent logs per suite type
+- 📈 **Result**: 99% reduction (2,290 → 10 files), 12.6 MB freed, <5 seconds
+- 🔧 **Command**: `node tools/cleanup-test-logs.js --execute` (or `--stats` to preview)
+- 📖 **Details**: See `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` "Cleanup Tool" section
 
 ---
 

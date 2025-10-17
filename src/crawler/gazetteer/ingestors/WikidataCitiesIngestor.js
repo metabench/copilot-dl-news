@@ -17,6 +17,7 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const chalk = require('chalk');
 const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const { AttributeBuilder } = require('../../../utils/attributeBuilder');
@@ -31,18 +32,25 @@ class WikidataCitiesIngestor {
     sleepMs = 250,
     useCache = true,
     maxCitiesPerCountry = 50,
-    minPopulation = 100000
+    minPopulation = 100000,
+    limitCountries = null,
+    targetCountries = null,
+    verbose = false
   } = {}) {
     if (!db) {
       throw new Error('WikidataCitiesIngestor requires a database handle');
     }
     this.db = db;
     this.logger = logger;
+    this.verbose = verbose;
     this.timeoutMs = timeoutMs;
     this.sleepMs = sleepMs;
     this.useCache = useCache;
     this.maxCitiesPerCountry = maxCitiesPerCountry;
     this.minPopulation = minPopulation;
+    this.limitCountries = limitCountries;
+  this.targetCountries = Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null;
+  this.countryFilter = this.targetCountries ? this._buildCountryFilter(this.targetCountries) : null;
     this.cacheDir = cacheDir || path.join(process.cwd(), 'data', 'cache', 'sparql');
 
     this.id = 'wikidata-cities';
@@ -80,15 +88,33 @@ class WikidataCitiesIngestor {
 
     try {
       // Get all countries from database
-      const countries = this.db.prepare(`
-        SELECT id, country_code
-        FROM places
-        WHERE kind = 'country' AND country_code IS NOT NULL
-        ORDER BY country_code
+      const allCountries = this.db.prepare(`
+        SELECT p.id, p.country_code, p.wikidata_qid, pn.name AS canonical_name, pn.normalized AS canonical_normalized
+        FROM places p
+        LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
+        WHERE p.kind = 'country' AND p.country_code IS NOT NULL
+        ORDER BY p.country_code
       `).all();
 
+      let countries = allCountries;
+
+      if (this.countryFilter) {
+        const { filteredCountries, unmatchedSpecifiers } = this._filterCountryList(allCountries);
+        this.logger.info(`[WikidataCitiesIngestor] Target country filter applied: ${filteredCountries.length}/${allCountries.length} countries retained`);
+        if (unmatchedSpecifiers.length) {
+          this.logger.warn('[WikidataCitiesIngestor] Some target countries were not found for city ingestion:', unmatchedSpecifiers.map(spec => spec.raw || spec.value || spec.key));
+        }
+        countries = filteredCountries;
+      }
+
+      if (this.limitCountries && countries.length > this.limitCountries) {
+        countries = countries.slice(0, this.limitCountries);
+      }
+
       if (countries.length === 0) {
-        this.logger.warn('[WikidataCitiesIngestor] No countries found in database');
+        this.logger.warn(this.countryFilter
+          ? '[WikidataCitiesIngestor] No countries matched the requested target filter'
+          : '[WikidataCitiesIngestor] No countries found in database');
         return { recordsProcessed: 0, recordsUpserted: 0, errors: 0 };
       }
 
@@ -160,7 +186,7 @@ class WikidataCitiesIngestor {
       const avgCitiesPerCountry = Math.round(recordsProcessed / countries.length);
       const successRate = countries.length > 0 ? Math.round(((countries.length - errors) / countries.length) * 100) : 0;
       
-      this.logger.info('[WikidataCitiesIngestor] Completed:', summary);
+      this.logger.info(`[WikidataCitiesIngestor] Completed: ${JSON.stringify(summary)}`);
       this._emitProgress(emitProgress, {
         phase: 'complete',
         summary: {
@@ -196,15 +222,20 @@ class WikidataCitiesIngestor {
   async _processCitiesForCountry(country, emitProgress) {
     const result = { processed: 0, upserted: 0, errors: 0 };
 
-    // SPARQL query for cities in this country
+    const countryClause = this._buildCountryClause(country, 'city');
+
+    const populationFilter = this.minPopulation > 0
+      ? `FILTER(?pop > ${this.minPopulation})  # Minimum population`
+      : '';
+
+    // SPARQL query for cities in this country (handles constituent hierarchies)
     const sparql = `
-      SELECT ?city ?cityLabel ?coord ?pop WHERE {
+      SELECT DISTINCT ?city ?cityLabel ?coord ?pop WHERE {
         ?city wdt:P31/wdt:P279* wd:Q515.  # Instance of city (or subclass)
-        ?city wdt:P17 ?country.  # Country
-        ?country wdt:P297 "${country.country_code}".  # ISO code
+        ${countryClause}
         OPTIONAL { ?city wdt:P625 ?coord. }  # Coordinates
         OPTIONAL { ?city wdt:P1082 ?pop. }  # Population
-        FILTER(?pop > ${this.minPopulation})  # Minimum population
+        ${populationFilter}
         SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,pt,it,ja,und". }
       }
       ORDER BY DESC(?pop)
@@ -225,8 +256,8 @@ class WikidataCitiesIngestor {
         return result;
       }
 
-      // Fetch full entity data
-      const entities = await this._fetchEntities(qids);
+  // Fetch full entity data in batches to respect Wikidata API limits
+  const entities = await this._fetchEntities(qids, emitProgress);
 
       // Upsert each city
       for (const binding of bindings) {
@@ -254,11 +285,170 @@ class WikidataCitiesIngestor {
         }
       }
     } catch (err) {
-      this.logger.error(`[WikidataCitiesIngestor] Error fetching cities for ${country.country_code}:`, err.message);
+      const errorName = err?.name || 'Error';
+      const errorMessage = err?.message || String(err);
+      const queryLength = sparql.length;
+      const isAbortError = errorName === 'AbortError' || err?.code === 'ABORT_ERR';
+      const telemetryContext = {
+        countryCode: country.country_code,
+        timeoutMs: this.timeoutMs,
+        maxCitiesPerCountry: this.maxCitiesPerCountry,
+        minPopulation: this.minPopulation,
+        useCache: this.useCache,
+        queryLength,
+        errorName,
+        errorMessage,
+        errorStack: err?.stack?.split('\n').slice(0, 4).join(' | ')
+      };
+
+      if (isAbortError) {
+        const timeoutMessage = `SPARQL query timed out after ${this.timeoutMs}ms for ${country.country_code}`;
+        this.logger.error(`[WikidataCitiesIngestor] ${timeoutMessage}`);
+        this._emitTelemetry(emitProgress, 'error', timeoutMessage, {
+          ...telemetryContext,
+          errorKind: 'timeout'
+        });
+
+        const fallbackResult = await this._fallbackIngestCities(country, emitProgress);
+        result.processed += fallbackResult.processed;
+        result.upserted += fallbackResult.upserted;
+        result.errors += fallbackResult.errors;
+
+        if (fallbackResult.processed === 0 && fallbackResult.errors === 0) {
+          result.errors++;
+        }
+
+        return result;
+      } else {
+        this.logger.error(`[WikidataCitiesIngestor] Error fetching cities for ${country.country_code}:`, errorMessage);
+        this._emitTelemetry(emitProgress, 'error', `Cities ingestion error for ${country.country_code}: ${errorMessage}`, {
+          ...telemetryContext,
+          errorKind: 'fetch-error'
+        });
+      }
+
       result.errors++;
     }
 
     return result;
+  }
+
+  _buildCountryClause(country, subjectVar = 'city') {
+    const clauses = [];
+
+    if (country.wikidata_qid) {
+      clauses.push(`{
+        VALUES ?targetCountry { wd:${country.wikidata_qid} }
+        ?${subjectVar} wdt:P17 ?country.
+        ?targetCountry (wdt:P150*) ?country.
+      }`);
+    }
+
+    if (country.country_code) {
+      clauses.push(`{
+        ?${subjectVar} wdt:P17 ?country.
+        ?country wdt:P297 "${country.country_code}".
+      }`);
+    }
+
+    if (clauses.length === 0) {
+      clauses.push(`{
+        ?${subjectVar} wdt:P17 ?country.
+      }`);
+    }
+
+    return clauses.length === 1 ? clauses[0] : clauses.join('\n      UNION\n      ');
+  }
+
+  async _fallbackIngestCities(country, emitProgress) {
+  this.logger.warn(`Cities fallback: switching to incremental ingestion for ${country.country_code}`);
+    this._emitTelemetry(emitProgress, 'warning', `Falling back to incremental city ingestion for ${country.country_code}`, {
+      countryCode: country.country_code,
+      maxCitiesPerCountry: this.maxCitiesPerCountry,
+      timeoutMs: this.timeoutMs
+    });
+
+    const qids = await this._fetchCityQidsSimple(country);
+    if (!Array.isArray(qids) || qids.length === 0) {
+  this.logger.warn(`Cities fallback: no candidates returned for ${country.country_code}`);
+      return { processed: 0, upserted: 0, errors: 0 };
+    }
+
+    const result = { processed: 0, upserted: 0, errors: 0 };
+
+    for (let index = 0; index < qids.length; index++) {
+      const qid = qids[index];
+      try {
+        const batch = await this._fetchEntityBatch([qid]);
+        const entity = batch?.entities?.[qid] || null;
+        if (!entity) {
+          throw new Error('Entity data missing in fallback fetch');
+        }
+
+        const binding = {
+          city: {
+            type: 'uri',
+            value: `http://www.wikidata.org/entity/${qid}`
+          }
+        };
+
+        const upserted = this._upsertCity(qid, entity, binding, country);
+        if (upserted) {
+          result.upserted++;
+        }
+        result.processed++;
+      } catch (error) {
+        result.errors++;
+        result.processed++;
+  this.logger.error(`Cities fallback: failed to ingest ${qid} (${country.country_code}): ${error.message}`);
+      }
+
+      const current = index + 1;
+      if (current === 1 || current % 5 === 0 || current === qids.length) {
+        this.logger.info(`Cities fallback: ${country.country_code} ${current}/${qids.length} processed (new: ${result.upserted}, errors: ${result.errors})`);
+      }
+
+      this._emitProgress(emitProgress, {
+        phase: 'fallback-processing',
+        countryCode: country.country_code,
+        current,
+        totalItems: qids.length,
+        citiesProcessed: result.processed,
+        citiesUpserted: result.upserted,
+        totalErrors: result.errors,
+        message: `Fallback city fetch ${current}/${qids.length}`
+      });
+
+      if (this.sleepMs > 0 && current < qids.length) {
+        await this._sleep(this.sleepMs);
+      }
+    }
+
+  this.logger.info(`Cities fallback: complete for ${country.country_code} (processed=${result.processed}, new=${result.upserted}, errors=${result.errors})`);
+
+    return result;
+  }
+
+  async _fetchCityQidsSimple(country) {
+    try {
+      const countryClause = this._buildCountryClause(country, 'city');
+      const sparql = `
+        SELECT DISTINCT ?city WHERE {
+          ?city wdt:P31/wdt:P279* wd:Q515.
+          ${countryClause}
+        }
+        LIMIT ${this.maxCitiesPerCountry}
+      `;
+
+      const data = await this._fetchSparql(sparql);
+      const bindings = data?.results?.bindings || [];
+      const qids = compact(bindings, b => this._extractQid(b.city?.value));
+      this.logger.info(`[WikidataCitiesIngestor] Fallback query retrieved ${qids.length} city QIDs for ${country.country_code}`);
+      return qids;
+    } catch (error) {
+  this.logger.error(`Cities fallback: SPARQL list query failed for ${country.country_code}: ${error.message}`);
+      return [];
+    }
   }
 
   _upsertCity(qid, entity, sparqlBinding, country) {
@@ -295,9 +485,8 @@ class WikidataCitiesIngestor {
       } catch (_) {}
     }
 
-    // Build attributes for extra field
-    const extra = new AttributeBuilder()
-      .add('wikidata_qid', qid)
+    // Build attributes for attributes field
+    const attributesRaw = new AttributeBuilder('wikidata')
       .add('elevation_m', elevation)
       .add('timezone', timezone)
       .add('osm_node_id', osmNodeId)
@@ -305,11 +494,19 @@ class WikidataCitiesIngestor {
       .add('geonames_id', geonamesId)
       .build();
 
+    // Convert AttributeBuilder format to recordAttributes format
+    const attributes = attributesRaw.map(attr => ({
+      attr: attr.kind,      // kind -> attr
+      value: attr.value,
+      source: attr.source
+    }));
+
     // Extract names from labels and aliases
     const names = this._extractNames(entity);
 
     // Upsert place
-    const placeId = this.stmts.upsertPlace.run({
+    const { placeId } = ingestQueries.upsertPlace(this.db, this.stmts, {
+      wikidataQid: qid,
       kind: 'city',
       countryCode: country.country_code,
       adm1Code,
@@ -320,48 +517,26 @@ class WikidataCitiesIngestor {
       lng: coords?.lng || null,
       bbox: null,
       source: 'wikidata',
-      extra
-    }).lastInsertRowid;
+      attributes
+    });
 
-    // Upsert external ID
-    try {
-      this.stmts.upsertExternalId.run({
-        source: 'wikidata',
-        extId: qid,
-        placeId
-      });
-    } catch (_) {}
+    // Insert external ID (already handled by upsertPlace)
+    // ingestQueries.insertExternalId(this.stmts, 'wikidata', qid, placeId);
 
-    // Upsert names
-    let canonicalNameId = null;
+    // Insert names
     for (const name of names) {
-      try {
-        const result = this.stmts.upsertPlaceName.run({
-          placeId,
-          name: name.name,
-          normalized: name.normalized,
-          lang: name.lang,
-          script: name.script,
-          nameKind: name.kind,
-          isPreferred: name.preferred ? 1 : 0,
-          isOfficial: name.official ? 1 : 0,
-          source: 'wikidata'
-        });
-        if (name.preferred && !canonicalNameId) {
-          canonicalNameId = result.lastInsertRowid;
-        }
-      } catch (_) {}
+      ingestQueries.insertPlaceName(this.stmts, placeId, {
+        text: name.name,
+        lang: name.lang,
+        kind: name.kind,
+        isPreferred: name.preferred,
+        isOfficial: name.official,
+        source: 'wikidata'
+      });
     }
 
-    // Set canonical name
-    if (canonicalNameId) {
-      try {
-        this.stmts.updateCanonicalName.run({
-          canonicalNameId,
-          placeId
-        });
-      } catch (_) {}
-    }
+    // Set canonical name (automatically finds best name)
+    ingestQueries.setCanonicalName(this.stmts, placeId);
 
     // Create hierarchy relationship to country
     try {
@@ -447,12 +622,16 @@ class WikidataCitiesIngestor {
     if (this.useCache && fs.existsSync(cacheFile)) {
       try {
         const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+        const resultCount = cached?.results?.bindings?.length || 0;
+        console.log(chalk.cyan('⚡'), `SPARQL cache hit (${resultCount} results)`);
         return cached;
       } catch (_) {}
     }
 
     const url = 'https://query.wikidata.org/sparql';
     const params = new URLSearchParams({ query, format: 'json' });
+    
+    console.log(chalk.yellow('⏳'), 'SPARQL cache miss - querying Wikidata...');
     
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -475,6 +654,8 @@ class WikidataCitiesIngestor {
       if (this.useCache) {
         try {
           fs.writeFileSync(cacheFile, JSON.stringify(data, null, 2));
+          const sizeKB = (JSON.stringify(data).length / 1024).toFixed(1);
+          console.log(chalk.green('✓'), `Cached SPARQL result (${sizeKB}KB)`);
         } catch (_) {}
       }
 
@@ -485,8 +666,67 @@ class WikidataCitiesIngestor {
     }
   }
 
-  async _fetchEntities(qids) {
-    if (!qids || qids.length === 0) return null;
+  async _fetchEntities(qids, emitProgress = null) {
+    if (!Array.isArray(qids) || qids.length === 0) {
+      return { entities: {} };
+    }
+
+    const uniqueQids = Array.from(new Set(qids));
+    const BATCH_SIZE = 50; // Wikidata API limit for wbgetentities
+    const batches = [];
+    for (let i = 0; i < uniqueQids.length; i += BATCH_SIZE) {
+      batches.push(uniqueQids.slice(i, i + BATCH_SIZE));
+    }
+
+    this.logger.info(`[WikidataCitiesIngestor] Fetching ${uniqueQids.length} entities in ${batches.length} batch(es)`);
+    this._emitTelemetry(emitProgress, 'info', 'Fetching city entities', {
+      totalQids: uniqueQids.length,
+      batchCount: batches.length,
+      batchSize: BATCH_SIZE
+    });
+
+    const aggregate = {};
+    for (let index = 0; index < batches.length; index++) {
+      const batchQids = batches[index];
+      try {
+        const batchData = await this._fetchEntityBatch(batchQids);
+        if (batchData?.entities) {
+          Object.assign(aggregate, batchData.entities);
+        }
+      } catch (err) {
+        this.logger.error(`[WikidataCitiesIngestor] Failed to fetch entity batch ${index + 1}/${batches.length}:`, err.message);
+        this._emitTelemetry(emitProgress, 'error', 'City entity batch fetch failed', {
+          batchIndex: index + 1,
+          batchCount: batches.length,
+          batchSize: batchQids.length,
+          errorName: err?.name,
+          errorMessage: err?.message,
+          errorStack: err?.stack?.split('\n').slice(0, 4).join(' | ')
+        });
+      }
+
+      this._emitProgress(emitProgress, {
+        phase: 'fetching-entities',
+        current: index + 1,
+        totalItems: batches.length,
+        message: `Fetched entity batch ${index + 1}/${batches.length}`
+      });
+
+      if (this.sleepMs > 0 && index < batches.length - 1) {
+        await this._sleep(this.sleepMs);
+      }
+    }
+
+    return { entities: aggregate };
+  }
+
+  async _fetchEntityBatch(qids) {
+    if (!Array.isArray(qids) || qids.length === 0) {
+      return { entities: {} };
+    }
+    if (qids.length > 50) {
+      throw new Error(`City entity batch exceeds Wikidata limit (got ${qids.length})`);
+    }
 
     const url = 'https://www.wikidata.org/w/api.php';
     const params = new URLSearchParams({
@@ -561,6 +801,169 @@ class WikidataCitiesIngestor {
     const lat = parseFloat(match[2]);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
+  }
+
+  _buildCountryFilter(specifiers) {
+    const normalizedSpecs = [];
+    const qids = new Set();
+    const qidKeys = new Map();
+    const isoCodes = new Set();
+    const isoKeys = new Map();
+    const namesLower = new Set();
+    const nameKeys = new Map();
+    const normalizedNames = new Set();
+    const normalizedNameKeys = new Map();
+
+    if (Array.isArray(specifiers)) {
+      for (const spec of specifiers) {
+        if (!spec || typeof spec !== 'object') continue;
+
+        if (spec.qid) {
+          const value = String(spec.qid).toUpperCase();
+          const key = `qid:${value}`;
+          if (!qidKeys.has(value)) {
+            qids.add(value);
+            qidKeys.set(value, key);
+            normalizedSpecs.push({ type: 'qid', value, key, raw: spec.raw || spec.qid });
+          }
+          continue;
+        }
+
+        if (spec.code) {
+          const value = String(spec.code).toUpperCase();
+          const key = `code:${value}`;
+          if (!isoKeys.has(value)) {
+            isoCodes.add(value);
+            isoKeys.set(value, key);
+            normalizedSpecs.push({ type: 'code', value, key, raw: spec.raw || spec.code });
+          }
+          continue;
+        }
+
+        const rawName = spec.name || spec.raw;
+        const lowerName = spec.nameLower || (rawName ? String(rawName).toLowerCase() : null);
+        if (lowerName) {
+          const key = `name:${lowerName}`;
+          if (!nameKeys.has(lowerName)) {
+            namesLower.add(lowerName);
+            nameKeys.set(lowerName, key);
+            normalizedSpecs.push({ type: 'name', value: lowerName, key, raw: rawName || lowerName });
+          }
+          const normalizedName = this._normalizeName(rawName || lowerName);
+          if (normalizedName && !normalizedNameKeys.has(normalizedName)) {
+            normalizedNames.add(normalizedName);
+            normalizedNameKeys.set(normalizedName, key);
+          }
+        }
+      }
+    }
+
+    return {
+      specifiers: normalizedSpecs,
+      qids,
+      isoCodes,
+      namesLower,
+      normalizedNames,
+      qidKeys,
+      isoKeys,
+      nameKeys,
+      normalizedNameKeys
+    };
+  }
+
+  _filterCountryList(countries) {
+    if (!Array.isArray(countries)) {
+      return { filteredCountries: [], unmatchedSpecifiers: this.countryFilter?.specifiers || [], matchDetails: [] };
+    }
+    if (!this.countryFilter) {
+      return { filteredCountries: [...countries], unmatchedSpecifiers: [], matchDetails: [] };
+    }
+
+    const filteredCountries = [];
+    const matchDetails = [];
+    const matchedKeys = new Set();
+
+    for (const country of countries) {
+      const match = this._matchTargetCountry({
+        qid: country?.wikidata_qid,
+        code: country?.country_code,
+        labels: [country?.canonical_name, country?.canonical_normalized]
+      });
+      if (match) {
+        filteredCountries.push(country);
+        matchDetails.push({
+          specKey: match.specKey,
+          matchedBy: match.matchedBy,
+          qid: match.qid || null,
+          iso2: match.iso2 || null,
+          label: match.label || null
+        });
+        if (match.specKey) {
+          matchedKeys.add(match.specKey);
+        }
+      }
+    }
+
+    const unmatchedSpecifiers = (this.countryFilter.specifiers || []).filter(spec => !matchedKeys.has(spec.key));
+    return { filteredCountries, unmatchedSpecifiers, matchDetails };
+  }
+
+  _matchTargetCountry({ qid = null, code = null, labels = [] } = {}) {
+    const filter = this.countryFilter;
+    if (!filter) return null;
+
+    if (qid) {
+      const normalizedQid = String(qid).toUpperCase();
+      if (filter.qids.has(normalizedQid)) {
+        return {
+          matchedBy: 'qid',
+          qid: normalizedQid,
+          specKey: filter.qidKeys.get(normalizedQid) || `qid:${normalizedQid}`
+        };
+      }
+    }
+
+    if (code) {
+      const normalizedCode = String(code).toUpperCase();
+      if (filter.isoCodes.has(normalizedCode)) {
+        return {
+          matchedBy: 'iso2',
+          iso2: normalizedCode,
+          specKey: filter.isoKeys.get(normalizedCode) || `code:${normalizedCode}`
+        };
+      }
+    }
+
+    for (const label of labels) {
+      if (!label) continue;
+      const trimmed = String(label).trim();
+      if (!trimmed) continue;
+
+      const lower = trimmed.toLowerCase();
+      if (filter.namesLower.has(lower)) {
+        return {
+          matchedBy: 'name',
+          label: trimmed,
+          specKey: filter.nameKeys.get(lower) || `name:${lower}`
+        };
+      }
+
+      const normalized = this._normalizeName(trimmed);
+      if (normalized && filter.normalizedNames.has(normalized)) {
+        return {
+          matchedBy: 'name-normalized',
+          label: trimmed,
+          specKey: filter.normalizedNameKeys.get(normalized) || `name:${normalized}`
+        };
+      }
+    }
+
+    return null;
+  }
+
+  _normalizeName(text) {
+    if (!text) return null;
+    return text.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase();
   }
 
   async _sleep(ms) {

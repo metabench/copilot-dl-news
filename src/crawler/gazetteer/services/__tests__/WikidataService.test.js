@@ -177,7 +177,7 @@ describe('WikidataService', () => {
       expect(result.entities).toBeDefined();
       expect(result.entities.Q30).toBeDefined();
       expect(result.entities.Q30.id).toBe('Q30');
-    });
+    }, 30000); // 30s timeout for network call
 
     it('should fetch multiple entities in batch', async () => {
       // Note: Wikidata Special:EntityData may not support batch requests via pipe separator

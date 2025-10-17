@@ -1,0 +1,3 @@
+- [x] Integrate article detection confidence into hub detector gating
+- [x] Adjust CLI output/tests if gating changes require updates
+- [x] Verify behavior with focused tests (detect-articles + place hub flow)

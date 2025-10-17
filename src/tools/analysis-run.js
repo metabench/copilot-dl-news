@@ -185,6 +185,14 @@ function buildRunHighlights(summary = {}) {
         const placesStr = formatNumberIntl(pages.placesInserted) || String(pages.placesInserted);
         highlights.push(`${placesStr} places extracted`);
       }
+      if (Number(pages.hubsInserted) > 0) {
+        const hubsStr = formatNumberIntl(pages.hubsInserted) || String(pages.hubsInserted);
+        highlights.push(`${hubsStr} new hubs detected`);
+      }
+      if (Number(pages.hubsUpdated) > 0) {
+        const hubsUpdStr = formatNumberIntl(pages.hubsUpdated) || String(pages.hubsUpdated);
+        highlights.push(`${hubsUpdStr} hubs refreshed`);
+      }
     }
   }
   const domains = steps.domains && typeof steps.domains === 'object' ? steps.domains : null;
@@ -811,7 +819,7 @@ async function runAnalysis(rawOptions = {}) {
           progressReporter.flush({ processed: finalProcessed, updated: finalUpdated });
         }
       }
-      const pageSummary = summary || { analysed: null, updated: null, placesInserted: null };
+  const pageSummary = summary || { analysed: null, updated: null, placesInserted: null, hubsInserted: null, hubsUpdated: null };
       runSummary.steps.pages = pageSummary;
   completeStage('page-analysis', pageSummary);
   tracker.update({ summary: runSummary, lastProgress: { stage: 'page-analysis', summary: pageSummary, diagnostics: runSummary.diagnostics } });
@@ -834,6 +842,14 @@ async function runAnalysis(rawOptions = {}) {
       if (Number.isFinite(Number(pageSummary.placesInserted)) && Number(pageSummary.placesInserted) > 0) {
         const placesStr = formatNumberIntl(pageSummary.placesInserted) || String(pageSummary.placesInserted);
         summaryParts.push(`${placesStr} places extracted`);
+      }
+      if (Number.isFinite(Number(pageSummary.hubsInserted)) && Number(pageSummary.hubsInserted) > 0) {
+        const hubsStr = formatNumberIntl(pageSummary.hubsInserted) || String(pageSummary.hubsInserted);
+        summaryParts.push(`${hubsStr} new hubs`);
+      }
+      if (Number.isFinite(Number(pageSummary.hubsUpdated)) && Number(pageSummary.hubsUpdated) > 0) {
+        const hubsUpdStr = formatNumberIntl(pageSummary.hubsUpdated) || String(pageSummary.hubsUpdated);
+        summaryParts.push(`${hubsUpdStr} hubs updated`);
       }
       emitProgress({
         stage: 'page-analysis',

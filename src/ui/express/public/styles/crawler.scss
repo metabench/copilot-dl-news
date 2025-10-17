@@ -7,6 +7,7 @@
   Generated output: ../crawler.css (do not edit directly).
 */
 
+@use 'partials/variables';
 @use 'partials/core';
 @use 'partials/layout';
 @use 'partials/utilities';
@@ -18,3 +19,241 @@
 @use 'partials/modal';
 @use 'partials/crawl-progress-indicator';
 @use 'partials/telemetry';
+
+// ==================================================================
+// Compact Layout Styles (for index.html two-column layout)
+// ==================================================================
+
+/* Streamlined single-view layout */
+.crawler-layout--compact {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  min-height: 100vh;
+  height: auto;
+}
+
+/* ========================================
+   Compact Header - Complete Redesign
+   Clean, simple, wrapping-friendly layout
+   ======================================== */
+
+/* Header container */
+.compact-header {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Title */
+.compact-header__title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Nav container */
+.compact-header__nav {
+  width: 100%;
+}
+
+/* Override base global-nav styles for compact mode */
+.compact-header .global-nav-shell,
+.compact-header .global-nav--bar {
+  width: 100%;
+}
+
+.compact-header .global-nav__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  /* Remove problematic overflow constraints */
+  overflow: visible;
+  /* Allow natural height expansion */
+  min-height: fit-content;
+  height: auto;
+  /* Remove backdrop filters that can cause issues */
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.compact-header .global-nav__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.compact-header .global-nav__item {
+  flex: 0 0 auto;
+}
+
+.compact-header .global-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.compact-header .global-nav__link:hover {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.compact-header .global-nav__item--active .global-nav__link {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.crawler-layout--compact .controls-sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.crawler-layout--compact .main-view {
+  grid-column: 2;
+  grid-row: 2;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Compact controls */
+.controls-card--compact .control-grid--primary {
+  gap: 0.5rem;
+}
+
+.controls-card--compact .control-field {
+  margin-bottom: 0;
+}
+
+/* Stage indicator */
+.stage-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-panel);
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.stage-item {
+  flex: 1;
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: 3px;
+  background: var(--bg-subtle);
+  font-size: 0.75rem;
+  position: relative;
+}
+
+.stage-item.is-active {
+  background: var(--color-primary);
+  color: white;
+  font-weight: 600;
+}
+
+.stage-item.is-complete {
+  background: var(--color-success);
+  color: white;
+}
+
+.stage-item::after {
+  content: '→';
+  position: absolute;
+  right: -0.75rem;
+  color: var(--text-muted);
+}
+
+.stage-item:last-child::after {
+  content: '';
+}
+
+/* Feature badges in compact layout */
+.features-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: var(--bg-subtle);
+  border-radius: 4px;
+}
+
+.feature-badge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.feature-badge.is-disabled {
+  opacity: 0.4;
+}
+
+/* Metrics in compact grid */
+.metrics-compact {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.metric-compact {
+  padding: 0.5rem;
+  background: var(--bg-subtle);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.metric-compact__label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.metric-compact__value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}

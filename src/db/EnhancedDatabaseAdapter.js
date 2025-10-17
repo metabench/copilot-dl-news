@@ -9,12 +9,35 @@ const { CoverageDatabase } = require('./CoverageDatabase');
 class EnhancedDatabaseAdapter {
   constructor(newsDatabase) {
     this.newsDb = newsDatabase;
-    this.db = newsDatabase.db;
     
-    // Initialize feature modules
-    this.queue = new QueueDatabase(this.db);
-    this.planner = new PlannerDatabase(this.db);
-    this.coverage = new CoverageDatabase(this.db);
+    // Extract raw better-sqlite3 database
+    // newsDatabase might be CrawlerDb with .db = NewsDatabase with .db = raw DB
+    // or it might be NewsDatabase with .db = raw DB
+    let rawDb = newsDatabase.db;
+    if (rawDb && rawDb.db && typeof rawDb.db.prepare === 'function') {
+      // Two-level wrapper: CrawlerDb -> NewsDatabase -> raw DB
+      rawDb = rawDb.db;
+    }
+    this.db = rawDb;
+    
+    // Initialize feature modules with individual error handling
+    try {
+      this.queue = new QueueDatabase(this.db);
+    } catch (error) {
+      throw new Error(`QueueDatabase initialization failed: ${error?.message || 'unknown'}`);
+    }
+    
+    try {
+      this.planner = new PlannerDatabase(this.db);
+    } catch (error) {
+      throw new Error(`PlannerDatabase initialization failed: ${error?.message || 'unknown'}`);
+    }
+    
+    try {
+      this.coverage = new CoverageDatabase(this.db);
+    } catch (error) {
+      throw new Error(`CoverageDatabase initialization failed: ${error?.message || 'unknown'}`);
+    }
     
     // Track initialization
     this.initialized = true;

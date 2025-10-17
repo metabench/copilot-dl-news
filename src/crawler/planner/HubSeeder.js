@@ -1,6 +1,7 @@
 'use strict';
 
 const { recordPlaceHubSeed } = require('../data/placeHubs');
+const { getContinentNames } = require('../../data/continents');
 
 class HubSeeder {
   constructor({
@@ -92,7 +93,29 @@ class HubSeeder {
       this._recordSeedInDatabase(host, entry.url, entry.meta);
     }
 
-    this._log(`Intelligent plan: seeded ${seeded.length} hub(s)`);
+    // Count hubs by type
+    const hubCounts = this._categorizeHubsByType(entries.slice(0, cap));
+    const placeHubsTotal = hubCounts.continent + hubCounts.country + hubCounts.otherPlace;
+    const topicHubsTotal = hubCounts.section + hubCounts.navigation;
+    
+    // Build summary string
+    const parts = [];
+    if (placeHubsTotal > 0) {
+      const placeBreakdown = [];
+      if (hubCounts.continent > 0) placeBreakdown.push(`${hubCounts.continent} continent`);
+      if (hubCounts.country > 0) placeBreakdown.push(`${hubCounts.country} country`);
+      if (hubCounts.otherPlace > 0) placeBreakdown.push(`${hubCounts.otherPlace} other place`);
+      parts.push(`🗺️  ${placeHubsTotal} place (${placeBreakdown.join(', ')})`);
+    }
+    if (topicHubsTotal > 0) {
+      parts.push(`📂 ${topicHubsTotal} topic`);
+    }
+    
+    const summary = parts.length > 0 
+      ? `Intelligent plan: seeded ${seeded.length} hub(s) — ${parts.join(' + ')}`
+      : `Intelligent plan: seeded ${seeded.length} hub(s)`;
+    
+    this._log(summary);
 
     if (seeded.length === 0) {
       this._emitProblem({
@@ -352,7 +375,8 @@ class HubSeeder {
         source: 'pattern-inference',
         reason: 'pattern-section',
         slug,
-        priorityBias: 0
+        // Medium-high priority: sections often contain topic hubs
+        priorityBias: 10
       });
     }
 
@@ -363,7 +387,9 @@ class HubSeeder {
         source: candidate.source || 'country-planner',
         reason: candidate.reason || 'country-candidate',
         slug: candidate.slug || null,
-        priorityBias: -5
+        // HIGH PRIORITY: Place hubs are foundational for discovering comprehensive article coverage
+        // Prioritize early to build complete place hub catalog
+        priorityBias: 20
       });
     }
 
@@ -399,6 +425,52 @@ class HubSeeder {
       default:
         return 0;
     }
+  }
+
+  _categorizeHubsByType(entries) {
+    const continentNames = getContinentNames();
+    const counts = {
+      continent: 0,
+      country: 0,
+      otherPlace: 0,
+      section: 0,
+      navigation: 0,
+      other: 0
+    };
+
+    for (const entry of entries) {
+      const kind = entry.meta?.kind;
+      const slug = entry.meta?.slug || '';
+      
+      // Extract name from slug or URL
+      let name = slug;
+      if (!name && entry.url) {
+        try {
+          const urlPath = new URL(entry.url).pathname;
+          const segments = urlPath.split('/').filter(Boolean);
+          name = segments[0] || '';
+        } catch (_) {
+          // ignore URL parsing errors
+        }
+      }
+      
+      // Check if this is a continent (regardless of reported kind)
+      if (name && continentNames.has(name.toLowerCase().replace(/-/g, ' '))) {
+        counts.continent++;
+      } else if (kind === 'country') {
+        counts.country++;
+      } else if (kind === 'section') {
+        counts.section++;
+      } else if (kind === 'navigation') {
+        counts.navigation++;
+      } else if (kind === 'place' || kind === 'region' || kind === 'city') {
+        counts.otherPlace++;
+      } else {
+        counts.other++;
+      }
+    }
+
+    return counts;
   }
 
   _emitMilestone(payload, scope) {

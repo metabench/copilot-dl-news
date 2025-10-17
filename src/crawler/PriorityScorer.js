@@ -280,6 +280,23 @@ class PriorityScorer {
         }
       }
 
+      // Cost-aware priority adjustment (Phase 1 improvement)
+      const costEnabled = Boolean(features.costAwarePriority);
+      if (costEnabled && meta?.estimatedCostMs) {
+        const costAdjustment = this._calculateCostAdjustment(meta.estimatedCostMs, enhancedPriority);
+        if (costAdjustment !== 0) {
+          enhancedPriority += costAdjustment;
+          if (costAdjustment < 0) {
+            bonusApplied += costAdjustment; // Track negative adjustment
+          } else {
+            bonusApplied += costAdjustment;
+          }
+          if (prioritySource === 'base') {
+            prioritySource = 'cost-adjusted';
+          }
+        }
+      }
+
       const computeTimeMs = Date.now() - startTime;
 
       return {
@@ -310,6 +327,36 @@ class PriorityScorer {
       };
     }
   }
+  /**
+   * Calculate priority adjustment based on estimated cost.
+   * Lower cost actions get priority boost, higher cost get penalty.
+   * @private
+   * @param {number} estimatedCostMs - Estimated action cost in milliseconds
+   * @param {number} currentPriority - Current priority before adjustment
+   * @returns {number} Priority adjustment (positive or negative)
+   */
+  _calculateCostAdjustment(estimatedCostMs, currentPriority) {
+    // Cost thresholds
+    const fastThreshold = 100;  // <100ms = fast
+    const slowThreshold = 500;  // >500ms = slow
+    
+    // Adjustment scale based on current priority magnitude
+    const adjustmentScale = currentPriority * 0.1; // 10% of current priority
+    
+    if (estimatedCostMs < fastThreshold) {
+      // Fast actions get priority boost
+      const boost = adjustmentScale * (1 - estimatedCostMs / fastThreshold);
+      return boost;
+    } else if (estimatedCostMs > slowThreshold) {
+      // Slow actions get priority penalty
+      const penalty = -adjustmentScale * Math.min((estimatedCostMs - slowThreshold) / slowThreshold, 1.0);
+      return penalty;
+    }
+    
+    // Medium cost = no adjustment
+    return 0;
+  }
+
   _computeBasePriority({ type, depth, discoveredAt, bias = 0 }) {
     let kind = type;
     if (type && typeof type === 'object') {

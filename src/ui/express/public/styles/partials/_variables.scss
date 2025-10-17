@@ -1,0 +1,65 @@
+// Additional CSS custom properties for component styling
+// These supplement the core variables in _core.scss
+
+:root {
+  // Background colors
+  --bg-panel: #f8f9fa;
+  --bg-subtle: #e9ecef;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --bg-hover: #f1f3f5;
+  
+  // Badge backgrounds
+  --bg-badge: #e9ecef;
+  --bg-danger-subtle: #fff5f5;
+  --bg-warning-subtle: #fffbf0;
+  --bg-info-subtle: #f0f9ff;
+  --bg-success-subtle: #f0fdf4;
+  --bg-danger-light: #f8d7da;
+  --bg-warning-light: #fff3cd;
+  --bg-info-light: #d1ecf1;
+  
+  // Border colors
+  --border-subtle: #dee2e6;
+  
+  // Text colors
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-muted: #6c757d;
+  
+  // Component colors
+  --color-primary: #0d6efd;
+  --color-primary-subtle: #cfe2ff;
+  --color-success: #198754;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+  --color-info: #0dcaf0;
+}
+
+.dark, [data-theme="dark"] {
+  // Dark theme overrides
+  --bg-panel: #2d2d2d;
+  --bg-subtle: #3a3a3a;
+  --bg-primary: #1e1e1e;
+  --bg-secondary-dark: #1e1e1e;
+  --bg-primary-dark: #2d2d2d;
+  --bg-hover-dark: #3a3a3a;
+  --bg-badge-dark: #404040;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
+  --bg-hover: #4a4a4a;
+  
+  --border-subtle: #495057;
+  
+  --text-primary: #e9ecef;
+  --text-secondary: #ced4da;
+  --text-muted: #adb5bd;
+  
+  --color-primary: #0d6efd;
+  --color-primary-subtle: #084298;
+  --color-success: #198754;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+  --color-info: #0dcaf0;
+}

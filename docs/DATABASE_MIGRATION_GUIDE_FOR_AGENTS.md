@@ -25,22 +25,38 @@
 
 Database migrations in this project require **zero-downtime compatibility** and **referential integrity verification**. This guide outlines a systematic approach to:
 
-1. **Dual-Adapter Testing** - Run old and new schemas simultaneously
-2. **Export/Import Validation** - Verify all references are preserved
-3. **Incremental Migration** - Move data in testable chunks
-4. **Rollback Safety** - Always maintain ability to revert
+1. **Schema Version Tracking** - Know which schema version is active
+2. **Adapter-Based Encapsulation** - Isolate schema details from application code
+3. **Dual-Adapter Testing** - Run old and new schemas simultaneously
+4. **Export/Import Validation** - Verify all references are preserved
+5. **Incremental Migration** - Move data in testable chunks
+6. **Rollback Safety** - Always maintain ability to revert
 
-**Key Principle**: Never modify production database without proven migration path tested on real data subsets.
+**Current State**: DB Schema Version 1 (implicit, no version tracking yet)
+
+**See**: `docs/DATABASE_SCHEMA_VERSION_1.md` for complete current schema documentation
+
+**Key Principle**: Never modify production database without:
+1. Creating adapter classes that encapsulate schema access
+2. Proven migration path tested on real data subsets
+3. Rollback procedure documented and tested
 
 ---
 
 ## Current Migration State
 
-**Schema Version**: Check `src/db/sqlite/schema.js` - look for `PRAGMA user_version`
+**Schema Version**: 1 (implicit - no formal version tracking implemented)
+
+**See**: `docs/DATABASE_SCHEMA_VERSION_1.md` for complete current schema documentation
+
+**Current Database API**:
+- Primary: `ensureDatabase()` + `wrapWithTelemetry()` (new API)
+- Legacy: `ensureDb()` + `createInstrumentedDb()` (still works)
+- Returns: `better-sqlite3` Database instance with WAL mode + foreign keys enabled
 
 **Known Schema Issues** (as of 2025-10-10):
 - ✅ `articles.host`, `urls.host`, `fetches.host` - Migration added
-- ✅ `crawl_jobs.id` (INTEGER → TEXT) - Migration added
+- ✅ `crawl_jobs.id` (INTEGER → TEXT) - Migration added (may be incomplete)
 - ✅ `url_aliases.url_exists` - Migration added
 - ❌ `places.wikidata_qid` - Missing migration (gazetteer degraded)
 - ❌ Schema versioning system - Not yet implemented
@@ -48,9 +64,12 @@ Database migrations in this project require **zero-downtime compatibility** and 
 **Migration Infrastructure Status**:
 - ✅ Resilient schema initialization (logs warnings, doesn't crash)
 - ✅ Basic ALTER TABLE migrations in `initCoreTables()`
+- ❌ Adapter-based encapsulation - Not implemented (REQUIRED for v2)
 - ❌ Phase 0 infrastructure (exporter, importer, transformer, validator) - Documented but not implemented
-- ❌ Schema version tracking - Not implemented
+- ❌ Schema version tracking - Not implemented (CRITICAL for v2)
 - ❌ Migration rollback system - Not implemented
+
+**CRITICAL for Version 2**: Before implementing any new schema version, MUST create `SchemaV1Adapter` class to encapsulate current schema. See "Adapter-Based Encapsulation" section below.
 
 **See**: `docs/DATABASE_SCHEMA_ISSUES_STATUS.md` for detailed current state
 
@@ -110,11 +129,417 @@ npm run test:file "table-name"
 
 ---
 
-## Dual-Adapter Strategy
+## Adapter-Based Encapsulation (REQUIRED Before Schema v2)
 
-**Goal**: Run old and new database schemas simultaneously during migration to verify compatibility.
+**Goal**: Isolate schema version details from application code, enabling smooth migration between versions.
 
-### Step 1: Create Dual Database Adapters
+### Why Adapters Are Critical
+
+**Problem**: Current code directly accesses database with raw SQL:
+```javascript
+// ❌ Direct SQL - tightly coupled to Schema v1
+const articles = db.prepare('SELECT * FROM articles WHERE host = ?').all('example.com');
+```
+
+**This causes**:
+- Cannot change schema without updating all code
+- Cannot run v1 and v2 simultaneously
+- Cannot test migration incrementally
+- Cannot rollback easily
+
+**Solution**: Adapter pattern encapsulates schema access:
+```javascript
+// ✅ Adapter - decoupled from schema version
+const articles = adapter.getArticlesByHost('example.com');
+```
+
+### Step 0: Create Adapter Interface
+
+**Location**: `src/db/sqlite/adapters/ISchemaAdapter.js`
+
+```javascript
+/**
+ * Schema Adapter Interface
+ * 
+ * All schema versions must implement this interface.
+ * Enables switching between v1, v2, etc. without code changes.
+ */
+class ISchemaAdapter {
+  constructor(db) {
+    this.db = db;
+  }
+  
+  // Article operations
+  getArticleById(id) { throw new Error('Not implemented'); }
+  getArticlesByHost(host, options = {}) { throw new Error('Not implemented'); }
+  insertArticle(data) { throw new Error('Not implemented'); }
+  updateArticle(id, data) { throw new Error('Not implemented'); }
+  deleteArticle(id) { throw new Error('Not implemented'); }
+  
+  // Crawl job operations
+  getCrawlJobById(id) { throw new Error('Not implemented'); }
+  insertCrawlJob(data) { throw new Error('Not implemented'); }
+  updateCrawlJobStatus(id, status) { throw new Error('Not implemented'); }
+  
+  // Background task operations
+  getBackgroundTaskById(id) { throw new Error('Not implemented'); }
+  insertBackgroundTask(data) { throw new Error('Not implemented'); }
+  updateBackgroundTaskStatus(id, status) { throw new Error('Not implemented'); }
+  
+  // Gazetteer operations
+  getPlaceByQid(qid) { throw new Error('Not implemented'); }
+  getPlacesByKind(kind) { throw new Error('Not implemented'); }
+  insertPlace(data) { throw new Error('Not implemented'); }
+  
+  // Analysis operations
+  getAnalysisRunById(id) { throw new Error('Not implemented'); }
+  insertAnalysisRun(data) { throw new Error('Not implemented'); }
+  linkAnalysisToBackgroundTask(analysisId, taskId) { throw new Error('Not implemented'); }
+  
+  // Utility
+  getSchemaVersion() { throw new Error('Not implemented'); }
+  close() { this.db.close(); }
+}
+
+module.exports = { ISchemaAdapter };
+```
+
+### Step 1: Create Schema V1 Adapter
+
+**Location**: `src/db/sqlite/adapters/SchemaV1Adapter.js`
+
+**Purpose**: Encapsulate current production schema (Schema Version 1)
+
+```javascript
+const { ISchemaAdapter } = require('./ISchemaAdapter');
+
+/**
+ * Schema Version 1 Adapter
+ * 
+ * Wraps current production schema (as of Oct 2025).
+ * Provides stable interface for existing code during v2 migration.
+ * 
+ * See: docs/DATABASE_SCHEMA_VERSION_1.md for complete v1 schema docs
+ */
+class SchemaV1Adapter extends ISchemaAdapter {
+  constructor(db) {
+    super(db);
+    this._initStatements();
+  }
+  
+  _initStatements() {
+    // Prepare all v1 schema queries once for performance
+    this.stmts = {
+      // Articles
+      getArticleById: this.db.prepare('SELECT * FROM articles WHERE id = ?'),
+      getArticlesByHost: this.db.prepare('SELECT * FROM articles WHERE host = ? LIMIT ? OFFSET ?'),
+      insertArticle: this.db.prepare(`
+        INSERT INTO articles (url, title, body, host, fetched_at, created_at)
+        VALUES (@url, @title, @body, @host, @fetched_at, @created_at)
+      `),
+      updateArticle: this.db.prepare(`
+        UPDATE articles SET title = @title, body = @body WHERE id = @id
+      `),
+      deleteArticle: this.db.prepare('DELETE FROM articles WHERE id = ?'),
+      
+      // Crawl jobs
+      getCrawlJobById: this.db.prepare('SELECT * FROM crawl_jobs WHERE id = ?'),
+      insertCrawlJob: this.db.prepare(`
+        INSERT INTO crawl_jobs (id, url, args, status, started_at, crawl_type_id)
+        VALUES (@id, @url, @args, @status, @started_at, @crawl_type_id)
+      `),
+      updateCrawlJobStatus: this.db.prepare(`
+        UPDATE crawl_jobs SET status = ?, ended_at = ? WHERE id = ?
+      `),
+      
+      // Background tasks
+      getBackgroundTaskById: this.db.prepare('SELECT * FROM background_tasks WHERE id = ?'),
+      insertBackgroundTask: this.db.prepare(`
+        INSERT INTO background_tasks (id, type, status, created_at, config)
+        VALUES (@id, @type, @status, @created_at, @config)
+      `),
+      updateBackgroundTaskStatus: this.db.prepare(`
+        UPDATE background_tasks SET status = ?, updated_at = ? WHERE id = ?
+      `),
+      
+      // Gazetteer
+      getPlaceByQid: this.db.prepare('SELECT * FROM places WHERE wikidata_qid = ?'),
+      getPlacesByKind: this.db.prepare('SELECT * FROM places WHERE kind = ?'),
+      insertPlace: this.db.prepare(`
+        INSERT INTO places (wikidata_qid, name, kind, parent_qid, geometry)
+        VALUES (@wikidata_qid, @name, @kind, @parent_qid, @geometry)
+      `),
+      
+      // Analysis
+      getAnalysisRunById: this.db.prepare('SELECT * FROM analysis_runs WHERE id = ?'),
+      insertAnalysisRun: this.db.prepare(`
+        INSERT INTO analysis_runs (id, type, status, started_at, config, background_task_id)
+        VALUES (@id, @type, @status, @started_at, @config, @background_task_id)
+      `),
+      linkAnalysisToBackgroundTask: this.db.prepare(`
+        UPDATE analysis_runs SET background_task_id = ?, background_task_status = ?
+        WHERE id = ?
+      `)
+    };
+  }
+  
+  // Article operations
+  getArticleById(id) {
+    return this.stmts.getArticleById.get(id);
+  }
+  
+  getArticlesByHost(host, options = {}) {
+    const limit = options.limit || 100;
+    const offset = options.offset || 0;
+    return this.stmts.getArticlesByHost.all(host, limit, offset);
+  }
+  
+  insertArticle(data) {
+    return this.stmts.insertArticle.run({
+      url: data.url,
+      title: data.title || null,
+      body: data.body || null,
+      host: data.host || null,
+      fetched_at: data.fetched_at || new Date().toISOString(),
+      created_at: data.created_at || new Date().toISOString()
+    });
+  }
+  
+  updateArticle(id, data) {
+    return this.stmts.updateArticle.run({
+      id,
+      title: data.title,
+      body: data.body
+    });
+  }
+  
+  deleteArticle(id) {
+    return this.stmts.deleteArticle.run(id);
+  }
+  
+  // Crawl job operations
+  getCrawlJobById(id) {
+    return this.stmts.getCrawlJobById.get(id);
+  }
+  
+  insertCrawlJob(data) {
+    return this.stmts.insertCrawlJob.run({
+      id: data.id,
+      url: data.url || null,
+      args: data.args || null,
+      status: data.status || 'pending',
+      started_at: data.started_at || new Date().toISOString(),
+      crawl_type_id: data.crawl_type_id || null
+    });
+  }
+  
+  updateCrawlJobStatus(id, status) {
+    return this.stmts.updateCrawlJobStatus.run(status, new Date().toISOString(), id);
+  }
+  
+  // Background task operations
+  getBackgroundTaskById(id) {
+    return this.stmts.getBackgroundTaskById.get(id);
+  }
+  
+  insertBackgroundTask(data) {
+    return this.stmts.insertBackgroundTask.run({
+      id: data.id,
+      type: data.type,
+      status: data.status || 'pending',
+      created_at: data.created_at || new Date().toISOString(),
+      config: data.config ? JSON.stringify(data.config) : null
+    });
+  }
+  
+  updateBackgroundTaskStatus(id, status) {
+    return this.stmts.updateBackgroundTaskStatus.run(status, new Date().toISOString(), id);
+  }
+  
+  // Gazetteer operations
+  getPlaceByQid(qid) {
+    return this.stmts.getPlaceByQid.get(qid);
+  }
+  
+  getPlacesByKind(kind) {
+    return this.stmts.getPlacesByKind.all(kind);
+  }
+  
+  insertPlace(data) {
+    return this.stmts.insertPlace.run({
+      wikidata_qid: data.wikidata_qid,
+      name: data.name,
+      kind: data.kind,
+      parent_qid: data.parent_qid || null,
+      geometry: data.geometry ? JSON.stringify(data.geometry) : null
+    });
+  }
+  
+  // Analysis operations
+  getAnalysisRunById(id) {
+    return this.stmts.getAnalysisRunById.get(id);
+  }
+  
+  insertAnalysisRun(data) {
+    return this.stmts.insertAnalysisRun.run({
+      id: data.id,
+      type: data.type,
+      status: data.status || 'pending',
+      started_at: data.started_at || new Date().toISOString(),
+      config: data.config ? JSON.stringify(data.config) : null,
+      background_task_id: data.background_task_id || null
+    });
+  }
+  
+  linkAnalysisToBackgroundTask(analysisId, taskId) {
+    // Get task status for denormalized storage
+    const task = this.getBackgroundTaskById(taskId);
+    return this.stmts.linkAnalysisToBackgroundTask.run(
+      taskId,
+      task?.status || 'unknown',
+      analysisId
+    );
+  }
+  
+  // Utility
+  getSchemaVersion() {
+    return 1; // Explicit version identifier
+  }
+}
+
+module.exports = { SchemaV1Adapter };
+```
+
+### Step 2: Update Application to Use Adapter
+
+**Before (direct SQL)**:
+```javascript
+// src/ui/express/server.js
+const { ensureDatabase } = require('./db/sqlite');
+const db = ensureDatabase(dbPath);
+
+// Scattered SQL queries throughout codebase
+app.get('/articles', (req, res) => {
+  const articles = db.prepare('SELECT * FROM articles WHERE host = ?')
+    .all(req.query.host);
+  res.json(articles);
+});
+```
+
+**After (adapter-based)**:
+```javascript
+// src/ui/express/server.js
+const { ensureDatabase } = require('./db/sqlite');
+const { SchemaV1Adapter } = require('./db/sqlite/adapters/SchemaV1Adapter');
+
+const db = ensureDatabase(dbPath);
+const adapter = new SchemaV1Adapter(db);
+
+// Clean, version-independent API
+app.get('/articles', (req, res) => {
+  const articles = adapter.getArticlesByHost(req.query.host, {
+    limit: req.query.limit || 100,
+    offset: req.query.offset || 0
+  });
+  res.json(articles);
+});
+
+// Store adapter for use across application
+app.locals.dbAdapter = adapter;
+```
+
+### Step 3: Create Tests for V1 Adapter
+
+**Location**: `src/db/sqlite/adapters/__tests__/SchemaV1Adapter.test.js`
+
+```javascript
+const { ensureDatabase } = require('../../connection');
+const { SchemaV1Adapter } = require('../SchemaV1Adapter');
+const { createTempDb } = require('../../../test-utils/tempDb');
+
+describe('SchemaV1Adapter', () => {
+  let dbPath, db, adapter;
+  
+  beforeEach(() => {
+    dbPath = createTempDb();
+    db = ensureDatabase(dbPath);
+    adapter = new SchemaV1Adapter(db);
+  });
+  
+  afterEach(() => {
+    adapter.close();
+    // Clean up temp files
+  });
+  
+  describe('Article operations', () => {
+    test('insertArticle and getArticleById', () => {
+      const article = {
+        url: 'http://example.com/test',
+        title: 'Test Article',
+        body: 'Content',
+        host: 'example.com'
+      };
+      
+      const result = adapter.insertArticle(article);
+      expect(result.lastInsertRowid).toBeDefined();
+      
+      const retrieved = adapter.getArticleById(result.lastInsertRowid);
+      expect(retrieved.url).toBe(article.url);
+      expect(retrieved.title).toBe(article.title);
+      expect(retrieved.host).toBe(article.host);
+    });
+    
+    test('getArticlesByHost with pagination', () => {
+      // Insert 10 articles
+      for (let i = 0; i < 10; i++) {
+        adapter.insertArticle({
+          url: `http://example.com/${i}`,
+          title: `Article ${i}`,
+          host: 'example.com'
+        });
+      }
+      
+      // Test pagination
+      const page1 = adapter.getArticlesByHost('example.com', { limit: 5, offset: 0 });
+      expect(page1.length).toBe(5);
+      
+      const page2 = adapter.getArticlesByHost('example.com', { limit: 5, offset: 5 });
+      expect(page2.length).toBe(5);
+      
+      // Verify no overlap
+      expect(page1[0].id).not.toBe(page2[0].id);
+    });
+  });
+  
+  describe('Schema version', () => {
+    test('getSchemaVersion returns 1', () => {
+      expect(adapter.getSchemaVersion()).toBe(1);
+    });
+  });
+});
+```
+
+### Benefits of Adapter Approach
+
+1. **Isolated Changes**: Update schema without touching application code
+2. **Parallel Operation**: Run v1 and v2 simultaneously during migration
+3. **Easy Testing**: Test adapters independently
+4. **Clear Interface**: Standard methods across versions
+5. **Safe Rollback**: Switch back to v1 adapter if v2 fails
+
+---
+
+## Dual-Adapter Strategy (For Schema v2 Migration)
+
+**Goal**: Run old and new schemas simultaneously during migration to verify compatibility.
+
+### Prerequisites
+
+- ✅ SchemaV1Adapter implemented and tested (see above)
+- ✅ Schema v2 design documented
+- ✅ All application code using adapter interface (not direct SQL)
+
+### Step 1: Create Schema V2 Adapter
 
 **Location**: `src/db/sqlite/adapters/`
 

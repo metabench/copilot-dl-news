@@ -1,5 +1,5 @@
 /**
- * Test Helpers for Database Access
+ * Test Helpers for Database Access (Helper Module - No Tests)
  * 
  * CRITICAL: SQLite WAL Mode and Test Isolation
  * 
@@ -128,3 +128,42 @@ module.exports = {
   cleanupTempDb,
   createTempDbPath
 };
+
+if (typeof describe === 'function') {
+  describe('database helpers module', () => {
+    test('getDbFromApp returns provided db handle when available', () => {
+      const sentinel = { name: 'db-handle' };
+      const app = { locals: { backgroundTaskManager: { db: sentinel } } };
+      expect(getDbFromApp(app)).toBe(sentinel);
+    });
+
+    test('getDbFromApp falls back to null when app locals missing', () => {
+      expect(getDbFromApp(null)).toBeNull();
+      expect(getDbFromApp({})).toBeNull();
+    });
+
+    test('createTempDbPath generates unique file paths containing test name', () => {
+      const first = createTempDbPath('unit');
+      const second = createTempDbPath('unit');
+      expect(first).not.toBe(second);
+      expect(first).toContain('unit');
+      expect(second).toContain('unit');
+    });
+
+    test('cleanupTempDb removes sqlite sidecar files if present', () => {
+      const fs = require('fs');
+      const path = require('path');
+      const tmpDir = require('os').tmpdir();
+      const base = path.join(tmpDir, `cleanup-test-${process.pid}-${Date.now()}`);
+      for (const suffix of ['', '-shm', '-wal']) {
+        fs.writeFileSync(base + suffix, 'test');
+      }
+
+      cleanupTempDb(base);
+
+      for (const suffix of ['', '-shm', '-wal']) {
+        expect(fs.existsSync(base + suffix)).toBe(false);
+      }
+    });
+  });
+}

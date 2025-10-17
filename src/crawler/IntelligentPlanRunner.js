@@ -1,4 +1,5 @@
 const { PlanBlueprintBuilder } = require('./planner/PlanBlueprintBuilder');
+const { IntelligentPlanningFacade } = require('./IntelligentPlanningFacade');
 
 class IntelligentPlanRunner {
   constructor({
@@ -13,11 +14,13 @@ class IntelligentPlanRunner {
     getCachedArticle,
     dbAdapter,
     plannerKnowledgeService,
+    countryHubGapService = null,
     enqueueRequest,
     normalizeUrl,
     state,
     intMaxSeeds = 50,
     logger = console,
+    useAPS = false,
     PlannerTelemetryBridge,
     PlannerOrchestrator,
     PlannerBootstrap,
@@ -61,11 +64,13 @@ class IntelligentPlanRunner {
     this.getCachedArticle = getCachedArticle;
     this.dbAdapter = dbAdapter;
     this.plannerKnowledgeService = plannerKnowledgeService;
+    this.countryHubGapService = countryHubGapService;
     this.enqueueRequest = enqueueRequest;
     this.normalizeUrl = normalizeUrl;
     this.state = state;
     this.intMaxSeeds = typeof intMaxSeeds === 'number' ? intMaxSeeds : 50;
     this.logger = logger;
+    this.useAPS = useAPS;
 
     this.PlannerTelemetryBridge = PlannerTelemetryBridge;
     this.PlannerOrchestrator = PlannerOrchestrator;
@@ -76,6 +81,37 @@ class IntelligentPlanRunner {
     this.TargetedAnalysisRunner = TargetedAnalysisRunner;
     this.NavigationDiscoveryRunner = NavigationDiscoveryRunner;
     this.enableTargetedAnalysis = enableTargetedAnalysis !== false;
+
+    // Create planning facade (switches between legacy and APS)
+    this.planningFacade = new IntelligentPlanningFacade({
+      useAPS: this.useAPS,
+      telemetry: this.telemetry,
+      domain: this.domain,
+      baseUrl: this.baseUrl,
+      startUrl: this.startUrl,
+      fetchPage: this.fetchPage,
+      getCachedArticle: this.getCachedArticle,
+      dbAdapter: this.dbAdapter,
+      plannerKnowledgeService: this.plannerKnowledgeService,
+      countryHubGapService: this.countryHubGapService,
+      enqueueRequest: this.enqueueRequest,
+      normalizeUrl: this.normalizeUrl,
+      state: this.state,
+      intMaxSeeds: this.intMaxSeeds,
+      logger: this.logger,
+      PlannerTelemetryBridge: this.PlannerTelemetryBridge,
+      PlannerOrchestrator: this.PlannerOrchestrator,
+      PlannerBootstrap: this.PlannerBootstrap,
+      PatternInference: this.PatternInference,
+      CountryHubPlanner: this.CountryHubPlanner,
+      HubSeeder: this.HubSeeder,
+      TargetedAnalysisRunner: this.TargetedAnalysisRunner,
+      NavigationDiscoveryRunner: this.NavigationDiscoveryRunner,
+      enableTargetedAnalysis: this.enableTargetedAnalysis,
+      plannerEnabled: this.plannerEnabled,
+      plannerVerbosity: this.plannerVerbosity,
+      intTargetHosts: this.intTargetHosts
+    });
 
     this.planPreview = !!planPreview;
     this.planBlueprintBuilderInstance = planBlueprintBuilder instanceof PlanBlueprintBuilder
@@ -98,7 +134,31 @@ class IntelligentPlanRunner {
   async run() {
     const blueprintBuilder = this._createPlanBlueprintBuilder();
     const host = this.domain.toLowerCase();
-    this._log(`Intelligent crawl planning for host=${host}`);
+    
+    // Check if using APS (Advanced Planning Suite)
+    if (this.useAPS) {
+      this._log(`Intelligent crawl planning for host=${host} [APS mode]`);
+      const apsResult = await this.planningFacade.runPlanning();
+      
+      // Return APS result with blueprint
+      return {
+        plannerSummary: {
+          backend: 'aps',
+          countryHubCoverage: apsResult.countryHubCoverage
+        },
+        intelligentSummary: {
+          backend: 'aps',
+          elapsedMs: apsResult.elapsedMs
+        },
+        planBlueprint: blueprintBuilder ? blueprintBuilder.build({
+          plannerSummary: { backend: 'aps' },
+          intelligentSummary: { backend: 'aps' }
+        }) : null
+      };
+    }
+    
+    // Legacy planning mode
+    this._log(`Intelligent crawl planning for host=${host} [Legacy mode]`);
 
     const telemetryBridge = new this.PlannerTelemetryBridge({
       telemetry: this.telemetry,
@@ -273,6 +333,71 @@ class IntelligentPlanRunner {
       })
     }) || [];
   blueprintBuilder?.recordCountryCandidates(countryCandidates);
+
+    // Verify place hubs - check which ones are missing from the database and fetch them immediately
+    const placeHubVerification = await orchestrator.runStage('verify-place-hubs', {
+      candidateCount: countryCandidates.length
+    }, async () => {
+      const missing = [];
+      const cached = [];
+      
+      for (const candidate of countryCandidates) {
+        if (!candidate?.url) continue;
+        
+        const normalized = this.normalizeUrl ? this.normalizeUrl(candidate.url) : candidate.url;
+        if (!normalized) continue;
+        
+        // Check if we have this hub in the database
+        const cachedArticle = await this.getCachedArticle(normalized);
+        
+        if (cachedArticle) {
+          cached.push({ url: normalized, slug: candidate.slug });
+        } else {
+          missing.push({ url: normalized, slug: candidate.slug, reason: candidate.reason });
+        }
+      }
+      
+      // If we have missing place hubs, fetch them immediately with highest priority
+      if (missing.length > 0) {
+        telemetryBridge.milestone({
+          kind: 'place-hub-verification',
+          message: `Found ${missing.length} missing place hubs, fetching immediately`,
+          details: {
+            missing: missing.length,
+            cached: cached.length,
+            total: countryCandidates.length,
+            missingSample: missing.slice(0, 5).map(m => m.slug || m.url)
+          }
+        });
+        
+        // Enqueue missing place hubs with maximum priority
+        for (const hub of missing) {
+          this.enqueueRequest({
+            url: hub.url,
+            depth: 0,
+            priority: 100, // Maximum priority - fetch immediately
+            type: {
+              kind: 'place-hub-verification',
+              reason: hub.reason || 'missing-place-hub',
+              slug: hub.slug,
+              source: 'place-hub-verification-stage'
+            }
+          });
+        }
+      }
+      
+      return { missing: missing.length, cached: cached.length, total: countryCandidates.length };
+    }, {
+      mapResultForEvent: (res) => ({
+        missingCount: res?.missing || 0,
+        cachedCount: res?.cached || 0,
+        totalCount: res?.total || 0
+      }),
+      updateSummaryWithResult: (summary = {}, res) => ({
+        ...summary,
+        placeHubVerification: res || null
+      })
+    });
 
     const maxSeeds = this.intMaxSeeds;
     const hubSeeder = new this.HubSeeder({

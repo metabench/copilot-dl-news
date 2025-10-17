@@ -73,11 +73,21 @@
     }
   },
   "features": {
+    "advancedPlanningSuite": true,
     "gapDrivenPrioritization": true,
     "plannerKnowledgeReuse": true,
     "realTimeCoverageAnalytics": true,
     "problemClustering": true,
-    "gap-driven-prioritization": false
+    "problemResolution": true,
+    "graphReasonerPlugin": true,
+    "gazetteerAwareReasoner": true,
+    "gap-driven-prioritization": true,
+    "costAwarePriority": false,
+    "patternDiscovery": true,
+    "adaptiveBranching": false,
+    "realTimePlanAdjustment": false,
+    "dynamicReplanning": false,
+    "crossDomainSharing": false
   },
   "lastUpdated": "2025-09-28T09:29:04.035Z"
 }

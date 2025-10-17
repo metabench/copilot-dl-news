@@ -20,8 +20,41 @@ const {
   createAttributeStatements,
   recordAttribute
 } = require('../db/sqlite/queries/gazetteer.attributes');
+const {
+  createDeduplicationStatements,
+  checkIngestionRun,
+  startIngestionRun,
+  completeIngestionRun,
+  generateCapitalExternalId,
+  addCapitalRelationship
+} = require('../db/sqlite/queries/gazetteer.deduplication');
 const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../utils/project-root');
+
+// Multi-capital countries with correct coordinates per capital
+// REST Countries API only provides one latlng - use this map for accuracy
+const MULTI_CAPITAL_COORDS = {
+  'ZA': {  // South Africa
+    'pretoria': [-25.7461, 28.1881],      // Executive capital
+    'cape town': [-33.9249, 18.4241],     // Legislative capital
+    'bloemfontein': [-29.1211, 26.2140]   // Judicial capital
+  },
+  'BO': {  // Bolivia
+    'la paz': [-16.4897, -68.1193],       // Administrative capital
+    'sucre': [-19.0332, -65.2627]         // Constitutional capital
+  },
+  'MY': {  // Malaysia
+    'kuala lumpur': [3.1390, 101.6869],   // De facto capital
+    'putrajaya': [2.9264, 101.6964]       // Administrative capital
+  },
+  'NL': {  // Netherlands
+    'amsterdam': [52.3676, 4.9041],       // Constitutional capital
+    'the hague': [52.0705, 4.3007]        // Administrative capital
+  },
+  'BN': {  // Brunei
+    'bandar seri begawan': [4.9031, 114.9398]  // Official capital (sometimes split)
+  }
+};
 
 function getArg(name, fallback) {
   const a = process.argv.find(x => x.startsWith(`--${name}=`));
@@ -36,6 +69,10 @@ function getArg(name, fallback) {
   const dbPath = getArg('db', path.join(projectRoot, 'data', 'news.db'));
   const raw = ensureDb(dbPath);
   try { ensureGazetteer(raw); } catch (_) {}
+  
+  // Create deduplication statements
+  const dedupStmts = createDeduplicationStatements(raw);
+  
   const countriesFilter = (getArg('countries', '') || '').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
   const regionFilter = (getArg('region', '') || '').trim();
   const subregionFilter = (getArg('subregion', '') || '').trim();
@@ -112,6 +149,27 @@ function getArg(name, fallback) {
     raw.prepare(`INSERT OR IGNORE INTO place_sources(name, version, url, license) VALUES ('restcountries', 'v3.1', 'https://restcountries.com', 'CC BY 4.0')`).run();
   } catch (_) {}
 
+  // Check if this ingestion has already been completed
+  try {
+    const existingRun = checkIngestionRun(dedupStmts, 'restcountries', 'v3.1', force);
+    if (existingRun) {
+      const runDate = new Date(existingRun.completed_at).toISOString();
+      const summary = { 
+        countries: 0, 
+        capitals: 0, 
+        names: 0, 
+        source: 'restcountries@v3.1', 
+        skipped: 'already-ingested',
+        lastRun: runDate,
+        message: `REST Countries v3.1 already ingested at ${runDate}. Use --force=1 to re-ingest.`
+      };
+      if (verbose) log(`[gazetteer] Skipping: already ingested on ${runDate}`);
+      console.log(JSON.stringify(summary));
+      try { raw.close(); } catch (_) {}
+      return;
+    }
+  } catch (_) { /* ignore and proceed */ }
+  
   // Fast path: if already populated and no filters/enrichment, skip network fetch
   try {
     const existingCountries = raw.prepare("SELECT COUNT(*) AS c FROM places WHERE kind='country'").get()?.c || 0;
@@ -140,6 +198,15 @@ function getArg(name, fallback) {
     console.error('Failed to fetch REST Countries:', e.message);
     process.exit(1);
   }
+  
+  // Start ingestion run tracking
+  const runId = startIngestionRun(dedupStmts, 'restcountries', 'v3.1', {
+    countriesFilter: countriesFilter.length > 0 ? countriesFilter : null,
+    importAdm1,
+    importCities,
+    offline
+  });
+  if (verbose) log(`[gazetteer] Started ingestion run #${runId}`);
 
   const insPlace = raw.prepare(`
     INSERT INTO places(kind, country_code, population, timezone, lat, lng, bbox, canonical_name_id, source, extra)
@@ -341,25 +408,71 @@ function getArg(name, fallback) {
           if (m && m !== f) { insName.run(pid, m, normalizeName(m), lang, 'demonym', 0, 0); names++; }
         }
       }
-  // Capitals (as cities with parent link)
+  // Capitals (as cities with capital_of relationship)
       const capList = is_array(c.capital) ? c.capital : (c.capital ? [c.capital] : []);
       const capInfo = is_array(c.capitalInfo?.latlng) ? c.capitalInfo.latlng : null;
+      
       for (const cap of capList) {
-        // Create city place
         const normCap = normalizeName(cap);
-        let cid = getCityByCountryAndNormName.get(cc2, normCap)?.id || null;
+        
+        // Generate stable external ID for this capital
+        const externalId = generateCapitalExternalId('restcountries', cc2, normCap);
+        
+        // Check if capital already exists via external ID
+  const existing = getByExternalId.get('restcountries', externalId);
+        let cid = existing?.id || null;
+        
+        // Determine coordinates: use multi-capital map if available, fallback to API data
+        let capLat = null, capLng = null;
+        const multiCapCoords = MULTI_CAPITAL_COORDS[cc2];
+        if (multiCapCoords && multiCapCoords[normCap]) {
+          capLat = multiCapCoords[normCap][0];
+          capLng = multiCapCoords[normCap][1];
+        } else if (capInfo) {
+          capLat = capInfo[0];
+          capLng = capInfo[1];
+        }
+        
         if (!cid) {
-          const res = insPlace.run({ kind: 'city', country_code: cc2, population: null, timezone: primTz, lat: capInfo?capInfo[0]:null, lng: capInfo?capInfo[1]:null, bbox: null, source: 'restcountries@v3.1', extra: JSON.stringify({ role: 'capital' }) });
+          // Create new capital city
+          const res = insPlace.run({ 
+            kind: 'city', 
+            country_code: cc2, 
+            population: null, 
+            timezone: primTz, 
+            lat: capLat, 
+            lng: capLng, 
+            bbox: null, 
+            source: 'restcountries@v3.1', 
+            extra: JSON.stringify({ role: 'capital' }) 
+          });
           cid = res.lastInsertRowid;
           capitals++;
+          
+          // Register external ID to prevent future duplicates
+          try {
+            insertExternalId.run('restcountries', externalId, cid);
+          } catch (_) {}
+        } else {
+          // Update coordinates if we have better data and existing record lacks them
+          if (capLat && capLng) {
+            try {
+              raw.prepare(`UPDATE places SET lat = COALESCE(lat, ?), lng = COALESCE(lng, ?) WHERE id = ?`)
+                .run(capLat, capLng, cid);
+            } catch (_) {}
+          }
         }
+        
+        // Add name
         insName.run(cid, cap, normCap, 'und', 'endonym', 1, 0); names++;
+        
+        // Record attributes
         const cityFetchedAt = Date.now();
-        if (capInfo) {
+        if (capLat && capLng) {
           recordAttribute(attributeStatements, {
             placeId: cid,
             attr: 'lat',
-            value: capInfo[0],
+            value: capLat,
             source: attrSource,
             fetchedAt: cityFetchedAt,
             metadata: { provider: 'restcountries', version: 'v3.1', role: 'capital' }
@@ -367,7 +480,7 @@ function getArg(name, fallback) {
           recordAttribute(attributeStatements, {
             placeId: cid,
             attr: 'lng',
-            value: capInfo[1],
+            value: capLng,
             source: attrSource,
             fetchedAt: cityFetchedAt,
             metadata: { provider: 'restcountries', version: 'v3.1', role: 'capital' }
@@ -381,8 +494,10 @@ function getArg(name, fallback) {
           fetchedAt: cityFetchedAt,
           metadata: { provider: 'restcountries', version: 'v3.1' }
         });
-        // Link hierarchy (country -> city)
-  try { raw.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?, ?, 'admin_parent', 1)`).run(pid, cid); } catch (_) {}
+        
+        // Link hierarchy using capital_of relation (supports multi-parent)
+        addCapitalRelationship(dedupStmts, pid, cid, { source: 'restcountries', version: 'v3.1' });
+        
         // Set canonical for the city
         try {
           const best = raw.prepare(`SELECT id FROM place_names WHERE place_id=? ORDER BY is_official DESC, is_preferred DESC, (lang='en') DESC, id ASC LIMIT 1`).get(cid)?.id;
@@ -569,7 +684,13 @@ function getArg(name, fallback) {
       if (importAdm1) {
         // ADM1 via Wikidata SPARQL (limited); import name + link to country, no polygons
         try {
-          const sparql = `SELECT ?adm ?admLabel WHERE { ?country wdt:P297 "${crow.country_code}". ?adm wdt:P31/wdt:P279* wd:Q10864048; wdt:P17 ?country. SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,und". } } LIMIT ${Math.max(1, Math.min(adm1Limit, 500))}`;
+          const adm1ClassValues = ['wd:Q10864048', 'wd:Q15284', 'wd:Q3336843'].join(' ');
+          const sparql = `SELECT ?adm ?admLabel WHERE {
+            ?country wdt:P297 "${crow.country_code}".
+            VALUES ?admClass { ${adm1ClassValues} }
+            ?adm wdt:P31/wdt:P279* ?admClass; wdt:P17 ?country.
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,und". }
+          } LIMIT ${Math.max(1, Math.min(adm1Limit, 500))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
           if (verbose) log(`[gazetteer] ADM1 query for ${crow.country_code} returned ${rows.length}`);
@@ -708,6 +829,19 @@ function getArg(name, fallback) {
       log(lines.join('\n'));
     } catch (_) {}
   }
+  // Complete ingestion run
+  try {
+    completeIngestionRun(dedupStmts, runId, {
+      countries_processed: finalSummary.countries,
+      places_created: finalSummary.capitals + (finalSummary.adm1 || 0) + (finalSummary.adm2 || 0) + (finalSummary.cities || 0),
+      places_updated: 0,
+      names_added: finalSummary.names
+    });
+    if (verbose) log(`[gazetteer] Completed ingestion run #${runId}`);
+  } catch (e) {
+    if (verbose) log(`[gazetteer] Failed to complete ingestion run: ${e.message}`);
+  }
+  
   console.log(JSON.stringify(finalSummary));
   try { raw.close(); } catch (_) {}
 })();

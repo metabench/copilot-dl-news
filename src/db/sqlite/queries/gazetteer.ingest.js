@@ -1,15 +1,21 @@
 'use strict';
 
 const { is_array } = require('lang-tools');
+const { normalizeName } = require('./gazetteer.utils');
 const {
   createAttributeStatements,
   recordAttributes
 } = require('./gazetteer.attributes');
+const {
+  findExistingPlace,
+  generateCapitalExternalId
+} = require('./gazetteer.deduplication');
 
 /**
  * Gazetteer data ingestion queries
  * 
  * Handles upserts and lookups for places, names, external IDs, and per-source attributes during ingestion
+ * Now integrated with robust deduplication strategies
  */
 
 /**
@@ -18,9 +24,16 @@ const {
  * @returns {object} Object with prepared statement functions
  */
 function createIngestionStatements(db) {
-  process.stderr.write('[createIngestionStatements] Starting to create prepared statements...\n');
+  const debugEnabled = global.__COPILOT_GAZETTEER_VERBOSE === true;
+  const debugLog = (message) => {
+    if (debugEnabled) {
+      process.stderr.write(`${message}\n`);
+    }
+  };
+
+  debugLog('[createIngestionStatements] Starting to create prepared statements...');
   const attributeStatements = createAttributeStatements(db);
-  process.stderr.write('[createIngestionStatements] Attribute statements created\n');
+  debugLog('[createIngestionStatements] Attribute statements created');
   const statements = {
     getPlaceByWikidataQid: db.prepare(`
       SELECT id FROM places WHERE wikidata_qid = ?
@@ -38,12 +51,41 @@ function createIngestionStatements(db) {
       SELECT id FROM places
       WHERE kind = 'region' AND country_code = ? AND adm1_code = ?
     `),
+
+    getRegionByAdm1: db.prepare(`
+      SELECT id, source FROM places
+      WHERE kind = 'region' AND country_code = ? AND adm1_code = ? AND adm2_code IS NULL
+    `),
+
+    getRegionByAdm2: db.prepare(`
+      SELECT id, source FROM places
+      WHERE kind = 'region' AND country_code = ? AND adm1_code = ? AND adm2_code = ?
+    `),
+
+    getCityByCountryAndNormName: db.prepare(`
+      SELECT p.id, p.source, p.lat, p.lng
+      FROM places p
+      JOIN place_names pn ON p.canonical_name_id = pn.id
+      WHERE p.kind = 'city' AND p.country_code = ? AND pn.normalized = ?
+      LIMIT 1
+    `),
+
+    findNearbyPlace: db.prepare(`
+      SELECT id, source,
+        ABS(lat - @lat) + ABS(lng - @lng) AS distance
+      FROM places
+      WHERE kind = @kind AND country_code = @country_code
+        AND lat IS NOT NULL AND lng IS NOT NULL
+        AND ABS(lat - @lat) + ABS(lng - @lng) < @threshold
+      ORDER BY distance
+      LIMIT 1
+    `),
     
     insertPlace: db.prepare(`
       INSERT INTO places (
         kind, country_code, adm1_code, adm2_code, population, timezone, lat, lng, bbox,
         canonical_name_id, source, extra,
-        wikidata_qid, osm_type, osm_id, area, gdp_usd, admin_level, wikidata_props, osm_tags,
+        wikidata_qid, osm_type, osm_id, area, gdp_usd, wikidata_admin_level, wikidata_props, osm_tags,
         crawl_depth, priority_score, last_crawled_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
@@ -60,8 +102,8 @@ function createIngestionStatements(db) {
         osm_type = COALESCE(osm_type, ?),
         osm_id = COALESCE(osm_id, ?),
         area = COALESCE(area, ?),
-        gdp_usd = COALESCE(gdp_usd, ?),
-        admin_level = COALESCE(admin_level, ?),
+  gdp_usd = COALESCE(gdp_usd, ?),
+  wikidata_admin_level = COALESCE(wikidata_admin_level, ?),
         wikidata_props = COALESCE(wikidata_props, ?),
         osm_tags = COALESCE(osm_tags, ?),
         crawl_depth = COALESCE(crawl_depth, ?),
@@ -106,16 +148,17 @@ function createIngestionStatements(db) {
 
     attributeStatements
   };
-  process.stderr.write('[createIngestionStatements] All statements created successfully\n');
+  debugLog('[createIngestionStatements] All statements created successfully');
   return statements;
 }
 
 /**
  * Upsert a place (insert if new, update if exists)
+ * Now uses robust deduplication strategies to find existing places
  * @param {object} db - Better-sqlite3 database handle
  * @param {object} statements - Prepared statements from createIngestionStatements
  * @param {object} placeData - Place data to upsert
- * @returns {number} Place ID
+ * @returns {object} { placeId, created: boolean }
  */
 function upsertPlace(db, statements, placeData) {
   const {
@@ -133,44 +176,43 @@ function upsertPlace(db, statements, placeData) {
     extra = null,
     area = null,
     gdpUsd = null,
-    adminLevel = null,
+  wikidataAdminLevel = null,
+  adminLevel = null,
     wikidataProps = null,
     crawlDepth = null,
     priorityScore = null,
     osmType = null,
     osmId = null,
     osmTags = null,
+    geonamesId = null,
     attributes = []
   } = placeData;
 
   const now = Date.now();
   const normalizedSource = source || 'unknown';
-  let existing = null;
-
-  if (wikidataQid) {
-    existing = statements.getPlaceByWikidataQid.get(wikidataQid);
-    if (!existing) {
-      existing = statements.getPlaceByExternalId.get('wikidata', wikidataQid);
-    }
-  }
-
-  if (!existing && osmId) {
-    const osmKey = `${osmType || 'relation'}/${osmId}`;
-    existing = statements.getPlaceByExternalId.get('osm', osmKey);
-  }
-
-  if (!existing && kind === 'country' && countryCode) {
-    existing = statements.getCountryByCode.get(countryCode);
-  }
-
-  if (!existing && kind === 'region' && countryCode && adm1Code) {
-    existing = statements.getRegionByCodes.get(countryCode, adm1Code);
-  }
+  const resolvedWikidataAdminLevel = wikidataAdminLevel != null ? wikidataAdminLevel : adminLevel;
+  
+  // Use robust deduplication to find existing place
+  const existingMatch = findExistingPlace(statements, {
+    wikidataQid,
+    osmType,
+    osmId,
+    geonamesId,
+    kind,
+    countryCode,
+    adm1Code,
+    adm2Code,
+    normalizedName: placeData.normalizedName, // Can be passed explicitly
+    lat,
+    lng
+  });
 
   let placeId;
+  let created = false;
 
-  if (existing) {
-    placeId = existing.id;
+  if (existingMatch) {
+    // Update existing place
+    placeId = existingMatch.id;
     statements.updatePlace.run(
       adm1Code,
       adm2Code,
@@ -181,9 +223,9 @@ function upsertPlace(db, statements, placeData) {
       bbox,
       osmType || null,
       osmId || null,
-      area,
-      gdpUsd,
-      adminLevel,
+  area,
+  gdpUsd,
+  resolvedWikidataAdminLevel,
       wikidataProps ? JSON.stringify(wikidataProps) : null,
       osmTags ? JSON.stringify(osmTags) : null,
       crawlDepth,
@@ -198,7 +240,11 @@ function upsertPlace(db, statements, placeData) {
     if (osmId) {
       statements.insertExternalId.run('osm', `${osmType || 'relation'}/${osmId}`, placeId);
     }
+    if (geonamesId) {
+      statements.insertExternalId.run('geonames', String(geonamesId), placeId);
+    }
   } else {
+    // Create new place
     const insertResult = statements.insertPlace.run(
       kind,
       countryCode,
@@ -215,9 +261,9 @@ function upsertPlace(db, statements, placeData) {
       wikidataQid,
       osmType || null,
       osmId || null,
-      area,
-      gdpUsd,
-      adminLevel,
+  area,
+  gdpUsd,
+  resolvedWikidataAdminLevel,
       wikidataProps ? JSON.stringify(wikidataProps) : null,
       osmTags ? JSON.stringify(osmTags) : null,
       crawlDepth,
@@ -225,11 +271,16 @@ function upsertPlace(db, statements, placeData) {
       now
     );
     placeId = insertResult.lastInsertRowid;
+    created = true;
+    
     if (wikidataQid) {
       statements.insertExternalId.run('wikidata', wikidataQid, placeId);
     }
     if (osmId) {
       statements.insertExternalId.run('osm', `${osmType || 'relation'}/${osmId}`, placeId);
+    }
+    if (geonamesId) {
+      statements.insertExternalId.run('geonames', String(geonamesId), placeId);
     }
   }
 
@@ -250,7 +301,7 @@ function upsertPlace(db, statements, placeData) {
     );
   }
 
-  return placeId;
+  return { placeId, created };
 }
 
 /**
@@ -310,21 +361,14 @@ function setCanonicalName(statements, placeId) {
   }
 }
 
-/**
- * Normalize a name for matching (remove diacritics, lowercase)
- * @param {string} text
- * @returns {string|null}
- */
-function normalizeName(text) {
-  if (!text) return null;
-  return text.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase();
-}
-
 module.exports = {
   createIngestionStatements,
   upsertPlace,
   insertPlaceName,
   insertExternalId,
   setCanonicalName,
-  normalizeName
+  normalizeName,  // Re-export from utils for backward compatibility
+  // Re-export deduplication utilities for convenience
+  findExistingPlace,
+  generateCapitalExternalId
 };

@@ -6,7 +6,9 @@
 @use 'partials/layout';
 @use 'partials/themes';
 @use 'partials/ui-pages';
+@use 'partials/analysis-start-form';
 @use 'partials/proposed-actions-popup';
 @use 'partials/analysis-progress-bar';
 @use 'partials/crawl-progress-indicator';
+@use 'partials/prop-editor-legacy';
 @use 'partials/telemetry';

@@ -5,6 +5,7 @@ const fetch = (...args) => import('node-fetch').then(({
 }) => fetch(...args));
 const robotsParser = require('robots-parser');
 const fs = require('fs').promises;
+const { existsSync } = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { tof, is_array } = require('lang-tools');
@@ -36,8 +37,9 @@ const {
   createCrawlerDb
 } = require('./crawler/dbClient');
 const {
-  ensureGazetteer
-} = require('./db/sqlite/ensureDb');
+  ensureGazetteer,
+  ensureDatabase
+} = require('./db/sqlite');
 // Enhanced features (optional)
 const {
   ConfigManager
@@ -60,6 +62,276 @@ const {
 const {
   ProblemResolutionService
 } = require('./crawler/ProblemResolutionService');
+const {
+  CrawlPlaybookService
+} = require('./crawler/CrawlPlaybookService');
+const {
+  CountryHubGapService
+} = require('./crawler/CountryHubGapService');
+const chalk = require('chalk');
+
+const CLI_COLORS = Object.freeze({
+  success: chalk.green,
+  error: chalk.red,
+  warning: chalk.yellow,
+  info: chalk.blue,
+  progress: chalk.cyan,
+  muted: chalk.gray,
+  neutral: chalk.white,
+  accent: chalk.magenta,
+  dim: chalk.dim
+});
+
+const CLI_ICONS = Object.freeze({
+  info: 'ℹ',
+  success: '✓',
+  warning: '⚠',
+  error: '✖',
+  progress: '⚙',
+  pending: '⏳',
+  complete: '✅',
+  geography: '🌍',
+  schema: '🗂',
+  compass: '🧭',
+  features: '🧠',
+  stageCountries: '🌐',
+  stageRegions: '🗺️',
+  stageCities: '🏙️',
+  stageBoundaries: '🛡️',
+  summary: '📊',
+  idle: '○',
+  bullet: '•',
+  debug: '…'
+});
+
+const CLI_STAGE_LABELS = Object.freeze({
+  countries: 'Countries',
+  adm1: 'Regions',
+  adm2: 'Sub-regions',
+  cities: 'Cities',
+  boundaries: 'Boundaries'
+});
+
+const CLI_STAGE_ICONS = Object.freeze({
+  countries: CLI_ICONS.stageCountries,
+  adm1: CLI_ICONS.stageRegions,
+  adm2: CLI_ICONS.stageRegions,
+  cities: CLI_ICONS.stageCities,
+  boundaries: CLI_ICONS.stageBoundaries
+});
+
+const CLI_STAGE_COLORS = Object.freeze({
+  countries: CLI_COLORS.info,
+  adm1: CLI_COLORS.accent,
+  adm2: CLI_COLORS.accent,
+  cities: CLI_COLORS.success,
+  boundaries: CLI_COLORS.warning,
+  default: CLI_COLORS.progress
+});
+
+const colorText = (colorFn, text) => (colorFn ? colorFn(text) : text);
+const colorBold = (colorFn, text) => (colorFn?.bold ? colorFn.bold(text) : colorText(colorFn, text));
+
+// Global verbose flag (set by CLI argument)
+let VERBOSE_MODE = false;
+
+const log = {
+  success: (msg) => console.log(CLI_COLORS.success(CLI_ICONS.success), msg),
+  error: (msg) => console.log(CLI_COLORS.error(CLI_ICONS.error), msg),
+  warn: (msg) => console.log(CLI_COLORS.warning(CLI_ICONS.warning), msg),
+  info: (msg) => console.log(CLI_COLORS.info(CLI_ICONS.info), msg),
+  progress: (stage, current, total, details = '') => {
+    const pct = Math.round((current / total) * 100);
+    const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
+    const detailText = details ? CLI_COLORS.muted(` ${details}`) : '';
+    console.log(CLI_COLORS.progress(`[${bar}] ${pct}% ${stage}`) + detailText);
+  },
+  stat: (label, value) => console.log(CLI_COLORS.muted(`${label}:`), CLI_COLORS.neutral(value)),
+  debug: (...args) => VERBOSE_MODE && console.error(CLI_COLORS.dim('[DEBUG]'), ...args),
+
+  // Format geography crawl progress into concise one-liner
+  formatGeographyProgress: (data) => {
+    if (!data || !data.gazetteer) return null;
+
+    const g = data.gazetteer;
+    const parts = [];
+    const progressPayload = g.lastProgress?.payload;
+
+    if (g.status === 'running') {
+      parts.push(CLI_COLORS.progress(CLI_ICONS.progress));
+    } else if (g.status === 'completed') {
+      parts.push(CLI_COLORS.success(CLI_ICONS.complete));
+    } else if (g.error) {
+      parts.push(CLI_COLORS.error(CLI_ICONS.error));
+    } else {
+      parts.push(CLI_COLORS.muted(CLI_ICONS.idle));
+    }
+
+    if (g.currentStage) {
+      const stageKey = g.currentStage;
+      const stageLabel = CLI_STAGE_LABELS[stageKey] || stageKey;
+      const stageColor = CLI_STAGE_COLORS[stageKey] || CLI_STAGE_COLORS.default;
+      const stageIcon = CLI_STAGE_ICONS[stageKey] || CLI_ICONS.progress;
+      const innerPayload = (progressPayload?.phase === 'ingestor-progress') ? progressPayload?.payload : progressPayload;
+
+      let descriptor = `${colorText(stageColor, stageIcon)} ${colorBold(stageColor, stageLabel)}`;
+
+      if (stageKey === 'boundaries' && innerPayload?.canonicalName) {
+        const locationLabel = innerPayload.countryCode
+          ? `${innerPayload.canonicalName} (${innerPayload.countryCode})`
+          : innerPayload.canonicalName;
+        descriptor = `${descriptor} ${colorText(stageColor, locationLabel)}`;
+      } else if ((stageKey === 'cities' || stageKey === 'adm1') && innerPayload?.countryCode) {
+        descriptor = `${descriptor} ${colorText(stageColor, innerPayload.countryCode)}`;
+      }
+
+      parts.push(descriptor);
+    }
+
+    if (progressPayload) {
+      const payload = progressPayload;
+
+      if (payload.phase === 'stage-start') {
+        parts.push(CLI_COLORS.muted(`starting (${payload.ingestorCount || 0} ingestors)`));
+      } else if (payload.phase === 'ingestor-start') {
+        parts.push(CLI_COLORS.muted(`ingestor: ${payload.ingestor || 'unknown'}`));
+      } else if (payload.phase === 'discovery') {
+        if (payload.totalCountries) {
+          parts.push(CLI_COLORS.muted(`discovering from ${payload.totalCountries} countries`));
+        }
+        if (payload.estimatedTotal) {
+          parts.push(CLI_COLORS.muted(`~${payload.estimatedTotal} expected`));
+        }
+      } else if (payload.phase === 'processing') {
+        if (payload.current != null && payload.totalItems != null) {
+          parts.push(CLI_COLORS.neutral(`[${payload.current}/${payload.totalItems}]`));
+        }
+
+        if (payload.citiesProcessed != null) {
+          parts.push(CLI_COLORS.muted(`${payload.citiesProcessed} cities`));
+        } else if (payload.regionsProcessed != null) {
+          parts.push(CLI_COLORS.muted(`${payload.regionsProcessed} regions`));
+        }
+
+        if (payload.percentComplete != null) {
+          const pct = payload.percentComplete;
+          const pctColor = pct < 33 ? CLI_COLORS.error : pct < 66 ? CLI_COLORS.warning : CLI_COLORS.success;
+          parts.push(pctColor(`${pct}%`));
+        }
+
+        if (payload.totalUpserted != null || payload.totalProcessed != null) {
+          const upserted = payload.totalUpserted || 0;
+          const processed = payload.totalProcessed || 0;
+          const errors = payload.totalErrors || 0;
+
+          if (upserted > 0) {
+            parts.push(CLI_COLORS.success(`${CLI_ICONS.success}${upserted}`));
+          }
+          if (processed > 0) {
+            parts.push(CLI_COLORS.muted(`${processed} total`));
+          }
+          if (errors > 0) {
+            parts.push(CLI_COLORS.error(`${CLI_ICONS.error}${errors}`));
+          }
+        }
+      }
+
+      if (payload.timing && payload.timing.estimatedRemainingMs != null) {
+        const remainingSec = Math.round(payload.timing.estimatedRemainingMs / 1000);
+        const remainingMin = Math.floor(remainingSec / 60);
+        if (remainingMin > 0) {
+          parts.push(CLI_COLORS.dim(`~${remainingMin}m left`));
+        } else if (remainingSec > 0) {
+          parts.push(CLI_COLORS.dim(`~${remainingSec}s left`));
+        }
+      }
+
+      if (payload.message && !payload.countryCode) {
+        parts.push(CLI_COLORS.muted(payload.message));
+      }
+    }
+
+    return parts.join(' ');
+  }
+};
+
+const formatStageStart = (stageKey) => {
+  if (!stageKey) return null;
+  const label = CLI_STAGE_LABELS[stageKey] || stageKey;
+  const colorFn = CLI_STAGE_COLORS[stageKey] || CLI_STAGE_COLORS.default;
+  const icon = CLI_STAGE_ICONS[stageKey] || CLI_ICONS.progress;
+  const statusIcon = CLI_COLORS.progress(CLI_ICONS.pending);
+  const stageIcon = colorText(colorFn, icon);
+  const stageLabel = colorBold(colorFn, label);
+  return `${statusIcon} ${stageIcon} ${stageLabel} ${CLI_COLORS.muted('starting')}`;
+};
+
+const formatStageComplete = (stageKey, stats) => {
+  if (!stageKey) return null;
+  const summary = stats && typeof stats === 'object' ? stats : null;
+  const label = CLI_STAGE_LABELS[stageKey] || stageKey;
+  const colorFn = CLI_STAGE_COLORS[stageKey] || CLI_STAGE_COLORS.default;
+  const icon = CLI_STAGE_ICONS[stageKey] || CLI_ICONS.progress;
+  const stageIcon = colorText(colorFn, icon);
+  const stageLabel = colorBold(colorFn, label);
+
+  const processed = summary?.recordsProcessed;
+  const upserted = summary?.recordsUpserted;
+  const errors = summary?.errors;
+  const ingestors = summary?.ingestorsCompleted ?? summary?.ingestorsAttempted;
+
+  const detailParts = [];
+  if (processed != null) {
+    detailParts.push(CLI_COLORS.muted(`${processed} processed`));
+  }
+  if (upserted != null) {
+    detailParts.push(upserted > 0
+      ? CLI_COLORS.success(`${CLI_ICONS.success}${upserted} new`)
+      : CLI_COLORS.muted('0 new'));
+  }
+  if (errors != null) {
+    detailParts.push(errors > 0
+      ? CLI_COLORS.error(`${CLI_ICONS.error}${errors}`)
+      : CLI_COLORS.muted('0 errors'));
+  }
+  if (ingestors != null) {
+    detailParts.push(CLI_COLORS.muted(`${ingestors} ingestor${ingestors === 1 ? '' : 's'}`));
+  }
+
+  const bullet = CLI_COLORS.muted(` ${CLI_ICONS.bullet} `);
+  const detailText = detailParts.filter(Boolean).join(bullet);
+  return `${CLI_COLORS.success(CLI_ICONS.complete)} ${stageIcon} ${stageLabel}${detailText ? ' ' + detailText : ''}`;
+};
+
+const formatAllStagesSummary = (summary) => {
+  if (!summary || typeof summary !== 'object') return null;
+  const stages = summary.stagesCompleted ?? summary.stagesAttempted;
+  const processed = summary.recordsProcessed;
+  const upserted = summary.recordsUpserted;
+  const errors = summary.errors;
+
+  const detailParts = [];
+  if (stages != null) {
+    detailParts.push(CLI_COLORS.muted(`${stages} stages`));
+  }
+  if (processed != null) {
+    detailParts.push(CLI_COLORS.muted(`${processed} processed`));
+  }
+  if (upserted != null) {
+    detailParts.push(upserted > 0
+      ? CLI_COLORS.success(`${CLI_ICONS.success}${upserted} new`)
+      : CLI_COLORS.muted('0 new'));
+  }
+  if (errors != null) {
+    detailParts.push(errors > 0
+      ? CLI_COLORS.error(`${CLI_ICONS.error}${errors}`)
+      : CLI_COLORS.muted('0 errors'));
+  }
+
+  const bullet = CLI_COLORS.muted(` ${CLI_ICONS.bullet} `);
+  const detailText = detailParts.filter(Boolean).join(bullet);
+  return `${CLI_COLORS.success(CLI_ICONS.summary)} ${colorBold(CLI_COLORS.success, 'Gazetteer summary')}${detailText ? ' ' + detailText : ''}`;
+};
 
 const DEFAULT_FEATURE_FLAGS = Object.freeze({
   gapDrivenPrioritization: false,
@@ -68,6 +340,14 @@ const DEFAULT_FEATURE_FLAGS = Object.freeze({
   problemClustering: false,
   problemResolution: false
 });
+
+function normalizeHost(host) {
+  if (!host && host !== 0) return null;
+  const value = String(host).trim().toLowerCase();
+  if (!value) return null;
+  const withoutScheme = value.replace(/^https?:\/\//, '');
+  return withoutScheme.replace(/\/.*$/, '');
+}
 const {
   loadSitemaps
 } = require('./crawler/sitemap');
@@ -113,15 +393,9 @@ const {
 const {
   WikidataCountryIngestor
 } = require('./crawler/gazetteer/ingestors/WikidataCountryIngestor');
-const {
-  WikidataAdm1Ingestor
-} = require('./crawler/gazetteer/ingestors/WikidataAdm1Ingestor');
-const {
-  WikidataCitiesIngestor
-} = require('./crawler/gazetteer/ingestors/WikidataCitiesIngestor');
-const {
-  OsmBoundaryIngestor
-} = require('./crawler/gazetteer/ingestors/OsmBoundaryIngestor');
+const WikidataAdm1Ingestor = require('./crawler/gazetteer/ingestors/WikidataAdm1Ingestor');
+const WikidataCitiesIngestor = require('./crawler/gazetteer/ingestors/WikidataCitiesIngestor');
+const OsmBoundaryIngestor = require('./crawler/gazetteer/ingestors/OsmBoundaryIngestor');
 const {
   sleep,
   nowMs,
@@ -193,7 +467,7 @@ const crawlerOptionsSchema = {
   maxAgeArticleMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
   maxAgeHubMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
   dbPath: { type: 'string', default: null }, // Will be computed after dataDir
-  fastStart: { type: 'boolean', default: false },
+  fastStart: { type: 'boolean', default: true },
   enableDb: { type: 'boolean', default: true },
   preferCache: { type: 'boolean', default: true },
   useSitemap: { type: 'boolean', default: true },
@@ -202,6 +476,9 @@ const crawlerOptionsSchema = {
   hubMaxPages: { type: 'number', default: undefined },
   hubMaxDays: { type: 'number', default: undefined },
   intMaxSeeds: { type: 'number', default: 50 },
+  limitCountries: { type: 'number', default: undefined, processor: (val) => (val == null ? undefined : Math.max(1, Math.floor(val))), validator: (val) => val > 0 },
+  targetCountries: { type: 'array', default: null },
+  gazetteerStages: { type: 'array', default: null },
   intTargetHosts: { type: 'array', default: null, processor: (val) => val ? val.map(s => String(s || '').toLowerCase()) : null },
   plannerVerbosity: { type: 'number', default: 0 },
   requestTimeoutMs: { type: 'number', default: 10000, validator: (val) => val > 0 },
@@ -217,6 +494,7 @@ class NewsCrawler {
   constructor(startUrl, options = {}) {
     this.startUrl = startUrl;
     this.domain = new URL(startUrl).hostname;
+    this.domainNormalized = normalizeHost(this.domain);
     this.baseUrl = `${new URL(startUrl).protocol}//${this.domain}`;
     
     // Apply schema-driven option validation
@@ -254,6 +532,12 @@ class NewsCrawler {
     this.intMaxSeeds = opts.intMaxSeeds;
     this.intTargetHosts = opts.intTargetHosts;
     this.plannerVerbosity = opts.plannerVerbosity;
+    // Geography crawl limits
+    this.limitCountries = opts.limitCountries;
+    this.targetCountries = opts.targetCountries && opts.targetCountries.length ? opts.targetCountries : null;
+    this.gazetteerStageFilter = Array.isArray(opts.gazetteerStages) && opts.gazetteerStages.length
+      ? new Set(opts.gazetteerStages.map(stage => String(stage).toLowerCase()))
+      : null;
 
     // State containers
     this.state = new CrawlerState();
@@ -279,6 +563,8 @@ class NewsCrawler {
       ProblemClusteringService,
       PlannerKnowledgeService,
       ProblemResolutionService,
+      CrawlPlaybookService,
+      CountryHubGapService,
       logger: console
     });
     // Track active workers to coordinate idle waiting
@@ -514,6 +800,7 @@ class NewsCrawler {
       enqueueRequest: (request) => this.enqueueRequest(request),
       emitProgress: () => this.emitProgress(),
       getQueueSize: () => this.queue.size(),
+      dbAdapter: () => this.dbAdapter,
       logger: console
     });
 
@@ -600,6 +887,9 @@ class NewsCrawler {
       computeContentSignals: ($, html) => this._computeContentSignals($, html),
       computeUrlSignals: (rawUrl) => this._computeUrlSignals(rawUrl),
       combineSignals: (urlSignals, contentSignals, opts) => this._combineSignals(urlSignals, contentSignals, opts),
+      countryHubGapService: () => this.enhancedFeatures?.getCountryHubGapService?.(),
+      jobId: this.jobId,
+      domain: this.domain,
       structureOnly: this.structureOnly
     });
 
@@ -674,6 +964,10 @@ class NewsCrawler {
 
   get problemResolutionService() {
     return this.enhancedFeatures?.getProblemResolutionService() || null;
+  }
+
+  get crawlPlaybookService() {
+    return this.enhancedFeatures?.getCrawlPlaybookService() || null;
   }
 
   get seededHubUrls() {
@@ -795,6 +1089,12 @@ class NewsCrawler {
     // Store concurrency as maximum allowed, not as required parallelism level
     this.concurrency = Math.max(1, options.concurrency || 1);
     this.usePriorityQueue = false;
+    
+    // Geography/gazetteer crawls should process all stages regardless of depth
+    // Set maxDepth to 999 to effectively disable depth filtering
+    if (options.maxDepth == null) {
+      this.maxDepth = 999;
+    }
   }
 
   _shouldBypassDepth(info = {}) {
@@ -837,7 +1137,7 @@ class NewsCrawler {
     }
     
     // Emit milestone at start of configuration
-    console.error('[GAZETTEER-DEBUG] _configureGazetteerPipeline() STARTING');
+    log.debug('[GAZETTEER-DEBUG] _configureGazetteerPipeline() STARTING');
     try {
       this.telemetry.milestoneOnce('gazetteer:pipeline-config-start', {
         kind: 'debug',
@@ -848,19 +1148,19 @@ class NewsCrawler {
     
     if (this.gazetteerOptions && this.gazetteerOptions.ingestionCoordinator) {
       this._gazetteerPipelineConfigured = true;
-      console.error('[GAZETTEER-DEBUG] Using provided ingestionCoordinator, returning early');
+      log.debug('[GAZETTEER-DEBUG] Using provided ingestionCoordinator, returning early');
       return;
     }
     if (!this.dbAdapter || typeof this.dbAdapter.getDb !== 'function') {
       this._gazetteerPipelineConfigured = true;
-      console.error('[GAZETTEER-DEBUG] No dbAdapter, returning early');
+      log.debug('[GAZETTEER-DEBUG] No dbAdapter, returning early');
       return;
     }
 
     const dbWrapper = this.dbAdapter.getDb();
     if (!dbWrapper) {
       this._gazetteerPipelineConfigured = true;
-      console.error('[GAZETTEER-DEBUG] No dbWrapper, returning early');
+      log.debug('[GAZETTEER-DEBUG] No dbWrapper, returning early');
       return;
     }
 
@@ -869,7 +1169,7 @@ class NewsCrawler {
     const db = dbWrapper.getHandle();
     if (!db) {
       this._gazetteerPipelineConfigured = true;
-      console.error('[GAZETTEER-DEBUG] No db handle, returning early');
+      log.debug('[GAZETTEER-DEBUG] No db handle, returning early');
       return;
     }
 
@@ -883,7 +1183,7 @@ class NewsCrawler {
     const stages = [];
     
     // Emit milestone before creating WikidataCountryIngestor
-    console.error('[GAZETTEER-DEBUG] About to create WikidataCountryIngestor');
+    log.debug('[GAZETTEER-DEBUG] About to create WikidataCountryIngestor');
     try {
       this.telemetry.milestoneOnce('gazetteer:creating-wikidata-ingestor', {
         kind: 'debug',
@@ -892,12 +1192,18 @@ class NewsCrawler {
       });
     } catch (_) {}
 
+    const maxCountriesForQuery = (this.targetCountries && this.targetCountries.length)
+      ? null
+      : (this.limitCountries || null);
+
     const wikidataCountry = new WikidataCountryIngestor({
       db,
       logger,
       cacheDir: path.join(cacheRoot, 'wikidata'),
       useCache: this.preferCache !== false,
-      maxCountries: this.maxPages <= 1000 ? 10 : null  // Limit to 10 countries for testing
+      maxCountries: maxCountriesForQuery,
+      targetCountries: this.targetCountries,
+      verbose: VERBOSE_MODE
     });
 
     if (variant === 'wikidata') {
@@ -924,7 +1230,12 @@ class NewsCrawler {
         ingestors: [
           new WikidataAdm1Ingestor({
             db,
-            logger
+            logger,
+            cacheDir: path.join(cacheRoot, 'wikidata'),
+            useCache: this.preferCache !== false,
+            useDynamicFetch: true,  // Enable dynamic Wikidata fetching per country
+            limitCountries: this.limitCountries,
+            targetCountries: this.targetCountries
           })
         ]
       });
@@ -941,26 +1252,103 @@ class NewsCrawler {
             logger,
             cacheDir: path.join(cacheRoot, 'wikidata'),
             useCache: this.preferCache !== false,
-            maxCitiesPerCountry: 50,
-            minPopulation: 100000
+            maxCitiesPerCountry: 200,  // Increased from 50 to 200
+            minPopulation: 10000,  // Lowered from 100000 to 10000
+            limitCountries: this.limitCountries,
+            targetCountries: this.targetCountries,
+            verbose: VERBOSE_MODE
           })
         ]
       });
     }
 
     if (variant === 'geography') {
-      stages.push({
-        name: 'boundaries',
-        kind: 'boundary',
-        crawlDepth: 1,
-        priority: 80,
-        ingestors: [
-          new OsmBoundaryIngestor({
-            db,
-            logger
-          })
-        ]
-      });
+      if (this.limitCountries || (this.targetCountries && this.targetCountries.length)) {
+        log.debug('[GAZETTEER-DEBUG] Skipping boundaries stage because limit or target countries are set');
+      } else {
+        stages.push({
+          name: 'boundaries',
+          kind: 'boundary',
+          crawlDepth: 1,
+          priority: 80,
+          ingestors: [
+            new OsmBoundaryIngestor({
+              db,
+              logger
+            })
+          ]
+        });
+      }
+    }
+
+    const originalStageOrder = stages.map(stage => stage.name);
+    let selectedStages = stages;
+
+    if (this.gazetteerStageFilter && this.gazetteerStageFilter.size) {
+      const requestedStages = Array.from(this.gazetteerStageFilter).map(name => String(name).toLowerCase());
+      const availableStages = new Map(stages.map(stage => [stage.name.toLowerCase(), stage.name]));
+      const dependencyMap = new Map([
+        ['adm1', ['countries']],
+        ['adm2', ['adm1', 'countries']],
+        ['cities', ['countries', 'adm1']],
+        ['boundaries', ['countries']]
+      ]);
+
+      const resolvedStages = new Set();
+      const missingStages = new Set();
+
+      const addStageWithDependencies = (stageName, stack = []) => {
+        const normalized = String(stageName || '').toLowerCase();
+        if (!normalized) {
+          return;
+        }
+        if (stack.includes(normalized)) {
+          return; // Prevent cyclic dependencies
+        }
+        if (!resolvedStages.has(normalized) && availableStages.has(normalized)) {
+          resolvedStages.add(normalized);
+        }
+        if (!availableStages.has(normalized) && !dependencyMap.has(normalized)) {
+          missingStages.add(normalized);
+        }
+        const deps = dependencyMap.get(normalized);
+        if (deps && deps.length) {
+          for (const dep of deps) {
+            addStageWithDependencies(dep, stack.concat(normalized));
+          }
+        }
+      };
+
+      for (const stageName of requestedStages) {
+        addStageWithDependencies(stageName);
+        if (!availableStages.has(stageName) && !dependencyMap.has(stageName)) {
+          missingStages.add(stageName);
+        }
+      }
+
+      if (resolvedStages.size === 0) {
+        log.warn('[GAZETTEER] Stage filter requested, but no matching stages were found. Available stages:', originalStageOrder);
+      } else {
+        selectedStages = stages.filter(stage => resolvedStages.has(stage.name.toLowerCase()));
+        const resolvedList = Array.from(resolvedStages);
+        log.info('[GAZETTEER] Applying stage filter', {
+          requested: requestedStages,
+          resolved: resolvedList,
+          dependenciesAdded: resolvedList.filter(name => !requestedStages.includes(name)),
+          missing: Array.from(missingStages)
+        });
+        try {
+          this.telemetry?.milestoneOnce('gazetteer:stage-filter-applied', {
+            kind: 'debug',
+            message: 'Gazetteer stage filter applied',
+            details: {
+              requested: requestedStages,
+              resolved: resolvedList,
+              missing: Array.from(missingStages)
+            }
+          });
+        } catch (_) {}
+      }
     }
 
     // Create planner for gazetteer mode
@@ -976,18 +1364,25 @@ class NewsCrawler {
     const { GazetteerPlanRunner } = require('./crawler/gazetteer/GazetteerPlanRunner');
     const useAdvancedPlanning = this.config?.features?.advancedPlanningSuite === true;
     
+    // Get enhanced database adapter for meta-planning (if available)
+    const dbAdapter = this.enhancedDbAdapter || null;
+    
     const planner = new GazetteerPlanRunner({
       telemetry: this.telemetry,
       logger,
       config: this.config,
-      useAdvancedPlanning
+      useAdvancedPlanning,
+      dbAdapter
     });
     
     try {
       this.telemetry.milestoneOnce('gazetteer:planner-created', {
         kind: 'debug',
         message: 'GazetteerPlanRunner created successfully',
-        details: { useAdvancedPlanning }
+        details: { 
+          useAdvancedPlanning,
+          hasDbAdapter: !!dbAdapter 
+        }
       });
     } catch (_) {}
 
@@ -995,12 +1390,12 @@ class NewsCrawler {
       this.telemetry.milestoneOnce('gazetteer:creating-coordinator', {
         kind: 'debug',
         message: 'Creating StagedGazetteerCoordinator',
-        details: { stageCount: stages.length }
+        details: { stageCount: selectedStages.length }
       });
     } catch (_) {}
 
-    console.error('[CRAWL] About to create StagedGazetteerCoordinator with', stages.length, 'stages');
-    console.error('[CRAWL] Stage summary (before depth filter):', stages.map(s => ({ 
+    log.debug('[CRAWL] About to create StagedGazetteerCoordinator with', selectedStages.length, 'stages');
+    log.debug('[CRAWL] Stage summary (before depth filter):', selectedStages.map(s => ({ 
       name: s.name, 
       kind: s.kind, 
       priority: s.priority,
@@ -1011,14 +1406,14 @@ class NewsCrawler {
     // Filter stages based on maxDepth (if specified)
     // Stages with crawlDepth <= maxDepth are included
     const filteredStages = typeof this.maxDepth === 'number'
-      ? stages.filter(s => s.crawlDepth <= this.maxDepth)
-      : stages;
+      ? selectedStages.filter(s => s.crawlDepth <= this.maxDepth)
+      : selectedStages;
     
-    console.error('[CRAWL] Stages after depth filter:', filteredStages.map(s => ({ 
+    log.debug('[CRAWL] Stages after depth filter:', filteredStages.map(s => ({ 
       name: s.name, 
       crawlDepth: s.crawlDepth 
     })));
-    console.error('[CRAWL] maxDepth:', this.maxDepth);
+    log.debug('[CRAWL] maxDepth:', this.maxDepth);
     
     const ingestionCoordinator = new StagedGazetteerCoordinator({
       db,
@@ -1138,7 +1533,7 @@ class NewsCrawler {
     let summary = null;
     try {
       summary = await this.gazetteerModeController.run();
-      console.log('\nGazetteer crawl completed.');
+      log.success('Gazetteer crawl completed');
       if (summary && summary.totals) {
         try {
           console.log(`[gazetteer] Totals: ${JSON.stringify(summary.totals)}`);
@@ -1236,16 +1631,16 @@ class NewsCrawler {
         if (this.isGazetteerMode) {
           await this._trackStartupStage('db-gazetteer-schema', 'Ensuring gazetteer schema ready', async () => {
             try {
-              console.error('[GAZETTEER-DEBUG] Getting database handle for ensureGazetteer...');
+              log.debug('[GAZETTEER-DEBUG] Getting database handle for ensureGazetteer...');
               const sqliteDb = this.dbAdapter.getDb();
               const rawDb = sqliteDb && sqliteDb.db ? sqliteDb.db : sqliteDb;
               if (!rawDb) {
-                console.error('[GAZETTEER-DEBUG] No database handle available');
+                log.debug('[GAZETTEER-DEBUG] No database handle available');
                 return { status: 'skipped', message: 'No database handle available' };
               }
-              console.error('[GAZETTEER-DEBUG] About to call ensureGazetteer()...');
+              log.debug('[GAZETTEER-DEBUG] About to call ensureGazetteer()...');
               ensureGazetteer(rawDb);
-              console.error('[GAZETTEER-DEBUG] ensureGazetteer() returned successfully');
+              log.debug('[GAZETTEER-DEBUG] ensureGazetteer() returned successfully');
               this.telemetry.milestoneOnce('gazetteer-schema:ready', {
                 kind: 'gazetteer-schema',
                 message: 'Gazetteer tables verified',
@@ -1256,7 +1651,7 @@ class NewsCrawler {
               });
               return { status: 'completed' };
             } catch (err) {
-              console.error('[GAZETTEER-DEBUG] ensureGazetteer() threw error:', err);
+              log.debug('[GAZETTEER-DEBUG] ensureGazetteer() threw error:', err);
               const message = err?.message || String(err);
               this.telemetry.problem({
                 kind: 'gazetteer-schema-failed',
@@ -1290,6 +1685,8 @@ class NewsCrawler {
     } catch (_) {
       this.startUrlNormalized = this.startUrl;
     }
+
+    await this._hydrateResolvedHubsFromHistory();
 
     if (this.isGazetteerMode) {
       this._skipStartupStage('robots', 'Loading robots.txt', 'Gazetteer mode uses external data sources');
@@ -1639,7 +2036,7 @@ class NewsCrawler {
     } catch (_) {}
     if (normalized) {
       try {
-        console.log(`Skipping query URL (heuristic superfluous): ${normalized} -> ${decision.guessedUrl || analysis.guessedWithoutQuery || '<none>'}`);
+        // Suppressed: too verbose for CLI
       } catch (_) {}
     }
   }
@@ -1733,6 +2130,13 @@ class NewsCrawler {
 
   _ensureIntelligentPlanRunner() {
     if (!this.intelligentPlanRunner) {
+      // Check if APS should be used (from config via EnhancedFeaturesManager)
+      const featureFlags = this.enhancedFeatures?.configManager?.getFeatureFlags?.() || {};
+      const useAPS = featureFlags.advancedPlanningSuite === true;
+      
+      // Get country hub gap service if available
+      const countryHubGapService = this.enhancedFeatures?.getCountryHubGapService?.() || null;
+      
       this.intelligentPlanRunner = new IntelligentPlanRunner({
         telemetry: this.telemetry,
         domain: this.domain,
@@ -1745,6 +2149,8 @@ class NewsCrawler {
         getCachedArticle: (url) => this.getCachedArticle(url),
         dbAdapter: this.dbAdapter,
         plannerKnowledgeService: this.plannerKnowledgeService,
+        countryHubGapService,
+        useAPS,
         enqueueRequest: (request) => this.enqueueRequest(request),
         normalizeUrl: (url) => this.normalizeUrl(url),
         state: this.state,
@@ -1823,12 +2229,15 @@ class NewsCrawler {
     await Promise.all(workers);
 
     const outcomeErr = this._determineOutcomeError();
-    const finishedMsg = outcomeErr ? '\nCrawling ended with errors.' : '\nCrawling completed!';
-    console.log(finishedMsg);
     if (outcomeErr) {
-      console.log(`Failure summary: ${outcomeErr.message}`);
+      log.error(`Crawl ended: ${outcomeErr.message}`);
+    } else {
+      log.success('Crawl completed');
     }
-    console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
+    log.stat('Pages visited', this.stats.pagesVisited);
+    log.stat('Pages downloaded', this.stats.pagesDownloaded);
+    log.stat('Articles found', this.stats.articlesFound);
+    log.stat('Articles saved', this.stats.articlesSaved);
     this.emitProgress(true);
     this.milestoneTracker.emitCompletionMilestone({
       outcomeErr
@@ -1836,7 +2245,7 @@ class NewsCrawler {
 
     if (this.dbAdapter && this.dbAdapter.isEnabled()) {
       const count = this.dbAdapter.getArticleCount();
-      console.log(`Database contains ${count} article records`);
+      log.stat('Database articles', count);
       this.dbAdapter.close();
     }
 
@@ -1871,14 +2280,38 @@ class NewsCrawler {
     }
     await this.init();
 
+    // Run intelligent planner even in sequential mode (concurrency 1)
     if (this.plannerEnabled) {
-      this._skipStartupStage('planner', 'Planning intelligent crawl', 'Planner requires concurrent mode');
+      await this._trackStartupStage('planner', 'Planning intelligent crawl', async () => {
+        try {
+          await this.planIntelligent();
+          return { status: 'completed' };
+        } catch (e) {
+          try {
+            this.telemetry.problem({
+              kind: 'intelligent-plan-failed',
+              message: e?.message || String(e)
+            });
+          } catch (_) {}
+          return { status: 'failed', message: 'Intelligent planner failed', error: e?.message || String(e) };
+        }
+      });
     } else {
       this._skipStartupStage('planner', 'Planning intelligent crawl', 'Planner disabled');
     }
 
     if (this.useSitemap) {
-      this._skipStartupStage('sitemaps', 'Loading sitemaps', 'Sitemaps processed in concurrent mode only');
+      await this._trackStartupStage('sitemaps', 'Loading sitemaps', async () => {
+        if (!this.robotsCoordinator) {
+          return { status: 'skipped', message: 'Robots coordinator unavailable' };
+        }
+        try {
+          await this.loadSitemapsAndEnqueue();
+          return { status: 'completed' };
+        } catch (err) {
+          return { status: 'failed', message: 'Sitemap load failed', error: err?.message || String(err) };
+        }
+      });
     } else {
       this._skipStartupStage('sitemaps', 'Loading sitemaps', 'Sitemap ingestion disabled');
     }
@@ -1954,17 +2387,20 @@ class NewsCrawler {
       }
 
       if (this.stats.pagesVisited % 10 === 0) {
-        console.log(`Progress: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
+        // Suppressed: too verbose for CLI
       }
     }
 
     const outcomeErr = this._determineOutcomeError();
-    const finishedMsg = outcomeErr ? '\nCrawling ended with errors.' : '\nCrawling completed!';
-    console.log(finishedMsg);
     if (outcomeErr) {
-      console.log(`Failure summary: ${outcomeErr.message}`);
+      log.error(`Crawl ended: ${outcomeErr.message}`);
+    } else {
+      log.success('Crawl completed');
     }
-    console.log(`Final stats: ${this.stats.pagesVisited} pages visited, ${this.stats.pagesDownloaded} pages downloaded, ${this.stats.articlesFound} articles found, ${this.stats.articlesSaved} articles saved`);
+    log.stat('Pages visited', this.stats.pagesVisited);
+    log.stat('Pages downloaded', this.stats.pagesDownloaded);
+    log.stat('Articles found', this.stats.articlesFound);
+    log.stat('Articles saved', this.stats.articlesSaved);
     this.emitProgress(true);
     this.milestoneTracker.emitCompletionMilestone({
       outcomeErr
@@ -1972,7 +2408,7 @@ class NewsCrawler {
 
     if (this.dbAdapter && this.dbAdapter.isEnabled()) {
       const count = this.dbAdapter.getArticleCount();
-      console.log(`Database contains ${count} article records`);
+      log.stat('Database articles', count);
       this.dbAdapter.close();
     }
 
@@ -1992,12 +2428,115 @@ class NewsCrawler {
    * Initialize enhanced features (gap-driven prioritization, knowledge reuse, coverage analytics)
    * Features are enabled based on configuration and gracefully degrade if initialization fails
    */
+  async _hydrateResolvedHubsFromHistory() {
+    const resolver = this.problemResolutionService;
+    if (!resolver || typeof resolver.getKnownHubSeeds !== 'function') {
+      return { status: 'skipped', message: 'Problem resolution disabled' };
+    }
+    const host = this.domain;
+    if (!host) {
+      return { status: 'skipped', message: 'No domain available' };
+    }
+
+    let seeds;
+    try {
+      seeds = resolver.getKnownHubSeeds({ host, limit: 100 });
+      if (seeds && typeof seeds.then === 'function') {
+        seeds = await seeds;
+      }
+    } catch (error) {
+      this.telemetry?.problem({
+        kind: 'problem-resolution-hydration-failed',
+        scope: host,
+        message: error?.message || String(error),
+        details: { stack: error?.stack || null }
+      });
+      return { status: 'failed', message: 'Failed to hydrate hub resolutions' };
+    }
+
+    if (!Array.isArray(seeds) || seeds.length === 0) {
+      return { status: 'skipped', message: 'No stored hub resolutions' };
+    }
+
+    const added = [];
+    for (const entry of seeds) {
+      const normalized = this.normalizeUrl(entry?.url, { phase: 'problem-resolution-hydrated' });
+      if (!normalized || this.state.hasSeededHub(normalized)) {
+        continue;
+      }
+      this.state.addSeededHub(normalized, {
+        source: 'problem-resolution',
+        confidence: entry?.confidence ?? null,
+        hydratedFromHistory: true,
+        variant: entry?.evidence?.variant || null
+      });
+      added.push(normalized);
+    }
+
+    if (added.length > 0 && this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
+      this.telemetry.milestoneOnce(`problem-resolution:hydrated:${this.domainNormalized || this.domain}`, {
+        kind: 'problem-resolution-hydrated',
+        message: `Reused ${added.length} known hub${added.length === 1 ? '' : 's'} from history`,
+        details: {
+          host,
+          count: added.length,
+          sample: added.slice(0, 5)
+        }
+      });
+    }
+
+    return added.length > 0
+      ? { status: 'completed', message: `Hydrated ${added.length} hub${added.length === 1 ? '' : 's'}` }
+      : { status: 'skipped', message: 'Known hubs already registered' };
+  }
+
+  _handleProblemResolution(payload = {}) {
+    if (!payload) {
+      return;
+    }
+    const host = payload?.normalizedHost || normalizeHost(payload?.host);
+    if (!host || this.domainNormalized !== host) {
+      return;
+    }
+    const url = payload?.url;
+    if (!url) {
+      return;
+    }
+    const normalized = this.normalizeUrl(url, { phase: 'problem-resolution-resolved' });
+    if (!normalized || this.state.hasSeededHub(normalized)) {
+      return;
+    }
+    this.state.addSeededHub(normalized, {
+      source: 'problem-resolution',
+      confidence: payload?.candidate?.confidence ?? null,
+      variant: payload?.candidate?.variant || null,
+      hydratedFromResolution: true
+    });
+    if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
+      this.telemetry.milestoneOnce(`problem-resolution:resolved:${normalized}`, {
+        kind: 'problem-resolution-learned',
+        message: `Learned resolved hub ${normalized}`,
+        details: {
+          host,
+          confidence: payload?.candidate?.confidence ?? null,
+          sourceUrl: payload?.sourceUrl || null
+        }
+      });
+    }
+  }
+
   async _initializeEnhancedFeatures() {
     if (!this.enhancedFeatures) return;
     await this.enhancedFeatures.initialize({
       dbAdapter: this.dbAdapter,
-      jobId: this.jobId
+      jobId: this.jobId,
+      state: this.state,
+      telemetry: this.telemetry
     });
+    const resolver = this.problemResolutionService;
+    if (resolver && typeof resolver.setResolutionObserver === 'function') {
+      resolver.setResolutionObserver((payload) => this._handleProblemResolution(payload));
+    }
   }
 
   /**
@@ -2044,6 +2583,10 @@ class NewsCrawler {
    * Cleanup enhanced features on crawler shutdown
    */
   _cleanupEnhancedFeatures() {
+    const resolver = this.problemResolutionService;
+    if (resolver && typeof resolver.setResolutionObserver === 'function') {
+      resolver.setResolutionObserver(null);
+    }
     this.enhancedFeatures?.cleanup();
   }
 }
@@ -2051,17 +2594,300 @@ class NewsCrawler {
 // CLI interface
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const startUrl = args[0] || 'https://www.theguardian.com';
+  const crawlTypeArg = args.find(a => a.startsWith('--crawl-type='));
+  const crawlType = crawlTypeArg ? String(crawlTypeArg.split('=')[1]) : undefined;
+
+  function parseCountrySpecifier(rawValue) {
+    if (!rawValue) return null;
+    const trimmed = String(rawValue).trim();
+    if (!trimmed) return null;
+    if (/^Q\d+$/i.test(trimmed)) {
+      return { qid: trimmed.toUpperCase(), raw: trimmed };
+    }
+    if (/^[a-z]{2}$/i.test(trimmed) || /^[a-z]{3}$/i.test(trimmed)) {
+      return { code: trimmed.toUpperCase(), raw: trimmed };
+    }
+    return { name: trimmed, nameLower: trimmed.toLowerCase(), raw: trimmed };
+  }
+  
+  function collectCountrySpecifiers() {
+    const parsed = [];
+    const eqArgs = args.filter(a => a.startsWith('--country='));
+    for (const eq of eqArgs) {
+      const [, valuePart] = eq.split('=');
+      if (!valuePart) continue;
+      const tokens = valuePart.split(',');
+      for (const token of tokens) {
+        const spec = parseCountrySpecifier(token);
+        if (spec) parsed.push(spec);
+      }
+    }
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--country') {
+        const next = args[i + 1];
+        if (next && !next.startsWith('--')) {
+          const tokens = next.split(',');
+          for (const token of tokens) {
+            const spec = parseCountrySpecifier(token);
+            if (spec) parsed.push(spec);
+          }
+        }
+      }
+    }
+    if (!parsed.length) return undefined;
+    const seen = new Set();
+    const unique = [];
+    for (const entry of parsed) {
+      const key = entry.qid ? `qid:${entry.qid}`
+        : entry.code ? `code:${entry.code}`
+        : `name:${entry.nameLower}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(entry);
+    }
+    return unique.length ? unique : undefined;
+  }
+
+  function collectGazetteerStages() {
+    const parsed = [];
+    const stageArgPrefixes = ['--gazetteer-stages=', '--geography-stages='];
+    for (const prefix of stageArgPrefixes) {
+      for (const arg of args) {
+        if (arg.startsWith(prefix)) {
+          const valuePart = arg.substring(prefix.length);
+          if (!valuePart) continue;
+          for (const token of valuePart.split(',')) {
+            const trimmed = String(token || '').trim();
+            if (trimmed) {
+              parsed.push(trimmed.toLowerCase());
+            }
+          }
+        }
+      }
+    }
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === '--gazetteer-stages' || args[i] === '--geography-stages') {
+        const next = args[i + 1];
+        if (next && !next.startsWith('--')) {
+          for (const token of next.split(',')) {
+            const trimmed = String(token || '').trim();
+            if (trimmed) {
+              parsed.push(trimmed.toLowerCase());
+            }
+          }
+        }
+      }
+      if (args[i] === '--gazetteer-stage' || args[i] === '--geography-stage') {
+        const next = args[i + 1];
+        if (next && !next.startsWith('--')) {
+          parsed.push(String(next).trim().toLowerCase());
+        }
+      }
+    }
+    if (!parsed.length) return undefined;
+    const seen = new Set();
+    const ordered = [];
+    for (const stage of parsed) {
+      const key = stage.toLowerCase();
+      if (!key) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ordered.push(key);
+    }
+    return ordered.length ? ordered : undefined;
+  }
+
+  function resolveExplicitDbPath() {
+    const eqArg = args.find(a => a.startsWith('--db='));
+    if (eqArg) {
+      const valuePart = eqArg.substring('--db='.length).trim();
+      if (valuePart) {
+        return path.resolve(valuePart);
+      }
+    }
+    for (let i = 0; i < args.length - 1; i++) {
+      if (args[i] === '--db') {
+        const next = args[i + 1];
+        if (next && !next.startsWith('--')) {
+          return path.resolve(next);
+        }
+      }
+    }
+    return null;
+  }
+
+  function allocateNewDbPath(dataDir) {
+    const baseDir = path.resolve(dataDir);
+    let index = 1;
+    while (index < 10000) {
+      const candidate = path.join(baseDir, `news_${index}.db`);
+      if (!existsSync(candidate)) {
+        return candidate;
+      }
+      index += 1;
+    }
+    throw new Error('Unable to allocate new database filename in data directory');
+  }
+
+  function resolveCountryRow(db, statements, spec) {
+    if (!spec || typeof spec !== 'object') {
+      return null;
+    }
+
+    const normalizedCode = spec.code ? String(spec.code).trim().toUpperCase() : null;
+    if (normalizedCode) {
+      const rowByCode = statements.byCode.get(normalizedCode);
+      if (rowByCode) return rowByCode;
+    }
+
+    const normalizedQid = spec.qid ? String(spec.qid).trim().toUpperCase() : null;
+    if (normalizedQid) {
+      const rowByQid = statements.byQid.get(normalizedQid);
+      if (rowByQid) return rowByQid;
+    }
+
+    const lowerNameCandidates = [];
+    if (spec.nameLower) {
+      lowerNameCandidates.push(String(spec.nameLower).trim().toLowerCase());
+    }
+    if (spec.raw) {
+      lowerNameCandidates.push(String(spec.raw).trim().toLowerCase());
+    }
+
+    for (const candidate of lowerNameCandidates) {
+      if (!candidate) continue;
+      const rowByName = statements.byName.get(candidate);
+      if (rowByName) return rowByName;
+    }
+
+    return null;
+  }
+
+  function reportCountryCityCounts(dbPath, countrySpecs) {
+    if (!countrySpecs || !countrySpecs.length) {
+      return;
+    }
+
+    let db;
+    try {
+      db = ensureDatabase(dbPath);
+    } catch (err) {
+      log.warn(`[GAZETTEER] Unable to open database for city counts: ${err.message}`);
+      return;
+    }
+
+    try {
+      const statements = {
+        byCode: db.prepare(`
+          SELECT p.country_code AS code,
+                 COALESCE(pn.name, p.country_code) AS name
+          FROM places p
+          LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
+          WHERE p.kind = 'country'
+            AND p.country_code = ?
+          LIMIT 1
+        `),
+        byQid: db.prepare(`
+          SELECT p.country_code AS code,
+                 COALESCE(pn.name, p.country_code) AS name
+          FROM places p
+          LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
+          WHERE p.kind = 'country'
+            AND p.wikidata_qid = ?
+          LIMIT 1
+        `),
+        byName: db.prepare(`
+          SELECT p.country_code AS code,
+                 COALESCE(pn.name, p.country_code) AS name
+          FROM places p
+          LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
+          WHERE p.kind = 'country'
+            AND pn.name IS NOT NULL
+            AND LOWER(pn.name) = ?
+          LIMIT 1
+        `),
+        cityCount: db.prepare(`
+          SELECT COUNT(*) AS count
+          FROM places
+          WHERE kind = 'city'
+            AND status = 'current'
+            AND country_code = ?
+        `)
+      };
+
+      const seenCodes = new Set();
+      const pendingReports = [];
+      const unresolvedSpecs = new Set();
+
+      for (const spec of countrySpecs) {
+        const row = resolveCountryRow(db, statements, spec);
+        if (row && row.code) {
+          const normalizedCode = String(row.code).toUpperCase();
+          if (seenCodes.has(normalizedCode)) {
+            continue;
+          }
+          seenCodes.add(normalizedCode);
+          pendingReports.push({
+            code: normalizedCode,
+            name: row.name || normalizedCode
+          });
+        } else {
+          const label = spec?.raw || spec?.code || spec?.qid || 'unknown';
+          unresolvedSpecs.add(label);
+        }
+      }
+
+      for (const report of pendingReports) {
+        const countRow = statements.cityCount.get(report.code);
+        const count = countRow?.count || 0;
+        const formattedCount = Number.isFinite(count) ? count.toLocaleString('en-US') : '0';
+        log.info(`Cities in ${report.name} (${report.code}): ${formattedCount}`);
+      }
+
+      if (unresolvedSpecs.size > 0) {
+        log.warn(`Could not resolve country specifier(s): ${Array.from(unresolvedSpecs).join(', ')}`);
+      }
+    } catch (err) {
+      log.warn(`[GAZETTEER] Failed to report city counts: ${err.message}`);
+    } finally {
+      try {
+        db.close();
+      } catch (_) {}
+    }
+  }
+  
+  // For geography/wikidata/gazetteer crawls, URL is not needed (use placeholder)
+  // For other crawl types, require URL or default to The Guardian
+  const isGazetteerType = crawlType && ['geography', 'wikidata', 'gazetteer'].includes(crawlType.toLowerCase());
+  const firstNonFlagArg = args.find(a => !a.startsWith('--'));
+  const startUrl = isGazetteerType 
+    ? (firstNonFlagArg || 'https://placeholder.local')
+    : (firstNonFlagArg || 'https://www.theguardian.com');
+  
   const enableDb = !args.includes('--no-db');
+  const newDbRequested = args.includes('--newdb');
+  const explicitDbPath = resolveExplicitDbPath();
   const slowMode = args.includes('--slow') || args.includes('--slow-mode');
   const maxDepthArg = args.find(a => a.startsWith('--depth='));
   const maxDepth = maxDepthArg ? parseInt(maxDepthArg.split('=')[1], 10) : 2;
-  const dbPathArg = args.find(a => a.startsWith('--db='));
-  const dbPath = dbPathArg ? dbPathArg.split('=')[1] : undefined;
+  let dbPath;
+  if (explicitDbPath) {
+    dbPath = explicitDbPath;
+    if (newDbRequested) {
+      log.warn('`--newdb` ignored because an explicit --db value was provided.');
+    }
+  } else if (newDbRequested) {
+    try {
+      const dataDirDefault = path.join(process.cwd(), 'data');
+      dbPath = allocateNewDbPath(dataDirDefault);
+      log.info(`Creating new database at ${dbPath}`);
+    } catch (err) {
+      log.error(err?.message || 'Failed to allocate new database filename');
+      process.exit(1);
+    }
+  }
   const rateLimitArg = args.find(a => a.startsWith('--rate-limit-ms='));
   const rateLimitMs = rateLimitArg ? parseInt(rateLimitArg.split('=')[1], 10) : undefined;
-  const crawlTypeArg = args.find(a => a.startsWith('--crawl-type='));
-  const crawlType = crawlTypeArg ? String(crawlTypeArg.split('=')[1]) : undefined;
   const reqTimeoutArg = args.find(a => a.startsWith('--request-timeout-ms='));
   const requestTimeoutMs = reqTimeoutArg ? parseInt(reqTimeoutArg.split('=')[1], 10) : undefined;
   const jitterMinArg = args.find(a => a.startsWith('--pacer-jitter-min-ms='));
@@ -2081,14 +2907,266 @@ if (require.main === module) {
   const intMaxSeedsArg = args.find(a => a.startsWith('--int-max-seeds='));
   const intTargetHostsArg = args.find(a => a.startsWith('--int-target-hosts='));
   const plannerVerbosityArg = args.find(a => a.startsWith('--planner-verbosity='));
+  // Geography crawl limits
+  const limitCountriesEqArg = args.find(a => a.startsWith('--limit-countries='));
+  let limitCountries;
+  if (limitCountriesEqArg) {
+    const parsed = parseInt(limitCountriesEqArg.split('=')[1], 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      limitCountries = parsed;
+    }
+  }
   // Cache preference: default is to prefer cache; allow override with --no-prefer-cache
   const preferCache = args.includes('--no-prefer-cache') ? false : true;
   const useSitemap = !args.includes('--no-sitemap');
   const sitemapOnly = args.includes('--sitemap-only');
   const sitemapMaxArg = args.find(a => a.startsWith('--sitemap-max='));
-  const fastStart = args.includes('--fast-start');
+  const fastStartDisabled = args.includes('--no-fast-start');
+  const fastStartRequested = args.includes('--fast-start');
+  let fastStart = true;
+  if (fastStartDisabled) {
+    fastStart = false;
+  } else if (fastStartRequested) {
+    fastStart = true;
+  }
   const jobIdArg = args.find(a => a.startsWith('--job-id='));
   const allowQueryUrls = args.includes('--allow-query-urls');
+  VERBOSE_MODE = args.includes('--verbose');
+  global.__COPILOT_GAZETTEER_VERBOSE = VERBOSE_MODE;
+  const targetCountries = collectCountrySpecifiers();
+  const gazetteerStages = collectGazetteerStages();
+
+  // Intercept console.log to format PROGRESS output concisely for CLI
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+
+  const TELEMETRY_STYLES = {
+    info: { icon: CLI_ICONS.info, color: CLI_COLORS.info },
+    success: { icon: CLI_ICONS.success, color: CLI_COLORS.success },
+    warning: { icon: CLI_ICONS.warning, color: CLI_COLORS.warning },
+    warn: { icon: CLI_ICONS.warning, color: CLI_COLORS.warning },
+    error: { icon: CLI_ICONS.error, color: CLI_COLORS.error },
+    critical: { icon: CLI_ICONS.error, color: CLI_COLORS.error },
+    debug: { icon: CLI_ICONS.debug, color: CLI_COLORS.muted }
+  };
+
+  const STARTUP_STAGE_LABELS = {
+    'prepare-data': 'Preparing data directory',
+    'db-open': 'Opening crawl database',
+    'db-gazetteer-schema': 'Ensuring gazetteer schema',
+    'enhanced-features': 'Starting enhanced features',
+    'gazetteer-prepare': 'Preparing gazetteer services'
+  };
+
+  const MILESTONE_ICONS = {
+    'gazetteer-schema': { icon: CLI_ICONS.schema, color: CLI_COLORS.progress },
+    'gazetteer-config': { icon: CLI_ICONS.compass, color: CLI_COLORS.accent },
+    'gazetteer-init': { icon: CLI_ICONS.progress, color: CLI_COLORS.progress },
+    'gazetteer-init-complete': { icon: CLI_ICONS.complete, color: CLI_COLORS.success },
+    'gazetteer-mode': { icon: CLI_ICONS.geography, color: CLI_COLORS.success },
+    'gazetteer-mode-summary': { icon: CLI_ICONS.compass, color: CLI_COLORS.accent },
+    debug: { icon: CLI_ICONS.debug, color: CLI_COLORS.muted }
+  };
+
+  const SUPPRESSED_PREFIXES = [
+    '[WikidataCountryIngestor]',
+    '[WikidataAdm1Ingestor]',
+    '[WikidataCitiesIngestor]',
+    '[createIngestionStatements]',
+    '[CountryHubGapAnalyzer]',
+    'Enhanced database adapter initialized',
+    'Priority scorer initialized',
+    'Problem clustering service initialized',
+    'Planner knowledge service initialized',
+    'Problem resolution service initialized',
+    'Crawl playbook service initialized',
+    'Country hub gap service initialized',
+    '[GazetteerPriorityScheduler]'
+  ];
+
+  console.log = function(...args) {
+    const firstArg = args[0];
+    if (typeof firstArg === 'string' && firstArg.startsWith('PROGRESS ')) {
+      try {
+        const jsonStr = firstArg.substring('PROGRESS '.length);
+        const data = JSON.parse(jsonStr);
+        
+        // Format geography crawl progress if available
+        if (data.gazetteer) {
+          const formatted = log.formatGeographyProgress(data);
+          if (formatted) {
+            originalConsoleLog(formatted);
+            return;
+          }
+        }
+        
+        // For non-geography progress, just skip it (too verbose)
+        // The important info is in TELEMETRY and MILESTONE messages
+        return;
+      } catch (_) {
+        // If parsing fails, fall through to original output
+      }
+    }
+
+    if (typeof firstArg === 'string' && firstArg.startsWith('TELEMETRY ')) {
+      try {
+        const payload = JSON.parse(firstArg.substring('TELEMETRY '.length));
+        const severity = (payload.severity || 'info').toLowerCase();
+        const style = TELEMETRY_STYLES[severity] || TELEMETRY_STYLES.info;
+        const message = payload.message || payload.event || 'Telemetry';
+
+        if (payload.event === 'startup-stage') {
+          const stageKey = payload.details?.stage || payload.event;
+          const stageLabel = STARTUP_STAGE_LABELS[stageKey] || message;
+          const status = payload.status || 'info';
+          const statusIcon = status === 'completed' ? CLI_ICONS.complete : status === 'started' ? CLI_ICONS.pending : style.icon;
+          const statusColor = status === 'completed' ? CLI_COLORS.success : status === 'started' ? CLI_COLORS.progress : style.color;
+          originalConsoleLog(statusColor(`${statusIcon} ${stageLabel}`));
+          return;
+        }
+
+        const shouldShow = severity !== 'info' || VERBOSE_MODE;
+        if (!shouldShow) {
+          return;
+        }
+
+        const text = `${style.icon} ${message}`;
+        originalConsoleLog(style.color(text));
+        return;
+      } catch (_) {
+        // fall through
+      }
+    }
+
+    if (typeof firstArg === 'string' && firstArg.startsWith('MILESTONE ')) {
+      try {
+        const payload = JSON.parse(firstArg.substring('MILESTONE '.length));
+        const kind = payload.kind || 'debug';
+        const descriptor = MILESTONE_ICONS[kind] || MILESTONE_ICONS.debug;
+        const message = payload.message || kind;
+        originalConsoleLog(descriptor.color(`${descriptor.icon} ${message}`));
+        return;
+      } catch (_) {
+        // fall through
+      }
+    }
+
+    if (!VERBOSE_MODE && typeof firstArg === 'string') {
+  const sanitizedFirstArg = firstArg.replace(/\u001b\[[0-9;]*m/g, '');
+  const normalizedFirstArg = sanitizedFirstArg.trim();
+
+  const stageStartMatch = normalizedFirstArg.match(/^\[StagedGazetteerCoordinator\] Starting stage: ([^\s]+)/);
+      if (stageStartMatch) {
+        const formatted = formatStageStart(stageStartMatch[1]);
+        if (formatted) {
+          originalConsoleLog(formatted);
+          return;
+        }
+      }
+
+      const stageCompleteMatch = normalizedFirstArg.match(/^\[StagedGazetteerCoordinator\] Stage '([^']+)' complete:/);
+      if (stageCompleteMatch) {
+        let stageStats = typeof args[1] === 'object' && args[1] !== null ? args[1] : null;
+        if (!stageStats) {
+          const jsonIndex = normalizedFirstArg.indexOf('{', stageCompleteMatch[0].length);
+          if (jsonIndex !== -1) {
+            try {
+              stageStats = JSON.parse(normalizedFirstArg.slice(jsonIndex));
+            } catch (_) {
+              stageStats = null;
+            }
+          }
+        }
+        const formatted = formatStageComplete(stageCompleteMatch[1], stageStats);
+        if (formatted) {
+          originalConsoleLog(formatted);
+          return;
+        }
+      }
+
+      if (normalizedFirstArg.startsWith('[StagedGazetteerCoordinator] All stages complete')) {
+        let summaryStats = typeof args[1] === 'object' && args[1] !== null ? args[1] : null;
+        if (!summaryStats) {
+          const jsonIndex = normalizedFirstArg.indexOf('{');
+          if (jsonIndex !== -1) {
+            try {
+              summaryStats = JSON.parse(normalizedFirstArg.slice(jsonIndex));
+            } catch (_) {
+              summaryStats = null;
+            }
+          }
+        }
+        const formatted = formatAllStagesSummary(summaryStats);
+        if (formatted) {
+          originalConsoleLog(formatted);
+          return;
+        }
+      }
+
+      if (normalizedFirstArg.startsWith('[StagedGazetteerCoordinator] Running meta-planning analysis')) {
+        originalConsoleLog(CLI_COLORS.muted(`${CLI_ICONS.debug} Meta-planning analysis`));
+        return;
+      }
+
+      if (normalizedFirstArg.startsWith('[GazetteerPlanRunner] Advanced planning disabled')) {
+        originalConsoleLog(CLI_COLORS.muted(`${CLI_ICONS.debug} Advanced planning disabled`));
+        return;
+      }
+
+      if (normalizedFirstArg.startsWith(CLI_ICONS.progress)) {
+        const candidateRaw = normalizedFirstArg.substring(CLI_ICONS.progress.length).trim();
+        const normalizedCandidate = candidateRaw.replace(/^[^\w]+/, '').trim();
+        const stageLabels = Object.values(CLI_STAGE_LABELS);
+        const isStageEcho = stageLabels.some(label =>
+          normalizedCandidate === label || normalizedCandidate.startsWith(`${label} `)
+        );
+        if (isStageEcho) {
+          return;
+        }
+      }
+
+      if (SUPPRESSED_PREFIXES.some(prefix => normalizedFirstArg.startsWith(prefix))) {
+        return;
+      }
+
+      if (normalizedFirstArg.startsWith('Enhanced features configuration')) {
+        originalConsoleLog(CLI_COLORS.accent(`${CLI_ICONS.features} Enhanced features configuration loaded (use --verbose for details)`));
+        return;
+      }
+
+      if (normalizedFirstArg.startsWith('Priority config loaded from')) {
+        const parts = normalizedFirstArg.split(' ');
+        const file = parts[parts.length - 1] || '';
+        originalConsoleLog(CLI_COLORS.accent(`${CLI_ICONS.compass} Priority config loaded (${path.basename(file)})`));
+        return;
+      }
+    }
+
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.warn = function(...args) {
+    if (!VERBOSE_MODE && typeof args[0] === 'string' && SUPPRESSED_PREFIXES.some(prefix => args[0].startsWith(prefix))) {
+      return;
+    }
+    originalConsoleWarn.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    originalConsoleError.apply(console, args);
+  };
+
+  console.info = function(...args) {
+    console.log.apply(console, args);
+  };
+
+  console.debug = function(...args) {
+    if (!VERBOSE_MODE) {
+      return;
+    }
+    originalConsoleLog.apply(console, args);
+  };
 
   function parseMaxAgeToMs(val) {
     if (!val) return undefined;
@@ -2108,7 +3186,7 @@ if (require.main === module) {
     // explicit 0 means always refetch; pass through
   }
 
-  console.log(`Starting news crawler with URL: ${startUrl}`);
+  log.info(`Starting: ${chalk.bold(startUrl)}`);
 
   const crawler = new NewsCrawler(startUrl, {
     rateLimitMs,
@@ -2137,6 +3215,9 @@ if (require.main === module) {
     intMaxSeeds: intMaxSeedsArg ? parseInt(intMaxSeedsArg.split('=')[1], 10) : undefined,
     intTargetHosts: intTargetHostsArg ? String(intTargetHostsArg.split('=')[1]).split(',').map(s => s.trim()).filter(Boolean) : undefined,
     plannerVerbosity: plannerVerbosityArg ? parseInt(plannerVerbosityArg.split('=')[1], 10) : undefined,
+    limitCountries,
+    targetCountries,
+  gazetteerStages,
     jobId: jobIdArg ? jobIdArg.split('=')[1] : undefined,
     skipQueryUrls: !allowQueryUrls
   });
@@ -2159,11 +3240,13 @@ if (require.main === module) {
 
   crawler.crawl()
     .then(() => {
-      console.log('Crawler finished successfully');
+      reportCountryCityCounts(crawler.dbPath, targetCountries);
+      log.success('Crawler finished');
       process.exit(0);
     })
     .catch(error => {
-      console.error('Crawler failed:', error);
+      log.error(`Crawler failed: ${error.message}`);
+      if (error.stack) console.error(error.stack);
       process.exit(1);
     });
 }

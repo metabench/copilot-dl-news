@@ -1,7 +1,7 @@
 'use strict';
 
 const { slugify } = require('../tools/placeHubDetector');
-const { recordPlaceHubSeed } = require('./data/placeHubs');
+const { recordPlaceHubSeed, resolveHandle } = require('./data/placeHubs');
 
 function uniqueByKey(items, keyFn) {
   const seen = new Set();
@@ -148,13 +148,37 @@ function buildCandidateUrls({ host, scheme, chain, topics, sourceUrl }) {
   return uniqueByKey(outputs, (entry) => entry.url);
 }
 
+function parseEvidence(raw) {
+  if (raw == null) return null;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (typeof raw === 'object') {
+    return raw;
+  }
+  return null;
+}
+
+function normalizeHost(host) {
+  if (!host && host !== 0) return null;
+  const value = String(host).trim().toLowerCase();
+  if (!value) return null;
+  const withoutScheme = value.replace(/^https?:\/\//, '');
+  return withoutScheme.replace(/\/.*$/, '');
+}
+
 class ProblemResolutionService {
   constructor({
     db = null,
     taskWriter = null,
     recordSeed = null,
     getScheme = defaultGetScheme,
-    logger = console
+    logger = console,
+    onResolved = null
   } = {}) {
     this.db = db;
     this.logger = logger || console;
@@ -164,6 +188,9 @@ class ProblemResolutionService {
     });
     this.getScheme = typeof getScheme === 'function' ? getScheme : defaultGetScheme;
     this._seenCandidates = new Set();
+    this._resolvedCache = new Map();
+    this._dbHandle = null;
+    this.onResolved = typeof onResolved === 'function' ? onResolved : null;
   }
 
   buildResolutionCandidates({ host, sourceUrl, urlPlaceAnalysis = null, hubCandidate = null }) {
@@ -196,6 +223,7 @@ class ProblemResolutionService {
     if (!host) {
       throw new Error('resolveMissingHub requires a host');
     }
+    const normalizedHost = normalizeHost(host) || host;
     const candidates = this.buildResolutionCandidates({ host, sourceUrl, urlPlaceAnalysis, hubCandidate });
     const created = [];
     const errors = [];
@@ -210,7 +238,7 @@ class ProblemResolutionService {
       try {
         if (this.db) {
           try {
-            this.recordSeed(this.db, { host, url: candidate.url, evidence: {
+            this.recordSeed(this.db, { host: normalizedHost, url: candidate.url, evidence: {
               confidence: candidate.confidence,
               placeChain: candidate.placeChain,
               topics: candidate.topics,
@@ -237,6 +265,15 @@ class ProblemResolutionService {
         }) : null;
 
         created.push({ candidate, task });
+        this._rememberResolutionCandidate(normalizedHost, candidate);
+        this._notifyResolved({
+          jobId,
+          host,
+          normalizedHost,
+          url: candidate.url,
+          candidate,
+          sourceUrl
+        });
       } catch (error) {
         errors.push({ candidate, error });
         this._log('warn', 'ProblemResolutionService failed to resolve candidate', error);
@@ -274,6 +311,135 @@ class ProblemResolutionService {
     } catch (_) {
       // ignore logging errors
     }
+  }
+
+  _rememberResolutionCandidate(host, candidate) {
+    if (!host || !candidate?.url) {
+      return;
+    }
+    const key = host;
+    if (!this._resolvedCache.has(key)) {
+      this._resolvedCache.set(key, new Map());
+    }
+    const cache = this._resolvedCache.get(key);
+    cache.set(candidate.url.toLowerCase(), {
+      url: candidate.url,
+      candidate,
+      recordedAt: Date.now()
+    });
+  }
+
+  _notifyResolved(payload) {
+    if (!this.onResolved) {
+      return;
+    }
+    try {
+      this.onResolved(payload);
+    } catch (error) {
+      this._log('warn', 'ProblemResolutionService resolution observer failed', error);
+    }
+  }
+
+  _getDbHandle() {
+    if (!this.db) {
+      return null;
+    }
+    if (this._dbHandle) {
+      return this._dbHandle;
+    }
+    try {
+      this._dbHandle = resolveHandle(this.db);
+    } catch (_) {
+      this._dbHandle = null;
+    }
+    return this._dbHandle;
+  }
+
+  setResolutionObserver(handler) {
+    this.onResolved = typeof handler === 'function' ? handler : null;
+  }
+
+  getKnownHubSeeds({ host, limit = 50, minConfidence = 0 } = {}) {
+    const normalizedHost = normalizeHost(host);
+    if (!normalizedHost) {
+      return [];
+    }
+
+    const handle = this._getDbHandle();
+    let stmt = null;
+    if (handle) {
+      try {
+        stmt = handle.prepare(`
+          SELECT host, url, evidence, last_seen_at AS lastSeenAt
+            FROM place_hubs
+           WHERE LOWER(host) = ?
+           ORDER BY last_seen_at DESC
+           LIMIT ?
+        `);
+      } catch (error) {
+        this._log('warn', 'ProblemResolutionService failed to prepare known hub query', error?.message || error);
+        stmt = null;
+      }
+    }
+
+    const entries = new Map();
+    const pushEntry = (url, payload) => {
+      if (!url) return;
+      const key = url.toLowerCase();
+      if (entries.has(key)) return;
+      const confidence = typeof payload?.confidence === 'number' ? payload.confidence : null;
+      if (minConfidence && confidence != null && confidence < minConfidence) {
+        return;
+      }
+      entries.set(key, {
+        url,
+        confidence,
+        evidence: payload || null,
+        lastSeenAt: payload?.lastSeenAt || null
+      });
+    };
+
+    if (stmt) {
+      const variants = new Set([normalizedHost]);
+      if (!normalizedHost.startsWith('www.')) {
+        variants.add(`www.${normalizedHost}`);
+      }
+      const rawHost = typeof host === 'string' ? host.trim().toLowerCase() : null;
+      if (rawHost && rawHost !== normalizedHost) {
+        variants.add(rawHost);
+      }
+
+      for (const candidateHost of variants) {
+        try {
+          const rows = stmt.all(candidateHost, Math.max(limit, 50));
+          for (const row of rows) {
+            const payload = parseEvidence(row?.evidence) || {};
+            payload.lastSeenAt = row?.lastSeenAt || null;
+            pushEntry(row?.url, payload);
+            if (entries.size >= limit) {
+              break;
+            }
+          }
+        } catch (error) {
+          this._log('warn', 'ProblemResolutionService failed to load known hub seeds', error?.message || error);
+        }
+        if (entries.size >= limit) {
+          break;
+        }
+      }
+    }
+
+  const cache = this._resolvedCache.get(normalizedHost);
+    if (cache) {
+      for (const entry of cache.values()) {
+        pushEntry(entry.url, entry.candidate);
+        if (entries.size >= limit) {
+          break;
+        }
+      }
+    }
+
+    return Array.from(entries.values()).slice(0, limit);
   }
 }
 

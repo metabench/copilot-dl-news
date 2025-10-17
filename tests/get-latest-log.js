@@ -41,9 +41,12 @@ function getLatestLog(suiteFilter = null) {
     process.exit(1);
   }
 
-  // Sort by filename (timestamp-based) descending
-  files.sort().reverse();
-  const latestFile = files[0];
+  const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T/;
+  const timestamped = files.filter(f => TIMESTAMP_PATTERN.test(f));
+  const prioritisedFiles = timestamped.length > 0 ? timestamped : files;
+
+  prioritisedFiles.sort().reverse();
+  const latestFile = prioritisedFiles[0];
   const fullPath = path.join(TESTLOGS_DIR, latestFile);
 
   console.log(fullPath);

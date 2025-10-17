@@ -50,6 +50,7 @@ Prerequisites:
 
 ### Command Line Interface
 
+**Standard Web Crawls:**
 ```bash
 # Crawl The Guardian (default)
 node src/crawl.js
@@ -73,38 +74,76 @@ node src/crawl.js https://www.theguardian.com --max-age=6h
 node src/crawl.js https://www.theguardian.com --depth=1 --concurrency=4 --max-queue=20000
 ```
 
+**Geography/Gazetteer Crawls** (fetch geographic data from Wikidata, no URL needed):
+```bash
+# Geography crawl (countries + regions + cities + boundaries)
+node src/crawl.js --crawl-type=geography
+
+# Wikidata-only crawl (subset of geography)
+node src/crawl.js --crawl-type=wikidata
+
+# With custom database and download limits
+node src/crawl.js --crawl-type=geography --db=./data/geography.db --max-pages=1000
+
+# With concurrency (respects API rate limits internally)
+node src/crawl.js --crawl-type=geography --concurrency=4
+```
+
+**Note:** Geography, wikidata, and gazetteer crawl types don't require a URL argument. If you provide one, it will be ignored and replaced with a placeholder.
+
 ### CLI quick reference
 
+**Core Options:**
 - `--depth=N`           Max crawl depth (default: 2 via CLI)
 - `--no-db`             Disable SQLite persistence (no data saved)
 - `--db=PATH`           Custom SQLite DB path
-- `--max-pages=N`       Limit number of network downloads
-- `--max-age=30s|10m|2h|1d` Prefer cached articles when fresh within window
+- `--max-pages=N`       Limit number of network downloads (alias: `--max-downloads`)
+- `--crawl-type=<name>` Pick a crawl preset. Options:
+  - `basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent` - Web crawls (require URL)
+  - `geography`, `wikidata`, `gazetteer` - Geographic data crawls (no URL needed)
+- `--job-id=ID`         Set custom job ID (useful for tracking in multi-job environments)
+
+**Caching & Freshness:**
+- `--max-age=30s|10m|2h|1d` Prefer cached articles when fresh within window (alias: `--refetch-if-older-than`)
 - `--no-prefer-cache`   Force network fetches even when cache is fresh
+- `--refetch-article-if-older-than=7d` Article-specific freshness window (alias: `--max-age-article`)
+- `--refetch-hub-if-older-than=1h` Hub/navigation page freshness window (alias: `--max-age-hub`)
+
+**Concurrency & Queue:**
 - `--concurrency=N`     Number of parallel workers (default: 1). For specialized crawls (gazetteer, geography), this sets the maximum allowed concurrency; actual parallelism may be less due to API limits.
 - `--max-queue=N`       Bounded queue size (default: 10000)
+- `--fast-start` / `--no-fast-start`  Fast-start is now the default (skips heavy DB sampling). Use `--no-fast-start` to run the full initialization.
+- `--newdb`             Allocate a fresh database in `data/` named `news_<number>.db` (ignored when `--db` is supplied)
+
+**Sitemap Options:**
 - `--no-sitemap`        Disable sitemap discovery/seed (GUI: uncheck "Use sitemap")
 - `--sitemap-only`      Crawl only sitemap URLs (don't seed start URL)
 - `--sitemap-max=N`     Cap number of sitemap URLs (default: 5000). In the GUI, this mirrors Max Pages.
-- `--crawl-type=<name>`  Pick a crawl preset (`basic`, `sitemap-only`, `basic-with-sitemap`, `intelligent`). Planner features activate automatically when the type starts with `intelligent`.
-- Intelligent crawl flags (forwarded only when provided):
-  - `--hub-max-pages=N`      Limit pages considered per detected hub
-  - `--hub-max-days=N`       Limit age (days) for hub seeding
-  - `--int-max-seeds=N`      Cap initial hub seeds (default internal 50)
-  - `--int-target-hosts=host1,host2` Activate planner only if start host matches suffix
-  - `--planner-verbosity=0..3` Planner diagnostic verbosity
-- Freshness / refetch policy:
-  - `--refetch-if-older-than=1d` Global fallback freshness window
-  - `--refetch-article-if-older-than=7d` Article-specific window
-  - `--refetch-hub-if-older-than=1h` Hub/navigation page window (kept fresh more aggressively)
-- Networking & pacing:
-  - `--request-timeout-ms=MS`  Per-request timeout (default: 10000)
-  - `--pacer-jitter-min-ms=MS` Small jitter min between paced tokens (default: 25)
-  - `--pacer-jitter-max-ms=MS` Small jitter max (default: 50)
+
+**Intelligent Crawl Options** (forwarded only when provided):
+- `--hub-max-pages=N`      Limit pages considered per detected hub
+- `--hub-max-days=N`       Limit age (days) for hub seeding
+- `--int-max-seeds=N`      Cap initial hub seeds (default internal 50)
+- `--int-target-hosts=host1,host2` Activate planner only if start host matches suffix
+- `--planner-verbosity=0..3` Planner diagnostic verbosity
+
+**Networking & Rate Limiting:**
+- `--request-timeout-ms=MS`  Per-request timeout (default: 10000)
+- `--rate-limit-ms=MS`       Global rate limit between requests in milliseconds
+- `--slow` / `--slow-mode`   Enable slow crawling mode with stricter rate limiting
+- `--pacer-jitter-min-ms=MS` Small jitter min between paced tokens (default: 25)
+- `--pacer-jitter-max-ms=MS` Small jitter max (default: 50)
+
+**URL Filtering:**
+- `--allow-query-urls`  Allow crawling URLs with query parameters (default: skip query URLs)
 
 Backfill publication dates: `npm run backfill:dates` (flags: `--redo`, `--limit=N`, `--batch-size=N`, `--no-list-existing`, `--include-nav`, `--url=...`)
 
 Analyze domains (news-site heuristic): `npm run analyze:domains`
+
+### Gazetteer utilities
+
+- `node tools/gazetteer/gazetteer-summary.js` — Print a country-by-country table of current city and region counts (use `--db=` to override the database, `--json` for machine-readable output)
 
 ### Benchmark crawl SQL performance
 
@@ -201,6 +240,14 @@ Run the canonical analysis script (places extraction + hub detection):
 ```bash
 node src/tools/analyse-pages.js --db=./data/news.db --analysis-version=1 --limit=5000
 ```
+
+Useful flags:
+
+- `--dry-run` Skip database writes while reporting how many articles, places, and hubs would be updated.
+- `--list` Emit a human-readable summary of hub assignments (combine with `--list-limit=<n>` to control output size).
+- `--include-evidence` Attach the JSON evidence payload for each listed hub (pairs well with `--list`).
+
+All flags work together, so `--dry-run --list --list-limit=25` lets you preview new hub rows without mutating the database.
 
 Run the combined analysis + milestone refresh (pages + domains + milestone backfill):
 

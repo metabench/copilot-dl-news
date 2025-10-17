@@ -68,6 +68,17 @@ class QueryCostEstimatorPlugin {
     const hubCosts = this._estimateHubCosts(ctx);
     const highCostHubs = hubCosts.filter(h => h.estimatedMs > this.budgetThresholdMs);
 
+    // Phase 1: Enrich proposedHubs with cost estimates
+    if (ctx.bb.proposedHubs && Array.isArray(ctx.bb.proposedHubs)) {
+      for (const hub of ctx.bb.proposedHubs) {
+        const costInfo = hubCosts.find(c => c.hubUrl === hub.url);
+        if (costInfo) {
+          hub.estimatedCostMs = costInfo.estimatedMs;
+          hub.costConfidence = costInfo.confidence;
+        }
+      }
+    }
+
     // Store estimates on blackboard
     ctx.bb.costEstimates = {
       available: true,
@@ -136,14 +147,22 @@ class QueryCostEstimatorPlugin {
       };
 
       for (const stat of stats) {
-        model.queryTypes[stat.query_type] = {
-          avgDurationMs: stat.avg_duration_ms,
-          minDurationMs: stat.min_duration_ms,
-          maxDurationMs: stat.max_duration_ms,
-          avgResultCount: stat.avg_result_count,
-          sampleCount: stat.sample_count,
-          complexity: stat.query_complexity
-        };
+        if (model.queryTypes[stat.query_type]) {
+          // Aggregate stats if the query_type already exists (different complexity)
+          const existing = model.queryTypes[stat.query_type];
+          const totalSamples = existing.sampleCount + stat.sample_count;
+          existing.avgDurationMs = ((existing.avgDurationMs * existing.sampleCount) + (stat.avg_duration_ms * stat.sample_count)) / totalSamples;
+          existing.sampleCount = totalSamples;
+        } else {
+          model.queryTypes[stat.query_type] = {
+            avgDurationMs: stat.avg_duration_ms,
+            minDurationMs: stat.min_duration_ms,
+            maxDurationMs: stat.max_duration_ms,
+            avgResultCount: stat.avg_result_count,
+            sampleCount: stat.sample_count,
+            complexity: stat.query_complexity // Note: this will be the complexity of the first stat seen
+          };
+        }
       }
 
       return model;

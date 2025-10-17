@@ -43,6 +43,7 @@ function buildArgs(body = {}) {
   if (body.maxQueue != null) args.push(`--max-queue=${parseInt(body.maxQueue, 10)}`);
   if (body.noDb === true) args.push('--no-db');
   if (body.dbPath) args.push(`--db=${body.dbPath}`);
+  if (body.newDb === true) args.push('--newdb');
   if (body.slow === true) args.push('--slow');
   if (body.preferCache === true) args.push('--prefer-cache');
   if (body.allowQueryUrls === true || body.skipQueryUrls === false) {

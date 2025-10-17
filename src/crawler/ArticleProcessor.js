@@ -4,6 +4,7 @@ const cheerio = require('cheerio');
 const crypto = require('crypto');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
+const { extractSchemaSignals } = require('./schemaSignals');
 
 class ArticleProcessor {
   constructor(options = {}) {
@@ -414,8 +415,23 @@ class ArticleProcessor {
       const $ = cheerio.load(html || '');
       const urlSig = this.computeUrlSignals(url);
       const contentSig = this.computeContentSignals($, html || '');
-      const combined = this.combineSignals(urlSig, contentSig, { wordCount: readability.wordCount ?? undefined });
-      return { url: urlSig, content: { ...contentSig, wordCount: readability.wordCount ?? null, articleXPath: readability.articleXPath || null }, combined };
+      let schemaSignals = null;
+      try {
+        schemaSignals = extractSchemaSignals({ $, html: html || '' });
+      } catch (_) {
+        schemaSignals = contentSig?.schema || null;
+      }
+      const combined = this.combineSignals(urlSig, { ...contentSig, schema: schemaSignals }, { wordCount: readability.wordCount ?? undefined });
+      return {
+        url: urlSig,
+        content: {
+          ...contentSig,
+          schema: schemaSignals,
+          wordCount: readability.wordCount ?? null,
+          articleXPath: readability.articleXPath || null
+        },
+        combined
+      };
     } catch (_) {
       return null;
     }

@@ -115,6 +115,25 @@ class StagedGazetteerCoordinator {
       stages: this.getStages()
     });
 
+    // Run meta-planning analysis before stage execution (if advanced planning enabled)
+    let metaPlanResults = null;
+    if (this.planner && typeof this.planner.runMetaPlanning === 'function') {
+      try {
+        this.logger.info('[StagedGazetteerCoordinator] Running meta-planning analysis...');
+        metaPlanResults = await this.planner.runMetaPlanning(this._stages);
+        
+        if (metaPlanResults && metaPlanResults.proposedPriorities) {
+          this.logger.info('[StagedGazetteerCoordinator] Meta-planning priorities:', metaPlanResults.proposedPriorities);
+          
+          // Apply priority recommendations to stages
+          this._applyMetaPlanPriorities(metaPlanResults.proposedPriorities);
+        }
+      } catch (err) {
+        this.logger.error('[StagedGazetteerCoordinator] Meta-planning failed:', err.message);
+        // Continue with default priorities
+      }
+    }
+
     const overallTotals = {
       stagesAttempted: 0,
       stagesCompleted: 0,
@@ -122,7 +141,8 @@ class StagedGazetteerCoordinator {
       ingestorsCompleted: 0,
       recordsProcessed: 0,
       recordsUpserted: 0,
-      errors: 0
+      errors: 0,
+      metaPlanResults
     };
 
     // Execute stages sequentially (breadth-first enforcement)
@@ -205,18 +225,6 @@ class StagedGazetteerCoordinator {
     const stageName = stage.name;
     overallTotals.stagesAttempted += 1;
 
-    console.error('[StagedGazetteerCoordinator] ========================================');
-    console.error('[StagedGazetteerCoordinator] STARTING STAGE:', stageName);
-    console.error('[StagedGazetteerCoordinator] Stage config:', { 
-      name: stage.name, 
-      kind: stage.kind, 
-      priority: stage.priority,
-      crawlDepth: stage.crawlDepth,
-      ingestorCount: stage.ingestors.length,
-      ingestorNames: stage.ingestors.map(i => i.constructor.name || i.name || 'anonymous')
-    });
-    console.error('[StagedGazetteerCoordinator] ========================================');
-    
     this.logger.info(`[StagedGazetteerCoordinator] Starting stage: ${stageName}`);
     this._emitProgress(onProgress, {
       phase: 'stage-start',
@@ -245,8 +253,6 @@ class StagedGazetteerCoordinator {
         const ingestorClassName = ingestor.constructor.name;
         stageTotals.ingestorsAttempted += 1;
         overallTotals.ingestorsAttempted += 1;
-
-        console.error(`[StagedGazetteerCoordinator] >> Executing ingestor: ${ingestorClassName} (id: ${ingestorId})`);
         
         this._emitProgress(onProgress, {
           phase: 'ingestor-start',
@@ -258,7 +264,6 @@ class StagedGazetteerCoordinator {
         let result = null;
 
         try {
-          console.error(`[StagedGazetteerCoordinator] >> Calling ${ingestorClassName}.execute()`);
           result = await ingestor.execute({
             signal,
             emitProgress: (payload = {}) => {
@@ -353,7 +358,7 @@ class StagedGazetteerCoordinator {
       };
       stageResults.push(stageResult);
 
-      this.logger.info(`[StagedGazetteerCoordinator] Stage '${stageName}' complete:`, stageTotals);
+      this.logger.info(`[StagedGazetteerCoordinator] Stage '${stageName}' complete: ${JSON.stringify(stageTotals)}`);
       this._emitProgress(onProgress, {
         phase: 'stage-complete',
         stage: stageName,
@@ -473,6 +478,33 @@ class StagedGazetteerCoordinator {
 
   _syncSchedulerStages() {
     this.scheduler.replaceStages(deriveSchedulerStages(this._stages));
+  }
+
+  /**
+   * Apply meta-planning priority recommendations to stages.
+   * Updates stage priority scores based on planner analysis.
+   * 
+   * @param {Object} proposedPriorities - Map of stage names to priority scores
+   * @private
+   */
+  _applyMetaPlanPriorities(proposedPriorities) {
+    if (!proposedPriorities || typeof proposedPriorities !== 'object') {
+      return;
+    }
+
+    for (const stage of this._stages) {
+      const stageName = stage.name;
+      if (proposedPriorities[stageName] !== undefined) {
+        const oldPriority = stage.priority;
+        stage.priority = proposedPriorities[stageName];
+        this.logger.info(`[StagedGazetteerCoordinator] Updated stage '${stageName}' priority: ${oldPriority} → ${stage.priority}`);
+      }
+    }
+
+    // Re-sort stages by new priorities (descending)
+    this._stages.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    this.logger.info('[StagedGazetteerCoordinator] Stages reordered by meta-plan priorities:', 
+      this._stages.map(s => `${s.name}(${s.priority})`).join(', '));
   }
 }
 

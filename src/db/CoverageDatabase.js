@@ -95,7 +95,6 @@ class CoverageDatabase {
     // Real-time dashboard metrics
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS dashboard_metrics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
         job_id TEXT NOT NULL,
         metric_name TEXT NOT NULL,
         metric_value REAL NOT NULL,

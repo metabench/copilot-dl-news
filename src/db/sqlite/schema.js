@@ -157,6 +157,21 @@ function initCoreTables(db, { verbose, logger }) {
 
 function initGazetteerTables(db, { verbose, logger }) {
     if (verbose) logger.log('[schema] Initializing gazetteer tables...');
+
+    // Rename legacy admin_level column to wikidata_admin_level for provenance clarity
+    try {
+      const placeColumns = db.prepare("PRAGMA table_info('places')").all();
+      const hasLegacyAdminLevel = placeColumns.some((column) => column.name === 'admin_level');
+      const hasWikidataAdminLevel = placeColumns.some((column) => column.name === 'wikidata_admin_level');
+      if (hasLegacyAdminLevel && !hasWikidataAdminLevel) {
+        if (verbose) logger.log('[schema] Renaming places.admin_level → places.wikidata_admin_level');
+        db.exec('ALTER TABLE places RENAME COLUMN admin_level TO wikidata_admin_level');
+      }
+    } catch (renameError) {
+      if (verbose) {
+        logger.warn('[schema] Failed to rename places.admin_level column:', renameError.message);
+      }
+    }
     // ... implementation from ensureDb.js ...
     db.exec(`
     CREATE TABLE IF NOT EXISTS places (
@@ -178,7 +193,7 @@ function initGazetteerTables(db, { verbose, logger }) {
       osm_id TEXT,                         -- OpenStreetMap ID
       area REAL,                           -- Area in square kilometers
       gdp_usd REAL,                        -- GDP in USD (for countries/regions)
-      admin_level INTEGER,                 -- Wikidata administrative level
+  wikidata_admin_level INTEGER,        -- Wikidata administrative level (P2959)
       wikidata_props JSON,                 -- Comprehensive Wikidata properties
       osm_tags JSON,                       -- OpenStreetMap tags
       crawl_depth INTEGER DEFAULT 0,       -- 0=country, 1=ADM1, 2=ADM2, 3=city
@@ -221,9 +236,10 @@ function initGazetteerTables(db, { verbose, logger }) {
     CREATE TABLE IF NOT EXISTS place_hierarchy (
       parent_id INTEGER NOT NULL,
       child_id INTEGER NOT NULL,
-      relation TEXT,                       -- admin_parent | contains | member_of
+      relation TEXT,                       -- admin_parent | contains | member_of | capital_of
       depth INTEGER,
-      PRIMARY KEY (parent_id, child_id),
+      metadata JSON,                       -- Optional metadata (e.g., for capital_of: { role: 'administrative' })
+      PRIMARY KEY (parent_id, child_id, relation),
       FOREIGN KEY (parent_id) REFERENCES places(id) ON DELETE CASCADE,
       FOREIGN KEY (child_id) REFERENCES places(id) ON DELETE CASCADE
     );
@@ -256,6 +272,23 @@ function initGazetteerTables(db, { verbose, logger }) {
       PRIMARY KEY (place_id, attr, source),
       FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS ingestion_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT NOT NULL,                -- Source name (restcountries, wikidata, osm, etc.)
+      source_version TEXT,                 -- Source version (v3.1, latest, etc.)
+      started_at INTEGER NOT NULL,         -- Unix timestamp
+      completed_at INTEGER,                -- Unix timestamp
+      status TEXT DEFAULT 'running',       -- running | completed | failed
+      countries_processed INTEGER,
+      places_created INTEGER,
+      places_updated INTEGER,
+      names_added INTEGER,
+      error_message TEXT,
+      metadata JSON                        -- Additional run metadata
+    );
+    CREATE INDEX IF NOT EXISTS idx_ingestion_runs_source_status ON ingestion_runs(source, status);
+    CREATE INDEX IF NOT EXISTS idx_ingestion_runs_completed ON ingestion_runs(completed_at);
     CREATE INDEX IF NOT EXISTS idx_place_attr_attr ON place_attribute_values(attr);
     CREATE INDEX IF NOT EXISTS idx_place_attr_source ON place_attribute_values(source);
 
@@ -703,6 +736,30 @@ function initPlaceHubsTables(db, { verbose, logger }) {
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_place ON place_hubs(place_slug)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_topic ON place_hubs(topic_slug)'); } catch (_) {}
+
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS place_hub_unknown_terms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host TEXT NOT NULL,
+        url TEXT NOT NULL,
+        canonical_url TEXT,
+        term_slug TEXT NOT NULL,
+        term_label TEXT,
+        source TEXT,
+        reason TEXT,
+        confidence TEXT,
+        evidence TEXT,
+        occurrences INTEGER NOT NULL DEFAULT 1,
+        first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(host, canonical_url, term_slug)
+      );
+    `);
+  } catch (_) {}
+
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_unknown_terms_host ON place_hub_unknown_terms(host)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_unknown_terms_slug ON place_hub_unknown_terms(term_slug)'); } catch (_) {}
 }
 
 function initCompressionTables(db, { verbose, logger }) {
@@ -863,14 +920,11 @@ function initQueryTelemetryTables(db, { verbose, logger }) {
       result_count INTEGER DEFAULT 0,     -- Number of rows returned or affected
       query_complexity TEXT,              -- 'simple' | 'moderate' | 'complex' (based on query structure)
       host TEXT,                          -- Domain being queried (if applicable)
-      job_id TEXT,                        -- Crawl job ID (if applicable)
-      timestamp TEXT NOT NULL DEFAULT (datetime('now')),
-      metadata TEXT                       -- JSON: { table, filters, joins, error, etc. }
+      job_id TEXT                         -- Crawl job ID (if applicable)
     );
 
     CREATE INDEX IF NOT EXISTS idx_query_telemetry_type ON query_telemetry(query_type);
     CREATE INDEX IF NOT EXISTS idx_query_telemetry_duration ON query_telemetry(duration_ms);
-    CREATE INDEX IF NOT EXISTS idx_query_telemetry_timestamp ON query_telemetry(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_query_telemetry_host ON query_telemetry(host);
     CREATE INDEX IF NOT EXISTS idx_query_telemetry_complexity ON query_telemetry(query_complexity);
   `);

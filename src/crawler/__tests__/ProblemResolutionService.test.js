@@ -100,4 +100,58 @@ describe('ProblemResolutionService', () => {
       kind: 'hub-resolution'
     });
   });
+
+  test('resolveMissingHub notifies observer and exposes known hub seeds', () => {
+    const inserted = [];
+    const stmt = {
+      all: jest.fn((hostArg) => {
+        const normalized = (hostArg || '').toLowerCase();
+        return inserted
+          .filter((row) => row.host === normalized)
+          .map((row) => ({
+            host: row.host,
+            url: row.url,
+            evidence: row.evidence,
+            last_seen_at: row.lastSeenAt
+          }));
+      })
+    };
+    const db = {
+      createTask: jest.fn(),
+      prepare: jest.fn(() => stmt)
+    };
+    const recordSeed = jest.fn((_, payload) => {
+      inserted.push({
+        host: payload.host,
+        url: payload.url,
+        evidence: JSON.stringify(payload.evidence),
+        lastSeenAt: '2025-10-12T00:00:00Z'
+      });
+      return true;
+    });
+
+    const observer = jest.fn();
+    const service = new ProblemResolutionService({ db, recordSeed });
+    service.setResolutionObserver(observer);
+
+    const analysis = createUrlPlaceAnalysis();
+    service.resolveMissingHub({
+      jobId: 'job-42',
+      host: 'Example.com',
+      sourceUrl: 'https://example.com/us/california/news',
+      urlPlaceAnalysis: analysis
+    });
+
+    expect(observer).toHaveBeenCalled();
+    const payload = observer.mock.calls[0][0];
+    expect(payload.normalizedHost).toBe('example.com');
+    expect(payload.url).toBeTruthy();
+
+    const seeds = service.getKnownHubSeeds({ host: 'example.com' });
+    expect(Array.isArray(seeds)).toBe(true);
+    expect(seeds.length).toBeGreaterThan(0);
+    expect(seeds[0].url).toEqual(inserted[0].url);
+    expect(seeds[0].confidence).toBeGreaterThan(0);
+    expect(db.prepare).toHaveBeenCalled();
+  });
 });

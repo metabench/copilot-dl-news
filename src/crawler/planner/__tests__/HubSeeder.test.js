@@ -63,7 +63,7 @@ describe('HubSeeder', () => {
       type: expect.objectContaining({
         kind: 'hub-seed',
         hubKind: 'country',
-        priorityBias: -5
+        priorityBias: 20
       })
     }));
     expect(enqueueRequest).toHaveBeenCalledWith(expect.objectContaining({

@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS crawl_jobs (
   status TEXT,
   crawl_type_id INTEGER REFERENCES crawl_types(id)
 );
+CREATE INDEX IF NOT EXISTS idx_crawl_jobs_timeline ON crawl_jobs(ended_at DESC, started_at DESC);
 
 CREATE TABLE IF NOT EXISTS crawl_types (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -231,6 +232,7 @@ CREATE TABLE IF NOT EXISTS queue_events (
   queue_depth_bucket TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_queue_events_job ON queue_events(job_id);
+CREATE INDEX IF NOT EXISTS idx_queue_events_job_ts ON queue_events(job_id, ts DESC);
 
 CREATE TABLE IF NOT EXISTS crawl_problems (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

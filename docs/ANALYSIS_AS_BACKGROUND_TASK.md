@@ -396,6 +396,22 @@ CREATE INDEX idx_background_tasks_created ON background_tasks(created_at DESC);
 }
 ```
 
+### analysis_runs Linkage
+
+**Managed by**: `ensureAnalysisRunSchema()` in `src/ui/express/services/analysisRuns.js`
+
+**Relevant columns**:
+```sql
+background_task_id INTEGER,
+background_task_status TEXT
+```
+
+- `background_task_id` is nullable and backfilled automatically. Existing databases gain the column via an `ALTER TABLE` guard that tolerates duplicate-column races.
+- `background_task_status` mirrors the latest background task status (e.g. `running`, `completed`, `failed`) so the analysis list can show task state without re-querying the task table.
+- When a run has no associated task (legacy child-process runs), both fields remain `NULL`. The UI displays an em dash and skips linking.
+- Every new background-task-backed analysis writes both fields during `createAnalysisRun()`/`updateAnalysisRun()` so SSR and client hydration stay consistent.
+- The analysis list now renders a dedicated “Task” column that links to `/api/background-tasks/{id}` for quick drill-down.
+
 ---
 
 ## Benefits Over Child Process Approach
@@ -512,8 +528,17 @@ const result = await analysePages({
   dbPath: './data/news.db',
   analysisVersion: 1,
   limit: 100,  // Just 100 pages
-  verbose: false
+  verbose: false,
+  // Optional helpers:
+  dryRun: true,              // collect stats without writing
+  collectHubSummary: true,   // capture a list of hub assignments
+  hubSummaryLimit: 25        // limit the number of listed hubs (0 = unlimited)
 });
+
+if (result.dryRun) {
+  console.log(`Would insert ${result.hubsInserted} hubs and update ${result.hubsUpdated}.`);
+  console.table(result.hubAssignments || []);
+}
 ```
 
 **Quality Scoring** (still works unchanged):
@@ -758,12 +783,13 @@ const taskStatus = await fetch(`/api/background-tasks/${taskId}`);
 - ✅ Registered `analysis-run` task type
 - ✅ Added `/api/analysis/start-background` endpoint
 - ✅ Added task definition for background tasks UI
+- ✅ `analysis_runs` now stores `background_task_id` and `background_task_status` so every run stays linked to the task lifecycle
+- ✅ Analysis list UI renders a Task column that links directly to `/api/background-tasks/{id}` and shows the latest task status
 - ✅ Analysis modules remain unchanged and reusable
 
 **What Stayed the Same**:
 - ✅ Core analysis modules (analyse-pages-core, page-analyzer, etc.)
 - ✅ Analysis algorithms and logic
-- ✅ Database schema (analysis_runs table)
 - ✅ Existing `/api/analysis/start` endpoint (child process)
 - ✅ Module usage in crawler planning and intelligence
 
@@ -775,7 +801,7 @@ const taskStatus = await fetch(`/api/background-tasks/${taskId}`);
 - ✅ Analysis modules stay lightweight and reusable
 
 **Next Steps**:
-1. Update UI to use background task endpoint
+1. Populate the new `analysis_runs.background_task_*` fields from `BackgroundTaskManager` so legacy jobs migrate cleanly
 2. Add comprehensive tests
 3. Implement smart resume and incremental analysis
 4. Feed analysis results to crawler intelligence

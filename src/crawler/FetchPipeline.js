@@ -85,11 +85,11 @@ class FetchPipeline {
 
   /**
    * Fetches a URL using cache and network rules.
-   * @param {{url: string, context?: object}} params
+   * @param {{url: string, context?: object, retryCount?: number}} params
    * @returns {Promise<{html: string|null, meta: object, source: 'cache'|'network'|'not-modified'|'skipped'|'error'}>}
    */
   async fetch(params) {
-    const { url, context = {} } = params || {};
+    const { url, context = {}, retryCount = 0 } = params || {};
     const depth = context.depth || 0;
     const allowRevisit = !!context.allowRevisit;
     const decision = this.getUrlDecision(url, { ...context, phase: 'fetch', depth });
@@ -179,6 +179,27 @@ class FetchPipeline {
     }
     if (!cached) return null;
 
+    // Skip known 404s to avoid wasteful re-fetches
+    if (cached.source === 'db-404' && cached.httpStatus === 404) {
+      const ageMs = Date.now() - new Date(cached.crawledAt).getTime();
+      const ageDays = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+      if (this.logger && typeof this.logger.info === 'function') {
+        this.logger.info(`Skipping known 404 (checked ${ageDays}d ago): ${normalizedUrl}`);
+      }
+      return this._buildResult({
+        status: 'skip-404',
+        source: 'cache',
+        url: normalizedUrl,
+        decision,
+        cacheInfo: {
+          reason: 'known-404',
+          crawledAt: cached.crawledAt,
+          httpStatus: 404,
+          ageDays
+        }
+      });
+    }
+
     const decisionCache = shouldUseCache({ preferCache, maxAgeMs: effectiveMaxAgeMs, crawledAt: cached.crawledAt });
     const useCache = forcedCache || decisionCache.use;
     if (!useCache) {
@@ -223,8 +244,17 @@ class FetchPipeline {
   }
 
   async _performNetworkFetch({ normalizedUrl, context, decision }) {
-    const parsedUrl = new URL(normalizedUrl);
+    let parsedUrl = new URL(normalizedUrl);
     const host = parsedUrl.hostname;
+
+    // Validate protocol - log and fix http: URLs for https: domains
+    if (parsedUrl.protocol === 'http:' && (host.includes('theguardian.com') || host.includes('bbc.co'))) {
+      const httpsUrl = normalizedUrl.replace(/^http:/, 'https:');
+      this.logger.warn(`URL protocol corrected: ${normalizedUrl} → ${httpsUrl}`);
+      normalizedUrl = httpsUrl;
+      // Re-parse with corrected URL
+      parsedUrl = new URL(httpsUrl);  // Recreate URL object with corrected protocol
+    }
 
     await this.acquireDomainToken(host);
     if (this.rateLimitMs > 0) {
@@ -253,19 +283,52 @@ class FetchPipeline {
       const response = await this.fetchFn(normalizedUrl, {
         headers,
         agent: parsedUrl.protocol === 'http:' ? this.httpAgent : this.httpsAgent,
-        signal: abortController.signal
+        signal: abortController.signal,
+        redirect: 'manual'  // Handle redirects manually to fix protocol
       });
 
       clearTimeout(timeoutHandle);
 
+      // Handle redirects manually with protocol correction
+      let actualResponse = response;
+      let finalUrl = normalizedUrl;
+      
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location) {
+          let redirectUrl = location;
+          // Make relative URLs absolute
+          if (!redirectUrl.startsWith('http')) {
+            redirectUrl = new URL(redirectUrl, normalizedUrl).href;
+          }
+          // Force https: for Guardian/BBC domains
+          if (redirectUrl.startsWith('http://')) {
+            const redirectHost = new URL(redirectUrl).hostname;
+            if (redirectHost.includes('theguardian.com') || redirectHost.includes('bbc.co')) {
+              redirectUrl = redirectUrl.replace(/^http:/, 'https:');
+              this.logger.warn(`Redirect location corrected: ${location} → ${redirectUrl}`);
+            }
+          }
+          // Follow the corrected redirect
+          this.logger.info(`Following redirect: ${normalizedUrl} → ${redirectUrl}`);
+          actualResponse = await this.fetchFn(redirectUrl, {
+            headers,
+            agent: redirectUrl.startsWith('https:') ? this.httpsAgent : this.httpAgent,
+            signal: abortController.signal,
+            redirect: 'manual'
+          });
+          finalUrl = redirectUrl;
+        }
+      }
+
       const headersReady = Date.now();
       const ttfbMs = headersReady - started;
-      const status = response.status;
-      const etag = response.headers.get('etag') || null;
-      const lastModified = response.headers.get('last-modified') || null;
-      const contentTypeHeader = response.headers.get('content-type') || null;
-      const contentLengthHeader = parseInt(response.headers.get('content-length') || '0', 10) || null;
-      const contentEncoding = response.headers.get('content-encoding') || null;
+      const status = actualResponse.status;
+      const etag = actualResponse.headers.get('etag') || null;
+      const lastModified = actualResponse.headers.get('last-modified') || null;
+      const contentTypeHeader = actualResponse.headers.get('content-type') || null;
+      const contentLengthHeader = parseInt(actualResponse.headers.get('content-length') || '0', 10) || null;
+      const contentEncoding = actualResponse.headers.get('content-encoding') || null;
 
       if (status === 304) {
         const finished = Date.now();
@@ -300,8 +363,8 @@ class FetchPipeline {
         });
       }
 
-      if (!response.ok) {
-        const retryAfterHeader = response.headers.get('retry-after');
+      if (!actualResponse.ok) {
+        const retryAfterHeader = actualResponse.headers.get('retry-after');
         const retryAfterMs = this.parseRetryAfter ? this.parseRetryAfter(retryAfterHeader) : null;
         this.logger.warn(`Failed to fetch ${normalizedUrl}: ${status}`);
         this._recordHttpError(normalizedUrl, status);
@@ -322,13 +385,16 @@ class FetchPipeline {
         });
       }
 
-      const html = await response.text();
+      const html = await actualResponse.text();
       const finished = Date.now();
       const downloadMs = finished - headersReady;
       const totalMs = finished - started;
       const bytesDownloaded = Buffer.byteLength(html, 'utf8');
       const transferKbps = downloadMs > 0 ? (bytesDownloaded / 1024) / (downloadMs / 1000) : null;
-      const finalUrl = response.url || normalizedUrl;
+      
+      // Use finalUrl from redirect handling above, or fall back to normalizedUrl
+      // finalUrl already set during redirect handling
+      
       const redirectChain = finalUrl !== normalizedUrl ? JSON.stringify([normalizedUrl, finalUrl]) : null;
 
       const fetchMeta = {
@@ -368,12 +434,25 @@ class FetchPipeline {
       });
     } catch (error) {
       clearTimeout(timeoutHandle);
+      
+      // Check if this is a retryable network error
+      const isConnectionReset = error && (error.code === 'ECONNRESET' || /ECONNRESET|socket hang up/i.test(String(error?.message || '')));
+      const isTimeout = error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error?.message || '')));
+      const maxRetries = 1; // Single retry by default
+      
+      // Retry on connection reset or timeout (but not on other errors)
+      if ((isConnectionReset || isTimeout) && retryCount < maxRetries) {
+        this.logger.warn(`Retrying ${normalizedUrl} after ${isTimeout ? 'timeout' : 'connection reset'} (attempt ${retryCount + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
+        return this.fetch({ url, context, retryCount: retryCount + 1 });
+      }
+      
+      // Log error and record after retries exhausted
       this.logger.error(`Error fetching ${normalizedUrl}: ${error?.message || String(error)}`);
       this.recordError({ kind: 'exception', message: error?.message || error?.name || String(error), url: normalizedUrl });
-      if (error && (error.code === 'ECONNRESET' || /ECONNRESET|socket hang up/i.test(String(error?.message || '')))) {
+      if (isConnectionReset) {
         this.handleConnectionReset(normalizedUrl, error);
       }
-      const isTimeout = error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error?.message || '')));
       this._recordNetworkError(normalizedUrl, isTimeout ? 'timeout' : 'network', error);
       return this._buildResult({
         status: 'error',

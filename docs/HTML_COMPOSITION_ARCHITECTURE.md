@@ -8,6 +8,10 @@ _Inspired by jsgui3-html and jsgui3-server patterns, adapted for server-side ren
 
 This document outlines the modular HTML generation system for the copilot-dl-news crawler UI. Drawing from jsgui3's Control-based architecture and compositional patterns, we've adapted these principles for pure server-side rendering (SSR) without client-side reactivity.
 
+> **Terminology note**: Throughout the project we use the word **activation** (not hydration) to describe clients attaching behaviour to SSR markup. Activators bind listeners and live data feeds without re-rendering the markup the server already produced.
+
+> **Data flow note**: Route handlers build **view models** (plain objects containing raw rows and derived summaries) before delegating to view functions. Renderers remain pure string formatters, which keeps streaming straightforward and simplifies testing.
+
 ## Key Principles from jsgui3
 
 ### 1. **Component Composition Over Monoliths**
@@ -59,6 +63,15 @@ This document outlines the modular HTML generation system for the copilot-dl-new
 ```
 
 ## Component System
+### Streaming-Friendly Rendering
+
+For long tables (crawls, queues), list pages expose `stream*Page` helpers that:
+
+1. Write the document shell (head + summary) to the response.
+2. Chunk rows in configurable batches using shared `renderRow` helpers.
+3. Finish with the closing HTML and activation script tag.
+
+Routes pick between `.render*Page()` and `.stream*Page()` based on the row count, so small responses remain simple while large datasets begin activation without waiting for the full payload.
 
 ### Component Signature
 

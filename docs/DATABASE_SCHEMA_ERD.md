@@ -295,7 +295,7 @@ This document provides a visual representation and detailed explanation of the S
 | `osm_id` | TEXT | OpenStreetMap ID |
 | `area` | REAL | Area (km²) |
 | `gdp_usd` | REAL | GDP in USD |
-| `admin_level` | INTEGER | Wikidata admin level |
+| `wikidata_admin_level` | INTEGER | Wikidata admin level |
 | `wikidata_props` | JSON | Comprehensive Wikidata properties |
 | `osm_tags` | JSON | OpenStreetMap tags |
 | `crawl_depth` | INTEGER | Crawl depth (0=country, 1=ADM1, 2=ADM2, 3=city) |

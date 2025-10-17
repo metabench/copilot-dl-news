@@ -209,6 +209,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resumeStatus = document.getElementById('resumeStatus');
     const resumeAllBtn = document.getElementById('resumeAllBtn');
     const resumeRefreshBtn = document.getElementById('resumeRefreshBtn');
+    const clearQueuesBtn = document.getElementById('clearQueuesBtn');
+    const jobsList = document.getElementById('jobsList');
 
     // ========================================
     // Element Definitions
@@ -774,6 +776,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('[index] createCrawlControls returned:', crawlControlsResult);
     console.log('[index] Verifying startBtn.onclick is set:', typeof startBtn?.onclick, startBtn?.onclick);
+
+    // ========================================
+    // Jobs and Resume Manager Initialization
+    // ========================================
+    console.log('[index] About to call createJobsAndResumeManager');
+    
+    const jobsAndResumeManager = createJobsAndResumeManager({
+      elements: {
+        jobsList,
+        logs,
+        resumeSection,
+        resumeSummary,
+        resumeAllBtn,
+        resumeRefreshBtn,
+        clearQueuesBtn,
+        resumeList,
+        resumeStatus
+      },
+      actions: {
+        setStage,
+        setPausedBadge,
+        hidePausedBadge,
+        setCrawlType,
+        updateStartupStatus
+      }
+    });
+    
+    console.log('[index] createJobsAndResumeManager returned:', jobsAndResumeManager);
+    
+    // Setup resume controls and fetch initial inventory
+    if (jobsAndResumeManager && jobsAndResumeManager.setupResumeControls) {
+      console.log('[index] Calling setupResumeControls...');
+      jobsAndResumeManager.setupResumeControls();
+    }
 
     // ========================================
     // Analysis Link Rendering

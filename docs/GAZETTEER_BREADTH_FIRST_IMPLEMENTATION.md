@@ -19,7 +19,7 @@ This enhancement transforms the gazetteer system from depth-first (country-by-co
 - `osm_type TEXT, osm_id TEXT` - OpenStreetMap references
 - `area REAL` - Area in square kilometers  
 - `gdp_usd REAL` - GDP in USD
-- `admin_level INTEGER` - Wikidata administrative level
+- `wikidata_admin_level INTEGER` - Wikidata administrative level
 - `wikidata_props JSON` - Comprehensive Wikidata properties storage
 - `osm_tags JSON` - OpenStreetMap tags
 - `crawl_depth INTEGER` - 0=country, 1=ADM1, 2=ADM2, 3=city

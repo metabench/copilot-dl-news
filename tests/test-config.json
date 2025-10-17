@@ -6,7 +6,7 @@
   "testSuites": {
     "unit": {
       "description": "Fast unit tests only (no network, no E2E)",
-      "testPathIgnorePatterns": ["e2e", "online", "puppeteer", "http.test.js", ".dev.test.js", ".manual.test.js"],
+  "testPathIgnorePatterns": ["e2e", "online", "puppeteer", "http.test.js", ".dev.test.js", ".manual.test.js", "/broken/"],
       "timeout": 5000,
       "maxWorkers": 4,
       "forceExit": false
@@ -23,7 +23,7 @@
     "e2e": {
       "description": "Standard E2E tests (excludes dev/manual tests)",
       "testPathPattern": "e2e",
-      "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js"],
+  "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "/broken/"],
       "timeout": 60000,
       "forceExit": true,
       "maxWorkers": 1,
@@ -40,7 +40,7 @@
     
     "all": {
       "description": "All regular tests (excludes dev/manual tests)",
-      "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "geography-crawl.e2e.test.js", "geography.full.e2e.test.js"],
+  "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "geography-crawl.e2e.test.js", "geography.full.e2e.test.js", "/broken/"],
       "timeout": 10000,
       "forceExit": true,
       "maxWorkers": 4

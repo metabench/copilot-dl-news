@@ -5,14 +5,18 @@ const {
   getQueueDetail
 } = require('../data/queues');
 const {
-  renderQueuesListPage
+  renderQueuesListPage,
+  streamQueuesListPage
 } = require('../views/queuesListPage');
+const { createQueuesViewModel } = require('../views/queues/createQueuesViewModel');
 const {
   renderQueueDetailPage
 } = require('../views/queueDetailPage');
 const { resolveStaleQueueJobs } = require('../services/queueJanitor');
 const { createRenderContext } = require('../utils/html');
 const { errorPage } = require('../components/base');
+
+const STREAMING_THRESHOLD = 150;
 
 function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger = null }) {
   if (typeof getDbRW !== 'function') {
@@ -37,8 +41,19 @@ function createQueuesSsrRouter({ getDbRW, renderNav, jobRegistry = null, logger 
         resolveStaleQueueJobs({ db, jobRegistry, logger });
       } catch (_) {}
       const rows = listQueues(db, { limit: req.query.limit });
+      const viewModel = createQueuesViewModel(rows);
+      if (viewModel.rows.length > STREAMING_THRESHOLD) {
+        res.status(200);
+        res.set('Content-Type', 'text/html; charset=utf-8');
+        streamQueuesListPage({
+          res,
+          renderNav: context.renderNav,
+          viewModel
+        });
+        return;
+      }
       const html = renderQueuesListPage({
-        rows,
+        viewModel,
         renderNav: context.renderNav
       });
       res.type('html').send(html);

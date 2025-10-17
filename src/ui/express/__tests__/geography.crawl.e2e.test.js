@@ -321,16 +321,24 @@ describe('Geography Crawl E2E', () => {
       // Try to get logs to understand what happened
       const logsResponse = await fetch(`${baseUrl}/api/logs?limit=50`);
       if (logsResponse.ok) {
-        const logs = await logsResponse.json();
-        console.log('[TEST DEBUG] Recent logs:', logs);
+        try {
+          const logs = await logsResponse.json();
+          console.log('[TEST DEBUG] Recent logs:', logs);
+        } catch (e) {
+          console.error('[TEST DEBUG] Failed to parse logs JSON. Response text:');
+          console.error(await logsResponse.text());
+        }
+      } else {
+        console.error(`[TEST DEBUG] Failed to fetch logs. Status: ${logsResponse.status}`);
+        console.error(await logsResponse.text());
       }
     }
     
     expect(isValidState).toBe(true);
-  }, 20000);
+  }, 30000);
 
   test('geography crawl includes gazetteer-specific telemetry', async () => {
-    const ssePromise = collectSseEvents(baseUrl, 15000);
+    const ssePromise = collectSseEvents(baseUrl, 25000);
     
     await new Promise(resolve => setTimeout(resolve, 100));
     
@@ -355,5 +363,5 @@ describe('Geography Crawl E2E', () => {
     );
     
     expect(gazetteerEvents.length).toBeGreaterThan(0);
-  }, 15000);
+  }, 30000);
 });

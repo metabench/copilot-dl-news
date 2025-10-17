@@ -4,217 +4,290 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>News Crawler UI</title>
-  <link rel="stylesheet" href="/crawler.css" />
-  <link rel="stylesheet" href="/assets/index.css" />
+    <link rel="stylesheet" href="/crawler.css?v=20251014-complete-overhaul" />
   <script type="module" src="/assets/global-nav.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#crawl-controls">Skip to crawl controls</a>
-    <main class="crawler-layout crawler-layout--studio">
-      <header class="page-header panel--full-width">
-        <div class="page-header__primary">
-          <h1 class="page-title">News Crawler</h1>
-          <div class="page-header__nav" data-nav-container>
-            <div data-global-nav data-active="crawler" data-variant="bar"></div>
-          </div>
-        </div>
-        <nav class="quick-nav" aria-label="Quick links">
-          <ul class="quick-links">
-            <li><a href="/urls">URLs</a></li>
-            <li><a href="/domain">Domain summary</a></li>
-            <li><a href="/domains">Domains</a></li>
-            <li><a href="/errors">Errors</a></li>
-            <li><a href="/health" target="_blank" rel="noopener">Health</a></li>
-            <li><a href="/metrics" target="_blank" rel="noopener">Metrics</a></li>
-            <li><a href="/gazetteer">Gazetteer</a></li>
-          </ul>
+    <main class="crawler-layout crawler-layout--compact">
+      <header class="compact-header">
+        <h1 class="compact-header__title">Crawler</h1>
+        <nav class="compact-header__nav">
+          <div data-global-nav data-active="crawler" data-variant="bar"></div>
         </nav>
       </header>
 
-      <section id="crawl-controls" class="panel controls-card panel--full-width" aria-labelledby="crawl-controls-heading">
-        <header class="controls-card__header">
-          <h2 id="crawl-controls-heading" class="section-title">Crawl controls</h2>
-          <button id="themeBtn" class="button button--ghost" type="button" title="Toggle dark mode">Dark</button>
-        </header>
+      <!-- Left Sidebar: Controls -->
+      <div class="controls-sidebar">
+        <!-- Crawl Controls -->
+        <section id="crawl-controls" class="panel controls-card controls-card--compact" aria-labelledby="crawl-controls-heading">
+          <header class="controls-card__header">
+            <h2 id="crawl-controls-heading" class="section-title">Quick Start</h2>
+            <button id="themeBtn" class="button button--ghost button--sm" type="button" title="Toggle dark mode">🌙</button>
+          </header>
 
-        <div class="control-grid control-grid--primary">
-          <div class="control-field control-field--wide" id="startUrlField">
-            <label for="startUrl">Start URL</label>
-            <input id="startUrl" value="https://www.theguardian.com" size="40" />
-          </div>
-          <div class="control-field control-field--wide control-field--hidden" id="gazetteerNote">
-            <div class="info-message">
-              <strong>Gazetteer Crawl Mode:</strong> This crawl type uses predefined URLs from the gazetteer database. No start URL or depth setting is required.
+          <div class="control-grid control-grid--primary">
+            <div class="control-field control-field--wide" id="startUrlField">
+              <label for="startUrl">Website</label>
+              <input id="startUrl" value="https://www.theguardian.com" size="30" />
             </div>
-          </div>
-          <div class="control-field" id="depthField">
-            <label for="depth">Depth</label>
-            <input id="depth" type="number" value="2" />
-          </div>
-          <div class="control-field">
-            <label for="maxPages">Max pages</label>
-            <input id="maxPages" type="number" />
-          </div>
-          <div class="control-field">
-            <label for="concurrency">Concurrency</label>
-            <input id="concurrency" type="number" value="1" title="For web crawls: number of parallel workers. For geography/gazetteer crawls: maximum allowed (may use less)." />
-          </div>
-          <div class="control-field">
-            <label for="requestTimeoutMs">Timeout (ms)</label>
-            <input id="requestTimeoutMs" type="number" placeholder="10000" />
-          </div>
-          <div class="control-field">
-            <label for="crawlType">Crawl type</label>
-            <select id="crawlType">
-              <option value="">Loading…</option>
-            </select>
-          </div>
-        </div>
-
-        <details class="controls-advanced" id="controlsAdvanced">
-          <summary>Advanced options</summary>
-          <div class="control-grid control-grid--advanced">
-            <div class="control-field">
-              <label for="refetchIfOlderThan">Refetch window (global)</label>
-              <input id="refetchIfOlderThan" type="text" placeholder="e.g., 30m or 6h" />
-            </div>
-            <div class="control-field">
-              <label for="refetchArticleIfOlderThan">Refetch window — articles</label>
-              <input id="refetchArticleIfOlderThan" type="text" placeholder="e.g., 28d (overrides global)" />
-            </div>
-            <div class="control-field">
-              <label for="refetchHubIfOlderThan">Refetch window — hubs/nav</label>
-              <input id="refetchHubIfOlderThan" type="text" placeholder="e.g., 2d (overrides global)" />
-            </div>
-            <div class="control-field control-field--inline">
-              <label for="pacerJitterMinMs">Pacer jitter (ms)</label>
-              <div class="control-inline">
-                <input id="pacerJitterMinMs" type="number" placeholder="25" />
-                <span class="control-inline__dash" aria-hidden="true">–</span>
-                <input id="pacerJitterMaxMs" type="number" placeholder="50" />
+            <div class="control-field control-field--wide control-field--hidden" id="gazetteerNote">
+              <div class="info-message">
+                <strong>Gazetteer Mode:</strong> Uses predefined URLs.
               </div>
             </div>
-            <div class="control-checkboxes">
-              <label class="control-checkbox">
-                <input id="slowMode" type="checkbox" />
-                <span>Slow mode (1 req/s)</span>
-              </label>
-              <label class="control-checkbox" title="Discover and enqueue URLs from the site’s sitemap in addition to the Start URL. Disable to rely only on link traversal.">
-                <input id="useSitemap" type="checkbox" />
-                <span>Use sitemap</span>
-              </label>
-              <label class="control-checkbox">
-                <input id="sitemapOnly" type="checkbox" />
-                <span>Sitemap only</span>
-              </label>
+            <div class="control-field">
+              <label for="crawlType">Mode</label>
+              <select id="crawlType">
+                <option value="">Loading…</option>
+              </select>
+            </div>
+            <div class="control-field" id="depthField">
+              <label for="depth">Depth</label>
+              <input id="depth" type="number" value="2" min="1" max="5" />
+            </div>
+            <div class="control-field">
+              <label for="maxPages">Pages</label>
+              <input id="maxPages" type="number" placeholder="∞" />
+            </div>
+            <div class="control-field">
+              <label for="concurrency">Threads</label>
+              <input id="concurrency" type="number" value="1" min="1" max="10" />
             </div>
           </div>
-        </details>
 
-        <div class="control-actions">
-          <div class="control-buttons">
-                        <button id="startBtn" data-testid="start-crawl-button" class="button button--primary" type="button">Start</button>
-            <button id="stopBtn" class="button" type="button">Stop</button>
-            <button id="pauseBtn" class="button" type="button">Pause</button>
-            <button id="resumeBtn" class="button" type="button" disabled>Resume</button>
-            <button id="analysisBtn" class="button button--secondary" type="button" title="Run offline analysis pipeline">Perform Analysis</button>
-          </div>
-          <div class="analysis-status-card">
-            <span id="analysisLink" class="analysis-link muted"></span>
-            <div id="analysisStatus" class="analysis-status muted">
-              <div id="analysisStatusSummary" class="analysis-status__summary">No analysis runs yet.</div>
-              <ul id="analysisStatusMetrics" class="analysis-status__metrics"></ul>
+          <details class="controls-advanced" id="controlsAdvanced">
+            <summary>Advanced</summary>
+            <div class="control-grid control-grid--advanced">
+              <div class="control-field">
+                <label for="requestTimeoutMs">Timeout (ms)</label>
+                <input id="requestTimeoutMs" type="number" placeholder="10000" />
+              </div>
+              <div class="control-field">
+                <label for="refetchIfOlderThan">Refetch</label>
+                <input id="refetchIfOlderThan" type="text" placeholder="6h" />
+              </div>
+              <div class="control-checkboxes">
+                <label class="control-checkbox">
+                  <input id="slowMode" type="checkbox" />
+                  <span>Slow mode</span>
+                </label>
+                <label class="control-checkbox">
+                  <input id="useSitemap" type="checkbox" />
+                  <span>Use sitemap</span>
+                </label>
+              </div>
+            </div>
+          </details>
+
+          <div class="control-actions">
+            <div class="control-buttons">
+              <button id="startBtn" data-testid="start-crawl-button" class="button button--primary" type="button">▶️ Start</button>
+              <button id="stopBtn" class="button" type="button">⏹️ Stop</button>
+              <button id="pauseBtn" class="button" type="button">⏸️ Pause</button>
+              <button id="resumeBtn" class="button" type="button" disabled>▶️ Resume</button>
             </div>
           </div>
-        </div>
-      </section>
-      
-      <!-- Ongoing Crawls (moved to top with integrated progress) -->
-      <section id="jobsSection" class="panel panel--full-width">
-        <div class="panel-head">
-          <h3>Ongoing crawls</h3>
-          <label class="toggle-control">
-            <input type="checkbox" id="showLogs" />
-            <span>Show logs</span>
-          </label>
-        </div>
-        <div id="jobsList" class="muted text-sm">None</div>
+        </section>
+
+        <!-- Status Box -->
+        <section class="panel">
+          <h3>Status</h3>
+          <div class="summary-meta">
+            <span id="stageBadge" class="badge badge-neutral">Idle</span>
+            <span id="crawlTypeBadge" class="badge badge-neutral">—</span>
+            <span id="pausedBadge" class="badge badge-ok is-hidden">Running</span>
+          </div>
+          <div id="healthStrip" class="health-strip" style="margin-top: 0.5rem;">
+            <span id="badgeConn" class="badge badge-warn">SSE: connecting…</span>
+            <span id="badgeDb" class="muted">db: …</span>
+          </div>
+        </section>
+
+        <!-- Features Panel -->
+        <section id="featuresPanel" class="panel is-hidden">
+          <h3>🧠 Intelligent Features</h3>
+          <div id="featuresDisplay" class="features-display">
+            <span class="feature-badge">Loading...</span>
+          </div>
+        </section>
+
+        <!-- Metrics Box -->
+        <section class="panel">
+          <h3>Metrics</h3>
+          <div class="metrics-compact">
+            <div class="metric-compact">
+              <span class="metric-compact__label">Visited</span>
+              <span id="metricVisited" class="metric-compact__value">0</span>
+            </div>
+            <div class="metric-compact">
+              <span class="metric-compact__label">Saved</span>
+              <span id="metricSaved" class="metric-compact__value">0</span>
+            </div>
+            <div class="metric-compact">
+              <span class="metric-compact__label">Queue</span>
+              <span id="metricQueue" class="metric-compact__value">0</span>
+            </div>
+            <div class="metric-compact">
+              <span class="metric-compact__label">Downloaded</span>
+              <span id="metricDownloaded" class="metric-compact__value">0</span>
+            </div>
+            <div class="metric-compact">
+              <span class="metric-compact__label">Found</span>
+              <span id="metricFound" class="metric-compact__value">0</span>
+            </div>
+            <div class="metric-compact">
+              <span class="metric-compact__label">Errors</span>
+              <span id="metricErrors" class="metric-compact__value">0</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Background Tasks Widget -->
+        <section id="backgroundTasksWidget" class="panel is-hidden" data-has-tasks="0">
+          <div class="summary-head">
+            <h3>Background Tasks</h3>
+            <a href="/background-tasks" class="button button--ghost button--sm">→</a>
+          </div>
+          <div id="activeTasksList" class="active-tasks-list"></div>
+        </section>
+      </div>
+
+      <!-- Right Side: Main View -->
+      <div class="main-view">
         
-        <!-- Crawl Progress Indicator (integrated within ongoing crawls) -->
-        <div id="crawlProgressSection" class="crawl-progress-section is-hidden" data-active="0">
-          <div class="crawl-progress-header">
-            <h4>📊 Current Crawl Progress</h4>
+        <!-- Stage Flow Indicator -->
+        <section id="stageFlow" class="panel is-hidden">
+          <div class="stage-flow">
+            <div class="stage-item" data-stage="planning">
+              <div>📋 Planning</div>
+            </div>
+            <div class="stage-item" data-stage="discovery">
+              <div>🔍 Discovery</div>
+            </div>
+            <div class="stage-item" data-stage="crawling">
+              <div>🕷️ Crawling</div>
+            </div>
+            <div class="stage-item" data-stage="completion">
+              <div>✅ Complete</div>
+            </div>
           </div>
-          <div id="crawlProgressContainer" class="crawl-progress-container">
-            <!-- CrawlProgressIndicator will be rendered here -->
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Background Tasks Widget -->
-      <section id="backgroundTasksWidget" class="panel panel--full-width is-hidden" data-has-tasks="0">
+        <!-- Active Jobs -->
+        <section id="jobsSection" class="panel">
+          <div class="panel-head">
+            <h3>Active Crawl</h3>
+            <label class="toggle-control">
+              <input type="checkbox" id="showLogs" />
+              <span>Logs</span>
+            </label>
+          </div>
+          <div id="jobsList" class="muted text-sm">No active crawls</div>
+          
+          <div id="crawlProgressSection" class="crawl-progress-section is-hidden" data-active="0">
+            <div id="crawlProgressContainer" class="crawl-progress-container"></div>
+          </div>
+        </section>
+
+        <!-- Planner Info (Intelligent Crawls Only) -->
+        <section id="plannerInfo" class="panel is-hidden">
+          <h3>🧠 Planner Status</h3>
+          <div class="pipeline-grid">
+            <article class="pipeline-card" data-pipeline-stage="planner">
+              <header class="pipeline-card__head">
+                <span id="pipelinePlannerStatus" class="badge badge-neutral">Idle</span>
+                <span id="pipelinePlannerSummary" class="pipeline-card__summary muted">Waiting...</span>
+              </header>
+              <dl class="pipeline-card__meta">
+                <div>
+                  <dt>Stage</dt>
+                  <dd id="pipelinePlannerStage" class="muted">—</dd>
+                </div>
+                <div>
+                  <dt>Goals</dt>
+                  <dd id="pipelinePlannerGoals" class="muted">—</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+          <div id="pipelineDiagram" class="pipeline-diagram muted"></div>
+        </section>
+
+        <!-- Intelligent Insights Panel (Intelligent Crawls Only) -->
+        <section id="insightsPanel" class="panel is-hidden" data-has-data="0">
+          <div class="summary-head">
+            <h3>💡 Intelligent Insights</h3>
+          </div>
+          <div class="insight-grid">
+            <div class="insight-item">
+              <span class="insight-label">Coverage</span>
+              <span id="insightCoverage" class="insight-value">—</span>
+              <span id="insightCoverageDetail" class="insight-detail muted"></span>
+            </div>
+            <div class="insight-item">
+              <span class="insight-label">Seeded Hubs</span>
+              <span id="insightHubs" class="insight-value">—</span>
+              <span id="insightHubsDetail" class="insight-detail muted"></span>
+            </div>
+            <div class="insight-item">
+              <span class="insight-label">Problems</span>
+              <span id="insightProblems" class="insight-value">0</span>
+              <span id="insightProblemsDetail" class="insight-detail muted"></span>
+            </div>
+            <div class="insight-item">
+              <span class="insight-label">Queue Mix</span>
+              <span id="insightQueueMix" class="insight-value">—</span>
+              <span id="insightQueueMixDetail" class="insight-detail muted"></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pattern Insights (Intelligent Crawls Only) -->
+        <section id="patternInsightsPanel" class="panel pattern-insights is-hidden" data-has-data="0">
+          <div class="summary-head">
+            <h3>🔍 Pattern Discovery</h3>
+          </div>
+          <div class="pattern-summary-grid">
+            <div class="pattern-summary-card">
+              <span class="pattern-summary-label">Events</span>
+              <span id="patternInsightsTotal" class="pattern-summary-value">0</span>
+            </div>
+            <div class="pattern-summary-card">
+              <span class="pattern-summary-label">Sections</span>
+              <span id="patternInsightsSections" class="pattern-summary-value">0</span>
+            </div>
+            <div class="pattern-summary-card">
+              <span class="pattern-summary-label">Hints</span>
+              <span id="patternInsightsHints" class="pattern-summary-value">0</span>
+            </div>
+            <div class="pattern-summary-card pattern-summary-card--wide">
+              <span class="pattern-summary-label">Last Event</span>
+              <span id="patternInsightsLastSummary" class="pattern-summary-value pattern-summary-value--small">None</span>
+            </div>
+          </div>
+          <div class="pattern-log">
+            <div class="pattern-log__head">
+              <h4>Recent Events</h4>
+            </div>
+            <div id="patternInsightsLog" class="pattern-log__list timeline-list muted">No pattern events yet.</div>
+          </div>
+        </section>
+
+        <!-- Structure Discovery (Structure Crawls Only) -->
+        <section id="structurePanel" class="panel is-hidden" data-has-data="0" aria-live="polite">
         <div class="summary-head">
-          <h3>🔄 Active Background Tasks</h3>
-          <a href="/background-tasks" class="button button--ghost button--sm">View All</a>
-        </div>
-        <div id="activeTasksList" class="active-tasks-list">
-          <!-- Active tasks will be rendered here -->
-        </div>
-      </section>
-      
-    <section id="overviewSection" class="panel panel--half-width">
-      <div class="summary-head">
-        <h3>Run overview</h3>
-        <div class="summary-meta">
-          <span id="crawlTypeBadge" class="badge badge-neutral">Type: unknown</span>
-          <span id="stageBadge" class="badge badge-neutral">Stage: idle</span>
-          <span id="pausedBadge" class="badge badge-ok is-hidden">Running</span>
-        </div>
+          <h3>Structure Discovery</h3>
+          <span id="structureHint" class="muted text-xs">Maps navigation without downloading articles.</span>
       </div>
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <span class="metric-label">Visited</span>
-          <span id="metricVisited" class="metric-value">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Downloaded</span>
-          <span id="metricDownloaded" class="metric-value">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Saved</span>
-          <span id="metricSaved" class="metric-value">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Found</span>
-          <span id="metricFound" class="metric-value">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Queue size</span>
-          <span id="metricQueue" class="metric-value">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Errors</span>
-          <span id="metricErrors" class="metric-value">0</span>
-        </div>
-        <div class="metric-card">
-          <span class="metric-label">Coverage</span>
-          <span id="metricCoverage" class="metric-value">—</span>
-        </div>
-      </div>
-    </section>
-    <section id="structurePanel" class="panel panel--two-thirds is-hidden" data-has-data="0" aria-live="polite">
-      <div class="summary-head">
-        <h3>Structure discovery</h3>
-        <span id="structureHint" class="muted text-xs">Structure-only runs map navigation pathways without downloading full articles.</span>
-      </div>
-      <div class="structure-grid">
-        <div class="structure-card">
-          <span class="structure-label">Navigation pages mapped</span>
-          <span id="structureNavPages" class="structure-value">0</span>
-        </div>
-        <div class="structure-card">
-          <span class="structure-label">Article candidates skipped</span>
-          <span id="structureArticlesSkipped" class="structure-value">0</span>
+        <div class="structure-grid">
+          <div class="structure-card">
+            <span class="structure-label">Nav pages</span>
+            <span id="structureNavPages" class="structure-value">0</span>
+          </div>
+          <div class="structure-card">
+            <span class="structure-label">Articles skipped</span>
+            <span id="structureArticlesSkipped" class="structure-value">0</span>
         </div>
         <div class="structure-card structure-card--wide">
           <span class="structure-label">Top sections</span>
@@ -225,10 +298,10 @@
       </div>
       <p id="structureUpdated" class="structure-updated muted text-xs">Awaiting crawl activity…</p>
     </section>
-    <section id="insightsPanel" class="panel panel--two-thirds is-hidden" data-has-data="0">
-      <div class="summary-head">
-        <h3>Intelligent insights</h3>
-        <span id="insightsHint" class="muted text-xs">Insights appear once planner telemetry streams in.</span>
+      <section id="insightsPanel" class="panel panel--two-thirds is-hidden" data-has-data="0">
+        <div class="summary-head">
+          <h3>Intelligent Insights</h3>
+          <span id="insightsHint" class="muted text-xs">Appears when planner is active.</span>
       </div>
       <div class="insight-grid">
         <div class="insight-item">
@@ -262,33 +335,33 @@
           <h4>Highlights</h4>
           <ul id="insightHighlightsList" class="insight-highlights"></ul>
         </div>
-        <div class="insight-extra">
-          <h4>Queue heatmap</h4>
-          <div id="insightQueueHeatmap" class="insight-heatmap muted">Queue telemetry not yet available.</div>
+          <div class="insight-extra">
+            <h4>Queue heatmap</h4>
+            <div id="insightQueueHeatmap" class="insight-heatmap muted">Not available yet.</div>
         </div>
       </div>
     </section>
-    <section id="patternInsightsPanel" class="panel pattern-insights panel--full-width is-hidden" data-has-data="0">
-      <div class="summary-head">
-        <h3>Pattern insights</h3>
-        <span id="patternInsightsHint" class="muted text-xs">Pattern discovery events appear once the intelligent planner runs.</span>
+      <section id="patternInsightsPanel" class="panel pattern-insights panel--full-width is-hidden" data-has-data="0">
+        <div class="summary-head">
+          <h3>Pattern Insights</h3>
+          <span id="patternInsightsHint" class="muted text-xs">Pattern discovery from intelligent planner.</span>
       </div>
-      <div class="pattern-summary-grid">
-        <div class="pattern-summary-card">
-          <span class="pattern-summary-label">Pattern events</span>
-          <span id="patternInsightsTotal" class="pattern-summary-value">0</span>
+        <div class="pattern-summary-grid">
+          <div class="pattern-summary-card">
+            <span class="pattern-summary-label">Events</span>
+            <span id="patternInsightsTotal" class="pattern-summary-value">0</span>
+          </div>
+          <div class="pattern-summary-card">
+            <span class="pattern-summary-label">Sections</span>
+            <span id="patternInsightsSections" class="pattern-summary-value">0</span>
+          </div>
+          <div class="pattern-summary-card">
+            <span class="pattern-summary-label">Hints</span>
+            <span id="patternInsightsHints" class="pattern-summary-value">0</span>
         </div>
-        <div class="pattern-summary-card">
-          <span class="pattern-summary-label">Unique sections</span>
-          <span id="patternInsightsSections" class="pattern-summary-value">0</span>
-        </div>
-        <div class="pattern-summary-card">
-          <span class="pattern-summary-label">Article hints</span>
-          <span id="patternInsightsHints" class="pattern-summary-value">0</span>
-        </div>
-        <div class="pattern-summary-card pattern-summary-card--wide">
-          <span class="pattern-summary-label">Last event</span>
-          <span id="patternInsightsLastSummary" class="pattern-summary-value pattern-summary-value--small">No pattern activity yet.</span>
+          <div class="pattern-summary-card pattern-summary-card--wide">
+            <span class="pattern-summary-label">Last event</span>
+            <span id="patternInsightsLastSummary" class="pattern-summary-value pattern-summary-value--small">None yet.</span>
           <span id="patternInsightsLastStage" class="pattern-summary-detail muted">—</span>
           <span class="pattern-summary-detail muted">Updated <span id="patternInsightsLastUpdated">—</span></span>
         </div>
@@ -302,9 +375,9 @@
           <h4>Article hints</h4>
           <ul id="patternInsightsTopHints" class="pattern-insights-list"></ul>
         </div>
-        <div class="pattern-insights-column">
-          <h4>Homepage fetch sources</h4>
-          <ul id="patternInsightsSources" class="pattern-insights-list"></ul>
+          <div class="pattern-insights-column">
+            <h4>Sources</h4>
+            <ul id="patternInsightsSources" class="pattern-insights-list"></ul>
         </div>
       </div>
       <div class="pattern-log">
@@ -314,22 +387,22 @@
         <div id="patternInsightsLog" class="pattern-log__list timeline-list muted">No pattern events yet.</div>
       </div>
     </section>
-    <section id="pipelinePanel" class="panel pipeline-panel panel--full-width is-hidden">
-      <div class="summary-head">
-        <h3>Intelligent pipeline</h3>
-        <span id="pipelineUpdated" class="muted text-xs">Waiting for planner telemetry…</span>
+      <section id="pipelinePanel" class="panel pipeline-panel panel--full-width is-hidden">
+        <div class="summary-head">
+          <h3>Pipeline</h3>
+          <span id="pipelineUpdated" class="muted text-xs">Waiting for planner…</span>
       </div>
       <div id="pipelineDiagram" class="pipeline-diagram muted"></div>
       <div class="pipeline-grid">
-        <article class="pipeline-card" data-pipeline-stage="analysis">
-          <header class="pipeline-card__head">
-            <span id="pipelineAnalysisStatus" class="badge badge-neutral">Idle</span>
-            <span id="pipelineAnalysisSummary" class="pipeline-card__summary muted">No analysis runs detected yet.</span>
-          </header>
-          <dl class="pipeline-card__meta">
-            <div>
-              <dt>Signals</dt>
-              <dd id="pipelineAnalysisSignals" class="muted">None captured</dd>
+          <article class="pipeline-card" data-pipeline-stage="analysis">
+            <header class="pipeline-card__head">
+              <span id="pipelineAnalysisStatus" class="badge badge-neutral">Idle</span>
+              <span id="pipelineAnalysisSummary" class="pipeline-card__summary muted">No runs yet.</span>
+            </header>
+            <dl class="pipeline-card__meta">
+              <div>
+                <dt>Signals</dt>
+                <dd id="pipelineAnalysisSignals" class="muted">None</dd>
             </div>
             <div>
               <dt>Last run</dt>
@@ -340,17 +413,15 @@
               <dd id="pipelineAnalysisLink" class="muted">—</dd>
             </div>
           </dl>
-          <footer id="pipelineAnalysisHistorySection" class="pipeline-card__history">
-            <div class="pipeline-history-toolbar">
-              <button id="pipelineAnalysisHistoryClear" type="button" class="link-button">Clear history</button>
+            <footer id="pipelineAnalysisHistorySection" class="pipeline-card__history">
             </div>
             <ul id="pipelineAnalysisHistory" class="pipeline-history-list"></ul>
           </footer>
         </article>
-        <article class="pipeline-card" data-pipeline-stage="planner">
-          <header class="pipeline-card__head">
-            <span id="pipelinePlannerStatus" class="badge badge-neutral">Idle</span>
-            <span id="pipelinePlannerSummary" class="pipeline-card__summary muted">Planner will activate once intelligent crawl begins.</span>
+          <article class="pipeline-card" data-pipeline-stage="planner">
+            <header class="pipeline-card__head">
+              <span id="pipelinePlannerStatus" class="badge badge-neutral">Idle</span>
+              <span id="pipelinePlannerSummary" class="pipeline-card__summary muted">Activates on crawl start.</span>
           </header>
           <dl class="pipeline-card__meta">
             <div>
@@ -363,10 +434,10 @@
             </div>
           </dl>
         </article>
-        <article class="pipeline-card" data-pipeline-stage="execution">
-          <header class="pipeline-card__head">
-            <span id="pipelineExecutionStatus" class="badge badge-neutral">Idle</span>
-            <span id="pipelineExecutionSummary" class="pipeline-card__summary muted">Awaiting crawl activity.</span>
+          <article class="pipeline-card" data-pipeline-stage="execution">
+            <header class="pipeline-card__head">
+              <span id="pipelineExecutionStatus" class="badge badge-neutral">Idle</span>
+              <span id="pipelineExecutionSummary" class="pipeline-card__summary muted">Awaiting crawl.</span>
           </header>
           <dl class="pipeline-card__meta">
             <div>
@@ -387,18 +458,19 @@
       <div id="insightAnalysisHighlights" class="analysis-highlights"></div>
     </section>
 
-    <section id="resumeSection" class="panel panel--compact panel--half-width resume-panel" data-has-data="0">
-      <div class="panel-head resume-panel__head">
-        <h3>Resume queues</h3>
-        <div class="resume-panel__actions">
-          <button id="resumeRefreshBtn" class="button button--ghost resume-panel__btn" type="button">Refresh</button>
-          <button id="resumeAllBtn" class="button button--secondary resume-panel__btn" type="button" disabled>Resume suggestions</button>
+      <section id="resumeSection" class="panel panel--compact panel--half-width resume-panel" data-has-data="0">
+        <div class="panel-head resume-panel__head">
+          <h3>Resume Crawls</h3>
+          <div class="resume-panel__actions">
+            <button id="clearQueuesBtn" class="button button--danger resume-panel__btn" type="button" title="Clear all incomplete crawls">Clear Crawls</button>
+            <button id="resumeRefreshBtn" class="button button--ghost resume-panel__btn" type="button">Refresh</button>
+            <button id="resumeAllBtn" class="button button--secondary resume-panel__btn" type="button" disabled>Resume All</button>
+          </div>
         </div>
-      </div>
-      <p id="resumeSummary" class="resume-panel__summary muted text-sm">Checking paused queues…</p>
-      <div id="resumeStatus" class="resume-panel__status" aria-live="polite"></div>
-      <ul id="resumeList" class="resume-list" aria-live="polite">
-        <li class="resume-item resume-item--empty">Loading paused queues…</li>
+        <p id="resumeSummary" class="resume-panel__summary muted text-sm">Checking…</p>
+        <div id="resumeStatus" class="resume-panel__status" aria-live="polite"></div>
+        <ul id="resumeList" class="resume-list" aria-live="polite">
+          <li class="resume-item resume-item--empty">Loading…</li>
       </ul>
     </section>
 
@@ -414,9 +486,9 @@
         <span>current downloads: 0</span>
         <ul id="inflightList" class="progress-list"></ul>
       </div>
-      <div id="cacheInfo" class="progress-line">cached hits: 0</div>
-      <div id="metrics" class="metrics-bar">
-        <strong>Metrics:</strong>
+        <div id="cacheInfo" class="progress-line">cached hits: 0</div>
+        <div id="metrics" class="metrics-bar">
+          <strong>Performance:</strong>
         <span id="m_reqps" class="metric-spark">
           <span id="m_reqps_label">req/s: 0</span>
           <svg id="reqps_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
@@ -424,8 +496,8 @@
             <polyline id="reqps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
           </svg>
         </span>
-        <span id="m_dlps" class="metric-spark">
-          <span id="m_dlps_label">dl/s (≤15s avg): 0 · MB/s (≤15s avg): 0</span>
+          <span id="m_dlps" class="metric-spark">
+            <span id="m_dlps_label">dl/s: 0 · MB/s: 0</span>
           <svg id="dlps_spark" width="200" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
             <title id="dlps_title">dl/s sparkline</title>
             <polyline id="dlps_poly" class="spark-ok" fill="none" stroke-width="1" points="" />
@@ -448,26 +520,27 @@
       </div>
     </section>
 
-    <section id="eventsSection" class="panel panel--expando panel--full-width">
-      <details id="secErrors" open>
-        <summary><strong>Recent errors</strong></summary>
+      <!-- Events & Logs -->
+      <section id="eventsSection" class="panel panel--expando panel--full-width">
+        <details id="secErrors" open>
+          <summary><strong>Recent Errors</strong></summary>
         <div id="errorsPanel" class="expando-body text-sm">
           <div id="errorsList" class="muted">Loading…</div>
-        </div>
-      </details>
-      <details id="secProblems" open>
-        <summary><strong>Problems (expectations)</strong></summary>
+          </div>
+        </details>
+        <details id="secProblems">
+          <summary><strong>Problems</strong></summary>
         <div id="problemsPanel" class="expando-body text-sm">
           <div id="problemsList" class="muted">None</div>
-        </div>
-      </details>
-      <details id="secMilestones" open>
-        <summary><strong>Milestones</strong></summary>
-        <div id="milestonesList" class="timeline-list muted">No milestones yet.</div>
-      </details>
-      <details id="secPlanner" open>
-        <summary><strong>Planner timeline</strong></summary>
-        <div id="plannerStagesList" class="timeline-list muted">Planner telemetry appears when intelligent crawls run.</div>
+          </div>
+        </details>
+        <details id="secMilestones">
+          <summary><strong>Milestones</strong></summary>
+          <div id="milestonesList" class="timeline-list muted">No milestones yet.</div>
+        </details>
+        <details id="secTelemetry">
+          <summary><strong>Crawl Telemetry</strong></summary>
+          <div id="crawlTelemetryContainer" class="telemetry-container"></div>
       </details>
       <details id="secTelemetry" open>
         <summary><strong>Crawl Telemetry</strong></summary>
@@ -490,25 +563,33 @@
           </div>
           <pre id="logs"></pre>
           <div id="logsResizer" class="resizer-h" title="Drag to resize logs"></div>
-        </div>
-      </details>
-    </section>
+            </div>
+          </details>
+        </details>
+      </section>
 
-    <section id="healthPanel" class="panel panel--compact panel--third">
-      <div class="panel-head">
-        <h3>Status</h3>
-      </div>
-      <div id="healthStrip" class="health-strip">
-        <span id="badgeRobots" class="muted">robots: …</span>
-        <span id="badgeSitemap" class="muted">sitemap: 0 / 0</span>
-        <span id="badgeDb" class="muted">db: …</span>
-        <span id="badgeDisk" class="muted">disk: …</span>
-        <span id="badgeConn" class="badge badge-warn">SSE: connecting…</span>
-      </div>
-      <div class="panel-footer-link">
-        <a href="/urls">View saved article URLs</a>
-      </div>
-    </section>
+      <section id="healthPanel" class="panel panel--compact panel--third">
+        <div class="panel-head">
+          <h3>Status</h3>
+        </div>
+        <div id="healthStrip" class="health-strip">
+          <span id="badgeRobots" class="muted">robots: …</span>
+          <span id="badgeSitemap" class="muted">sitemap: 0 / 0</span>
+          <span id="badgeDb" class="muted">db: …</span>
+          <span id="badgeDisk" class="muted">disk: …</span>
+          <span id="badgeConn" class="badge badge-warn">SSE: connecting…</span>
+        </div>
+        <div class="panel-footer-link">
+          <a href="/urls">View saved URLs</a>
+        </div>
+      </section>
+
+      <section id="planner" class="panel panel--expando panel--full-width is-hidden">
+        <details id="secPlanner">
+          <summary><strong>Planner Timeline</strong></summary>
+          <div id="plannerStagesList" class="timeline-list muted">Appears when intelligent crawls run.</div>
+        </details>
+      </section>
     </main>
     <script type="module" src="/assets/index.js?v=20251009-2245"></script>
   </body>
