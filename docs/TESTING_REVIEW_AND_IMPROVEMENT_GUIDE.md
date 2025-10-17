@@ -132,7 +132,7 @@ node tests/analyze-test-logs.js --summary
    ```
   - Ignores `imported_*` logs, verifies `_ALL` runs include ≥50 suites, and automatically rolls back to the most recent real full-suite log when needed.
   - Replays every baseline failure across newer logs so newly passing tests appear under **Fixed since baseline** instead of the failing list.
-  - Tags anything under `tests/broken/**` with `[broken-suite]` and surfaces a broken count to steer agents away from quarantined suites.
+  - Tags anything under `tests/broken/**` with `[broken-suite]` and surfaces a broken count to steer agents away from quarantined suites. When the user says a test is "broken", move the file into `tests/broken/` (preserving its subdirectory) so it is quarantined from normal test runs.
 
 4. **`get-slow-tests.js`** - Find performance bottlenecks (5s)
    ```bash

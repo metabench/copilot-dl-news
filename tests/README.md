@@ -34,6 +34,7 @@ tests/
 ├── run-tests.js           # Test runner script
 ├── README.md              # This file
 ├── e2e-features/          # Quick E2E tests
+├── broken/                # Quarantined tests (skipped by default suites)
 └── helpers/               # Test utilities
 ```
 

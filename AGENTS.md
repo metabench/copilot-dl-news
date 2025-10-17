@@ -822,6 +822,7 @@ app = createApp({ dbPath }); // Connection 2 - won't see seeded data!
 - Fix one test, verify, then next (no batching)
 - Use `npm run test:file "pattern"` for focused tests
 - Configuration runner: `node tests/run-tests.js <suite>` (no approval dialogs)
+- When the user labels a test "broken", move the file into `tests/broken/` (mirroring its subdirectory) so regular suites skip it. Keep the contents intact there for future repair work and note the relocation in your summary.
 
 **See specialized docs above for complete testing workflows and patterns.**
 

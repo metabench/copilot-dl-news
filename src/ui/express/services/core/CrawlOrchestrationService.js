@@ -96,10 +96,10 @@ class CrawlOrchestrationService {
    * @throws {InvalidCrawlOptionsError} If options are invalid
    */
   /**
-   * Start a new crawl job. This method performs initial validation synchronously
-   * and then schedules the actual process start for the next tick, allowing
-   * the API to return immediately.
-   * 
+   * Start a new crawl job. This method performs validation and immediately
+   * starts the crawler process so that control endpoints (pause/resume/stop)
+   * can interact with the job without waiting for another event loop turn.
+   *
    * @param {Object} options - Crawl configuration options
    * @param {string} [options.url] - URL to crawl
    * @param {number} [options.depth] - Crawl depth
@@ -150,49 +150,42 @@ class CrawlOrchestrationService {
     this.jobRegistry.registerJob(job);
     this.broadcastJobs(true);
 
-    // Step 7: Defer the actual process start to the next event loop tick
-    setTimeout(() => {
-      try {
-        if (!this.QUIET) {
-          console.log(`[CrawlOrchestrationService] Asynchronously starting process for jobId=${jobId}`);
-        }
-        
-        // Start child process
-        const child = this.runner.start(enhancedArgs);
-        if (!child) {
-          throw new Error('Failed to start crawler process');
-        }
-
-        // Update job with the actual process handle
-        job.child = child;
-        job.stdin = child.stdin && typeof child.stdin.write === 'function' ? child.stdin : null;
-        
-        // Record in database
-        this._recordJobStartInDb(job);
-
-        // Setup event handlers
-        this.eventHandler.attachEventHandlers(child, job, t0);
-
-        // Setup initial broadcast and watchdog timers
-        this.eventHandler.setupInitialBroadcast(child, job, enhancedArgs, t0);
-
-        if (!this.QUIET) {
-          console.log(`[CrawlOrchestrationService] Crawl started: jobId=${jobId}, pid=${child.pid}, url=${job.url}`);
-        }
-      } catch (err) {
-        console.error(`[CrawlOrchestrationService] Async start failed for jobId=${jobId}:`, err);
-        // Mark job as failed
-        job.stage = 'failed';
-        job.lastExit = { code: -1, signal: null, error: err.message };
-        this.jobRegistry.updateJob(job);
-        this.broadcastJobs(true);
+    try {
+      if (!this.QUIET) {
+        console.log(`[CrawlOrchestrationService] Starting process for jobId=${jobId}`);
       }
-    }, 0);
+
+      const child = this.runner.start(enhancedArgs);
+      if (!child) {
+        throw new Error('Failed to start crawler process');
+      }
+
+      job.child = child;
+      job.stdin = child.stdin && typeof child.stdin.write === 'function' ? child.stdin : null;
+
+      this._recordJobStartInDb(job);
+      this.eventHandler.attachEventHandlers(child, job, t0);
+      this.eventHandler.setupInitialBroadcast(child, job, enhancedArgs, t0);
+      this.broadcastJobs(true);
+
+      if (!this.QUIET) {
+        console.log(`[CrawlOrchestrationService] Crawl started: jobId=${jobId}, pid=${child.pid}, url=${job.url}`);
+      }
+    } catch (err) {
+      console.error(`[CrawlOrchestrationService] Start failed for jobId=${jobId}:`, err);
+      job.stage = 'failed';
+      job.lastExit = { code: -1, signal: null, error: err.message };
+      try {
+        this.jobRegistry.updateJobStage(job, 'failed');
+      } catch (_) {}
+      this.broadcastJobs(true);
+      throw err;
+    }
 
     // Return immediately with the initial job info
     return {
       jobId: job.id,
-      process: null, // Process is not available yet
+      process: job.child || null,
       startedAt: job.startedAt,
       args: job.args,
       url: job.url,
