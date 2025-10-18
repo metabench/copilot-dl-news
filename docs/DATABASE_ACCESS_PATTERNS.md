@@ -647,12 +647,12 @@ async function loadEvents(jobId) {
 - Server: Query optimization, indexes, efficient data structures
 - Client: Request limits, caching, reduced payloads, loading states, debouncing
 
-**Test Coverage**: See `src/db/sqlite/queries/ui/__tests__/queues.performance.test.js`
+**Test Coverage**: See `src/db/sqlite/v1/queries/ui/__tests__/queues.performance.test.js`
 
 **Related Files**:
-- Query: `src/db/sqlite/queries/ui/queues.js` (lines 17-29)
-- Schema: `src/db/sqlite/schema-definitions.js` (lines 209, 234)
-- Tests: `src/db/sqlite/queries/ui/__tests__/queues.performance.test.js`
+- Query: `src/db/sqlite/v1/queries/ui/queues.js` (lines 17-29)
+- Schema: `src/db/sqlite/v1/schema-definitions.js` (lines 209, 234)
+- Tests: `src/db/sqlite/v1/queries/ui/__tests__/queues.performance.test.js`
 
 ---
 

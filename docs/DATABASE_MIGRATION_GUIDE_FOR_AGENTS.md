@@ -102,9 +102,9 @@ node -e "const { grep_search } = require('./tools'); grep_search({ query: 'artic
 ```
 
 **Critical files to check**:
-- `src/db/sqlite/SQLiteNewsDatabase.js` - Prepared statements
-- `src/db/sqlite/schema-definitions.js` - Table definitions
-- `src/db/sqlite/queries/*.js` - Query modules
+- `src/db/sqlite/v1/SQLiteNewsDatabase.js` - Prepared statements
+- `src/db/sqlite/v1/schema-definitions.js` - Table definitions
+- `src/db/sqlite/v1/queries/*.js` - Query modules
 - All test files - May have direct SQL queries
 - All API endpoints - May use affected tables
 
@@ -1577,10 +1577,10 @@ node src/db/sqlite/tools/import-subset.js --input exports/test-100.json --db dat
 
 ### Phase 4: Code Migration (2-8 hours)
 
-- [ ] Update `src/db/sqlite/schema-definitions.js` with new schema
-- [ ] Add migration logic to `src/db/sqlite/schema.js` `initCoreTables()`
+- [ ] Update `src/db/sqlite/v1/schema-definitions.js` with new schema
+- [ ] Add migration logic to `src/db/sqlite/v1/schema.js` `initCoreTables()`
 - [ ] Update `SQLiteNewsDatabase.js` prepared statements
-- [ ] Update all query modules in `src/db/sqlite/queries/`
+- [ ] Update all query modules in `src/db/sqlite/v1/queries/`
 - [ ] Update all tests to use new schema
 - [ ] All tests pass: `npm test`
 

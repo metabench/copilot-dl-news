@@ -1,23 +1,17 @@
 'use strict';
 
-const { recordQuery } = require('../queryTelemetry');
+const { recordQuery } = require('../../queryTelemetry');
 
 /**
- * Wrap database instance with query telemetry tracking
+ * Create an instrumented database wrapper that records all query telemetry
  * 
- * This is OPTIONAL - only use when you need cost estimation.
- * Most code should use unwrapped DB instance.
- * 
- * The wrapped database records all queries to the query_telemetry table,
- * which can be used by QueryCostEstimatorPlugin for planning decisions.
- * 
- * @param {Database} db - better-sqlite3 Database instance
+ * @param {Database} db - better-sqlite3 database instance
  * @param {Object} options - Instrumentation options
- * @param {boolean} [options.trackQueries=true] - Enable/disable tracking
- * @param {Object} [options.logger=console] - Logger for errors
- * @returns {Database} Instrumented database instance (or original if disabled)
+ * @param {boolean} [options.trackQueries=true] - Whether to track queries
+ * @param {Object} [options.logger=console] - Logger instance
+ * @returns {Database} Instrumented database instance
  */
-function wrapWithTelemetry(db, options = {}) {
+function createInstrumentedDb(db, options = {}) {
   const { trackQueries = true, logger = console } = options;
   
   if (!trackQueries || !db) {
@@ -46,47 +40,46 @@ function wrapWithTelemetry(db, options = {}) {
         const result = originalRun(...args);
         const durationMs = Date.now() - start;
         
-        if (durationMs > 10 || complexity === 'complex') {
-          setImmediate(() => {
-            try {
-              recordQuery(db, {
-                queryType,
-                operation,
-                durationMs,
-                resultCount: result.changes || 0,
-                complexity,
-              });
-            } catch (err) {
-              // Silently fail telemetry recording to avoid breaking queries
-              if (logger && typeof logger.warn === 'function') {
-                logger.warn('[instrumentation] Failed to record query telemetry:', err.message);
-              }
+        // Record telemetry asynchronously (don't block query)
+        setImmediate(() => {
+          try {
+            recordQuery(db, {
+              queryType,
+              operation,
+              durationMs,
+              resultCount: result.changes || 0,
+              queryComplexity: complexity,
+              metadata: JSON.stringify({ sql: sql.substring(0, 200) })
+            });
+          } catch (err) {
+            // Silently fail telemetry recording to avoid breaking queries
+            if (logger && typeof logger.warn === 'function') {
+              logger.warn('[InstrumentedDb] Failed to record query telemetry:', err.message);
             }
-          });
-        }
+          }
+        });
         
         return result;
       } catch (error) {
         // Record error timing too
         const durationMs = Date.now() - start;
-        if (durationMs > 10 || complexity === 'complex') {
-          setImmediate(() => {
-            try {
-              recordQuery(db, {
-                queryType: `${queryType}_error`,
-                operation,
-                durationMs,
-                resultCount: 0,
-                complexity,
-                metadata: {
-                  error: error.message
-                }
-              });
-            } catch (_) {
-              // Ignore telemetry errors
-            }
-          });
-        }
+        setImmediate(() => {
+          try {
+            recordQuery(db, {
+              queryType: `${queryType}_error`,
+              operation,
+              durationMs,
+              resultCount: 0,
+              queryComplexity: complexity,
+              metadata: JSON.stringify({ 
+                sql: sql.substring(0, 200),
+                error: error.message
+              })
+            });
+          } catch (_) {
+            // Ignore telemetry errors
+          }
+        });
         throw error;
       }
     };
@@ -97,43 +90,41 @@ function wrapWithTelemetry(db, options = {}) {
         const results = originalAll(...args);
         const durationMs = Date.now() - start;
         
-        if (durationMs > 10 || complexity === 'complex') {
-          setImmediate(() => {
-            try {
-              recordQuery(db, {
-                queryType,
-                operation,
-                durationMs,
-                resultCount: results.length,
-                complexity,
-              });
-            } catch (err) {
-              if (logger && typeof logger.warn === 'function') {
-                logger.warn('[instrumentation] Failed to record query telemetry:', err.message);
-              }
+        setImmediate(() => {
+          try {
+            recordQuery(db, {
+              queryType,
+              operation,
+              durationMs,
+              resultCount: results.length,
+              queryComplexity: complexity,
+              metadata: JSON.stringify({ sql: sql.substring(0, 200) })
+            });
+          } catch (err) {
+            if (logger && typeof logger.warn === 'function') {
+              logger.warn('[InstrumentedDb] Failed to record query telemetry:', err.message);
             }
-          });
-        }
+          }
+        });
         
         return results;
       } catch (error) {
         const durationMs = Date.now() - start;
-        if (durationMs > 10 || complexity === 'complex') {
-          setImmediate(() => {
-            try {
-              recordQuery(db, {
-                queryType: `${queryType}_error`,
-                operation,
-                durationMs,
-                resultCount: 0,
-                complexity,
-                metadata: {
-                  error: error.message
-                }
-              });
-            } catch (_) {}
-          });
-        }
+        setImmediate(() => {
+          try {
+            recordQuery(db, {
+              queryType: `${queryType}_error`,
+              operation,
+              durationMs,
+              resultCount: 0,
+              queryComplexity: complexity,
+              metadata: JSON.stringify({ 
+                sql: sql.substring(0, 200),
+                error: error.message
+              })
+            });
+          } catch (_) {}
+        });
         throw error;
       }
     };
@@ -144,43 +135,41 @@ function wrapWithTelemetry(db, options = {}) {
         const result = originalGet(...args);
         const durationMs = Date.now() - start;
         
-        if (durationMs > 10 || complexity === 'complex') {
-          setImmediate(() => {
-            try {
-              recordQuery(db, {
-                queryType,
-                operation,
-                durationMs,
-                resultCount: result ? 1 : 0,
-                complexity,
-              });
-            } catch (err) {
-              if (logger && typeof logger.warn === 'function') {
-                logger.warn('[instrumentation] Failed to record query telemetry:', err.message);
-              }
+        setImmediate(() => {
+          try {
+            recordQuery(db, {
+              queryType,
+              operation,
+              durationMs,
+              resultCount: result ? 1 : 0,
+              queryComplexity: complexity,
+              metadata: JSON.stringify({ sql: sql.substring(0, 200) })
+            });
+          } catch (err) {
+            if (logger && typeof logger.warn === 'function') {
+              logger.warn('[InstrumentedDb] Failed to record query telemetry:', err.message);
             }
-          });
-        }
+          }
+        });
         
         return result;
       } catch (error) {
         const durationMs = Date.now() - start;
-        if (durationMs > 10 || complexity === 'complex') {
-          setImmediate(() => {
-            try {
-              recordQuery(db, {
-                queryType: `${queryType}_error`,
-                operation,
-                durationMs,
-                resultCount: 0,
-                complexity,
-                metadata: {
-                  error: error.message
-                }
-              });
-            } catch (_) {}
-          });
-        }
+        setImmediate(() => {
+          try {
+            recordQuery(db, {
+              queryType: `${queryType}_error`,
+              operation,
+              durationMs,
+              resultCount: 0,
+              queryComplexity: complexity,
+              metadata: JSON.stringify({ 
+                sql: sql.substring(0, 200),
+                error: error.message
+              })
+            });
+          } catch (_) {}
+        });
         throw error;
       }
     };
@@ -312,4 +301,4 @@ function inferComplexity(sql) {
   return 'moderate';
 }
 
-module.exports = { wrapWithTelemetry };
+module.exports = { createInstrumentedDb };

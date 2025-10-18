@@ -12,7 +12,7 @@ This enhancement transforms the gazetteer system from depth-first (country-by-co
 
 ## Changes Made
 
-### 1. Database Schema Extensions (`src/db/sqlite/ensureDb.js`)
+### 1. Database Schema Extensions (`src/db/sqlite/v1/ensureDb.js`)
 
 **Extended `places` table with new columns:**
 - `wikidata_qid TEXT` - Direct Wikidata reference
@@ -266,7 +266,7 @@ node src/ui/express/server.js
 
 ## Files Modified
 
-- `src/db/sqlite/ensureDb.js` (schema)
+- `src/db/sqlite/v1/ensureDb.js` (schema)
 - `src/ui/express/server.js` (wiring)
 - `src/ui/express/services/navigation.js` (links)
 - `src/ui/express/public/crawler.css` (styles)

@@ -26,7 +26,7 @@ Tests create temporary databases that persist between runs. When schema changes 
 
 ### Current Migration Approach (Partial)
 
-Added ad-hoc migrations in `src/db/sqlite/schema.js`:
+Added ad-hoc migrations in `src/db/sqlite/v1/schema.js`:
 ```javascript
 // Migration: Add missing 'host' column to articles table
 try {

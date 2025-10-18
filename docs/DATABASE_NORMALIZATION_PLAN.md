@@ -254,7 +254,7 @@ CREATE INDEX idx_discovery_job ON discovery_events(crawl_job_id);
 CREATE TABLE place_provenance (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   place_id INTEGER NOT NULL REFERENCES places(id),
-  source TEXT NOT NULL,          -- 'wikidata' | 'osm' | 'restcountries' | 'geonames'
+  source TEXT NOT NULL,          -- 'wikidata' | 'osm' | 'restcountries' | 'geonames' | 'places-info'
   external_id TEXT NOT NULL,     -- QID (Q30), osm_id (R148838), etc.
   fetched_at INTEGER,            -- Unix timestamp
   raw_data TEXT,                 -- JSON blob of original API response
@@ -288,6 +288,15 @@ CREATE INDEX idx_place_attributes_source ON place_attributes(source);
 - `places.extra` JSON blob → normalized `place_attributes` rows
 - `places.wikidata_props` JSON → `place_attributes` rows with `source='wikidata'`
 - `places.osm_tags` JSON → `place_attributes` rows with `source='osm'`
+
+##### Places Info API Integration (Postgres-backed)
+
+- **Service**: Local Places Info API (`http://localhost:8088`) exposes `/v1/admin-areas` for streaming administrative areas; spec captured in `tmp/places-openapi.json`.
+- **Client**: `src/crawler/gazetteer/clients/PlacesInfoClient.js` provides typed access (timeouts, query params, error handling) and will be the canonical adapter for this source.
+- **Provenance**: Persist each feature as `place_provenance` with `source='places-info'`, storing `osm_id` (or upstream identifier) in `external_id` and the full API payload in `raw_data` for replay.
+- **Attributes**: Derive structured rows in `place_attributes` (e.g., `admin_area_type`, `iso_code`, `population`, `way_area`) using the payload’s `features[].tags` and top-level metadata.
+- **Geometry**: When `includeGeometry=true`, store geometry blobs in a future `place_geometries` table (Phase 2 add-on) and reference them via the same provenance entries; until then, cache geometry separately for ingestion scripts.
+- **Backfill Workflow**: Batch requests per ISO country code, use `batchSize` and `minFeatures` to throttle, and record run metadata so dual-write ingestion can resume after interruptions.
 
 ---
 
@@ -1477,6 +1486,7 @@ module.exports = { DatabaseMigrator };
 - Create place normalization tables (`place_provenance`, `place_attributes`)
 - Seed `compression_types` with standard types
 - Record as schema version 2
+- Wire Places Info API ingestion (via `PlacesInfoClient`) to seed `place_provenance`/`place_attributes` with normalized ISO + admin hierarchy data
 
 **Week 5-6: Implement Compression**
 

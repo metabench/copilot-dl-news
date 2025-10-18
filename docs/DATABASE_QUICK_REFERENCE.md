@@ -284,7 +284,7 @@ if (!tableExists) return [];
 
 **Tools**:
 - `tools/debug/README.md` - Database inspection tools
-- `src/db/sqlite/queries/README.md` - Query module conventions
+- `src/db/sqlite/v1/queries/README.md` - Query module conventions
 
 **Architecture**:
 - `docs/DATABASE_INITIALIZATION_ARCHITECTURE_ANALYSIS.md` - Init patterns

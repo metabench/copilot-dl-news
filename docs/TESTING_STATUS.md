@@ -230,8 +230,8 @@ node tests/analyze-test-logs.js
      - Fixed: Status expectation from 'active' to 'running'
    - **maintain-db.test.js**: 1/1 passing (was 0/1)
      - Fixed: Created missing `dedupePlaceSources()` function
-     - Added: `src/db/sqlite/tools/dedupePlaceSources.js`
-     - Exported from `src/db/sqlite/index.js`
+     - Added: `src/db/sqlite/v1/tools/dedupePlaceSources.js`
+     - Exported from `src/db/sqlite/v1/index.js`
    - **gazetteerPlace.data.test.js**: 2/2 passing (was 1/2)
      - Fixed: Test expectation for removed `article_places` table
      - Changed to expect empty array (table doesn't exist)

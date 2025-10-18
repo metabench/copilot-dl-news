@@ -89,7 +89,7 @@ VALUES ('en', 'trump', 'trump', 'common-person-name', 'system-default');
 
 ## API Modules
 
-### `src/db/sqlite/queries/topicKeywords.js`
+### `src/db/sqlite/v1/queries/topicKeywords.js`
 
 Query functions for topic keywords:
 
@@ -120,7 +120,7 @@ const topic = getTopicForTerm(db, 'political', 'en');
 - `getTopicForTerm(db, term, lang)` - Get canonical topic ID for term
 - `seedDefaultTopics(db, source)` - Seed default English topics
 
-### `src/db/sqlite/queries/crawlSkipTerms.js`
+### `src/db/sqlite/v1/queries/crawlSkipTerms.js`
 
 Query functions for skip terms:
 
@@ -186,7 +186,7 @@ const DEFAULT_TOPIC_TOKENS = new Set([
 
 ```javascript
 // intelligent_crawl (NOW)
-const { getTopicTermsForLanguage } = require('./src/db/sqlite/queries/topicKeywords');
+const { getTopicTermsForLanguage } = require('./src/db/sqlite/v1/queries/topicKeywords');
 const newsTopics = getTopicTermsForLanguage(db, 'en');
 
 // src/hub-validation/HubValidator.js (NOW)
@@ -359,8 +359,8 @@ const isPolitique = isTopicKeyword(db, 'politique', 'fr');
 ## Files Changed
 
 ### New Files
-- `src/db/sqlite/queries/topicKeywords.js` - Topic queries API
-- `src/db/sqlite/queries/crawlSkipTerms.js` - Skip term queries API
+- `src/db/sqlite/v1/queries/topicKeywords.js` - Topic queries API
+- `src/db/sqlite/v1/queries/crawlSkipTerms.js` - Skip term queries API
 - `scripts/seed-topics-and-skip-terms.js` - Database seeding script
 - `docs/MULTI_LINGUAL_TOPICS.md` - This documentation
 

@@ -259,7 +259,7 @@ const tar2 = await cache.get(db, bucketId);
 
 ### Step 1: Add Tables to Database (5 minutes)
 
-**File**: `src/db/sqlite/ensureDb.js`
+**File**: `src/db/sqlite/v1/ensureDb.js`
 
 **Action**: Add table creation SQL (see Part 1 above)
 
@@ -271,7 +271,7 @@ const tar2 = await cache.get(db, bucketId);
 
 ### Step 2: Seed Compression Types (10 minutes)
 
-**File**: `src/db/sqlite/ensureDb.js`
+**File**: `src/db/sqlite/v1/ensureDb.js`
 
 **Action**: Insert 17 compression type variants
 

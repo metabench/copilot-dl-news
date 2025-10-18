@@ -13,11 +13,11 @@ Migrated hardcoded English topic keywords and skip terms from source code to dat
 
 ## Files Created
 
-1. **`src/db/sqlite/queries/topicKeywords.js`**
+1. **`src/db/sqlite/v1/queries/topicKeywords.js`**
    - Query API for topic keywords
    - Functions: `getTopicTermsForLanguage()`, `getAllTopicsGrouped()`, `isTopicKeyword()`, `getTopicForTerm()`, `seedDefaultTopics()`
 
-2. **`src/db/sqlite/queries/crawlSkipTerms.js`**
+2. **`src/db/sqlite/v1/queries/crawlSkipTerms.js`**
    - Query API for crawl skip terms
    - Functions: `getSkipTermsForLanguage()`, `getSkipTermsByReason()`, `shouldSkipTerm()`, `getSkipReason()`, `seedDefaultSkipTerms()`
 
@@ -83,7 +83,7 @@ CREATE TABLE crawl_skip_terms (
 CREATE UNIQUE INDEX uniq_crawl_skip_terms ON crawl_skip_terms(lang, normalized);
 ```
 
-**Note**: These tables were already defined in `src/db/sqlite/schema.js` but were unused until now.
+**Note**: These tables were already defined in `src/db/sqlite/v1/schema.js` but were unused until now.
 
 ---
 
@@ -125,10 +125,10 @@ Topic breakdown:
 ### 2. Verify Data Loaded
 ```bash
 # Check topics
-node -e "const {ensureDatabase} = require('./src/db/sqlite'); const {getTopicTermsForLanguage} = require('./src/db/sqlite/queries/topicKeywords'); const db = ensureDatabase('data/news.db'); console.log(Array.from(getTopicTermsForLanguage(db, 'en')).slice(0, 10));"
+node -e "const {ensureDatabase} = require('./src/db/sqlite'); const {getTopicTermsForLanguage} = require('./src/db/sqlite/v1/queries/topicKeywords'); const db = ensureDatabase('data/news.db'); console.log(Array.from(getTopicTermsForLanguage(db, 'en')).slice(0, 10));"
 
 # Check skip terms
-node -e "const {ensureDatabase} = require('./src/db/sqlite'); const {getSkipTermsForLanguage} = require('./src/db/sqlite/queries/crawlSkipTerms'); const db = ensureDatabase('data/news.db'); console.log(Array.from(getSkipTermsForLanguage(db, 'en')).slice(0, 10));"
+node -e "const {ensureDatabase} = require('./src/db/sqlite'); const {getSkipTermsForLanguage} = require('./src/db/sqlite/v1/queries/crawlSkipTerms'); const db = ensureDatabase('data/news.db'); console.log(Array.from(getSkipTermsForLanguage(db, 'en')).slice(0, 10));"
 ```
 
 ### 3. Test intelligent crawl
@@ -169,7 +169,7 @@ console.log(frenchTopics); // Set(['politique', 'politiques', 'sport', 'affaires
 ### Topics
 ```javascript
 const { getTopicTermsForLanguage, isTopicKeyword, getTopicForTerm } = 
-  require('./src/db/sqlite/queries/topicKeywords');
+  require('./src/db/sqlite/v1/queries/topicKeywords');
 
 // Get all English topics
 const topics = getTopicTermsForLanguage(db, 'en');
@@ -187,7 +187,7 @@ const topic = getTopicForTerm(db, 'political', 'en');
 ### Skip Terms
 ```javascript
 const { getSkipTermsForLanguage, shouldSkipTerm, getSkipReason } = 
-  require('./src/db/sqlite/queries/crawlSkipTerms');
+  require('./src/db/sqlite/v1/queries/crawlSkipTerms');
 
 // Get all English skip terms
 const skipTerms = getSkipTermsForLanguage(db, 'en');
@@ -267,7 +267,7 @@ node tools/db-query.js "SELECT reason, COUNT(*) as count FROM crawl_skip_terms G
 ## Documentation
 
 - **`docs/MULTI_LINGUAL_TOPICS.md`**: Complete architecture guide
-- **`src/db/sqlite/queries/README.md`**: Query module conventions
+- **`src/db/sqlite/v1/queries/README.md`**: Query module conventions
 - **`AGENTS.md`**: Add reference to multi-lingual topic architecture
 
 ---

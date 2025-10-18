@@ -21,7 +21,7 @@ This document summarizes the fixes applied to resolve widespread test failures i
 
 ### 1. Missing `ensureGazetteer` Export ✅
 
-**Problem**: During database schema refactoring, `ensureGazetteer()` function was replaced with `initGazetteerTables()` in `src/db/sqlite/schema.js`, but many modules still imported `ensureGazetteer` from the main sqlite module.
+**Problem**: During database schema refactoring, `ensureGazetteer()` function was replaced with `initGazetteerTables()` in `src/db/sqlite/v1/schema.js`, but many modules still imported `ensureGazetteer` from the main sqlite module.
 
 **Impact**: ~50+ test files failing with `ensureGazetteer is not a function` error, including:
 - Bootstrap database tests
@@ -31,7 +31,7 @@ This document summarizes the fixes applied to resolve widespread test failures i
 
 **Solution**:
 ```javascript
-// src/db/sqlite/index.js
+// src/db/sqlite/v1/index.js
 const { initGazetteerTables } = require("./schema");
 
 module.exports = {
@@ -43,7 +43,7 @@ module.exports = {
 ```
 
 **Files Modified**:
-- `src/db/sqlite/index.js` - Added import and export of `initGazetteerTables`, created backward-compatible `ensureGazetteer` wrapper
+- `src/db/sqlite/v1/index.js` - Added import and export of `initGazetteerTables`, created backward-compatible `ensureGazetteer` wrapper
 
 **Tests Fixed**: All tests importing `ensureGazetteer` from `src/db/sqlite` now work.
 

@@ -264,7 +264,7 @@ console.log(`Topic keywords: ${topicStats.length} categories — ${topicSummary}
 **Identify missing country hubs**:
 
 ```javascript
-const { getAllCountryPlaces } = require('./src/db/sqlite/queries/gazetteer.queries');
+const { getAllCountryPlaces } = require('./src/db/sqlite/v1/queries/gazetteer.queries');
 const { getCachedArticle } = require('./src/crawler/IntelligentPlanRunner');
 
 const countries = getAllCountryPlaces(db);

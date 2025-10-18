@@ -151,7 +151,7 @@ Jest waits for all async operations to complete before exiting. If operations ar
 
 | Source | Location | Symptom | Fix |
 |--------|----------|---------|-----|
-| `setImmediate()` | `src/db/sqlite/instrumentation.js` | 3+ open handles | Use `--forceExit` or uninstrumented DB |
+| `setImmediate()` | `src/db/sqlite/v1/instrumentation.js` | 3+ open handles | Use `--forceExit` or uninstrumented DB |
 | `setInterval()` | Background tasks, polling | Infinite wait | Clear in `afterAll()` |
 | Worker threads | `CompressionWorkerPool` | Jest hangs | Call `.shutdown()` |
 | Database connections | SQLite handles | File locks | Call `.close()` |
@@ -171,7 +171,7 @@ npm run test:file "mytest" -- --detectOpenHandles
 # ✕  Immediate
 #       144 |         setImmediate(() => {
 #           |         ^
-#       at Statement.setImmediate (src/db/sqlite/instrumentation.js:144:9)
+#       at Statement.setImmediate (src/db/sqlite/v1/instrumentation.js:144:9)
 ```
 
 **Reading the Output**:
@@ -186,11 +186,11 @@ npm run test:file "mytest" -- --detectOpenHandles
 
 ### 1. Database Instrumentation (Most Common)
 
-**Problem**: `src/db/sqlite/instrumentation.js` uses `setImmediate()` for async query telemetry, creating open handles.
+**Problem**: `src/db/sqlite/v1/instrumentation.js` uses `setImmediate()` for async query telemetry, creating open handles.
 
 **Solution A: Use --forceExit (Recommended for Integration Tests)** ⭐:
 
-This is the **recommended approach** for HTTP integration tests that use the full server stack with instrumented databases. The `setImmediate()` calls in `src/db/sqlite/instrumentation.js` are intentional for async query telemetry and don't indicate a problem.
+This is the **recommended approach** for HTTP integration tests that use the full server stack with instrumented databases. The `setImmediate()` calls in `src/db/sqlite/v1/instrumentation.js` are intentional for async query telemetry and don't indicate a problem.
 
 ```json
 // package.json (October 2025 Update)

@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
-const { findProjectRoot } = require('../../utils/project-root');
+const { findProjectRoot } = require('../../../utils/project-root');
 const { initializeSchema } = require('./schema');
 
 // Open (and create if needed) a SQLite DB file and ensure all schemas exist.

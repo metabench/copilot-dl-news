@@ -456,7 +456,7 @@ node tests/run-tests.js e2e --show-child
 **Proposal**: Create `tests/helpers/inspectTestDb.js`:
 
 ```javascript
-const { openDatabase } = require('../../src/db/sqlite/connection');
+const { openDatabase } = require('../../src/db/sqlite/v1/connection');
 
 /**
  * Inspect test database state for debugging

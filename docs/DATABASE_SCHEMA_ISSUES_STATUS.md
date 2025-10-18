@@ -132,11 +132,12 @@ With current resilient error handling:
 3. ⬜ Apply fix and verify tests pass
 4. ⬜ Plan Phase 0 migration infrastructure (Q4 2025)
 5. ⬜ Document migration patterns in AGENTS.md
+6. ⬜ Coordinate Places Info API ingestion plan with normalized gazetteer tables
 
 ## Files Modified This Session
 
-- `src/db/sqlite/schema.js` - Added migrations, resilient error handling
-- `src/db/sqlite/schema-definitions.js` - Removed problematic indexes, fixed crawl_jobs.id
+- `src/db/sqlite/v1/schema.js` - Added migrations, resilient error handling
+- `src/db/sqlite/v1/schema-definitions.js` - Removed problematic indexes, fixed crawl_jobs.id
 - `src/ui/express/__tests__/recent-domains.api.test.js` - Added cleanup and connection close
 - `docs/DATABASE_MIGRATION_STRATEGY.md` - Created migration strategy doc
 - `docs/DATABASE_SCHEMA_ISSUES_STATUS.md` - This file

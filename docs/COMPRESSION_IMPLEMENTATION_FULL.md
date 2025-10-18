@@ -18,7 +18,7 @@
 
 ### Full Compression Type Registry
 
-Add to `src/db/sqlite/ensureDb.js`:
+Add to `src/db/sqlite/v1/ensureDb.js`:
 
 ```javascript
 // Comprehensive compression types with all levels
