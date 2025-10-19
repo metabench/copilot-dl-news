@@ -22,30 +22,6 @@ This document outlines critical rules for executing commands in VS Code terminal
 
 ## Procedure
 
-### The AGENT_IMMEDIATE.js Strategy
-
-To prevent VS Code from requesting user approval for terminal commands, use a dynamic script execution strategy:
-
-1. **Dynamically Create a Script**: Write desired logic into `AGENT_IMMEDIATE.js` using the `create_file` tool
-2. **Execute the Script**: Run the simple, pre-approved command `node AGENT_IMMEDIATE.js`
-
-**Example**:
-```javascript
-// Instead of this (requires approval):
-node -e "require('./my-script.js').doSomething({ complex: 'arg' })"
-
-// Do this:
-create_file({
-  filePath: 'c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\AGENT_IMMEDIATE.js',
-  content: `
-    const { doSomething } = require('./my-script.js');
-    doSomething({ complex: 'arg' });
-  `
-});
-
-run_terminal_command('node AGENT_IMMEDIATE.js');
-```
-
 ### NEVER USE These PowerShell Patterns
 
 - `Get-Content | Set-Content` pipelines
@@ -83,7 +59,7 @@ If command is >1 line OR uses piping/chaining → Use a tool instead.
 - **Background processes get killed** when running ANY command in the same terminal
 - **PowerShell curl syntax differs** from Unix curl - use E2E tests for HTTP testing
 - **Complex regex triggers approval** - use `replace_string_in_file` for file edits
-- **Multi-line commands require approval** - use `AGENT_IMMEDIATE.js` strategy
+- **Multi-line commands require approval** - use tools instead
 - **Piping always requires approval** - use tools instead
 
 ## Examples
@@ -100,20 +76,6 @@ replace_string_in_file({
 ### ❌ WRONG: Complex PowerShell
 ```powershell
 (Get-Content "file.js") -replace 'pattern', 'replacement' | Set-Content "file.js"
-```
-
-### ✅ RIGHT: Use AGENT_IMMEDIATE.js
-```javascript
-create_file({
-  filePath: 'AGENT_IMMEDIATE.js',
-  content: `
-    const fs = require('fs');
-    const data = fs.readFileSync('file.js', 'utf8');
-    const updated = data.replace(/pattern/g, 'replacement');
-    fs.writeFileSync('file.js', updated);
-  `
-});
-run_terminal_command('node AGENT_IMMEDIATE.js');
 ```
 
 ## Related Documentation

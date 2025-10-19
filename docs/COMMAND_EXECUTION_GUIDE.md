@@ -176,19 +176,6 @@ replace_string_in_file({ filePath, oldString: "pattern2", newString: "replacemen
 
 ---
 
-## AGENT_IMMEDIATE Quick Scripts (REINFORCED October 2025)
-
-When you need a one-off Node script—probing an external API, replaying a SPARQL query, or crunching data before changing production code—follow this pattern:
-
-1. **Overwrite `AGENT_IMMEDIATE.js`** with the scratch logic (use `apply_patch`/`create_file`).
-2. **Run** `node AGENT_IMMEDIATE.js` (simple command, no approval dialog).
-3. **Observe output**, capture findings in chat or docs.
-4. **Restore** the placeholder content once finished (keeps the repo tidy).
-
-This workflow proved effective during the October 2025 Wikidata investigation and is now the default approach for exploratory commands.
-
----
-
 ## Configuration-Based Test Execution
 
 **CRITICAL**: Use configuration-based test runner to avoid PowerShell confirmation dialogs.

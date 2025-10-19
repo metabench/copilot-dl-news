@@ -251,7 +251,7 @@ Code comments (Implementation details)
 - When editing files or searching code
 - When you encounter approval dialog blocks
 
-**See**: `docs/agents/command-rules.md` for complete patterns, AGENT_IMMEDIATE.js strategy, and safe command examples.
+**See**: `docs/agents/command-rules.md` for complete patterns and safe command examples.
 
 ---
 
