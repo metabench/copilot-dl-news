@@ -1,41 +1,84 @@
-﻿const path = require('path');
-const { ensureDatabase } = require('./src/db/sqlite');
-const WikidataAdm1Ingestor = require('./src/crawler/gazetteer/ingestors/WikidataAdm1Ingestor');
+﻿const Database = require('better-sqlite3');
+const path = require('path');
 
-(async () => {
-  const dbPath = path.join(__dirname, 'data', 'news.db');
-  const db = ensureDatabase(dbPath);
+// Connect to dev database
+const dbPath = path.join(__dirname, 'data/dev.db');
+const db = new Database(dbPath);
 
-  try {
-    const ingestor = new WikidataAdm1Ingestor({
-      db,
-      useDynamicFetch: true,
-      useSnapshot: true,
-      useCache: false,
-      limitCountries: 1,
-      timeoutMs: 60000,
-      sleepMs: 0,
-      targetCountries: [
-        { code: 'GB', qid: 'Q145', name: 'United Kingdom', raw: 'GB' }
-      ],
-      logger: {
-        info: (...args) => console.log('[adm1]', ...args),
-        warn: (...args) => console.warn('[adm1]', ...args),
-        error: (...args) => console.error('[adm1]', ...args)
-      }
-    });
+console.log('Populating dev.db with test data...');
 
-    console.log('[adm1] Starting targeted GB ADM1 backfill (dry run)');
-    const summary = await ingestor.execute({});
-    console.log('[adm1] Summary:', JSON.stringify(summary, null, 2));
-  } catch (error) {
-    console.error('[adm1] Execution failed:', error);
-    process.exitCode = 1;
-  } finally {
-    try {
-      db.close();
-    } catch (closeError) {
-      console.error('[adm1] Failed to close database:', closeError.message);
-    }
-  }
-})();
+// Create urls table if it doesn't exist
+db.exec(`
+  CREATE TABLE IF NOT EXISTS urls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL
+  );
+`);
+
+// Create test tables with migration schema (simplified for testing)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    src_url TEXT,
+    dst_url TEXT,
+    src_url_id INTEGER,
+    dst_url_id INTEGER,
+    FOREIGN KEY (src_url_id) REFERENCES urls(id),
+    FOREIGN KEY (dst_url_id) REFERENCES urls(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS queue_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id TEXT NOT NULL,
+    ts TEXT NOT NULL,
+    action TEXT NOT NULL,
+    url TEXT,
+    url_id INTEGER,
+    FOREIGN KEY (url_id) REFERENCES urls(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS crawl_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT,
+    url_id INTEGER,
+    FOREIGN KEY (url_id) REFERENCES urls(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS errors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT,
+    url_id INTEGER,
+    FOREIGN KEY (url_id) REFERENCES urls(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS url_aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT,
+    alias_url TEXT,
+    url_id INTEGER,
+    alias_url_id INTEGER,
+    FOREIGN KEY (url_id) REFERENCES urls(id),
+    FOREIGN KEY (alias_url_id) REFERENCES urls(id)
+  );
+`);
+
+// Insert test data
+const now = new Date().toISOString();
+
+db.prepare('INSERT OR IGNORE INTO urls (url, created_at, last_seen_at) VALUES (?, ?, ?)').run('https://example.com/page1', now, now);
+db.prepare('INSERT OR IGNORE INTO urls (url, created_at, last_seen_at) VALUES (?, ?, ?)').run('https://example.com/page2', now, now);
+db.prepare('INSERT OR IGNORE INTO urls (url, created_at, last_seen_at) VALUES (?, ?, ?)').run('https://news.example.com/article1', now, now);
+
+db.prepare('INSERT INTO links (src_url, dst_url) VALUES (?, ?)').run('https://example.com/page1', 'https://example.com/page2');
+db.prepare('INSERT INTO links (src_url, dst_url) VALUES (?, ?)').run('https://example.com/page2', 'https://news.example.com/article1');
+
+db.prepare('INSERT INTO queue_events (job_id, ts, action, url) VALUES (?, ?, ?, ?)').run('test-job-1', now, 'discovered', 'https://example.com/page1');
+db.prepare('INSERT INTO crawl_jobs (url) VALUES (?)').run('https://news.example.com/article1');
+db.prepare('INSERT INTO errors (url) VALUES (?)').run('https://example.com/page2');
+db.prepare('INSERT INTO url_aliases (url, alias_url) VALUES (?, ?)').run('https://example.com/page1', 'https://example.com/p1');
+
+db.close();
+
+console.log('✅ Test data populated in dev.db');

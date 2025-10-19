@@ -278,6 +278,26 @@ const TASK_DEFINITIONS = {
         description: 'Skip awarding achievement milestones for domains'
       },
       {
+        name: 'skipPlaceMatching',
+        label: 'Skip Place Matching',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Skip matching articles to places using gazetteer data'
+      },
+      {
+        name: 'placeMatchingRuleLevel',
+        label: 'Place Matching Rule Level',
+        type: FieldType.SELECT,
+        default: 1,
+        options: [
+          { value: 1, label: 'Level 1: Basic string matching' },
+          { value: 2, label: 'Level 2: Context-aware matching' },
+          { value: 3, label: 'Level 3: Entity disambiguation' },
+          { value: 4, label: 'Level 4: NLP-enhanced matching' }
+        ],
+        description: 'Rule level for article-place matching (higher = more accurate but slower)'
+      },
+      {
         name: 'verbose',
         label: 'Verbose Logging',
         type: FieldType.BOOLEAN,

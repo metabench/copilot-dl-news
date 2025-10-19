@@ -7,7 +7,7 @@ const chalk = require('chalk');
 const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const { AttributeBuilder } = require('../../../utils/attributeBuilder');
-const ingestQueries = require('../../../db/sqlite/queries/gazetteer.ingest');
+const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
 
 /**
  * WikidataCountryIngestor

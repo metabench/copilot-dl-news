@@ -5,6 +5,13 @@
 class PlannerDatabase {
   constructor(db) {
     this.db = db;
+    this._ensureUrlId = (url) => {
+      if (!url) return null;
+      const existing = this.db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
+      if (existing) return existing.id;
+      const result = this.db.prepare('INSERT INTO urls (url) VALUES (?)').run(url);
+      return result.lastInsertRowid;
+    };
     this._ensureSchema();
     this._prepareStatements();
   }
@@ -36,7 +43,7 @@ class PlannerDatabase {
       CREATE TABLE IF NOT EXISTS hub_validations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         domain TEXT NOT NULL,
-        hub_url TEXT NOT NULL,
+        hub_url_id INTEGER,
         hub_type TEXT NOT NULL,
         validation_status TEXT NOT NULL,
         classification_confidence REAL,
@@ -47,7 +54,8 @@ class PlannerDatabase {
         expires_at TEXT,
         revalidation_priority INTEGER DEFAULT 0,
         metadata TEXT,
-        UNIQUE(domain, hub_url)
+        UNIQUE(domain, hub_url_id),
+        FOREIGN KEY (hub_url_id) REFERENCES urls(id)
       );
       CREATE INDEX IF NOT EXISTS idx_hub_validations_domain_status ON hub_validations(domain, validation_status);
       CREATE INDEX IF NOT EXISTS idx_hub_validations_expires ON hub_validations(expires_at);
@@ -144,27 +152,29 @@ class PlannerDatabase {
     // Hub validation management
     this._insertHubValidationStmt = this.db.prepare(`
       INSERT OR REPLACE INTO hub_validations (
-        domain, hub_url, hub_type, validation_status, classification_confidence,
+        domain, hub_url_id, hub_type, validation_status, classification_confidence,
         last_fetch_status, content_indicators, validation_method, validated_at,
         expires_at, revalidation_priority, metadata
       ) VALUES (
-        @domain, @hubUrl, @hubType, @validationStatus, @classificationConfidence,
+        @domain, @hubUrlId, @hubType, @validationStatus, @classificationConfidence,
         @lastFetchStatus, @contentIndicators, @validationMethod, @validatedAt,
         @expiresAt, @revalidationPriority, @metadata
       )
     `);
 
     this._getValidatedHubsStmt = this.db.prepare(`
-      SELECT * FROM hub_validations 
-      WHERE domain = ? AND validation_status = 'valid' 
-      AND (expires_at IS NULL OR expires_at > datetime('now'))
-      ORDER BY classification_confidence DESC
+      SELECT hv.*, u.url as hub_url FROM hub_validations hv
+      LEFT JOIN urls u ON hv.hub_url_id = u.id
+      WHERE hv.domain = ? AND hv.validation_status = 'valid' 
+      AND (hv.expires_at IS NULL OR hv.expires_at > datetime('now'))
+      ORDER BY hv.classification_confidence DESC
     `);
 
     this._getExpiredHubsStmt = this.db.prepare(`
-      SELECT * FROM hub_validations 
-      WHERE expires_at <= datetime('now') OR revalidation_priority > 5
-      ORDER BY revalidation_priority DESC, expires_at ASC
+      SELECT hv.*, u.url as hub_url FROM hub_validations hv
+      LEFT JOIN urls u ON hv.hub_url_id = u.id
+      WHERE hv.expires_at <= datetime('now') OR hv.revalidation_priority > 5
+      ORDER BY hv.revalidation_priority DESC, hv.expires_at ASC
       LIMIT ?
     `);
 
@@ -260,8 +270,9 @@ class PlannerDatabase {
     revalidationPriority = 0, metadata = null
   }) {
     try {
+      const hubUrlId = hubUrl ? this._ensureUrlId(hubUrl) : null;
       return this._insertHubValidationStmt.run({
-        domain, hubUrl, hubType, validationStatus, classificationConfidence,
+        domain, hubUrlId, hubType, validationStatus, classificationConfidence,
         lastFetchStatus, contentIndicators: JSON.stringify(contentIndicators),
         validationMethod, validatedAt: new Date().toISOString(),
         expiresAt, revalidationPriority,

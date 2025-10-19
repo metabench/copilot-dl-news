@@ -12,6 +12,7 @@
 const { analysePages } = require('../../tools/analyse-pages-core');
 const { awardMilestones } = require('../../tools/milestones');
 const { countArticlesNeedingAnalysis } = require('../../db/queries/analysisQueries');
+const { ArticlePlaceMatcher } = require('../../matching/ArticlePlaceMatcher');
 const { tof } = require('lang-tools');
 
 /**
@@ -56,6 +57,8 @@ class AnalysisTask {
     this.skipPages = this.config.skipPages ?? false;
     this.skipDomains = this.config.skipDomains ?? false;
     this.skipMilestones = this.config.skipMilestones ?? false;
+    this.skipPlaceMatching = this.config.skipPlaceMatching ?? false;
+    this.placeMatchingRuleLevel = this.config.placeMatchingRuleLevel ?? 1;
     this.verbose = this.config.verbose ?? false;
     this.dbPath = this.config.dbPath;
     
@@ -66,6 +69,8 @@ class AnalysisTask {
       placesExtracted: 0,
       domainsAnalyzed: 0,
       milestonesAwarded: 0,
+      articlesMatched: 0,
+      placeRelationsCreated: 0,
       errors: 0
     };
   }
@@ -110,7 +115,19 @@ class AnalysisTask {
         return;
       }
       
-      // Stage 2: Domain Analysis
+      // Stage 2: Place Matching
+      if (!this.skipPlaceMatching) {
+        await this._runPlaceMatching();
+      } else {
+        this._reportProgress('Place matching skipped', { skipped: 'place-matching' });
+      }
+      
+      // Check for cancellation
+      if (this.signal.aborted || this.paused) {
+        return;
+      }
+      
+      // Stage 3: Domain Analysis
       if (!this.skipDomains) {
         await this._runDomainAnalysis();
       } else {
@@ -222,6 +239,99 @@ class AnalysisTask {
         console.error('[AnalysisTask] Page analysis failed:', error);
         throw error;
       }
+    }
+  }
+  
+  /**
+   * Run place matching stage
+   * @private
+   */
+  async _runPlaceMatching() {
+    this.currentStage = 'place-matching';
+    this._reportProgress('Starting place matching', { stage: 'place-matching' });
+    
+    try {
+      const matcher = new ArticlePlaceMatcher({ db: this.db });
+      
+      // Get articles that need place matching
+      // For now, match all articles that don't have place relations yet
+      // In the future, we could be more selective
+      const articlesToMatch = this.db.prepare(`
+        SELECT a.id, a.title, a.url
+        FROM articles a
+        LEFT JOIN article_place_relations apr ON a.id = apr.article_id
+        WHERE apr.article_id IS NULL
+        ORDER BY a.published_at DESC
+        LIMIT ?
+      `).all(this.pageLimit || 1000);
+      
+      if (articlesToMatch.length === 0) {
+        this._reportProgress('No articles need place matching', {
+          stage: 'place-matching',
+          completed: true
+        });
+        return;
+      }
+      
+      this._reportProgress(`Matching places for ${articlesToMatch.length} articles`, {
+        stage: 'place-matching',
+        total: articlesToMatch.length
+      });
+      
+      let matchedCount = 0;
+      let relationsCreated = 0;
+      
+      for (let i = 0; i < articlesToMatch.length; i++) {
+        const article = articlesToMatch[i];
+        
+        try {
+          const relations = await matcher.matchArticleToPlaces(article.id, this.placeMatchingRuleLevel);
+          
+          if (relations.length > 0) {
+            matchedCount++;
+            relationsCreated += relations.length;
+          }
+          
+          // Report progress periodically
+          if ((i + 1) % 10 === 0 || i === articlesToMatch.length - 1) {
+            this._reportProgress(
+              `Place matching: ${i + 1}/${articlesToMatch.length} articles (${matchedCount} matched, ${relationsCreated} relations)`,
+              {
+                stage: 'place-matching',
+                current: i + 1,
+                total: articlesToMatch.length,
+                matched: matchedCount,
+                relations: relationsCreated
+              }
+            );
+          }
+          
+          // Check for pause/cancellation
+          if (this.paused || this.signal.aborted) {
+            this._reportProgress('Place matching paused', { stage: 'place-matching', paused: true });
+            return;
+          }
+          
+        } catch (error) {
+          console.warn(`[AnalysisTask] Failed to match places for article ${article.id}:`, error.message);
+          this.stats.errors++;
+        }
+      }
+      
+      this.stats.articlesMatched = matchedCount;
+      this.stats.placeRelationsCreated = relationsCreated;
+      
+      this._reportProgress(`Place matching complete: ${matchedCount} articles matched, ${relationsCreated} relations created`, {
+        stage: 'place-matching',
+        completed: true,
+        matched: matchedCount,
+        relations: relationsCreated
+      });
+      
+    } catch (error) {
+      this.stats.errors++;
+      console.error('[AnalysisTask] Place matching failed:', error);
+      throw error;
     }
   }
   

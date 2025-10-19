@@ -9,7 +9,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { createApp } = require('../server');
-const { ensureDatabase } = require('../../../db/sqlite');
+const { ensureDatabase } = require('../../../db/sqlite/v1');
 
 // Valid parameters for article-compression tasks (required by schema)
 const VALID_COMPRESSION_PARAMS = {

@@ -6,9 +6,9 @@
  * and verification strategies.
  */
 
-const { getAllPlaceNames } = require('../db/sqlite/queries/gazetteerPlaceNames');
-const { getTopicTermsForLanguage } = require('../db/sqlite/queries/topicKeywords');
-const { getSkipTermsForLanguage } = require('../db/sqlite/queries/crawlSkipTerms');
+const { getAllPlaceNames } = require('../db/sqlite/v1/queries/gazetteerPlaceNames');
+const { getTopicTermsForLanguage } = require('../db/sqlite/v1/queries/topicKeywords');
+const { getSkipTermsForLanguage } = require('../db/sqlite/v1/queries/crawlSkipTerms');
 
 class HubValidator {
   constructor(db) {

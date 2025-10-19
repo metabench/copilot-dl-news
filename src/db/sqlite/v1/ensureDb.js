@@ -19,6 +19,25 @@ function ensureDb(dbFilePath) {
   try { db.pragma('busy_timeout = 5000'); } catch (_) {}
   try { db.pragma('synchronous = NORMAL'); } catch (_) {}
 
+  // Ensure schema version tracking table exists
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      applied_at TEXT NOT NULL,
+      description TEXT,
+      rollback_sql TEXT
+    );
+  `);
+
+  // Seed current schema as version 1 (idempotent)
+  try {
+    db.prepare(`
+      INSERT OR IGNORE INTO schema_migrations (version, name, applied_at, description)
+      VALUES (1, 'initial_denormalized_schema', datetime('now'), 'Legacy denormalized schema (articles, fetches, places tables)')
+    `).run();
+  } catch (_) {}
+
   // Centralized schema creation
   try {
     initializeSchema(db);

@@ -16,7 +16,7 @@
     "test:all": "node tests/run-tests.js all",
     "test:dev-geography": "node tests/run-tests.js dev-geography",
     "test:dev-geography-monitor": "node tests/run-tests.js dev-geography-monitor",
-  "tests:review": "node tests/tests-review.js",
+    "tests:review": "node tests/tests-review.js",
     "test:legacy:fast": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathIgnorePatterns='e2e|online|puppeteer|http.test.js' --maxWorkers=4",
     "test:legacy:quick": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='quick.test.js' --forceExit --bail",
     "test:legacy:geography-full": "cross-env GEOGRAPHY_FULL_E2E=1 JEST_DISABLE_TRUNCATE=1 node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='geography.full.e2e' --reporters=./jest-compact-reporter.js",
@@ -58,6 +58,7 @@
     "fast-xml-parser": "^4.3.6",
     "jsdom": "^24.0.0",
     "lang-tools": "^0.0.39",
+    "ndjson": "^2.0.0",
     "node-fetch": "^3.3.2",
     "robots-parser": "^3.0.1",
     "tar-stream": "^3.1.7"

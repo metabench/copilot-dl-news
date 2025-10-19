@@ -1,7 +1,7 @@
 'use strict';
 
 const { tof, is_array } = require('lang-tools');
-const progressQueries = require('../../db/sqlite/queries/gazetteer.progress');
+const progressQueries = require('../../db/sqlite/v1/queries/gazetteer.progress');
 
 const DEFAULT_STAGE_DEFS = Object.freeze([
   { name: 'countries', priority: 1000, crawlDepth: 0, kind: 'country' },

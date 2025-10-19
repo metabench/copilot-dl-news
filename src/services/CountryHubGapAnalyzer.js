@@ -8,7 +8,7 @@
  * Learns URL patterns from existing data via Domain-Specific Pattern Libraries (DSPLs).
  */
 
-const { getAllCountries, getTopCountries } = require('../db/sqlite/queries/gazetteer.places');
+const { getAllCountries, getTopCountries } = require('../db/sqlite/v1/queries/gazetteer.places');
 const path = require('path');
 const { loadDsplLibrary, getDsplForDomain } = require('./shared/dspl');
 

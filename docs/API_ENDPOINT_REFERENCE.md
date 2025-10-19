@@ -596,25 +596,18 @@ Get detailed information about a specific place.
 
 Get articles associated with places.
 
+**⚠️ CURRENT STATUS**: Returns empty array due to schema normalization. The `article_places` table was removed during database schema evolution. This endpoint remains available for API compatibility but currently returns no results.
+
 **Query Parameters**:
 - `placeId` (string, optional) - Filter by place ID
 - `limit` (number, optional) - Max results
 
 **Response** (200 OK):
 ```json
-{
-  "articles": [
-    {
-      "url": "https://example.com/article",
-      "title": "News from USA",
-      "placeId": "Q30",
-      "placeName": "United States",
-      "publishedAt": 1728556800000
-    }
-  ],
-  "total": 1500
-}
+[]
 ```
+
+**Note**: This endpoint currently returns an empty array because the direct article-place relationship table was removed during schema normalization. If this functionality is needed, it would require reimplementation using content analysis or a new relationship mechanism.
 
 ---
 

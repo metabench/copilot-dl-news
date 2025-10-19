@@ -88,7 +88,7 @@ function createWritableDbAccessor({ ensureDb, urlsDbPath, queueDebug = false, ve
           job_id TEXT NOT NULL,
           ts TEXT NOT NULL,
           action TEXT NOT NULL,
-          url TEXT NOT NULL,
+          url_id INTEGER,
           depth INTEGER,
           host TEXT,
           reason TEXT,

@@ -230,7 +230,7 @@ function selectCompressionType(db, contentSize, useCase = 'balanced') {
  * @returns {Object} { contentId, compressionType, ratio, ... }
  */
 function compressAndStore(db, content, options = {}) {
-  const { compressionType, useCase = 'balanced' } = options;
+  const { compressionType, useCase = 'balanced', httpResponseId } = options;
   
   // Select compression type
   const type = compressionType 
@@ -248,6 +248,7 @@ function compressAndStore(db, content, options = {}) {
   // Store in content_storage
   const insertResult = db.prepare(`
     INSERT INTO content_storage (
+      http_response_id,
       storage_type,
       compression_type_id,
       content_blob,
@@ -255,9 +256,10 @@ function compressAndStore(db, content, options = {}) {
       uncompressed_size,
       compressed_size,
       compression_ratio
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     RETURNING id
   `).get(
+    httpResponseId || null,
     type.algorithm === 'none' ? 'db_inline' : 'db_compressed',
     type.id,
     result.compressed,

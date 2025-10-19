@@ -8,8 +8,10 @@ const {
 } = require('./place-extraction');
 const { detectPlaceHub } = require('../tools/placeHubDetector');
 const { performDeepAnalysis } = require('./deep-analyzer');
+const { ArticleXPathService } = require('../services/ArticleXPathService');
+const { extractDomain } = require('../services/shared/dxpl');
 
-function analyzePage({
+async function analyzePage({
   url,
   title = null,
   section = null,
@@ -19,12 +21,13 @@ function analyzePage({
   gazetteer = null,
   db,
   targetVersion = 1,
-  nonGeoTopicSlugs = null
+  nonGeoTopicSlugs = null,
+  xpathService = null
 }) {
   if (!url) throw new Error('analyzePage requires a url');
 
   const context = inferContext(db, url, title || null, section || null);
-  const analysis = buildAnalysis({
+  const analysis = await buildAnalysis({
     url,
     html,
     title,
@@ -33,7 +36,8 @@ function analyzePage({
     fetchRow,
     gazetteer,
     context,
-    targetVersion
+    targetVersion,
+    xpathService
   });
 
   const places = Array.isArray(analysis.findings?.places) ? analysis.findings.places : [];
@@ -80,7 +84,7 @@ function analyzePage({
   };
 }
 
-function buildAnalysis({
+async function buildAnalysis({
   url,
   html,
   title,
@@ -89,7 +93,8 @@ function buildAnalysis({
   fetchRow,
   gazetteer,
   context,
-  targetVersion
+  targetVersion,
+  xpathService = null
 }) {
   const base = {
     analysis_version: targetVersion,
@@ -180,22 +185,66 @@ function buildAnalysis({
       base.findings.places = dedupeDetections(detections);
     }
 
-    if (!base.meta.articleXPath && html) {
-      try {
-        const virtualConsole = new VirtualConsole();
-        virtualConsole.on('jsdomError', () => {});
-        const dom = new JSDOM(html, { url, virtualConsole });
-        const readable = new Readability(dom.window.document).parse();
-        if (readable && readable.textContent) {
-          base.meta.wordCount =
-            base.meta.wordCount ?? readable.textContent.trim().split(/\s+/).filter(Boolean).length;
+    // Extract article text using XPath patterns or Readability
+    let extractedText = null;
+    let extractionMethod = 'readability';
+
+    if (html) {
+      // Try XPath extraction first if service is available
+      if (xpathService && !base.meta.articleXPath) {
+        try {
+          extractedText = xpathService.extractTextWithXPath(url, html);
+          if (extractedText) {
+            extractionMethod = 'xpath';
+            base.meta.articleXPath = xpathService.getXPathForDomain(extractDomain(url))?.xpath;
+          }
+        } catch (error) {
+          // XPath extraction failed, continue to learning/fallback
         }
-      } catch (_) {
-        // ignore readability errors
+      }
+
+      // If no XPath worked and we have HTML, try learning or Readability
+      if (!extractedText) {
+        if (xpathService && !xpathService.hasXPathForDomain(extractDomain(url))) {
+          // Learn new XPath pattern
+          try {
+            const learnedPattern = await xpathService.learnXPathFromHtml(url, html);
+            if (learnedPattern) {
+              extractedText = xpathService.extractTextWithXPath(url, html);
+              if (extractedText) {
+                extractionMethod = 'xpath-learned';
+                base.meta.articleXPath = learnedPattern.xpath;
+              }
+            }
+          } catch (error) {
+            // XPath learning failed, fall back to Readability
+          }
+        }
+
+        // Fall back to Readability if XPath didn't work
+        if (!extractedText) {
+          try {
+            const virtualConsole = new VirtualConsole();
+            virtualConsole.on('jsdomError', () => {});
+            const dom = new JSDOM(html, { url, virtualConsole });
+            const readable = new Readability(dom.window.document).parse();
+            if (readable && readable.textContent) {
+              extractedText = readable.textContent.trim();
+              extractionMethod = 'readability';
+            }
+          } catch (_) {
+            // ignore readability errors
+          }
+        }
+      }
+
+      // Update word count if we extracted text
+      if (extractedText) {
+        base.meta.wordCount = base.meta.wordCount ?? extractedText.split(/\s+/).filter(Boolean).length;
       }
     }
 
-    base.meta.method = 'readability+heuristics@v1';
+    base.meta.method = `${extractionMethod}+heuristics@v1`;
     return base;
   }
 

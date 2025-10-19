@@ -126,6 +126,9 @@ function initCoreTables(db, { verbose, logger }) {
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_urls_host ON urls(host)'); } catch (indexErr) {
     if (verbose) logger.warn('[schema] Could not create idx_urls_host:', indexErr.message);
   }
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_urls_canonical ON urls(canonical_url)'); } catch (indexErr) {
+    if (verbose) logger.warn('[schema] Could not create idx_urls_canonical:', indexErr.message);
+  }
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_fetches_host ON fetches(host)'); } catch (indexErr) {
     if (verbose) logger.warn('[schema] Could not create idx_fetches_host:', indexErr.message);
   }
@@ -764,71 +767,7 @@ function initPlaceHubsTables(db, { verbose, logger }) {
 
 function initCompressionTables(db, { verbose, logger }) {
     if (verbose) logger.log('[schema] Initializing compression tables...');
-    // ... implementation from ensureDb.js ...
-    // Create compression types table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS compression_types (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      algorithm TEXT NOT NULL,
-      level INTEGER NOT NULL,
-      mime_type TEXT,
-      extension TEXT,
-      memory_mb INTEGER DEFAULT 0,
-      window_bits INTEGER,
-      block_bits INTEGER,
-      description TEXT
-    );
-  `);
-
-  // Create compression buckets table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS compression_buckets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      bucket_type TEXT NOT NULL,
-      domain_pattern TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      finalized_at TEXT,
-      content_count INTEGER DEFAULT 0,
-      uncompressed_size INTEGER DEFAULT 0,
-      compressed_size INTEGER DEFAULT 0,
-      compression_ratio REAL,
-      compression_type_id INTEGER REFERENCES compression_types(id),
-      bucket_blob BLOB,
-      index_json TEXT
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_compression_buckets_type 
-      ON compression_buckets(bucket_type);
-    CREATE INDEX IF NOT EXISTS idx_compression_buckets_domain 
-      ON compression_buckets(domain_pattern);
-    CREATE INDEX IF NOT EXISTS idx_compression_buckets_finalized 
-      ON compression_buckets(finalized_at);
-  `);
-
-  // Create content storage table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS content_storage (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      storage_type TEXT NOT NULL,
-      compression_type_id INTEGER REFERENCES compression_types(id),
-      compression_bucket_id INTEGER REFERENCES compression_buckets(id),
-      bucket_entry_key TEXT,
-      content_blob BLOB,
-      content_sha256 TEXT,
-      uncompressed_size INTEGER,
-      compressed_size INTEGER,
-      compression_ratio REAL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_content_storage_bucket 
-      ON content_storage(compression_bucket_id);
-    CREATE INDEX IF NOT EXISTS idx_content_storage_sha256 
-      ON content_storage(content_sha256);
-    CREATE INDEX IF NOT EXISTS idx_content_storage_type 
-      ON content_storage(storage_type);
-  `);
+    // Tables are now created in ALL_TABLES_SCHEMA, just seed the data
 
   // Seed compression types (idempotent)
   const compressionTypes = [
@@ -908,26 +847,45 @@ function initBackgroundTasksTables(db, { verbose, logger }) {
   `);
 }
 
-function initQueryTelemetryTables(db, { verbose, logger }) {
-    if (verbose) logger.log('[schema] Initializing query telemetry tables...');
-    // ... implementation from ensureDb.js ...
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS query_telemetry (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      query_type TEXT NOT NULL,           -- e.g., 'fetch_articles', 'lookup_place', 'analyze_domain'
-      operation TEXT NOT NULL,            -- e.g., 'SELECT', 'INSERT', 'UPDATE', 'DELETE'
-      duration_ms REAL NOT NULL,          -- Query execution time in milliseconds
-      result_count INTEGER DEFAULT 0,     -- Number of rows returned or affected
-      query_complexity TEXT,              -- 'simple' | 'moderate' | 'complex' (based on query structure)
-      host TEXT,                          -- Domain being queried (if applicable)
-      job_id TEXT                         -- Crawl job ID (if applicable)
-    );
+function initViews(db, { verbose, logger }) {
+  if (verbose) logger.log('[schema] Phase 5: Removing backward compatibility views (normalized-only schema)...');
 
-    CREATE INDEX IF NOT EXISTS idx_query_telemetry_type ON query_telemetry(query_type);
-    CREATE INDEX IF NOT EXISTS idx_query_telemetry_duration ON query_telemetry(duration_ms);
-    CREATE INDEX IF NOT EXISTS idx_query_telemetry_host ON query_telemetry(host);
-    CREATE INDEX IF NOT EXISTS idx_query_telemetry_complexity ON query_telemetry(query_complexity);
-  `);
+  // Phase 5: Drop backward compatibility views (normalized schema is now the source of truth)
+  try {
+    db.exec('DROP VIEW IF EXISTS articles_view');
+    db.exec('DROP VIEW IF EXISTS fetches_view');
+    db.exec('DROP VIEW IF EXISTS places_view');
+    if (verbose) logger.log('[schema] ✓ Backward compatibility views dropped');
+  } catch (err) {
+    logger.error(`[schema] ✗ Failed to drop backward compatibility views:`, err.message);
+  }
+
+  // Phase 5: Add composite indexes for normalized schema query performance
+  if (verbose) logger.log('[schema] Adding composite indexes for normalized schema...');
+  
+  try {
+    // Composite index for urls -> http_responses JOIN (already exists in schema-definitions.js)
+    // idx_http_responses_url ON http_responses(url_id, fetched_at DESC)
+    
+    // Additional composite index for http_responses queries with status filtering
+    db.exec('CREATE INDEX IF NOT EXISTS idx_http_responses_url_status ON http_responses(url_id, http_status)');
+    
+    // Composite index for content_storage -> content_analysis JOIN
+    db.exec('CREATE INDEX IF NOT EXISTS idx_content_analysis_content_classification ON content_analysis(content_id, classification)');
+    
+    // Composite index for discovery_events queries
+    db.exec('CREATE INDEX IF NOT EXISTS idx_discovery_events_url_discovered ON discovery_events(url_id, discovered_at DESC)');
+    
+    // Composite index for place_provenance queries
+    db.exec('CREATE INDEX IF NOT EXISTS idx_place_provenance_place_source ON place_provenance(place_id, source)');
+    
+    // Composite index for place_attributes queries
+    db.exec('CREATE INDEX IF NOT EXISTS idx_place_attributes_place_attr ON place_attributes(place_id, attribute_kind)');
+    
+    if (verbose) logger.log('[schema] ✓ Composite indexes added');
+  } catch (err) {
+    logger.error(`[schema] ✗ Failed to add composite indexes:`, err.message);
+  }
 }
 
 /**
@@ -965,7 +923,7 @@ function initializeSchema(db, options = {}) {
     placeHubs: run('Place Hubs', initPlaceHubsTables),
     compression: run('Compression', initCompressionTables),
     backgroundTasks: run('Background Tasks', initBackgroundTasksTables),
-    queryTelemetry: run('Query Telemetry', initQueryTelemetryTables)
+    views: run('Views', initViews)
   };
   
   if (verbose) {
@@ -987,5 +945,5 @@ module.exports = {
   initPlaceHubsTables,
   initCompressionTables,
   initBackgroundTasksTables,
-  initQueryTelemetryTables
+  initViews
 };

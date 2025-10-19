@@ -13,7 +13,7 @@ const {
   iteratePlaceNames,
   iteratePlaceHierarchy,
   iteratePlaceExternalIds
-} = require('../db/sqlite/tools/gazetteerExport');
+} = require('../db/sqlite/v1/tools/gazetteerExport');
 const { findProjectRoot } = require('../utils/project-root');
 
 function parseArgs(argv) {

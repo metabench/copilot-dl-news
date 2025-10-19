@@ -5,6 +5,13 @@
 class CoverageDatabase {
   constructor(db) {
     this.db = db;
+    this._ensureUrlId = (url) => {
+      if (!url) return null;
+      const existing = this.db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
+      if (existing) return existing.id;
+      const result = this.db.prepare('INSERT INTO urls (url) VALUES (?)').run(url);
+      return result.lastInsertRowid;
+    };
     this._ensureSchema();
     this._prepareStatements();
   }
@@ -37,7 +44,7 @@ class CoverageDatabase {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         job_id TEXT NOT NULL,
         discovered_at TEXT NOT NULL,
-        hub_url TEXT NOT NULL,
+        hub_url_id INTEGER,
         hub_type TEXT,
         discovery_method TEXT NOT NULL,
         confidence_score REAL,
@@ -45,7 +52,8 @@ class CoverageDatabase {
         gap_filled BOOLEAN DEFAULT 0,
         coverage_impact REAL,
         metadata TEXT,
-        UNIQUE(job_id, hub_url)
+        UNIQUE(job_id, hub_url_id),
+        FOREIGN KEY (hub_url_id) REFERENCES urls(id)
       );
       CREATE INDEX IF NOT EXISTS idx_hub_discoveries_job_discovered ON hub_discoveries(job_id, discovered_at DESC);
       CREATE INDEX IF NOT EXISTS idx_hub_discoveries_method ON hub_discoveries(discovery_method);
@@ -136,18 +144,19 @@ class CoverageDatabase {
     // Hub discovery tracking
     this._insertHubDiscoveryStmt = this.db.prepare(`
       INSERT OR IGNORE INTO hub_discoveries (
-        job_id, discovered_at, hub_url, hub_type, discovery_method,
+        job_id, discovered_at, hub_url_id, hub_type, discovery_method,
         confidence_score, classification_reason, gap_filled, coverage_impact, metadata
       ) VALUES (
-        @jobId, @discoveredAt, @hubUrl, @hubType, @discoveryMethod,
+        @jobId, @discoveredAt, @hubUrlId, @hubType, @discoveryMethod,
         @confidenceScore, @classificationReason, @gapFilled, @coverageImpact, @metadata
       )
     `);
 
     this._getRecentDiscoveriesStmt = this.db.prepare(`
-      SELECT * FROM hub_discoveries 
-      WHERE job_id = ? AND discovered_at >= ?
-      ORDER BY discovered_at DESC
+      SELECT hd.*, u.url as hub_url FROM hub_discoveries hd
+      LEFT JOIN urls u ON hd.hub_url_id = u.id
+      WHERE hd.job_id = ? AND hd.discovered_at >= ?
+      ORDER BY hd.discovered_at DESC
       LIMIT ?
     `);
 
@@ -284,8 +293,9 @@ class CoverageDatabase {
     confidenceScore, classificationReason, gapFilled = false, coverageImpact, metadata
   }) {
     try {
+      const hubUrlId = hubUrl ? this._ensureUrlId(hubUrl) : null;
       return this._insertHubDiscoveryStmt.run({
-        jobId, discoveredAt, hubUrl, hubType, discoveryMethod,
+        jobId, discoveredAt, hubUrlId, hubType, discoveryMethod,
         confidenceScore, classificationReason, gapFilled, coverageImpact,
         metadata: metadata ? JSON.stringify(metadata) : null
       });

@@ -70,6 +70,14 @@
         "JEST_MAX_CONSOLE_LINES": "999999"
       },
       "note": "This is a development/debugging tool for monitoring live telemetry. Very long-running."
+    },
+    
+    "migration": {
+      "description": "Database migration orchestrator tests",
+      "testPathPattern": "orchestrator.test.js",
+      "timeout": 30000,
+      "forceExit": true,
+      "maxWorkers": 1
     }
   },
   

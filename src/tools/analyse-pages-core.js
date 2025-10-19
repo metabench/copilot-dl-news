@@ -5,6 +5,7 @@ const { analyzePage } = require('../analysis/page-analyzer');
 const { buildGazetteerMatchers } = require('../analysis/place-extraction');
 const { findProjectRoot } = require('../utils/project-root');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
+const { ArticleXPathService } = require('../services/ArticleXPathService');
 
 function toNumber(value, fallback) {
   const num = Number(value);
@@ -48,6 +49,12 @@ async function analysePages({
     } catch (_) {
       // best-effort pragmas only
     }
+
+    // Initialize XPath service for article extraction
+    const xpathService = new ArticleXPathService({
+      db: db.db,
+      logger
+    });
 
     const nonGeoTopicSlugs = loadNonGeoTopicSlugs(db.db).slugs;
 
@@ -247,7 +254,7 @@ async function analysePages({
 
       let analysisResult;
       try {
-        analysisResult = analyzePage({
+        analysisResult = await analyzePage({
           url: row.url,
           title: row.title || null,
           section: row.section || null,
@@ -257,7 +264,8 @@ async function analysePages({
           gazetteer,
           db: db.db,
           targetVersion: analysisVersion,
-          nonGeoTopicSlugs: nonGeoTopicSlugs
+          nonGeoTopicSlugs: nonGeoTopicSlugs,
+          xpathService
         });
       } catch (error) {
         emit(logger, 'warn', `[analyse-pages] Failed to analyse ${row.url}`, verbose ? error : error?.message);

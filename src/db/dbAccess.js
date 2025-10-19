@@ -27,7 +27,7 @@
  */
 
 const path = require('path');
-const NewsDatabase = require('./sqlite/SQLiteNewsDatabase');
+const NewsDatabase = require('./sqlite/v1/SQLiteNewsDatabase');
 const { ensureDb } = require('./sqlite/ensureDb');
 
 /**
