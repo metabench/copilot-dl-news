@@ -1,0 +1,74 @@
+[
+  {
+    "doc_slug": "command-rules",
+    "title": "Command Rules",
+    "purpose": "Rules for executing commands without approval dialogs",
+    "tags": ["commands", "powershell", "tools"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/command-rules.md"
+  },
+  {
+    "doc_slug": "core-workflow-rules",
+    "title": "Core Workflow Rules",
+    "purpose": "Fundamental execution patterns for autonomous agent work",
+    "tags": ["workflow", "agents", "development"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/core-workflow-rules.md"
+  },
+  {
+    "doc_slug": "database-schema-evolution",
+    "title": "Database Schema Evolution",
+    "purpose": "Comprehensive database normalization and compression infrastructure",
+    "tags": ["database", "schema", "normalization"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/database-schema-evolution.md"
+  },
+  {
+    "doc_slug": "testing-guidelines",
+    "title": "Testing Guidelines",
+    "purpose": "Comprehensive testing patterns, rules, and workflows",
+    "tags": ["testing", "guidelines", "development"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/testing-guidelines.md"
+  },
+  {
+    "doc_slug": "tools-correction-scripts",
+    "title": "Tools and Correction Scripts",
+    "purpose": "Safe data manipulation and correction workflows",
+    "tags": ["tools", "correction", "data-manipulation"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/tools-correction-scripts.md"
+  },
+  {
+    "doc_slug": "test-log-migration",
+    "title": "Test Log Migration and Management",
+    "purpose": "Safe migration and management of test logs",
+    "tags": ["testing", "logs", "migration"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/test-log-migration.md"
+  },
+  {
+    "doc_slug": "database-schema-tools",
+    "title": "Database Schema Tools",
+    "purpose": "Quick database inspection without approval dialogs",
+    "tags": ["database", "schema", "tools"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/database-schema-tools.md"
+  },
+  {
+    "doc_slug": "tdd-guidelines",
+    "title": "Test-Driven Development Guidelines",
+    "purpose": "Ensures reliable code changes through testing",
+    "tags": ["testing", "tdd", "development"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/tdd-guidelines.md"
+  },
+  {
+    "doc_slug": "intelligent-crawl-startup",
+    "title": "Intelligent Crawl Startup Analysis",
+    "purpose": "Rapid iteration on crawl startup output",
+    "tags": ["crawls", "startup", "analysis"],
+    "last_review": "2025-10-19",
+    "path": "docs/agents/intelligent-crawl-startup.md"
+  }
+]

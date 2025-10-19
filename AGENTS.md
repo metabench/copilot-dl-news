@@ -155,6 +155,20 @@ const taskCategories = {
 - 📋 Phase 4 refactoring complete → `docs/PHASE_4_REFACTORING_COMPLETE.md`
 - 📋 Phase 6 assessment → `docs/PHASE_6_ASSESSMENT.md`
 
+## Index of Operational Docs
+
+| doc | purpose | when_to_use | tags | last_review |
+|-----|---------|-------------|------|-------------|
+| `command-rules` | Rules for executing commands without approval dialogs | When you need to run terminal commands | commands, powershell, tools | 2025-10-19 |
+| `core-workflow-rules` | Fundamental execution patterns for autonomous agent work | When starting any coding task | workflow, agents, development | 2025-10-19 |
+| `database-schema-evolution` | Comprehensive database normalization and compression | When planning database schema changes | database, schema, normalization | 2025-10-19 |
+| `testing-guidelines` | Comprehensive testing patterns and workflows | When writing or fixing tests | testing, guidelines, development | 2025-10-19 |
+| `tools-correction-scripts` | Safe data manipulation and correction workflows | When creating data manipulation tools | tools, correction, data-manipulation | 2025-10-19 |
+| `test-log-migration` | Safe migration and management of test logs | When repository has many old logs | testing, logs, migration | 2025-10-19 |
+| `database-schema-tools` | Quick database inspection without dialogs | When needing database structure info | database, schema, tools | 2025-10-19 |
+| `tdd-guidelines` | Ensures reliable code changes through testing | When implementing new features | testing, tdd, development | 2025-10-19 |
+| `intelligent-crawl-startup` | Rapid iteration on crawl startup output | When improving startup output | crawls, startup, analysis | 2025-10-19 |
+
 ### When to Read Which Docs
 
 | If you need to... | Read this first | Then read (if needed) |
@@ -341,126 +355,50 @@ import { createCrawlControls } from './crawlControls.js';
 
 ---
 
-## Tools and Correction Scripts (October 2025)
+## Tools and Correction Scripts
 
-**Convention**: All correction and data manipulation tools default to dry-run mode and require `--fix` to apply changes.
+All correction and data manipulation tools default to dry-run mode requiring `--fix` to apply changes, ensuring safety. This enables safe database and file operations with verification workflows. When creating new tools or running cleanup scripts, follow these patterns to prevent data loss.
 
 **When to consult**:
 - When creating new data manipulation or correction tools
 - When running existing correction scripts for data cleanup
 - When implementing tools that modify database records or files
 
-**See**: `docs/agents/tools-correction-scripts.md` for complete patterns, existing tools, and verification workflows.
+**See**: `docs/agents/tools-correction-scripts.md`
+
+**Example**: Run `node tools/corrections/fix-foreign-keys.js` in dry-run first.
 
 ---
 
-## Test Log Migration and Management (October 2025)
+## Test Log Migration and Management
 
-**Purpose**: Migrate legacy `test-timing-*.log` files from root to organized `testlogs/` directory, validate log integrity.
+Tools for migrating legacy test-timing-*.log files to organized testlogs/ directory, validating integrity, and managing cleanup. Includes audit, dry-run, and execution modes for safe operations. Use when repository has many old logs or needs cleanup.
 
-**Quick Commands**:
-```bash
-# Audit existing testlogs (validate suite claims, detect issues)
-node tools/migrate-test-logs.js --audit
-
-# Dry run - see what would be migrated
-node tools/migrate-test-logs.js
-
-# Execute migration and cleanup (DESTRUCTIVE - deletes root logs)
-node tools/migrate-test-logs.js --execute
-
-# Verbose mode (detailed analysis)
-node tools/migrate-test-logs.js --verbose
-```
-
-**Tool Features**:
-- **Smart Import**: Only imports most recent root log (ignores ~804 old logs)
-- **Validation**: Checks "ALL" suite claims (must have ≥100 tests, ≥50 files)
-- **Duplicate Detection**: Compares timestamps + test counts with existing testlogs
-- **Safe by Default**: Dry-run mode unless `--execute` flag provided
-- **Audit Mode**: Reviews existing testlogs for mislabeled suites (e.g., single-file "ALL" suites)
-
-**When to Use**:
+**When to consult**:
 - Repository root has many old test-timing logs (> 50 files)
 - Before major cleanup sessions (preserve logs safely)
 - When testlogs has suspicious "ALL" labels (tool detects mislabeling)
 - After test suite reconfigurations (ensure correct suite names)
 
-**Common Workflow**:
-```bash
-# 1. Check what's in root
-(Get-ChildItem test-timing-*.log).Count  # e.g., 805 files
+**See**: `docs/agents/test-log-migration.md`
 
-# 2. Audit testlogs to find issues
-node tools/migrate-test-logs.js --audit
-# Shows: Many "ALL" logs with only 1-30 tests (mislabeled)
-
-# 3. Dry run to preview migration
-node tools/migrate-test-logs.js
-# Shows: Would import most recent, delete 804 old logs
-
-# 4. Execute if satisfied
-node tools/migrate-test-logs.js --execute
-# Imports recent log, deletes old root logs
-```
-
-**Docs**: See `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` for complete testing workflow integration.
-
-**Cleanup Tool**: Use `tools/cleanup-test-logs.js` for aggressive maintenance:
-```bash
-# Default: keep only 2 recent logs per suite type (parallel processing, ~5s for 2,000+ files)
-node tools/cleanup-test-logs.js --execute
-
-# Dry run to preview deletions
-node tools/cleanup-test-logs.js --stats
-```
-
-**Strategy**: Keeps only most recent logs per suite to minimize AI scanning overhead. Parallel worker threads analyze 1,000+ logs in seconds. See `docs/TESTING_QUICK_REFERENCE.md` for options.
+**Example**: `node tools/migrate-test-logs.js --audit` to check current state.
 
 ---
 
-## Database Schema Tools (October 2025)
+## Database Schema Tools
 
-**Quick database inspection without approval dialogs**:
+Quick database inspection tools that eliminate PowerShell approval dialogs using simple Node commands. Provides table structure, indexes, foreign keys, stats, and read-only queries. Opens DB read-only for safety and formats output for readability.
 
-```bash
-# Table structure and metadata
-node tools/db-schema.js tables                    # List all tables
-node tools/db-schema.js table analysis_runs       # Show columns
-node tools/db-schema.js indexes analysis_runs     # Show indexes
-node tools/db-schema.js foreign-keys articles     # Show foreign keys
-node tools/db-schema.js stats                     # Row counts + DB size
+**When to consult**:
+- When needing database structure information (tables, columns, indexes)
+- For read-only queries during development and debugging
+- To verify schema after code changes
+- When checking foreign key relationships or row counts
 
-# Read-only queries
-node tools/db-query.js "SELECT * FROM articles LIMIT 5"
-node tools/db-query.js --json "SELECT * FROM analysis_runs WHERE status='running'"
-```
+**See**: `docs/agents/database-schema-tools.md`
 
-**Why**: Eliminates PowerShell approval dialogs, opens DB read-only for safety, formats output for readability.
-**Docs**: `tools/debug/README.md` (Database Schema Tools section)
-
-**VS Code Approval Mechanism** (Researched October 2025):
-- **Auto-Approve Setting**: `terminal.integrated.enableAutoApprove` (default: `true`)
-- **Simple commands DON'T need approval**: `node script.js arg1 arg2` (single command, simple args)
-- **Commands that REQUIRE approval**: Piping (`|`), chaining (`;`), output parsing (`2>&1 | Select-String`), complex shell operations
-- **Our tools are simple Node commands**: Should NOT trigger approval in normal operation
-- **If approval appears**: User may have disabled auto-approve setting, or command output is being processed by VS Code
-- **Source**: VS Code `runInTerminalTool.ts`, `terminalConfiguration.ts` (auto-approve system for Copilot Chat tool invocations)
-
-**Common Workflows**:
-```bash
-# Verify schema after code changes
-node tools/db-schema.js table analysis_runs
-
-# Check if index exists
-node tools/db-schema.js indexes analysis_runs
-
-# Manually upgrade schema (server does this automatically)
-node tools/upgrade-analysis-schema.js
-
-# Query specific records
-node tools/db-query.js "SELECT * FROM analysis_runs WHERE background_task_id IS NOT NULL LIMIT 5"
-```
+**Example**: `node tools/db-schema.js tables` to list all tables.
 
 ---
 
@@ -626,30 +564,17 @@ Key architecture docs:
 
 ## Test-Driven Development (TDD) Guidelines
 
-**CRITICAL**: Every code change requires tests. Write tests alongside (not after) implementation.
+Test-driven development patterns for reliable code changes. Every code change requires tests written alongside implementation, not after. Includes test types, workflow, and common pitfalls. Critical rules include checking logs before running tests and using single DB connections.
 
-**For Comprehensive Test Fixing**: See `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` for systematic test fixing process, including Phase 6 insights on common failure patterns.
+**When to consult**:
+- When writing new code or modifying existing code
+- When implementing new features that require tests
+- When refactoring code that affects existing behavior
+- When debugging test failures or hangs
 
-**Test Types**:
-- **Unit tests**: Mock external dependencies (DB, network, file system)
-- **Integration tests**: Use real DB/APIs to verify end-to-end behavior
-- **API tests**: Test endpoints with actual HTTP requests
+**See**: `docs/agents/tdd-guidelines.md`
 
-**TDD Workflow**:
-1. **Check test logs first**: Read `test-timing-*.log` files to see recent failures (saves 30-60 min)
-2. Search for existing tests covering code you'll modify
-3. Write new test stubs before implementation
-4. Implement incrementally: code → test → next feature
-5. Fix test failures immediately before proceeding
-6. Only mark complete when all tests pass
-
-**Rule of Thumb**: New file → new test file. Modified endpoint → updated tests. Failing tests = incomplete work.
-
-**Common Pitfalls** (October 2025):
-- ✅ **Check schema before logic**: Schema bugs are silent (TEXT vs INTEGER id)
-- ✅ **One app per test**: Multiple connections in WAL mode = isolation
-- ✅ **Fix in layers**: Structure → logic → data → assertions
-- ✅ **Use targeted runs**: `npm run test:file "pattern"` (5s) vs full suite (hangs)
+**Example**: Check test logs first: Read recent test-timing-*.log files to see failures.
 
 ---
 
@@ -695,7 +620,18 @@ Get-Content "file.js" `
   -replace 'pattern2', 'replacement2' | Set-Content "file.js"
 
 # Commands with complex escaping or nested quotes
-(Get-Content "file.js") -replace 'const config = JSON\.parse\(taskRes\.body\.task\.config\);', 'const config = taskRes.body.task.config; // Already parsed by API' | Set-Content "file.js"
+### PowerShell Command Guidelines
+
+Rules for executing commands without VS Code approval dialogs. Use safe patterns and tools instead of complex PowerShell commands that trigger security prompts. Prefer replace_string_in_file for file edits and simple Node commands for operations.
+
+**When to consult**:
+- When you need to run terminal commands
+- When editing files or searching code
+- When you encounter approval dialog blocks
+
+**See**: `docs/agents/command-rules.md`
+
+**Example**: Use `replace_string_in_file` tool instead of Get-Content piped to Set-Content.
 
 # Chained commands with semicolons
 command1; Start-Sleep -Seconds N; command2 | ConvertFrom-Json
@@ -839,49 +775,17 @@ node server.js --detached --auto-shutdown-seconds 10
 
 ## Intelligent Crawl Startup Analysis (Rapid Iteration Workflow)
 
-**Purpose**: Rapidly iterate on dense, informative startup output for intelligent crawls in seconds rather than minutes.
+Rapidly iterate on dense, informative startup output for intelligent crawls in seconds rather than minutes. Use --limit N to display only first N lines, enabling rapid testing without full crawl completion.
 
-**Quick Start**:
-```bash
-# Analyze first 100 lines of startup (recommended)
-node tools/intelligent-crawl.js --limit 100
+**When to consult**:
+- When improving information density in startup output
+- For rapid testing of initialization changes (<30 seconds per iteration)
+- To verify database status, coverage, and missing hubs without full crawl
+- When debugging initialization issues
 
-# Quick check (50 lines)
-node tools/intelligent-crawl.js --limit 50
+**See**: `docs/agents/intelligent-crawl-startup.md`
 
-# Extended analysis (200 lines)
-node tools/intelligent-crawl.js --limit 200
-```
-
-**Workflow**: Use `--limit N` to display only first N lines, enabling rapid testing of startup reporting improvements without waiting for full crawl completion.
-
-**Key Benefits**:
-- ✅ Test startup changes in <30 seconds per iteration
-- ✅ Verify database status, gazetteer coverage, missing hubs in first 100 lines
-- ✅ Optimize information density (single-line summaries, inline lists)
-- ✅ Debug initialization without full crawl overhead
-
-**Target Output** (first 100 lines should show):
-- Database size, article count, place count, country count
-- Country hub coverage (X cached, Y missing [names listed])
-- Topic hub coverage (categories cached)
-- DSPL loading status (learned patterns for domains)
-- Feature flags enabled (abbreviated)
-- Intelligent plan preview (hub count, coverage prediction)
-
-**Logging Discipline** (applies to all intelligent crawl components):
-- ✅ Log once at initialization with summary statistics
-- ✅ Batch operations: "Generated 50 URLs for 50 countries" not 50 separate lines
-- ✅ Single-line summaries with counts, not per-item messages
-- ❌ Never repeat identical log messages in loops
-- ❌ No verbose per-country/per-URL logging during planning
-
-**Full Documentation**: `docs/INTELLIGENT_CRAWL_OUTPUT_LIMITING.md` ⭐ **Complete workflow guide**
-
-**Related Tools**:
-- `tools/db-schema.js` - Query database structure without approval dialogs
-- `tools/db-query.js` - Run read-only queries for status checks
-- See "Database Schema Tools" section in AGENTS.md
+**Example**: `node tools/intelligent-crawl.js --limit 100` for recommended analysis.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: 'Description of the custom chat mode.'
-tools: []
+tools: ['runCommands/runInTerminal', 'edit', 'search/fileSearch', 'search/textSearch', 'search/listDirectory', 'search/readFile', 'extensions', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'github.vscode-pull-request-github/copilotCodingAgent', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/suggest-fix', 'github.vscode-pull-request-github/searchSyntax', 'github.vscode-pull-request-github/doSearch', 'github.vscode-pull-request-github/renderIssues', 'github.vscode-pull-request-github/activePullRequest', 'github.vscode-pull-request-github/openPullRequest', 'todos', 'runTests']
 ---
 
 # RAPID FEATURE IMPLEMENTATION MODE
@@ -27,6 +27,60 @@ tools: []
 - Run full test suite and fix all failures
 - Verify integration scenarios work end-to-end
 - Update documentation
+
+---
+
+## Tool Integration in Rapid Mode
+
+**Leverage available tools to accelerate development while maintaining quality.**
+
+### Essential Tools for Rapid Development
+
+**Code Exploration & Understanding**:
+- **`readFile`**: Quickly examine existing files to understand patterns and copy structures
+- **`grep_search`**: Find similar implementations across the codebase in seconds
+- **`listDirectory`**: Navigate project structure efficiently
+- **`usages`**: Understand how functions/classes are used throughout the project
+
+**Implementation & Editing**:
+- **`editFiles`**: Make precise edits to existing files with confidence
+- **`createFile`**: Scaffold new files from scratch
+- **`runInTerminal`**: Execute commands for testing, building, and validation
+
+**Validation & Testing**:
+- **`runTests`**: Run focused test suites to verify changes
+- **`runInTerminal`**: Execute npm scripts and manual tests
+- **`problems`**: Check for linting errors and compilation issues
+
+### Tool Usage Workflow
+
+**Before Implementation**:
+```
+✅ Use grep_search to find similar features: "grep_search query:'similar-feature' includePattern:'src/**/*.js'"
+✅ Use readFile to examine existing patterns
+✅ Use usages to understand dependencies
+```
+
+**During Implementation**:
+```
+✅ Use editFiles for precise code changes
+✅ Use createFile for new components/services
+✅ Use runInTerminal for quick validation: "runInTerminal command:'npm test'"
+```
+
+**After Implementation**:
+```
+✅ Use runTests for automated validation
+✅ Use problems to catch any issues
+✅ Use runInTerminal for manual testing
+```
+
+### Tool Speed Tips
+
+- **Search First**: Always search for existing patterns before implementing
+- **Batch Operations**: Use tools sequentially for complex changes
+- **Validate Immediately**: Run tests after each significant change
+- **Document Tool Usage**: Note which tools were used for future reference
 
 ---
 

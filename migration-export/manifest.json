@@ -1,237 +1,242 @@
 {
-  "exported_at": "2025-10-19T00:48:47.744Z",
+  "exported_at": "2025-10-19T04:30:43.837Z",
   "schema_version": 1,
-  "database_path": "C:\\Users\\james\\AppData\\Local\\Temp\\copilot-dl-news-tests\\test-117152-1760834927663-zw7oga0ry.db",
+  "database_path": "C:\\Users\\james\\AppData\\Local\\Temp\\copilot-dl-news-tests\\test-126516-1760848243723-5sr1a0lmc.db",
   "tables": {
     "background_tasks": {
       "file": "background_tasks.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.747Z"
+      "exported_at": "2025-10-19T04:30:43.845Z"
     },
     "bucket_entries": {
       "file": "bucket_entries.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.748Z"
+      "exported_at": "2025-10-19T04:30:43.847Z"
     },
     "compression_buckets": {
       "file": "compression_buckets.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.749Z"
+      "exported_at": "2025-10-19T04:30:43.849Z"
     },
     "compression_types": {
       "file": "compression_types.ndjson",
       "row_count": 18,
-      "exported_at": "2025-10-19T00:48:47.752Z"
+      "exported_at": "2025-10-19T04:30:43.852Z"
     },
     "content_analysis": {
       "file": "content_analysis.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.753Z"
+      "exported_at": "2025-10-19T04:30:43.854Z"
     },
     "content_storage": {
       "file": "content_storage.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.754Z"
+      "exported_at": "2025-10-19T04:30:43.855Z"
     },
     "crawl_jobs": {
       "file": "crawl_jobs.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.755Z"
+      "exported_at": "2025-10-19T04:30:43.857Z"
     },
     "crawl_milestones": {
       "file": "crawl_milestones.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.756Z"
+      "exported_at": "2025-10-19T04:30:43.858Z"
     },
     "crawl_problems": {
       "file": "crawl_problems.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.757Z"
+      "exported_at": "2025-10-19T04:30:43.860Z"
     },
     "crawl_skip_terms": {
       "file": "crawl_skip_terms.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.758Z"
+      "exported_at": "2025-10-19T04:30:43.861Z"
     },
     "crawl_tasks": {
       "file": "crawl_tasks.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.759Z"
+      "exported_at": "2025-10-19T04:30:43.862Z"
     },
     "crawl_types": {
       "file": "crawl_types.ndjson",
       "row_count": 8,
-      "exported_at": "2025-10-19T00:48:47.760Z"
+      "exported_at": "2025-10-19T04:30:43.864Z"
     },
     "crawler_settings": {
       "file": "crawler_settings.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.761Z"
+      "exported_at": "2025-10-19T04:30:43.865Z"
     },
     "discovery_events": {
       "file": "discovery_events.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.762Z"
+      "exported_at": "2025-10-19T04:30:43.867Z"
     },
     "domain_categories": {
       "file": "domain_categories.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.763Z"
+      "exported_at": "2025-10-19T04:30:43.868Z"
     },
     "domain_category_map": {
       "file": "domain_category_map.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.764Z"
+      "exported_at": "2025-10-19T04:30:43.870Z"
     },
     "domain_locales": {
       "file": "domain_locales.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.765Z"
+      "exported_at": "2025-10-19T04:30:43.871Z"
     },
     "domains": {
       "file": "domains.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.766Z"
+      "exported_at": "2025-10-19T04:30:43.873Z"
     },
     "errors": {
       "file": "errors.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.767Z"
+      "exported_at": "2025-10-19T04:30:43.874Z"
     },
     "gazetteer_crawl_state": {
       "file": "gazetteer_crawl_state.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.768Z"
+      "exported_at": "2025-10-19T04:30:43.875Z"
     },
     "http_responses": {
       "file": "http_responses.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.769Z"
+      "exported_at": "2025-10-19T04:30:43.876Z"
     },
     "ingestion_runs": {
       "file": "ingestion_runs.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.770Z"
+      "exported_at": "2025-10-19T04:30:43.878Z"
+    },
+    "latest_fetch": {
+      "file": "latest_fetch.ndjson",
+      "row_count": 0,
+      "exported_at": "2025-10-19T04:30:43.879Z"
     },
     "links": {
       "file": "links.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.771Z"
+      "exported_at": "2025-10-19T04:30:43.880Z"
     },
     "news_websites": {
       "file": "news_websites.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.772Z"
+      "exported_at": "2025-10-19T04:30:43.881Z"
     },
     "news_websites_stats_cache": {
       "file": "news_websites_stats_cache.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.772Z"
+      "exported_at": "2025-10-19T04:30:43.882Z"
     },
     "page_categories": {
       "file": "page_categories.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.773Z"
+      "exported_at": "2025-10-19T04:30:43.883Z"
     },
     "page_category_map": {
       "file": "page_category_map.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.774Z"
+      "exported_at": "2025-10-19T04:30:43.885Z"
     },
     "place_attribute_values": {
       "file": "place_attribute_values.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.775Z"
+      "exported_at": "2025-10-19T04:30:43.886Z"
     },
     "place_attributes": {
       "file": "place_attributes.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.776Z"
+      "exported_at": "2025-10-19T04:30:43.887Z"
     },
     "place_external_ids": {
       "file": "place_external_ids.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.777Z"
+      "exported_at": "2025-10-19T04:30:43.888Z"
     },
     "place_hierarchy": {
       "file": "place_hierarchy.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.777Z"
+      "exported_at": "2025-10-19T04:30:43.889Z"
     },
     "place_hub_unknown_terms": {
       "file": "place_hub_unknown_terms.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.778Z"
+      "exported_at": "2025-10-19T04:30:43.890Z"
     },
     "place_hubs": {
       "file": "place_hubs.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.779Z"
+      "exported_at": "2025-10-19T04:30:43.891Z"
     },
     "place_names": {
       "file": "place_names.ndjson",
       "row_count": 2,
-      "exported_at": "2025-10-19T00:48:47.779Z"
+      "exported_at": "2025-10-19T04:30:43.893Z"
     },
     "place_provenance": {
       "file": "place_provenance.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.780Z"
+      "exported_at": "2025-10-19T04:30:43.894Z"
     },
     "place_sources": {
       "file": "place_sources.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.781Z"
+      "exported_at": "2025-10-19T04:30:43.895Z"
     },
     "places": {
       "file": "places.ndjson",
       "row_count": 2,
-      "exported_at": "2025-10-19T00:48:47.782Z"
+      "exported_at": "2025-10-19T04:30:43.896Z"
     },
     "planner_stage_events": {
       "file": "planner_stage_events.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.783Z"
+      "exported_at": "2025-10-19T04:30:43.897Z"
     },
     "query_telemetry": {
       "file": "query_telemetry.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.784Z"
+      "exported_at": "2025-10-19T04:30:43.899Z"
     },
     "queue_events": {
       "file": "queue_events.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.785Z"
+      "exported_at": "2025-10-19T04:30:43.900Z"
     },
     "schema_migrations": {
       "file": "schema_migrations.ndjson",
       "row_count": 1,
-      "exported_at": "2025-10-19T00:48:47.786Z"
+      "exported_at": "2025-10-19T04:30:43.901Z"
     },
     "topic_keywords": {
       "file": "topic_keywords.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.788Z"
+      "exported_at": "2025-10-19T04:30:43.902Z"
     },
     "url_aliases": {
       "file": "url_aliases.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.789Z"
+      "exported_at": "2025-10-19T04:30:43.904Z"
     },
     "url_categories": {
       "file": "url_categories.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.790Z"
+      "exported_at": "2025-10-19T04:30:43.905Z"
     },
     "url_category_map": {
       "file": "url_category_map.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T00:48:47.791Z"
+      "exported_at": "2025-10-19T04:30:43.906Z"
     },
     "urls": {
       "file": "urls.ndjson",
       "row_count": 5,
-      "exported_at": "2025-10-19T00:48:47.792Z"
+      "exported_at": "2025-10-19T04:30:43.907Z"
     }
   },
   "schema_file": "schema.sql"

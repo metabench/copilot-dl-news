@@ -171,6 +171,11 @@ class CrawlerDb {
     try { return this.db.insertError(err); } catch (_) { return null; }
   }
 
+  insertHttpResponse(httpResponseData) {
+    if (!this.db || typeof this.db.insertHttpResponse !== 'function') return null;
+    try { return this.db.insertHttpResponse(httpResponseData); } catch (_) { return null; }
+  }
+
   upsertUrl(url, canonical = null, analysis = null) {
     if (!this.db || typeof this.db.upsertUrl !== 'function') return null;
     try { return this.db.upsertUrl(url, canonical, analysis); } catch (_) { return null; }

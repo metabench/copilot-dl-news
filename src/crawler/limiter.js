@@ -14,7 +14,7 @@ class DomainLimiter {
       s = {
         host,
         isLimited: false,
-        rpm: null,
+        rpm: 30,  // Default conservative RPM for new domains to prevent 429 errors
         nextRequestAt: 0,
         backoffUntil: 0,
         lastRequestAt: 0,

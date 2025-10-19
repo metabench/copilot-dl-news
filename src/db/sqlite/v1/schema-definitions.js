@@ -399,6 +399,18 @@ CREATE TABLE IF NOT EXISTS query_telemetry (
 CREATE INDEX IF NOT EXISTS idx_query_telemetry_type ON query_telemetry(query_type);
 CREATE INDEX IF NOT EXISTS idx_query_telemetry_operation ON query_telemetry(operation);
 CREATE INDEX IF NOT EXISTS idx_query_telemetry_created ON query_telemetry(created_at);
+
+-- Legacy compatibility table for latest_fetch (maintained by triggers)
+CREATE TABLE IF NOT EXISTS latest_fetch (
+  url TEXT PRIMARY KEY,
+  ts TEXT,
+  http_status INTEGER,
+  classification TEXT,
+  word_count INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_latest_fetch_classification ON latest_fetch(classification);
+CREATE INDEX IF NOT EXISTS idx_latest_fetch_status ON latest_fetch(http_status);
+
 `;
 
 module.exports = { ALL_TABLES_SCHEMA };

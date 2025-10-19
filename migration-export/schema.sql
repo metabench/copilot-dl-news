@@ -60,6 +60,10 @@ CREATE INDEX idx_ingestion_runs_completed ON ingestion_runs(completed_at);
 
 CREATE INDEX idx_ingestion_runs_source_status ON ingestion_runs(source, status);
 
+CREATE INDEX idx_latest_fetch_classification ON latest_fetch(classification);
+
+CREATE INDEX idx_latest_fetch_status ON latest_fetch(http_status);
+
 CREATE INDEX idx_links_dst ON links(dst_url_id);
 
 CREATE INDEX idx_links_src ON links(src_url_id);
@@ -419,6 +423,14 @@ CREATE TABLE ingestion_runs (
       error_message TEXT,
       metadata JSON                        -- Additional run metadata
     );
+
+CREATE TABLE latest_fetch (
+  url TEXT PRIMARY KEY,
+  ts TEXT,
+  http_status INTEGER,
+  classification TEXT,
+  word_count INTEGER
+);
 
 CREATE TABLE links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

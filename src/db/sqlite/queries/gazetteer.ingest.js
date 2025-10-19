@@ -139,11 +139,8 @@ function createIngestionStatements(db) {
       UPDATE places SET canonical_name_id = ? WHERE id = ?
     `),
     
-    getBestName: db.prepare(`
-      SELECT id FROM place_names 
-      WHERE place_id = ? 
-      ORDER BY is_official DESC, is_preferred DESC, (lang='en') DESC, id ASC 
-      LIMIT 1
+    getCanonicalNameId: db.prepare(`
+      SELECT canonical_name_id FROM places WHERE id = ?
     `),
 
     attributeStatements
@@ -325,6 +322,12 @@ function insertPlaceName(statements, placeId, nameData) {
       nameData.isOfficial ? 1 : 0,
       nameData.source || 'wikidata'
     );
+    
+    // Set canonical name if not already set
+    const existingCanonical = statements.getCanonicalNameId.get(placeId);
+    if (!existingCanonical.canonical_name_id) {
+      setCanonicalName(statements, placeId);
+    }
   } catch (err) {
     // Ignore duplicate name errors
   }

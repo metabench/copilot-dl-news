@@ -89,34 +89,46 @@ const discoveredHubs = {
 // Function to verify if a title corresponds to a real place
 function isActualPlaceHub(title, url) {
   // Extract place name from title like "France | The Guardian" or "Latest Australia news"
-  
+
   // Pattern 1: "PlaceName | The Guardian"
   const pattern1 = title.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+\|/);
   if (pattern1) {
-    const placeName = pattern1[1].toLowerCase();
-    if (placeNames.has(placeName)) {
-      return { isHub: true, name: pattern1[1] };
+    const placeName = pattern1[1];
+    // Only consider countries as place hubs for news websites
+    const isCountry = allCountries.some(c =>
+      c.name.toLowerCase() === placeName.toLowerCase()
+    );
+    if (isCountry) {
+      return { isHub: true, name: placeName };
     }
   }
-  
+
   // Pattern 2: "Latest PlaceName news"
   const pattern2 = title.match(/Latest\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+news/);
   if (pattern2) {
-    const placeName = pattern2[1].toLowerCase();
-    if (placeNames.has(placeName)) {
-      return { isHub: true, name: pattern2[1] };
+    const placeName = pattern2[1];
+    // Only consider countries as place hubs for news websites
+    const isCountry = allCountries.some(c =>
+      c.name.toLowerCase() === placeName.toLowerCase()
+    );
+    if (isCountry) {
+      return { isHub: true, name: placeName };
     }
   }
-  
+
   // Pattern 3: "PlaceName news from"
   const pattern3 = title.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+news/);
   if (pattern3) {
-    const placeName = pattern3[1].toLowerCase();
-    if (placeNames.has(placeName)) {
-      return { isHub: true, name: pattern3[1] };
+    const placeName = pattern3[1];
+    // Only consider countries as place hubs for news websites
+    const isCountry = allCountries.some(c =>
+      c.name.toLowerCase() === placeName.toLowerCase()
+    );
+    if (isCountry) {
+      return { isHub: true, name: placeName };
     }
   }
-  
+
   return { isHub: false, name: null };
 }
 
@@ -283,7 +295,7 @@ if (!verbose) {
           if (isCountry) {
             discoveredHubs.country.push(placeHub.name);
           }
-          return;
+          // Don't return here - allow checking for topic hubs too
         }
         
         // Check for topic hub (verified against known topics)
@@ -293,6 +305,11 @@ if (!verbose) {
           originalLog(colorize(hubStr, 'cyan'));
           if (outputLimit) lineCount++;
           discoveredHubs.topic.push(topicHub.name);
+          // Don't return here - allow multiple hub types
+        }
+        
+        // If we found any hubs, don't show as regular article
+        if (placeHub.isHub || topicHub.isHub) {
           return;
         }
         

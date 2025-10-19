@@ -16,13 +16,13 @@ function createDeduplicationStatements(db) {
     getIngestionRun: db.prepare(`
       SELECT id, started_at, completed_at, status, metadata
       FROM ingestion_runs
-      WHERE source = ? AND version = ?
+      WHERE source = ? AND source_version = ?
       ORDER BY started_at DESC
       LIMIT 1
     `),
 
     insertIngestionRun: db.prepare(`
-      INSERT INTO ingestion_runs (source, version, started_at, status, metadata)
+      INSERT INTO ingestion_runs (source, source_version, started_at, status, metadata)
       VALUES (?, ?, datetime('now'), 'running', ?)
     `),
 
@@ -66,8 +66,8 @@ function createDeduplicationStatements(db) {
 
     // Capital relationship management
     insertCapitalRelationship: db.prepare(`
-      INSERT OR IGNORE INTO place_hierarchy (parent_id, child_id, relation, depth, metadata)
-      VALUES (?, ?, 'capital_of', 1, ?)
+      INSERT OR IGNORE INTO place_hierarchy (parent_id, child_id, relation, depth)
+      VALUES (?, ?, 'capital_of', 1)
     `)
   };
 }
@@ -234,8 +234,7 @@ function generateCapitalExternalId(source, countryCode, normalizedName) {
  */
 function addCapitalRelationship(statements, countryId, capitalId, metadata = {}) {
   try {
-    const metadataJson = JSON.stringify(metadata);
-    statements.insertCapitalRelationship.run(countryId, capitalId, metadataJson);
+    statements.insertCapitalRelationship.run(countryId, capitalId);
   } catch (err) {
     console.warn('[deduplication] Error adding capital relationship:', err.message);
     // Don't throw - relationship is optional

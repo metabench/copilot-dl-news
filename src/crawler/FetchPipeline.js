@@ -2,6 +2,9 @@ const { shouldUseCache } = require('../cache');
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
+// Configuration for error response body storage
+const STORE_ERROR_RESPONSE_BODIES = process.env.STORE_ERROR_BODIES === 'true';
+
 function defaultLogger() {
   return {
     info: (...args) => console.log(...args),
@@ -289,36 +292,46 @@ class FetchPipeline {
 
       clearTimeout(timeoutHandle);
 
-      // Handle redirects manually with protocol correction
+      // Handle redirects manually with protocol correction (support multiple redirects)
       let actualResponse = response;
       let finalUrl = normalizedUrl;
+      let redirectCount = 0;
+      const maxRedirects = 5; // Prevent infinite redirect loops
       
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get('location');
-        if (location) {
-          let redirectUrl = location;
-          // Make relative URLs absolute
-          if (!redirectUrl.startsWith('http')) {
-            redirectUrl = new URL(redirectUrl, normalizedUrl).href;
-          }
-          // Force https: for Guardian/BBC domains
-          if (redirectUrl.startsWith('http://')) {
-            const redirectHost = new URL(redirectUrl).hostname;
-            if (redirectHost.includes('theguardian.com') || redirectHost.includes('bbc.co')) {
-              redirectUrl = redirectUrl.replace(/^http:/, 'https:');
-              this.logger.warn(`Redirect location corrected: ${location} → ${redirectUrl}`);
-            }
-          }
-          // Follow the corrected redirect
-          this.logger.info(`Following redirect: ${normalizedUrl} → ${redirectUrl}`);
-          actualResponse = await this.fetchFn(redirectUrl, {
-            headers,
-            agent: redirectUrl.startsWith('https:') ? this.httpsAgent : this.httpAgent,
-            signal: abortController.signal,
-            redirect: 'manual'
-          });
-          finalUrl = redirectUrl;
+      while (actualResponse.status >= 300 && actualResponse.status < 400 && redirectCount < maxRedirects) {
+        const location = actualResponse.headers.get('location');
+        if (!location) break; // No location header, can't follow redirect
+        
+        let redirectUrl = location;
+        // Make relative URLs absolute
+        if (!redirectUrl.startsWith('http')) {
+          redirectUrl = new URL(redirectUrl, finalUrl).href;
         }
+        // Force https: for Guardian/BBC domains
+        if (redirectUrl.startsWith('http://')) {
+          const redirectHost = new URL(redirectUrl).hostname;
+          if (redirectHost.includes('theguardian.com') || redirectHost.includes('bbc.co')) {
+            redirectUrl = redirectUrl.replace(/^http:/, 'https:');
+            this.logger.warn(`Redirect location corrected: ${location} → ${redirectUrl}`);
+          }
+        }
+        
+        redirectCount++;
+        this.logger.info(`Following redirect ${redirectCount}: ${finalUrl} → ${redirectUrl}`);
+        
+        // Follow the redirect
+        actualResponse = await this.fetchFn(redirectUrl, {
+          headers,
+          agent: redirectUrl.startsWith('https:') ? this.httpsAgent : this.httpAgent,
+          signal: abortController.signal,
+          redirect: 'manual'
+        });
+        finalUrl = redirectUrl;
+      }
+      
+      // Check for too many redirects
+      if (redirectCount >= maxRedirects) {
+        this.logger.warn(`Too many redirects (${redirectCount}) for ${normalizedUrl}, stopping at ${finalUrl}`);
       }
 
       const headersReady = Date.now();
@@ -352,6 +365,25 @@ class FetchPipeline {
           transferKbps: null,
           conditional: !!conditionalHeaders
         };
+
+        // Record HTTP response
+        await this._recordHttpResponse({
+          url: normalizedUrl,
+          status,
+          headers: actualResponse.headers,
+          timing: {
+            requestStartedIso,
+            fetchedAtIso: meta.fetchedAtIso,
+            ttfbMs,
+            downloadMs: null,
+            totalMs,
+            bytesDownloaded: 0,
+            transferKbps: null
+          },
+          body: null, // 304 responses have no body
+          redirectChain: null
+        });
+
         this._recordConditionalHeaders(normalizedUrl, { etag, lastModified, fetched_at: meta.fetchedAtIso });
         this.noteSuccess(host);
         return this._buildResult({
@@ -367,14 +399,43 @@ class FetchPipeline {
         const retryAfterHeader = actualResponse.headers.get('retry-after');
         const retryAfterMs = this.parseRetryAfter ? this.parseRetryAfter(retryAfterHeader) : null;
         this.logger.warn(`Failed to fetch ${normalizedUrl}: ${status}`);
-        this._recordHttpError(normalizedUrl, status);
+
+        // Read response body for error recording if configured
+        let errorBody = null;
+        if (STORE_ERROR_RESPONSE_BODIES) {
+          try {
+            errorBody = await actualResponse.text();
+          } catch (bodyError) {
+            this.logger.warn(`Failed to read error response body: ${bodyError.message}`);
+          }
+        }
+
+        // Record HTTP response
+        await this._recordHttpResponse({
+          url: finalUrl,
+          status,
+          headers: actualResponse.headers,
+          timing: {
+            requestStartedIso,
+            fetchedAtIso: new Date(Date.now()).toISOString(),
+            ttfbMs,
+            downloadMs: null, // Error responses don't download content
+            totalMs: Date.now() - started,
+            bytesDownloaded: errorBody ? Buffer.byteLength(errorBody, 'utf8') : 0,
+            transferKbps: null
+          },
+          body: errorBody,
+          redirectChain: finalUrl !== normalizedUrl ? JSON.stringify([normalizedUrl, finalUrl]) : null
+        });
+
+        this._recordHttpError(finalUrl, status);
         if (status === 429) {
           this.note429(host, retryAfterMs);
         }
         return this._buildResult({
           status: 'error',
           source: 'error',
-          url: normalizedUrl,
+          url: finalUrl,
           error: {
             kind: 'http',
             httpStatus: status,
@@ -416,6 +477,24 @@ class FetchPipeline {
         transferKbps,
         conditional: !!conditionalHeaders
       };
+
+      // Record HTTP response (successful responses don't store body here - that's handled by content acquisition)
+      await this._recordHttpResponse({
+        url: finalUrl,
+        status,
+        headers: actualResponse.headers,
+        timing: {
+          requestStartedIso,
+          fetchedAtIso: fetchMeta.fetchedAtIso,
+          ttfbMs,
+          downloadMs,
+          totalMs,
+          bytesDownloaded,
+          transferKbps
+        },
+        body: null, // Successful responses store content via content acquisition, not here
+        redirectChain
+      });
 
       this._recordConditionalHeaders(finalUrl, {
         etag,
@@ -527,6 +606,54 @@ class FetchPipeline {
     try {
       console.log(`ERROR ${JSON.stringify({ url, kind, message: error?.message || String(error) })}`);
     } catch (_) {}
+  }
+
+  /**
+   * Record HTTP response metadata (and optionally body for errors when configured)
+   * @param {object} responseData
+   * @param {string} responseData.url - Final URL after redirects
+   * @param {number} responseData.status - HTTP status code
+   * @param {object} responseData.headers - Response headers object
+   * @param {object} responseData.timing - Timing information
+   * @param {string|null} responseData.body - Response body (only for errors when configured)
+   * @param {string|null} responseData.redirectChain - JSON string of redirect chain
+   */
+  async _recordHttpResponse({ url, status, headers, timing, body = null, redirectChain = null }) {
+    try {
+      const dbAdapter = this.getDbAdapter();
+      if (!dbAdapter || !dbAdapter.isEnabled?.()) return;
+
+      // Always record HTTP response metadata
+      const httpResponseData = {
+        url,
+        request_started_at: timing.requestStartedIso,
+        fetched_at: timing.fetchedAtIso,
+        http_status: status,
+        content_type: headers.get('content-type') || null,
+        content_encoding: headers.get('content-encoding') || null,
+        etag: headers.get('etag') || null,
+        last_modified: headers.get('last-modified') || null,
+        redirect_chain: redirectChain,
+        ttfb_ms: timing.ttfbMs,
+        download_ms: timing.downloadMs,
+        total_ms: timing.totalMs,
+        bytes_downloaded: timing.bytesDownloaded || 0,
+        transfer_kbps: timing.transferKbps
+      };
+
+      // Store response body for errors only when configured
+      const shouldStoreBody = body && status >= 400 && STORE_ERROR_RESPONSE_BODIES;
+
+      if (shouldStoreBody) {
+        httpResponseData.content_body = body;
+        httpResponseData.content_length = Buffer.byteLength(body, 'utf8');
+      }
+
+      await dbAdapter.insertHttpResponse(httpResponseData);
+    } catch (error) {
+      // Don't fail the fetch if response recording fails
+      this.logger.warn(`Failed to record HTTP response for ${url}: ${error.message}`);
+    }
   }
 
   _buildResult({ status, source, url = null, html = null, fetchMeta = null, error = null, retryAfterMs = null, decision = null, cacheInfo = null, reason = null }) {

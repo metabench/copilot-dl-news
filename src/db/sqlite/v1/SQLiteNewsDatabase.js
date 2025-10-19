@@ -1250,6 +1250,102 @@ class NewsDatabase {
     });
   }
 
+  /**
+   * Insert HTTP response metadata (and optionally error body)
+   * @param {object} responseData
+   * @param {string} responseData.url - The URL that was requested
+   * @param {string} responseData.request_started_at - ISO timestamp when request started
+   * @param {string} responseData.fetched_at - ISO timestamp when response received
+   * @param {number} responseData.http_status - HTTP status code
+   * @param {string} responseData.content_type - Content-Type header
+   * @param {string} responseData.content_encoding - Content-Encoding header
+   * @param {string} responseData.etag - ETag header
+   * @param {string} responseData.last_modified - Last-Modified header
+   * @param {string} responseData.redirect_chain - JSON string of redirect chain
+   * @param {number} responseData.ttfb_ms - Time to first byte in milliseconds
+   * @param {number} responseData.download_ms - Download time in milliseconds
+   * @param {number} responseData.total_ms - Total request time in milliseconds
+   * @param {number} responseData.bytes_downloaded - Bytes downloaded
+   * @param {number} responseData.transfer_kbps - Transfer speed in KB/s
+   * @param {string} responseData.content_body - Response body (only for errors when configured)
+   * @param {number} responseData.content_length - Content-Length header value
+   * @returns {number} HTTP response ID
+   */
+  insertHttpResponse(responseData) {
+    try {
+      // Ensure URL exists in urls table
+      const urlId = this._ensureUrlId(responseData.url);
+      if (!urlId) {
+        console.warn('[insertHttpResponse] Failed to ensure URL:', responseData.url);
+        return null;
+      }
+
+      // Insert HTTP response metadata
+      const httpResponseResult = this.db.prepare(`
+        INSERT INTO http_responses (
+          url_id, request_started_at, fetched_at, http_status,
+          content_type, content_encoding, etag, last_modified,
+          redirect_chain, ttfb_ms, download_ms, total_ms,
+          bytes_downloaded, transfer_kbps
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        urlId,
+        responseData.request_started_at,
+        responseData.fetched_at,
+        responseData.http_status,
+        responseData.content_type,
+        responseData.content_encoding,
+        responseData.etag,
+        responseData.last_modified,
+        responseData.redirect_chain,
+        responseData.ttfb_ms,
+        responseData.download_ms,
+        responseData.total_ms,
+        responseData.bytes_downloaded,
+        responseData.transfer_kbps
+      );
+
+      const httpResponseId = httpResponseResult.lastInsertRowid;
+
+      // Store error response body if provided
+      if (responseData.content_body && responseData.http_status >= 400) {
+        this._insertErrorResponseBody(httpResponseId, responseData);
+      }
+
+      return httpResponseId;
+    } catch (error) {
+      console.error('[insertHttpResponse] Error inserting HTTP response:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Insert error response body (compressed) into content_storage
+   * @param {number} httpResponseId - HTTP response ID
+   * @param {object} responseData - Response data containing body
+   * @private
+   */
+  _insertErrorResponseBody(httpResponseId, responseData) {
+    try {
+      const contentData = {
+        http_response_id: httpResponseId,
+        storage_type: 'error_response',
+        compression_type_id: null, // Could add compression later if needed
+        compression_bucket_id: null,
+        bucket_entry_key: null,
+        content_blob: Buffer.from(responseData.content_body, 'utf8'),
+        content_sha256: null, // Not computing for error responses
+        uncompressed_size: Buffer.byteLength(responseData.content_body, 'utf8'),
+        compressed_size: Buffer.byteLength(responseData.content_body, 'utf8'), // No compression for now
+        compression_ratio: 1.0
+      };
+
+      this._insertContentStorage(contentData);
+    } catch (error) {
+      console.warn('[insertHttpResponse] Failed to store error response body:', error.message);
+    }
+  }
+
   getHandle() {
     return this.db;
   }

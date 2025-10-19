@@ -61,10 +61,30 @@ node tools/corrections/fix-place-hub-names.js
 node tools/corrections/fix-place-hub-names.js --fix
 ```
 
-### 4. fix-duplicate-capitals.js (Legacy)
-**Basic duplicate merger - superseded by fix-duplicate-places.js**
+### 5. detect-duplicate-places.js ⭐
+**Detect multiple types of duplicate places without fixing them**
 
-Use fix-duplicate-places.js instead for better results.
+Comprehensive duplicate detection across 5 criteria:
+- Wikidata QID duplicates (most reliable)
+- OSM ID + type duplicates
+- External ID duplicates (geonames, osm, wikidata)
+- Coordinate proximity duplicates (< 5.5km)
+- Name-based duplicates (same normalized name in country/kind)
+
+```bash
+# Detect all duplicate types
+node tools/detect-duplicate-places.js
+
+# Focus on specific types
+node tools/detect-duplicate-places.js --type=wikidata
+node tools/detect-duplicate-places.js --type=coords --proximity=0.1
+
+# Filter by geography
+node tools/detect-duplicate-places.js --country=US --kind=city
+
+# Limit results for quick overview
+node tools/detect-duplicate-places.js --limit=10
+```
 
 ## 🎯 Recommended Workflow
 

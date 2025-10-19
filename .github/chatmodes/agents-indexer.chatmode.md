@@ -1,6 +1,6 @@
 ---
 description: Keep AGENTS.md slim, authoritative, and index-driven. Extract bulky content into indexed docs and enforce a lookup ritual.
-tools: ['search','githubRepo','fetch','editor','edit','terminal']
+tools: ['runCommands/runInTerminal', 'edit', 'search', 'extensions', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'github.vscode-pull-request-github/copilotCodingAgent', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/suggest-fix', 'github.vscode-pull-request-github/searchSyntax', 'github.vscode-pull-request-github/doSearch', 'github.vscode-pull-request-github/renderIssues', 'github.vscode-pull-request-github/activePullRequest', 'github.vscode-pull-request-github/openPullRequest', 'todos', 'runTests']
 ---
 
 # Agents Indexer (AGENTS.md guardian)
