@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { getTopRegions } = require('../db/sqlite/queries/gazetteer.places');
+const { getTopRegions } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { slugify } = require('../tools/slugify');
 const { loadDsplLibrary, getDsplForDomain } = require('./shared/dspl');
 

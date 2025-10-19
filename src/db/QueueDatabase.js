@@ -9,6 +9,36 @@ class QueueDatabase {
     this._prepareStatements();
   }
 
+  _ensureUrlId(url) {
+    if (!url) return null;
+
+    try {
+      // Try to get existing URL ID
+      let urlRow = this.db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
+      if (urlRow) return urlRow.id;
+
+      // URL doesn't exist, insert it
+      const host = (() => {
+        try {
+          const u = new URL(url);
+          return u.hostname.toLowerCase();
+        } catch (_) {
+          return null;
+        }
+      })();
+
+      const result = this.db.prepare(`
+        INSERT INTO urls (url, host, created_at, last_seen_at)
+        VALUES (?, ?, datetime('now'), datetime('now'))
+      `).run(url, host);
+
+      return result.lastInsertRowid;
+    } catch (err) {
+      console.warn(`[QueueDatabase] Failed to ensure URL ${url}:`, err?.message || err);
+      return null;
+    }
+  }
+
   _ensureSchema() {
     // Enhanced queue events with priority metadata
     this.db.exec(`
@@ -17,7 +47,7 @@ class QueueDatabase {
         job_id TEXT NOT NULL,
         ts TEXT NOT NULL,
         action TEXT NOT NULL,
-        url TEXT NOT NULL,
+        url_id INTEGER,
         depth INTEGER,
         host TEXT,
         reason TEXT,
@@ -100,11 +130,11 @@ class QueueDatabase {
     // Enhanced queue event insertion
     this._insertEnhancedQueueEventStmt = this.db.prepare(`
       INSERT INTO queue_events_enhanced (
-        job_id, ts, action, url, depth, host, reason, queue_size, alias,
+        job_id, ts, action, url_id, depth, host, reason, queue_size, alias,
         queue_origin, queue_role, queue_depth_bucket,
         priority_score, priority_source, bonus_applied, cluster_id, gap_prediction_score
       ) VALUES (
-        @jobId, @ts, @action, @url, @depth, @host, @reason, @queueSize, @alias,
+        @jobId, @ts, @action, @urlId, @depth, @host, @reason, @queueSize, @alias,
         @queueOrigin, @queueRole, @queueDepthBucket,
         @priorityScore, @prioritySource, @bonusApplied, @clusterId, @gapPredictionScore
       )
@@ -167,8 +197,9 @@ class QueueDatabase {
     priorityScore, prioritySource, bonusApplied, clusterId, gapPredictionScore
   }) {
     try {
+      const urlId = url ? this._ensureUrlId(url) : null;
       return this._insertEnhancedQueueEventStmt.run({
-        jobId, ts, action, url, depth, host, reason, queueSize, alias,
+        jobId, ts, action, urlId, depth, host, reason, queueSize, alias,
         queueOrigin: queueOrigin || null,
         queueRole: queueRole || null,
         queueDepthBucket: queueDepthBucket || null,

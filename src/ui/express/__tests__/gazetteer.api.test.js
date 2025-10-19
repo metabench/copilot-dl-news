@@ -16,7 +16,7 @@ function seedMinimalGazetteer(dbPath) {
   // Places: country, region, city
   db.db.exec(`
     DELETE FROM places; DELETE FROM place_names; DELETE FROM place_external_ids; DELETE FROM place_hierarchy;
-    DELETE FROM articles; DELETE FROM place_hubs;
+    DELETE FROM place_hubs;
   `);
   const insPlace = db.db.prepare(`INSERT INTO places(kind, country_code, adm1_code, population, canonical_name_id) VALUES (?,?,?,?,NULL)`);
   const ids = {};

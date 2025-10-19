@@ -103,8 +103,16 @@ function createUrlsApiRouter({ urlsDbPath }) {
     try {
       withNewsDb(urlsDbPath, (db) => {
         const handle = typeof db.getHandle === 'function' ? db.getHandle() : db.db;
+        
+        // Record access for API usage
+        const accessContext = {
+          source: 'api',
+          userAgent: req.get('User-Agent') || null,
+          ip: req.ip || req.connection?.remoteAddress || null
+        };
+        
         const urlInfo = getUrlRecord(handle, url);
-        const article = db.getArticleRowByUrl(url) || null;
+        const article = db.getArticleByUrl(url, accessContext) || null;
         const fetches = db.getFetchesByUrl(url, 200) || [];
         
         res.json({ url, urlInfo, article, fetches });

@@ -7,7 +7,13 @@ describe('database adapter registry', () => {
     jest.isolateModules(() => {
       const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'adapter-sqlite-'));
       const dbPath = path.join(tmpRoot, 'news.db');
-      const NewsDatabase = require('../db');
+      
+      // Manually register the sqlite adapter since isolateModules prevents auto-registration
+      const { registerAdapter } = require('../db');
+      registerAdapter("sqlite", (options) => {
+        const { createSQLiteDatabase } = require("../db/sqlite/v1/index");
+        return createSQLiteDatabase(options);
+      });      const NewsDatabase = require('../db');
 
       let db;
       try {

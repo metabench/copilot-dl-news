@@ -5,7 +5,7 @@ let DEFAULT_TOPIC_TOKENS = null;
 
 function getDefaultTopicTokens(db) {
   if (!DEFAULT_TOPIC_TOKENS && db) {
-    const { getTopicTermsForLanguage } = require('../db/sqlite/queries/topicKeywords');
+    const { getTopicTermsForLanguage } = require('../db/sqlite/v1/queries/topicKeywords');
     DEFAULT_TOPIC_TOKENS = getTopicTermsForLanguage(db, 'en');
   }
   // Fallback to minimal set if no database provided

@@ -824,6 +824,34 @@ app = createApp({ dbPath }); // Connection 2 - won't see seeded data!
 - Configuration runner: `node tests/run-tests.js <suite>` (no approval dialogs)
 - When the user labels a test "broken", move the file into `tests/broken/` (mirroring its subdirectory) so regular suites skip it. Keep the contents intact there for future repair work and note the relocation in your summary.
 
+**🔥 CRITICAL: Focused Testing When Working on Single Features** (October 2025)
+
+**When working on a single thing (like DB migration, UI component, or API endpoint), DON'T run the full unit test suite**:
+
+- ✅ **Run ONLY the relevant tests**: Use `npm run test:file "pattern"` for tests related to your changes
+- ✅ **Check logs first**: Use `node tests/analyze-test-logs.js --summary` to see current status without running tests
+- ✅ **Iterate on focused tests**: Fix one test file, verify it passes, then move to next
+- ✅ **Run full suite only at completion**: Once all related tests pass, run the full suite once to catch regressions
+
+**Why this matters**:
+- Full suite runs take 2-5 minutes and provide no value when working on isolated features
+- Most test failures are unrelated to your current work (schema bugs, import issues, etc.)
+- Focused testing enables rapid iteration (seconds per cycle vs minutes)
+- Prevents wasting time on unrelated failures that aren't your responsibility
+
+**Example workflow for DB migration**:
+```bash
+# ❌ WRONG: Don't run full suite repeatedly
+npm test  # Takes 5min, shows unrelated failures
+
+# ✅ RIGHT: Run only DB-related tests
+npm run test:file "db.*test"  # Takes 30s, shows only relevant failures
+npm run test:file "migration.*test"  # Takes 10s, shows only migration failures
+
+# ✅ RIGHT: Check status without running
+node tests/analyze-test-logs.js --summary  # Takes 5s, shows current status
+```
+
 **See specialized docs above for complete testing workflows and patterns.**
 
 **Telemetry Regression Pack (October 2025)**

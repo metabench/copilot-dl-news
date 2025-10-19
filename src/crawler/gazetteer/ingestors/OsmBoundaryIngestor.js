@@ -6,7 +6,7 @@ const {
   createOsmBoundaryStatements,
   listBoundaryCandidates,
   saveBoundaryData
-} = require('../../../db/sqlite/queries/gazetteer.osm');
+} = require('../../../db/sqlite/v1/queries/gazetteer.osm');
 
 class OsmBoundaryIngestor {
   constructor({

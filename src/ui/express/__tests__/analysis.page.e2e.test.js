@@ -8,7 +8,7 @@ const { createApp } = require('../server');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
-const { createTempDb } = require('../../../../tests/test-utils');
+const { createTempDb } = require('../../../test-utils/db-helpers');
 const { inferQueryType } = require('../../../db/sqlite/instrumentation');
 const schema = require('../../../db/sqlite/schema');
 

@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { tof, is_array, each } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
-const ingestQueries = require('../../../db/sqlite/queries/gazetteer.ingest');
+const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
 
 // Classes treated as first-level regions when querying Wikidata.
 const REGION_CLASS_QIDS = ['Q10864048', 'Q15284', 'Q3336843'];

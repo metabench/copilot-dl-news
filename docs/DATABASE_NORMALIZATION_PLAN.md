@@ -1,13 +1,13 @@
 # Database Normalization & Compression Architecture Plan
 
-**Status**: Design Phase  
+**Status**: Phase 2 Complete (2025-10-18) - Dual-write implementation tested and working. Ready for Phase 3: Backfill historical data.  
 **Created**: 2025-10-06  
 **Goal**: Normalize database schema, add compression infrastructure, and establish migration groundwork WITHOUT requiring immediate schema changes to existing tables.
 
-**When to Read**:
-- Planning schema evolution, migration phases, or dual-write strategies for the SQLite database
-- Estimating effort or sequencing for normalization and compression initiatives
-- Coordinating with Phase 0 migration tooling before implementing structural changes
+**When to Read**: Planning schema evolution, migration phases, or dual-write strategies for the SQLite database
+- **Phase 0 Complete**: Migration infrastructure implemented and tested (2025-10-18)
+- **Next**: Phase 1 - Add normalized tables alongside existing schema (no breaking changes)
+- **Goal**: Normalize database schema, add compression infrastructure, and establish migration groundwork WITHOUT requiring immediate schema changes to existing tables.
 
 ---
 
@@ -423,37 +423,32 @@ GROUP BY p.id;
 
 ## Part 4: Migration-Free Implementation Strategy
 
-### Phase 0: Preparation (No Schema Changes)
+### Phase 0: Preparation (Complete - 2025-10-18)
 
 **Goal**: Lay groundwork without touching existing schema
 
-1. **Create migration infrastructure modules**:
-   ```
-   src/db/migration/
-     schema-versions.js       # Schema version tracking
-     exporter.js             # Export to JSON/NDJSON
-     importer.js             # Import with transformations
-     transformer.js          # Data transformation rules
-     validator.js            # Data integrity checks
-     migrator.js             # Orchestration
-   ```
+**Completed Tasks**:
+- ✅ Create migration infrastructure modules (`src/db/migration/`)
+- ✅ Add `schema_migrations` table to track schema versions
+- ✅ Implement `SchemaVersionManager` with version tracking and history
+- ✅ Implement `DatabaseExporter` for NDJSON export with manifest generation
+- ✅ Implement `DatabaseImporter` with batch processing and transformation support
+- ✅ Implement `DataValidator` with row count, foreign key, and integrity checks
+- ✅ Implement `MigrationOrchestrator` coordinating export/transform/import/validate/version_update
+- ✅ Create CLI tool (`tools/migration-cli.js`) for operational migration commands
+- ✅ Write comprehensive tests for all migration components (17 tests passing)
+- ✅ Create README documentation for migration infrastructure
+- ✅ Resolve circular dependency issues with dependency-aware import ordering
+- ✅ Implement deferred updates for foreign key constraints (places.canonical_name_id)
+- ✅ Add targeted "migration" test suite configuration for focused testing
+- ✅ All migration tests passing with proper error handling and validation
 
-2. **Add schema version tracking table** (non-breaking):
-   ```sql
-   CREATE TABLE IF NOT EXISTS schema_migrations (
-     version INTEGER PRIMARY KEY,
-     name TEXT NOT NULL,
-     applied_at TEXT NOT NULL,
-     checksum TEXT,
-     description TEXT
-   );
-   ```
-
-3. **Seed current schema as version 1**:
-   ```sql
-   INSERT INTO schema_migrations (version, name, applied_at, description)
-   VALUES (1, 'initial_denormalized_schema', datetime('now'), 'Legacy denormalized schema');
-   ```
+**Key Achievements**:
+- Zero-risk infrastructure: No schema changes, only additive migration tooling
+- Dependency-aware imports: Handles circular dependencies like places ↔ place_names
+- Comprehensive validation: Row counts, foreign keys, data integrity checks
+- Operational CLI: status, export, import, migrate, backup, restore, validate commands
+- Tested reliability: All 17 orchestrator tests pass, including complex migrateTo scenarios
 
 ### Phase 1: Add Normalized Tables (Non-Breaking)
 
@@ -481,108 +476,25 @@ GROUP BY p.id;
    VALUES (2, 'add_normalized_tables', datetime('now'), 'Add normalized tables without breaking changes');
    ```
 
-### Phase 2: Dual-Write Layer (Non-Breaking)
+### Phase 2: Dual-Write Layer (Complete - 2025-10-18)
 
 **Goal**: Write to both old and new schemas simultaneously
 
-1. **Modify application code** to write to both schemas:
-   ```javascript
-   // In src/db/sqlite/NewsDatabase.js
-   upsertArticle(article) {
-     // Existing write to denormalized tables
-     const res = this.insertArticleStmt.run(article);
-     
-     // NEW: Also write to normalized tables
-     try {
-       this._writeToNormalizedSchema(article);
-     } catch (err) {
-       // Log but don't fail (normalized schema optional during transition)
-       console.warn('[dual-write] Failed to write to normalized schema:', err);
-     }
-     
-     return res;
-   }
-   
-   _writeToNormalizedSchema(article) {
-     // 1. Ensure URL exists in urls table
-     const urlId = this._ensureUrl(article.url);
-     
-     // 2. Insert HTTP response
-     const httpResponseId = this._insertHttpResponse({
-       url_id: urlId,
-       request_started_at: article.request_started_at,
-       fetched_at: article.fetched_at,
-       http_status: article.http_status,
-       // ... other HTTP fields
-     });
-     
-     // 3. Store content (inline for now, compression later)
-     const contentId = this._insertContentStorage({
-       http_response_id: httpResponseId,
-       storage_type: 'db_inline',
-       content_blob: article.html,
-       content_sha256: article.html_sha256,
-       uncompressed_size: article.html ? Buffer.byteLength(article.html, 'utf8') : 0
-     });
-     
-     // 4. Insert content analysis
-     this._insertContentAnalysis({
-       content_id: contentId,
-       analysis_version: 1,
-       title: article.title,
-       classification: 'article',
-       word_count: article.word_count,
-       language: article.language,
-       // ... other analysis fields
-     });
-     
-     // 5. Insert discovery event
-     if (article.referrer_url || article.discovered_at) {
-       this._insertDiscoveryEvent({
-         url_id: urlId,
-         discovered_at: article.discovered_at,
-         referrer_url: article.referrer_url,
-         crawl_depth: article.crawl_depth
-       });
-     }
-   }
-   ```
+**Completed Tasks**:
+- ✅ Modified `upsertArticle()` in `SQLiteNewsDatabase.js` to call dual-write methods
+- ✅ Implemented `_writeToNormalizedSchema()` method that writes to normalized tables
+- ✅ Added helper methods: `_ensureUrlId()`, `_insertHttpResponse()`, `_insertContentStorage()`, `_insertContentAnalysis()`, `_insertDiscoveryEvent()`
+- ✅ Fixed table schema issues (added missing `http_response_id` column to `content_storage`)
+- ✅ Added error handling that logs failures but doesn't break legacy operations
+- ✅ Tested dual-write functionality - new articles are written to both legacy and normalized schemas
+- ✅ Recorded as schema version 3
 
-2. **Add migration triggers** for data written by other processes:
-   ```sql
-   -- Sync articles table writes to normalized tables
-   CREATE TRIGGER IF NOT EXISTS trg_articles_insert_sync
-   AFTER INSERT ON articles
-   BEGIN
-     -- Insert into http_responses (if not exists)
-     INSERT OR IGNORE INTO http_responses (
-       url_id,
-       request_started_at,
-       fetched_at,
-       http_status,
-       content_type,
-       -- ... other fields
-     )
-     SELECT 
-       u.id,
-       NEW.request_started_at,
-       NEW.fetched_at,
-       NEW.http_status,
-       NEW.content_type
-       -- ... other fields
-     FROM urls u
-     WHERE u.url = NEW.url;
-     
-     -- Insert into content_storage (if not exists)
-     -- ... (similar pattern)
-   END;
-   ```
-
-3. **Record as migration version 3**:
-   ```sql
-   INSERT INTO schema_migrations (version, name, applied_at, description)
-   VALUES (3, 'enable_dual_write', datetime('now'), 'Enable dual-write to normalized and legacy schemas');
-   ```
+**Key Implementation Details**:
+- Dual-write is **optional** - failures are logged but don't break article insertion
+- Uses inline storage for content during dual-write phase (compression comes later)
+- Handles missing data gracefully (provides defaults for required fields)
+- Maintains referential integrity between normalized tables
+- All new articles now populate: `urls`, `http_responses`, `content_storage`, `content_analysis`, `discovery_events`
 
 ### Phase 3: Backfill Historical Data (Background Process)
 

@@ -2,18 +2,53 @@
 
 /**
  * intelligent_crawl - Simple CLI tool for running intelligent crawls
- * 
+ *
  * Usage:
  *   node tools/intelligent-crawl.js [url] [--limit N] [--concurrency N] [--max-downloads N] [--verbose]
- * 
+ *
  * Options:
  *   --limit N          Limit output to first N lines (useful for startup analysis)
  *   --concurrency N    Number of parallel downloads (default: 1 for reliability)
  *   --max-downloads N  Maximum number of pages to download (default: unlimited)
  *   --verbose          Show all output including structured events
- * 
+ *
  * If no URL is provided, loads from config.json
  */
+
+// Check for help flag first, before any imports that might fail
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`
+Intelligent Crawl Tool
+
+Runs intelligent web crawls with place and topic hub discovery.
+
+USAGE:
+  node tools/intelligent-crawl.js [url] [options]
+
+OPTIONS:
+  --help, -h              Show this help message
+  --limit N               Limit output to first N lines (useful for startup analysis)
+  --concurrency N         Number of parallel downloads (default: 1 for reliability)
+  --max-downloads N       Maximum number of pages to download (default: unlimited)
+  --verbose               Show all output including structured events
+
+EXAMPLES:
+  node tools/intelligent-crawl.js                                    # Crawl URL from config.json
+  node tools/intelligent-crawl.js https://example.com               # Crawl specific URL
+  node tools/intelligent-crawl.js --limit 50                        # Show first 50 lines only
+  node tools/intelligent-crawl.js --concurrency 3 --max-downloads 100  # Parallel crawl with limit
+  node tools/intelligent-crawl.js --verbose                         # Show all detailed output
+
+HUB DISCOVERY:
+  The tool automatically discovers and reports:
+  🌍 Country hubs (verified against gazetteer)
+  🗺️  Place hubs (cities, regions, etc.)
+  🗂️  Topic hubs (news categories, sections)
+
+If no URL is provided, the tool loads the URL from config.json.
+`);
+  process.exit(0);
+}
 
 const NewsCrawler = require('../src/crawl.js');
 const fs = require('fs');

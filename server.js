@@ -2,10 +2,23 @@
 /**
  * Simple wrapper to start the UI server from the root directory.
  * Usage: node server.js [options]
- * 
+ *
  * Passes all arguments to the Express UI server.
+ * Use --help for available options.
  */
 
-const { startServer } = require('./src/ui/express/server');
+const {
+	startServer,
+	parseServerArgs,
+	printServerHelp
+} = require('./src/ui/express/server');
 
-startServer({ argv: process.argv });
+const argv = process.argv;
+const serverArgs = parseServerArgs(argv);
+
+if (serverArgs.showHelp) {
+	printServerHelp();
+	process.exit(0);
+}
+
+startServer({ argv, serverArgs });

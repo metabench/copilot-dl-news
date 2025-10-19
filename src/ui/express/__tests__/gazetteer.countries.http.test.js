@@ -18,7 +18,7 @@ function getText(hostname, port, pathStr) {
 
 function seedDb(p) {
   const db = new NewsDatabase(p);
-  db.db.exec(`DELETE FROM places; DELETE FROM place_names; DELETE FROM place_hierarchy; DELETE FROM place_external_ids; DELETE FROM articles;`);
+  db.db.exec(`DELETE FROM places; DELETE FROM place_names; DELETE FROM place_hierarchy; DELETE FROM place_external_ids;`);
   const ctry = db.db.prepare(`INSERT INTO places(kind, country_code, population) VALUES ('country','GB',67000000)`);
   const id = ctry.run().lastInsertRowid;
   const nameId = db.db.prepare(`INSERT INTO place_names(place_id, name, normalized, lang, name_kind, is_preferred, is_official) VALUES (?,?,?,?,?,?,?)`).run(id, 'United Kingdom', 'united kingdom', 'en', 'official', 1, 1).lastInsertRowid;

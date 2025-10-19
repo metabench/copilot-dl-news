@@ -1,0 +1,8 @@
+{"id":1,"name":"basic","description":"Follow links only (no sitemap)","declaration":"{\"crawlType\":\"basic\",\"useSitemap\":false,\"sitemapOnly\":false}"}
+{"id":2,"name":"sitemap-only","description":"Use only the sitemap to discover pages","declaration":"{\"crawlType\":\"sitemap-only\",\"useSitemap\":true,\"sitemapOnly\":true}"}
+{"id":3,"name":"basic-with-sitemap","description":"Follow links and also use the sitemap","declaration":"{\"crawlType\":\"basic-with-sitemap\",\"useSitemap\":true,\"sitemapOnly\":false}"}
+{"id":4,"name":"intelligent","description":"Intelligent planning (hubs + sitemap + heuristics)","declaration":"{\"crawlType\":\"intelligent\",\"useSitemap\":true,\"sitemapOnly\":false}"}
+{"id":5,"name":"discover-structure","description":"Map site structure without downloading articles","declaration":"{\"crawlType\":\"discover-structure\",\"useSitemap\":true,\"sitemapOnly\":false}"}
+{"id":6,"name":"gazetteer","description":"Legacy alias for geography gazetteer crawl","declaration":"{\"crawlType\":\"geography\",\"useSitemap\":false,\"sitemapOnly\":false}"}
+{"id":7,"name":"wikidata","description":"Only ingest gazetteer data from Wikidata","declaration":"{\"crawlType\":\"wikidata\",\"useSitemap\":false,\"sitemapOnly\":false}"}
+{"id":8,"name":"geography","description":"Aggregate gazetteer data from Wikidata plus OpenStreetMap boundaries","declaration":"{\"crawlType\":\"geography\",\"useSitemap\":false,\"sitemapOnly\":false}"}

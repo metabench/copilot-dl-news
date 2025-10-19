@@ -40,6 +40,9 @@ const {
   createAnalysisApiRouter
 } = require('./routes/api.analysis');
 const {
+  createArticlesApiRouter
+} = require('./routes/api.articles');
+const {
   createAnalysisSsrRouter
 } = require('./routes/ssr.analysis');
 const {
@@ -145,7 +148,7 @@ const {
   ensureDb,
   ensureDatabase,
   wrapWithTelemetry
-} = require('../../db/sqlite');
+} = require('../../db/sqlite/v1');
 const {
   createRunnerFactory,
   isTruthyFlag
@@ -202,6 +205,9 @@ const {
 const {
   AnalysisTask
 } = require('../../background/tasks/AnalysisTask');
+const {
+  CompressionLifecycleTask
+} = require('../../background/tasks/CompressionLifecycleTask');
 const {
   CompressionWorkerPool
 } = require('../../background/workers/CompressionWorkerPool');
@@ -695,6 +701,15 @@ function createApp(options = {}) {
       console.log('[server] Registered analysis-run task type');
     }
 
+    // Register compression lifecycle task type (no worker pool needed - age-based scheduling)
+    backgroundTaskManager.registerTaskType('compression-lifecycle', CompressionLifecycleTask, {
+      dbPath: urlsDbPath
+    });
+    
+    if (verbose) {
+      console.log('[server] Registered compression-lifecycle task type');
+    }
+
     // Resume paused tasks on startup (after a delay to ensure server is ready)
     if (!process.env.JEST_WORKER_ID) {
       setTimeout(async () => {
@@ -922,6 +937,9 @@ function createApp(options = {}) {
   app.use(createAnalysisApiRouter({
     getDbRW: getDbRW
   }));
+  app.use(createArticlesApiRouter({
+    getDbRW: getDbRW
+  }));
   app.use(createAnalysisSsrRouter({
     getDbRW: getDbRW,
     renderNav
@@ -1095,15 +1113,25 @@ function createApp(options = {}) {
  */
 function parseServerArgs(argv = process.argv) {
   const args = {
+    showHelp: false,
     detached: false,
     autoShutdownMs: null
   };
-  
+
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
+
+    if (arg === '--help' || arg === '-h') {
+      args.showHelp = true;
+      continue;
+    }
+
     if (arg === '--detached') {
       args.detached = true;
-    } else if (arg === '--auto-shutdown') {
+      continue;
+    }
+
+    if (arg === '--auto-shutdown') {
       const nextArg = argv[i + 1];
       if (nextArg) {
         const ms = parseInt(nextArg, 10);
@@ -1112,7 +1140,10 @@ function parseServerArgs(argv = process.argv) {
           i++; // skip next arg since we consumed it
         }
       }
-    } else if (arg === '--auto-shutdown-seconds') {
+      continue;
+    }
+
+    if (arg === '--auto-shutdown-seconds') {
       const nextArg = argv[i + 1];
       if (nextArg) {
         const seconds = parseInt(nextArg, 10);
@@ -1123,11 +1154,53 @@ function parseServerArgs(argv = process.argv) {
       }
     }
   }
-  
+
   return args;
 }
 
+/**
+ * Print help information for server options
+ */
+function printServerHelp() {
+  console.log(`
+News Crawler Web UI Server
+
+Usage: node server.js [options]
+
+Options:
+  --help, -h              Show this help message
+  --detached              Run server in detached mode (background process)
+  --auto-shutdown <ms>    Auto-shutdown server after specified milliseconds
+  --auto-shutdown-seconds <s>  Auto-shutdown server after specified seconds
+
+Environment variables:
+  PORT=NNNN               Override the listening port (defaults to dynamic high port)
+  UI_ALLOW_MULTI_JOBS=1   Permit multiple crawls concurrently in the UI
+  UI_FAKE_RUNNER=1        Use the fake runner for tests and demos
+
+Examples:
+  node server.js                          # Start server normally
+  node server.js --detached               # Start in background
+  node server.js --auto-shutdown 30000    # Auto-shutdown after 30 seconds
+  node server.js --auto-shutdown-seconds 60  # Auto-shutdown after 1 minute
+
+The server will automatically select an available port (default range: 41000+)
+unless PORT environment variable is set. Open the displayed URL in your browser
+to access the web interface.
+
+For more information, see README.md
+`);
+}
+
 async function startServer(appOptions = {}) {
+  const argv = appOptions.argv || process.argv;
+  const serverArgs = appOptions.serverArgs || parseServerArgs(argv);
+
+  if (serverArgs.showHelp) {
+    printServerHelp();
+    return null;
+  }
+
   // Auto-build components if needed (fast check, only rebuilds if sources are newer)
   try {
     await autoBuild();
@@ -1137,8 +1210,7 @@ async function startServer(appOptions = {}) {
   }
 
   const app = createApp(appOptions);
-  const serverArgs = parseServerArgs(appOptions.argv);
-  
+
   const server = bootstrapServer(app, {
     quiet: QUIET,
     jobRegistry: app.locals?.jobRegistry || null,
@@ -1156,9 +1228,16 @@ async function startServer(appOptions = {}) {
 }
 
 if (require.main === module) {
-  const serverArgs = parseServerArgs();
-  startServer({ argv: process.argv });
-  
+  const argv = process.argv;
+  const serverArgs = parseServerArgs(argv);
+
+  if (serverArgs.showHelp) {
+    printServerHelp();
+    process.exit(0);
+  }
+
+  startServer({ argv, serverArgs });
+
   // In detached mode, prevent the process from exiting immediately
   if (serverArgs.detached) {
     console.log('[server] Running in detached mode');
@@ -1170,5 +1249,7 @@ if (require.main === module) {
 
 module.exports = {
   createApp,
-  startServer
+  startServer,
+  parseServerArgs,
+  printServerHelp
 };
