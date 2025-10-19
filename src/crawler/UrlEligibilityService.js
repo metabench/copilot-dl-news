@@ -108,6 +108,17 @@ class UrlEligibilityService {
     let reason = meta?.reason || null;
     const allowRevisit = !!meta?.allowRevisit;
 
+    // Check database first for already processed URLs (prevents duplicate processing across crawl sessions)
+    if (!allowRevisit && this._isAlreadyProcessed(normalized)) {
+      return {
+        status: 'drop',
+        reason: 'already-processed',
+        normalized,
+        host,
+        decision
+      };
+    }
+
     if (!allowRevisit && this.hasVisited(normalized)) {
       return {
         status: 'drop',
@@ -168,6 +179,44 @@ class UrlEligibilityService {
       this.knownArticlesCache.set(normalized, isKnown);
     }
     return isKnown;
+  }
+
+  /**
+   * Check if URL has already been successfully fetched and stored
+   * @param {string} normalized - Normalized URL to check
+   * @returns {boolean} - True if URL has successful HTTP response with content storage
+   */
+  _isAlreadyProcessed(normalized) {
+    if (!normalized) return false;
+    
+    // Check cache first
+    if (this.knownArticlesCache?.has(normalized)) {
+      return !!this.knownArticlesCache.get(normalized);
+    }
+    
+    const adapter = this.getDbAdapter ? this.getDbAdapter() : null;
+    if (!adapter || !adapter.isEnabled || !adapter.isEnabled()) {
+      return false;
+    }
+    
+    try {
+      // Check if URL has successful HTTP response with content storage
+      const db = adapter.getDb ? adapter.getDb() : null;
+      if (!db) return false;
+      
+      const row = db.prepare(`
+        SELECT 1 FROM urls u
+        INNER JOIN http_responses hr ON hr.url_id = u.id
+        INNER JOIN content_storage cs ON cs.http_response_id = hr.id
+        WHERE u.url = ? AND hr.http_status >= 200 AND hr.http_status < 300
+        LIMIT 1
+      `).get(normalized);
+      
+      return !!row;
+    } catch (error) {
+      // If database check fails, err on the side of processing (don't block potentially valid URLs)
+      return false;
+    }
   }
 
   _safeHost(url) {
