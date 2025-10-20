@@ -86,7 +86,9 @@
       "/__tests__/helpers/",
       "/helpers/",
       "database-helpers.js",
-      "/tests/broken/"
+      "/tests/broken/",
+      "/src/deprecated-ui/",
+      "/tests/deprecated-ui/"
     ],
     "reporters": [
       "default",

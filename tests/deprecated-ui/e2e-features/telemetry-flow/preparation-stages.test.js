@@ -2,10 +2,10 @@
 
 /**
  * Specialized E2E Feature Test: Telemetry Flow - Preparation Stages
- * 
+ *
  * Purpose: Verify detailed telemetry during crawl preparation phase
  * Target: Capture all preparation stage emissions (bootstrap, planning, etc.)
- * 
+ *
  * Test Philosophy:
  * - Sequential stage verification
  * - Telemetry timing analysis
@@ -17,7 +17,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { SimpleEventSource } = require('../../helpers/simpleEventSource');
+const { SimpleEventSource } = require('../../../helpers/simpleEventSource');
 
 describe('E2E Feature: Telemetry Flow - Preparation Stages', () => {
   let serverProcess, serverPort, dbPath, tmpDir;
@@ -41,7 +41,7 @@ describe('E2E Feature: Telemetry Flow - Preparation Stages', () => {
     log(0, 'Setup - Starting server process', { dbPath });
 
     serverProcess = spawn('node', [
-      'src/ui/express/server.js',
+      'src/deprecated-ui/express/server.js',
       '--detached'
     ], {
       env: {
@@ -57,14 +57,14 @@ describe('E2E Feature: Telemetry Flow - Preparation Stages', () => {
         UI_FAKE_PROBLEMS: '1',
         UI_FAKE_PLANNER_DELAY_MS: '25'
       },
-      cwd: path.resolve(__dirname, '../../..'),
+      cwd: path.resolve(__dirname, '../../../../'),
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
     // Capture port from server output
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Server start timeout')), 10000);
-      
+
       serverProcess.stdout.on('data', (data) => {
         const output = data.toString();
         const match = output.match(/listening on.*:(\d+)/);
@@ -89,7 +89,9 @@ describe('E2E Feature: Telemetry Flow - Preparation Stages', () => {
     }
     if (dbPath) {
       ['', '-shm', '-wal'].forEach(suffix => {
-        try { fs.unlinkSync(dbPath + suffix); } catch (_) {}
+        try {
+          fs.unlinkSync(dbPath + suffix);
+        } catch (_) {}
       });
     }
   });
@@ -156,7 +158,7 @@ describe('E2E Feature: Telemetry Flow - Preparation Stages', () => {
     });
 
     // Verify instant response
-  expect(responseTime).toBeLessThan(700);
+    expect(responseTime).toBeLessThan(700);
     expect(responseData.jobId).toBeDefined();
     expect(responseData.stage).toBe('preparing');
 
@@ -206,7 +208,7 @@ describe('E2E Feature: Telemetry Flow - Preparation Stages', () => {
     // Final summary
     log(15, '✅ Preparation stage telemetry test completed', {
       summary: {
-  instantResponse: `${responseTime}ms < 700ms`,
+        instantResponse: `${responseTime}ms < 700ms`,
         stagesCaptured: stages.length,
         progressEventsCaptured: progressEvents.length,
         telemetryFlowing: stages.length > 0 || progressEvents.length > 0

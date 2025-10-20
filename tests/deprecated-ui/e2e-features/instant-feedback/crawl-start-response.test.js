@@ -2,10 +2,10 @@
 
 /**
  * Specialized E2E Feature Test: Instant Feedback - Crawl Start Response
- * 
+ *
  * Purpose: Verify that crawl start provides instant feedback to the client
  * Target: Aim for <200ms response time (alert if slower than 350ms)
- * 
+ *
  * Test Philosophy:
  * - Precise sequential steps with detailed logging
  * - Performance assertions (timing requirements)
@@ -17,7 +17,7 @@ const request = require('supertest');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { createApp } = require('../../../src/deprecated-ui/express/server');
+const { createApp } = require('../../../../src/deprecated-ui/express/server');
 
 describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
   let app, dbPath;
@@ -36,17 +36,17 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
     const tmpDir = path.join(os.tmpdir(), `instant-feedback-test-${Date.now()}`);
     fs.mkdirSync(tmpDir, { recursive: true });
     dbPath = path.join(tmpDir, 'test.db');
-    
+
     log(0, 'Setup - Creating test app', { dbPath });
-    app = createApp({ 
-      dbPath, 
-        verbose: false,
-        env: {
-          ...process.env,
-          UI_FAKE_RUNNER: '1',
-          UI_FAKE_PLANNER: '1',
-          UI_FAST_START: '1'
-        }
+    app = createApp({
+      dbPath,
+      verbose: false,
+      env: {
+        ...process.env,
+        UI_FAKE_RUNNER: '1',
+        UI_FAKE_PLANNER: '1',
+        UI_FAST_START: '1'
+      }
     });
     log(0, 'Setup - App created successfully');
   });
@@ -54,7 +54,9 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
   afterEach(() => {
     if (dbPath) {
       ['', '-shm', '-wal'].forEach(suffix => {
-        try { fs.unlinkSync(dbPath + suffix); } catch (_) {}
+        try {
+          fs.unlinkSync(dbPath + suffix);
+        } catch (_) {}
       });
     }
   });
@@ -86,8 +88,8 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
     });
 
     // Step 4: Verify response time
-  expect(responseTime).toBeLessThan(350);
-  log(4, `✓ Response time ${responseTime}ms < 350ms requirement`);
+    expect(responseTime).toBeLessThan(350);
+    log(4, `✓ Response time ${responseTime}ms < 350ms requirement`);
 
     // Step 5: Verify response structure
     expect(response.status).toBe(202);
@@ -123,7 +125,7 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
     log(9, '✅ Test completed successfully', {
       summary: {
         responseTime: `${responseTime}ms`,
-  requirement: '<350ms',
+        requirement: '<350ms',
         status: 'PASS',
         jobId: response.body.jobId,
         initialStage: response.body.stage
@@ -145,9 +147,9 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
       });
 
     const responseTime = Date.now() - startTime;
-    log(3, 'Received response', { 
-      status: response.status, 
-      responseTimeMs: responseTime 
+    log(3, 'Received response', {
+      status: response.status,
+      responseTimeMs: responseTime
     });
 
     // Verify instant response
@@ -157,9 +159,9 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
     // Verify crawl type echo
     expect(response.body).toHaveProperty('args');
     expect(response.body.args).toContain('--crawl-type=geography');
-    log(5, '✓ Crawl type confirmed in args', { 
+    log(5, '✓ Crawl type confirmed in args', {
       crawlType: 'geography',
-      found: true 
+      found: true
     });
 
     log(6, '✅ Test completed successfully', {
@@ -186,8 +188,8 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
     });
 
     // Verify very fast response for status checks
-  expect(responseTime).toBeLessThan(200);
-  log(4, `✓ Status response time ${responseTime}ms < 200ms requirement`);
+    expect(responseTime).toBeLessThan(200);
+    log(4, `✓ Status response time ${responseTime}ms < 200ms requirement`);
 
     // Verify status structure
     expect(response.body).toHaveProperty('running');
@@ -196,8 +198,8 @@ describe('E2E Feature: Instant Feedback - Crawl Start Response', () => {
 
     log(6, '✅ Status endpoint performance verified', {
       summary: {
-  responseTime: `${responseTime}ms`,
-  requirement: '<200ms',
+        responseTime: `${responseTime}ms`,
+        requirement: '<200ms',
         status: 'PASS'
       }
     });
