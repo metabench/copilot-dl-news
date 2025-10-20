@@ -1,242 +1,252 @@
 {
-  "exported_at": "2025-10-19T04:30:43.837Z",
-  "schema_version": 1,
-  "database_path": "C:\\Users\\james\\AppData\\Local\\Temp\\copilot-dl-news-tests\\test-126516-1760848243723-5sr1a0lmc.db",
+  "exported_at": "2025-10-20T20:20:50.967Z",
+  "schema_version": 0,
+  "database_path": "C:\\Users\\james\\AppData\\Local\\Temp\\copilot-dl-news-tests\\test-36728-1760991650824-3kicqciqj.db",
   "tables": {
     "background_tasks": {
       "file": "background_tasks.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.845Z"
+      "exported_at": "2025-10-20T20:20:50.971Z"
     },
     "bucket_entries": {
       "file": "bucket_entries.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.847Z"
+      "exported_at": "2025-10-20T20:20:50.973Z"
     },
     "compression_buckets": {
       "file": "compression_buckets.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.849Z"
+      "exported_at": "2025-10-20T20:20:50.976Z"
     },
     "compression_types": {
       "file": "compression_types.ndjson",
       "row_count": 18,
-      "exported_at": "2025-10-19T04:30:43.852Z"
+      "exported_at": "2025-10-20T20:20:50.980Z"
     },
     "content_analysis": {
       "file": "content_analysis.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.854Z"
+      "exported_at": "2025-10-20T20:20:50.984Z"
     },
     "content_storage": {
       "file": "content_storage.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.855Z"
+      "exported_at": "2025-10-20T20:20:50.985Z"
     },
     "crawl_jobs": {
       "file": "crawl_jobs.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.857Z"
+      "exported_at": "2025-10-20T20:20:50.987Z"
     },
     "crawl_milestones": {
       "file": "crawl_milestones.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.858Z"
+      "exported_at": "2025-10-20T20:20:50.988Z"
     },
     "crawl_problems": {
       "file": "crawl_problems.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.860Z"
+      "exported_at": "2025-10-20T20:20:50.990Z"
     },
     "crawl_skip_terms": {
       "file": "crawl_skip_terms.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.861Z"
+      "exported_at": "2025-10-20T20:20:50.992Z"
     },
     "crawl_tasks": {
       "file": "crawl_tasks.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.862Z"
+      "exported_at": "2025-10-20T20:20:50.993Z"
     },
     "crawl_types": {
       "file": "crawl_types.ndjson",
       "row_count": 8,
-      "exported_at": "2025-10-19T04:30:43.864Z"
+      "exported_at": "2025-10-20T20:20:50.995Z"
     },
     "crawler_settings": {
       "file": "crawler_settings.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.865Z"
+      "exported_at": "2025-10-20T20:20:50.996Z"
     },
     "discovery_events": {
       "file": "discovery_events.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.867Z"
+      "exported_at": "2025-10-20T20:20:50.998Z"
     },
     "domain_categories": {
       "file": "domain_categories.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.868Z"
+      "exported_at": "2025-10-20T20:20:50.999Z"
     },
     "domain_category_map": {
       "file": "domain_category_map.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.870Z"
+      "exported_at": "2025-10-20T20:20:51.001Z"
     },
     "domain_locales": {
       "file": "domain_locales.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.871Z"
+      "exported_at": "2025-10-20T20:20:51.003Z"
     },
     "domains": {
       "file": "domains.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.873Z"
+      "exported_at": "2025-10-20T20:20:51.004Z"
     },
     "errors": {
       "file": "errors.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.874Z"
+      "exported_at": "2025-10-20T20:20:51.005Z"
+    },
+    "fetches": {
+      "file": "fetches.ndjson",
+      "row_count": 0,
+      "exported_at": "2025-10-20T20:20:51.007Z"
     },
     "gazetteer_crawl_state": {
       "file": "gazetteer_crawl_state.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.875Z"
+      "exported_at": "2025-10-20T20:20:51.008Z"
     },
     "http_responses": {
       "file": "http_responses.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.876Z"
+      "exported_at": "2025-10-20T20:20:51.009Z"
     },
     "ingestion_runs": {
       "file": "ingestion_runs.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.878Z"
+      "exported_at": "2025-10-20T20:20:51.011Z"
     },
     "latest_fetch": {
       "file": "latest_fetch.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.879Z"
+      "exported_at": "2025-10-20T20:20:51.012Z"
     },
     "links": {
       "file": "links.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.880Z"
+      "exported_at": "2025-10-20T20:20:51.014Z"
     },
     "news_websites": {
       "file": "news_websites.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.881Z"
+      "exported_at": "2025-10-20T20:20:51.015Z"
     },
     "news_websites_stats_cache": {
       "file": "news_websites_stats_cache.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.882Z"
+      "exported_at": "2025-10-20T20:20:51.017Z"
     },
     "page_categories": {
       "file": "page_categories.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.883Z"
+      "exported_at": "2025-10-20T20:20:51.018Z"
     },
     "page_category_map": {
       "file": "page_category_map.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.885Z"
+      "exported_at": "2025-10-20T20:20:51.020Z"
     },
     "place_attribute_values": {
       "file": "place_attribute_values.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.886Z"
+      "exported_at": "2025-10-20T20:20:51.022Z"
     },
     "place_attributes": {
       "file": "place_attributes.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.887Z"
+      "exported_at": "2025-10-20T20:20:51.024Z"
     },
     "place_external_ids": {
       "file": "place_external_ids.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.888Z"
+      "exported_at": "2025-10-20T20:20:51.025Z"
     },
     "place_hierarchy": {
       "file": "place_hierarchy.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.889Z"
+      "exported_at": "2025-10-20T20:20:51.027Z"
     },
     "place_hub_unknown_terms": {
       "file": "place_hub_unknown_terms.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.890Z"
+      "exported_at": "2025-10-20T20:20:51.029Z"
     },
     "place_hubs": {
       "file": "place_hubs.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.891Z"
+      "exported_at": "2025-10-20T20:20:51.030Z"
     },
     "place_names": {
       "file": "place_names.ndjson",
       "row_count": 2,
-      "exported_at": "2025-10-19T04:30:43.893Z"
+      "exported_at": "2025-10-20T20:20:51.032Z"
     },
     "place_provenance": {
       "file": "place_provenance.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.894Z"
+      "exported_at": "2025-10-20T20:20:51.034Z"
     },
     "place_sources": {
       "file": "place_sources.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.895Z"
+      "exported_at": "2025-10-20T20:20:51.035Z"
     },
     "places": {
       "file": "places.ndjson",
       "row_count": 2,
-      "exported_at": "2025-10-19T04:30:43.896Z"
+      "exported_at": "2025-10-20T20:20:51.038Z"
     },
     "planner_stage_events": {
       "file": "planner_stage_events.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.897Z"
+      "exported_at": "2025-10-20T20:20:51.039Z"
     },
     "query_telemetry": {
       "file": "query_telemetry.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.899Z"
+      "exported_at": "2025-10-20T20:20:51.040Z"
     },
     "queue_events": {
       "file": "queue_events.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.900Z"
+      "exported_at": "2025-10-20T20:20:51.042Z"
+    },
+    "schema_metadata": {
+      "file": "schema_metadata.ndjson",
+      "row_count": 1,
+      "exported_at": "2025-10-20T20:20:51.043Z"
     },
     "schema_migrations": {
       "file": "schema_migrations.ndjson",
-      "row_count": 1,
-      "exported_at": "2025-10-19T04:30:43.901Z"
+      "row_count": 0,
+      "exported_at": "2025-10-20T20:20:51.045Z"
     },
     "topic_keywords": {
       "file": "topic_keywords.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.902Z"
+      "exported_at": "2025-10-20T20:20:51.046Z"
     },
     "url_aliases": {
       "file": "url_aliases.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.904Z"
+      "exported_at": "2025-10-20T20:20:51.048Z"
     },
     "url_categories": {
       "file": "url_categories.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.905Z"
+      "exported_at": "2025-10-20T20:20:51.050Z"
     },
     "url_category_map": {
       "file": "url_category_map.ndjson",
       "row_count": 0,
-      "exported_at": "2025-10-19T04:30:43.906Z"
+      "exported_at": "2025-10-20T20:20:51.052Z"
     },
     "urls": {
       "file": "urls.ndjson",
       "row_count": 5,
-      "exported_at": "2025-10-19T04:30:43.907Z"
+      "exported_at": "2025-10-20T20:20:51.054Z"
     }
   },
   "schema_file": "schema.sql"

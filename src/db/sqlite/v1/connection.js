@@ -1,7 +1,9 @@
 'use strict';
 
 const Database = require('better-sqlite3');
-const { initializeSchema } = require('./schema');
+const schema = require('./schema');
+const schemaMetadata = require('./schemaMetadata');
+const { seedCrawlTypes } = require('./seeders');
 
 /**
  * Open database connection with minimal setup
@@ -53,10 +55,40 @@ function ensureDatabase(dbPath, options = {}) {
   });
   
   if (!options.skipSchema && !options.readonly) {
-    initializeSchema(db, {
-      logger: options.logger || console,
-      verbose: options.verbose || false
-    });
+    const logger = options.logger || console;
+    const verbose = options.verbose || false;
+
+    let usedFastPath = false;
+    let fastPathReason = null;
+
+    try {
+      schemaMetadata.ensureSchemaMetadataTable(db);
+      const evaluation = schemaMetadata.shouldUseFastPath(db, { fingerprint: schemaMetadata.CURRENT_SCHEMA_FINGERPRINT });
+      if (evaluation.useFastPath) {
+        usedFastPath = true;
+        if (verbose) {
+          logger.log('[schema] Fast path: schema fingerprint verified; skipping full initialization.');
+        }
+      } else {
+        fastPathReason = evaluation.reason || 'fingerprint unavailable';
+      }
+    } catch (error) {
+      fastPathReason = error?.message || String(error);
+    }
+
+    if (!usedFastPath) {
+      if (verbose && fastPathReason) {
+        logger.log(`[schema] Fast path unavailable (${fastPathReason}); running full initialization...`);
+      }
+      schema.initializeSchema(db, { logger, verbose });
+      try {
+        schemaMetadata.recordSchemaFingerprint(db, { fingerprint: schemaMetadata.CURRENT_SCHEMA_FINGERPRINT });
+      } catch (error) {
+        logger.warn?.('[schema] Unable to record schema fingerprint:', error.message);
+      }
+    }
+
+    seedCrawlTypes(db, { logger });
   }
   
   return db;

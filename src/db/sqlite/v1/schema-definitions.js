@@ -235,6 +235,33 @@ CREATE TABLE IF NOT EXISTS news_websites_stats_cache (
   FOREIGN KEY (website_id) REFERENCES news_websites(id) ON DELETE CASCADE
 );
 
+-- Legacy fetches table for backward compatibility
+CREATE TABLE IF NOT EXISTS fetches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  url TEXT NOT NULL,
+  request_started_at TEXT,
+  fetched_at TEXT,
+  http_status INTEGER,
+  content_type TEXT,
+  content_length INTEGER,
+  content_encoding TEXT,
+  bytes_downloaded INTEGER,
+  transfer_kbps REAL,
+  ttfb_ms INTEGER,
+  download_ms INTEGER,
+  total_ms INTEGER,
+  saved_to_db INTEGER,
+  saved_to_file INTEGER,
+  file_path TEXT,
+  file_size INTEGER,
+  classification TEXT,
+  nav_links_count INTEGER,
+  article_links_count INTEGER,
+  word_count INTEGER,
+  analysis TEXT,
+  host TEXT
+);
+
 -- Normalized schema tables (Phase 1)
 
 -- HTTP Protocol Layer

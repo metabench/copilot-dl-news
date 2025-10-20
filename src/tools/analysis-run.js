@@ -14,7 +14,7 @@ const {
   createAnalysisRun,
   updateAnalysisRun,
   addAnalysisRunEvent
-} = require('../ui/express/services/analysisRuns');
+} = require('../deprecated-ui/express/services/analysisRuns');
 const { awardMilestones } = require('./milestones');
 const { analysePages } = require('./analyse-pages-core');
 const { countArticlesNeedingAnalysis } = require('../db/queries/analysisQueries');

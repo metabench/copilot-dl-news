@@ -48,6 +48,8 @@ CREATE INDEX idx_discovery_job ON discovery_events(crawl_job_id);
 
 CREATE INDEX idx_discovery_url ON discovery_events(url_id, discovered_at DESC);
 
+CREATE INDEX idx_fetches_host ON fetches(host);
+
 CREATE INDEX idx_http_responses_fetched ON http_responses(fetched_at);
 
 CREATE INDEX idx_http_responses_status ON http_responses(http_status);
@@ -377,6 +379,32 @@ CREATE TABLE errors (
   at TEXT
 );
 
+CREATE TABLE fetches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  url TEXT NOT NULL,
+  request_started_at TEXT,
+  fetched_at TEXT,
+  http_status INTEGER,
+  content_type TEXT,
+  content_length INTEGER,
+  content_encoding TEXT,
+  bytes_downloaded INTEGER,
+  transfer_kbps REAL,
+  ttfb_ms INTEGER,
+  download_ms INTEGER,
+  total_ms INTEGER,
+  saved_to_db INTEGER,
+  saved_to_file INTEGER,
+  file_path TEXT,
+  file_size INTEGER,
+  classification TEXT,
+  nav_links_count INTEGER,
+  article_links_count INTEGER,
+  word_count INTEGER,
+  analysis TEXT,
+  host TEXT
+);
+
 CREATE TABLE gazetteer_crawl_state (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       stage TEXT NOT NULL,                 -- countries | adm1 | adm2 | cities | osm_boundaries
@@ -658,13 +686,20 @@ CREATE TABLE queue_events (
   queue_depth_bucket TEXT
 );
 
+CREATE TABLE schema_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    details JSON
+  );
+
 CREATE TABLE schema_migrations (
-      version INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      applied_at TEXT NOT NULL,
-      description TEXT,
-      rollback_sql TEXT
-    );
+        version INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        applied_at TEXT NOT NULL,
+        description TEXT,
+        rollback_sql TEXT
+      );
 
 CREATE TABLE sqlite_sequence(name,seq);
 
@@ -712,6 +747,18 @@ CREATE TABLE urls (
     analysis TEXT,
     host TEXT
 );
+
+CREATE TRIGGER trg_latest_fetch_upsert
+    AFTER INSERT ON fetches
+    BEGIN
+      INSERT INTO latest_fetch(url, ts, http_status, classification, word_count)
+      VALUES (NEW.url, COALESCE(NEW.fetched_at, NEW.request_started_at), NEW.http_status, NEW.classification, NEW.word_count)
+      ON CONFLICT(url) DO UPDATE SET
+        ts = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) > COALESCE(latest_fetch.ts, '') THEN COALESCE(NEW.fetched_at, NEW.request_started_at) ELSE latest_fetch.ts END,
+        http_status = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.http_status ELSE latest_fetch.http_status END,
+        classification = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.classification ELSE latest_fetch.classification END,
+        word_count = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.word_count ELSE latest_fetch.word_count END;
+    END;
 
 CREATE TRIGGER trg_place_hierarchy_no_cycle_ins
       BEFORE INSERT ON place_hierarchy
@@ -856,3 +903,11 @@ CREATE TRIGGER trg_places_status_check_upd
       BEFORE UPDATE ON places
       WHEN NEW.status IS NOT NULL AND NEW.status NOT IN ('current','historical')
       BEGIN SELECT RAISE(ABORT, 'places.status invalid'); END;
+
+CREATE TRIGGER trg_urls_from_fetches_insert
+    AFTER INSERT ON fetches
+    BEGIN
+      INSERT OR IGNORE INTO urls(url, created_at, last_seen_at)
+      VALUES (NEW.url, COALESCE(NEW.fetched_at, datetime('now')), COALESCE(NEW.fetched_at, datetime('now')));
+      UPDATE urls SET last_seen_at = COALESCE(NEW.fetched_at, datetime('now')) WHERE url = NEW.url;
+    END;

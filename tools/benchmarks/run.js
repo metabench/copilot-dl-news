@@ -14,10 +14,10 @@ const {
 } = require('../../src/db/sqlite/queries/ui/gazetteerCountry');
 const {
   fetchCountryMinimalData
-} = require('../../src/ui/express/data/gazetteerCountry');
+} = require('../../src/deprecated-ui/express/data/gazetteerCountry');
 const {
   createGazetteerCountryRouter
-} = require('../../src/ui/express/routes/ssr.gazetteer.country');
+} = require('../../src/deprecated-ui/express/routes/ssr.gazetteer.country');
 
 const DEFAULT_OUTPUT_PATH = path.join(__dirname, 'results', 'benchmark-results.json');
 

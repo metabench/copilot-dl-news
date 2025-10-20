@@ -9,7 +9,7 @@
  * Run with: node test-geography-crawl.js
  */
 
-const { buildArgs } = require('../../src/ui/express/services/buildArgs.js');
+const { buildArgs } = require('../../src/deprecated-ui/express/services/buildArgs.js');
 
 console.log('=== Geography Crawl Integration Test ===\n');
 

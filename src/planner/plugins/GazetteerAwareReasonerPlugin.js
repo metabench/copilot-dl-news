@@ -91,7 +91,8 @@ class GazetteerAwareReasonerPlugin {
             confidence: this._calculateConfidence(country, domain),
             reason: `Predicted country hub for ${country.name} based on gazetteer`,
             estimatedDiscoveriesPerHub: 50,
-            priority: this._calculatePriority(country)
+            priority: this._calculatePriority(country),
+            isCountryHub: true  // Metadata for special processing
           });
         }
       }
@@ -162,7 +163,7 @@ class GazetteerAwareReasonerPlugin {
           AND name IS NOT NULL
           AND country_code IS NOT NULL
         ORDER BY importance DESC, name ASC
-        LIMIT ?
+        LIMIT 50
       `).all(this.maxCountryProposals);
 
       if (countries && countries.length > 0) {
@@ -280,9 +281,31 @@ class GazetteerAwareReasonerPlugin {
   }
 
   _calculatePriority(country) {
-    // Priority based on importance
-    // Higher importance = higher priority
-    return Math.max(10, Math.floor(country.importance));
+    // Check if total prioritisation mode is enabled
+    if (this._isTotalPrioritisationEnabled()) {
+      return 100; // Maximum priority for total prioritisation mode
+    }
+
+    // Use high fixed priority for country hubs instead of importance-based calculation
+    // This corresponds to the country-hub-discovery bonus (35)
+    return 35;
+  }
+
+  _isTotalPrioritisationEnabled() {
+    try {
+      // Try to load priority config to check for totalPrioritisation feature
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(process.cwd(), 'config', 'priority-config.json');
+
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        return config?.features?.totalPrioritisation === true;
+      }
+    } catch (err) {
+      // Fall back to false if config can't be loaded
+    }
+    return false;
   }
 }
 

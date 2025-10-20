@@ -3,7 +3,7 @@
  * Tests for _shouldReplan, _calculateAvgPerformance, _triggerReplan, _mergePlans
  */
 
-const { IntelligentCrawlerManager } = require('../../ui/express/services/IntelligentCrawlerManager');
+const { IntelligentCrawlerManager } = require('../../deprecated-ui/express/services/IntelligentCrawlerManager');
 const Database = require('better-sqlite3');
 
 describe('IntelligentCrawlerManager - Dynamic Re-Planning (Phase 3)', () => {

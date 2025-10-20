@@ -41,7 +41,7 @@ function main() {
     console.log(`\nBefore: ${beforeColumns.length} columns`);
     
     // Import the service to run the schema upgrade
-    const { ensureAnalysisRunSchema } = require('../src/ui/express/services/analysisRuns');
+    const { ensureAnalysisRunSchema } = require('../src/deprecated-ui/express/services/analysisRuns');
     
     ensureAnalysisRunSchema(db);
     

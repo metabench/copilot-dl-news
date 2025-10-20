@@ -156,9 +156,11 @@ class FetchPipeline {
     }
 
     return this._performNetworkFetch({
+      originalUrl: url,
       normalizedUrl,
       context,
-      decision
+      decision,
+      retryCount
     });
   }
 
@@ -246,7 +248,7 @@ class FetchPipeline {
     });
   }
 
-  async _performNetworkFetch({ normalizedUrl, context, decision }) {
+  async _performNetworkFetch({ originalUrl, normalizedUrl, context, decision, retryCount = 0 }) {
     let parsedUrl = new URL(normalizedUrl);
     const host = parsedUrl.hostname;
 
@@ -523,7 +525,8 @@ class FetchPipeline {
       if ((isConnectionReset || isTimeout) && retryCount < maxRetries) {
         this.logger.warn(`Retrying ${normalizedUrl} after ${isTimeout ? 'timeout' : 'connection reset'} (attempt ${retryCount + 1}/${maxRetries + 1})`);
         await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
-        return this.fetch({ url, context, retryCount: retryCount + 1 });
+        const retryUrl = originalUrl || normalizedUrl;
+        return this.fetch({ url: retryUrl, context, retryCount: retryCount + 1 });
       }
       
       // Log error and record after retries exhausted
@@ -672,6 +675,18 @@ class FetchPipeline {
       }
     };
   }
+  /**
+   * Check if a URL is known to be a 404 error from cache
+   * @param {string} url - URL to check
+   * @returns {Promise<boolean>} True if URL is cached as 404
+   */
+  async isKnown404(url) {
+    try {
+      const cached = await this.getCachedArticle(url);
+      return !!cached && cached.source === 'db-404' && cached.httpStatus === 404;
+    } catch (error) {
+      return false;
+    }
+  }
 }
-
 module.exports = { FetchPipeline };

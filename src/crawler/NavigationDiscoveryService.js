@@ -29,7 +29,9 @@ class NavigationDiscoveryService {
     url,
     html,
     depth = 0,
-    normalizedUrl = null
+    normalizedUrl = null,
+    isCountryHubPage = false,
+    totalPrioritisationMode = false
   } = {}) {
     if (!url) {
       throw new Error('NavigationDiscoveryService.discover requires a url');
@@ -39,7 +41,7 @@ class NavigationDiscoveryService {
     }
 
     const $ = cheerio.load(html);
-    const linkSummary = this.linkExtractor.extract($) || {};
+    const linkSummary = this.linkExtractor.extract($, { isCountryHubPage, totalPrioritisationMode }) || {};
     const navigationLinks = Array.isArray(linkSummary.navigation) ? linkSummary.navigation : [];
     const articleLinks = Array.isArray(linkSummary.articles) ? linkSummary.articles : [];
     const allLinks = Array.isArray(linkSummary.all) ? linkSummary.all : [];

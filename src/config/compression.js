@@ -160,8 +160,8 @@ const compressionConfig = {
 
   // Default compression settings
   defaults: {
-    // Default compression for new content (leave uncompressed for hot tier)
-    newContentCompression: null, // No compression for new content
+    // Default compression for new content (compress with Brotli 6 by default)
+    newContentCompression: 'brotli_6',
 
     // Default compression for migration/backfill
     migrationCompression: 'brotli_6',
@@ -216,8 +216,8 @@ const compressionConfig = {
 
   // Feature Flags
   features: {
-    // Enable automatic compression during ingestion (currently disabled - new content stays uncompressed)
-    autoCompressOnIngest: false,
+    // Enable automatic compression during ingestion (now enabled by default)
+    autoCompressOnIngest: true,
 
     // Enable age-based lifecycle compression
     lifecycleCompression: true,

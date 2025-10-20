@@ -139,22 +139,25 @@ class IntelligentPlanningFacade {
    */
   async _runAPSPlanning(options = {}) {
     const startTime = Date.now();
-    
-    this.logger.log?.('[APS] Starting intelligent planning with country hub priority');
-    
+
+    this.logger.log?.('[APS] Starting country hub prioritization planning');
+
     try {
-      // Phase 1: Country Hub Discovery (PRIORITY)
+      // Phase 1: Country Hub Discovery (PRIORITY FOCUS)
+      this.logger.log?.('[APS] 🔍 Discovering and prioritizing country hubs...');
       const countryHubResult = await this._apsCountryHubPhase();
-      
+
       // Phase 2: Pattern inference and hub seeding
+      this.logger.log?.('[APS] 📊 Building hub discovery patterns...');
       const patternResult = await this._apsPatternPhase(countryHubResult);
-      
+
       // Phase 3: Generate final plan
+      this.logger.log?.('[APS] 🎯 Finalizing country hub prioritization plan...');
       const plan = await this._apsBuildPlan(countryHubResult, patternResult);
-      
+
       const elapsed = Date.now() - startTime;
-      this.logger.log?.(`[APS] Planning complete in ${elapsed}ms`);
-      
+      this.logger.log?.(`[APS] Country hub prioritization complete in ${elapsed}ms`);
+
       return {
         backend: 'aps',
         countryHubCoverage: countryHubResult,
@@ -163,7 +166,7 @@ class IntelligentPlanningFacade {
         elapsedMs: elapsed
       };
     } catch (error) {
-      this.logger.error?.('[APS] Planning failed:', error.message);
+      this.logger.error?.('[APS] Country hub planning failed:', error.message);
       this.logger.error?.(error.stack);
       throw error;
     }
@@ -174,25 +177,25 @@ class IntelligentPlanningFacade {
    * Uses GazetteerAwareReasonerPlugin to ensure all country hubs are found
    */
   async _apsCountryHubPhase() {
-    this.logger.log?.('[APS] Phase 1: Country hub discovery');
-    
+    this.logger.log?.('[APS] 🌍 Evaluating country hub coverage...');
+
     if (!this.countryHubGapService) {
       this.logger.warn?.('[APS] No countryHubGapService available, skipping country hub phase');
-      return { 
-        complete: false, 
-        found: 0, 
+      return {
+        complete: false,
+        found: 0,
         total: 0,
         message: 'Country hub service not available'
       };
     }
-    
+
     // Get all countries from gazetteer
     const allCountries = this.countryHubGapService.getAllCountries();
     const total = allCountries.length;
-    
+
     // Get predictions for top countries
     const topCountries = this.countryHubGapService.getTopCountries(50);
-    
+
     // Display evaluation upfront
     this.logger.log?.('');
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
@@ -203,7 +206,10 @@ class IntelligentPlanningFacade {
     this.logger.log?.(`  Domain: ${this.domain}`);
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
     this.logger.log?.('');
-    
+
+    // Show progress during URL generation
+    this.logger.log?.(`[APS] 🎯 Generating country hub URL predictions for ${this.domain}...`);
+
     // Generate URL predictions for this domain
     const predictions = [];
     for (const country of topCountries) {
@@ -219,10 +225,10 @@ class IntelligentPlanningFacade {
         importance: country.importance
       })));
     }
-    
-    this.logger.log?.(`[APS] Generated ${predictions.length} country hub URL predictions`);
-    this.logger.log?.(`[APS] Queueing predicted URLs with high priority...`);
-    
+
+    this.logger.log?.(`[APS] ✅ Generated ${predictions.length} country hub URL predictions`);
+    this.logger.log?.(`[APS] 📋 Queueing country hub URLs with high priority for immediate discovery...`);
+
     // Queue predicted country hub URLs
     let queued = 0;
     for (const pred of predictions) {
@@ -245,20 +251,20 @@ class IntelligentPlanningFacade {
         this.logger.warn?.(`[APS] Failed to queue ${pred.url}:`, err.message);
       }
     }
-    
+
     this.logger.log?.('');
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
     this.logger.log?.(`  ✓ QUEUED: ${queued} country hub URLs`);
     this.logger.log?.(`  ✓ TARGET: ${topCountries.length} countries (top by importance)`);
     this.logger.log?.(`  ✓ TOTAL: ${total} countries in gazetteer`);
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
-    this.logger.log?.('  Starting country hub downloads...');
+    this.logger.log?.('  🚀 Starting prioritized country hub downloads...');
     this.logger.log?.('═══════════════════════════════════════════════════════════════');
     this.logger.log?.('');
-    
+
     const message = `Country hubs: ${queued} URLs queued from ${topCountries.length} top countries (${total} total in gazetteer)`;
-    this.logger.log?.(`[APS] ${message}`);
-    
+    this.logger.log?.(`[APS] 🎯 ${message}`);
+
     // Emit single-line milestone
     this.telemetry?.milestone?.({
       kind: 'aps-country-hub-complete',
@@ -271,7 +277,7 @@ class IntelligentPlanningFacade {
         backend: 'aps'
       }
     });
-    
+
     return {
       complete: true,
       found: queued,

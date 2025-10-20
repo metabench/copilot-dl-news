@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 /**
+ * DEPRECATED UI SERVER WRAPPER
+ *
+ * This script starts the deprecated UI server.
+ * The UI is deprecated as of October 2025 and kept for reference only.
+ *
+ * For new UI development, see src/ui/README.md
+ *
  * Simple wrapper to start the UI server from the root directory.
  * Usage: node server.js [options]
  *
@@ -11,7 +18,7 @@ const {
 	startServer,
 	parseServerArgs,
 	printServerHelp
-} = require('./src/ui/express/server');
+} = require('./src/deprecated-ui/express/server');
 
 const argv = process.argv;
 const serverArgs = parseServerArgs(argv);

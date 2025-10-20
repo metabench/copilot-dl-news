@@ -67,11 +67,11 @@ All tools default to **dry-run mode** and require `--fix` flag to apply changes:
 
 The tools apply age-based compression:
 
-- **Hot (< 7 days)**: No compression for fast access (new content stays uncompressed)
-- **Warm (7-30 days)**: Brotli level 6 (balanced speed/size)
+- **Hot (< 7 days)**: Brotli level 6 (compressed for storage efficiency)
+- **Warm (7-30 days)**: Brotli level 6 (balanced speed/size) 
 - **Cold (30+ days)**: Brotli level 11 (maximum compression)
 
-**New content is left uncompressed** during ingestion for optimal read performance. Compression is applied later via the lifecycle task as content ages.
+**New content is compressed with Brotli 6 by default** during ingestion for optimal storage efficiency. Additional compression is applied later via the lifecycle task as content ages.
 
 ## Expected Results
 
@@ -85,7 +85,7 @@ These tools work with:
 
 - `CompressionTask`: Bulk compression of existing content
 - `CompressionLifecycleTask`: Scheduled age-based compression (compresses content as it ages)
-- `upsertArticle()`: **No automatic compression** during ingestion (new content stays uncompressed)
+- `upsertArticle()`: **Automatic Brotli 6 compression** during ingestion (new content is compressed by default)
 - Background task system: `/api/background-tasks` UI
 
 ## Troubleshooting

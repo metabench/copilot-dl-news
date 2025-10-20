@@ -10,7 +10,7 @@ console.log('🔍 Verifying implementation files...\n');
 try {
   // Test 1: Load isomorphic renderer
   console.log('1️⃣  Loading renderQueuesTable.js...');
-  const renderer = require('../../src/ui/express/views/queues/renderQueuesTable');
+  const renderer = require('../../src/deprecated-ui/express/views/queues/renderQueuesTable');
   console.log('   ✓ renderQueueRow:', typeof renderer.renderQueueRow);
   console.log('   ✓ renderQueuesTable:', typeof renderer.renderQueuesTable);
   console.log('   ✓ renderQueuesSummary:', typeof renderer.renderQueuesSummary);
@@ -57,7 +57,7 @@ try {
   
   // Test 3: Load updated queuesListPage
   console.log('3️⃣  Loading queuesListPage.js...');
-  const queuesListPage = require('../../src/ui/express/views/queuesListPage');
+  const queuesListPage = require('../../src/deprecated-ui/express/views/queuesListPage');
   console.log('   ✓ renderQueuesListPage:', typeof queuesListPage.renderQueuesListPage);
   
   if (queuesListPage.renderQueuesListPage) {

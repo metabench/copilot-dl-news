@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { createApp } = require('../src/ui/express/server');
+const { createApp } = require('../src/deprecated-ui/express/server');
 
 describe('Server Connection Test', () => {
   let dbPath;

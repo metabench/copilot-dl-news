@@ -1,1 +1,0 @@
-{"version":1,"name":"initial_denormalized_schema","applied_at":"2025-10-19 04:30:43","description":"Legacy denormalized schema (articles, fetches, places tables)","rollback_sql":null}

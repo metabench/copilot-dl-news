@@ -49,6 +49,8 @@ class CrawlerState {
     this.problemCounters = new Map();
     this.problemSamples = new Map();
 
+    this._resetCountryHubTracking();
+
     this.intelligentPlanSummary = null;
     this._plannerStageSeq = 0;
   }
@@ -217,6 +219,8 @@ class CrawlerState {
     this.visitedSeededHubUrls = new Set();
     this.visitedHubMetadata = new Map();
 
+    this._resetCountryHubTracking();
+
     if (!iterable || tof(iterable[Symbol.iterator]) !== 'function') {
       return;
     }
@@ -224,20 +228,16 @@ class CrawlerState {
     for (const entry of iterable) {
       if (!entry) continue;
       if (tof(entry) === 'string') {
-        this.seededHubUrls.add(entry);
-        if (!this.seededHubMetadata.has(entry)) {
-          this.seededHubMetadata.set(entry, {});
-        }
+        this.addSeededHub(entry);
         continue;
       }
       if (tof(entry) === 'object') {
         const url = entry.url || entry.normalized || entry.href;
         if (!url) continue;
-        this.seededHubUrls.add(url);
         const meta = { ...(entry.meta || entry.metadata || {}) };
         if (entry.reason && meta.reason == null) meta.reason = entry.reason;
         if (entry.kind && meta.kind == null) meta.kind = entry.kind;
-        this.seededHubMetadata.set(url, meta);
+        this.addSeededHub(url, meta);
       }
     }
   }
@@ -273,10 +273,19 @@ class CrawlerState {
     }
     if (meta && tof(meta) === 'object') {
       const existing = this.seededHubMetadata.get(normalizedUrl) || {};
-      this.seededHubMetadata.set(normalizedUrl, {
+      const merged = {
         ...existing,
         ...meta
-      });
+      };
+      this.seededHubMetadata.set(normalizedUrl, merged);
+      if ((merged.kind || meta.kind) === 'country') {
+        this._recordCountryHubSeed(normalizedUrl, merged);
+      }
+    } else {
+      const existing = this.seededHubMetadata.get(normalizedUrl) || {};
+      if (existing.kind === 'country') {
+        this._recordCountryHubSeed(normalizedUrl, existing);
+      }
     }
   }
 
@@ -306,6 +315,11 @@ class CrawlerState {
     };
     this.seededHubMetadata.set(normalizedUrl, visitMeta);
     this.visitedHubMetadata.set(normalizedUrl, visitMeta);
+
+    const hubKind = visitMeta?.kind || existing?.kind;
+    if (hubKind === 'country') {
+      this._recordCountryHubVisit(normalizedUrl, visitMeta);
+    }
   }
 
   hasVisitedHub(normalizedUrl) {
@@ -493,6 +507,132 @@ class CrawlerState {
   nextPlannerStageSequence() {
     this._plannerStageSeq += 1;
     return this._plannerStageSeq;
+  }
+
+  recordCountryHubLinks(normalizedHubUrl, summary = {}) {
+    if (!normalizedHubUrl || !summary || tof(summary) !== 'object') {
+      return;
+    }
+    const record = this._ensureCountryHubRecord(normalizedHubUrl);
+    if (!record) {
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const { articleUrls = [], paginationUrls = [], sourceUrl = null } = summary;
+
+    let addedArticles = 0;
+    if (is_array(articleUrls)) {
+      for (const raw of articleUrls) {
+        if (!raw) continue;
+        const href = String(raw);
+        if (!record.articleUrls.has(href)) {
+          record.articleUrls.add(href);
+          addedArticles += 1;
+        }
+      }
+    }
+
+    if (addedArticles > 0) {
+      this._countryHubStats.articleUrls += addedArticles;
+      record.lastLinkUpdateAt = nowIso;
+    }
+
+    if (is_array(paginationUrls)) {
+      for (const raw of paginationUrls) {
+        if (!raw) continue;
+        const href = String(raw);
+        if (!record.paginationUrls.has(href)) {
+          record.paginationUrls.add(href);
+          record.lastLinkUpdateAt = record.lastLinkUpdateAt || nowIso;
+        }
+      }
+    }
+
+    if (sourceUrl) {
+      record.lastSourceUrl = sourceUrl;
+    }
+  }
+
+  getCountryHubProgress() {
+    return {
+      discovered: this._countryHubStats.discovered,
+      validated: this._countryHubStats.validated,
+      articleUrls: this._countryHubStats.articleUrls
+    };
+  }
+
+  _resetCountryHubTracking() {
+    this.countryHubRecords = new Map();
+    this._countryHubStats = {
+      discovered: 0,
+      validated: 0,
+      articleUrls: 0
+    };
+  }
+
+  _ensureCountryHubRecord(normalizedUrl) {
+    if (!normalizedUrl) {
+      return null;
+    }
+    let record = this.countryHubRecords.get(normalizedUrl);
+    if (!record) {
+      record = {
+        hubUrl: normalizedUrl,
+        kind: 'country',
+        firstDiscoveredAt: null,
+        firstValidatedAt: null,
+        lastVisitedAt: null,
+        visitCount: 0,
+        countryName: null,
+        countryCode: null,
+        articleUrls: new Set(),
+        paginationUrls: new Set(),
+        lastLinkUpdateAt: null,
+        lastSourceUrl: null
+      };
+      this.countryHubRecords.set(normalizedUrl, record);
+    }
+    return record;
+  }
+
+  _recordCountryHubSeed(normalizedUrl, meta = {}) {
+    const record = this._ensureCountryHubRecord(normalizedUrl);
+    if (!record) {
+      return;
+    }
+    if (!record.firstDiscoveredAt) {
+      record.firstDiscoveredAt = new Date().toISOString();
+      this._countryHubStats.discovered += 1;
+    }
+    if (meta) {
+      if (meta.countryName && !record.countryName) record.countryName = meta.countryName;
+      if (meta.name && !record.countryName) record.countryName = meta.name;
+      if (meta.countryCode) record.countryCode = meta.countryCode;
+    }
+  }
+
+  _recordCountryHubVisit(normalizedUrl, meta = {}) {
+    const record = this._ensureCountryHubRecord(normalizedUrl);
+    if (!record) {
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    if (!record.firstDiscoveredAt) {
+      record.firstDiscoveredAt = nowIso;
+      this._countryHubStats.discovered += 1;
+    }
+    if (!record.firstValidatedAt) {
+      record.firstValidatedAt = nowIso;
+      this._countryHubStats.validated += 1;
+    }
+    record.lastVisitedAt = nowIso;
+    record.visitCount += 1;
+    if (meta) {
+      if (meta.countryName && !record.countryName) record.countryName = meta.countryName;
+      if (meta.name && !record.countryName) record.countryName = meta.name;
+      if (meta.countryCode) record.countryCode = meta.countryCode;
+    }
   }
 }
 

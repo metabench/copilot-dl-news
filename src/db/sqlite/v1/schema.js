@@ -101,6 +101,62 @@ function initCoreTables(db, { verbose, logger }) {
     }
   }
   
+  // Migration: Add missing 'status' column to existing core tables
+  const coreTablesWithStatus = ['crawl_jobs', 'crawl_tasks', 'compression_buckets', 'planner_stage_events'];
+  for (const tableName of coreTablesWithStatus) {
+    try {
+      const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+      if (tableInfo && tableInfo.sql) {
+        if (!tableInfo.sql.toLowerCase().includes('status ')) {
+          if (verbose) logger.log(`[schema] Migrating ${tableName} table: adding status column...`);
+          try {
+            db.exec(`ALTER TABLE ${tableName} ADD COLUMN status TEXT`);
+          } catch (alterErr) {
+            if (verbose) logger.warn(`[schema] Warning: Could not add status column to ${tableName}:`, alterErr.message);
+          }
+        }
+      }
+    } catch (err) {
+      // Table doesn't exist yet, will be created below
+      if (verbose && err.message && !err.message.includes('no such table')) {
+        logger.warn(`[schema] Warning during ${tableName} status migration:`, err.message);
+      }
+    }
+  }
+  
+  // Migration: Add missing 'created_at' column to existing core tables
+  const coreTablesWithCreatedAt = ['urls', 'domains', 'content_storage', 'compression_buckets', 'bucket_entries', 'query_telemetry'];
+  for (const tableName of coreTablesWithCreatedAt) {
+    try {
+      const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+      if (tableInfo && tableInfo.sql) {
+        if (!tableInfo.sql.toLowerCase().includes('created_at ')) {
+          if (verbose) logger.log(`[schema] Migrating ${tableName} table: adding created_at column...`);
+          try {
+            // SQLite doesn't allow non-constant DEFAULTs in ALTER TABLE, so add column without DEFAULT first
+            db.exec(`ALTER TABLE ${tableName} ADD COLUMN created_at TEXT`);
+            
+            // For tables that should have a DEFAULT, update existing rows and add a trigger
+            if (['content_storage', 'compression_buckets', 'bucket_entries', 'query_telemetry'].includes(tableName)) {
+              // Update existing rows with current timestamp
+              db.exec(`UPDATE ${tableName} SET created_at = datetime('now') WHERE created_at IS NULL`);
+              
+              // Note: We can't add DEFAULT constraints to existing columns in SQLite
+              // The application code will need to handle setting created_at on inserts
+            }
+          } catch (alterErr) {
+            if (verbose) logger.warn(`[schema] Warning: Could not add created_at column to ${tableName}:`, alterErr.message);
+          }
+        }
+      }
+    } catch (err) {
+      // Table doesn't exist yet, will be created below
+      if (verbose && err.message && !err.message.includes('no such table')) {
+        logger.warn(`[schema] Warning during ${tableName} created_at migration:`, err.message);
+      }
+    }
+  }
+  
   // ========== url_aliases.url_exists Migration ==========
   // Migration: Add url_exists column to url_aliases table (used by DeepUrlAnalyzer)
   try {

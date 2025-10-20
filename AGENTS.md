@@ -56,6 +56,7 @@ const taskCategories = {
 - ⚙️ Concurrency model → `docs/CONCURRENCY_IMPLEMENTATION_SUMMARY.md`
 - 🧪 E2E test implementation → `docs/GEOGRAPHY_E2E_IMPLEMENTATION_SUMMARY.md`
 - 📊 Geography flowchart UI → `docs/GEOGRAPHY_FLOWCHART_IMPLEMENTATION.md`
+- 🎯 Country hub behavioral profile → `docs/COUNTRY_HUB_BEHAVIORAL_PROFILE_ANALYSIS.md` ⭐ **Goal-driven crawling behavior**
 
 **Background Tasks (Background System)**
 - ⚙️ Task basics → `ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` (Section 2)
@@ -75,11 +76,15 @@ const taskCategories = {
 - 🧰 Query module conventions → `src/db/sqlite/queries/README.md`
 - 🔧 Correction tools → `tools/corrections/README.md` ⭐ **Data cleanup workflow**
 - 🗄️ Deduplication guide → `docs/GAZETTEER_DEDUPLICATION_IMPLEMENTATION.md` ⭐ **Fix duplicates**
+- 💾 Backup policy → AGENTS.md "Database Backup Policy" section ⭐ **Keep only one recent backup**
 
 **UI Development**
-- 🎨 HTML composition → `HTML_COMPOSITION_ARCHITECTURE.md`
-- 🧩 Component modules → `CLIENT_MODULARIZATION_PLAN.md`
-- 📡 SSE integration → `UI_INTEGRATION_COMPLETE.md`
+- ⚠️ **DEPRECATED**: UI code moved to `src/deprecated-ui/` (October 2025)
+- ⚠️ **DO NOT TEST DEPRECATED UI**: Agents should not run tests on deprecated UI code. Use `deprecated-ui` test suite only when explicitly requested for reference.
+- 📋 **New UI Planning**: `src/ui/README.md` - Simple data-focused interface
+- 🎨 HTML composition → `deprecated-ui/express/public/views/` (reference only)
+- 🧩 Component modules → `deprecated-ui/express/public/components/` (reference only)
+- 📡 SSE integration → `deprecated-ui/express/routes/events.js` (reference only)
 
 **Language Tools & Utilities**
 - 🔧 Architectural patterns → `LANG_TOOLS_ARCHITECTURAL_PATTERNS.md`
@@ -181,6 +186,7 @@ const taskCategories = {
 | Implement API consumers | `docs/API_ENDPOINT_REFERENCE.md` ⭐ | `ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` |
 | Understand place hub taxonomy | `docs/PLACE_HUB_HIERARCHY.md` ⭐ | `HIERARCHICAL_PLANNING_INTEGRATION.md` |
 | Improve country hub discovery | `docs/PATTERN_LEARNING_AND_DSPLS.md` ⭐ | Generate DSPLs from existing data |
+| Implement country hub behavioral profile | `docs/COUNTRY_HUB_BEHAVIORAL_PROFILE_ANALYSIS.md` ⭐ | `docs/INTELLIGENT_CRAWL_COUNTRY_HUB_ENHANCEMENT_PLAN.md` |
 | Implement geography crawl | `GEOGRAPHY_CRAWL_TYPE.md` | `GAZETTEER_BREADTH_FIRST_IMPLEMENTATION.md` |
 | Fix crawl not showing up | `ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` | `GEOGRAPHY_E2E_INVESTIGATION.md` |
 | Add background task | `BACKGROUND_TASKS_COMPLETION.md` | `ANALYSIS_AS_BACKGROUND_TASK.md` (example) |
@@ -284,9 +290,9 @@ Code comments (Implementation details)
 
 ## Project Structure
 
-**UI Styles**: `src/ui/express/public/styles/*.scss` → `npm run sass:build`  
-**UI Components**: `src/ui/public/**/*.js` → `node scripts/build-ui.js` → `src/ui/express/public/assets/`  
-**Server**: `src/ui/express/server.js` serves `/assets/` (built), `/theme/` (shared)  
+**UI Styles**: `src/deprecated-ui/express/public/styles/*.scss` (DEPRECATED - reference only)  
+**UI Components**: `src/deprecated-ui/public/**/*.js` (DEPRECATED - reference only)  
+**Server**: `src/deprecated-ui/express/server.js` (DEPRECATED - reference only)  
 **Database**: SQLite WAL mode via better-sqlite3 (`src/db/sqlite/ensureDb.js`)
 
 ### Crawls vs Background Tasks ⚠️ CRITICAL
@@ -320,6 +326,8 @@ This project has **two distinct systems**:
 
 **Key Rule**: Crawls **acquire new data** (network I/O). Background tasks **process existing data** (CPU/disk I/O).
 
+**Compression Behavior (October 2025)**: Crawls now compress content with Brotli 6 by default during ingestion. Background tasks handle lifecycle compression (hot/warm/cold tiers).
+
 **Critical Terminology Rule** (October 2025):
 - ✅ **Crawls** are user-facing entities (users start, resume, pause, clear crawls)
 - ❌ **Queues** are internal implementation details (not directly controllable by users)
@@ -349,9 +357,9 @@ import { createCrawlControls } from './crawlControls.js';
 
 ### Build Process
 
-**Auto-Build on Server Start**: Components auto-rebuild if sources newer than outputs (~100-300ms)  
-**Manual Build**: `node scripts/build-ui.js` (rebuilds index.js, global-nav.js, chunks)  
-**SASS**: `npm run sass:build` for styles, `npm run sass:watch` for auto-compile
+**Auto-Build on Server Start**: Components auto-rebuild if sources newer than outputs (~100-300ms) - DEPRECATED  
+**Manual Build**: `node scripts/build-ui.js` (rebuilds index.js, global-nav.js, chunks) - DEPRECATED  
+**SASS**: `npm run sass:build` for styles, `npm run sass:watch` for auto-compile - DEPRECATED
 
 ---
 
@@ -431,6 +439,40 @@ beforeEach(() => {
 const { ensureDatabase, wrapWithTelemetry } = require('../db/sqlite');
 const db = ensureDatabase('/path/to/db.sqlite');
 const instrumentedDb = wrapWithTelemetry(db, { trackQueries: true });
+```
+
+**See `docs/DATABASE_QUICK_REFERENCE.md` for complete patterns and WAL mode details.**
+
+---
+
+## Database Backup Policy (October 2025)
+
+**Keep only one recent backup** to avoid cluttering the repository while maintaining recovery capability.
+
+**Current Backups** (`data/backups/`):
+- `news-backup-YYYY-MM-DD-HHMMSS.db` - Most recently modified main database (news.db)
+- `gazetteer-backup-YYYY-MM-DD-HHMMSS.db` - Gazetteer database backup
+- `urls.db` - Most recent URL database backup
+- `gazetteer-backup/` - NDJSON export of gazetteer tables (681,400 rows as of 2025-10-20)
+
+**Policy**:
+- ✅ Keep **one recent backup** of each major database
+- ✅ Create timestamped backups before major schema changes
+- ✅ Remove old backups when creating new ones
+- ✅ Gazetteer backups are critical (contains place/country data)
+- ❌ Don't accumulate multiple backups over time
+
+**When to Create Backups**:
+- Before major schema migrations
+- Before running data correction scripts
+- When testing new compression algorithms
+- Before large data imports/exports
+
+**Backup Command Pattern**:
+```powershell
+$timestamp = Get-Date -Format "yyyy-MM-dd-HHmmss"
+Copy-Item -Path "data\news.db" -Destination "data\backups\news-backup-$timestamp.db" -Force
+Copy-Item -Path "data\gazetteer.db" -Destination "data\backups\gazetteer-backup-$timestamp.db" -Force
 ```
 
 **See `docs/DATABASE_QUICK_REFERENCE.md` for complete patterns and WAL mode details.**
@@ -786,6 +828,8 @@ Rapidly iterate on dense, informative startup output for intelligent crawls in s
 **See**: `docs/agents/intelligent-crawl-startup.md`
 
 **Example**: `node tools/intelligent-crawl.js --limit 100` for recommended analysis.
+
+**Note (Oct 2025)**: the helper now launches `NewsCrawler` with `countryHubExclusiveMode` enabled, so runs stay focused on hub structure; unset this flag inside `tools/intelligent-crawl.js` if you need full article fetching for comparisons.
 
 ---
 

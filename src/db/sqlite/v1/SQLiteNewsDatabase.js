@@ -3,6 +3,7 @@ const fs = require('fs');
 const Database = require('better-sqlite3');
 const { is_array, tof } = require('lang-tools');
 const { ensureDb, ensureGazetteer } = require('./ensureDb');
+const { seedCrawlTypes } = require('./seeders');
 const { Readable } = require('stream');
 
 function slugifyCountryName(name) {
@@ -112,10 +113,12 @@ class NewsDatabase {
 
       FROM urls u
       INNER JOIN http_responses hr ON hr.url_id = u.id
-      INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-      INNER JOIN content_analysis ca ON ca.content_id = cs.id
+      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
       LEFT JOIN discovery_events de ON de.url_id = u.id
       WHERE u.url = ?
+      ORDER BY hr.fetched_at DESC
+      LIMIT 1
     `);
     this.selectByUrlOrCanonicalStmt = this.db.prepare(`
       SELECT
@@ -179,19 +182,23 @@ class NewsDatabase {
 
       FROM urls u
       INNER JOIN http_responses hr ON hr.url_id = u.id
-      INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-      INNER JOIN content_analysis ca ON ca.content_id = cs.id
+      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
       LEFT JOIN discovery_events de ON de.url_id = u.id
       WHERE u.url = ? OR u.canonical_url = ?
+      ORDER BY hr.fetched_at DESC
+      LIMIT 1
     `);
     this.selectArticleHeadersStmt = this.db.prepare(`
       SELECT u.url, ca.title, ca.date, ca.section, u.canonical_url
       FROM urls u
       INNER JOIN http_responses hr ON hr.url_id = u.id
-      INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-      INNER JOIN content_analysis ca ON ca.content_id = cs.id
+      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
       LEFT JOIN discovery_events de ON de.url_id = u.id
       WHERE u.url = ? OR u.canonical_url = ?
+      ORDER BY hr.fetched_at DESC
+      LIMIT 1
     `);
     this.countStmt = this.db.prepare(`
       SELECT COUNT(*) as count
@@ -320,7 +327,7 @@ class NewsDatabase {
    * @returns {Object|null} Result object with success status and IDs, or null on failure
    */
   _writeToNormalizedSchema(article, options = {}) {
-    const { compress = false, compressionType = 'brotli_6', useCase = 'balanced' } = options;
+    const { compress = true, compressionType = 'brotli_6', useCase = 'balanced' } = options;
     try {
       // 1. Ensure URL exists and get its ID
       const urlId = this._ensureUrlId(article.url);
@@ -816,7 +823,7 @@ class NewsDatabase {
           hr.fetched_at,
           hr.http_status,
           hr.content_type,
-          hr.content_length,
+          hr.bytes_downloaded AS content_length,
           hr.bytes_downloaded,
           hr.transfer_kbps,
           hr.ttfb_ms,
@@ -831,7 +838,7 @@ class NewsDatabase {
           ca.word_count,
           ca.article_links_count,
           ca.nav_links_count,
-          ca.analysis
+          ca.analysis_json AS analysis
         FROM urls u
         INNER JOIN http_responses hr ON hr.url_id = u.id
         LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
@@ -1352,37 +1359,13 @@ class NewsDatabase {
 
   ensureCrawlTypesSeeded() {
     if (this._crawlTypesSeeded) return;
-    const defaults = [
-      { name: 'basic', description: 'Follow links only (no sitemap)', declaration: { crawlType: 'basic', useSitemap: false, sitemapOnly: false } },
-      { name: 'sitemap-only', description: 'Use only the sitemap to discover pages', declaration: { crawlType: 'sitemap-only', useSitemap: true, sitemapOnly: true } },
-      { name: 'basic-with-sitemap', description: 'Follow links and also use the sitemap', declaration: { crawlType: 'basic-with-sitemap', useSitemap: true, sitemapOnly: false } },
-      { name: 'intelligent', description: 'Intelligent planning (hubs + sitemap + heuristics)', declaration: { crawlType: 'intelligent', useSitemap: true, sitemapOnly: false } },
-  { name: 'discover-structure', description: 'Map site structure without downloading articles', declaration: { crawlType: 'discover-structure', useSitemap: true, sitemapOnly: false } },
-  { name: 'gazetteer', description: 'Legacy alias for geography gazetteer crawl', declaration: { crawlType: 'geography', useSitemap: false, sitemapOnly: false } },
-  { name: 'wikidata', description: 'Only ingest gazetteer data from Wikidata', declaration: { crawlType: 'wikidata', useSitemap: false, sitemapOnly: false } },
-  { name: 'geography', description: 'Aggregate gazetteer data from Wikidata plus OpenStreetMap boundaries', declaration: { crawlType: 'geography', useSitemap: false, sitemapOnly: false } }
-    ];
-    const stmt = this.db.prepare(`
-      INSERT INTO crawl_types(name, description, declaration)
-      VALUES (@name, @description, @declaration)
-      ON CONFLICT(name) DO UPDATE SET description = excluded.description, declaration = excluded.declaration
-    `);
-    const txn = this.db.transaction((rows) => {
-      for (const row of rows) {
-        stmt.run({
-          name: row.name,
-          description: row.description,
-          declaration: JSON.stringify(row.declaration)
-        });
-      }
-    });
-    try {
-      txn(defaults);
-      this._crawlTypesSeeded = true;
-    } catch (_) {
+    const result = seedCrawlTypes(this.db);
+    if (!result.success) {
       // Ignore seeding errors but avoid retry loop
       this._crawlTypesSeeded = true;
+      return;
     }
+    this._crawlTypesSeeded = true;
   }
 
   recordCrawlJobStart({ id, url = null, args = null, pid = null, startedAt = null, status = 'running' }) {

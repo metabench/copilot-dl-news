@@ -34,6 +34,12 @@ build/
 # Data directory (crawled content)
 data/
 
+# Large NDJSON exports and backups
+*.ndjson
+gazetteer-backup/
+migration-export/
+migration-temp/
+
 # Test logs directory (can grow to thousands of files)
 testlogs/
 

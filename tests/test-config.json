@@ -6,7 +6,7 @@
   "testSuites": {
     "unit": {
       "description": "Fast unit tests only (no network, no E2E)",
-  "testPathIgnorePatterns": ["e2e", "online", "puppeteer", "http.test.js", ".dev.test.js", ".manual.test.js", "/broken/"],
+  "testPathIgnorePatterns": ["e2e", "online", "puppeteer", "http.test.js", ".dev.test.js", ".manual.test.js", "/broken/", "/deprecated-ui/"],
       "timeout": 5000,
       "maxWorkers": 4,
       "forceExit": false
@@ -15,6 +15,7 @@
     "integration": {
       "description": "HTTP server integration tests",
       "testPathPattern": "http.test.js",
+      "testPathIgnorePatterns": ["/deprecated-ui/"],
       "timeout": 10000,
       "forceExit": true,
       "maxWorkers": 2
@@ -23,7 +24,7 @@
     "e2e": {
       "description": "Standard E2E tests (excludes dev/manual tests)",
       "testPathPattern": "e2e",
-  "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "/broken/"],
+  "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "/broken/", "/deprecated-ui/"],
       "timeout": 60000,
       "forceExit": true,
       "maxWorkers": 1,
@@ -33,6 +34,7 @@
     "e2e-quick": {
       "description": "Quick E2E tests only (fast smoke tests)",
       "testPathPattern": "e2e-features",
+      "testPathIgnorePatterns": ["/deprecated-ui/"],
       "timeout": 30000,
       "forceExit": true,
       "maxWorkers": 1
@@ -40,7 +42,7 @@
     
     "all": {
       "description": "All regular tests (excludes dev/manual tests)",
-  "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "geography-crawl.e2e.test.js", "geography.full.e2e.test.js", "/broken/"],
+  "testPathIgnorePatterns": [".dev.test.js", ".manual.test.js", "geography-crawl.e2e.test.js", "geography.full.e2e.test.js", "/broken/", "/deprecated-ui/"],
       "timeout": 10000,
       "forceExit": true,
       "maxWorkers": 4
@@ -78,6 +80,15 @@
       "timeout": 30000,
       "forceExit": true,
       "maxWorkers": 1
+    },
+    
+    "deprecated-ui": {
+      "description": "DEPRECATED: UI tests (kept for reference, rarely run)",
+      "testPathPattern": "/deprecated-ui/",
+      "timeout": 60000,
+      "forceExit": true,
+      "maxWorkers": 1,
+      "note": "These tests are for the deprecated UI and should rarely be run. Use only for reference."
     }
   },
   

@@ -14,19 +14,31 @@
         "description": "URLs predicted to fill coverage gaps based on problem clustering",
         "category": "intelligent"
       },
+      "country-hub-discovery": {
+        "value": 100,
+        "description": "Country hub pages predicted by gazetteer-aware reasoning - TOTAL PRIORITY",
+        "category": "intelligent",
+        "totalPrioritisationValue": 1000
+      },
+      "country-hub-article": {
+        "value": 90,
+        "description": "Article links discovered on country hub pages - HIGH PRIORITY",
+        "category": "intelligent",
+        "totalPrioritisationValue": 900
+      },
       "sitemap": {
-        "value": 10,
-        "description": "URLs from structured sitemaps (high confidence navigation)",
+        "value": 5,
+        "description": "URLs from structured sitemaps (reduced priority for country hub focus)",
         "category": "structured"
       },
       "hub-validated": {
-        "value": 8,
-        "description": "Hub pages validated by previous crawls or knowledge reuse",
+        "value": 3,
+        "description": "Hub pages validated by previous crawls (reduced for country focus)",
         "category": "validated"
       },
       "link": {
         "value": 0,
-        "description": "Regular link discovery from page parsing",
+        "description": "Regular link discovery from page parsing (lowest priority)",
         "category": "organic"
       }
     },
@@ -87,7 +99,8 @@
     "adaptiveBranching": false,
     "realTimePlanAdjustment": false,
     "dynamicReplanning": false,
-    "crossDomainSharing": false
+    "crossDomainSharing": false,
+    "totalPrioritisation": true
   },
   "lastUpdated": "2025-09-28T09:29:04.035Z"
 }

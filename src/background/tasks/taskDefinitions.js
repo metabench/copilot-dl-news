@@ -5,7 +5,7 @@
  * Each task type has a schema with fields, validation, and defaults.
  */
 
-const { FieldType, validateValues } = require('../../ui/shared/propertyEditor');
+const { FieldType, validateValues } = require('../../deprecated-ui/shared/propertyEditor');
 
 /**
  * Task parameter definitions

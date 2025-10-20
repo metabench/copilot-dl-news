@@ -8,6 +8,7 @@ class EnhancedFeaturesManager {
     ProblemResolutionService,
     CrawlPlaybookService,
     CountryHubGapService,
+    CountryHubBehavioralProfile,
     logger = console
   } = {}) {
     if (!ConfigManager || !EnhancedDatabaseAdapter || !PriorityScorer || !ProblemClusteringService || !PlannerKnowledgeService || !ProblemResolutionService) {
@@ -22,6 +23,7 @@ class EnhancedFeaturesManager {
     this.ProblemResolutionService = ProblemResolutionService;
     this.CrawlPlaybookService = CrawlPlaybookService;
     this.CountryHubGapService = CountryHubGapService;
+    this.CountryHubBehavioralProfile = CountryHubBehavioralProfile;
     this.logger = logger;
 
     this._resetState();
@@ -37,7 +39,8 @@ class EnhancedFeaturesManager {
       problemResolution: false,
       crawlPlaybooks: false,
       patternDiscovery: false,
-      countryHubGaps: false
+      countryHubGaps: false,
+      countryHubBehavioralProfile: false
     };
     this.configManager = null;
     this.enhancedDbAdapter = null;
@@ -47,6 +50,7 @@ class EnhancedFeaturesManager {
     this.problemResolutionService = null;
     this.crawlPlaybookService = null;
     this.countryHubGapService = null;
+    this.countryHubBehavioralProfile = null;
     this.jobId = null;
   }
 
@@ -78,6 +82,10 @@ class EnhancedFeaturesManager {
     return this.countryHubGapService;
   }
 
+  getCountryHubBehavioralProfile() {
+    return this.countryHubBehavioralProfile;
+  }
+
   async initialize({ dbAdapter, jobId, state = null, telemetry = null } = {}) {
     this._resetState();
     this.jobId = jobId || null;
@@ -94,6 +102,7 @@ class EnhancedFeaturesManager {
 
       if (anyFeatureRequested && dbEnabled) {
         try {
+          this.logger.log('Initializing enhanced database adapter...');
           this.enhancedDbAdapter = new this.EnhancedDatabaseAdapter(dbAdapter);
           this.logger.log('Enhanced database adapter initialized');
         } catch (error) {
@@ -108,6 +117,7 @@ class EnhancedFeaturesManager {
       this.featuresEnabled.graphReasonerPlugin = Boolean(featureFlags.graphReasonerPlugin);
       this.featuresEnabled.gazetteerAwareReasoner = Boolean(featureFlags.gazetteerAwareReasoner);
 
+      this.logger.log('Initializing enhanced feature services...');
       await this._initializeFeatureServices(featureFlags || {}, { dbAdapter, state, telemetry }, initializationFailures);
 
       const enabledFeatures = Object.keys(this.featuresEnabled).filter((key) => this.featuresEnabled[key]);
@@ -251,8 +261,10 @@ class EnhancedFeaturesManager {
     }
 
     // Initialize CountryHubGapService when gap-driven prioritization and pattern discovery are enabled
+    // AND enhanced database adapter is available
     if (this.CountryHubGapService && 
         (features.gapDrivenPrioritization || features.patternDiscovery) && 
+        this.enhancedDbAdapter &&
         (state && telemetry)) {
       try {
         this.countryHubGapService = new this.CountryHubGapService({
@@ -270,6 +282,31 @@ class EnhancedFeaturesManager {
         this._warn('Failed to initialize country hub gap service:', error);
         this.countryHubGapService = null;
         this.featuresEnabled.countryHubGaps = false;
+      }
+    }
+
+    // Initialize CountryHubBehavioralProfile when country hub features are enabled
+    if (this.CountryHubBehavioralProfile && 
+        (features.countryHubBehavioralProfile || features.gapDrivenPrioritization) &&
+        (state && telemetry)) {
+      try {
+        this.countryHubBehavioralProfile = new this.CountryHubBehavioralProfile({
+          logger: this.logger,
+          telemetryEnabled: true
+        });
+        // Initialize with crawler context
+        this.countryHubBehavioralProfile.initialize({
+          state,
+          telemetry,
+          jobId: this.jobId
+        });
+        this.featuresEnabled.countryHubBehavioralProfile = true;
+        this.logger.log('Country hub behavioral profile initialized');
+      } catch (error) {
+        failures.push({ feature: 'countryHubBehavioralProfile', error: error.message });
+        this._warn('Failed to initialize country hub behavioral profile:', error);
+        this.countryHubBehavioralProfile = null;
+        this.featuresEnabled.countryHubBehavioralProfile = false;
       }
     }
   }
@@ -299,6 +336,9 @@ class EnhancedFeaturesManager {
     try {
       if (this.countryHubGapService?.close) {
         this.countryHubGapService.close();
+      }
+      if (this.countryHubBehavioralProfile?.close) {
+        this.countryHubBehavioralProfile.close();
       }
       if (this.crawlPlaybookService?.close) {
         this.crawlPlaybookService.close();

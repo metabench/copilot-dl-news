@@ -26,7 +26,9 @@ class PageExecutionService {
     countryHubGapService = null,
     jobId = null,
     domain = null,
-    structureOnly = false
+    structureOnly = false,
+    hubOnlyMode = false,
+    getCountryHubBehavioralProfile = null
   } = {}) {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
@@ -72,6 +74,10 @@ class PageExecutionService {
     this.jobId = jobId || null;
     this.domain = domain || null;
     this.structureOnly = !!structureOnly;
+    this.hubOnlyMode = !!hubOnlyMode;
+    this.getCountryHubBehavioralProfile = typeof getCountryHubBehavioralProfile === 'function'
+      ? getCountryHubBehavioralProfile
+      : () => null;
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -281,13 +287,19 @@ class PageExecutionService {
     if (this.emitProgress) this.emitProgress();
     await this._noteSeededHubVisit(normalizedUrl, { depth, fetchSource: source });
 
+    // Check if this is a country hub page in total prioritisation mode
+    const isCountryHubPage = this._isCountryHubPage(resolvedUrl);
+    const totalPrioritisationMode = this._isTotalPrioritisationEnabled();
+
     let discovery = null;
     try {
       discovery = this.navigationDiscoveryService?.discover({
         url: resolvedUrl,
         html,
         depth,
-        normalizedUrl
+        normalizedUrl,
+        isCountryHubPage,
+        totalPrioritisationMode
       }) || null;
     } catch (error) {
       if (this.recordError) {
@@ -424,23 +436,161 @@ class PageExecutionService {
       allLinks = discoveryAllLinks;
     }
 
+    if (this.hubOnlyMode && isCountryHubPage && typeof this.state?.recordCountryHubLinks === 'function') {
+      const summary = this._collectCountryHubLinkSummary(allLinks);
+      if (summary.articleUrls.length > 0 || summary.paginationUrls.length > 0) {
+        try {
+          this.state.recordCountryHubLinks(normalizedUrl, {
+            ...summary,
+            sourceUrl: resolvedUrl
+          });
+        } catch (_) {}
+      }
+    }
+
     const seen = new Set();
     for (const link of allLinks) {
       if (!link || !link.url) continue;
       if (seen.has(link.url)) continue;
       seen.add(link.url);
+
+      // In country hub exclusive mode, only process links from country hub pages
+      const isCountryHubPage = this._isCountryHubPage(resolvedUrl);
+      if (this.hubOnlyMode && !isCountryHubPage) {
+        continue; // Skip all links from non-country-hub pages
+      }
+
+      if (this.hubOnlyMode && link.type === 'article') {
+        continue; // Skip article links even from country hubs
+      }
+
       try {
+        let linkMeta = isCountryHubPage ? { sourceHub: resolvedUrl, sourceHubType: 'country' } : null;
+
+        // Apply maximum priority bonus for country hub articles in total prioritisation mode
+        if (isCountryHubPage && this._isTotalPrioritisationEnabled()) {
+          linkMeta = {
+            ...linkMeta,
+            priorityBonus: 'country-hub-article-total',
+            forcePriority: 90  // Maximum priority for articles from country hubs
+          };
+        }
+
         this.enqueueRequest({
           url: link.url,
           depth: depth + 1,
-          type: link.type || 'nav'
+          type: link.type || 'nav',
+          meta: linkMeta
         });
       } catch (_) {}
     }
 
+    this._updateCountryHubProgress();
+
     return {
       status: 'success'
     };
+  }
+
+  _collectCountryHubLinkSummary(allLinks) {
+    const summary = {
+      articleUrls: [],
+      paginationUrls: []
+    };
+    if (!Array.isArray(allLinks)) {
+      return summary;
+    }
+    for (const link of allLinks) {
+      if (!link || !link.url) continue;
+      if (link.type === 'article') {
+        summary.articleUrls.push(link.url);
+      } else if (link.type === 'pagination') {
+        summary.paginationUrls.push(link.url);
+      }
+    }
+    return summary;
+  }
+
+  _updateCountryHubProgress() {
+    if (typeof this.state?.getCountryHubProgress !== 'function') {
+      return;
+    }
+    let profile = null;
+    try {
+      profile = this.getCountryHubBehavioralProfile?.();
+    } catch (_) {
+      profile = null;
+    }
+    if (!profile || typeof profile.updateProgress !== 'function') {
+      return;
+    }
+    let progress = null;
+    try {
+      progress = this.state.getCountryHubProgress();
+    } catch (_) {
+      progress = null;
+    }
+    if (!progress) {
+      return;
+    }
+    const totalCountries = typeof profile.state?.totalCountries === 'number'
+      ? profile.state.totalCountries
+      : 0;
+    const overallProgress = totalCountries > 0
+      ? Math.min(progress.discovered / totalCountries, 1)
+      : 0;
+    try {
+      profile.updateProgress({
+        countryHubsDiscovered: progress.discovered,
+        countryHubsValidated: progress.validated,
+        countryArticlesIndexed: progress.articleUrls,
+        overallProgress
+      });
+    } catch (_) {}
+  }
+
+  /**
+   * Check if a URL represents a country hub page
+   * @private
+   */
+  _isCountryHubPage(url) {
+    if (!url) return false;
+
+    // Check if this URL is in our seeded hubs as a country hub
+    if (this.state?.hasSeededHub && this.state.hasSeededHub(url)) {
+      const meta = this.state.getSeededHubMeta?.(url);
+      return meta?.kind === 'country';
+    }
+
+    // Fallback: check URL patterns for common country hub patterns
+    try {
+      const urlObj = new URL(url);
+      const path = urlObj.pathname.toLowerCase();
+
+      // Common country hub URL patterns
+      return path.match(/^\/world\/[^\/]+$/) ||
+             path.match(/^\/news\/world\/[^\/]+$/) ||
+             path.match(/^\/international\/[^\/]+$/);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  _isTotalPrioritisationEnabled() {
+    try {
+      // Try to load priority config to check for totalPrioritisation feature
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(process.cwd(), 'config', 'priority-config.json');
+
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        return config?.features?.totalPrioritisation === true;
+      }
+    } catch (err) {
+      // Fall back to false if config can't be loaded
+    }
+    return false;
   }
 
   async _noteSeededHubVisit(normalizedUrl, { depth = null, fetchSource = null } = {}) {
@@ -513,6 +663,7 @@ class PageExecutionService {
           console.warn('[PageExecutionService] Country hub gap detection failed:', error);
         }
       }
+      this._updateCountryHubProgress();
     }
   }
 }

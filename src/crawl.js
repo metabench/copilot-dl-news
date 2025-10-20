@@ -68,6 +68,9 @@ const {
 const {
   CountryHubGapService
 } = require('./crawler/CountryHubGapService');
+const {
+  CountryHubBehavioralProfile
+} = require('./crawler/CountryHubBehavioralProfile');
 const chalk = require('chalk');
 
 const CLI_COLORS = Object.freeze({
@@ -565,6 +568,7 @@ class NewsCrawler {
       ProblemResolutionService,
       CrawlPlaybookService,
       CountryHubGapService,
+      CountryHubBehavioralProfile,
       logger: console
     });
     // Track active workers to coordinate idle waiting
@@ -598,7 +602,17 @@ class NewsCrawler {
     this.crawlType = opts.crawlType;
     this.gazetteerVariant = this._resolveGazetteerVariant(this.crawlType);
     this.isGazetteerMode = !!this.gazetteerVariant;
-    this.structureOnly = this.crawlType === 'discover-structure';
+    this.countryHubExclusiveMode = Boolean(
+      opts.exhaustiveCountryHubMode ||
+      opts.countryHubExclusiveMode ||
+      (typeof opts.priorityMode === 'string' && opts.priorityMode.toLowerCase() === 'country-hubs-only')
+    );
+    const structureOnlyFromCrawlType = this.crawlType === 'discover-structure';
+    if (opts.structureOnly != null) {
+      this.structureOnly = !!opts.structureOnly;
+    } else {
+      this.structureOnly = structureOnlyFromCrawlType || this.countryHubExclusiveMode;
+    }
     if (options.concurrency == null && this.structureOnly && this.concurrency < 4) {
       this.concurrency = 4;
       this.usePriorityQueue = this.concurrency > 1;
@@ -890,7 +904,9 @@ class NewsCrawler {
       countryHubGapService: () => this.enhancedFeatures?.getCountryHubGapService?.(),
       jobId: this.jobId,
       domain: this.domain,
-      structureOnly: this.structureOnly
+      structureOnly: this.structureOnly,
+      hubOnlyMode: this.countryHubExclusiveMode,
+      getCountryHubBehavioralProfile: () => this.countryHubBehavioralProfile
     });
 
     if (this.isGazetteerMode) {
@@ -968,6 +984,10 @@ class NewsCrawler {
 
   get crawlPlaybookService() {
     return this.enhancedFeatures?.getCrawlPlaybookService() || null;
+  }
+
+  get countryHubBehavioralProfile() {
+    return this.enhancedFeatures?.getCountryHubBehavioralProfile() || null;
   }
 
   get seededHubUrls() {
@@ -2594,6 +2614,78 @@ class NewsCrawler {
 // CLI interface
 if (require.main === module) {
   const args = process.argv.slice(2);
+  if (args.includes('--help') || args.includes('-h')) {
+    const helpText = `
+News Crawl CLI
+
+Usage:
+  node src/crawl.js [options] [start-url]
+
+If no start URL is provided, the crawler defaults to https://www.theguardian.com for web crawls
+and uses an internal placeholder for geography/gazetteer runs.
+
+Core modes:
+  --crawl-type=news (default)         Standard intelligent news crawl
+  --crawl-type=intelligent            Enables opportunistic hub planner
+  --crawl-type=discover-structure     Focus on hub discovery without article storage
+  --crawl-type=geography              Gazetteer ingestion (countries → regions → cities → boundaries)
+  --crawl-type=gazetteer              Alias for geography
+  --crawl-type=wikidata               Wikidata-powered geography bootstrap
+
+Primary options:
+  --depth=<n>                         Maximum link depth to follow (default 2; ignored for geography modes)
+  --max-pages=<n>                     Hard cap on pages/downloads for this run
+  --max-age=<seconds|m|h|d>           Refetch content older than the given age (alias: --refetch-if-older-than)
+  --max-age-article=<age>             Refetch threshold specifically for article pages
+  --max-age-hub=<age>                 Refetch threshold for hub/index pages
+  --max-queue=<n>                     Limit in-flight queue size before backpressure
+  --concurrency=<n>                   Parallel downloads (treated as max for geography modes)
+  --rate-limit-ms=<n>                 Minimum delay between requests in milliseconds
+  --request-timeout-ms=<n>            HTTP request timeout in milliseconds
+  --pacer-jitter-min-ms=<n>           Randomized pacing: minimum jitter window
+  --pacer-jitter-max-ms=<n>           Randomized pacing: maximum jitter window
+  --fast-start / --no-fast-start      Toggle startup optimizations (default: fast start enabled)
+  --no-sitemap                        Skip sitemap discovery entirely
+  --sitemap-only                      Process sitemap URLs without page crawling
+  --sitemap-max=<n>                   Cap sitemap URLs ingested this run
+  --allow-query-urls                  Permit crawling URLs with query strings (default: skip)
+  --verbose                           Show full telemetry, milestones, and debug output
+
+Database controls:
+  --db <path> or --db=<path>          Use an explicit SQLite database file
+  --newdb                             Create a new data/news_*.db in the working directory
+  --no-db                             Disable persistence (in-memory crawl only)
+
+Planner & hub discovery:
+  --hub-max-pages=<n>                 Limit article fetches per discovered hub
+  --hub-max-days=<n>                  Stop exploring hubs older than n days
+  --int-max-seeds=<n>                 Cap initial intelligent planner seeds
+  --int-target-hosts=a,b,c            Force planner focus to selected hosts
+  --planner-verbosity=<0-3>           Increase intelligent planner logging detail
+
+Geography & gazetteer helpers:
+  --country=code[,code]               Restrict geography crawl to specific countries (iso2/iso3/Wikidata QID/name)
+  --gazetteer-stages=stage[,stage]    Run only selected stages (countries, adm1, adm2, cities, boundaries)
+  --limit-countries=<n>               Stop after ingesting N countries
+
+Miscellaneous:
+  --job-id=<id>                       Attach crawl run to an external job identifier
+  --max-downloads=<n>                 Alias for --max-pages
+  --refetch-article-if-older-than=<age>  Alias for --max-age-article
+  --refetch-hub-if-older-than=<age>      Alias for --max-age-hub
+  --no-prefer-cache                   Always fetch fresh content (default prefers cached content when possible)
+
+Examples:
+  node src/crawl.js                                   # Intelligent crawl of The Guardian
+  node src/crawl.js https://news.example.com --depth=3
+  node src/crawl.js --crawl-type=geography --country=GB,IE --limit-countries=1
+  node src/crawl.js --crawl-type=intelligent --max-pages=200 --newdb
+
+Use --verbose for rich telemetry and --allow-query-urls to inspect query-string feeds.
+`; 
+    console.log(helpText);
+    process.exit(0);
+  }
   const crawlTypeArg = args.find(a => a.startsWith('--crawl-type='));
   const crawlType = crawlTypeArg ? String(crawlTypeArg.split('=')[1]) : undefined;
 

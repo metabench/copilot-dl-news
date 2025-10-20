@@ -7,7 +7,7 @@
  * country hub URL predictions when creating intelligent crawl plans.
  */
 
-const { AsyncPlanRunner } = require('../../src/ui/express/services/planning/AsyncPlanRunner');
+const { AsyncPlanRunner } = require('../../src/deprecated-ui/express/services/planning/AsyncPlanRunner');
 const { CountryHubGapAnalyzer } = require('../../src/services/CountryHubGapAnalyzer');
 const { ensureDatabase } = require('../../src/db/sqlite');
 const path = require('path');
