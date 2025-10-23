@@ -1,5 +1,7 @@
 "use strict";
 
+const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
+
 function nowMs() { return Date.now(); }
 
 class MinHeap {
@@ -61,6 +63,10 @@ class QueueManager {
     this.jobIdProvider = opts.jobIdProvider || (() => null);
     this.onRateLimitDeferred = typeof opts.onRateLimitDeferred === 'function' ? opts.onRateLimitDeferred : null;
 
+    this.isTotalPrioritisationEnabledFn = typeof opts.isTotalPrioritisationEnabled === 'function'
+      ? opts.isTotalPrioritisationEnabled
+      : () => isTotalPrioritisationEnabled();
+
     this.discoveryQueueType = 'discovery';
     this.acquisitionQueueType = 'acquisition';
 
@@ -95,7 +101,7 @@ class QueueManager {
     return this.fifoQueues[this.discoveryQueueType].length + this.fifoQueues[this.acquisitionQueueType].length;
   }
 
-  enqueue({ url, depth, type, meta }) {
+  enqueue({ url, depth, type, meta, priority }) {
     const currentSize = this.size();
     if (!this.urlEligibilityService || typeof this.urlEligibilityService.evaluate !== 'function') {
       throw new Error('QueueManager requires a urlEligibilityService with an evaluate method');
@@ -165,14 +171,89 @@ class QueueManager {
     const heatmapInfo = this._classifyHeatmap({ depth, kind, meta: evaluationMeta, decision });
     const priorityBias = evaluationMeta && typeof evaluationMeta.priorityBias === 'number' ? evaluationMeta.priorityBias : 0;
     const discoveredAt = nowMs();
-    const priorityResult = this.computeEnhancedPriority({
+    const jobId = this.jobIdProvider();
+
+    const priorityOverride = this._resolvePriorityOverride({
+      requestedPriority: priority,
+      meta: evaluationMeta
+    });
+
+    const basePriorityResult = this.computeEnhancedPriority({
       type: kind,
       depth,
       discoveredAt,
       bias: priorityBias,
       url: normalized,
-      meta: evaluationMeta
+      meta: evaluationMeta,
+      jobId
     }) || { priority: 0, prioritySource: 'base' };
+
+    let finalPriority = typeof basePriorityResult.priority === 'number' && Number.isFinite(basePriorityResult.priority)
+      ? basePriorityResult.priority
+      : 0;
+
+    let prioritySource = basePriorityResult.prioritySource || 'base';
+    let priorityMetadata = prioritySource !== 'base'
+      ? {
+          source: prioritySource,
+          bonusApplied: basePriorityResult.bonusApplied,
+          clusterId: basePriorityResult.clusterId,
+          gapPredictionScore: basePriorityResult.gapPredictionScore
+        }
+      : undefined;
+
+    if (priorityOverride != null) {
+      finalPriority = priorityOverride;
+      prioritySource = evaluationMeta && typeof evaluationMeta.forcePriority === 'number'
+        ? 'forced'
+        : 'explicit-override';
+      priorityMetadata = {
+        ...(priorityMetadata || {}),
+        override: true
+      };
+    }
+
+    const totalPrioritisationActive = this._isTotalPrioritisationEnabled();
+    let totalPrioritisationClassification = null;
+    if (totalPrioritisationActive) {
+      totalPrioritisationClassification = this._classifyTotalPrioritisationTarget({
+        kind,
+        meta: evaluationMeta,
+        url: normalized
+      });
+
+      if (totalPrioritisationClassification === 'other') {
+        this.emitQueueEvent({
+          action: 'drop',
+          url: normalized,
+          depth,
+          host,
+          queueSize: currentSize,
+          reason: 'total-prioritisation-filter'
+        });
+        return false;
+      }
+
+      const adjusted = this._applyTotalPrioritisationPriority(finalPriority, totalPrioritisationClassification);
+      if (adjusted.priority !== finalPriority) {
+        finalPriority = adjusted.priority;
+        prioritySource = adjusted.source;
+      }
+      if (adjusted.tag) {
+        priorityMetadata = {
+          ...(priorityMetadata || {}),
+          totalPrioritisation: adjusted.tag
+        };
+      }
+    }
+
+    const priorityResult = {
+      priority: finalPriority,
+      prioritySource,
+      bonusApplied: basePriorityResult.bonusApplied,
+      clusterId: basePriorityResult.clusterId,
+      gapPredictionScore: basePriorityResult.gapPredictionScore
+    };
 
     const item = {
       url: normalized,
@@ -183,15 +264,8 @@ class QueueManager {
       allowRevisit,
       queueKey,
       priorityBias,
-      priority: typeof priorityResult.priority === 'number' ? priorityResult.priority : 0,
-      priorityMetadata: priorityResult.prioritySource && priorityResult.prioritySource !== 'base'
-        ? {
-            source: priorityResult.prioritySource,
-            bonusApplied: priorityResult.bonusApplied,
-            clusterId: priorityResult.clusterId,
-            gapPredictionScore: priorityResult.gapPredictionScore
-          }
-        : undefined,
+      priority: priorityResult.priority,
+      priorityMetadata,
       _heatmapInfo: heatmapInfo
     };
 
@@ -207,7 +281,7 @@ class QueueManager {
       depth,
       host,
       queueSize: this.size(),
-      jobId: this.jobIdProvider(),
+      jobId,
       priorityScore: item.priority,
       prioritySource: priorityResult.prioritySource || 'base'
     };
@@ -215,6 +289,9 @@ class QueueManager {
       eventPayload.bonusApplied = priorityResult.bonusApplied;
       eventPayload.clusterId = priorityResult.clusterId;
       eventPayload.gapPredictionScore = priorityResult.gapPredictionScore;
+    }
+    if (priorityMetadata && priorityMetadata.totalPrioritisation) {
+      eventPayload.totalPrioritisation = priorityMetadata.totalPrioritisation;
     }
     if (heatmapInfo) {
       eventPayload.queueOrigin = heatmapInfo.origin;
@@ -361,6 +438,7 @@ class QueueManager {
       const queue = this.priorityQueues[queueType];
       const deferred = [];
       let candidate = null;
+      let candidateHost = null;
       let context = null;
       let minWake = Infinity;
       const scanLimit = Math.min(64, queue.size() + 1);
@@ -399,12 +477,14 @@ class QueueManager {
         }
 
         candidate = item;
+        candidateHost = host;
         break;
       }
 
+      const finalContext = await this._maybeAttachCacheContext(candidate, context, candidateHost);
       return {
         item: candidate,
-        context,
+        context: finalContext,
         deferred,
         wakeAt: minWake < Infinity ? minWake : null
       };
@@ -413,6 +493,7 @@ class QueueManager {
     const queue = this.fifoQueues[queueType];
     const deferred = [];
     let candidate = null;
+    let candidateHost = null;
     let context = null;
     let minWake = Infinity;
     const scanLimit = Math.min(64, queue.length);
@@ -459,12 +540,14 @@ class QueueManager {
 
       delete item.deferredUntil;
       candidate = item;
+      candidateHost = host;
       break;
     }
 
+    const finalContext = await this._maybeAttachCacheContext(candidate, context, candidateHost);
     return {
       item: candidate,
-      context,
+      context: finalContext,
       deferred,
       wakeAt: minWake < Infinity ? minWake : null
     };
@@ -526,6 +609,125 @@ class QueueManager {
 
     this._heatmapState.total = Math.max(0, (this._heatmapState.total || 0) + delta);
     this._heatmapState.lastUpdatedAt = nowMs();
+  }
+
+  _resolvePriorityOverride({ requestedPriority, meta }) {
+    const overrides = [];
+    if (typeof requestedPriority === 'number' && Number.isFinite(requestedPriority)) {
+      overrides.push(requestedPriority);
+    }
+    if (meta) {
+      if (typeof meta.priority === 'number' && Number.isFinite(meta.priority)) {
+        overrides.push(meta.priority);
+      }
+      if (typeof meta.forcePriority === 'number' && Number.isFinite(meta.forcePriority)) {
+        overrides.push(meta.forcePriority);
+      }
+    }
+    if (!overrides.length) {
+      return null;
+    }
+    const chosen = Math.max(...overrides);
+    return -Math.abs(chosen);
+  }
+
+  _isTotalPrioritisationEnabled() {
+    try {
+      return !!this.isTotalPrioritisationEnabledFn();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  _applyTotalPrioritisationPriority(currentPriority, classification) {
+    const MODE_MAP = {
+      country: { floor: -5000, source: 'total-country' },
+      'country-related': { floor: -3000, source: 'total-country-related' },
+      other: { floor: 5_000_000, source: 'total-deprioritised' }
+    };
+
+    const mode = MODE_MAP[classification || 'other'];
+    if (classification === 'country' || classification === 'country-related') {
+      const adjusted = Math.min(currentPriority, mode.floor);
+      return {
+        priority: adjusted,
+        source: mode.source,
+        tag: classification
+      };
+    }
+
+    const adjusted = Math.max(currentPriority, mode.floor);
+    return {
+      priority: adjusted,
+      source: mode.source,
+      tag: 'deprioritised'
+    };
+  }
+
+  _classifyTotalPrioritisationTarget({ kind, meta, url }) {
+    const tokens = new Set();
+    const pushToken = (value) => {
+      if (typeof value === 'string' && value) {
+        tokens.add(value.toLowerCase());
+      }
+    };
+
+    pushToken(kind);
+
+    if (meta && typeof meta === 'object') {
+      for (const value of Object.values(meta)) {
+        if (Array.isArray(value)) {
+          value.forEach(pushToken);
+        } else {
+          pushToken(value);
+        }
+      }
+    }
+
+    const tokenArray = Array.from(tokens);
+    if (tokenArray.some((token) => token.includes('country') || token.includes('place-hub'))) {
+      return 'country';
+    }
+    if (tokenArray.some((token) => token.includes('pagination') || token.includes('country-hub'))) {
+      return 'country-related';
+    }
+
+    if (typeof url === 'string' && url) {
+      try {
+        const pathname = new URL(url).pathname.toLowerCase();
+        if (/\/world\//.test(pathname) || /\/international\//.test(pathname)) {
+          return 'country-related';
+        }
+      } catch (_) {
+        // ignore URL parsing errors
+      }
+    }
+
+    return 'other';
+  }
+
+  async _maybeAttachCacheContext(item, context, host = null) {
+    if (!item || (context && context.forceCache)) {
+      return context;
+    }
+    if (!this.cache || typeof this.cache.get !== 'function') {
+      return context;
+    }
+    if (item.allowRevisit) {
+      return context;
+    }
+    try {
+      const cached = await this.cache.get(item.url);
+      if (cached) {
+        return {
+          ...(context || {}),
+          forceCache: true,
+          cachedPage: cached,
+          cachedHost: host || this.safeHostFromUrl(item.url)
+        };
+      }
+    } catch (_) {}
+    return context;
   }
 }
 

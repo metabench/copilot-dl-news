@@ -346,37 +346,63 @@ function extractGazetteerPlacesFromText(text, matchers, ctx, isTitle) {
 
   const tokenRegex = /[A-Za-z][A-Za-z'\-]*/g;
   const tokens = [];
+  const normalizedTokens = [];
   let match;
 
   while ((match = tokenRegex.exec(text)) !== null) {
-    tokens.push({ word: match[0], start: match.index, end: match.index + match[0].length });
+    const word = match[0];
+    const normalized = normName(word);
+    if (!normalized) {
+      continue;
+    }
+    tokens.push({ word, start: match.index, end: match.index + word.length });
+    normalizedTokens.push(normalized);
   }
 
   const maxWindow = 4;
   for (let i = 0; i < tokens.length; i++) {
-    let matched = false;
-    for (let windowSize = Math.min(maxWindow, tokens.length - i); windowSize >= 1; windowSize--) {
-      const phrase = tokens.slice(i, i + windowSize).map((t) => t.word).join(' ');
-      const key = normName(phrase);
-      const candidates = matchers.nameMap.get(key);
+    let bestMatch = null;
+    let phraseNormalized = '';
+
+    for (
+      let windowSize = 1;
+      windowSize <= maxWindow && i + windowSize <= tokens.length;
+      windowSize += 1
+    ) {
+      const tokenIndex = i + windowSize - 1;
+      const normalizedToken = normalizedTokens[tokenIndex];
+      if (!normalizedToken) {
+        phraseNormalized = '';
+        continue;
+      }
+      phraseNormalized = windowSize === 1
+        ? normalizedToken
+        : `${phraseNormalized} ${normalizedToken}`;
+
+      const candidates = matchers.nameMap.get(phraseNormalized);
       if (candidates && candidates.length) {
         const record = pickBestCandidate(candidates, ctx, isTitle);
-        results.push({
-          name: record.name,
-          kind: record.kind,
-          country_code: record.country_code,
-          place_id: record.place_id,
-          start: tokens[i].start,
-          end: tokens[i + windowSize - 1].end
-        });
-        i += windowSize - 1;
-        matched = true;
-        break;
+        if (record) {
+          bestMatch = {
+            record,
+            windowSize,
+            start: tokens[i].start,
+            end: tokens[tokenIndex].end
+          };
+        }
       }
     }
 
-    if (!matched) {
-      continue;
+    if (bestMatch) {
+      results.push({
+        name: bestMatch.record.name,
+        kind: bestMatch.record.kind,
+        country_code: bestMatch.record.country_code,
+        place_id: bestMatch.record.place_id,
+        start: bestMatch.start,
+        end: bestMatch.end
+      });
+      i += bestMatch.windowSize - 1;
     }
   }
 

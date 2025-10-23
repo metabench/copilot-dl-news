@@ -28,11 +28,12 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-async function main() {
-  console.log('🗜️  Compressing uncompressed records with Brotli level 6...\n');
+async function main(options = {}) {
+  const useColors = process.stdout.isTTY;
+  const banner = useColors ? `${colors.cyan || ''}` : '';
+  console.log(`${banner}🗜️  Compressing uncompressed records with Brotli level 6...${useColors ? colors.reset : ''}\n`);
 
-  // Open database
-  const dbPath = path.join(__dirname, '..', 'data', 'news.db');
+  const dbPath = options.dbPath || path.join(__dirname, '..', 'data', 'news.db');
   const db = openDatabase(dbPath, { readonly: false, fileMustExist: true });
 
   try {
@@ -43,8 +44,7 @@ async function main() {
     `).get();
 
     if (!brotli6Type) {
-      console.error(`${colors.red}Error: Brotli level 6 (22-bit) compression type not found in database${colors.reset}`);
-      process.exit(1);
+      throw new Error('Brotli level 6 (22-bit) compression type not found in database');
     }
 
     console.log(`Using compression type: ${brotli6Type.name} (ID: ${brotli6Type.id})`);
@@ -61,7 +61,14 @@ async function main() {
 
     if (uncompressedRecords.length === 0) {
       console.log(`${colors.green}No uncompressed records found. All records are already compressed!${colors.reset}`);
-      return;
+      return {
+        processed: 0,
+        totalOriginalSize: 0,
+        totalCompressedSize: 0,
+        averageRatio: 1,
+        spaceSavedPercent: 0,
+        totalTimeSeconds: 0
+      };
     }
 
     // Prepare update statement
@@ -136,6 +143,15 @@ async function main() {
     console.log(`🗜️  Average ratio: ${totalRatio.toFixed(3)}`);
     console.log(`💾 Space saved: ${spaceSaved}%`);
     console.log(`⏱️  Time taken: ${totalTime.toFixed(1)}s (${(processed / totalTime).toFixed(1)} records/s)`);
+
+    return {
+      processed,
+      totalOriginalSize,
+      totalCompressedSize,
+      averageRatio: totalRatio,
+      spaceSavedPercent: Number(spaceSaved),
+      totalTimeSeconds: totalTime
+    };
 
   } finally {
     db.close();

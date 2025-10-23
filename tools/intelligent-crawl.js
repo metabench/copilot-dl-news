@@ -389,24 +389,94 @@ try {
    console.warn(`Warning: Could not load priority-config.json, using defaults`);
 }
 
-// Extract totalPrioritisation feature flag
-const totalPrioritisation = priorityConfig.features?.totalPrioritisation || false;
 
 // Load configuration
 console.log('Loading crawl configuration...');
-const configPath = path.join(__dirname, 'config.json');
+const configCandidates = [
+  path.join(__dirname, '..', 'config.json'),
+  path.join(__dirname, 'config.json')
+];
+let configPath = null;
+for (const candidate of configCandidates) {
+  if (fs.existsSync(candidate)) {
+    configPath = candidate;
+    break;
+  }
+}
+
 let config = { url: 'https://www.theguardian.com' }; // Default fallback
 
-try {
-   const configData = fs.readFileSync(configPath, 'utf-8');
-   config = JSON.parse(configData);
-} catch (error) {
-   console.warn(`Warning: Could not load config.json, using default URL`);
+if (configPath) {
+  try {
+    const configData = fs.readFileSync(configPath, 'utf-8');
+    const parsed = JSON.parse(configData);
+    if (parsed && typeof parsed === 'object') {
+      config = parsed;
+    } else {
+      console.warn(`Warning: Config at ${configPath} is not valid JSON object, using default URL`);
+    }
+  } catch (error) {
+    console.warn(`Warning: Could not load config from ${configPath}, using default URL`);
+  }
+} else {
+  console.warn(`Warning: No config.json found (checked root and tools directories), using default URL`);
 }
 
 // Determine starting URL (command line arg overrides config)
 const urlArg = args.find(arg => !arg.startsWith('--') && arg.startsWith('http'));
-const startUrl = urlArg || config.url;
+const configUrl = config.intelligentCrawl?.url || config.url;
+const startUrl = urlArg || configUrl || 'https://www.theguardian.com';
+
+function resolveTotalPrioritySetting(runConfig) {
+  if (!runConfig || typeof runConfig !== 'object') {
+    return undefined;
+  }
+  const settings = runConfig.intelligentCrawl;
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  if (typeof settings.totalPriority === 'boolean') {
+    return settings.totalPriority;
+  }
+  if (typeof settings.totalPrioritisation === 'boolean') {
+    return settings.totalPrioritisation;
+  }
+  if (typeof settings.mode === 'string') {
+    const normalized = settings.mode.trim().toLowerCase();
+    if (normalized === 'total-priority' || normalized === 'country-hubs-total') {
+      return true;
+    }
+    if (normalized === 'balanced' || normalized === 'standard') {
+      return false;
+    }
+  }
+  return undefined;
+}
+
+const totalPriorityOverride = resolveTotalPrioritySetting(config);
+
+if (typeof totalPriorityOverride === 'boolean') {
+  if (!priorityConfig.features) {
+    priorityConfig.features = {};
+  }
+  if (priorityConfig.features.totalPrioritisation !== totalPriorityOverride) {
+    priorityConfig.features.totalPrioritisation = totalPriorityOverride;
+    try {
+      fs.writeFileSync(
+        priorityConfigPath,
+        `${JSON.stringify(priorityConfig, null, 2)}\n`,
+        'utf-8'
+      );
+      console.log(`Priority configuration updated: totalPrioritisation set to ${totalPriorityOverride ? 'ENABLED' : 'DISABLED'} via config.json`);
+    } catch (error) {
+      console.warn(`Warning: Failed to persist total priority setting to priority-config.json (${error.message})`);
+    }
+  }
+}
+
+const totalPrioritisation = (typeof totalPriorityOverride === 'boolean')
+  ? totalPriorityOverride
+  : priorityConfig.features?.totalPrioritisation === true;
 
 
 // Function to verify if a title corresponds to a real place
@@ -665,7 +735,7 @@ const crawler = new NewsCrawler(startUrl, {
   // Enable country hub discovery and exhaustive pagination crawling
   plannerEnabled: true,      // Enable intelligent planning for country hub discovery
   behavioralProfile: 'country-hub-focused',
-  totalPrioritisation: true,
+  totalPrioritisation,
   gapDrivenPrioritization: true,
   patternDiscovery: true,    // Enable pattern discovery for country hubs
   countryHubGaps: true,

@@ -10,37 +10,11 @@
 const path = require('path');
 const { evaluateDomainFromDb } = require('../is_this_a_news_website');
 
-function computeWindowSpec(minutes) {
-  // Return SQLite interval string like '-15 minutes'
-  return `-${minutes} minutes`;
-}
-
 function compute429Stats(db, host, minutes) {
-  const win = computeWindowSpec(minutes);
-  // 429s in window
-  const row429 = db.db.prepare(
-    `SELECT COUNT(*) AS c FROM errors WHERE host = ? AND code = 429 AND at >= datetime('now', ?)`
-  ).get(host, win);
-  const count429 = row429?.c || 0;
-  // Total attempts in window = successes (fetches) + errors
-  const rowOk = db.db.prepare(
-    `SELECT COUNT(*) AS c
-     FROM fetches f
-     JOIN urls u ON u.url = f.url
-     WHERE u.host = ? AND COALESCE(f.fetched_at, f.request_started_at) >= datetime('now', ?)`
-  ).get(host, win);
-  const ok = rowOk?.c || 0;
-  const rowErr = db.db.prepare(
-    `SELECT COUNT(*) AS c FROM errors WHERE host = ? AND at >= datetime('now', ?)`
-  ).get(host, win);
-  const err = rowErr?.c || 0;
-  const attempts = ok + err; // includes 429s
-  const rpm = minutes > 0 ? (count429 / minutes) : 0;
-  const ratio = attempts > 0 ? (count429 / attempts) : 0;
-  // Last 429 timestamp
-  const lastRow = db.db.prepare(`SELECT MAX(at) AS last FROM errors WHERE host = ? AND code = 429`).get(host);
-  const last429At = lastRow?.last || null;
-  return { count429, attempts, rpm, ratio, last429At };
+  if (!db || typeof db.getHttp429Stats !== 'function') {
+    throw new Error('NewsDatabase#getHttp429Stats is required for domain analysis');
+  }
+  return db.getHttp429Stats(host, minutes);
 }
 
 function main(){
@@ -55,9 +29,14 @@ function main(){
   const db = new NewsDatabase(dbPath);
 
   // Get list of domains (optionally limited)
-  const domRows = db.db.prepare(`SELECT host FROM domains ORDER BY last_seen_at DESC ${LIMIT? 'LIMIT ?' : ''}`).all(...(LIMIT? [LIMIT] : []));
-  for (const d of domRows) {
-    const host = d.host;
+  if (typeof db.listDomainHosts !== 'function') {
+    throw new Error('NewsDatabase#listDomainHosts is required for domain analysis');
+  }
+
+  const hosts = db.listDomainHosts({ limit: LIMIT });
+
+  for (const host of hosts) {
+    if (!host) continue;
     const { analysis } = evaluateDomainFromDb(db, host);
     // Compute 429 metrics for 15m and 60m windows
     const w15 = compute429Stats(db, host, 15);

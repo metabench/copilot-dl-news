@@ -32,4 +32,26 @@ describe('CountryHubPlanner', () => {
       reason: 'country-hub-default'
     });
   });
+
+  test('skips candidates with known 404 responses from database', async () => {
+    const prepare = jest.fn((sql) => {
+      if (sql.includes('http_responses')) {
+        return { get: jest.fn(() => ({ status: 404 })) };
+      }
+      return { get: jest.fn(() => null) };
+    });
+
+    const dbAdapter = {
+      getTopCountrySlugs: jest.fn(() => ['france']),
+      getDb: () => ({ prepare })
+    };
+
+    const planner = new CountryHubPlanner({ baseUrl, db: dbAdapter });
+
+    const result = await planner.computeCandidates('example.com');
+
+    expect(dbAdapter.getTopCountrySlugs).toHaveBeenCalledWith(100);
+    expect(prepare).toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
 });

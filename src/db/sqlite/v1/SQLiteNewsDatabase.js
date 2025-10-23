@@ -16,6 +16,22 @@ function slugifyCountryName(name) {
     .replace(/^-|-$/g, '');
 }
 
+function normalizeHostVariants(host) {
+  const base = String(host || '').trim().toLowerCase();
+  if (!base) return [];
+  const variants = new Set([base]);
+  if (base.startsWith('www.')) {
+    variants.add(base.replace(/^www\./, ''));
+  } else {
+    variants.add(`www.${base}`);
+  }
+  return Array.from(variants);
+}
+
+function buildInClausePlaceholders(values) {
+  return values.map(() => '?').join(', ');
+}
+
 class NewsDatabase {
   constructor(dbHandle) {
     if (!dbHandle) {
@@ -981,6 +997,302 @@ class NewsDatabase {
     if (!cid) return null;
     this.db.prepare(`INSERT OR IGNORE INTO domain_category_map(domain_id, category_id) VALUES (?, ?)`).run(row.id, cid);
     return { domain_id: row.id, category_id: cid };
+  }
+
+  listDomainHosts({ limit = 0, orderBy = 'last_seen_at' } = {}) {
+    const order = orderBy === 'host' ? 'host' : 'last_seen_at DESC';
+    const sql = limit && Number(limit) > 0
+      ? `SELECT host FROM domains WHERE host IS NOT NULL ORDER BY ${order} LIMIT ?`
+      : `SELECT host FROM domains WHERE host IS NOT NULL ORDER BY ${order}`;
+    const rows = limit && Number(limit) > 0
+      ? this.db.prepare(sql).all(Number(limit))
+      : this.db.prepare(sql).all();
+    return rows.map((row) => row.host).filter(Boolean);
+  }
+
+  getDomainArticleMetrics(host) {
+    const variants = normalizeHostVariants(host);
+    if (!variants.length) {
+      return { articleFetches: 0, distinctSections: 0, datedUrlRatio: 0 };
+    }
+    const placeholders = buildInClausePlaceholders(variants);
+    const row = this.db.prepare(`
+      SELECT
+        COUNT(*) AS article_count,
+        COUNT(DISTINCT CASE
+          WHEN ca.section IS NOT NULL AND TRIM(ca.section) != ''
+            THEN LOWER(TRIM(ca.section))
+        END) AS section_count,
+        SUM(CASE
+          WHEN u.url GLOB '*[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]*' THEN 1
+          ELSE 0
+        END) AS dated_count
+      FROM content_analysis ca
+      JOIN content_storage cs ON ca.content_id = cs.id
+      JOIN http_responses hr ON cs.http_response_id = hr.id
+      JOIN urls u ON hr.url_id = u.id
+      WHERE LOWER(COALESCE(ca.classification, '')) = 'article'
+        AND u.host IN (${placeholders})
+    `).get(...variants);
+
+    const totalArticles = Number(row?.article_count || 0);
+    const distinctSections = Number(row?.section_count || 0);
+    const datedCount = Number(row?.dated_count || 0);
+    const datedUrlRatio = totalArticles > 0 ? datedCount / totalArticles : 0;
+
+    return {
+      articleFetches: totalArticles,
+      distinctSections,
+      datedUrlRatio
+    };
+  }
+
+  getHttp429Stats(host, minutes) {
+    const variants = normalizeHostVariants(host);
+    if (!variants.length) {
+      return { count429: 0, attempts: 0, rpm: 0, ratio: 0, last429At: null };
+    }
+    const windowMinutes = Math.max(0, Number(minutes) || 0);
+    const windowArg = `-${windowMinutes} minutes`;
+    const placeholders = buildInClausePlaceholders(variants);
+
+    const okRow = this.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM http_responses hr
+      JOIN urls u ON hr.url_id = u.id
+      WHERE u.host IN (${placeholders})
+        AND (
+          hr.fetched_at IS NOT NULL
+          OR hr.request_started_at IS NOT NULL
+        )
+        AND datetime(COALESCE(hr.fetched_at, hr.request_started_at)) >= datetime('now', ?)
+    `).get(...variants, windowArg);
+
+    const errRow = this.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM errors
+      WHERE host IN (${placeholders})
+        AND datetime(at) >= datetime('now', ?)
+    `).get(...variants, windowArg);
+
+    const row429 = this.db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM errors
+      WHERE host IN (${placeholders})
+        AND code = 429
+        AND datetime(at) >= datetime('now', ?)
+    `).get(...variants, windowArg);
+
+    const last429Row = this.db.prepare(`
+      SELECT MAX(datetime(at)) AS last_at
+      FROM errors
+      WHERE host IN (${placeholders})
+        AND code = 429
+    `).get(...variants);
+
+    const ok = Number(okRow?.count || 0);
+    const err = Number(errRow?.count || 0);
+    const count429 = Number(row429?.count || 0);
+    const attempts = ok + err;
+    const rpm = windowMinutes > 0 ? count429 / windowMinutes : 0;
+    const ratio = attempts > 0 ? count429 / attempts : 0;
+    const last429At = last429Row?.last_at || null;
+
+    return { count429, attempts, rpm, ratio, last429At };
+  }
+
+  getMilestoneHostStats({ hosts } = {}) {
+    const stats = new Map();
+    const ensure = (host) => {
+      const key = String(host || '').trim().toLowerCase();
+      if (!key) return null;
+      if (!stats.has(key)) {
+        stats.set(key, {
+          host: key,
+          downloads: 0,
+          depth2Analysed: 0,
+          articlesIdentified: 0
+        });
+      }
+      return stats.get(key);
+    };
+
+    const normalizedHosts = Array.isArray(hosts)
+      ? hosts.map((h) => String(h || '').trim().toLowerCase()).filter(Boolean)
+      : [];
+    const uniqueHosts = Array.from(new Set(normalizedHosts));
+    const placeholders = uniqueHosts.length ? buildInClausePlaceholders(uniqueHosts) : '';
+    const hostFilterClause = uniqueHosts.length ? `AND LOWER(u.host) IN (${placeholders})` : '';
+
+    const downloadSql = `
+      SELECT LOWER(u.host) AS host, COUNT(*) AS count
+      FROM http_responses hr
+      JOIN urls u ON hr.url_id = u.id
+      WHERE hr.http_status BETWEEN 200 AND 399
+        ${hostFilterClause}
+      GROUP BY LOWER(u.host)
+    `;
+    const downloadRows = uniqueHosts.length
+      ? this.db.prepare(downloadSql).all(...uniqueHosts)
+      : this.db.prepare(downloadSql).all();
+    for (const row of downloadRows) {
+      const entry = ensure(row.host);
+      if (entry) entry.downloads = Number(row.count || 0);
+    }
+
+    const depthConditions = [];
+    if (uniqueHosts.length) {
+      depthConditions.push(`LOWER(u.host) IN (${placeholders})`);
+    }
+    depthConditions.push(`EXISTS (
+      SELECT 1 FROM discovery_events de
+      WHERE de.url_id = u.id AND de.crawl_depth = 2
+    )`);
+    depthConditions.push(`EXISTS (
+      SELECT 1
+      FROM http_responses hr
+      JOIN content_storage cs ON cs.http_response_id = hr.id
+      JOIN content_analysis ca ON ca.content_id = cs.id
+      WHERE hr.url_id = u.id
+    )`);
+    const depthWhere = depthConditions.length
+      ? `WHERE ${depthConditions.join('\n        AND ')}`
+      : '';
+    const depthSql = `
+      SELECT LOWER(u.host) AS host, COUNT(*) AS count
+      FROM urls u
+      ${depthWhere}
+      GROUP BY LOWER(u.host)
+    `;
+    const depthRows = uniqueHosts.length
+      ? this.db.prepare(depthSql).all(...uniqueHosts)
+      : this.db.prepare(depthSql).all();
+    for (const row of depthRows) {
+      const entry = ensure(row.host);
+      if (entry) entry.depth2Analysed = Number(row.count || 0);
+    }
+
+    const articleSql = `
+      SELECT LOWER(u.host) AS host, COUNT(*) AS count
+      FROM content_analysis ca
+      JOIN content_storage cs ON ca.content_id = cs.id
+      JOIN http_responses hr ON cs.http_response_id = hr.id
+      JOIN urls u ON hr.url_id = u.id
+      WHERE LOWER(COALESCE(ca.classification, '')) = 'article'
+        ${hostFilterClause}
+      GROUP BY LOWER(u.host)
+    `;
+    const articleRows = uniqueHosts.length
+      ? this.db.prepare(articleSql).all(...uniqueHosts)
+      : this.db.prepare(articleSql).all();
+    for (const row of articleRows) {
+      const entry = ensure(row.host);
+      if (entry) entry.articlesIdentified = Number(row.count || 0);
+    }
+
+    if (uniqueHosts.length) {
+      for (const host of uniqueHosts) {
+        ensure(host);
+      }
+    }
+
+    return Array.from(stats.values());
+  }
+
+  countArticlesNeedingAnalysis({ analysisVersion = 1, limit = null } = {}) {
+    const version = Number.isFinite(Number(analysisVersion)) ? Number(analysisVersion) : 1;
+    const limitNumber = Number.isFinite(Number(limit)) ? Number(limit) : null;
+
+    const row = this.db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE
+          WHEN ca.analysis_version IS NULL
+            OR ca.analysis_version < ?
+            OR ca.analysis_json IS NULL
+            OR TRIM(ca.analysis_json) = ''
+          THEN 1
+          ELSE 0
+        END) AS needing
+      FROM content_analysis ca
+      JOIN content_storage cs ON ca.content_id = cs.id
+      JOIN http_responses hr ON cs.http_response_id = hr.id
+      WHERE LOWER(COALESCE(ca.classification, '')) = 'article'
+    `).get(version);
+
+    const total = Number(row?.total || 0);
+    const needingRaw = Number(row?.needing || 0);
+    const needingAnalysis = limitNumber && limitNumber > 0
+      ? Math.min(needingRaw, limitNumber)
+      : needingRaw;
+    const analyzed = total - needingRaw;
+
+    return {
+      total,
+      analyzed,
+      needingAnalysis,
+      needingAnalysisRaw: needingRaw,
+      analysisVersion: version,
+      limit: limitNumber && limitNumber > 0 ? limitNumber : null
+    };
+  }
+
+  getArticlesNeedingAnalysis({ analysisVersion = 1, limit = 100, offset = 0 } = {}) {
+    const version = Number.isFinite(Number(analysisVersion)) ? Number(analysisVersion) : 1;
+    const limitNumber = Math.max(0, Number(limit) || 0);
+    const offsetNumber = Math.max(0, Number(offset) || 0);
+
+    const sql = `
+      SELECT
+        u.url AS url,
+        ca.title AS title,
+        ca.section AS section,
+        ca.analysis_json AS analysis_json,
+        ca.analysis_version AS analysis_version,
+        COALESCE(lf.ts, hr.fetched_at, hr.request_started_at) AS last_ts,
+        hr.http_status AS http_status
+      FROM content_analysis ca
+      JOIN content_storage cs ON ca.content_id = cs.id
+      JOIN http_responses hr ON cs.http_response_id = hr.id
+      JOIN urls u ON hr.url_id = u.id
+      LEFT JOIN latest_fetch lf ON lf.url = u.url
+      WHERE LOWER(COALESCE(ca.classification, '')) = 'article'
+        AND (
+          ca.analysis_version IS NULL
+          OR ca.analysis_version < ?
+          OR ca.analysis_json IS NULL
+          OR TRIM(ca.analysis_json) = ''
+        )
+      ORDER BY
+        (COALESCE(lf.ts, hr.fetched_at, hr.request_started_at) IS NULL) ASC,
+        COALESCE(lf.ts, hr.fetched_at, hr.request_started_at) DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    return this.db.prepare(sql).all(version, limitNumber || 100, offsetNumber);
+  }
+
+  getAnalysisStatusCounts() {
+    const row = this.db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE
+          WHEN ca.analysis_json IS NOT NULL
+            AND TRIM(ca.analysis_json) != ''
+          THEN 1
+          ELSE 0
+        END) AS analyzed
+      FROM content_analysis ca
+      JOIN content_storage cs ON ca.content_id = cs.id
+      JOIN http_responses hr ON cs.http_response_id = hr.id
+      WHERE LOWER(COALESCE(ca.classification, '')) = 'article'
+    `).get();
+
+    const total = Number(row?.total || 0);
+    const analyzed = Number(row?.analyzed || 0);
+    const pending = Math.max(0, total - analyzed);
+
+    return { total, analyzed, pending };
   }
 
   ensureUrlCategory(name) {

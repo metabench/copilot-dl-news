@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg" style="background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; }
+  </style>
+  
+  <text x="400" y="30" font-size="20" font-weight="bold" text-anchor="middle">Analysis Run Performance Breakdown</text>
+  <text x="400" y="50" font-size="14" text-anchor="middle" fill="#666">Total time: 5395.14s across 35255 analyses (153ms per-analysis avg)</text>
+  
+  <g>
+    <path d="M 200 200 L 200 50 A 150 150 0 1 1 199.50702502037944 50.000810083289224 Z" fill="#FF6B6B" stroke="white" stroke-width="2"/>
+    <text x="200.16021708469214" y="297.4998683613766" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="bold" fill="white">99.9%</text>
+    <path d="M 200 200 L 199.50702502037944 50.000810083289224 A 150 150 0 0 1 199.99999999999997 50 Z" fill="#4ECDC4" stroke="white" stroke-width="2"/>
+  </g>
+  
+  <text x="420" y="35" font-size="14" font-weight="bold">Breakdown:</text>
+  
+      <g>
+        <rect x="420" y="40" width="15" height="15" fill="#FF6B6B" stroke="black" stroke-width="1"/>
+        <text x="445" y="52" font-size="13" font-family="monospace">Other Measured: 5392315ms (99.9%)</text>
+      </g>
+    
+      <g>
+        <rect x="420" y="70" width="15" height="15" fill="#4ECDC4" stroke="black" stroke-width="1"/>
+        <text x="445" y="82" font-size="13" font-family="monospace">Unaccounted Overhead: 2822ms (0.1%)</text>
+      </g>
+    
+  
+  <text x="420" y="480" font-size="11" fill="#999">Note: "Unaccounted Overhead" represents time not captured by individual stage timers</text>
+</svg>

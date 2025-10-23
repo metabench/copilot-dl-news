@@ -1,18 +1,14 @@
-const { analyzePage, buildAnalysis } = require('../page-analyzer');
+const Database = require('better-sqlite3');
+const { analyzePage, buildAnalysis, prepareArticleContent } = require('../page-analyzer');
 const { ArticleXPathService } = require('../../services/ArticleXPathService');
 
 describe('Page Analyzer XPath Integration', () => {
-  let mockDb;
+  let db;
   let mockGazetteer;
   let xpathService;
 
   beforeEach(() => {
-    mockDb = {
-      prepare: jest.fn(() => ({
-        get: jest.fn(() => null),
-        all: jest.fn(() => [])
-      }))
-    };
+    db = new Database(':memory:');
 
     mockGazetteer = {
       placeNames: new Map(),
@@ -22,11 +18,15 @@ describe('Page Analyzer XPath Integration', () => {
     };
 
     xpathService = new ArticleXPathService({
-      db: mockDb,
+      db,
       dxplDir: '/tmp/test-dxpls',
-      logger: { log: jest.fn(), error: jest.fn() },
+      logger: { log: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
       analyzerOptions: { minTextLength: 10, minParagraphs: 1 }
     });
+  });
+
+  afterEach(() => {
+    db.close();
   });
 
   describe('XPath extraction in buildAnalysis', () => {
@@ -53,13 +53,20 @@ describe('Page Analyzer XPath Integration', () => {
       }));
       xpathService.extractTextWithXPath = jest.fn(() => 'Test Article This is the main article content about London and Paris.');
 
-      const result = await buildAnalysis({
+      const preparation = await prepareArticleContent({
         url: 'https://www.theguardian.com/test',
         html: sampleHtml,
         title: 'Test Article',
-        articleRow: { text: 'Original text' },
-        gazetteer: mockGazetteer,
+        articleRow: { text: null, word_count: null, article_xpath: null },
         xpathService
+      });
+
+      const result = await buildAnalysis({
+        url: 'https://www.theguardian.com/test',
+        title: 'Test Article',
+        articleRow: preparation.articleRow,
+        gazetteer: mockGazetteer,
+        preparation
       });
 
       expect(result.meta.articleXPath).toBe('/html/body/main/article');
@@ -78,13 +85,20 @@ describe('Page Analyzer XPath Integration', () => {
         confidence: 0.85
       }));
 
-      const result = await buildAnalysis({
+      const preparation = await prepareArticleContent({
         url: 'https://www.bbc.co.uk/test',
         html: sampleHtml,
         title: 'Test Article',
-        articleRow: { text: 'Original text' },
-        gazetteer: mockGazetteer,
+        articleRow: { text: null, word_count: null, article_xpath: null },
         xpathService
+      });
+
+      const result = await buildAnalysis({
+        url: 'https://www.bbc.co.uk/test',
+        title: 'Test Article',
+        articleRow: preparation.articleRow,
+        gazetteer: mockGazetteer,
+        preparation
       });
 
       expect(result.meta.articleXPath).toBe('/html/body/main/article');
@@ -97,13 +111,20 @@ describe('Page Analyzer XPath Integration', () => {
       xpathService.hasXPathForDomain = jest.fn(() => true);
       xpathService.extractTextWithXPath = jest.fn(() => null);
 
-      const result = await buildAnalysis({
+      const preparation = await prepareArticleContent({
         url: 'https://www.example.com/test',
         html: sampleHtml,
         title: 'Test Article',
-        articleRow: { text: 'Original text' },
-        gazetteer: mockGazetteer,
+        articleRow: { text: null, word_count: null, article_xpath: null },
         xpathService
+      });
+
+      const result = await buildAnalysis({
+        url: 'https://www.example.com/test',
+        title: 'Test Article',
+        articleRow: preparation.articleRow,
+        gazetteer: mockGazetteer,
+        preparation
       });
 
       expect(result.meta.method).toBe('readability+heuristics@v1');
@@ -111,12 +132,20 @@ describe('Page Analyzer XPath Integration', () => {
     });
 
     test('works without XPath service (backward compatibility)', async () => {
-      const result = await buildAnalysis({
+      const preparation = await prepareArticleContent({
         url: 'https://www.example.com/test',
         html: sampleHtml,
         title: 'Test Article',
-        articleRow: { text: 'Original text' },
+        articleRow: { text: null, word_count: null, article_xpath: null },
+        xpathService: null
+      });
+
+      const result = await buildAnalysis({
+        url: 'https://www.example.com/test',
+        title: 'Test Article',
+        articleRow: preparation.articleRow,
         gazetteer: mockGazetteer,
+        preparation,
         xpathService: null
       });
 
@@ -138,7 +167,7 @@ describe('Page Analyzer XPath Integration', () => {
         title: 'Test Title',
         articleRow: mockArticleRow,
         gazetteer: mockGazetteer,
-        db: mockDb,
+        db,
         xpathService
       });
 
@@ -164,7 +193,7 @@ describe('Page Analyzer XPath Integration', () => {
         title: 'Test Title',
         articleRow: mockArticleRow,
         gazetteer: mockGazetteer,
-        db: mockDb,
+        db,
         xpathService
       });
 
@@ -184,13 +213,20 @@ describe('Page Analyzer XPath Integration', () => {
         confidence: 0.92
       }));
 
-      const result = await buildAnalysis({
+      const preparation = await prepareArticleContent({
         url: 'https://www.nytimes.com/test',
         html: '<html><body><div><article>Content</article></div></body></html>',
         title: 'Test Article',
-        articleRow: { text: 'Original text' },
-        gazetteer: mockGazetteer,
+        articleRow: { text: null, word_count: null, article_xpath: null },
         xpathService
+      });
+
+      const result = await buildAnalysis({
+        url: 'https://www.nytimes.com/test',
+        title: 'Test Article',
+        articleRow: preparation.articleRow,
+        gazetteer: mockGazetteer,
+        preparation
       });
 
       expect(result.meta.articleXPath).toBe('/html/body/div[1]/article');

@@ -1,3 +1,5 @@
+const { NewsDatabase } = require('../db/sqlite/v1');
+
 const DEFAULT_JOB_ID = 'analysis-run';
 
 function unwrapDb(dbish) {
@@ -6,6 +8,24 @@ function unwrapDb(dbish) {
     return dbish.db;
   }
   return dbish;
+}
+
+function resolveNewsDatabase(dbish) {
+  if (!dbish) return null;
+  if (dbish instanceof NewsDatabase) {
+    return dbish;
+  }
+  if (dbish.newsDatabase instanceof NewsDatabase) {
+    return dbish.newsDatabase;
+  }
+  const raw = unwrapDb(dbish);
+  if (!raw || typeof raw.prepare !== 'function') {
+    return null;
+  }
+  if (raw instanceof NewsDatabase) {
+    return raw;
+  }
+  return new NewsDatabase(raw);
 }
 
 function ensureMilestoneSchema(dbish) {
@@ -30,8 +50,8 @@ function ensureMilestoneSchema(dbish) {
 }
 
 function collectHostStats(dbish) {
-  const db = unwrapDb(dbish);
-  if (!db || typeof db.prepare !== 'function') {
+  const newsDb = resolveNewsDatabase(dbish);
+  if (!newsDb || !newsDb.db || typeof newsDb.db.prepare !== 'function') {
     throw new Error('collectHostStats requires a better-sqlite3 Database');
   }
 
@@ -51,52 +71,27 @@ function collectHostStats(dbish) {
   };
 
   const stats = new Map();
-
-  const downloadRows = db.prepare(`
-    SELECT LOWER(u.host) AS host, COUNT(*) AS count
-    FROM fetches f
-    JOIN urls u ON u.url = f.url
-    WHERE f.http_status BETWEEN 200 AND 399
-    GROUP BY LOWER(u.host)
-  `).all();
-  for (const row of downloadRows) {
-    const entry = ensure(stats, row.host);
-    if (entry) entry.downloads = Number(row.count || 0);
-  }
-
-  const depthRows = db.prepare(`
-    SELECT LOWER(u.host) AS host, COUNT(DISTINCT a.url) AS count
-    FROM articles a
-    JOIN urls u ON u.url = a.url
-    WHERE a.crawl_depth = 2 AND a.analysis IS NOT NULL
-    GROUP BY LOWER(u.host)
-  `).all();
-  for (const row of depthRows) {
-    const entry = ensure(stats, row.host);
-    if (entry) entry.depth2Analysed = Number(row.count || 0);
-  }
-
-  let articleRows;
+  let hosts = [];
   try {
-    articleRows = db.prepare(`
-      SELECT LOWER(u.host) AS host, COUNT(*) AS count
-      FROM articles a
-      JOIN urls u ON u.url = a.url
-      WHERE a.analysis IS NOT NULL AND COALESCE(json_extract(a.analysis, '$.kind'), 'article') = 'article'
-      GROUP BY LOWER(u.host)
-    `).all();
+    hosts = newsDb.listDomainHosts();
   } catch (_) {
-    articleRows = db.prepare(`
-      SELECT LOWER(u.host) AS host, COUNT(*) AS count
-      FROM articles a
-      JOIN urls u ON u.url = a.url
-      WHERE a.analysis IS NOT NULL
-      GROUP BY LOWER(u.host)
-    `).all();
+    hosts = [];
   }
-  for (const row of articleRows) {
+
+  const milestoneRows = typeof newsDb.getMilestoneHostStats === 'function'
+    ? newsDb.getMilestoneHostStats({ hosts })
+    : [];
+
+  for (const row of milestoneRows) {
     const entry = ensure(stats, row.host);
-    if (entry) entry.articlesIdentified = Number(row.count || 0);
+    if (!entry) continue;
+    entry.downloads = Number(row.downloads || 0);
+    entry.depth2Analysed = Number(row.depth2Analysed || 0);
+    entry.articlesIdentified = Number(row.articlesIdentified || 0);
+  }
+
+  for (const host of hosts) {
+    ensure(stats, host);
   }
 
   return stats;
@@ -183,8 +178,8 @@ function awardMilestones(dbish, { dryRun = false, verbose = false, jobId = DEFAU
 
   if (!dryRun && toInsert.length) {
     const ensureJobStmt = db.prepare(`
-      INSERT OR IGNORE INTO crawl_jobs(id, url, args, pid, started_at, ended_at, status)
-      VALUES (@id, NULL, NULL, NULL, datetime('now'), datetime('now'), 'analysis-run')
+      INSERT OR IGNORE INTO crawl_jobs(id, args, pid, started_at, ended_at, status)
+      VALUES (@id, NULL, NULL, datetime('now'), datetime('now'), 'analysis-run')
     `);
 
     const uniqueJobIds = Array.from(new Set(toInsert.map((row) => row.jobId).filter(Boolean)));
@@ -197,12 +192,13 @@ function awardMilestones(dbish, { dryRun = false, verbose = false, jobId = DEFAU
           db.exec(`
             CREATE TABLE IF NOT EXISTS crawl_jobs (
               id TEXT PRIMARY KEY,
-              url TEXT,
+              url_id INTEGER REFERENCES urls(id),
               args TEXT,
               pid INTEGER,
               started_at TEXT,
               ended_at TEXT,
-              status TEXT
+              status TEXT,
+              crawl_type_id INTEGER REFERENCES crawl_types(id)
             );
           `);
           ensureJobStmt.run({ id: jobId });

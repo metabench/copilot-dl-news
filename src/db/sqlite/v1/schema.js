@@ -768,6 +768,24 @@ function initPlaceHubsTables(db, { verbose, logger }) {
       article_links_count INTEGER,
       evidence TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS place_page_mappings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      place_id INTEGER NOT NULL,
+      host TEXT NOT NULL,
+      url TEXT NOT NULL,
+      page_kind TEXT NOT NULL DEFAULT 'country-hub',
+      publisher TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+      verified_at TEXT,
+      evidence JSON,
+      hub_id INTEGER,
+      UNIQUE(place_id, host, page_kind),
+      FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE,
+      FOREIGN KEY (hub_id) REFERENCES place_hubs(id) ON DELETE SET NULL
+    );
   `);
 
   try {
@@ -795,6 +813,10 @@ function initPlaceHubsTables(db, { verbose, logger }) {
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_place ON place_hubs(place_slug)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hubs_topic ON place_hubs(topic_slug)'); } catch (_) {}
+
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_page_mappings_host_kind ON place_page_mappings(host, page_kind)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_page_mappings_place ON place_page_mappings(place_id)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_page_mappings_status ON place_page_mappings(status)'); } catch (_) {}
 
   try {
     db.exec(`

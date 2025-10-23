@@ -313,7 +313,7 @@ class IntelligentPlanRunner {
       knowledgeService: this.plannerKnowledgeService
     });
 
-    const countryCandidates = await orchestrator.runStage('country-hubs', {
+    let countryCandidates = await orchestrator.runStage('country-hubs', {
       host
     }, () => countryHubPlanner.computeCandidates(host), {
       mapResultForEvent: (res) => {
@@ -334,29 +334,66 @@ class IntelligentPlanRunner {
     }) || [];
   blueprintBuilder?.recordCountryCandidates(countryCandidates);
 
+    const candidateCoverage = new Map();
+
     // Verify place hubs - check which ones are missing from the database and fetch them immediately
     const placeHubVerification = await orchestrator.runStage('verify-place-hubs', {
       candidateCount: countryCandidates.length
     }, async () => {
       const missing = [];
-      const cached = [];
+      const verified = [];
+      const known404 = [];
       
       for (const candidate of countryCandidates) {
         if (!candidate?.url) continue;
         
-        const normalized = this.normalizeUrl ? this.normalizeUrl(candidate.url) : candidate.url;
+        const normalized = this._normalizeUrlSafe(candidate.url);
         if (!normalized) continue;
         
         // Check if we have this hub in the database
         const cachedArticle = await this.getCachedArticle(normalized);
-        
-        if (cachedArticle) {
-          cached.push({ url: normalized, slug: candidate.slug });
+
+        const slug = candidate.slug || this._extractSlugFromUrl(normalized);
+        const displayName = candidate.name || this._formatCountryNameFromSlug(slug);
+        const coverageEntry = {
+          url: normalized,
+          slug,
+          name: displayName,
+          source: candidate.source || 'country-planner'
+        };
+
+        const isVerified = cachedArticle && cachedArticle.source !== 'db-404';
+
+        if (isVerified) {
+          verified.push(coverageEntry);
+          candidateCoverage.set(normalized, { ...coverageEntry, status: 'verified' });
+        } else if (cachedArticle && cachedArticle.source === 'db-404') {
+          known404.push(coverageEntry);
+          candidateCoverage.set(normalized, { ...coverageEntry, status: 'known-404' });
         } else {
-          missing.push({ url: normalized, slug: candidate.slug, reason: candidate.reason });
+          missing.push({ ...coverageEntry, reason: candidate.reason });
+          candidateCoverage.set(normalized, { ...coverageEntry, status: 'missing' });
         }
       }
       
+      const verifiedNames = verified.map((entry) => entry.name || entry.slug || entry.url);
+      const missingNames = missing.map((entry) => entry.name || entry.slug || entry.url);
+      const known404Names = known404.map((entry) => entry.name || entry.slug || entry.url);
+
+      if (verifiedNames.length) {
+        this._log(`COUNTRY HUBS ✅ (${verifiedNames.length}/${countryCandidates.length}): ${verifiedNames.join(', ')}`);
+      } else {
+        this._log(`COUNTRY HUBS ✅ (0/${countryCandidates.length})`);
+      }
+
+      if (missingNames.length) {
+        this._log(`COUNTRY HUBS ❌ (${missingNames.length}/${countryCandidates.length} missing): ${missingNames.join(', ')}`);
+      }
+
+      if (known404Names.length) {
+        this._log(`COUNTRY HUBS 🚫 (${known404Names.length} known 404): ${known404Names.join(', ')}`);
+      }
+
       // If we have missing place hubs, fetch them immediately with highest priority
       if (missing.length > 0) {
         telemetryBridge.milestone({
@@ -364,7 +401,7 @@ class IntelligentPlanRunner {
           message: `Found ${missing.length} missing place hubs, fetching immediately`,
           details: {
             missing: missing.length,
-            cached: cached.length,
+            verified: verified.length,
             total: countryCandidates.length,
             missingSample: missing.slice(0, 5).map(m => m.slug || m.url)
           }
@@ -375,28 +412,58 @@ class IntelligentPlanRunner {
           this.enqueueRequest({
             url: hub.url,
             depth: 0,
-            priority: 100, // Maximum priority - fetch immediately
+            priority: 250, // Maximum priority - fetch immediately and ahead of indexed hubs
             type: {
               kind: 'place-hub-verification',
-              reason: hub.reason || 'missing-place-hub',
+              reason: hub.reason || 'missing-country-hub',
               slug: hub.slug,
+              countryName: hub.name,
               source: 'place-hub-verification-stage'
             }
           });
         }
       }
       
-      return { missing: missing.length, cached: cached.length, total: countryCandidates.length };
+      return {
+        missingCount: missing.length,
+        verifiedCount: verified.length,
+        known404Count: known404.length,
+        total: countryCandidates.length,
+        missingNames,
+        verifiedNames,
+        known404Names
+      };
     }, {
       mapResultForEvent: (res) => ({
-        missingCount: res?.missing || 0,
-        cachedCount: res?.cached || 0,
-        totalCount: res?.total || 0
+        missingCount: res?.missingCount || 0,
+        verifiedCount: res?.verifiedCount || 0,
+        known404Count: res?.known404Count || 0,
+        totalCount: res?.total || 0,
+        missingSample: Array.isArray(res?.missingNames) ? res.missingNames.slice(0, 5) : undefined,
+        verifiedSample: Array.isArray(res?.verifiedNames) ? res.verifiedNames.slice(0, 5) : undefined
       }),
       updateSummaryWithResult: (summary = {}, res) => ({
         ...summary,
         placeHubVerification: res || null
       })
+    });
+
+    countryCandidates = countryCandidates.map((candidate) => {
+      if (!candidate?.url) return candidate;
+      const normalized = this._normalizeUrlSafe(candidate.url);
+      const coverage = candidateCoverage.get(normalized) || null;
+      const coverageStatus = coverage?.status || 'unknown';
+      const displayName = coverage?.name || candidate.name || this._formatCountryNameFromSlug(candidate.slug);
+
+      return {
+        ...candidate,
+        name: displayName,
+        coverageStatus,
+        priorityBias: coverageStatus === 'missing' ? 40 : 20,
+        reason: coverageStatus === 'missing'
+          ? 'country-hub-missing'
+          : (candidate.reason || 'country-hub-verified')
+      };
     });
 
     const maxSeeds = this.intMaxSeeds;
@@ -675,6 +742,38 @@ class IntelligentPlanRunner {
       }
     }
     return Array.from(seeds).filter(Boolean).slice(0, 12);
+  }
+
+  _normalizeUrlSafe(url) {
+    if (!url) return null;
+    if (typeof this.normalizeUrl !== 'function') {
+      return url;
+    }
+    try {
+      return this.normalizeUrl(url);
+    } catch (_) {
+      return url;
+    }
+  }
+
+  _formatCountryNameFromSlug(slug) {
+    if (!slug) return null;
+    return String(slug)
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  _extractSlugFromUrl(url) {
+    if (!url) return null;
+    try {
+      const pathname = new URL(url, this.baseUrl).pathname;
+      const segments = pathname.split('/').filter(Boolean);
+      return segments.length ? segments[segments.length - 1] : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   _mapTargetedAnalysisResult(res) {

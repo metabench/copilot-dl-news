@@ -57,8 +57,11 @@ function createAnalysisApiRouter({ getDbRW }) {
       const version = req.query.version != null 
         ? parseInt(req.query.version, 10) || 1
         : 1;
-      const count = countArticlesNeedingAnalysis(db, version);
-      res.json({ count, analysisVersion: version });
+      const result = countArticlesNeedingAnalysis(db, version);
+      res.json({
+        count: Number(result?.needingAnalysis || 0),
+        analysisVersion: version
+      });
     } catch (err) {
       res.status(500).json({ error: err.message || String(err) });
     }

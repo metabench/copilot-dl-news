@@ -46,6 +46,9 @@ testlogs/
 # UI review artefacts
 screenshots/
 
+# Analysis charts (generated outputs)
+analysis-charts/
+
 # Generated stylesheets (built from Sass)
 src/ui/express/public/ui.css
 src/ui/express/public/ui-dark.css

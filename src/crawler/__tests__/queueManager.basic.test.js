@@ -39,7 +39,8 @@ describe('QueueManager basic', () => {
       urlEligibilityService,
       computeEnhancedPriority,
       emitEnhancedQueueEvent,
-      usePriorityQueue: true
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => false
     });
 
     qm.enqueue({ url: 'http://example.com/article/slow', depth: 1, type: 'article' });
@@ -80,7 +81,8 @@ describe('QueueManager basic', () => {
       urlEligibilityService,
       emitEnhancedQueueEvent,
       computeEnhancedPriority,
-      jobIdProvider: () => 'job-123'
+      jobIdProvider: () => 'job-123',
+      isTotalPrioritisationEnabled: () => false
     });
 
     const accepted = qm.enqueue({ url: 'http://example.com/hub', depth: 0, type: 'hub' });
@@ -158,6 +160,41 @@ describe('QueueManager basic', () => {
     expect(qm.size()).toBe(1);
   });
 
+  test('pullNext serves cached content even when host is eligible', async () => {
+    const cacheGet = jest.fn().mockResolvedValue({ body: 'cached-copy' });
+
+    const urlEligibilityService = {
+      evaluate: ({ url }) => ({
+        status: 'allow',
+        normalized: url,
+        kind: 'article',
+        queueKey: url
+      })
+    };
+
+    const qm = new QueueManager({
+      urlEligibilityService,
+      cache: { get: cacheGet },
+      safeHostFromUrl: (url) => new URL(url).host,
+      usePriorityQueue: true,
+      isHostRateLimited: () => false,
+      getHostResumeTime: () => null
+    });
+
+    const targetUrl = 'http://news.example.com/article/cached';
+    qm.enqueue({ url: targetUrl, depth: 1, type: 'article' });
+
+    const result = await qm.pullNext();
+    expect(result).not.toBeNull();
+    expect(result.item.url).toBe(targetUrl);
+    expect(result.context).toEqual(expect.objectContaining({
+      forceCache: true,
+      cachedPage: { body: 'cached-copy' },
+      cachedHost: 'news.example.com'
+    }));
+    expect(cacheGet).toHaveBeenCalledWith(targetUrl);
+  });
+
   test('heatmap tracks origin/role/depth buckets and decrements on pull', async () => {
     const urlEligibilityService = {
       evaluate: ({ url, depth }) => ({
@@ -228,5 +265,62 @@ describe('QueueManager basic', () => {
       url: 'http://example.com/gazetteer',
       reason: 'max-depth-bypassed'
     }));
+  });
+
+  test('total prioritisation drops non-country work', async () => {
+    const urlEligibilityService = {
+      evaluate: ({ url }) => {
+        if (url.includes('/world/france')) {
+          return {
+            status: 'allow',
+            normalized: url,
+            kind: 'hub-seed',
+            queueKey: url,
+            meta: { hubKind: 'country' }
+          };
+        }
+
+        return {
+          status: 'allow',
+          normalized: url,
+          kind: 'nav',
+          queueKey: url,
+          meta: { description: 'section' }
+        };
+      }
+    };
+
+    const emitQueueEvent = jest.fn();
+    const computeEnhancedPriority = jest.fn(() => ({ priority: 10, prioritySource: 'base' }));
+
+    const qm = new QueueManager({
+      urlEligibilityService,
+      computeEnhancedPriority,
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => true,
+      emitQueueEvent
+    });
+
+    const navAccepted = qm.enqueue({ url: 'https://news.example.com/section/politics', depth: 1, type: 'nav' });
+    expect(navAccepted).toBe(false);
+    expect(emitQueueEvent).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'drop',
+      reason: 'total-prioritisation-filter',
+      url: 'https://news.example.com/section/politics'
+    }));
+
+    const countryAccepted = qm.enqueue({
+      url: 'https://news.example.com/world/france',
+      depth: 0,
+      type: { kind: 'hub-seed', hubKind: 'country' }
+    });
+    expect(countryAccepted).toBe(true);
+
+    const first = await qm.pullNext();
+    expect(first.item.url).toContain('/world/france');
+    expect(first.item.priorityMetadata.totalPrioritisation).toBe('country');
+
+    const second = await qm.pullNext();
+    expect(second).toBeNull();
   });
 });

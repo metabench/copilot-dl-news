@@ -9,6 +9,7 @@
  */
 
 const { getAllCountries, getTopCountries } = require('../db/sqlite/v1/queries/gazetteer.places');
+const { getCountryHubCoverage } = require('../db/sqlite/v1/queries/placePageMappings');
 const path = require('path');
 const { loadDsplLibrary, getDsplForDomain } = require('./shared/dspl');
 
@@ -122,30 +123,39 @@ class CountryHubGapAnalyzer {
    * @returns {Object} Gap analysis summary
    */
   analyzeGaps(domain, hubStats = {}) {
+    const host = this._normalizeHost(domain);
     const now = Date.now();
     
     // Return cached analysis if recent
-    const cacheKey = `${domain}`;
+    const cacheKey = `${host || ''}`;
     if (this.lastAnalysis?.[cacheKey] && (now - this.lastAnalysisTime) < this.analysisCacheMs) {
       return this.lastAnalysis[cacheKey];
     }
 
     const countryStats = hubStats.perKind?.country || { seeded: 0, visited: 0 };
-    const seeded = countryStats.seeded || 0;
-    const visited = countryStats.visited || 0;
-    const missing = Math.max(seeded - visited, 0);
+    const coverage = host
+      ? getCountryHubCoverage(this.db, host)
+      : { seeded: 0, visited: 0, missingCountries: [], totalCountries: 0, missing: 0 };
+
+    const seeded = coverage.seeded || countryStats.seeded || 0;
+    const visited = coverage.visited || countryStats.visited || 0;
+    const missingCountries = coverage.missingCountries || [];
+    const missing = coverage.missing ?? Math.max(seeded - visited, 0);
     
     const coveragePercent = seeded > 0 ? Math.round((visited / seeded) * 100) : 0;
-    const isComplete = missing === 0 && seeded > 0;
+    const totalCountries = coverage.totalCountries || seeded;
+    const isComplete = missing === 0 && totalCountries > 0;
 
     const analysis = {
-      domain,
+      domain: host,
       seeded,
       visited,
       missing,
       coveragePercent,
       isComplete,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      totalCountries,
+      missingCountries
     };
 
     // Cache result
@@ -229,6 +239,23 @@ class CountryHubGapAnalyzer {
       'AU': 'oceania'
     };
     return regionMap[countryCode] || 'international';
+  }
+
+  _normalizeHost(domain) {
+    if (!domain) return '';
+    const trimmed = String(domain).trim();
+    if (!trimmed) return '';
+
+    try {
+      const parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
+      return parsed.hostname.replace(/^www\./, '').toLowerCase();
+    } catch (_) {
+      return trimmed
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '')
+        .toLowerCase();
+    }
   }
 
   _calculateConfidence(country) {

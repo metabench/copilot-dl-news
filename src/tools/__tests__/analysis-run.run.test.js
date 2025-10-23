@@ -9,16 +9,114 @@ function createTempDbWithDepthCoverage({ host = 'example.com', depthCount = 10 }
   const dbPath = path.join(dir, 'news.db');
   const db = new NewsDatabase(dbPath);
   const now = new Date().toISOString();
-  const insertUrl = db.db.prepare('INSERT INTO urls (url, host, created_at, last_seen_at) VALUES (?, ?, ?, ?)');
-  const insertArticle = db.db.prepare('INSERT INTO articles (url, title, crawled_at, crawl_depth, analysis) VALUES (?, ?, ?, ?, ?)');
+  const insertUrl = db.db.prepare(`
+    INSERT INTO urls (url, canonical_url, created_at, last_seen_at, host)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(url) DO UPDATE SET last_seen_at = excluded.last_seen_at
+    RETURNING id
+  `);
+  const insertResponse = db.db.prepare(`
+    INSERT INTO http_responses (
+      url_id,
+      request_started_at,
+      fetched_at,
+      http_status,
+      content_type,
+      content_encoding,
+      etag,
+      last_modified,
+      redirect_chain,
+      ttfb_ms,
+      download_ms,
+      total_ms,
+      bytes_downloaded,
+      transfer_kbps
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertContent = db.db.prepare(`
+    INSERT INTO content_storage (
+      storage_type,
+      http_response_id,
+      compression_type_id,
+      compression_bucket_id,
+      bucket_entry_key,
+      content_blob,
+      content_sha256,
+      uncompressed_size,
+      compressed_size,
+      compression_ratio
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertAnalysis = db.db.prepare(`
+    INSERT INTO content_analysis (
+      content_id,
+      analysis_version,
+      classification,
+      title,
+      section,
+      word_count,
+      analysis_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertDiscovery = db.db.prepare(`
+    INSERT INTO discovery_events (
+      url_id,
+      discovered_at,
+      referrer_url,
+      crawl_depth,
+      discovery_method,
+      crawl_job_id
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
   const insertMany = db.db.transaction((count) => {
     for (let i = 0; i < count; i++) {
       const url = `https://${host}/article-${i}`;
-      insertUrl.run(url, host, now, now);
-      insertArticle.run(url, `Article ${i}`, now, 2, JSON.stringify({ kind: 'article' }));
+      const urlRow = insertUrl.get(url, url, now, now, host);
+      const response = insertResponse.run(
+        urlRow.id,
+        now,
+        now,
+        200,
+        'text/html; charset=UTF-8',
+        null,
+        `etag-${i}`,
+        now,
+        null,
+        100,
+        50,
+        150,
+        1024,
+        256
+      );
+      const responseId = Number(response.lastInsertRowid);
+      const content = insertContent.run(
+        'inline',
+        responseId,
+        null,
+        null,
+        null,
+        Buffer.from('<html></html>'),
+        `sha-${i}`,
+        1024,
+        512,
+        2
+      );
+      const contentId = Number(content.lastInsertRowid);
+      insertAnalysis.run(
+        contentId,
+        6,
+        'article',
+        `Article ${i}`,
+        'World',
+        500,
+        JSON.stringify({ kind: 'article', version: 6 })
+      );
+      insertDiscovery.run(urlRow.id, now, null, 2, 'test', null);
     }
   });
   insertMany(depthCount);
+  db.upsertDomain(host);
   db.close();
   return { dir, dbPath };
 }

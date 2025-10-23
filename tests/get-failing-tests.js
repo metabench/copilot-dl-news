@@ -18,6 +18,7 @@ const path = require('path');
 
 const TESTLOGS_DIR = path.join(__dirname, '..', 'testlogs');
 const FAILURE_SUMMARY_PATH = path.join(__dirname, '..', 'test-failure-summary.json');
+const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T/;
 const DEFAULT_HISTORY_LOGS = 5;
 
 function ensureTestlogsDir() {
@@ -29,14 +30,13 @@ function ensureTestlogsDir() {
 
 function listLogPaths(suiteFilter, limit) {
   ensureTestlogsDir();
+  const normalizedSuite = suiteFilter ? suiteFilter.toLowerCase() : null;
   const files = fs.readdirSync(TESTLOGS_DIR)
     .filter(name => name.endsWith('.log'))
     .filter(name => {
-      if (!suiteFilter) return true;
-      return name.includes(`_${suiteFilter}.log`);
-    })
-    .sort()
-    .reverse();
+      if (!normalizedSuite) return true;
+      return name.toLowerCase().includes(`_${normalizedSuite}.log`);
+    });
 
   if (files.length === 0) {
     if (suiteFilter) {
@@ -47,7 +47,13 @@ function listLogPaths(suiteFilter, limit) {
     process.exit(1);
   }
 
-  const bounded = typeof limit === 'number' ? files.slice(0, limit) : files;
+  const timestamped = files.filter(name => TIMESTAMP_PATTERN.test(name));
+  const prioritised = (timestamped.length > 0 ? timestamped : files)
+    .slice()
+    .sort()
+    .reverse();
+
+  const bounded = typeof limit === 'number' ? prioritised.slice(0, limit) : prioritised;
   return bounded.map(name => path.join(TESTLOGS_DIR, name));
 }
 
@@ -70,11 +76,12 @@ function parseTestResults(logPath) {
 
     const [, runtime, testPath, totalTests, passed, failed] = match;
     results.push({
-      testPath: testPath.trim(),
+      testPath: normalizePath(testPath.trim()),
       runtime: parseFloat(runtime),
       totalTests: parseInt(totalTests, 10),
       passed: parseInt(passed, 10),
-      failed: parseInt(failed, 10)
+      failed: parseInt(failed, 10),
+      fromSummary: false
     });
   }
 
@@ -82,7 +89,7 @@ function parseTestResults(logPath) {
 }
 
 function normalizePath(value) {
-  return value.replace(/\\/g, '/');
+  return (value || '').replace(/\\/g, '/');
 }
 
 function loadJsonAsMap(payload) {
@@ -157,8 +164,84 @@ function failureMessageFor(testPath, failureSummaryMap) {
   return detail && detail.message ? detail.message : null;
 }
 
+function buildFailureRecordFromSummary(entry) {
+  if (!entry) return null;
+  const failed = Number.isFinite(entry.numFailing)
+    ? entry.numFailing
+    : Array.isArray(entry.entries)
+      ? entry.entries.length
+      : 0;
+  if (!failed || failed <= 0) {
+    return null;
+  }
+
+  const totalTests = Number.isFinite(entry.numTests) ? entry.numTests : null;
+  const passed = Number.isFinite(entry.numPassing)
+    ? entry.numPassing
+    : (totalTests != null ? Math.max(0, totalTests - failed) : null);
+  const runtime = Number.isFinite(entry.runtime) ? entry.runtime : null;
+  const testPath = normalizePath(entry.filePath || entry.testPath || '');
+  if (!testPath) {
+    return null;
+  }
+
+  return {
+    testPath,
+    runtime,
+    totalTests,
+    passed,
+    failed,
+    fromSummary: true
+  };
+}
+
+function mapFailureSummaryToRecords(failureSummaryMap) {
+  if (!failureSummaryMap || failureSummaryMap.size === 0) {
+    return [];
+  }
+  const records = [];
+  for (const entry of failureSummaryMap.values()) {
+    const record = buildFailureRecordFromSummary(entry);
+    if (record) {
+      records.push(record);
+    }
+  }
+  return records;
+}
+
+function collectFailureRecords(results, failureSummaryMap) {
+  const directFailures = results.filter(result => result.failed > 0);
+  if (directFailures.length > 0) {
+    return { records: directFailures, usedSummary: false };
+  }
+
+  const summaryRecords = mapFailureSummaryToRecords(failureSummaryMap);
+  if (summaryRecords.length > 0) {
+    return { records: summaryRecords, usedSummary: true };
+  }
+
+  return { records: [], usedSummary: false };
+}
+
+function formatRuntime(runtime) {
+  if (Number.isFinite(runtime)) {
+    return `${runtime.toFixed(2)}s`;
+  }
+  return 'unknown';
+}
+
+function formatFailureTotals(record) {
+  if (Number.isFinite(record.failed) && Number.isFinite(record.totalTests)) {
+    return `${record.failed}/${record.totalTests} tests`;
+  }
+  if (Number.isFinite(record.failed)) {
+    return `${record.failed} failure${record.failed === 1 ? '' : 's'}`;
+  }
+  return 'unknown failures';
+}
+
 function printLatestFailures(logPath, results, mode, failureSummaryMap) {
-  const failures = results.filter(result => result.failed > 0);
+  const { records: failures, usedSummary } = collectFailureRecords(results, failureSummaryMap);
 
   if (mode === 'count') {
     console.log(failures.length);
@@ -180,10 +263,13 @@ function printLatestFailures(logPath, results, mode, failureSummaryMap) {
 
   failures.forEach((failure, index) => {
     console.log(`${index + 1}. ${failure.testPath}`);
-    console.log(`   Runtime: ${failure.runtime}s | Failed: ${failure.failed}/${failure.totalTests} tests`);
+    console.log(`   Runtime: ${formatRuntime(failure.runtime)} | Failed: ${formatFailureTotals(failure)}`);
     const message = failureMessageFor(failure.testPath, failureSummaryMap);
     if (message) {
       console.log(`   Latest failure: ${message}`);
+    }
+    if (usedSummary && failure.fromSummary) {
+      console.log('   ℹ️  Source: failure summary snapshot (log missing structured test list)');
     }
     console.log('');
   });
@@ -205,13 +291,16 @@ function printHistory(logPaths, options) {
     const suite = getSuiteFromLogPath(logPath);
     const results = parseTestResults(logPath);
     const failureSummaryMap = loadFailureSummaryForLog(logPath, globalSummaryMap);
-    const failures = results.filter(r => r.failed > 0);
+    const summaryRecords = mapFailureSummaryToRecords(failureSummaryMap);
+    const { records: failures, usedSummary } = collectFailureRecords(results, failureSummaryMap);
 
     console.log(`${index + 1}. ${when} [${suite}]`);
 
     if (normalizedPattern) {
       const matches = results.filter(r => normalizePath(r.testPath).toLowerCase().includes(normalizedPattern));
-      if (matches.length === 0) {
+      const summaryMatches = summaryRecords.filter(r => r.testPath.toLowerCase().includes(normalizedPattern));
+
+      if (matches.length === 0 && summaryMatches.length === 0) {
         console.log('   • Test not present in this run');
         console.log('');
         return;
@@ -229,6 +318,18 @@ function printHistory(logPaths, options) {
           }
         }
       });
+
+      if (matches.length === 0 && summaryMatches.length > 0) {
+        summaryMatches.forEach(match => {
+          const runtime = formatRuntime(match.runtime);
+          console.log(`   ❌ ${match.testPath} (failures: ${formatFailureTotals(match)}, runtime ${runtime})`);
+          const message = failureMessageFor(match.testPath, failureSummaryMap);
+          if (message) {
+            console.log(`      ↳ ${message}`);
+          }
+          console.log('      ℹ️  Source: failure summary snapshot (log missing structured test list)');
+        });
+      }
       console.log('');
       return;
     }
@@ -240,11 +341,15 @@ function printHistory(logPaths, options) {
     }
 
     failures.forEach(failure => {
-      const runtime = Number.isFinite(failure.runtime) ? `${failure.runtime.toFixed(2)}s` : `${failure.runtime}s`;
-      console.log(`   ❌ ${failure.testPath} — failed ${failure.failed}/${failure.totalTests} (runtime ${runtime})`);
+      const runtime = formatRuntime(failure.runtime);
+      const failureTotals = formatFailureTotals(failure);
+      console.log(`   ❌ ${failure.testPath} — failed ${failureTotals} (runtime ${runtime})`);
       const message = failureMessageFor(failure.testPath, failureSummaryMap);
       if (message) {
         console.log(`      ↳ ${message}`);
+      }
+      if (usedSummary && failure.fromSummary) {
+        console.log('      ℹ️  Source: failure summary snapshot (log missing structured test list)');
       }
     });
     console.log('');
@@ -320,5 +425,6 @@ if (historyMode || logsCount > 1 || testPattern) {
 
 // Exit code reflects latest run status even when showing history
 const latestResults = parseTestResults(logPaths[0]);
-const latestFailures = latestResults.some(result => result.failed > 0);
+const latestFailureSummary = loadFailureSummaryForLog(logPaths[0], globalSummaryMap);
+const latestFailures = collectFailureRecords(latestResults, latestFailureSummary).records.length > 0;
 process.exit(latestFailures ? 1 : 0);

@@ -19,8 +19,9 @@
  *   node tools/gazetteer/query-country-hub-gaps.js --analyze theguardian.com
  */
 
-const { CountryHubGapAnalyzer } = require('../../src/services/CountryHubGapAnalyzer');
 const { ensureDatabase } = require('../../src/db/sqlite');
+const { createCountryHubGapReporter } = require('../../src/services/CountryHubGapReporter');
+const { CountryHubMatcher } = require('../../src/services/CountryHubMatcher');
 const path = require('path');
 
 // Parse command line arguments
@@ -30,7 +31,9 @@ function parseArgs() {
     top: null,
     country: null,
     domain: null,
-    analyze: null
+    analyze: null,
+    autoMatch: true,
+    populations: false
   };
   
   for (let i = 2; i < process.argv.length; i++) {
@@ -46,6 +49,12 @@ function parseArgs() {
       args.domain = process.argv[++i];
     } else if (arg === '--analyze') {
       args.analyze = process.argv[++i];
+    } else if (arg === '--match') {
+      args.autoMatch = true;
+    } else if (arg === '--no-match') {
+      args.autoMatch = false;
+    } else if (arg === '--populations') {
+      args.populations = true;
     } else if (arg === '--help' || arg === '-h') {
       showHelp();
       process.exit(0);
@@ -68,6 +77,8 @@ Options:
   --country NAME           Show details for specific country
   --domain DOMAIN          Predict country hub URLs for domain
   --analyze DOMAIN         Analyze gap coverage for domain
+  --match / --no-match     Enable or disable automatic matching (default: enabled)
+  --populations            When analyzing, output a population-sorted table
   --help, -h               Show this help message
 
 Examples:
@@ -77,6 +88,7 @@ Examples:
   node tools/gazetteer/query-country-hub-gaps.js --domain bbc.co.uk
   node tools/gazetteer/query-country-hub-gaps.js --analyze theguardian.com
   node tools/gazetteer/query-country-hub-gaps.js --domain nytimes.com --country France
+  node tools/gazetteer/query-country-hub-gaps.js --analyze theguardian.com --no-match
 
 Description:
   This tool queries the gazetteer database and generates country hub URL
@@ -93,8 +105,8 @@ async function main() {
   const dbPath = path.join(__dirname, '..', '..', 'data', 'news.db');
   const db = ensureDatabase(dbPath);
   
-  // Create analyzer
-  const analyzer = new CountryHubGapAnalyzer({ db });
+  const reporter = createCountryHubGapReporter({ db, logger: console });
+  const analyzer = reporter.analyzer;
   
   try {
     // Show all countries
@@ -186,22 +198,106 @@ async function main() {
     
     // Analyze gap coverage
     if (args.analyze) {
-      const hubStats = {
-        seeded: 0,
-        visited: 0
-      };
-      
-      // For now, use default stats (future: could query actual crawler state)
+      const hubStats = { perKind: { country: { seeded: 0, visited: 0 } } };
+
+      let matchResult = null;
+      if (args.autoMatch) {
+        const matcher = new CountryHubMatcher({ db, logger: console });
+        matchResult = matcher.matchDomain(args.analyze, {
+          dryRun: false,
+          hubStats
+        });
+
+        const { linkedCount, candidateCount } = matchResult;
+        const skippedCount = matchResult.skipped?.length || 0;
+
+        console.log(`\nAuto-matching existing hubs for ${args.analyze}: linked ${linkedCount} of ${candidateCount} candidates (skipped ${skippedCount}).`);
+
+        if (linkedCount > 0) {
+          const preview = matchResult.actions
+            .filter((action) => action.applied)
+            .slice(0, 10)
+            .map(({ target, candidate }) => `  ✓ ${target.name} (${target.code || '??'}) → ${candidate.url}`);
+          preview.forEach((line) => console.log(line));
+          if (matchResult.actions.filter((action) => action.applied).length > 10) {
+            console.log('  … additional matches applied');
+          }
+        }
+      }
+
       console.log(`\nGap Analysis for ${args.analyze}:\n`);
-      const analysis = analyzer.analyzeGaps(args.analyze, hubStats);
-      
-      console.log(`Seeded:           ${analysis.seeded}`);
-      console.log(`Visited:          ${analysis.visited}`);
-      console.log(`Missing:          ${analysis.missing}`);
-      console.log(`Coverage:         ${analysis.coveragePercent}%`);
-      console.log(`Complete:         ${analysis.isComplete ? 'Yes' : 'No'}`);
+      const { analysis, formatted } = reporter.analyzeAndFormat(args.analyze, {
+        hubStats,
+        missingLineLimit: Number.POSITIVE_INFINITY,
+        includeStatus: false
+      });
+
+      formatted.headerLines.forEach((line) => console.log(line));
+
+      if (analysis.missing > 0) {
+        if (args.populations) {
+          const sorted = [...(analysis.missingCountries || [])]
+            .sort((a, b) => {
+              const popA = a?.population || 0;
+              const popB = b?.population || 0;
+              if (popB !== popA) return popB - popA;
+              return (a?.name || '').localeCompare(b?.name || '');
+            });
+
+          console.log(`\nMissing country hubs by population (${analysis.missing}):\n`);
+          const header = ['Name', 'Code', 'Population'];
+          const formatPopulation = (value) => {
+            const population = Number.isFinite(value) ? value : 0;
+            return population.toLocaleString('en-US');
+          };
+
+          const formattedPopulations = sorted.map((country) =>
+            formatPopulation(country?.population || 0)
+          );
+
+          const columnWidths = {
+            name: Math.max(
+              header[0].length,
+              ...sorted.map((country) => (country?.name || '').length)
+            ),
+            code: Math.max(
+              header[1].length,
+              ...sorted.map((country) => (country?.code || '??').length)
+            ),
+            population: Math.max(
+              header[2].length,
+              ...formattedPopulations.map((value) => value.length)
+            )
+          };
+
+          const padLeft = (value, width) => String(value).padStart(width, ' ');
+          const padRight = (value, width) => String(value).padEnd(width, ' ');
+
+          console.log(
+            `${padRight(header[0], columnWidths.name)} | ${padRight(header[1], columnWidths.code)} | ${padLeft(header[2], columnWidths.population)}`
+          );
+          console.log('-'.repeat(columnWidths.name + columnWidths.code + columnWidths.population + 6));
+
+          sorted.forEach((country) => {
+            const population = formatPopulation(country?.population || 0);
+            const name = padRight(country?.name || 'Unknown', columnWidths.name);
+            const code = padRight(country?.code || '??', columnWidths.code);
+            const populationColumn = padLeft(population, columnWidths.population);
+            console.log(`${name} | ${code} | ${populationColumn}`);
+          });
+        } else {
+          console.log(`\nMissing country hubs (${analysis.missing}):`);
+          formatted.missing.lines.forEach((line) => console.log(line));
+          if (formatted.missing.moreAfterLines > 0) {
+            console.log(`  … +${formatted.missing.moreAfterLines} more`);
+          }
+        }
+      } else {
+        console.log('\nAll country hubs verified!');
+      }
+
       console.log(`\nNote: This shows potential gaps. Run with --domain to see URL predictions.`);
-      
+
       return;
     }
     

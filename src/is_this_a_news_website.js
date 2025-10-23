@@ -40,24 +40,15 @@ function scoreNewsDomain(m) {
  * @returns {{analysis: {kind:string, score:number, evidence:object, updatedAt:string}, metrics: object}}
  */
 function evaluateDomainFromDb(db, host) {
-  const pats = [ `http://${host}/%`, `https://${host}/%`, `http://www.${host}/%`, `https://www.${host}/%` ];
-  const likeClause = pats.map(() => 'url LIKE ?').join(' OR ');
-  const art = db.db.prepare(
-    `SELECT COUNT(*) AS c FROM fetches WHERE classification='article' AND (${likeClause})`
-  ).get(...pats);
-  const secRow = db.db.prepare(
-    `SELECT COUNT(DISTINCT section) AS c FROM articles WHERE section IS NOT NULL AND section != '' AND (${likeClause})`
-  ).get(...pats);
+  let metrics = null;
+  if (db && typeof db.getDomainArticleMetrics === 'function') {
+    metrics = db.getDomainArticleMetrics(host);
+  }
 
-  // Compute dated URL ratio for articles; SQLite REGEXP may be unavailable, so do it in JS
-  const artUrls = db.db.prepare(`SELECT url FROM articles WHERE (${likeClause})`).all(...pats);
-  const total = artUrls.length;
-  const dated = artUrls.filter(r => /\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}\//.test(r.url)).length;
-  const metrics = {
-    articleFetches: art?.c || 0,
-    distinctSections: secRow?.c || 0,
-    datedUrlRatio: total ? dated / total : 0
-  };
+  if (!metrics) {
+    metrics = { articleFetches: 0, distinctSections: 0, datedUrlRatio: 0 };
+  }
+
   const res = scoreNewsDomain(metrics);
   return {
     analysis: { kind: res.kind, score: res.score, evidence: res.evidence, updatedAt: new Date().toISOString() },

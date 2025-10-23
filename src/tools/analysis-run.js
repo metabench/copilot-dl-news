@@ -4,6 +4,7 @@
 // 1. Ensures page/domain analysis is up to date by invoking existing tools.
 // 2. Awards milestone rows for domains that now satisfy analysis thresholds.
 
+const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { is_array, tof, fp } = require('lang-tools');
@@ -467,6 +468,106 @@ function runAnalyzeDomains(scriptPath, opts) {
   }
 }
 
+function generateBenchmarkPieChart(totalRunTimeMs, analysisCount, stageTimings) {
+  if (!totalRunTimeMs || totalRunTimeMs <= 0) {
+    console.log('[analysis-run] Pie chart skipped: no valid runtime');
+    return '';
+  }
+
+  // Calculate unaccounted overhead
+  const accountedTime = Object.values(stageTimings).reduce((a, b) => a + b, 0);
+  const unaccountedMs = Math.max(0, totalRunTimeMs - accountedTime);
+
+  // Create categories with percentages
+  const categories = [
+    { name: 'Database Setup', ms: stageTimings.dbSetup },
+    { name: 'Page Analysis', ms: stageTimings.pageAnalysis },
+    { name: 'Domain Analysis', ms: stageTimings.domainAnalysis },
+    { name: 'Milestone Awarding', ms: stageTimings.milestones },
+    { name: 'Other Measured', ms: stageTimings.other },
+    { name: 'Unaccounted Overhead', ms: unaccountedMs }
+  ].filter(c => c.ms > 0);
+
+  // Sort by time descending for better visualization
+  categories.sort((a, b) => b.ms - a.ms);
+
+  // Colors for pie slices
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#C7CEEA'];
+
+  // Calculate SVG pie chart
+  const radius = 150;
+  const centerX = 200;
+  const centerY = 200;
+  let currentAngle = -Math.PI / 2;
+  const slices = [];
+  const legendItems = [];
+
+  categories.forEach((cat, idx) => {
+    const percentage = (cat.ms / totalRunTimeMs) * 100;
+    const sliceAngle = (cat.ms / totalRunTimeMs) * Math.PI * 2;
+    const x1 = centerX + radius * Math.cos(currentAngle);
+    const y1 = centerY + radius * Math.sin(currentAngle);
+    const nextAngle = currentAngle + sliceAngle;
+    const x2 = centerX + radius * Math.cos(nextAngle);
+    const y2 = centerY + radius * Math.sin(nextAngle);
+    const largeArc = sliceAngle > Math.PI ? 1 : 0;
+
+    const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+    slices.push(`<path d="${pathData}" fill="${colors[idx % colors.length]}" stroke="white" stroke-width="2"/>`);
+
+    // Label for slice (if large enough)
+    if (percentage >= 5) {
+      const labelAngle = currentAngle + sliceAngle / 2;
+      const labelRadius = radius * 0.65;
+      const labelX = centerX + labelRadius * Math.cos(labelAngle);
+      const labelY = centerY + labelRadius * Math.sin(labelAngle);
+      slices.push(`<text x="${labelX}" y="${labelY}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="bold" fill="white">${percentage.toFixed(1)}%</text>`);
+    }
+
+    legendItems.push({
+      color: colors[idx % colors.length],
+      name: cat.name,
+      ms: cat.ms,
+      percentage
+    });
+
+    currentAngle = nextAngle;
+  });
+
+  // Generate legend
+  let legendY = 50;
+  const legendSvg = legendItems.map((item, idx) => {
+    const y = legendY + idx * 30;
+    return `
+      <g>
+        <rect x="420" y="${y - 10}" width="15" height="15" fill="${item.color}" stroke="black" stroke-width="1"/>
+        <text x="445" y="${y + 2}" font-size="13" font-family="monospace">${item.name}: ${item.ms}ms (${item.percentage.toFixed(1)}%)</text>
+      </g>
+    `;
+  }).join('');
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg" style="background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; }
+  </style>
+  
+  <text x="400" y="30" font-size="20" font-weight="bold" text-anchor="middle">Analysis Run Performance Breakdown</text>
+  <text x="400" y="50" font-size="14" text-anchor="middle" fill="#666">Total time: ${(totalRunTimeMs / 1000).toFixed(2)}s across ${analysisCount} analyses (${(totalRunTimeMs / analysisCount).toFixed(0)}ms per-analysis avg)</text>
+  
+  <g>
+    ${slices.join('\n    ')}
+  </g>
+  
+  <text x="420" y="35" font-size="14" font-weight="bold">Breakdown:</text>
+  ${legendSvg}
+  
+  <text x="420" y="480" font-size="11" fill="#999">Note: "Unaccounted Overhead" represents time not captured by individual stage timers</text>
+</svg>`;
+
+  return svg;
+}
+
 async function runAnalysis(rawOptions = {}) {
   const options = rawOptions || {};
   const projectRoot = findProjectRoot(__dirname);
@@ -488,8 +589,35 @@ async function runAnalysis(rawOptions = {}) {
   const skipDomains = boolArg(getOption(options, 'skip-domains', 'skipDomains'), false);
   const dryRun = boolArg(getOption(options, 'dry-run', 'dryRun'), false);
   const verbose = boolArg(getOption(options, 'verbose'), false);
+  const benchmark = boolArg(getOption(options, 'benchmark'), false);
+  const piechart = boolArg(getOption(options, 'piechart'), false);
   const progressLoggingEnabled = options.progressLogging !== false;
   const userProgressHandler = typeof options.onProgress === 'function' ? options.onProgress : null;
+
+  // Determine analysis version - if not specified, auto-increment to force re-analysis
+  let effectiveAnalysisVersion = safeAnalysisVersion;
+  if (!effectiveAnalysisVersion) {
+    try {
+      if (!NewsDatabase) {
+        NewsDatabase = require('../db');
+      }
+      const tempDb = new NewsDatabase(dbPath);
+      try {
+        const maxVersionResult = tempDb.db.prepare(`SELECT COALESCE(MAX(analysis_version), 0) as max_version FROM content_analysis`).get();
+        const maxVersion = Number(maxVersionResult?.max_version || 0);
+        effectiveAnalysisVersion = maxVersion + 1;
+        if (verbose) {
+          console.log(`[analysis-run] Auto-incremented analysis version: ${effectiveAnalysisVersion} (was max: ${maxVersion})`);
+        }
+      } finally {
+        tempDb.close();
+      }
+    } catch (err) {
+      // If we can't determine version, default to 1 and warn
+      effectiveAnalysisVersion = 1;
+      logInfo('Could not determine max analysis version, using default 1', { error: err?.message });
+    }
+  }
 
   const runId = generateRunId(getOption(options, 'run-id', 'runId'));
   const startedAtIso = new Date().toISOString();
@@ -498,7 +626,7 @@ async function runAnalysis(rawOptions = {}) {
     startedAt: startedAtIso,
     config: {
       dbPath,
-      analysisVersion: safeAnalysisVersion ?? null,
+      analysisVersion: effectiveAnalysisVersion ?? null,
       pageLimit: safeLimit ?? null,
       domainLimit: safeDomainLimit ?? null,
       skipPages,
@@ -508,6 +636,39 @@ async function runAnalysis(rawOptions = {}) {
     },
     steps: {}
   };
+
+  // Stage timing tracking for benchmark/piechart
+  const stageTimings = {
+    dbSetup: 0,
+    pageAnalysis: 0,
+    domainAnalysis: 0,
+    milestones: 0,
+    other: 0
+  };
+  let stageStartTime = {};
+
+  const recordStageTime = (stageName, durationMs) => {
+    if (stageName in stageTimings) {
+      stageTimings[stageName] += durationMs;
+    } else if (stageName) {
+      stageTimings.other += durationMs;
+    }
+  };
+
+  const startStageTimer = (stageName) => {
+    stageStartTime[stageName] = Date.now();
+  };
+
+  const endStageTimer = (stageName) => {
+    if (stageStartTime[stageName]) {
+      const duration = Date.now() - stageStartTime[stageName];
+      recordStageTime(stageName, duration);
+      delete stageStartTime[stageName];
+      return duration;
+    }
+    return 0;
+  };
+
   const diagnosticsState = {
     currentStage: 'starting',
     lastCompletedStage: null,
@@ -554,11 +715,13 @@ async function runAnalysis(rawOptions = {}) {
   };
 
   const beginStage = (stage, details) => {
+    startStageTimer(stage);
     diagnosticsState.currentStage = stage || null;
     pushTimelineEntry(stage, 'started', details);
   };
 
   const completeStage = (stage, details) => {
+    endStageTimer(stage);
     diagnosticsState.lastCompletedStage = stage || diagnosticsState.lastCompletedStage;
     if (diagnosticsState.currentStage === stage) {
       diagnosticsState.currentStage = null;
@@ -743,13 +906,13 @@ async function runAnalysis(rawOptions = {}) {
       }
       
       beginStage('page-analysis', {
-        analysisVersion: safeAnalysisVersion ?? null,
+        analysisVersion: effectiveAnalysisVersion ?? null,
         limit: safeLimit ?? null,
         totalToAnalyze: totalToAnalyze || null
       });
       tracker.update({ stage: 'page-analysis', lastProgress: { stage: 'page-analysis', diagnostics: runSummary.diagnostics } });
       tracker.event('page-analysis', 'Starting page analysis', {
-        analysisVersion: safeAnalysisVersion ?? null,
+        analysisVersion: effectiveAnalysisVersion ?? null,
         limit: safeLimit ?? null,
         totalToAnalyze
       });
@@ -775,9 +938,10 @@ async function runAnalysis(rawOptions = {}) {
       try {
         summary = await analysePages({
           dbPath,
-          analysisVersion: safeAnalysisVersion ?? 1,
+          analysisVersion: effectiveAnalysisVersion,
           limit: safeLimit,
           verbose,
+          logger: console,
           onProgress(payload) {
             const processedTotal = Number.isFinite(payload?.processed) ? payload.processed : null;
             const updatedTotal = Number.isFinite(payload?.updated) ? payload.updated : null;
@@ -1077,6 +1241,22 @@ async function runAnalysis(rawOptions = {}) {
 
   if (dryRun) {
     logInfo('Dry-run mode: no database changes were committed');
+  }
+
+  // Generate pie chart if requested
+  if (piechart && runSummary.durationMs) {
+    try {
+      const analysisCount = runSummary.steps.pages?.processed || 1;
+      const svg = generateBenchmarkPieChart(runSummary.durationMs, analysisCount, stageTimings);
+      if (svg) {
+        const piechartPath = path.join(projectRoot, 'analysis-benchmark-piechart.svg');
+        fs.writeFileSync(piechartPath, svg, 'utf8');
+        logInfo('Pie chart generated', { path: piechartPath, duration: runSummary.durationMs, analysisCount, stagingTimings: stageTimings });
+        console.log(`[analysis-run] Pie chart written to ${piechartPath}`);
+      }
+    } catch (err) {
+      logInfo('Failed to generate pie chart', { error: err?.message });
+    }
   }
 
   return runSummary;

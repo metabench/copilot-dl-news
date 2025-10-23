@@ -294,15 +294,18 @@ describe('IntelligentPlanRunner', () => {
       ])
     }));
     expect(countryHubPlannerComputeCandidates).toHaveBeenCalledWith(deps.domain.toLowerCase());
-    expect(hubSeederSeedPlan).toHaveBeenCalledWith({
+    expect(hubSeederSeedPlan).toHaveBeenCalledWith(expect.objectContaining({
       host: deps.domain.toLowerCase(),
       sectionSlugs: patternSections,
-      countryCandidates: candidates,
+      countryCandidates: expect.arrayContaining([
+        expect.objectContaining({ url: 'https://example.com/country/fr' }),
+        expect.objectContaining({ url: 'https://example.com/country/de' })
+      ]),
       navigationLinks: expect.arrayContaining([
         expect.objectContaining({ url: 'https://example.com/world/' })
       ]),
       maxSeeds: deps.intMaxSeeds
-    });
+    }));
     expect(targetedAnalysisRun).toHaveBeenCalledWith({
       seeds: ['https://example.com/s1', 'https://example.com/s2'],
       sections: patternSections,

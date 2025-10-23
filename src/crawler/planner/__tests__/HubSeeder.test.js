@@ -4,15 +4,22 @@ jest.mock('../../data/placeHubs', () => ({
   recordPlaceHubSeed: jest.fn(() => true)
 }));
 
+jest.mock('../../../utils/priorityConfig', () => ({
+  isTotalPrioritisationEnabled: jest.fn(() => false)
+}));
+
 const { recordPlaceHubSeed } = require('../../data/placeHubs');
+const { isTotalPrioritisationEnabled } = require('../../../utils/priorityConfig');
 const { HubSeeder } = require('../HubSeeder');
 
 describe('HubSeeder', () => {
   beforeEach(() => {
     recordPlaceHubSeed.mockClear();
+    isTotalPrioritisationEnabled.mockClear();
+    isTotalPrioritisationEnabled.mockReturnValue(false);
   });
 
-  test('annotates seeded hubs with metadata and priority', async () => {
+  test('annotates seeded hubs with metadata and priority when total prioritisation disabled', async () => {
     const enqueueRequest = jest.fn(() => true);
     const addSeededHub = jest.fn();
     const seeder = new HubSeeder({
@@ -131,6 +138,79 @@ describe('HubSeeder', () => {
         reason: 'nav-primary',
         source: 'navigation-discovery'
       }
+    });
+  });
+
+  test('only seeds country hubs when total prioritisation is enabled', async () => {
+    isTotalPrioritisationEnabled.mockReturnValue(true);
+
+    const enqueueRequest = jest.fn(() => true);
+    const addSeededHub = jest.fn();
+    const seeder = new HubSeeder({
+      enqueueRequest,
+      normalizeUrl: (url) => url.toLowerCase(),
+      state: {
+        addSeededHub,
+        hasSeededHub: () => false,
+        hasVisited: () => false
+      },
+      telemetry: {
+        milestone: jest.fn(),
+        problem: jest.fn()
+      },
+      db: {},
+      baseUrl: 'https://example.com'
+    });
+
+    const result = await seeder.seedPlan({
+      host: 'example.com',
+      sectionSlugs: ['World'],
+      countryCandidates: [
+        {
+          url: 'https://example.com/world/france',
+          reason: 'country-candidate',
+          source: 'country-planner'
+        },
+        {
+          url: 'https://example.com/world/germany',
+          reason: 'country-candidate',
+          source: 'country-planner'
+        }
+      ],
+      navigationLinks: [
+        {
+          url: 'https://example.com/opinion/',
+          labels: ['Opinion'],
+          type: 'primary',
+          occurrences: 4
+        }
+      ],
+      maxSeeds: 1
+    });
+
+    expect(enqueueRequest).toHaveBeenCalledTimes(2);
+    for (const call of enqueueRequest.mock.calls) {
+      expect(call[0].type).toMatchObject({
+        kind: 'hub-seed',
+        hubKind: 'country'
+      });
+    }
+
+    expect(addSeededHub).toHaveBeenCalledTimes(2);
+    expect(addSeededHub).not.toHaveBeenCalledWith(
+      'https://example.com/world/',
+      expect.objectContaining({ kind: 'section' })
+    );
+
+    expect(recordPlaceHubSeed).toHaveBeenCalledTimes(2);
+    const recordedKinds = recordPlaceHubSeed.mock.calls.map(([, payload]) => payload.evidence?.kind);
+    expect(new Set(recordedKinds)).toEqual(new Set(['country']));
+
+    expect(result).toMatchObject({
+      sectionHubCount: 0,
+      navigationCandidateCount: 0,
+      requestedCount: 2,
+      seededCount: 2
     });
   });
 });

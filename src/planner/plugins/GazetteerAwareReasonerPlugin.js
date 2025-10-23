@@ -1,5 +1,7 @@
 'use strict';
 
+const { isTotalPrioritisationEnabled } = require('../../utils/priorityConfig');
+
 /**
  * GazetteerAwareReasonerPlugin: Uses gazetteer data to propose country hub URLs for intelligent crawls.
  * 
@@ -256,9 +258,12 @@ class GazetteerAwareReasonerPlugin {
   }
 
   _generateCountrySlug(countryName) {
-    return countryName
+    return String(countryName || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
   }
 
@@ -292,20 +297,7 @@ class GazetteerAwareReasonerPlugin {
   }
 
   _isTotalPrioritisationEnabled() {
-    try {
-      // Try to load priority config to check for totalPrioritisation feature
-      const fs = require('fs');
-      const path = require('path');
-      const configPath = path.join(process.cwd(), 'config', 'priority-config.json');
-
-      if (fs.existsSync(configPath)) {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        return config?.features?.totalPrioritisation === true;
-      }
-    } catch (err) {
-      // Fall back to false if config can't be loaded
-    }
-    return false;
+    return isTotalPrioritisationEnabled();
   }
 }
 

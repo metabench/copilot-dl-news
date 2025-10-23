@@ -87,6 +87,24 @@ CREATE TABLE IF NOT EXISTS page_category_map (
     FOREIGN KEY (category_id) REFERENCES page_categories(id) ON DELETE CASCADE
 );
 
+-- Learned XPath patterns for article extraction
+CREATE TABLE IF NOT EXISTS article_xpath_patterns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  domain TEXT NOT NULL,
+  domain_id INTEGER REFERENCES domains(id),
+  xpath TEXT NOT NULL,
+  confidence REAL,
+  learned_from TEXT,
+  learned_at TEXT,
+  sample_text_length INTEGER,
+  paragraph_count INTEGER,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  last_used_at TEXT,
+  metadata TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_article_xpath_patterns_domain ON article_xpath_patterns(domain);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_article_xpath_patterns_domain_xpath ON article_xpath_patterns(domain, xpath);
+
 -- URL Aliases
 CREATE TABLE IF NOT EXISTS url_aliases (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

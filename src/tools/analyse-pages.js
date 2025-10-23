@@ -9,6 +9,7 @@
 const path = require('path');
 const { findProjectRoot } = require('../utils/project-root');
 const { analysePages } = require('./analyse-pages-core');
+const { runAnalysisPostProcessing } = require('./analyze-post-run');
 
 function getArg(name, fallback) {
   const entry = process.argv.find(value => value.startsWith(`--${name}=`));
@@ -62,6 +63,21 @@ async function main() {
       }
     }
   });
+
+  if (!dryRun) {
+    try {
+      const postRunResult = runAnalysisPostProcessing({
+        dbPath,
+        summary,
+        logger: console
+      });
+      if (verbose && postRunResult?.payload) {
+        console.log(JSON.stringify({ event: 'post-run', payload: postRunResult.payload }));
+      }
+    } catch (error) {
+      console.warn('[analyse-pages] Warning: post-run processing failed:', error.message || error);
+    }
+  }
 
   if (listHubs) {
     const assignments = Array.isArray(summary?.hubAssignments) ? summary.hubAssignments : [];

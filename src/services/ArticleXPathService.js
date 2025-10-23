@@ -1,206 +1,467 @@
-/**
- * ArticleXPathService - Manages XPath patterns for article content extraction
- *
- * Provides learning and application of Domain-Specific XPath Libraries (DXPLs)
- * for fast article extraction without DOM parsing.
- *
- * Uses ArticleXPathAnalyzer for pattern discovery and DXPLs for storage.
- */
+"use strict";
 
-const path = require('path');
-const { loadDxplLibrary, getDxplForDomain, extractDomain } = require('./shared/dxpl');
-const { ArticleXPathAnalyzer } = require('../utils/ArticleXPathAnalyzer');
+const path = require("path");
+const cheerio = require("cheerio");
+
+const {
+  ensureArticleXPathPatternSchema,
+  getArticleXPathPatternsForDomain,
+  normalizePatternDomain,
+  recordArticleXPathPatternUsage,
+  upsertArticleXPathPattern
+} = require("../db/sqlite/v1/queries/articleXPathPatterns");
+const { ArticleXPathAnalyzer } = require("../utils/ArticleXPathAnalyzer");
+const { extractDomain, loadDxplLibrary, getDxplForDomain } = require("./shared/dxpl");
+
+const DEFAULT_MAX_PATTERNS_PER_DOMAIN = 6;
+const DEFAULT_PRELOAD_LIMIT = 25;
+const MINIMUM_TEXT_LENGTH = 50;
+
+function sortPatterns(patterns) {
+  return [...patterns].sort((a, b) => {
+    const confidenceDelta = (b.confidence ?? 0) - (a.confidence ?? 0);
+    if (confidenceDelta !== 0) return confidenceDelta;
+    const usageDelta = (b.usageCount ?? 0) - (a.usageCount ?? 0);
+    if (usageDelta !== 0) return usageDelta;
+    const learnedDelta =
+      new Date(b.learnedAt || 0).getTime() - new Date(a.learnedAt || 0).getTime();
+    if (learnedDelta !== 0) return learnedDelta;
+    return (b.id ?? 0) - (a.id ?? 0);
+  });
+}
+
+function dedupePatterns(patterns) {
+  const seen = new Set();
+  const deduped = [];
+  for (const pattern of patterns) {
+    const key = pattern?.xpath;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(pattern);
+  }
+  return deduped;
+}
+
+function normalizeDomainOrNull(domain) {
+  if (!domain) return null;
+  try {
+    return normalizePatternDomain(domain);
+  } catch {
+    return null;
+  }
+}
 
 class ArticleXPathService {
   constructor({
     db,
     logger = console,
-    dxplDir = path.join(__dirname, '..', '..', 'data', 'dxpls'),
-    analyzerOptions = {}
+    analyzerOptions = {},
+    maxPatternsPerDomain = DEFAULT_MAX_PATTERNS_PER_DOMAIN,
+    preloadDomains = DEFAULT_PRELOAD_LIMIT,
+    dxplDir = path.join(__dirname, "..", "..", "data", "dxpls"),
+    migrateLegacyDxpl = false
   } = {}) {
     if (!db) {
-      throw new Error('ArticleXPathService requires a database connection');
+      throw new Error("ArticleXPathService requires a database connection");
     }
 
     this.db = db;
     this.logger = logger;
-    this.dxplDir = dxplDir;
+    this.maxPatternsPerDomain =
+      Math.max(1, Number(maxPatternsPerDomain) || DEFAULT_MAX_PATTERNS_PER_DOMAIN);
     this.analyzerOptions = { limit: 3, verbose: false, ...analyzerOptions };
+    this.dxplDir = dxplDir;
+    this.cache = new Map();
+    this.cacheStats = { hits: 0, misses: 0, warmLoads: 0, refreshes: 0, migrations: 0 };
+    this._legacyDxplMap = undefined;
 
-    // Load DXPLs on initialization
-    this.dxpls = loadDxplLibrary({ dxplDir: this.dxplDir, logger: this.logger });
+    ensureArticleXPathPatternSchema(this.db, { logger: this.logger });
+
+    if (preloadDomains && preloadDomains > 0) {
+      this._warmCache(Math.min(Number(preloadDomains) || DEFAULT_PRELOAD_LIMIT, 500));
+    }
+
+    if (migrateLegacyDxpl) {
+      this._migrateLegacyDxplLibrary();
+    }
   }
 
-  /**
-   * Get stored XPath pattern for a domain
-   * @param {string} domain - Domain to look up
-   * @returns {object|null} XPath pattern with confidence or null
-   */
   getXPathForDomain(domain) {
-    const dxpl = getDxplForDomain(this.dxpls, domain);
-    if (!dxpl || !dxpl.articleXPathPatterns || dxpl.articleXPathPatterns.length === 0) {
+    const entry = this._getCacheEntry(domain);
+    if (!entry || entry.patterns.length === 0) {
       return null;
     }
-
-    // Return the highest confidence pattern
-    return dxpl.articleXPathPatterns[0];
+    return entry.patterns[0];
   }
 
-  /**
-   * Learn XPath pattern from HTML content
-   * @param {string} url - Article URL
-   * @param {string} html - Article HTML content
-   * @returns {object|null} Learned XPath pattern or null if learning failed
-   */
   async learnXPathFromHtml(url, html) {
-    try {
-      const domain = extractDomain(url);
-      if (!domain) {
-        this.logger.warn(`[xpath-service] Invalid URL for XPath learning: ${url}`);
-        return null;
-      }
-
-      const analyzer = new ArticleXPathAnalyzer(this.analyzerOptions);
-      const result = await analyzer.analyzeHtml(html);
-
-      if (!result || !result.topPatterns || result.topPatterns.length === 0) {
-        this.logger.warn(`[xpath-service] No XPath patterns found for ${url}`);
-        return null;
-      }
-
-      const topPattern = result.topPatterns[0];
-      const xpathPattern = {
-        xpath: topPattern.xpath,
-        confidence: topPattern.confidence,
-        alternatives: topPattern.alternatives || [],
-        learnedFrom: url,
-        learnedAt: new Date().toISOString(),
-        sampleTextLength: topPattern.stats?.chars || 0,
-        paragraphCount: topPattern.stats?.paras || 0
-      };
-
-      // Store in DXPL
-      this._storeXPathPattern(domain, xpathPattern);
-
-      this.logger.log(`[xpath-service] Learned XPath pattern for ${domain}: ${xpathPattern.xpath} (${Math.round(xpathPattern.confidence * 100)}% confidence)`);
-
-      return xpathPattern;
-
-    } catch (error) {
-      this.logger.error(`[xpath-service] Failed to learn XPath from ${url}: ${error.message}`);
+    const domain = extractDomain(url);
+    if (!domain) {
+      this.logger?.warn?.(`[xpath-service] Invalid URL for learning: ${url}`);
       return null;
     }
-  }
 
-  /**
-   * Extract article text using stored XPath pattern
-   * @param {string} url - Article URL
-   * @param {string} html - Article HTML content
-   * @returns {string|null} Extracted text or null if extraction failed
-   */
-  extractTextWithXPath(url, html) {
-    try {
-      const domain = extractDomain(url);
-      if (!domain) return null;
-
-      const xpathPattern = this.getXPathForDomain(domain);
-      if (!xpathPattern) return null;
-
-      // Use the XPath to extract content
-      const extractedText = this._extractWithXPath(html, xpathPattern.xpath);
-      if (!extractedText || extractedText.trim().length < 50) {
-        return null; // Too short, probably failed
-      }
-
-      return extractedText.trim();
-
-    } catch (error) {
-      this.logger.warn(`[xpath-service] XPath extraction failed for ${url}: ${error.message}`);
+    const analyzer = new ArticleXPathAnalyzer(this.analyzerOptions);
+    const result = await analyzer.analyzeHtml(html);
+    const topPattern = result?.topPatterns?.[0];
+    if (!topPattern || !topPattern.xpath) {
+      this.logger?.warn?.(`[xpath-service] No XPath patterns discovered for ${url}`);
       return null;
     }
-  }
 
-  /**
-   * Check if domain has learned XPath patterns
-   * @param {string} domain - Domain to check
-   * @returns {boolean} True if patterns exist
-   */
-  hasXPathForDomain(domain) {
-    return this.getXPathForDomain(domain) !== null;
-  }
+    const alternatives = Array.isArray(topPattern.alternatives)
+      ? topPattern.alternatives
+      : [];
 
-  // Private methods
-
-  _storeXPathPattern(domain, xpathPattern) {
-    // Initialize DXPL entry if needed
-    if (!this.dxpls.has(domain)) {
-      this.dxpls.set(domain, {
-        domain,
-        generated: new Date().toISOString(),
-        articleXPathPatterns: []
-      });
-    }
-
-    const dxpl = this.dxpls.get(domain);
-
-    // Add pattern (keep only top 3 by confidence)
-    dxpl.articleXPathPatterns.push(xpathPattern);
-    dxpl.articleXPathPatterns.sort((a, b) => b.confidence - a.confidence);
-    dxpl.articleXPathPatterns = dxpl.articleXPathPatterns.slice(0, 3);
-
-    // Update stats
-    dxpl.stats = {
-      totalPatterns: dxpl.articleXPathPatterns.length,
-      lastUpdated: new Date().toISOString()
+    const patternRecord = {
+      domain,
+      xpath: topPattern.xpath,
+      confidence: topPattern.confidence ?? null,
+      learnedFrom: url,
+      learnedAt: new Date().toISOString(),
+      sampleTextLength: topPattern.stats?.chars ?? null,
+      paragraphCount: topPattern.stats?.paras ?? null,
+      usageCount: 0,
+      alternatives,
+      metadata: { alternatives }
     };
 
-    // TODO: Persist to disk (would need saveDxplLibrary function)
-    // For now, patterns are cached in memory only
+    const persisted = upsertArticleXPathPattern(this.db, patternRecord);
+    if (!persisted) {
+      return null;
+    }
+
+    this._applyPatternToCache(domain, persisted);
+    const confidencePercent = Math.round((persisted.confidence ?? 0) * 100);
+    this.logger?.log?.(
+      `[xpath-service] Learned XPath for ${persisted.domain}: ${persisted.xpath} (${confidencePercent}% confidence)`
+    );
+    return persisted;
+  }
+
+  extractTextWithXPath(url, html) {
+    const domain = extractDomain(url);
+    if (!domain) return null;
+
+    const entry = this._getCacheEntry(domain);
+    if (!entry || entry.patterns.length === 0) {
+      return null;
+    }
+
+    for (const pattern of entry.patterns) {
+      const tried = new Set();
+      const candidateXpaths = [pattern.xpath, ...(pattern.alternatives || [])];
+      for (const candidate of candidateXpaths) {
+        if (!candidate || tried.has(candidate)) continue;
+        tried.add(candidate);
+        const extracted = this._extractWithXPath(html, candidate);
+        if (this._isAcceptableExtract(extracted)) {
+          const patternDomain = pattern.domain || domain;
+          this._recordUsage(patternDomain, pattern.xpath);
+          this._touchCachePattern(patternDomain, pattern.xpath);
+          return extracted.trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  hasXPathForDomain(domain) {
+    const entry = this._getCacheEntry(domain);
+    return Boolean(entry && entry.patterns.length > 0);
+  }
+
+  getCacheStats() {
+    return { ...this.cacheStats, size: this.cache.size };
+  }
+
+  migrateLegacyDxplLibrary() {
+    this._migrateLegacyDxplLibrary();
+  }
+
+  _warmCache(limit) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT domain
+        FROM article_xpath_patterns
+        GROUP BY domain
+        ORDER BY MAX(usage_count) DESC, COUNT(*) DESC
+        LIMIT ?
+      `);
+      const rows = stmt.all(Math.max(1, Number(limit) || DEFAULT_PRELOAD_LIMIT));
+      for (const row of rows) {
+        this._getCacheEntry(row.domain);
+      }
+      this.cacheStats.warmLoads += rows.length;
+    } catch (error) {
+      this.logger?.warn?.(`[xpath-service] Failed to warm cache: ${error.message}`);
+    }
+  }
+
+  _getCacheEntry(domain) {
+    const normalized = normalizeDomainOrNull(domain);
+    if (!normalized) {
+      return null;
+    }
+
+    const existing = this.cache.get(normalized);
+    if (existing) {
+      this.cacheStats.hits += 1;
+      existing.lastAccessedAt = Date.now();
+      return existing;
+    }
+
+    this.cacheStats.misses += 1;
+    const patterns = this._loadPatternsForDomain(normalized);
+    const entry = {
+      domain: normalized,
+      patterns,
+      lastAccessedAt: Date.now()
+    };
+    this.cache.set(normalized, entry);
+    return entry;
+  }
+
+  _loadPatternsForDomain(domain) {
+    let patterns = getArticleXPathPatternsForDomain(this.db, domain, {
+      limit: this.maxPatternsPerDomain * 2
+    });
+
+    if (patterns.length === 0 && this.dxplDir) {
+      const imported = this._importLegacyDxplForDomain(domain);
+      if (imported.length > 0) {
+        patterns = getArticleXPathPatternsForDomain(this.db, domain, {
+          limit: this.maxPatternsPerDomain * 2
+        });
+      }
+    }
+
+    const deduped = dedupePatterns(patterns);
+    return sortPatterns(deduped).slice(0, this.maxPatternsPerDomain);
+  }
+
+  _applyPatternToCache(domain, pattern) {
+    const normalized = normalizeDomainOrNull(domain);
+    if (!normalized) return;
+
+    const entry = this.cache.get(normalized) || {
+      domain: normalized,
+      patterns: [],
+      lastAccessedAt: Date.now()
+    };
+
+    const index = entry.patterns.findIndex((p) => p.xpath === pattern.xpath);
+    if (index >= 0) {
+      entry.patterns[index] = pattern;
+    } else {
+      entry.patterns.push(pattern);
+    }
+
+    entry.patterns = sortPatterns(dedupePatterns(entry.patterns)).slice(
+      0,
+      this.maxPatternsPerDomain
+    );
+    entry.lastAccessedAt = Date.now();
+    this.cache.set(normalized, entry);
+    this.cacheStats.refreshes += 1;
+  }
+
+  _recordUsage(domain, xpath) {
+    try {
+      recordArticleXPathPatternUsage(this.db, domain, xpath, {
+        at: new Date().toISOString()
+      });
+    } catch (error) {
+      this.logger?.warn?.(`[xpath-service] Failed to record usage: ${error.message}`);
+    }
+  }
+
+  _touchCachePattern(domain, xpath) {
+    const normalized = normalizeDomainOrNull(domain);
+    if (!normalized) return;
+    const entry = this.cache.get(normalized);
+    if (!entry) return;
+
+    entry.patterns = entry.patterns.map((pattern) => {
+      if (pattern.xpath !== xpath) return pattern;
+      return {
+        ...pattern,
+        usageCount: (pattern.usageCount ?? 0) + 1,
+        lastUsedAt: new Date().toISOString()
+      };
+    });
+
+    entry.patterns = sortPatterns(entry.patterns);
+    this.cache.set(normalized, entry);
+  }
+
+  _migrateLegacyDxplLibrary() {
+    const dxplMap = this._getLegacyDxplMap();
+    if (!dxplMap || dxplMap.size === 0) {
+      return;
+    }
+
+    const processed = new Set();
+    let importedCount = 0;
+    for (const [domain, dxpl] of dxplMap.entries()) {
+      const normalized = normalizeDomainOrNull(domain);
+      if (!normalized || processed.has(normalized)) continue;
+      processed.add(normalized);
+
+      if (!dxpl || !Array.isArray(dxpl.articleXPathPatterns)) continue;
+      for (const pattern of dxpl.articleXPathPatterns) {
+        const alternatives = Array.isArray(pattern.alternatives) ? pattern.alternatives : [];
+        const prepared = {
+          domain: normalized,
+          xpath: pattern.xpath,
+          confidence: pattern.confidence ?? null,
+          learnedFrom: pattern.learnedFrom || pattern.learned_from || null,
+          learnedAt: pattern.learnedAt || pattern.learned_at || null,
+          sampleTextLength: pattern.sampleTextLength || pattern.sample_text_length || null,
+          paragraphCount: pattern.paragraphCount || pattern.paragraph_count || null,
+          usageCount: pattern.usageCount || pattern.usage_count || 0,
+          lastUsedAt: pattern.lastUsedAt || pattern.last_used_at || null,
+          alternatives,
+          metadata: { alternatives }
+        };
+
+        if (!prepared.xpath) continue;
+
+        const persisted = upsertArticleXPathPattern(this.db, prepared);
+        if (persisted) {
+          this._applyPatternToCache(normalized, persisted);
+          importedCount += 1;
+        }
+      }
+    }
+
+    if (importedCount > 0) {
+      this.cacheStats.migrations += importedCount;
+      this.logger?.log?.(
+        `[xpath-service] Migrated ${importedCount} legacy DXPL pattern(s) into the database`
+      );
+    }
+  }
+
+  _importLegacyDxplForDomain(domain) {
+    const dxplMap = this._getLegacyDxplMap();
+    if (!dxplMap) return [];
+
+    const entry = getDxplForDomain(dxplMap, domain);
+    if (!entry || !Array.isArray(entry.articleXPathPatterns)) {
+      return [];
+    }
+
+    const persisted = [];
+    for (const pattern of entry.articleXPathPatterns) {
+      if (!pattern.xpath) continue;
+      const alternatives = Array.isArray(pattern.alternatives) ? pattern.alternatives : [];
+      const prepared = {
+        domain,
+        xpath: pattern.xpath,
+        confidence: pattern.confidence ?? null,
+        learnedFrom: pattern.learnedFrom || pattern.learned_from || null,
+        learnedAt: pattern.learnedAt || pattern.learned_at || null,
+        sampleTextLength: pattern.sampleTextLength || pattern.sample_text_length || null,
+        paragraphCount: pattern.paragraphCount || pattern.paragraph_count || null,
+        usageCount: pattern.usageCount || pattern.usage_count || 0,
+        lastUsedAt: pattern.lastUsedAt || pattern.last_used_at || null,
+        alternatives,
+        metadata: { alternatives }
+      };
+      const stored = upsertArticleXPathPattern(this.db, prepared);
+      if (stored) {
+        persisted.push(stored);
+        this._applyPatternToCache(domain, stored);
+      }
+    }
+
+    if (persisted.length > 0) {
+      this.logger?.log?.(
+        `[xpath-service] Imported ${persisted.length} legacy DXPL pattern(s) for ${domain}`
+      );
+    }
+
+    return persisted;
+  }
+
+  _getLegacyDxplMap() {
+    if (!this.dxplDir) return null;
+    if (this._legacyDxplMap === undefined) {
+      try {
+        this._legacyDxplMap = loadDxplLibrary({
+          dxplDir: this.dxplDir,
+          logger: this.logger
+        });
+      } catch (error) {
+        this.logger?.warn?.(
+          `[xpath-service] Failed to load legacy DXPL library: ${error.message}`
+        );
+        this._legacyDxplMap = null;
+      }
+    }
+    return this._legacyDxplMap;
   }
 
   _extractWithXPath(html, xpath) {
-    // Simple XPath extraction using basic DOM parsing
-    // In production, would use a proper XPath library
+    const cssSelector = this._xpathToCssSelector(xpath);
+    if (!cssSelector) return null;
+
     try {
-      const { JSDOM } = require('jsdom');
-      const dom = new JSDOM(html);
-      const document = dom.window.document;
+      const $ = cheerio.load(html, {
+        decodeEntities: false,
+        lowerCaseAttributeNames: false,
+        lowerCaseTags: false
+      });
 
-      // Convert XPath to CSS selector (simplified)
-      const cssSelector = this._xpathToCssSelector(xpath);
-      if (!cssSelector) return null;
+      const node = $(cssSelector).first();
+      if (!node || node.length === 0) return null;
 
-      const element = document.querySelector(cssSelector);
-      if (!element) return null;
+      const text = node.text();
+      if (this._isAcceptableExtract(text)) {
+        return text;
+      }
 
-      return element.textContent || element.innerHTML || null;
-
+      const htmlContent = node.html();
+      return this._isAcceptableExtract(htmlContent) ? htmlContent : null;
     } catch (error) {
+      this.logger?.debug?.(
+        `[xpath-service] Cheerio extraction failed for ${xpath}: ${error.message}`
+      );
       return null;
     }
   }
 
+  _isAcceptableExtract(value) {
+    if (!value) return false;
+    const trimmed = value.trim();
+    return trimmed.length >= MINIMUM_TEXT_LENGTH;
+  }
+
   _xpathToCssSelector(xpath) {
-    // Very basic XPath to CSS selector conversion
-    // In production, would use a proper XPath library
-    if (xpath.startsWith('/html/body/')) {
-      const parts = xpath.replace('/html/body/', '').split('/');
-      return parts.map(part => {
-        if (part.includes('[')) {
-          // Handle [1] indexing (first child)
-          const [tag, index] = part.split('[');
-          const idx = parseInt(index.replace(']', ''));
-          return idx === 1 ? tag : `${tag}:nth-child(${idx})`;
-        }
-        return part;
-      }).join(' > ');
+    if (!xpath || typeof xpath !== "string") return null;
+
+    if (xpath.startsWith("/html/body/")) {
+      const parts = xpath.replace("/html/body/", "").split("/");
+      return parts
+        .map((part) => {
+          if (!part) return null;
+          if (part.includes("[")) {
+            const [tag, indexPart] = part.split("[");
+            const idx = Number.parseInt(indexPart.replace("]", ""), 10);
+            if (Number.isNaN(idx) || idx <= 0) return tag;
+            return idx === 1 ? tag : `${tag}:nth-child(${idx})`;
+          }
+          return part;
+        })
+        .filter(Boolean)
+        .join(" > ");
     }
 
-    // Fallback for common patterns
-    if (xpath === '/body/main/article') return 'body > main > article';
-    if (xpath === '/html/body/main/article') return 'main > article';
-
-    return null; // Can't convert
+    if (xpath === "/body/main/article") return "body > main > article";
+    if (xpath === "/html/body/main/article") return "main > article";
+    return null;
   }
 }
 

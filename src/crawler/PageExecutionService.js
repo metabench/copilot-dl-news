@@ -1,4 +1,5 @@
 const cheerio = require('cheerio');
+const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
 
 class PageExecutionService {
   constructor({
@@ -467,6 +468,13 @@ class PageExecutionService {
       try {
         let linkMeta = isCountryHubPage ? { sourceHub: resolvedUrl, sourceHubType: 'country' } : null;
 
+        if (this._isTotalPrioritisationEnabled()) {
+          const targetIsCountryHub = this._isCountryHubPage(link.url || '');
+          if (!targetIsCountryHub) {
+            continue;
+          }
+        }
+
         // Apply maximum priority bonus for country hub articles in total prioritisation mode
         if (isCountryHubPage && this._isTotalPrioritisationEnabled()) {
           linkMeta = {
@@ -577,20 +585,7 @@ class PageExecutionService {
   }
 
   _isTotalPrioritisationEnabled() {
-    try {
-      // Try to load priority config to check for totalPrioritisation feature
-      const fs = require('fs');
-      const path = require('path');
-      const configPath = path.join(process.cwd(), 'config', 'priority-config.json');
-
-      if (fs.existsSync(configPath)) {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        return config?.features?.totalPrioritisation === true;
-      }
-    } catch (err) {
-      // Fall back to false if config can't be loaded
-    }
-    return false;
+    return isTotalPrioritisationEnabled();
   }
 
   async _noteSeededHubVisit(normalizedUrl, { depth = null, fetchSource = null } = {}) {

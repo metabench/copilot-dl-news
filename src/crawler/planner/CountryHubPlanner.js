@@ -14,6 +14,30 @@ const COUNTRY_PATTERNS = [
   { template: '/{slug}', reason: 'country-hub-root-path' }
 ];
 
+const COUNTRY_SLUG_PREFIXES = [
+  'republic-of-',
+  'state-of-',
+  'kingdom-of-',
+  'commonwealth-of-',
+  'commonwealth-of-the-',
+  'federal-democratic-republic-of-',
+  'federal-republic-of-',
+  'islamic-republic-of-',
+  'democratic-republic-of-',
+  'people-s-republic-of-',
+  'socialist-republic-of-',
+  'bolivarian-republic-of-',
+  'plurinational-state-of-',
+  'les-',
+  'le-',
+  'la-',
+  'l-',
+  'los-',
+  'las-',
+  'el-',
+  'the-'
+];
+
 class CountryHubPlanner {
   constructor({ baseUrl, db, knowledgeService = null, maxCountryCount = 100 } = {}) {
     this.baseUrl = baseUrl || null;
@@ -42,6 +66,7 @@ class CountryHubPlanner {
       candidates.push({
         url: candidate.url,
         slug,
+        name: this._formatCountryName(slug),
         reason: origin === 'gazetteer' ? 'country-hub-gazetteer' : 'country-hub-default',
         source: 'country-planner',
         pattern: candidate.pattern
@@ -117,10 +142,10 @@ class CountryHubPlanner {
 
   _normalizeSlug(value) {
     if (!value && value !== 0) return null;
-    if (typeof value === 'string' && /^[a-z0-9-]+$/.test(value)) {
-      return value;
-    }
-    return this._generateCountrySlug(String(value || ''));
+    const raw = typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
+      ? value
+      : this._generateCountrySlug(String(value || ''));
+    return this._stripCountryPrefixes(raw);
   }
 
   _getFallbackCountrySlugs() {
@@ -154,31 +179,107 @@ class CountryHubPlanner {
   }
 
   _generateCountrySlug(countryName) {
-    return String(countryName || '')
+    const base = String(countryName || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
+    return this._stripCountryPrefixes(base);
+  }
+
+  _stripCountryPrefixes(slug) {
+    if (!slug) return slug;
+    let trimmed = slug;
+    let mutated = true;
+    while (mutated && trimmed) {
+      mutated = false;
+      for (const prefix of COUNTRY_SLUG_PREFIXES) {
+        if (trimmed.startsWith(prefix)) {
+          trimmed = trimmed.slice(prefix.length);
+          mutated = true;
+          break;
+        }
+      }
+    }
+    return trimmed || slug;
+  }
+
+  _formatCountryName(slug) {
+    if (!slug) return null;
+    return slug.split('-')
+      .filter(Boolean)
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
   }
 
   async _checkUrlInDatabase(url) {
-    if (!this.db || !this.db.db) return { exists: false, status: null };
+    const db = this._getDbInstance();
+    if (!db) {
+      return { exists: false, status: null, isSuccess: false };
+    }
 
     try {
-      const row = this.db.db.prepare('SELECT http_status FROM articles WHERE url = ?').get(url);
-      if (row && row.http_status) {
+      const responsesStmt = db.prepare(`
+        SELECT hr.http_status AS status
+        FROM urls u
+        JOIN http_responses hr ON hr.url_id = u.id
+        WHERE u.url = ?
+        ORDER BY hr.fetched_at DESC
+        LIMIT 1
+      `);
+      const responseRow = responsesStmt.get(url);
+      if (responseRow && typeof responseRow.status === 'number') {
+        const status = responseRow.status;
         return {
           exists: true,
-          status: row.http_status,
-          isSuccess: row.http_status >= 200 && row.http_status < 300
+          status,
+          isSuccess: status >= 200 && status < 300
+        };
+      }
+    } catch (_) {
+      // ignore errors and fall back to legacy check
+    }
+
+    try {
+      const articleStmt = db.prepare('SELECT http_status FROM articles WHERE url = ?');
+      const articleRow = articleStmt.get(url);
+      if (articleRow && typeof articleRow.http_status === 'number') {
+        const status = articleRow.http_status;
+        return {
+          exists: true,
+          status,
+          isSuccess: status >= 200 && status < 300
         };
       }
     } catch (_) {
       // Ignore errors
     }
 
-    return { exists: false, status: null };
+    return { exists: false, status: null, isSuccess: false };
+  }
+
+  _getDbInstance() {
+    if (!this.db) return null;
+
+    if (typeof this.db.getDb === 'function') {
+      try {
+        const instance = this.db.getDb();
+        if (instance && typeof instance.prepare === 'function') {
+          return instance;
+        }
+      } catch (_) {
+        // fall through to other checks
+      }
+    }
+
+    if (this.db.db && typeof this.db.db.prepare === 'function') {
+      return this.db.db;
+    }
+
+    return null;
   }
 }
 

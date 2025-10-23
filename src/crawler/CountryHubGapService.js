@@ -25,6 +25,8 @@
  */
 
 const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
+const { formatMissingCountries } = require('../services/CountryHubGapReporter');
+const { CountryHubMatcher } = require('../services/CountryHubMatcher');
 
 class CountryHubGapService {
   constructor({ 
@@ -51,6 +53,11 @@ class CountryHubGapService {
       db,
       logger
     });
+
+    this.matcher = new CountryHubMatcher({
+      db,
+      logger
+    });
     
     // Track countries we've attempted
     this.attemptedCountries = new Set();
@@ -59,6 +66,15 @@ class CountryHubGapService {
     this.lastAnalysis = null;
     this.lastAnalysisTime = 0;
     this.analysisCacheMs = 5000; // Cache for 5 seconds
+
+    // Match attempts (avoid re-running too often)
+    this.lastMatchAttempt = {
+      domain: null,
+      ts: 0,
+      linked: 0
+    };
+    this.matchCooldownMs = 30_000; // 30 seconds between match attempts per domain
+    this.lastMatchResult = null;
   }
 
   /**
@@ -69,46 +85,109 @@ class CountryHubGapService {
    */
   analyzeCountryHubGaps(jobId = null) {
     const hubStats = this.state?.getHubVisitStats?.() || {};
-    const countryStats = hubStats.perKind?.country || { seeded: 0, visited: 0 };
-    
-    // Delegate to analyzer for gap analysis
     const domain = this.state?.getDomain?.() || '';
-    const analysis = this.analyzer.analyzeGaps(domain, countryStats);
-    
-    // Enhance with crawler-specific data (missing URLs from state)
-    const missingUrls = [];
-    const missingCountries = [];
-    
-    if (this.state?.getSeededHubSet && typeof this.state.getSeededHubSet === 'function') {
-      const seededSet = Array.from(this.state.getSeededHubSet());
-      
-      for (const url of seededSet) {
-        const meta = this.state.getSeededHubMeta?.(url) || {};
-        
-        // Only interested in country hubs
-        if (meta.kind !== 'country') continue;
-        
-        // Check if visited
-        const isVisited = this.state.hasVisitedHub?.(url);
-        if (isVisited) continue;
-        
-        // This is a missing country hub
-        missingUrls.push(url);
-        
-        // Extract country name from metadata or URL
-        const countryName = meta.name || this.analyzer.extractCountryNameFromUrl(url);
-        if (countryName) {
-          missingCountries.push({ name: countryName, url, meta });
+
+    let analysis = this.analyzer.analyzeGaps(domain, hubStats);
+    let matchResult = null;
+
+    if (domain && analysis.missing > 0 && this.matcher) {
+      const now = Date.now();
+      const shouldAttempt = (
+        this.lastMatchAttempt.domain !== analysis.domain ||
+        (now - this.lastMatchAttempt.ts) > this.matchCooldownMs
+      );
+
+      if (shouldAttempt) {
+        try {
+          matchResult = this.matcher.matchDomain(domain, {
+            dryRun: false,
+            hubStats
+          });
+
+          this.lastMatchAttempt = {
+            domain: analysis.domain,
+            ts: now,
+            linked: matchResult.linkedCount
+          };
+
+          if (matchResult.linkedCount > 0) {
+            analysis = matchResult.analysisAfter;
+          }
+
+          this.lastMatchResult = matchResult;
+        } catch (error) {
+          this.logger.error?.('[CountryHubGap] Failed to auto-match existing hubs:', error);
         }
       }
     }
-    
-    // Merge with crawler state data
-    return {
+
+    const missingUrlSet = new Set();
+    const missingCountries = Array.isArray(analysis.missingCountries)
+      ? analysis.missingCountries.map((country) => {
+          if (country?.url) missingUrlSet.add(country.url);
+          return { ...country };
+        })
+      : [];
+
+    if (this.state?.getSeededHubSet && typeof this.state.getSeededHubSet === 'function') {
+      const seededSet = Array.from(this.state.getSeededHubSet());
+
+      for (const url of seededSet) {
+        const meta = this.state.getSeededHubMeta?.(url) || {};
+
+        if (meta.kind !== 'country') continue;
+
+        const isVisited = this.state.hasVisitedHub?.(url);
+        if (isVisited) continue;
+
+        missingUrlSet.add(url);
+
+        const countryName = meta.name || this.analyzer.extractCountryNameFromUrl(url);
+        const countryCode = meta.code || meta.countryCode || null;
+        const placeId = meta.placeId || null;
+
+        const existing = missingCountries.find((entry) => {
+          if (placeId && entry.placeId && entry.placeId === placeId) return true;
+          if (countryCode && entry.code && entry.code === countryCode) return true;
+          if (countryName && entry.name && entry.name.toLowerCase() === countryName.toLowerCase()) return true;
+          return false;
+        });
+
+        if (existing) {
+          existing.url = existing.url || url;
+          existing.status = existing.status || 'pending';
+          existing.meta = existing.meta || meta;
+        } else {
+          missingCountries.push({
+            placeId: placeId ?? null,
+            name: countryName ?? null,
+            code: countryCode ?? null,
+            url,
+            status: 'pending',
+            meta
+          });
+        }
+      }
+    }
+
+    const missingUrls = Array.from(missingUrlSet);
+
+    const result = {
       ...analysis,
       missingUrls,
       missingCountries
     };
+
+    if (matchResult) {
+      result.matchResult = {
+        linkedCount: matchResult.linkedCount,
+        candidateCount: matchResult.candidateCount,
+        skipped: matchResult.skipped?.length || 0,
+        lastRunAt: this.lastMatchAttempt.ts
+      };
+    }
+
+    return result;
   }
 
   /**
@@ -286,12 +365,13 @@ class CountryHubGapService {
 
     // In progress - show gap
     const missing = analysis.missing;
-    const missingNames = analysis.missingCountries
-      .slice(0, 5)
-      .map(c => c.name)
-      .join(', ');
-    const moreSuffix = analysis.missingCountries.length > 5 
-      ? `, +${analysis.missingCountries.length - 5} more` 
+    const formatted = formatMissingCountries(analysis.missingCountries, {
+      previewLimit: 5,
+      includeStatus: false
+    });
+    const missingNames = formatted.previewNames.join(', ');
+    const moreSuffix = formatted.moreAfterPreview > 0
+      ? `, +${formatted.moreAfterPreview} more`
       : '';
 
     return {

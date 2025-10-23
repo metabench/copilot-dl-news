@@ -2,6 +2,7 @@
 
 const { recordPlaceHubSeed } = require('../data/placeHubs');
 const { getContinentNames } = require('../../data/continents');
+const { isTotalPrioritisationEnabled } = require('../../utils/priorityConfig');
 
 class HubSeeder {
   constructor({
@@ -40,9 +41,23 @@ class HubSeeder {
       };
     }
 
-    const sectionHubs = sectionSlugs.map((slug) => this._buildAbsolutePathUrl([slug])).filter(Boolean);
-    const entries = this._buildHubEntries({ sectionSlugs, countryCandidates, navigationLinks });
-    const cap = typeof maxSeeds === 'number' && maxSeeds > 0 ? maxSeeds : 50;
+    const totalPrioritisation = isTotalPrioritisationEnabled();
+
+    const sectionHubs = totalPrioritisation
+      ? []
+      : sectionSlugs.map((slug) => this._buildAbsolutePathUrl([slug])).filter(Boolean);
+
+    const entries = this._buildHubEntries({
+      sectionSlugs,
+      countryCandidates,
+      navigationLinks,
+      totalPrioritisation
+    });
+
+    const baseCap = typeof maxSeeds === 'number' && maxSeeds > 0 ? maxSeeds : 50;
+    const cap = totalPrioritisation
+      ? Math.max(baseCap, countryCandidates.length)
+      : baseCap;
     const hubs = entries.slice(0, cap);
 
     if (this.planCapture && typeof this.planCapture.recordSeedCandidates === 'function') {
@@ -117,6 +132,17 @@ class HubSeeder {
     
     this._log(summary);
 
+    const coverageRollup = this._summarizeCoverage(entries.slice(0, cap));
+    if (coverageRollup.missing > 0) {
+      this._log(`COUNTRY HUBS 🔍 Locating ${coverageRollup.missing} missing hub(s) for crawl coverage.`);
+    }
+    if (coverageRollup.verified > 0) {
+      const exploratorySample = coverageRollup.sampleVerified.length
+        ? ` — ${coverageRollup.sampleVerified.join(', ')}`
+        : '';
+      this._log(`COUNTRY HUBS 📚 Indexing ${coverageRollup.verified} verified hub(s)${exploratorySample}.`);
+    }
+
     if (seeded.length === 0) {
       this._emitProblem({
         kind: 'no-hubs-seeded',
@@ -137,9 +163,9 @@ class HubSeeder {
     return {
       seededCount: seeded.length,
       requestedCount: hubs.length,
-      sectionHubCount: sectionHubs.length,
+      sectionHubCount: totalPrioritisation ? 0 : sectionHubs.length,
       countryCandidateCount: countryCandidates.length,
-      navigationCandidateCount: Array.isArray(navigationLinks) ? navigationLinks.length : 0,
+      navigationCandidateCount: totalPrioritisation ? 0 : (Array.isArray(navigationLinks) ? navigationLinks.length : 0),
       navigationSeededCount: navigationSeeded.length,
       navigationSample: navigationSeeded.slice(0, 5),
       sampleSeeded: seeded.slice(0, 5)
@@ -344,7 +370,7 @@ class HubSeeder {
     }
   }
 
-  _buildHubEntries({ sectionSlugs = [], countryCandidates = [], navigationLinks = [] }) {
+  _buildHubEntries({ sectionSlugs = [], countryCandidates = [], navigationLinks = [], totalPrioritisation = false }) {
     const entries = [];
     const seen = new Set();
 
@@ -367,46 +393,58 @@ class HubSeeder {
       });
     };
 
-    for (const slug of (Array.isArray(sectionSlugs) ? sectionSlugs : [])) {
-      const url = this._buildAbsolutePathUrl([slug]);
-      if (!url) continue;
-      pushEntry(url, {
-        kind: 'section',
-        source: 'pattern-inference',
-        reason: 'pattern-section',
-        slug,
-        // Medium-high priority: sections often contain topic hubs
-        priorityBias: 10
-      });
+    if (!totalPrioritisation) {
+      for (const slug of (Array.isArray(sectionSlugs) ? sectionSlugs : [])) {
+        const url = this._buildAbsolutePathUrl([slug]);
+        if (!url) continue;
+        pushEntry(url, {
+          kind: 'section',
+          source: 'pattern-inference',
+          reason: 'pattern-section',
+          slug,
+          // Medium-high priority: sections often contain topic hubs
+          priorityBias: 10
+        });
+      }
     }
 
     for (const candidate of (Array.isArray(countryCandidates) ? countryCandidates : [])) {
       if (!candidate || !candidate.url) continue;
+      const coverageStatus = typeof candidate.coverageStatus === 'string' ? candidate.coverageStatus : null;
+      const displayName = candidate.name || null;
+      const priorityBias = typeof candidate.priorityBias === 'number'
+        ? candidate.priorityBias
+        : (coverageStatus === 'missing' ? 40 : 20);
+      const reason = candidate.reason || (coverageStatus === 'missing' ? 'country-hub-missing' : 'country-candidate');
       pushEntry(candidate.url, {
         kind: 'country',
         source: candidate.source || 'country-planner',
-        reason: candidate.reason || 'country-candidate',
+        reason,
         slug: candidate.slug || null,
+        displayName,
+        coverageStatus,
         // HIGH PRIORITY: Place hubs are foundational for discovering comprehensive article coverage
         // Prioritize early to build complete place hub catalog
-        priorityBias: 20
+        priorityBias
       });
     }
 
-    const navList = Array.isArray(navigationLinks) ? navigationLinks : [];
-    for (const link of navList) {
-      if (!link || !link.url) continue;
-      const type = String(link.type || 'other').toLowerCase();
-      const label = Array.isArray(link.labels) && link.labels.length ? link.labels[0] : null;
-      const priorityBias = this._navigationPriorityBias(type);
-      pushEntry(link.url, {
-        kind: 'navigation',
-        source: 'navigation-discovery',
-        reason: `nav-${type}`,
-        label,
-        occurrences: Number(link.occurrences) || 0,
-        priorityBias
-      });
+    if (!totalPrioritisation) {
+      const navList = Array.isArray(navigationLinks) ? navigationLinks : [];
+      for (const link of navList) {
+        if (!link || !link.url) continue;
+        const type = String(link.type || 'other').toLowerCase();
+        const label = Array.isArray(link.labels) && link.labels.length ? link.labels[0] : null;
+        const priorityBias = this._navigationPriorityBias(type);
+        pushEntry(link.url, {
+          kind: 'navigation',
+          source: 'navigation-discovery',
+          reason: `nav-${type}`,
+          label,
+          occurrences: Number(link.occurrences) || 0,
+          priorityBias
+        });
+      }
     }
 
     return entries;
@@ -471,6 +509,55 @@ class HubSeeder {
     }
 
     return counts;
+  }
+
+  _summarizeCoverage(entries) {
+    const rollup = {
+      missing: 0,
+      verified: 0,
+      known404: 0,
+      unknown: 0,
+      sampleVerified: []
+    };
+
+    for (const entry of entries) {
+      const status = entry.meta?.coverageStatus || 'unknown';
+      const name = entry.meta?.displayName || this._extractNameFromUrl(entry.url);
+      switch (status) {
+        case 'missing':
+          rollup.missing += 1;
+          break;
+        case 'verified':
+          rollup.verified += 1;
+          if (name && rollup.sampleVerified.length < 5) {
+            rollup.sampleVerified.push(name);
+          }
+          break;
+        case 'known-404':
+          rollup.known404 += 1;
+          break;
+        default:
+          rollup.unknown += 1;
+          break;
+      }
+    }
+
+    return rollup;
+  }
+
+  _extractNameFromUrl(url) {
+    if (!url) return null;
+    try {
+      const pathname = new URL(url, this.baseUrl).pathname;
+      const segments = pathname.split('/').filter(Boolean);
+      if (!segments.length) return null;
+      return segments[segments.length - 1]
+        .split('-')
+        .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+        .join(' ');
+    } catch (_) {
+      return null;
+    }
   }
 
   _emitMilestone(payload, scope) {

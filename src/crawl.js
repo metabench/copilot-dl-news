@@ -341,7 +341,15 @@ const DEFAULT_FEATURE_FLAGS = Object.freeze({
   plannerKnowledgeReuse: false,
   realTimeCoverageAnalytics: false,
   problemClustering: false,
-  problemResolution: false
+  problemResolution: false,
+  crawlPlaybooks: false,
+  patternDiscovery: false,
+  countryHubGaps: false,
+  countryHubBehavioralProfile: false,
+  advancedPlanningSuite: false,
+  graphReasonerPlugin: false,
+  gazetteerAwareReasoner: false,
+  totalPrioritisation: false
 });
 
 function normalizeHost(host) {

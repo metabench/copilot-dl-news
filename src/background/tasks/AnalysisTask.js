@@ -93,7 +93,7 @@ class AnalysisTask {
             analysisVersion: this.analysisVersion,
             limit: this.pageLimit
           });
-          totalToAnalyze = result.needingAnalysis;
+          totalToAnalyze = Number(result?.needingAnalysis || 0);
           
           if (this.verbose) {
             console.log(`[AnalysisTask] Found ${totalToAnalyze} articles needing analysis`);

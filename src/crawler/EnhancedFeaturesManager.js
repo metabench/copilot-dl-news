@@ -40,7 +40,8 @@ class EnhancedFeaturesManager {
       crawlPlaybooks: false,
       patternDiscovery: false,
       countryHubGaps: false,
-      countryHubBehavioralProfile: false
+      countryHubBehavioralProfile: false,
+      totalPrioritisation: false
     };
     this.configManager = null;
     this.enhancedDbAdapter = null;
@@ -116,13 +117,16 @@ class EnhancedFeaturesManager {
       this.featuresEnabled.advancedPlanningSuite = Boolean(featureFlags.advancedPlanningSuite);
       this.featuresEnabled.graphReasonerPlugin = Boolean(featureFlags.graphReasonerPlugin);
       this.featuresEnabled.gazetteerAwareReasoner = Boolean(featureFlags.gazetteerAwareReasoner);
+      this.featuresEnabled.totalPrioritisation = Boolean(featureFlags.totalPrioritisation);
 
       this.logger.log('Initializing enhanced feature services...');
       await this._initializeFeatureServices(featureFlags || {}, { dbAdapter, state, telemetry }, initializationFailures);
 
       const enabledFeatures = Object.keys(this.featuresEnabled).filter((key) => this.featuresEnabled[key]);
       const requestedFeatures = Object.keys(featureFlags || {}).filter(key => featureFlags[key]);
-      const requestedButNotEnabled = requestedFeatures.filter(f => !this.featuresEnabled[f]);
+      const configFlags = ['advancedPlanningSuite', 'graphReasonerPlugin', 'gazetteerAwareReasoner', 'totalPrioritisation'];
+      const recognizedFeatures = new Set([...Object.keys(this.featuresEnabled), ...configFlags]);
+      const requestedButNotEnabled = requestedFeatures.filter(f => recognizedFeatures.has(f) && !this.featuresEnabled[f]);
       
       // If features were requested but not enabled, and no explicit failures recorded, they failed silently
       if (requestedButNotEnabled.length > 0 && initializationFailures.length === 0) {
@@ -135,7 +139,6 @@ class EnhancedFeaturesManager {
       }
       
       // Separate config flags from service-based features for clearer reporting
-      const configFlags = ['advancedPlanningSuite', 'graphReasonerPlugin', 'gazetteerAwareReasoner'];
       const serviceFeatures = enabledFeatures.filter(f => !configFlags.includes(f));
       const enabledConfigFlags = enabledFeatures.filter(f => configFlags.includes(f));
 

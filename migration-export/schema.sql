@@ -1,3 +1,7 @@
+CREATE INDEX idx_article_xpath_patterns_domain ON article_xpath_patterns(domain);
+
+CREATE UNIQUE INDEX idx_article_xpath_patterns_domain_xpath ON article_xpath_patterns(domain, xpath);
+
 CREATE INDEX idx_background_tasks_created ON background_tasks(created_at DESC);
 
 CREATE INDEX idx_background_tasks_status ON background_tasks(status);
@@ -104,6 +108,12 @@ CREATE INDEX idx_place_names_norm ON place_names(normalized);
 
 CREATE INDEX idx_place_names_place ON place_names(place_id);
 
+CREATE INDEX idx_place_page_mappings_host_kind ON place_page_mappings(host, page_kind);
+
+CREATE INDEX idx_place_page_mappings_place ON place_page_mappings(place_id);
+
+CREATE INDEX idx_place_page_mappings_status ON place_page_mappings(status);
+
 CREATE INDEX idx_place_provenance_external ON place_provenance(external_id);
 
 CREATE INDEX idx_place_provenance_place ON place_provenance(place_id);
@@ -171,6 +181,21 @@ CREATE UNIQUE INDEX uniq_region_places ON places(country_code, adm1_code) WHERE 
 CREATE UNIQUE INDEX uniq_topic_keywords ON topic_keywords(topic, lang, normalized);
 
 CREATE UNIQUE INDEX uniq_url_alias ON url_aliases(url_id, alias_url_id);
+
+CREATE TABLE article_xpath_patterns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  domain TEXT NOT NULL,
+  domain_id INTEGER REFERENCES domains(id),
+  xpath TEXT NOT NULL,
+  confidence REAL,
+  learned_from TEXT,
+  learned_at TEXT,
+  sample_text_length INTEGER,
+  paragraph_count INTEGER,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  last_used_at TEXT,
+  metadata TEXT
+);
 
 CREATE TABLE background_tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -600,6 +625,24 @@ CREATE TABLE place_names (
       is_official INTEGER,                 -- 0/1
       source TEXT,
       FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE
+    );
+
+CREATE TABLE place_page_mappings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      place_id INTEGER NOT NULL,
+      host TEXT NOT NULL,
+      url TEXT NOT NULL,
+      page_kind TEXT NOT NULL DEFAULT 'country-hub',
+      publisher TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+      verified_at TEXT,
+      evidence JSON,
+      hub_id INTEGER,
+      UNIQUE(place_id, host, page_kind),
+      FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE,
+      FOREIGN KEY (hub_id) REFERENCES place_hubs(id) ON DELETE SET NULL
     );
 
 CREATE TABLE place_provenance (
