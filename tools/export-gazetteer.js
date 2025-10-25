@@ -102,7 +102,7 @@ USAGE:
 OPTIONS:
   --help, -h           Show this help message
   --db=PATH            Path to SQLite database (default: data/news.db)
-  --output-dir=DIR     Output directory (default: gazetteer-export)
+  --output-dir=DIR     Output directory (default: data/exports)
   --tables=LIST        Comma-separated list of tables to export (default: all gazetteer tables)
 
 DEFAULT TABLES:
@@ -110,7 +110,7 @@ DEFAULT TABLES:
   place_external_ids, place_hubs, place_hub_unknown_terms, place_provenance, place_sources
 
 EXAMPLES:
-  node tools/export-gazetteer.js                              # Export all tables to gazetteer-export/
+  node tools/export-gazetteer.js                              # Export all tables to data/exports/
   node tools/export-gazetteer.js --db=./data/test.db          # Export from specific database
   node tools/export-gazetteer.js --output-dir=./backup        # Export to custom directory
   node tools/export-gazetteer.js --tables=places,place_names  # Export only specific tables
@@ -134,7 +134,7 @@ OUTPUT:
 
   const outputDir = options.outputDir
     ? path.resolve(process.cwd(), options.outputDir)
-    : path.join(__dirname, '..', '..', 'gazetteer-export');
+    : path.join(__dirname, '..', 'data', 'exports');
 
   const tablesToExport = options.tables || GAZETTEER_TABLES;
 

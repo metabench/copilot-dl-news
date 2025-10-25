@@ -107,7 +107,7 @@ Usage:
 
 Commands:
   status                    Show current migration status and history
-  export <dir>             Export database to directory (default: ./migration-export)
+  export <dir>             Export database to directory (default: data/exports)
   import <dir>             Import database from directory
   migrate <target-db>      Migrate to new database file
   backup <file>            Create database backup file (default: ./backup.json)
@@ -157,7 +157,7 @@ Examples:
   }
 
   async exportDatabase(exportDir) {
-    const dir = exportDir || './migration-export';
+    const dir = exportDir || path.join(__dirname, '..', 'data', 'exports');
     console.log(`Exporting database to ${dir}...`);
 
     const result = await this.orchestrator._exportPhase();

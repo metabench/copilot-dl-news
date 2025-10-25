@@ -344,7 +344,7 @@ npm run analysis:run              # Combined analysis + milestone refresh
 # Populate gazetteer with geographic data
 npm run populate:gazetteer
 
-# Export gazetteer data
+# Export gazetteer data to data/exports directory
 npm run export:gazetteer
 
 # Validate gazetteer integrity
@@ -408,7 +408,7 @@ Compress article content to reduce storage space and improve performance.
 Export database tables to JSON/NDJSON/CSV formats for backup or analysis.
 
 **Parameters:**
-- **Output Path**: File path for export
+- **Output Path**: File path for export (default: `data/exports/`)
 - **Format**: Export format (NDJSON/JSON/CSV)
 - **Tables**: Which tables to export (articles/fetches/sitemaps/domains/gazetteer)
 - **Compress**: Gzip compress output file

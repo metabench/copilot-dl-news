@@ -6,10 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite/ensureDb');
-const { SQLiteNewsDatabase } = require('../db/sqlite');
+const { createSQLiteDatabase } = require('../db/sqlite');
 const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
 const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
 const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
+const HubValidator = require('../hub-validation/HubValidator');
 const { slugify } = require('./slugify');
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
@@ -399,10 +400,11 @@ async function guessPlaceHubs(options = {}, deps = {}) {
   }
 
   const db = ensureDb(dbPath);
-  const newsDb = new SQLiteNewsDatabase(db);
+  const newsDb = createSQLiteDatabase(dbPath);
   const analyzer = new CountryHubGapAnalyzer({ db, logger });
   const regionAnalyzer = new RegionHubGapAnalyzer({ db, logger });
   const cityAnalyzer = new CityHubGapAnalyzer({ db, logger });
+  const hubValidator = new HubValidator(db);
 
   const selectLatestFetch = db.prepare(`
     SELECT http_status, fetched_at, request_started_at
@@ -675,6 +677,30 @@ async function guessPlaceHubs(options = {}, deps = {}) {
               outcome: 'fetched',
               message: `GET ${result.status} ${candidateUrl} -> fetched`
             });
+
+            // Validate that this is actually a hub page, not just any page
+            const validation = await hubValidator.validateHubContent(result.finalUrl, place.name);
+            if (!validation.isValid) {
+              summary.errors += 1;
+              recordDecision({
+                stage: 'VALIDATION',
+                status: null,
+                url: candidateUrl,
+                outcome: 'invalid-content',
+                level: 'warn',
+                message: `Content validation failed for ${candidateUrl}: ${validation.reason}`
+              });
+              continue;
+            }
+
+            recordDecision({
+              stage: 'VALIDATION',
+              status: null,
+              url: candidateUrl,
+              outcome: 'valid-hub',
+              message: `Content validation passed for ${candidateUrl}: ${validation.reason}`
+            });
+
             if (options.apply) {
               const existing = selectHubByUrl.get(result.finalUrl) || null;
               const title = extractTitle(result.body);
