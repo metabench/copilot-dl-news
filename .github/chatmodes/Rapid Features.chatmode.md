@@ -250,7 +250,7 @@ beforeEach(() => {
 ```javascript
 ✅ Pass verbose: false to createApp
 ✅ Use silent: true for background managers
-✅ Check jest.setup.js for DROP_PATTERNS
+✅ Check tests/jest.setup.js for DROP_PATTERNS
 ✅ Add patterns for noisy logs
 ❌ Don't log unconditionally in library code
 ```

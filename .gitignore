@@ -62,3 +62,5 @@ src/ui/express/public/assets/**/*.js
 *.db
 test-failure-summary.json
 test-timing-report.json
+
+package-lock.json

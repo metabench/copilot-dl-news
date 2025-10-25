@@ -5,9 +5,9 @@
   "main": "src/crawl.js",
   "scripts": {
     "start": "node src/crawl.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --reporters=./jest-timing-reporter.js",
-    "test:timing": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --reporters=./jest-timing-reporter.js",
-    "test:file": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --reporters=./jest-timing-reporter.js --testPathPattern",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --reporters=./tests/jest-timing-reporter.js",
+    "test:timing": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --reporters=./tests/jest-timing-reporter.js",
+    "test:file": "node --experimental-vm-modules node_modules/jest/bin/jest.js --forceExit --reporters=default --reporters=./tests/jest-timing-reporter.js --testPathPattern",
     "test:suite": "node tests/run-tests.js",
     "test:unit": "node tests/run-tests.js unit",
     "test:integration": "node tests/run-tests.js integration",
@@ -19,7 +19,7 @@
     "tests:review": "node tests/tests-review.js",
     "tests:status": "node tests/get-test-summary.js",
     "test:legacy:fast": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathIgnorePatterns='e2e|online|puppeteer|http.test.js' --maxWorkers=4",
-    "test:legacy:geography-full": "cross-env GEOGRAPHY_FULL_E2E=1 JEST_DISABLE_TRUNCATE=1 node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='geography.full.e2e' --reporters=./jest-compact-reporter.js",
+    "test:legacy:geography-full": "cross-env GEOGRAPHY_FULL_E2E=1 JEST_DISABLE_TRUNCATE=1 node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='geography.full.e2e' --reporters=./tests/jest-compact-reporter.js",
     "test:legacy:all": "node --experimental-vm-modules node_modules/jest/bin/jest.js --detectOpenHandles",
     "backfill:dates": "node src/tools/backfill-dates.js",
     "backfill:dates:redo": "node src/tools/backfill-dates.js --redo",
@@ -70,7 +70,7 @@
   },
   "jest": {
     "setupFilesAfterEnv": [
-      "<rootDir>/jest.setup.js"
+      "<rootDir>/tests/jest.setup.js"
     ],
     "testPathIgnorePatterns": [
       "/node_modules/",
@@ -83,7 +83,7 @@
     ],
     "reporters": [
       "default",
-      "<rootDir>/jest-reporter-truncate.js"
+      "<rootDir>/tests/jest-reporter-truncate.js"
     ],
     "maxWorkers": 8,
     "testTimeout": 10000,

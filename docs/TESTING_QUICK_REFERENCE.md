@@ -335,7 +335,7 @@ node tests/analyze-test-logs.js --test "specific-pattern"
 
 ## Test Console Output
 
-**Keep <100 lines**: Add noisy patterns to `jest.setup.js` DROP_PATTERNS
+**Keep <100 lines**: Add noisy patterns to `tests/jest.setup.js` DROP_PATTERNS
 
 **Test-friendly code**:
 ```javascript

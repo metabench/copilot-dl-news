@@ -843,7 +843,7 @@ file_search query:"**/*.e2e.test.js"
 
 **1.2 Review Test Running Infrastructure**
 - [ ] Read `jest.config.js` or equivalent test runner config
-- [ ] Check `jest.setup.js` for global test configuration
+- [ ] Check `tests/jest.setup.js` for global test configuration
 - [ ] Review test timeouts, reporters, and environment settings
 - [ ] Identify which tests have custom configurations
 - [ ] Check for test-specific scripts in package.json

@@ -268,7 +268,7 @@ test('should complete operation', async () => {
 ### Concise E2E Test Output
 
 For development E2E tests that need clean, single-line output:
-1. **Suppress console in jest.setup.js**: Check for `GEOGRAPHY_FULL_E2E=1` env var and set `console.log/warn/info/error = () => {}`
+1. **Suppress console in tests/jest.setup.js**: Check for `GEOGRAPHY_FULL_E2E=1` env var and set `console.log/warn/info/error = () => {}`
 2. **Custom reporter**: Create compact reporter that shows errors inline (see `jest-compact-reporter.js`)
 3. **LogCondenser utility**: Use `src/utils/LogCondenser.js` for single-line progress (writes to `stderr` to bypass Jest)
 4. **Run command**: `npm run test:geography-full` (uses `cross-env` for Windows compatibility)
@@ -317,7 +317,7 @@ logger.error('ERR ', 'Failed to initialize');
 // 3. Configure package.json script with environment variable
 "test:my-e2e": "cross-env MY_E2E=1 JEST_DISABLE_TRUNCATE=1 node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='my.e2e' --reporters=./jest-compact-reporter.js"
 
-// 4. Update jest.setup.js to suppress console for your test
+// 4. Update tests/jest.setup.js to suppress console for your test
 if (process.env.MY_E2E === '1') {
   console.log = () => {};
   console.warn = () => {};

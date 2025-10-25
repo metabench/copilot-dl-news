@@ -365,7 +365,7 @@ node tools/analyze-place-duplicates.js
 - **Ingestion Guide**: `docs/GAZETTEER_INGESTION_DEDUPLICATION.md` (strategies overview)
 - **API Reference**: `docs/API_ENDPOINT_REFERENCE.md` (gazetteer endpoints)
 - **Database Schema**: `docs/DATABASE_SCHEMA_ERD.md` (visual reference)
-- **Populate Tool Updates**: `POPULATE_GAZETTEER_UPDATES.md` (code examples)
+- **Populate Tool Updates**: `docs/POPULATE_GAZETTEER_UPDATES.md` (code examples)
 
 ## Key Learnings
 

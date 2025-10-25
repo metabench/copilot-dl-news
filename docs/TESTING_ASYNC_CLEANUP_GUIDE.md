@@ -636,6 +636,6 @@ afterAll(async () => {
 ## Related Documentation
 
 - **AGENTS.md**: "Testing Guidelines" section for high-level patterns
-- **jest.setup.js**: Console output filtering configuration
+- **tests/jest.setup.js**: Console output filtering configuration
 - **jest.config.js**: Global Jest settings
 - **package.json**: Test script examples and configuration

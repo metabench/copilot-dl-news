@@ -37,7 +37,7 @@ const taskCategories = {
 
 ###  Complete Documentation Index
 
-**For the complete documentation index with all 187 docs organized by category, see `INDEX_FOR_AGENTS.md`.**
+**For the complete documentation index with all 187 docs organized by category, see `docs/INDEX_FOR_AGENTS.md`.**
 
 ---
 
@@ -815,7 +815,7 @@ Test-driven development patterns for reliable code changes. Every code change re
 
 ## Test Console Output
 
-**Keep output minimal** (<100 lines, ideally <50). Add noisy patterns to `jest.setup.js` DROP_PATTERNS. Use `verbose: false` and `silent: true` flags in tests.
+**Keep output minimal** (<100 lines, ideally <50). Add noisy patterns to `tests/jest.setup.js` DROP_PATTERNS. Use `verbose: false` and `silent: true` flags in tests.
 
 ---
 
