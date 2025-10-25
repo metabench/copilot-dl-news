@@ -47,6 +47,7 @@ const taskCategories = {
 **CLI Tools & Agentic Workflows**
 - 🛠️ **CLI Tools Overview** → AGENTS.md "CLI Tools & Commands" section ⭐ **START HERE for automation**
 - 🤖 **Agentic Workflows** → AGENTS.md "Agentic CLI Workflows" section ⭐ **Multi-step automation patterns**
+- 📚 **Grok's Agentic Workflows Guide** → `docs/GUIDE_TO_AGENTIC_WORKFLOWS_BY_GROK.md` ⭐ **Comprehensive framework for autonomous task execution**
 - 🔧 **Database Tools** → `tools/db-schema.js`, `tools/db-query.js` ⭐ **Database inspection without dialogs**
 - 📊 **Analysis Tools** → `tools/intelligent-crawl.js` ⭐ **Rapid crawl analysis**
 - 🧹 **Data Correction** → `tools/corrections/` ⭐ **Safe data manipulation**
@@ -216,6 +217,8 @@ const taskCategories = {
 | Build agentic workflows | AGENTS.md "Agentic CLI Workflows" ⭐ | Tool-specific documentation |
 | Run operations tasks | `RUNBOOK.md` | Server CLI reference in AGENTS.md |
 | Check project roadmap | `ROADMAP.md` | Review AGENTS.md current focus section |
+| Execute commands safely | AGENTS.md "OS Awareness & Command Line Best Practices" ⭐ | `docs/COMMAND_EXECUTION_GUIDE.md` |
+| Learn comprehensive agentic workflow patterns | `docs/GUIDE_TO_AGENTIC_WORKFLOWS_BY_GROK.md` ⭐ | Grok's complete framework for autonomous task execution |
 
 **Analysis run linkage (October 2025)**: `analysis_runs` now includes `background_task_id` and `background_task_status`. New analysis runs started through `BackgroundTaskManager` **must** populate both fields so the `/analysis` list can render the “Task” column and deep-link to `/api/background-tasks/{id}`. Legacy rows may leave them `NULL`.
 
@@ -281,6 +284,139 @@ Code comments (Implementation details)
 - When you encounter approval dialog blocks
 
 **See**: `docs/agents/command-rules.md` for complete patterns and safe command examples.
+
+---
+
+## 🖥️ OS AWARENESS & COMMAND LINE BEST PRACTICES
+
+**CRITICAL**: AI agents must maintain awareness of the operating system and adjust command line usage accordingly. This repository runs on **Windows** with **PowerShell** as the default shell.
+
+### Operating System Context
+
+**Current Environment**:
+- **OS**: Windows (PowerShell v5.1)
+- **Shell**: `powershell.exe`
+- **Path Separator**: `\` (backslash)
+- **Line Endings**: CRLF (`\r\n`)
+- **File Paths**: Use absolute paths with `c:\` prefix
+
+**Key OS Differences**:
+- **Windows/PowerShell**: `Get-Content`, `Set-Content`, `Select-String`, `ForEach-Object`
+- **Linux/Posix**: `cat`, `grep`, `sed`, `awk`, `xargs`
+- **Path Handling**: Windows uses `\`, Posix uses `/`
+- **Command Chaining**: Windows uses `;` or `&&`, Posix uses `;` or `&&`
+
+### Command Line Philosophy
+
+**SIMPLE COMMANDS ONLY**: Avoid complex piping, chaining, or output parsing that requires approval dialogs.
+
+**Golden Rules**:
+1. ✅ **Use simple, single-purpose commands**
+2. ✅ **Avoid `|` (pipe) and `&&` (conditional execution)**
+3. ✅ **Prefer tools over complex shell operations**
+4. ✅ **Test commands in isolation first**
+5. ❌ **Never chain commands with `;` for complex operations**
+6. ❌ **Never use output parsing or redirection for logic**
+
+### Windows/PowerShell Command Patterns
+
+**✅ SAFE Commands (Use These)**:
+```powershell
+# Simple file operations
+Test-Path "c:\path\to\file.js"
+Get-Content "c:\path\to\log.txt"
+Get-Content "c:\path\to\log.txt" | Select-Object -Last 20
+Get-ChildItem "c:\path\to\directory"
+
+# Simple process operations
+node server.js --detached --auto-shutdown-seconds 10
+npm test
+npm run build
+node tools/script.js arg1 arg2
+
+# Simple output filtering (minimal piping only)
+command | Select-Object -First 10
+```
+
+**❌ UNSAFE Commands (Never Use These)**:
+```powershell
+# Complex piping and chaining
+Get-Content file.js | Select-String "pattern" | ForEach-Object { ... }
+command1; Start-Sleep -Seconds 5; command2
+command1 && command2 | ConvertFrom-Json
+
+# Complex regex and string manipulation
+(Get-Content "file.js") -replace 'complex.*regex', 'replacement' | Set-Content "file.js"
+
+# Multi-line commands with backticks
+Get-Content "file.js" `
+  -replace 'pattern1', 'replacement1' `
+  -replace 'pattern2', 'replacement2' | Set-Content "file.js"
+
+# Output parsing for logic
+npm test 2>&1 | Select-String "error"
+Get-Content file.log | Select-String "complex.*pattern"
+```
+
+### Cross-Platform Compatibility
+
+**When writing code that might run on different OSes**:
+- Use `path.join()` or `path.resolve()` for path construction
+- Use `os.platform()` to detect OS if needed
+- Prefer Node.js APIs over shell commands
+- Test path separators: `path.sep` instead of hardcoded `/` or `\`
+
+**Example OS-Aware Code**:
+```javascript
+const path = require('path');
+const os = require('os');
+
+// OS-aware path construction
+const dbPath = path.join('data', 'news.db'); // Works on Windows/Linux/Mac
+
+// OS detection if needed
+if (os.platform() === 'win32') {
+  // Windows-specific logic
+} else {
+  // Posix logic
+}
+```
+
+### Background Process Rules
+
+**CRITICAL**: Terminals with background processes become dedicated - don't run additional commands in them.
+
+```powershell
+# ❌ WRONG: Commands in terminal with background process
+Terminal> node server.js --detached --auto-shutdown-seconds 30
+Terminal> curl http://localhost:3000/api/test  # KILLS THE SERVER!
+
+# ✅ RIGHT: Use get_terminal_output tool for logs, run E2E tests instead
+```
+
+### Tool-First Approach
+
+**For 95% of operations, use tools instead of shell commands**:
+
+- **File Editing**: `replace_string_in_file` tool (not PowerShell replace)
+- **File Reading**: `read_file` tool (not Get-Content with logic)
+- **File Searching**: `grep_search` tool (not Select-String with regex)
+- **File Finding**: `file_search` tool (not Get-ChildItem with ForEach)
+
+### Testing OS Awareness
+
+**Before running commands**:
+1. Verify you're using Windows/PowerShell syntax
+2. Test simple commands first
+3. Use tools for complex operations
+4. Check for approval dialogs (they indicate unsafe commands)
+
+**Command Testing Checklist**:
+- [ ] Is this a simple, single-purpose command?
+- [ ] Does it avoid `|` and `&&`?
+- [ ] Can I use a tool instead?
+- [ ] Have I tested it in isolation?
+- [ ] Does it follow Windows path conventions?
 
 ---
 

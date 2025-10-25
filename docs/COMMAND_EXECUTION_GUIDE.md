@@ -6,6 +6,32 @@
 
 ---
 
+## 🖥️ OS AWARENESS - CRITICAL FIRST STEP
+
+**ALWAYS REMEMBER**: This repository runs on **Windows** with **PowerShell** as the default shell.
+
+### Current Environment
+- **OS**: Windows (PowerShell v5.1)
+- **Shell**: `powershell.exe`
+- **Path Separator**: `\` (backslash)
+- **Line Endings**: CRLF (`\r\n`)
+- **File Paths**: Use absolute paths with `c:\` prefix
+
+### OS-Specific Command Rules
+- ✅ **Use PowerShell syntax**: `Get-Content`, `Set-Content`, `Select-String`
+- ❌ **Don't use Unix commands**: No `cat`, `grep`, `sed`, `awk` (they may not exist or behave differently)
+- ✅ **Simple commands only**: Avoid `|` (pipe) and `&&` (conditional execution)
+- ✅ **Windows paths**: Use `c:\path\to\file.js` format
+- ✅ **Test commands first**: Verify they work in PowerShell before using
+
+### Cross-Platform Code Considerations
+When writing Node.js code that might run elsewhere:
+- Use `path.join()` for path construction (works on all OSes)
+- Use `os.platform()` to detect OS if needed
+- Prefer Node.js APIs over shell commands
+
+---
+
 ## Critical Rules
 
 ### ❌ NEVER Use Commands That Require Approval
