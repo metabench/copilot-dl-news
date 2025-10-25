@@ -547,19 +547,21 @@ function initGazetteerTables(db, { verbose, logger }) {
     `);
   } catch (_) {}
   try {
+    db.exec(`DROP TRIGGER IF EXISTS trg_places_kind_check_ins;`);
     // Enforce kind domain
     db.exec(`
       CREATE TRIGGER IF NOT EXISTS trg_places_kind_check_ins
       BEFORE INSERT ON places
-      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational')
+      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational', 'planet')
       BEGIN SELECT RAISE(ABORT, 'places.kind invalid'); END;
     `);
   } catch (_) {}
   try {
+    db.exec(`DROP TRIGGER IF EXISTS trg_places_kind_check_upd;`);
     db.exec(`
       CREATE TRIGGER IF NOT EXISTS trg_places_kind_check_upd
       BEFORE UPDATE ON places
-      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational')
+      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational', 'planet')
       BEGIN SELECT RAISE(ABORT, 'places.kind invalid'); END;
     `);
   } catch (_) {}
@@ -570,7 +572,7 @@ function initGazetteerTables(db, { verbose, logger }) {
       BEFORE INSERT ON places
       WHEN NEW.lat IS NOT NULL AND (NEW.lat < -90 OR NEW.lat > 90)
       BEGIN SELECT RAISE(ABORT, 'places.lat out of range'); END;
-    `);
+    }`);
   } catch (_) {}
   try {
     db.exec(`

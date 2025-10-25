@@ -128,47 +128,53 @@ class ArticleSignalsService {
       nav: 0,
       other: 0
     };
-    const consider = [];
+    const reasons = [];
+    const rejections = [];
 
     if (urlSignals) {
       if (urlSignals.hasDatePath || urlSignals.hasArticleWords) {
         votes.article++;
-        consider.push('url-article');
+        reasons.push('url-article');
       }
       if (urlSignals.pathDepth <= 2 && !urlSignals.hasDatePath) {
         votes.nav++;
-        consider.push('url-shallow');
+        rejections.push('url-shallow');
       }
     }
 
     const cs = contentSignals || {};
     if (typeof cs.linkDensity === 'number') {
-      if (cs.linkDensity > 0.25 && (cs.a || 0) > 40) {
+      if (cs.linkDensity > 0.20 && (cs.a || 0) > 40) {
         votes.nav++;
-        consider.push('content-link-dense');
+        rejections.push('content-link-dense');
       }
       if (cs.linkDensity < 0.08 && (cs.p || 0) >= 3) {
         votes.article++;
-        consider.push('content-text-heavy');
+        reasons.push('content-text-heavy');
       }
+    }
+
+    if ((cs.a || 0) > 100) {
+      votes.nav += 2;
+      rejections.push(`high-link-count (>100, was ${cs.a})`);
     }
 
     if (cs.schema) {
       const schemaScore = typeof cs.schema.score === 'number' ? cs.schema.score : 0;
       if (schemaScore >= 6) {
         votes.article += 3;
-        consider.push('schema-strong');
+        reasons.push('schema-strong');
       } else if (schemaScore >= 3.5) {
         votes.article += 2;
-        consider.push('schema-medium');
+        reasons.push('schema-medium');
       } else if (schemaScore > 0.5) {
         votes.article++;
-        consider.push('schema-weak');
+        reasons.push('schema-weak');
       }
 
       if (cs.schema.ogTypeArticle && schemaScore < 3.5) {
         votes.article++;
-        consider.push('og-article');
+        reasons.push('og-article');
       }
 
       if (schemaScore >= 3.5 && votes.nav > 0) {
@@ -179,11 +185,11 @@ class ArticleSignalsService {
     if (typeof opts.wordCount === 'number') {
       if (opts.wordCount > 150) {
         votes.article++;
-        consider.push('wc>150');
+        reasons.push(`wc>150 (${opts.wordCount})`);
       }
       if (opts.wordCount < 60 && (cs.a || 0) > 20) {
         votes.nav++;
-        consider.push('wc<60');
+        rejections.push(`wc<60 (${opts.wordCount})`);
       }
     }
 
@@ -196,13 +202,15 @@ class ArticleSignalsService {
       }
     }
 
-    const considered = consider.length || 1;
-    const confidence = Math.min(1, Math.max(0, maxVotes / Math.max(2, considered)));
+    const consideredCount = reasons.length + rejections.length;
+    const confidence = Math.min(1, Math.max(0, maxVotes / Math.max(2, consideredCount)));
 
     return {
       hint,
       confidence,
-      considered
+      reasons,
+      rejections,
+      votes
     };
   }
 

@@ -258,7 +258,7 @@ function buildGazetteerMatchers(db, options = {}) {
         JOIN places p ON p.id = pn.place_id
        WHERE (pn.lang IS NULL OR pn.lang = 'en')
          AND pn.name_kind IN ('common', 'official', 'alias', 'endonym', 'exonym')
-         AND p.kind IN ('country', 'region')
+         AND p.kind IN ('country', 'region', 'planet')
     `).all();
 
   for (const row of countryRows) {

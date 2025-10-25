@@ -1,11 +1,14 @@
 const { Readability } = require('@mozilla/readability');
 const { JSDOM, VirtualConsole } = require('jsdom');
+const cheerio = require('cheerio');
 const {
   extractGazetteerPlacesFromText,
   extractPlacesFromUrl,
   dedupeDetections,
   inferContext
 } = require('./place-extraction');
+const { evaluateArticleCandidate } = require('./articleDetection');
+const ArticleSignalsService = require('../crawler/ArticleSignalsService');
 const { detectPlaceHub } = require('../tools/placeHubDetector');
 const { performDeepAnalysis } = require('./deep-analyzer');
 const { extractDomain } = require('../services/shared/dxpl');
@@ -95,9 +98,23 @@ async function analyzePage({
     articleLinksCount: fetchRow?.article_links_count ?? null,
     wordCount: latestWordCount,
     gazetteerPlaceNames: gazetteer?.placeNames || null,
-    nonGeoTopicSlugs
+    nonGeoTopicSlugs,
+    db
   });
   timings.detectHubMs = Math.max(0, performance.now() - detectHubStart);
+
+  const articleSignalsService = new ArticleSignalsService();
+  const urlSignals = articleSignalsService.computeUrlSignals(url);
+  const contentSignals = preparation.contentSignals;
+  const articleEvaluation = articleSignalsService.combineSignals(urlSignals, contentSignals, { wordCount: latestWordCount });
+
+  if (hubCandidate && hubCandidate.kind === 'place') {
+    analysis.kind = 'hub';
+    analysis.meta.hub = hubCandidate;
+  } else {
+    analysis.kind = articleEvaluation.hint === 'article' ? 'article' : 'nav';
+  }
+  analysis.meta.articleEvaluation = articleEvaluation;
 
   const deepStart = performance.now();
   const deepAnalysis = performDeepAnalysis({
@@ -164,7 +181,6 @@ async function buildAnalysis({
   }
 
   if (articleRow && articleRow.text) {
-    base.kind = 'article';
     base.meta.wordCount = articleRow.word_count ?? null;
     base.meta.articleXPath = articleRow.article_xpath || null;
 
@@ -240,7 +256,8 @@ async function buildAnalysis({
       method: preparation.extraction.method,
       htmlUsed: preparation.htmlUsed,
       wordCountUpdated: preparation.updates.wordCountChanged,
-      articleXPathUpdated: preparation.updates.articleXPathChanged
+      articleXPathUpdated: preparation.updates.articleXPathChanged,
+      contentSignals: preparation.contentSignals
     };
   }
 
@@ -275,6 +292,12 @@ async function prepareArticleContent({
 
   const result = {
     articleRow: preparedArticleRow,
+    linkCounts: {
+      nav: null,
+      article: null,
+      total: null
+    },
+    contentSignals: null,
     htmlUsed: Boolean(html),
     extraction: {
       method: preparedArticleRow.text ? 'existing-text' : 'unavailable',
@@ -345,12 +368,46 @@ async function prepareArticleContent({
   if (!extractedText) {
     try {
       const readabilityStart = performance.now();
+
+      const $ = cheerio.load(html);
+      const articleSignalsService = new ArticleSignalsService();
+      result.contentSignals = articleSignalsService.computeContentSignals($, html);
+
       const jsdomStart = performance.now();
       const virtualConsole = new VirtualConsole();
       virtualConsole.on('jsdomError', () => {});
       const dom = new JSDOM(html, { url, virtualConsole });
       const jsdomMs = Math.max(0, performance.now() - jsdomStart);
+
+      const links = Array.from(dom.window.document.querySelectorAll('a[href]'));
+      result.linkCounts.total = links.length;
       
+      // Simple link classification heuristic
+      let navLinks = 0;
+      let articleLinks = 0;
+      const currentHost = new URL(url).hostname;
+
+      for (const link of links) {
+        try {
+          const href = link.getAttribute('href');
+          if (!href || href.startsWith('#')) continue;
+
+          const linkUrl = new URL(href, url);
+          if (linkUrl.hostname !== currentHost) continue; // Skip external links
+
+          // Heuristic: paths with year/month/day or long slugs are articles
+          if (/\/\d{4}\/\w{3}\/\d{1,2}\//.test(linkUrl.pathname) || linkUrl.pathname.split('/').length > 4) {
+            articleLinks++;
+          } else {
+            navLinks++;
+          }
+        } catch (e) {
+          // Ignore invalid URLs
+        }
+      }
+      result.linkCounts.nav = navLinks;
+      result.linkCounts.article = articleLinks;
+
       const readabilityAlgoStart = performance.now();
       const readable = new Readability(dom.window.document).parse();
       const readabilityAlgoMs = Math.max(0, performance.now() - readabilityAlgoStart);

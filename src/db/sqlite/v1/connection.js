@@ -89,6 +89,22 @@ function ensureDatabase(dbPath, options = {}) {
     }
 
     seedCrawlTypes(db, { logger });
+
+    // Bootstrap data
+    try {
+      const path = require('path');
+      const fs = require('fs');
+      const { findProjectRoot } = require('../../../utils/project-root');
+      const { seedData } = require('./seed-utils');
+      const projectRoot = findProjectRoot(__dirname);
+      const bootstrapPath = path.join(projectRoot, 'data', 'bootstrap', 'bootstrap-db.json');
+      if (fs.existsSync(bootstrapPath)) {
+        const bootstrapData = JSON.parse(fs.readFileSync(bootstrapPath, 'utf-8'));
+        seedData(db, bootstrapData);
+      }
+    } catch (error) {
+      (options.logger || console).error('Failed to seed bootstrap data:', error);
+    }
   }
   
   return db;

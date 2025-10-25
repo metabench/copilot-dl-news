@@ -92,7 +92,7 @@ function evaluateArticleCandidate(candidate, { signalsService = createArticleSig
   let negatives = 0;
 
   if (urlLooksArticle) {
-    positives += 1;
+    positives += 0.5; // Reduced from 1
     reasons.push('url-pattern: matched article keyword');
   } else {
     negatives += 1;
@@ -182,9 +182,12 @@ function evaluateArticleCandidate(candidate, { signalsService = createArticleSig
   }
 
   if (typeof candidate.navLinksCount === 'number') {
-    if (candidate.navLinksCount >= 50) {
+    if (candidate.navLinksCount >= 100) {
+      negatives += 3;
+      rejections.push(`nav-links: very high (>=100, value ${candidate.navLinksCount})`);
+    } else if (candidate.navLinksCount >= 50) {
       negatives += 1;
-      rejections.push(`nav-links: high (${candidate.navLinksCount})`);
+      rejections.push(`nav-links: high (>=50, value ${candidate.navLinksCount})`);
     }
   }
 

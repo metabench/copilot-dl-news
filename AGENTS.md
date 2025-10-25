@@ -44,6 +44,15 @@ const taskCategories = {
 - 📊 Performance analysis → `ARCHITECTURE_ANALYSIS_AND_IMPROVEMENTS.md`
 - 🌐 API endpoint reference → `docs/API_ENDPOINT_REFERENCE.md` ⭐ **Complete API docs**
 
+**CLI Tools & Agentic Workflows**
+- 🛠️ **CLI Tools Overview** → AGENTS.md "CLI Tools & Commands" section ⭐ **START HERE for automation**
+- 🤖 **Agentic Workflows** → AGENTS.md "Agentic CLI Workflows" section ⭐ **Multi-step automation patterns**
+- 🔧 **Database Tools** → `tools/db-schema.js`, `tools/db-query.js` ⭐ **Database inspection without dialogs**
+- 📊 **Analysis Tools** → `tools/intelligent-crawl.js` ⭐ **Rapid crawl analysis**
+- 🧹 **Data Correction** → `tools/corrections/` ⭐ **Safe data manipulation**
+- 📈 **Performance Tools** → `tools/benchmarks/` ⭐ **Compression and performance testing**
+- 🔍 **Debug Tools** → `tools/debug/` ⭐ **Child process debugging**
+
 **Crawls (Foreground System)**
 - 🕷️ Crawl basics → `ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` (Section 1)
 - 🔗 Queues are internal → `docs/ARCHITECTURE_QUEUES_ARE_INTERNAL.md` ⭐ **Queues vs crawls terminology**
@@ -203,8 +212,8 @@ const taskCategories = {
 | Improve testing tools | `docs/POTENTIAL_TESTING_IMPROVEMENTS.md` ⭐ | Implement max 1 simple change per session |
 | Debug child processes | `DEBUGGING_CHILD_PROCESSES.md` | Check SSE logs, add MILESTONE events |
 | Build UI component | `CLIENT_MODULARIZATION_PLAN.md` | `HTML_COMPOSITION_ARCHITECTURE.md` |
-| Investigate slow queries | `DATABASE_ACCESS_PATTERNS.md` | `PERFORMANCE_INVESTIGATION_GUIDE.md` |
-| Review/improve documentation | `DOCUMENTATION_REVIEW_AND_IMPROVEMENT_GUIDE.md` ⭐ | `AI_AGENT_DOCUMENTATION_GUIDE.md` |
+| Use CLI tools for automation | AGENTS.md "CLI Tools & Commands" ⭐ | `tools/README.md` |
+| Build agentic workflows | AGENTS.md "Agentic CLI Workflows" ⭐ | Tool-specific documentation |
 | Run operations tasks | `RUNBOOK.md` | Server CLI reference in AGENTS.md |
 | Check project roadmap | `ROADMAP.md` | Review AGENTS.md current focus section |
 
@@ -336,7 +345,9 @@ This project has **two distinct systems**:
 - UI text must say "Resume Crawls", not "Resume Queues"
 - See `docs/ARCHITECTURE_QUEUES_ARE_INTERNAL.md` for complete explanation
 
-### UI Module Pattern ⚠️ CRITICAL
+### UI Module Pattern ⚠️ DEPRECATED
+
+**Note**: This section refers to the deprecated UI in `src/deprecated-ui/`. The new UI (v2) in `src/ui/` uses different patterns.
 
 **ES6 Modules Only**: All UI code uses `import/export`, NOT CommonJS `require/module.exports`
 
@@ -346,7 +357,7 @@ This project has **two distinct systems**:
 import { createCrawlControls } from './crawlControls.js';
 createCrawlControls({ elements, formElements, actions, formatters });
 
-// ❌ WRONG: Import alone does nothing
+# ❌ WRONG: Import alone does nothing
 import { createCrawlControls } from './crawlControls.js';
 // Missing call - no handlers attached!
 ```
@@ -354,12 +365,6 @@ import { createCrawlControls } from './crawlControls.js';
 **Common Bug** (Oct 2025): `index.js` imported `createCrawlControls` but never called it → start button had no click handler for months.
 
 **Verification**: Search `export function create*` → verify corresponding call site exists in `index.js`
-
-### Build Process
-
-**Auto-Build on Server Start**: Components auto-rebuild if sources newer than outputs (~100-300ms) - DEPRECATED  
-**Manual Build**: `node scripts/build-ui.js` (rebuilds index.js, global-nav.js, chunks) - DEPRECATED  
-**SASS**: `npm run sass:build` for styles, `npm run sass:watch` for auto-compile - DEPRECATED
 
 ---
 
@@ -442,6 +447,143 @@ const instrumentedDb = wrapWithTelemetry(db, { trackQueries: true });
 ```
 
 **See `docs/DATABASE_QUICK_REFERENCE.md` for complete patterns and WAL mode details.**
+
+---
+
+## CLI Tools & Commands
+
+**Comprehensive CLI toolkit for database operations, data analysis, and automation workflows.** All tools follow safety-first patterns with dry-run modes and clear output formatting.
+
+**When to consult**:
+- When performing database operations without VS Code approval dialogs
+- When analyzing crawl data or performance metrics
+- When running automated workflows or data corrections
+- When debugging system behavior or child processes
+
+### Core CLI Tools
+
+#### Database Inspection (No Approval Dialogs)
+```bash
+# Quick table overview
+node tools/db-schema.js tables
+
+# Detailed table structure
+node tools/db-schema.js describe <table>
+
+# Foreign key relationships
+node tools/db-schema.js fks
+
+# Table sizes and statistics
+node tools/db-table-sizes.js
+```
+
+#### Intelligent Crawl Analysis
+```bash
+# Rapid startup analysis (30 seconds)
+node tools/intelligent-crawl.js --limit 100
+
+# Full crawl analysis with coverage
+node tools/intelligent-crawl.js
+```
+
+#### Data Correction & Maintenance
+```bash
+# Safe data corrections (dry-run first)
+node tools/corrections/fix-foreign-keys.js
+node tools/corrections/fix-duplicate-places.js
+
+# Database maintenance
+node tools/vacuum-db.js
+node tools/db-maintenance.js
+```
+
+#### Performance & Benchmarking
+```bash
+# Compression benchmarks
+node tools/compression-benchmark.cjs
+
+# Database performance analysis
+node tools/db-table-sizes-fast.js
+```
+
+#### Debug & Analysis
+```bash
+# Child process debugging
+node tools/debug/child-process-monitor.js
+
+# Test log analysis
+node tools/count-testlogs.js
+```
+
+### Agentic CLI Workflows
+
+**Multi-step automation patterns for complex operations.** These workflows combine multiple CLI tools with decision logic for autonomous execution.
+
+#### Database Migration Workflow
+```javascript
+// Pattern: Safe schema migration with backup
+1. node tools/db-schema.js backup  // Create backup
+2. node tools/corrections/validate-data.js  // Pre-flight checks
+3. node tools/migrations/run-migration.js  // Apply changes
+4. node tools/db-schema.js verify  // Post-migration validation
+```
+
+#### Crawl Analysis Workflow
+```javascript
+// Pattern: Comprehensive crawl evaluation
+1. node tools/intelligent-crawl.js --limit 50  // Quick assessment
+2. node tools/analyze-country-hub-patterns.js  // Pattern analysis
+3. node tools/crawl-place-hubs.js  // Hub discovery validation
+4. node tools/export-gazetteer.js  // Export results
+```
+
+#### Data Quality Assurance Workflow
+```javascript
+// Pattern: Systematic data cleanup
+1. node tools/corrections/detect-issues.js  // Identify problems
+2. node tools/corrections/fix-foreign-keys.js --dry-run  // Preview fixes
+3. node tools/corrections/fix-foreign-keys.js --fix  // Apply fixes
+4. node tools/db-schema.js verify  // Confirm integrity
+```
+
+### Tool Categories
+
+| Category | Primary Tools | Purpose |
+|----------|---------------|---------|
+| **Database** | `db-schema.js`, `db-query.js`, `db-table-sizes.js` | Schema inspection, queries, statistics |
+| **Analysis** | `intelligent-crawl.js`, `analyze-country-hub-patterns.js` | Crawl analysis, pattern discovery |
+| **Correction** | `corrections/*.js` | Data cleanup, integrity fixes |
+| **Performance** | `benchmarks/`, `compression-benchmark.cjs` | Performance testing, optimization |
+| **Debug** | `debug/`, `manual-tests/` | Debugging, validation, testing |
+| **Maintenance** | `vacuum-db.js`, `cleanup-test-logs.js` | Database maintenance, cleanup |
+
+### Safety Patterns
+
+**All CLI tools follow these safety principles:**
+- ✅ **Dry-run mode** by default for destructive operations
+- ✅ **Clear output formatting** with emojis and structured data
+- ✅ **Progress indicators** for long-running operations
+- ✅ **Error handling** with actionable error messages
+- ✅ **No approval dialogs** - designed for automation
+
+**Example Safety Pattern**:
+```bash
+# Always preview first
+node tools/corrections/fix-data.js --dry-run
+
+# Then apply with clear confirmation
+node tools/corrections/fix-data.js --fix
+```
+
+### Integration with Agentic Workflows
+
+**CLI tools are designed for composition in automated workflows:**
+- **Structured output** for parsing by other tools
+- **Exit codes** for decision logic (0=success, 1=error, 2=warning)
+- **JSON output options** for programmatic consumption
+- **Idempotent operations** (safe to re-run)
+
+**See**: `tools/README.md` for complete tool reference and examples.
 
 ---
 
@@ -597,10 +739,16 @@ Key architecture docs:
 
 ---
 
-## 🎯 CURRENT FOCUS: Feature Development & Bug Fixes (October 2025)
+## 🎯 CURRENT FOCUS: CLI Tools & Agentic Workflows (October 2025)
 
-**Status**: ✅ Core infrastructure complete - active feature development  
-**Next**: Continue with background tasks, UI improvements, and optimizations
+**Status**: ✅ Core crawler and database infrastructure complete  
+**Next**: Expand CLI toolkit and implement agentic automation patterns
+
+**Priority Areas**:
+- **CLI Tools Enhancement**: Add new tools for data analysis, corrections, and maintenance
+- **Agentic Workflows**: Create multi-step automation patterns using CLI tools
+- **Tool Integration**: Ensure tools work together seamlessly for complex operations
+- **Documentation**: Keep CLI tools well-documented for easy discovery and usage
 
 ---
 

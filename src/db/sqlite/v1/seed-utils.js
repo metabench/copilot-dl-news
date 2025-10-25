@@ -11,7 +11,27 @@ function getCounts(db) {
 }
 
 function seedData(db, data) {
-    // This is a placeholder. In a real scenario, you would insert data.
+    if (data.planets) {
+        const insertPlanet = db.prepare("INSERT OR IGNORE INTO places (id, kind, source) VALUES (?, 'planet', ?)");
+        const insertPlanetName = db.prepare("INSERT OR IGNORE INTO place_names (place_id, name, lang, name_kind) VALUES (?, ?, ?, ?)");
+        for (const planet of data.planets) {
+            insertPlanet.run(planet.id, data.source);
+            if (planet.names) {
+                for (const lang in planet.names) {
+                    if (planet.names[lang].common) {
+                        for (const name of planet.names[lang].common) {
+                            insertPlanetName.run(planet.id, name, lang, 'common');
+                        }
+                    }
+                    if (planet.names[lang].aliases) {
+                        for (const name of planet.names[lang].aliases) {
+                            insertPlanetName.run(planet.id, name, lang, 'alias');
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 module.exports = {

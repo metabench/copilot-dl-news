@@ -1,6 +1,6 @@
 'use strict';
 
-const CURRENT_SCHEMA_FINGERPRINT = 'v1-2025-10-21';
+const CURRENT_SCHEMA_FINGERPRINT = 'v1-2025-10-22';
 const METADATA_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS schema_metadata (
     key TEXT PRIMARY KEY,

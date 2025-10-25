@@ -232,7 +232,8 @@ function detectPlaceHub({
   fetchAnalysis = null,
   gazetteerPlaceNames = null,
   minNavLinksThreshold = 10,
-  nonGeoTopicSlugs = null
+  nonGeoTopicSlugs = null,
+  db = null
 } = {}) {
   if (!url) return null;
 
@@ -400,9 +401,28 @@ function detectPlaceHub({
   let placeId = chosen ? (chosen.place_id || null) : null;
   let placeCountry = chosen ? (chosen.country_code || null) : null;
 
+  let isWorldOverride = false;
+
+  if (segments.includes('world') && db) {
+    try {
+      const planet = db.prepare("SELECT p.id, p.kind, p.country_code, pn.name FROM places p JOIN place_names pn ON p.id = pn.place_id WHERE p.kind = 'planet' AND pn.name = 'Earth' LIMIT 1").get();
+      if (planet) {
+        placeId = planet.id;
+        placeKind = planet.kind;
+        placeCountry = planet.country_code;
+        placeLabel = planet.name;
+        placeSlug = 'world';
+        placeSource = 'gazetteer-override';
+        isWorldOverride = true;
+      }
+    } catch (dbError) {
+      // ignore db errors during detection
+    }
+  }
+
   let fallbackInfo = null;
 
-  if (segments.length) {
+  if (segments.length && !isWorldOverride) {
     const fallbackSegment = segments[segments.length - 1];
     const fallbackSlug = slugify(fallbackSegment);
     if (fallbackSlug) {
@@ -554,6 +574,20 @@ function detectPlaceHub({
     topicKind = 'topic-place';
     if (!topicConfidence || topicConfidence === 'unproven') {
       topicConfidence = 'recognized';
+    }
+  }
+
+  if (placeSlug === 'world' && db && !isWorldOverride) {
+    try {
+      const planet = db.prepare("SELECT id, kind, country_code FROM places WHERE kind = 'planet' LIMIT 1").get();
+      if (planet) {
+        placeId = planet.id;
+        placeKind = planet.kind;
+        placeCountry = planet.country_code;
+        placeSource = 'gazetteer-override';
+      }
+    } catch (dbError) {
+      // ignore db errors during detection
     }
   }
 
