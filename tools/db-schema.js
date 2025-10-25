@@ -15,6 +15,18 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const {
+  getTableInfo,
+  getTableIndexes,
+  getIndexInfo,
+  getTableIndexNames,
+  getAllTablesAndViews,
+  tableExists,
+  getAllIndexes,
+  getForeignKeys,
+  getAllTables,
+  getTableRowCount
+} = require('../src/db/sqlite/v1/queries/schema');
 
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 
@@ -62,12 +74,7 @@ function formatTable(rows, options = {}) {
 }
 
 function listTables(db) {
-  const tables = db.prepare(`
-    SELECT name, type 
-    FROM sqlite_master 
-    WHERE type IN ('table', 'view') 
-    ORDER BY type, name
-  `).all();
+  const tables = getAllTablesAndViews(db);
   
   console.log(`\n${tables.length} tables/views found:\n`);
   console.log(formatTable(tables));
@@ -75,17 +82,14 @@ function listTables(db) {
 
 function describeTable(db, tableName) {
   // Check if table exists
-  const exists = db.prepare(`
-    SELECT name FROM sqlite_master 
-    WHERE type='table' AND name=?
-  `).get(tableName);
+  const exists = tableExists(db, tableName);
   
   if (!exists) {
     console.error(`Error: Table '${tableName}' not found`);
     process.exit(1);
   }
   
-  const columns = db.prepare(`PRAGMA table_info('${tableName}')`).all();
+  const columns = getTableInfo(db, tableName);
   
   console.log(`\nTable: ${tableName}`);
   console.log(`${columns.length} columns:\n`);
@@ -106,15 +110,10 @@ function listIndexes(db, tableName = null) {
   let indexes;
   
   if (tableName) {
-    indexes = db.prepare(`PRAGMA index_list('${tableName}')`).all();
+    indexes = getTableIndexes(db, tableName);
     console.log(`\nIndexes for table '${tableName}':\n`);
   } else {
-    indexes = db.prepare(`
-      SELECT name, tbl_name, sql 
-      FROM sqlite_master 
-      WHERE type='index' AND sql IS NOT NULL
-      ORDER BY tbl_name, name
-    `).all();
+    indexes = getAllIndexes(db);
     console.log(`\n${indexes.length} indexes found:\n`);
   }
   
@@ -127,7 +126,7 @@ function listIndexes(db, tableName = null) {
     // Detailed view for single table
     indexes.forEach(idx => {
       console.log(`Index: ${idx.name}${idx.unique ? ' (UNIQUE)' : ''}`);
-      const info = db.prepare(`PRAGMA index_info('${idx.name}')`).all();
+      const info = getIndexInfo(db, idx.name);
       info.forEach(col => {
         console.log(`  ${col.seqno}: ${col.name}`);
       });
@@ -144,17 +143,14 @@ function listIndexes(db, tableName = null) {
 }
 
 function listForeignKeys(db, tableName) {
-  const exists = db.prepare(`
-    SELECT name FROM sqlite_master 
-    WHERE type='table' AND name=?
-  `).get(tableName);
+  const exists = tableExists(db, tableName);
   
   if (!exists) {
     console.error(`Error: Table '${tableName}' not found`);
     process.exit(1);
   }
   
-  const fks = db.prepare(`PRAGMA foreign_key_list('${tableName}')`).all();
+  const fks = getForeignKeys(db, tableName);
   
   console.log(`\nForeign keys for table '${tableName}':\n`);
   
@@ -176,12 +172,7 @@ function listForeignKeys(db, tableName) {
 }
 
 function showStats(db) {
-  const tables = db.prepare(`
-    SELECT name 
-    FROM sqlite_master 
-    WHERE type='table' 
-    ORDER BY name
-  `).all();
+  const tables = getAllTables(db);
   
   console.log(`\nCounting rows in ${tables.length} tables...\n`);
   
@@ -190,8 +181,8 @@ function showStats(db) {
     const { name } = tables[i];
     process.stderr.write(`\r[${i + 1}/${tables.length}] ${name}...`.padEnd(60));
     try {
-      const result = db.prepare(`SELECT COUNT(*) as count FROM "${name}"`).get();
-      stats.push({ table: name, rows: result.count });
+      const count = getTableRowCount(db, name);
+      stats.push({ table: name, rows: count });
     } catch (err) {
       stats.push({ table: name, rows: 'ERROR' });
     }

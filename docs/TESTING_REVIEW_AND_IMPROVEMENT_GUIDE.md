@@ -2,7 +2,7 @@
 
 **Status**: Active Process Guide for AI Agents  
 **Purpose**: Systematic approach to testing review, validation, and improvement  
-**When to Use**: When user requests "test review", "fix tests", "validate tests", or "test audit"
+**When to Read**: When user requests "test review", "fix tests", "validate tests", or "test audit"
 
 ---
 

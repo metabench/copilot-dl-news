@@ -308,6 +308,40 @@ function displayResults(tableStats) {
 }
 
 async function main() {
+  // Check for help first
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    console.log(`
+Database Table Sizes Analyzer
+
+Analyze SQLite database table sizes and storage usage.
+
+USAGE:
+  node tools/db-table-sizes.js [options]
+
+DESCRIPTION:
+  This tool provides detailed analysis of database table sizes using the native
+  SQLite CLI for fast results, or falls back to a slower Node.js-based analysis.
+
+  It shows per-table row counts, sizes, and total database statistics.
+
+OPTIONS:
+  --help, -h    Show this help message
+
+OUTPUT:
+  - Table-by-table breakdown with row counts and sizes
+  - Total database size calculation
+  - Uses native SQLite CLI when available for speed
+
+REQUIREMENTS:
+  - SQLite database at data/news.db (or set DB_PATH env var)
+  - Internet connection for downloading SQLite CLI (optional, for faster analysis)
+
+EXAMPLES:
+  node tools/db-table-sizes.js    # Analyze default database
+`);
+    process.exit(0);
+  }
+
   const sqliteCliPath = await findOrDownloadSqliteCli();
 
   if (sqliteCliPath) {

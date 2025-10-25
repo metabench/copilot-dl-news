@@ -1,5 +1,7 @@
 # Place Hub Hierarchy
 
+**When to Read**: When working with geographic place hubs; when understanding the continent/country/region/city taxonomy; when implementing place-based crawling logic.
+
 ## Overview
 
 **Place hubs** are news website sections dedicated to geographic locations. They follow a hierarchical structure from large regions down to specific cities.

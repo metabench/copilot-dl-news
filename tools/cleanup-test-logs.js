@@ -31,6 +31,49 @@ const TESTLOGS_DIR = path.join(ROOT_DIR, 'testlogs');
 
 // Parse command line args
 const args = process.argv.slice(2);
+
+// Check for help first
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`
+Test Log Cleanup Tool
+
+Aggressive deletion strategy to minimize log file clutter.
+
+STRATEGY (Very Aggressive - Recommended):
+- Keep only 2 most recent "ALL" suite logs (latest + one fallback)
+- Keep only 1 most recent log per suite type (unit, integration, e2e)
+- NO time-based retention (ignore age entirely)
+- Result: Typically keeps 3-5 logs total, deletes 2,280+ files
+
+USAGE:
+  node tools/cleanup-test-logs.js [options]
+
+OPTIONS:
+  --help, -h       Show this help message
+  --execute        Actually delete files (default: dry-run preview)
+  --keep N         Keep N most recent logs instead of 2 (default: 2)
+  --all-only       Keep ONLY "ALL" suite logs (ignore others)
+  --stats          Show statistics without deleting
+  --parallel N     Use N worker threads (default: 2, max: 4)
+
+EXAMPLES:
+  node tools/cleanup-test-logs.js              # Dry run (show what would be deleted)
+  node tools/cleanup-test-logs.js --execute    # Delete files (keep 2 recent)
+  node tools/cleanup-test-logs.js --keep 5     # Keep 5 most recent logs
+  node tools/cleanup-test-logs.js --all-only   # Keep only "ALL" suite logs
+  node tools/cleanup-test-logs.js --stats      # Show statistics only
+
+PERFORMANCE:
+  - Uses worker threads for parallel processing (10x faster)
+  - Default: 2 workers, configurable with --parallel
+
+SAFETY:
+  - Dry-run by default - no files deleted without --execute
+  - Shows detailed deletion plan before executing
+`);
+  process.exit(0);
+}
+
 const dryRun = !args.includes('--execute');
 const showStats = args.includes('--stats');
 const allOnlyMode = args.includes('--all-only');

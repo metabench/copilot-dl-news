@@ -8,7 +8,33 @@
  *   node tools/count-testlogs.js --verbose    # Show file details
  */
 
-const fs = require('fs');
+// Check for help flag
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`
+Test Logs Counter
+
+Counts and analyzes files in the testlogs directory.
+
+USAGE:
+  node tools/count-testlogs.js [options]
+
+OPTIONS:
+  --help, -h       Show this help message
+  --breakdown      Show breakdown by test suite (unit, e2e, integration, etc.)
+  --verbose        Show detailed file information with sizes
+
+EXAMPLES:
+  node tools/count-testlogs.js                    # Show total count
+  node tools/count-testlogs.js --breakdown        # Show suite breakdown
+  node tools/count-testlogs.js --verbose          # Show file details and sizes
+
+OUTPUT:
+  Without options: Just the total number of log files
+  --breakdown: Counts per test suite
+  --verbose: File list with sizes, sorted by modification time
+`);
+  process.exit(0);
+}
 const path = require('path');
 
 const testlogsDir = path.join(__dirname, '..', 'testlogs');

@@ -16,6 +16,11 @@
 
 const path = require('path');
 const { openDatabase } = require('../src/db/sqlite/v1/connection');
+const {
+  findTablesWithCompression,
+  getTableRecordCount,
+  getCompressionStats
+} = require('../src/db/sqlite/v1/queries/compression');
 
 // ANSI color codes
 const colors = {
@@ -82,7 +87,7 @@ const db = openDatabase(dbPath, { readonly: true, fileMustExist: true });
 
 try {
   // Find all tables that have compression-related columns
-  const tablesWithCompression = findTablesWithCompression(db);
+  const tablesWithCompression = findTablesWithCompressionLocal(db);
 
   if (tablesWithCompression.length === 0) {
     console.log(`${colors.yellow}No tables with compression support found.${colors.reset}`);
@@ -97,7 +102,7 @@ try {
     console.log(`  Reference Table: ${tableInfo.referenceTable}`);
 
     // Get compression statistics for this table
-    const compressionStats = getCompressionStats(db, tableInfo);
+    const compressionStats = getCompressionStatsLocal(db, tableInfo);
     tableInfo.compressionStats = compressionStats; // Store for summary
 
     if (compressionStats.length === 0) {
@@ -142,24 +147,15 @@ try {
   db.close();
 }
 
-function findTablesWithCompression(db) {
+function findTablesWithCompressionLocal(db) {
   const tables = [];
 
   // Query to find tables with compression_type_id columns
-  const compressionTables = db.prepare(`
-    SELECT
-      m.name as table_name,
-      p.name as column_name
-    FROM sqlite_master m
-    JOIN pragma_table_info(m.name) p
-    WHERE m.type = 'table'
-      AND p.name = 'compression_type_id'
-    ORDER BY m.name
-  `).all();
+  const compressionTables = findTablesWithCompression(db);
 
   for (const table of compressionTables) {
     // Get total record count for this table
-    const totalRecords = db.prepare(`SELECT COUNT(*) as count FROM ${table.table_name}`).get().count;
+    const totalRecords = getTableRecordCount(db, table.table_name);
 
     tables.push({
       tableName: table.table_name,
@@ -173,25 +169,11 @@ function findTablesWithCompression(db) {
   return tables;
 }
 
-function getCompressionStats(db, tableInfo) {
+function getCompressionStatsLocal(db, tableInfo) {
   const stats = [];
 
-  // Query compression usage grouped by compression type
-  const query = `
-    SELECT
-      ct.algorithm,
-      ct.level,
-      ct.window_bits,
-      COUNT(*) as count
-    FROM ${tableInfo.tableName} t
-    JOIN compression_types ct ON t.${tableInfo.compressionColumn} = ct.id
-    WHERE t.${tableInfo.compressionColumn} IS NOT NULL
-    GROUP BY ct.algorithm, ct.level, ct.window_bits
-    ORDER BY COUNT(*) DESC
-  `;
-
   try {
-    const results = db.prepare(query).all();
+    const results = getCompressionStats(db, tableInfo);
     stats.push(...results);
   } catch (error) {
     if (verbose) {

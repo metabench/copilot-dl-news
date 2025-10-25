@@ -2,6 +2,8 @@
 
 *A Comprehensive Framework for Autonomous AI Task Execution*
 
+**When to Read**: When you need to implement complex, multi-step autonomous tasks; when designing agentic systems that operate independently; when you want to understand advanced patterns for goal-directed AI workflows.
+
 ---
 
 ## Preface

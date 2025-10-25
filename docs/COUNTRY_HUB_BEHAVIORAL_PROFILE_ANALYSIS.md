@@ -1,5 +1,7 @@
 # Country Hub Behavioral Profile Analysis & Enhancement Plan
 
+**When to Read**: When working on country hub discovery logic; when analyzing crawler behavioral patterns; when implementing goal-driven crawling strategies.
+
 ## Executive Summary
 
 The current intelligent crawler has robust technical infrastructure for country hub discovery and prioritization, but lacks a unified behavioral profile that defines goal-driven, state-aware crawling behavior. This analysis reveals that while individual components (GazetteerAwareReasonerPlugin, CountryHubGapService, priority bonuses) work well, they operate independently without coordinated behavioral objectives.

@@ -27,6 +27,20 @@ const { Worker } = require('worker_threads');
 const { openDatabase } = require('../src/db/sqlite/v1/connection');
 const { decompress } = require('../src/utils/compression');
 const { HtmlArticleExtractor } = require('../src/utils/HtmlArticleExtractor');
+const {
+  tableExists,
+  getTableCount,
+  getQueryCount,
+  getTotalArticlesCount,
+  getArticlesQuery,
+  getArticlesChunk,
+  insertCompressionType,
+  getLastInsertRowid,
+  insertArticle,
+  getExportedArticlesCount,
+  getExtractionStats,
+  getCompressionStats
+} = require('../src/db/sqlite/v1/queries/pages.export');
 
 // ANSI color codes
 const colors = {
@@ -261,67 +275,26 @@ async function runExport() {
   // Check if required tables exist (normalized schema)
   const requiredTables = ['urls', 'http_responses', 'content_storage', 'content_analysis'];
   for (const table of requiredTables) {
-    const exists = sourceDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table);
-    if (!exists) {
+    if (!tableExists(sourceDb, table)) {
       console.error(`Error: Required table '${table}' not found in source database`);
       process.exit(1);
     }
   }
 
   // Count total articles (successful downloads with content)
-  const totalCount = sourceDb.prepare(`
-    SELECT COUNT(*) as count
-    FROM urls u
-    INNER JOIN http_responses hr ON hr.url_id = u.id
-    INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-    WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL
-  `).get().count;
+  const totalCount = getTableCount(sourceDb, 'urls u INNER JOIN http_responses hr ON hr.url_id = u.id INNER JOIN content_storage cs ON cs.http_response_id = hr.id WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL');
   console.log(`Found ${totalCount} articles with content in source database`);
 
   // Get most recent article per URL (normalized schema) - ensure uniqueness
-  const articlesQuery = `
-    SELECT DISTINCT
-      u.id,
-      u.url,
-      u.canonical_url,
-      u.host,
-      ca.title,
-      ca.date,
-      ca.section,
-      cs.content_blob AS html,
-      ct.algorithm AS compression_algorithm,
-      hr.fetched_at AS crawled_at
-    FROM urls u
-    INNER JOIN http_responses hr ON hr.url_id = u.id
-    INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-    INNER JOIN compression_types ct ON cs.compression_type_id = ct.id
-    INNER JOIN content_analysis ca ON ca.content_id = cs.id
-    INNER JOIN (
-      SELECT u2.url, MAX(hr2.fetched_at) as max_crawled
-      FROM urls u2
-      INNER JOIN http_responses hr2 ON hr2.url_id = u2.id
-      INNER JOIN content_storage cs2 ON cs2.http_response_id = hr2.id
-      WHERE hr2.http_status = 200 AND cs2.content_blob IS NOT NULL
-      GROUP BY u2.url
-    ) latest ON u.url = latest.url AND hr.fetched_at = latest.max_crawled
-    WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL
-    ORDER BY hr.fetched_at DESC
-  `;
+  const articlesQuery = getArticlesQuery();
 
   // Get articles in chunks to avoid memory issues
-  const getArticlesChunk = (offset, chunkSize) => {
-    const query = articlesQuery + ` LIMIT ${chunkSize} OFFSET ${offset}`;
-    return sourceDb.prepare(query).all();
+  const getArticlesChunkLocal = (offset, chunkSize) => {
+    return getArticlesChunk(sourceDb, offset, chunkSize);
   };
 
   // Count total articles for progress tracking
-  const totalArticles = sourceDb.prepare(`
-    SELECT COUNT(*) as count
-    FROM urls u
-    INNER JOIN http_responses hr ON hr.url_id = u.id
-    INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-    WHERE hr.http_status = 200 AND cs.content_blob IS NOT NULL
-  `).get().count;
+  const totalArticles = getTotalArticlesCount(sourceDb);
 
   const articlesToProcess = limit || totalArticles;
   console.log(`Will process ${articlesToProcess} articles in chunks to avoid memory issues`);
@@ -398,26 +371,17 @@ async function runExport() {
     `);
 
     // Insert compression type
-    const insertCompressionType = outputDb.prepare(`
-      INSERT INTO compression_types (name, level, window_bits)
-      VALUES (?, ?, ?)
-    `);
-    insertCompressionType.run(compressionMethod, compressionLevel, compressionMethod === 'brotli' ? windowBits : null);
-    compressionTypeId = outputDb.prepare('SELECT last_insert_rowid() as id').get().id;
+    compressionTypeId = insertCompressionType(outputDb, {
+      name: compressionMethod,
+      level: compressionLevel,
+      window_bits: compressionMethod === 'brotli' ? windowBits : null
+    });
   }
 
-  // Prepare insert statement
-  const insertArticle = outputDb.prepare(`
-    INSERT INTO articles (
-      url, canonical_url, host, title, date, section, html, crawled_at
-      ${extractionMode === 'article-plus' ? ', extracted_text, word_count, metadata, extraction_success' : ''}
-      ${compressionMethod !== 'none' ? ', compressed_html, compression_type_id, original_size, compressed_size, compression_ratio' : ''}
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?
-      ${extractionMode === 'article-plus' ? ', ?, ?, ?, ?' : ''}
-      ${compressionMethod !== 'none' ? ', ?, ?, ?, ?, ?' : ''}
-    )
-  `);
+  // Prepare insert function with options
+  const insertArticleWithOptions = (article) => {
+    return insertArticle(outputDb, article, { extractionMode, compressionMethod });
+  };
 
 // Create worker pool for parallel compression
 function createWorkerPool(size) {
@@ -540,20 +504,33 @@ const startTime = Date.now();
       outputDb.transaction(() => {
         for (const result of compressedBatch) {
           try {
-            if (compressionMethod !== 'none' && result.success) {
-              insertArticle.run(
-                result.url, result.canonical_url, result.host,
-                result.title, result.date, result.section, result.html, result.crawled_at,  // html kept for reference
-                ...(extractionMode === 'article-plus' ? [result.extractedText, result.wordCount, result.metadata, result.extractionSuccess] : []),
-                result.compressedHtml, compressionTypeId, result.originalSize, result.compressedSize, result.compressionRatio
-              );
-            } else {
-              insertArticle.run(
-                result.url, result.canonical_url, result.host,
-                result.title, result.date, result.section, result.html, result.crawled_at,
-                ...(extractionMode === 'article-plus' ? [result.extractedText, result.wordCount, result.metadata, result.extractionSuccess] : [])
-              );
+            const article = {
+              url: result.url,
+              canonical_url: result.canonical_url,
+              host: result.host,
+              title: result.title,
+              date: result.date,
+              section: result.section,
+              html: result.html, // html kept for reference
+              crawled_at: result.crawled_at
+            };
+
+            if (extractionMode === 'article-plus') {
+              article.extracted_text = result.extractedText;
+              article.word_count = result.wordCount;
+              article.metadata = result.metadata;
+              article.extraction_success = result.extractionSuccess;
             }
+
+            if (compressionMethod !== 'none' && result.success) {
+              article.compressed_html = result.compressedHtml;
+              article.compression_type_id = compressionTypeId;
+              article.original_size = result.originalSize;
+              article.compressed_size = result.compressedSize;
+              article.compression_ratio = result.compressionRatio;
+            }
+
+            insertArticleWithOptions(article);
           } catch (error) {
             console.warn(`Warning: Failed to insert article ${result.id}: ${error.message}`);
           }
@@ -594,21 +571,13 @@ try {
 } finally {
   terminateWorkers(workers);
 }
-  const exportedCount = outputDb.prepare('SELECT COUNT(*) as count FROM articles').get().count;
+  const exportedCount = getExportedArticlesCount(outputDb);
   console.log(`\n✓ Export completed successfully`);
   console.log(`📊 Exported ${exportedCount} articles to ${outputFile}`);
   console.log(`📁 File saved to: ${outputDbPath}`);
 
   if (extractionMode === 'article-plus') {
-    const extractionStats = outputDb.prepare(`
-      SELECT
-        COUNT(*) as total_articles,
-        SUM(CASE WHEN extraction_success = 1 THEN 1 ELSE 0 END) as successful_extractions,
-        AVG(word_count) as avg_word_count,
-        SUM(word_count) as total_words
-      FROM articles
-      WHERE extraction_success IS NOT NULL
-    `).get();
+    const extractionStats = getExtractionStats(outputDb);
 
     if (extractionStats.total_articles > 0) {
       const successRate = (extractionStats.successful_extractions / extractionStats.total_articles * 100).toFixed(1);
@@ -620,16 +589,7 @@ try {
   }
 
   if (compressionMethod !== 'none') {
-    const compressionStats = outputDb.prepare(`
-      SELECT
-        AVG(compression_ratio) as avg_ratio,
-        MIN(compression_ratio) as min_ratio,
-        MAX(compression_ratio) as max_ratio,
-        SUM(original_size) as total_original,
-        SUM(compressed_size) as total_compressed
-      FROM articles
-      WHERE compressed_html IS NOT NULL
-    `).get();
+    const compressionStats = getCompressionStats(outputDb);
 
     if (compressionStats.total_original > 0) {
       const overallRatio = compressionStats.total_original / compressionStats.total_compressed;

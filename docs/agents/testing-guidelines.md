@@ -13,7 +13,7 @@ related: [testing-quick-reference, testing-review-guide, test-timeout-guards]
 
 This document contains critical testing guidelines, patterns, and workflows that AI agents must follow when working with the codebase. It covers everything from basic test discipline to advanced patterns for preventing hangs, handling async operations, and debugging failures.
 
-## When to use
+## When to Read
 
 - When writing new code or modifying existing code
 - When tests are failing and need systematic fixing

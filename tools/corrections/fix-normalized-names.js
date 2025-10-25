@@ -14,7 +14,7 @@
  */
 
 const { ensureDatabase } = require('../../src/db/sqlite');
-const { normalizeName } = require('../../src/db/sqlite/queries/gazetteer.utils');
+const { fixNormalizedNames } = require('../../src/db/sqlite/v1/queries/gazetteer.names');
 const path = require('path');
 
 function getArg(name, fallback) {
@@ -33,12 +33,7 @@ const db = ensureDatabase(dbPath);
 console.log('\n🔍 Finding place names with empty normalized values...');
 if (dryRun) console.log('(DRY RUN MODE - no changes will be made)\n');
 
-const namesToFix = db.prepare(`
-  SELECT id, name, normalized, lang
-  FROM place_names
-  WHERE normalized = '' AND name != ''
-  ORDER BY lang, name
-`).all();
+const { namesToFix, fixedCount, skippedCount } = fixNormalizedNames(db, { dryRun });
 
 console.log(`Found ${namesToFix.length} place names with empty normalized values`);
 
@@ -59,21 +54,11 @@ for (const [lang, count] of Object.entries(byLang).sort((a, b) => b[1] - a[1])) 
 }
 console.log('');
 
-const updateNormalized = db.prepare(`
-  UPDATE place_names
-  SET normalized = ?
-  WHERE id = ?
-`);
-
-let fixedCount = 0;
-let skippedCount = 0;
-
 for (const nameRecord of namesToFix) {
-  const newNormalized = normalizeName(nameRecord.name);
+  const newNormalized = require('../../src/db/sqlite/queries/gazetteer.utils').normalizeName(nameRecord.name);
 
   if (!newNormalized) {
     console.log(`⚠ Name "${nameRecord.name}" (${nameRecord.lang}) still normalizes to empty - skipping`);
-    skippedCount++;
     continue;
   }
 
@@ -83,14 +68,7 @@ for (const nameRecord of namesToFix) {
     console.log(`  New normalized: '${newNormalized}'`);
     console.log('');
   } else {
-    try {
-      updateNormalized.run(newNormalized, nameRecord.id);
-      console.log(`✓ Fixed "${nameRecord.name}" (${nameRecord.lang}) → "${newNormalized}"`);
-      fixedCount++;
-    } catch (err) {
-      console.error(`✗ Error fixing name ${nameRecord.id}: ${err.message}`);
-      skippedCount++;
-    }
+    console.log(`✓ Fixed "${nameRecord.name}" (${nameRecord.lang}) → "${newNormalized}"`);
   }
 }
 

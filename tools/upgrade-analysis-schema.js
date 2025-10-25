@@ -11,6 +11,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { getTableInfo, getTableIndexNames } = require('../src/db/sqlite/v1/queries/schema');
 
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 
@@ -35,7 +36,7 @@ function main() {
   
   try {
     // Check current columns
-    const beforeColumns = db.prepare(`PRAGMA table_info('analysis_runs')`).all();
+    const beforeColumns = getTableInfo(db, 'analysis_runs');
     const beforeNames = new Set(beforeColumns.map(col => col.name));
     
     console.log(`\nBefore: ${beforeColumns.length} columns`);
@@ -46,7 +47,7 @@ function main() {
     ensureAnalysisRunSchema(db);
     
     // Check after
-    const afterColumns = db.prepare(`PRAGMA table_info('analysis_runs')`).all();
+    const afterColumns = getTableInfo(db, 'analysis_runs');
     const afterNames = new Set(afterColumns.map(col => col.name));
     
     console.log(`After: ${afterColumns.length} columns`);
@@ -63,11 +64,7 @@ function main() {
     }
     
     // Check indexes
-    const indexes = db.prepare(`
-      SELECT name 
-      FROM sqlite_master 
-      WHERE type='index' AND tbl_name='analysis_runs'
-    `).all();
+    const indexes = getTableIndexNames(db, 'analysis_runs');
     
     console.log(`\nIndexes on analysis_runs: ${indexes.length}`);
     indexes.forEach(idx => {

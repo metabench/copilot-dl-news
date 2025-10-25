@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureDb } = require('../src/db/sqlite/ensureDb');
+const { vacuumDatabase } = require('../src/db/sqlite/v1/queries/maintenance');
 
 function getFileSize(filePath) {
   try {
@@ -100,7 +101,7 @@ async function main() {
     const db = ensureDb(dbPath);
 
     // Run vacuum
-    db.prepare('VACUUM').run();
+    vacuumDatabase(db);
 
     db.close();
 

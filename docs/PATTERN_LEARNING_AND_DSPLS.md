@@ -2,6 +2,7 @@
 
 **Status**: ✅ Implemented (October 2025)  
 **Purpose**: Automatically learn URL patterns from existing data to improve place hub discovery accuracy (countries, regions, cities)
+**When to Read**: When implementing or improving country/region/city hub discovery; when analyzing news site URL patterns; when working with DSPL (Domain-Specific Pattern Library) files.
 
 ## Overview
 

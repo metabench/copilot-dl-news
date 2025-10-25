@@ -35,140 +35,11 @@ const taskCategories = {
 // STEP 5: Cross-reference as you encounter references
 ```
 
-### Topic Index (Quick Navigation)
+###  Complete Documentation Index
 
-**Service Layer & Code Organization**
-- 🔍 Service layer guide → `docs/SERVICE_LAYER_GUIDE.md` ⭐ **START HERE for services**
-- 📐 Service extraction patterns → `SERVICE_LAYER_ARCHITECTURE.md`
-- 🛠️ News website service refactor → `docs/ARCHITECTURE_REFACTORING_NEWS_WEBSITES.md`
-- 📊 Performance analysis → `ARCHITECTURE_ANALYSIS_AND_IMPROVEMENTS.md`
-- 🌐 API endpoint reference → `docs/API_ENDPOINT_REFERENCE.md` ⭐ **Complete API docs**
+**For the complete documentation index with all 187 docs organized by category, see `INDEX_FOR_AGENTS.md`.**
 
-**CLI Tools & Agentic Workflows**
-- 🛠️ **CLI Tools Overview** → AGENTS.md "CLI Tools & Commands" section ⭐ **START HERE for automation**
-- 🤖 **Agentic Workflows** → AGENTS.md "Agentic CLI Workflows" section ⭐ **Multi-step automation patterns**
-- 📚 **Grok's Agentic Workflows Guide** → `docs/GUIDE_TO_AGENTIC_WORKFLOWS_BY_GROK.md` ⭐ **Comprehensive framework for autonomous task execution**
-- 🔧 **Database Tools** → `tools/db-schema.js`, `tools/db-query.js` ⭐ **Database inspection without dialogs**
-- 📊 **Analysis Tools** → `tools/intelligent-crawl.js` ⭐ **Rapid crawl analysis**
-- 🧹 **Data Correction** → `tools/corrections/` ⭐ **Safe data manipulation**
-- 📈 **Performance Tools** → `tools/benchmarks/` ⭐ **Compression and performance testing**
-- 🔍 **Debug Tools** → `tools/debug/` ⭐ **Child process debugging**
-
-**Crawls (Foreground System)**
-- 🕷️ Crawl basics → `ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` (Section 1)
-- 🔗 Queues are internal → `docs/ARCHITECTURE_QUEUES_ARE_INTERNAL.md` ⭐ **Queues vs crawls terminology**
-- 🧠 Hierarchical planning → `docs/HIERARCHICAL_PLANNING_INTEGRATION.md` ⭐ **Multi-level strategic planning**
-- 🚀 Intelligent crawl startup → `docs/INTELLIGENT_CRAWL_OUTPUT_LIMITING.md` ⭐ **Rapid iteration workflow**
-- 🗺️ Place hub hierarchy → `docs/PLACE_HUB_HIERARCHY.md` ⭐ **Continent/Country/Region/City taxonomy**
-- � Pattern learning & DSPLs → `docs/PATTERN_LEARNING_AND_DSPLS.md` ⭐ **Auto-learn URL patterns from data**
-- �🌍 Geography crawl → `GEOGRAPHY_CRAWL_TYPE.md`, `GEOGRAPHY_E2E_TEST.md`
-- 🗺️ Gazetteer breadth-first → `GAZETTEER_BREADTH_FIRST_IMPLEMENTATION.md`
-- ⚙️ Concurrency model → `docs/CONCURRENCY_IMPLEMENTATION_SUMMARY.md`
-- 🧪 E2E test implementation → `docs/GEOGRAPHY_E2E_IMPLEMENTATION_SUMMARY.md`
-- 📊 Geography flowchart UI → `docs/GEOGRAPHY_FLOWCHART_IMPLEMENTATION.md`
-- 🎯 Country hub behavioral profile → `docs/COUNTRY_HUB_BEHAVIORAL_PROFILE_ANALYSIS.md` ⭐ **Goal-driven crawling behavior**
-
-**Background Tasks (Background System)**
-- ⚙️ Task basics → `ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` (Section 2)
-- 🗜️ Compression → `BACKGROUND_TASKS_COMPLETION.md`, `COMPRESSION_IMPLEMENTATION_FULL.md`
-- ⚡ Compression performance → `docs/COMPRESSION_PERFORMANCE_SUMMARY.md`
-- 🔬 Analysis → `ANALYSIS_AS_BACKGROUND_TASK.md`
-- 📈 Coverage API → `docs/COVERAGE_API_AND_JOB_DETAIL_IMPLEMENTATION.md`
-
-**Database**
-- 🔌 Getting DB handle → AGENTS.md "How to Get a Database Handle" section
-- � Database ERD → `docs/DATABASE_SCHEMA_ERD.md` ⭐ **Visual schema reference**
-- �📐 Normalization plan → `DATABASE_NORMALIZATION_PLAN.md` (1660 lines, read when implementing schema changes)
-- 🚀 Migration infra → `PHASE_0_IMPLEMENTATION.md` (ready-to-run code)
-- 🪣 Bucket storage plan → `docs/BUCKET_STORAGE_IMPLEMENTATION_PLAN.md`
-- 🔍 Query patterns → `DATABASE_ACCESS_PATTERNS.md`
-- 🚀 Query optimization case study → `DATABASE_ACCESS_PATTERNS.md` (Queues N+1 fix, Oct 2025)
-- 🧰 Query module conventions → `src/db/sqlite/queries/README.md`
-- 🔧 Correction tools → `tools/corrections/README.md` ⭐ **Data cleanup workflow**
-- 🗄️ Deduplication guide → `docs/GAZETTEER_DEDUPLICATION_IMPLEMENTATION.md` ⭐ **Fix duplicates**
-- 💾 Backup policy → AGENTS.md "Database Backup Policy" section ⭐ **Keep only one recent backup**
-
-**UI Development**
-- ⚠️ **DEPRECATED**: UI code moved to `src/deprecated-ui/` (October 2025)
-- ⚠️ **DO NOT TEST DEPRECATED UI**: Agents should not run tests on deprecated UI code. Use `deprecated-ui` test suite only when explicitly requested for reference.
-- 📋 **New UI Planning**: `src/ui/README.md` - Simple data-focused interface
-- 🎨 HTML composition → `deprecated-ui/express/public/views/` (reference only)
-- 🧩 Component modules → `deprecated-ui/express/public/components/` (reference only)
-- 📡 SSE integration → `deprecated-ui/express/routes/events.js` (reference only)
-
-**Language Tools & Utilities**
-- 🔧 Architectural patterns → `LANG_TOOLS_ARCHITECTURAL_PATTERNS.md`
-- 🧠 Pattern catalog → `LANG_TOOLS_PATTERNS.md`
-- 🗺️ Action plan → `LANG_TOOLS_ACTION_PLAN.md`
-- ⏱️ Timeout tuning → `AGENTS_UPDATE_TIMEOUT_OPTIMIZATION.md`
-
-**Testing & Debugging**
-- 🧪 Test review process → `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` ⭐ **Systematic test fixing**
-- 📊 Current test status → `docs/TESTING_STATUS.md` ⭐ **Live test state (max 200 lines)**
-- 🧪 Test patterns → AGENTS.md "Testing Guidelines" section
-- ⏱️ Timeout guards → `docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md` ⭐ **Prevent silent hangs**
-- 🔧 Test fixes Oct 2025 → `docs/TEST_FIXES_2025-10-10.md` ⭐ **Recent fixes**
-- � Async cleanup guide → `docs/TESTING_ASYNC_CLEANUP_GUIDE.md` ⭐ READ WHEN TESTS HANG
-- �🐛 Performance debugging → `PERFORMANCE_INVESTIGATION_GUIDE.md`
-- 🚨 Geography issues → `GEOGRAPHY_E2E_INVESTIGATION.md`, `GEOGRAPHY_CRAWL_CONSOLE_ERRORS.md`
-- 📉 Analysis page issues → `docs/ANALYSIS_PAGE_ISSUES.md`
-- 🔍 Child process debugging → `docs/DEBUGGING_CHILD_PROCESSES.md`
-- 📈 Long-run E2E telemetry → `E2E_TEST_PROGRESS_LOGGING.md`
-- 🧭 Specialized E2E suite → `SPECIALIZED_E2E_TESTING.md`
-- 🧪 Specialized E2E feature suite → `tests/e2e-features/README.md`
-- 🌍 Geography E2E testing -> `docs/GEOGRAPHY_E2E_TESTING.md`
-- 🛠️ Debug scripts quickstart → `tools/debug/README.md`
-
-**Documentation & Maintenance**
-- 📚 Documentation review → `DOCUMENTATION_REVIEW_AND_IMPROVEMENT_GUIDE.md` ⭐ WHEN REQUESTED
-- 🧪 Testing review → `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` ⭐ WHEN REQUESTED (integrates with doc review)
-- 📋 Test timeout integration → `docs/documentation-review/2025-10-10-test-timeout-integration-summary.md` ⭐ **Complete**
-- 🏁 Project overview → `README.md`
-- 📝 AI-friendly docs → `AI_AGENT_DOCUMENTATION_GUIDE.md`
-- 🔄 Documentation strategy → AGENTS.md "AI Agent Documentation Strategy" section
-- 🎯 Improvement roadmap → `DOCUMENTATION_STRATEGY_ENHANCEMENT.md`
-- 🤖 Agent instructions → `.github/instructions/GitHub Copilot.instructions.md`
-- � Phase 6 self-improvement → `docs/documentation-review/2025-10-10-phase-6-self-improvement.md`
-- �🗂️ Documentation review snapshot 2025-10-09 → `docs/documentation-review/2025-10-09-findings.md`, `docs/documentation-review/2025-10-09-missing-in-agents.md`, `docs/documentation-review/2025-10-09-needs-when-to-read.md`, `docs/documentation-review/2025-10-09-zero-crossrefs.md`
-- 🗂️ Documentation review snapshot 2025-10-10 → `docs/documentation-review/2025-10-10-review-complete.md`, `docs/documentation-review/2025-10-10-missing-in-agents.md`, `docs/documentation-review/2025-10-10-needs-when-to-read.md`, `docs/documentation-review/2025-10-10-zero-crossrefs.md`
-- 🗂️ Documentation review archive (2025-10-10) → `docs/documentation-review/2025-10-10/2025-10-09-missing-in-agents.md`, `docs/documentation-review/2025-10-10/2025-10-09-needs-when-to-read.md`, `docs/documentation-review/2025-10-10/2025-10-09-zero-crossrefs.md`
-
-**Operations & Workflows**
-- 📖 Operations guide → `docs/RUNBOOK.md`
-- ⚙️ Configuration reference → `docs/CONFIGURATION_GUIDE.md`
-- 🗺️ Project roadmap → `docs/ROADMAP.md`
-- ⚡ Rapid feature mode → `docs/RAPID_FEATURE_MODE.md`
-- ⚡ Rapid feature chatmode → `.github/chatmodes/Rapid Features.chatmode.md`
-- 🧪 Server root verification → `docs/SERVER_ROOT_VERIFICATION.md`
-- 🌐 Geography progress log → `docs/GEOGRAPHY_PROGRESS_IMPLEMENTATION.md`
-- � Geography fixes summary → `GEOGRAPHY_CRAWL_FIXES_SUMMARY.md`
-- �📊 News website stats cache → `NEWS_WEBSITES_STATS_CACHE.md`
-- 🔬 Test performance results → `docs/TEST_PERFORMANCE_RESULTS.md`
-
-**System Components & Architecture**
-- 🧩 Component overview → `docs/COMPONENTS.md`
-- 🚀 Enhanced features → `docs/ENHANCED_FEATURES.md` (crawler intelligence, priority system)
-- 🔄 Architecture update log → `docs/ARCHITECTURE_UPDATE_CRAWLS_VS_TASKS.md`
-- 📡 SSE shutdown design → `SSE_CLOSURE_ARCHITECTURE.md`
-
-**Advanced Planning**
-- 🤖 GOFAI planning → `GOFAI_ARCHITECTURE.md` ⭐ **Symbolic AI foundation**
-- 🔮 Async planner → `ASYNC_PLANNER_PREVIEW.md`
-- 🎯 Advanced suite → `ADVANCED_PLANNING_SUITE.md`
-- 🔌 Integration design → `ADVANCED_PLANNING_INTEGRATION_DESIGN.md`
-- 🧠 Hierarchical planning integration → `docs/HIERARCHICAL_PLANNING_INTEGRATION.md` ⭐ **IMPLEMENTED**
-
-**Implementation & Historical Notes**
-- 🏙️ Cities crawl implementation → `docs/CITIES_IMPLEMENTATION_COMPLETE.md`
-- 📈 Cities integration status → `docs/CITIES_INTEGRATION_STATUS.md`
-- 📦 Database refactoring summary → `docs/DATABASE_REFACTORING_COMPLETE.md`
-- 🧱 Service layer roadmap → `docs/PHASE_3_IMPLEMENTATION_GUIDE.md`
-- � Future refactor vision → `docs/REFACTORING_PLAN.md`
-- �🔄 Telemetry and progress complete → `docs/TELEMETRY_AND_PROGRESS_COMPLETE.md`
-- 🎯 Specialized crawl concurrency → `docs/SPECIALIZED_CRAWL_CONCURRENCY.md`
-- 📋 Phase 3 refactoring complete → `docs/PHASE_3_REFACTORING_COMPLETE.md`
-- 📋 Phase 4 refactoring complete → `docs/PHASE_4_REFACTORING_COMPLETE.md`
-- 📋 Phase 6 assessment → `docs/PHASE_6_ASSESSMENT.md`
+---
 
 ## Index of Operational Docs
 
@@ -183,6 +54,9 @@ const taskCategories = {
 | `database-schema-tools` | Quick database inspection without dialogs | When needing database structure info | database, schema, tools | 2025-10-19 |
 | `tdd-guidelines` | Ensures reliable code changes through testing | When implementing new features | testing, tdd, development | 2025-10-19 |
 | `intelligent-crawl-startup` | Rapid iteration on crawl startup output | When improving startup output | crawls, startup, analysis | 2025-10-19 |
+| `testing-focused-workflow` | Targeted test development patterns | When developing features with comprehensive test coverage | testing, workflow, development | 2025-10-19 |
+| `database-migration-quick-reference` | Migration patterns and commands | When performing database migrations | database, migration, tools | 2025-10-19 |
+| `analysis-background-integration` | Analysis task implementation details | When working with background analysis tasks | background-tasks, analysis, integration | 2025-10-19 |
 
 ### When to Read Which Docs
 
@@ -219,6 +93,15 @@ const taskCategories = {
 | Check project roadmap | `ROADMAP.md` | Review AGENTS.md current focus section |
 | Execute commands safely | AGENTS.md "OS Awareness & Command Line Best Practices" ⭐ | `docs/COMMAND_EXECUTION_GUIDE.md` |
 | Learn comprehensive agentic workflow patterns | `docs/GUIDE_TO_AGENTIC_WORKFLOWS_BY_GROK.md` ⭐ | Grok's complete framework for autonomous task execution |
+| Perform database migration | `docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md` ⭐ | `docs/DATABASE_SCHEMA_ISSUES_STATUS.md` (current state) |
+| Check database schema status | `docs/DATABASE_SCHEMA_ISSUES_STATUS.md` | When investigating schema-related bugs or planning migrations |
+| Follow testing focused workflow | `docs/TESTING_FOCUSED_WORKFLOW.md` | When developing features with comprehensive test coverage |
+| Analyze JS GUI3 patterns | `docs/JSGUI3_PATTERNS_ANALYSIS.md` | When working with UI component architecture and patterns |
+| Review queues page optimizations | `docs/QUEUES_PAGE_OPTIMIZATION.md` | When optimizing UI performance and user experience |
+| Review language tools improvements | `docs/QUEUES_PAGE_LANG_TOOLS_IMPROVEMENTS.md` | When enhancing language processing capabilities |
+| Analyze false positive test results | `docs/POST_MORTEM_FALSE_POSITIVE_TEST_RESULTS.md` | When investigating unexpected test failures |
+| Plan database migration strategy | `docs/DATABASE_MIGRATION_STRATEGY.md` | When planning large-scale database changes |
+| Review phase 6 test fixing insights | `docs/documentation-review/2025-10-10-phase-6-test-fixing-insights.md` | When learning from recent testing improvements |
 
 **Analysis run linkage (October 2025)**: `analysis_runs` now includes `background_task_id` and `background_task_status`. New analysis runs started through `BackgroundTaskManager` **must** populate both fields so the `/analysis` list can render the “Task” column and deep-link to `/api/background-tasks/{id}`. Legacy rows may leave them `NULL`.
 

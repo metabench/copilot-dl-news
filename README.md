@@ -292,22 +292,719 @@ expect(milestoneSpy).toHaveBeenCalledWith(expect.objectContaining({ kind: 'intel
 
 Available methods include `progress`, `queueEvent`, `enhancedQueueEvent`, `problem`, `milestone`, `milestoneOnce`, and `plannerStage`. Each forwards to the underlying `CrawlerEvents` instance. The legacy `crawler.emitQueueEvent`, `crawler.emitProblem`, and `crawler.emitMilestone` instance methods have been removed.
 
-## Configuration Options
+## Scripts
 
-- `rateLimitMs`: Global spacing between requests in milliseconds (default: 1000 in slow mode; 0 otherwise)
-- `maxDepth`: Maximum depth to crawl (default: 3)
-- `dataDir`: Base directory used for the SQLite DB and working files (default: './data')
-- `enableDb`: Whether to persist to SQLite database (default: true)
-- `dbPath`: Path to SQLite database file (default: './data/news.db')
-- `maxDownloads` / `--max-pages`: Maximum number of pages to download over the network (default: unlimited)
-- `maxAgeMs` / `--max-age`: Freshness window to reuse cached articles without downloading again. Accepts values like `30s`, `10m`, `2h`, `1d`. When provided, the crawler will check the SQLite DB and use it if `crawled_at` is within the window.
-- `maxAgeMs` / `--max-age`: (Legacy) Freshness window to reuse cached articles. For finer control prefer new refetch flags (`--refetch-*`).
-- Refetch windows (SSE/DB-friendly freshness policy):
-  - `refetchIfOlderThan` / `--refetch-if-older-than`
-  - `refetchArticleIfOlderThan` / `--refetch-article-if-older-than`
-  - `refetchHubIfOlderThan` / `--refetch-hub-if-older-than`
-- `requestTimeoutMs`: Per-request timeout in ms (default: 10000)
-- `pacerJitterMinMs`/`pacerJitterMaxMs`: Small jitter added to per-domain pacing (defaults 25–50ms)
+This project includes several npm scripts for common tasks. Scripts are organized by category:
+
+### Testing Scripts
+```bash
+# Run full test suite (excludes expensive E2E tests)
+npm test
+
+# Run specific test suites
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests only  
+npm run test:e2e           # End-to-end tests
+npm run test:e2e-quick     # Quick E2E smoke tests
+npm run test:all           # All test suites
+
+# Development testing
+npm run test:dev-geography        # Geography-specific tests
+npm run test:dev-geography-monitor # Geography tests with monitoring
+
+# Legacy test commands (may be deprecated)
+npm run test:legacy:fast          # Fast unit tests (legacy)
+npm run test:legacy:quick         # Quick tests (legacy)
+npm run test:legacy:geography-full # Full geography E2E (legacy)
+npm run test:legacy:online        # Online tests (legacy)
+npm run test:legacy:all           # All tests (legacy)
+
+# Test utilities
+npm run tests:review              # Review test status and failures
+npm run test:file "pattern"       # Run tests matching pattern
+npm run test:timing               # Run tests with timing reports
+```
+
+### Data Analysis & Processing Scripts
+```bash
+# Backfill missing publication dates
+npm run backfill:dates
+npm run backfill:dates:redo       # Re-run date backfill
+
+# Analyze domains for news site characteristics
+npm run analyze:domains
+
+# Run page analysis (places extraction + hub detection)
+npm run analyze:pages
+npm run analysis:run              # Combined analysis + milestone refresh
+```
+
+### Gazetteer Scripts
+```bash
+# Populate gazetteer with geographic data
+npm run populate:gazetteer
+
+# Export gazetteer data
+npm run export:gazetteer
+
+# Validate gazetteer integrity
+npm run validate:gazetteer
+```
+
+### Build & Development Scripts
+```bash
+# Start crawler (same as npm start)
+npm run start
+
+# GUI server (DEPRECATED - see src/ui/README.md)
+npm run gui
+npm run gui:detached
+
+# Build scripts (DEPRECATED - UI build system deprecated)
+npm run sass:build
+npm run sass:watch
+npm run components:build
+npm run components:watch
+npm run ui:build
+```
+
+### Benchmarking Scripts
+```bash
+# Run performance benchmarks
+npm run benchmarks
+```
+
+### Screen Capture (DEPRECATED)
+```bash
+# UI screen capture (deprecated)
+npm run ui:capture-screens
+```
+
+**Note**: Many UI-related scripts are deprecated as of October 2025. See `src/ui/README.md` for new UI development information.
+
+## Background Tasks
+
+The crawler supports long-running background tasks for data processing, compression, analysis, and maintenance. These tasks run asynchronously and can be monitored through the web UI.
+
+### Available Background Tasks
+
+#### Article Compression (`article-compression`)
+Compress article content to reduce storage space and improve performance.
+
+**Parameters:**
+- **Quality**: Brotli compression level (0-11, default: 10)
+- **Window Size**: Compression window size (10-24, default: 24)
+- **Compression Method**: Algorithm to use (Brotli/Gzip/Zstandard)
+- **Target Articles**: Which articles to compress (uncompressed/all/age-based)
+- **Batch Size**: Articles per processing batch (default: 100)
+- **Enable Bucket Compression**: Group similar articles for better compression
+
+**Use Cases:**
+- Reduce database size by 60-80% with Brotli level 10-11
+- Archive old articles with maximum compression
+- Enable bucket compression for 20x+ compression ratios on similar content
+
+#### Database Export (`database-export`)
+Export database tables to JSON/NDJSON/CSV formats for backup or analysis.
+
+**Parameters:**
+- **Output Path**: File path for export
+- **Format**: Export format (NDJSON/JSON/CSV)
+- **Tables**: Which tables to export (articles/fetches/sitemaps/domains/gazetteer)
+- **Compress**: Gzip compress output file
+- **Row Limit**: Maximum rows per table (0 = unlimited)
+
+**Use Cases:**
+- Create backups before major changes
+- Export data for analysis in other tools
+- Migrate data between databases
+- Share datasets with compressed NDJSON format
+
+#### Gazetteer Import (`gazetteer-import`)
+Import geographic place data from external sources.
+
+**Parameters:**
+- **Source File**: Path to NDJSON place data file
+- **Import Mode**: How to handle existing data (merge/replace/append)
+- **Batch Size**: Places per import batch (default: 500)
+- **Validate Data**: Check data integrity before import
+
+**Use Cases:**
+- Import Wikidata place data
+- Update gazetteer with new geographic information
+- Merge data from multiple sources
+- Validate data quality during import
+
+#### Database Vacuum (`database-vacuum`)
+Reclaim disk space and optimize database performance.
+
+**Parameters:**
+- **Vacuum Mode**: Operation type (full/incremental/analyze-only)
+- **Backup Before Vacuum**: Create backup before operation
+
+**Use Cases:**
+- Reclaim space after deleting many articles
+- Optimize query performance with updated statistics
+- Maintenance after large data operations
+- Safe vacuuming with automatic backup
+
+#### Content Analysis (`analysis-run`)
+Analyze article content for places, topics, and quality metrics.
+
+**Parameters:**
+- **Analysis Version**: Algorithm version (default: 1)
+- **Page Limit**: Max pages to analyze (0 = unlimited)
+- **Domain Limit**: Max domains to analyze (0 = unlimited)
+- **Skip Options**: Skip page/domain/milestone/place analysis
+- **Place Matching Rule Level**: Accuracy vs speed trade-off (1-4)
+- **Verbose Logging**: Enable detailed progress output
+
+**Use Cases:**
+- Extract place mentions from articles
+- Award achievement milestones
+- Update domain analysis for news site detection
+- Perform place-article matching with gazetteer data
+
+#### Site Crawling (`crawl-site`)
+Crawl a news website as a background task.
+
+**Parameters:**
+- **Start URL**: Website to crawl
+- **Max Pages**: Page limit for crawl
+- **Concurrency**: Parallel request workers
+- **Rate Limit**: Delay between requests
+- **Respect robots.txt**: Honor exclusion rules
+- **User Agent**: HTTP User-Agent header
+
+**Use Cases:**
+- Crawl sites without blocking the main process
+- Schedule regular crawls of multiple sites
+- Monitor crawl progress through web UI
+- Automated crawling workflows
+
+### Running Background Tasks
+
+#### Via Web UI
+1. Navigate to `/background-tasks.html`
+2. Click "New Task"
+3. Select task type and configure parameters
+4. Monitor progress with real-time updates
+
+#### Via API
+```bash
+# Start a compression task
+curl -X POST http://localhost:3000/api/background-tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "taskType": "article-compression",
+    "parameters": {
+      "quality": 10,
+      "targetArticles": "uncompressed",
+      "batchSize": 100
+    }
+  }'
+
+# Check task status
+curl http://localhost:3000/api/background-tasks/{taskId}
+```
+
+#### Via Command Line (Future)
+Background tasks are currently managed through the web UI. CLI support may be added in future versions.
+
+### Task Monitoring
+
+All background tasks provide:
+- **Real-time Progress**: SSE updates with completion percentages
+- **Structured Logging**: Detailed operation logs
+- **Error Handling**: Automatic retry and failure reporting
+- **Cancellation Support**: Stop long-running tasks safely
+- **Result Persistence**: Task results saved to database
+
+### Compression Workflows
+
+#### Standard Compression Pipeline
+1. **Initial Compression**: Compress new articles during crawl (Brotli 6)
+2. **Batch Compression**: Compress existing uncompressed articles
+3. **Archival Compression**: Maximum compression for old articles (Brotli 11)
+4. **Bucket Compression**: Group similar articles for 20x+ compression ratios
+
+#### Compression Best Practices
+- Use Brotli level 6-8 for active content (good balance)
+- Use Brotli level 10-11 for archival (maximum compression)
+- Enable bucket compression for news articles (significant space savings)
+- Compress by age: recent articles with moderate compression, old with maximum
+
+#### Storage Tiers
+- **Hot**: Recently crawled articles (Brotli 6, fast access)
+- **Warm**: Articles < 30 days (Brotli 8, balanced)
+- **Cold**: Articles > 90 days (Brotli 11, maximum compression)
+
+### Analysis Workflows
+
+#### Content Analysis Pipeline
+1. **Page Analysis**: Extract places, topics, and quality metrics
+2. **Domain Analysis**: Aggregate statistics per news site
+3. **Place Matching**: Link articles to geographic locations
+4. **Milestone Awards**: Recognize crawling achievements
+
+#### Analysis Configuration
+- Use rule level 1-2 for fast processing
+- Use rule level 3-4 for maximum accuracy
+- Skip place matching if gazetteer data is incomplete
+- Enable verbose logging for debugging
+
+### Maintenance Workflows
+
+#### Database Maintenance
+1. **Regular Vacuum**: Reclaim space weekly/monthly
+2. **Export Backups**: Before major operations
+3. **Statistics Update**: After schema changes
+4. **Integrity Checks**: Periodic validation
+
+#### Automated Maintenance
+```javascript
+// Example maintenance schedule
+const maintenanceTasks = [
+  { task: 'database-vacuum', schedule: 'weekly', mode: 'incremental' },
+  { task: 'database-export', schedule: 'daily', tables: ['articles'] },
+  { task: 'analysis-run', schedule: 'daily', skipPages: true }
+];
+```
+
+### Task Dependencies
+
+Some tasks have dependencies or recommended execution order:
+
+- **Gazetteer Import** → **Analysis Run** (place data needed for matching)
+- **Site Crawling** → **Article Compression** (compress newly crawled content)
+- **Analysis Run** → **Database Export** (updated analysis data in exports)
+- **Database Vacuum** → Run after large deletions or imports
+
+### Performance Considerations
+
+- **Compression Tasks**: CPU-intensive, run during off-peak hours
+- **Analysis Tasks**: I/O intensive, may take hours for large datasets
+- **Export Tasks**: Disk I/O intensive, ensure sufficient storage space
+- **Import Tasks**: Memory intensive for large datasets, monitor RAM usage
+
+### Error Handling
+
+Background tasks include comprehensive error handling:
+- **Automatic Retries**: Failed operations retry with exponential backoff
+- **Partial Success**: Tasks continue processing after individual failures
+- **Detailed Logging**: Error context preserved for debugging
+- **Graceful Shutdown**: Tasks can be cancelled safely at any point
+
+### Task History
+
+All completed tasks are stored in the database with:
+- Execution parameters and results
+- Start/end timestamps and duration
+- Success/failure status and error details
+- Performance metrics (rows processed, compression ratios, etc.)
+
+Access task history through `/api/background-tasks` or the web UI.
+
+### Common Crawler Issues
+
+**Crawler not showing up in UI**
+- **Cause**: Crawls are internal processes, not directly visible in UI
+- **Solution**: Check `/api/crawls` endpoint or logs for active crawls
+- **See**: `docs/ARCHITECTURE_QUEUES_ARE_INTERNAL.md` - Queues are internal to crawls
+
+**Tests hanging or timing out**
+- **Cause**: Async operations without proper cleanup or timeouts
+- **Solution**: Add explicit timeouts (`test('name', async () => {...}, 30000)`)
+- **See**: `docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md`
+
+**Database connection issues**
+- **Cause**: Multiple connections in WAL mode cause isolation
+- **Solution**: Use single shared DB connection from app instance
+- **See**: AGENTS.md "How to Get a Database Handle"
+
+**High memory usage**
+- **Cause**: Large result sets or unclosed database connections
+- **Solution**: Use LIMIT clauses, close connections, enable streaming
+- **See**: `docs/DATABASE_ACCESS_PATTERNS.md`
+
+**Rate limiting errors (429)**
+- **Cause**: Too many requests to same domain
+- **Solution**: Increase `--rate-limit-ms` or use `--slow` mode
+- **See**: CLI options in Usage section
+
+**Sitemap discovery failing**
+- **Cause**: Missing or malformed robots.txt/sitemap
+- **Solution**: Use `--no-sitemap` flag or manual URL seeding
+- **See**: Sitemap options in Usage section
+
+**Article extraction poor**
+- **Cause**: Non-standard page structure
+- **Solution**: Check Readability.js compatibility or custom extraction
+- **See**: Article Detection section
+
+### Debug Tools
+
+**Child process debugging**
+```bash
+node tools/debug/child-process-monitor.js
+```
+- Monitors crawler child processes
+- Shows SSE events and MILESTONE markers
+- **See**: `docs/DEBUGGING_CHILD_PROCESSES.md`
+
+**Database inspection**
+```bash
+node tools/db-schema.js tables     # List all tables
+node tools/db-schema.js describe <table>  # Table structure
+node tools/db-query.js <query>     # Execute custom queries
+```
+
+**Test failure analysis**
+```bash
+node tests/analyze-test-logs.js --summary  # Current test status
+node tests/get-failing-tests.js           # List failing tests
+```
+
+### Performance Issues
+
+**Slow database queries**
+- **Check**: Run `node src/tools/crawl-query-benchmark.js`
+- **Common fixes**: Add indexes, use LIMIT, optimize JOINs
+- **See**: `docs/DATABASE_ACCESS_PATTERNS.md`
+
+**High CPU usage**
+- **Cause**: Complex regex or DOM parsing
+- **Solution**: Profile with Node.js inspector, optimize selectors
+- **See**: Performance investigation guide
+
+**Network timeouts**
+- **Cause**: Slow sites or network issues
+- **Solution**: Increase `--request-timeout-ms` (default 10s)
+- **See**: Networking options in CLI reference
+
+## Advanced Crawler Configuration
+
+The crawler supports advanced configuration options for fine-tuning behavior, enabling experimental features, and optimizing performance. These options are configured through JSON files and command-line parameters.
+
+### Priority Configuration (`config/priority-config.json`)
+
+The priority system determines which URLs are crawled first. Configure bonuses, weights, and clustering in `config/priority-config.json`:
+
+```json
+{
+  "queue": {
+    "bonuses": {
+      "adaptive-seed": { "value": 20, "description": "URLs from intelligent planning" },
+      "gap-prediction": { "value": 15, "description": "URLs filling coverage gaps" },
+      "country-hub-discovery": { "value": 100, "description": "Country hub pages" }
+    },
+    "weights": {
+      "article": { "value": 0, "description": "Highest priority - articles" },
+      "hub-seed": { "value": 4, "description": "Hub pages from planner" },
+      "nav": { "value": 10, "description": "Navigation pages" },
+      "refresh": { "value": 25, "description": "Lowest priority - cached refreshes" }
+    },
+    "clustering": {
+      "problemThreshold": 5,
+      "timeWindowMinutes": 30,
+      "maxClusterSize": 100,
+      "boostFactorPerCluster": 2.5
+    }
+  },
+  "coverage": {
+    "telemetryIntervalSeconds": 30,
+    "milestoneThresholds": {
+      "hubDiscoveryMinimum": 10,
+      "coveragePercentageTargets": [25, 50, 75, 90]
+    }
+  },
+  "features": {
+    "advancedPlanningSuite": true,
+    "gapDrivenPrioritization": true,
+    "plannerKnowledgeReuse": true,
+    "realTimeCoverageAnalytics": true,
+    "problemClustering": true
+  }
+}
+```
+
+**Priority Bonuses:**
+- `adaptive-seed`: URLs discovered by intelligent planning (+20 priority)
+- `gap-prediction`: URLs predicted to fill coverage gaps (+15 priority)  
+- `country-hub-discovery`: Country hub pages (TOTAL priority +1000)
+- `country-hub-article`: Article links on country hubs (+90 priority)
+
+**Content Type Weights:**
+- `article`: 0 (highest priority)
+- `hub-seed`: 4 (intelligent planner hubs)
+- `history`: 6 (archive content)
+- `nav`: 10 (navigation pages)
+- `refresh`: 25 (lowest priority - cached content refreshes)
+
+**Problem Clustering:**
+- Groups similar issues to avoid duplicate problem reports
+- `problemThreshold`: Minimum problems to trigger clustering (5)
+- `timeWindowMinutes`: Time window for clustering (30 minutes)
+- `boostFactorPerCluster`: Priority boost per cluster member (2.5x)
+
+### Enhanced Features Configuration
+
+Advanced features are enabled through the `features` section:
+
+```json
+{
+  "features": {
+    "advancedPlanningSuite": true,           // Full AI planning suite
+    "gapDrivenPrioritization": true,         // Prioritize gap-filling URLs
+    "plannerKnowledgeReuse": true,           // Learn from previous crawls
+    "realTimeCoverageAnalytics": true,       // Live coverage tracking
+    "problemClustering": true,               // Group similar issues
+    "problemResolution": true,               // Auto-resolve known issues
+    "graphReasonerPlugin": true,             // Graph-based reasoning
+    "gazetteerAwareReasoner": true,          // Geography-aware planning
+    "gap-driven-prioritization": true,       // Prioritize coverage gaps
+    "costAwarePriority": false,              // Experimental cost weighting
+    "patternDiscovery": true,                // Auto-discover URL patterns
+    "adaptiveBranching": false,              // Experimental adaptive depth
+    "realTimePlanAdjustment": false,         // Live planning adjustments
+    "dynamicReplanning": false,              // Replan during execution
+    "crossDomainSharing": false,             // Share knowledge across domains
+    "totalPrioritisation": true              // Use total priority scoring
+  }
+}
+```
+
+**Core Features:**
+- **Advanced Planning Suite**: Full AI-driven crawl planning and execution
+- **Gap-Driven Prioritization**: Focus on filling coverage gaps first
+- **Planner Knowledge Reuse**: Learn patterns from previous crawls
+- **Real-Time Coverage Analytics**: Live tracking of crawl coverage
+- **Problem Clustering**: Group and prioritize similar issues
+
+**Experimental Features:**
+- **Cost-Aware Priority**: Weight URLs by estimated processing cost
+- **Adaptive Branching**: Dynamically adjust crawl depth
+- **Real-Time Plan Adjustment**: Modify plan during execution
+- **Dynamic Replanning**: Complete replanning mid-crawl
+- **Cross-Domain Sharing**: Share knowledge between different sites
+
+### Intelligent Crawl Options
+
+Advanced options for intelligent crawl types (`--crawl-type=intelligent`):
+
+```bash
+# Hub discovery limits
+--hub-max-pages=100          # Max pages per hub (default: unlimited)
+--hub-max-days=30            # Max age for hub seeding in days (default: unlimited)
+--int-max-seeds=50           # Max initial hub seeds (default: 50)
+
+# Target specific hosts
+--int-target-hosts=bbc.com,cnn.com  # Only plan for these domains
+
+# Planner verbosity
+--planner-verbosity=3        # Debug level 0-3 (default: 0)
+```
+
+**Hub Discovery:**
+- `hub-max-pages`: Limit pages analyzed per detected hub
+- `hub-max-days`: Only consider hubs updated within N days
+- `int-max-seeds`: Maximum initial hubs to seed from start URL
+
+**Target Filtering:**
+- `int-target-hosts`: Comma-separated list of domains to focus planning on
+- Useful for multi-domain sites or focused crawling
+
+### Gazetteer/Geography Crawl Configuration
+
+Specialized options for geographic data crawls:
+
+```bash
+# Country limits
+--limit-countries=50         # Max countries to process
+--target-countries=US,CA,GB  # Specific countries to crawl
+
+# Stage filtering
+--gazetteer-stages=countries,cities  # Only run specific stages
+
+# Performance tuning
+--concurrency=2              # Parallel workers (max allowed)
+```
+
+**Geography Options:**
+- `limit-countries`: Maximum countries to fetch (unlimited by default)
+- `target-countries`: Specific country codes to process
+- `gazetteer-stages`: Run only selected stages (countries, adm1, cities, boundaries)
+
+**Performance Notes:**
+- Gazetteer crawls are sequential by default due to API rate limits
+- `concurrency` sets maximum allowed parallelism, not requirement
+- External APIs (Wikidata, Overpass) have built-in rate limiting
+
+### Queue and Concurrency Configuration
+
+Advanced queue management options:
+
+```bash
+# Queue sizing
+--max-queue=50000           # Maximum queue size (default: 10000)
+--concurrency=8             # Parallel workers (default: 1)
+
+# Priority queue control
+--use-priority-queue        # Enable priority-based scheduling (auto-enabled if concurrency > 1)
+```
+
+**Queue Behavior:**
+- `max-queue`: Bounded queue prevents memory issues
+- `concurrency`: Number of parallel page processors
+- Priority queue automatically enabled for concurrent crawls
+
+### Rate Limiting and Networking
+
+Fine-tune network behavior:
+
+```bash
+# Global rate limiting
+--rate-limit-ms=1000        # Min ms between requests (default: 1000 in slow mode, 0 otherwise)
+--slow-mode                 # Enable conservative rate limiting
+
+# Per-domain pacing
+--pacer-jitter-min-ms=25    # Min jitter between paced requests (default: 25)
+--pacer-jitter-max-ms=50    # Max jitter (default: 50)
+
+# Timeouts and retries
+--request-timeout-ms=15000  # Request timeout (default: 10000)
+--retry-limit=5             # Max retries per URL (default: 3)
+--backoff-base-ms=1000      # Initial backoff (default: 500)
+--backoff-max-ms=300000     # Max backoff (default: 300000)
+```
+
+**429 Handling:**
+- Automatic detection and 5-second blackout per domain
+- Ramped limiter: starts at 20/min, increases by 10/min each minute
+- Even spacing with configurable jitter to avoid alignment
+
+### Caching and Freshness Policies
+
+Advanced caching configuration:
+
+```bash
+# Freshness windows
+--refetch-if-older-than=6h              # Global freshness (default: unlimited)
+--refetch-article-if-older-than=24h     # Article-specific freshness
+--refetch-hub-if-older-than=1h          # Hub/navigation freshness
+
+# Cache behavior
+--prefer-cache                         # Use cached content when fresh (default: true)
+--no-prefer-cache                      # Force network fetches
+--fast-start                           # Skip heavy DB sampling (default: true)
+```
+
+**Freshness Policy:**
+- Separate freshness windows for articles vs navigation
+- `refetch-if-older-than`: Global fallback for unspecified content types
+- `prefer-cache`: Whether to use cached content when within freshness window
+
+### Database and Persistence
+
+Database-specific options:
+
+```bash
+# Database configuration
+--db=./data/custom.db       # Custom database path
+--no-db                     # Disable persistence (testing only)
+--fast-start                # Skip DB sampling on startup (default: true)
+
+# WAL mode settings (SQLite)
+# Automatic WAL mode with checkpointing
+# Connection pooling and prepared statements
+```
+
+**Database Features:**
+- Automatic WAL mode for concurrent access
+- Connection pooling for performance
+- Prepared statements for query efficiency
+- Optional enhanced database adapter for analytics
+
+### Experimental and Debug Options
+
+Advanced debugging and experimental features:
+
+```bash
+# Debug output
+--planner-verbosity=2       # Planner debug level 0-3
+--verbose                   # General verbosity
+
+# Experimental modes
+--structure-only            # Map navigation without fetching articles
+--country-hub-exclusive     # Only crawl country hub content
+--exhaustive-country-hub    # Comprehensive country hub discovery
+
+# Connection handling
+--connection-reset-window-ms=120000    # Connection reset detection window
+--connection-reset-threshold=5         # Failures before reset
+```
+
+**Debug Features:**
+- `structure-only`: Map site navigation without content fetching
+- `country-hub-exclusive`: Focus exclusively on geographic hubs
+- Connection reset detection for unreliable networks
+
+### Configuration File Examples
+
+**Minimal Intelligent Crawl:**
+```json
+{
+  "features": {
+    "advancedPlanningSuite": true,
+    "gapDrivenPrioritization": true
+  }
+}
+```
+
+**High-Performance Gazetteer Crawl:**
+```json
+{
+  "features": {
+    "gazetteerAwareReasoner": true
+  }
+}
+```
+
+**Debug Configuration:**
+```json
+{
+  "features": {
+    "advancedPlanningSuite": true,
+    "realTimeCoverageAnalytics": true
+  },
+  "coverage": {
+    "telemetryIntervalSeconds": 10
+  }
+}
+```
+
+### Performance Tuning Guidelines
+
+**For Large Sites:**
+- Increase `concurrency` to 4-8
+- Set `max-queue` to 50000+
+- Use `hub-max-pages` to limit analysis scope
+- Enable `fast-start` to skip DB sampling
+
+**For Rate-Limited Sites:**
+- Set `rate-limit-ms` to 2000+ 
+- Use `--slow-mode` for conservative defaults
+- Enable `prefer-cache` to reduce requests
+
+**For Geography Crawls:**
+- Set `concurrency` to 1-2 (API limits)
+- Use `limit-countries` for testing
+- Enable caching for repeated runs
+
+**For Debug/Development:**
+- Set `planner-verbosity` to 2-3
+- Use `structure-only` for navigation mapping
+- Enable all `features` for full diagnostics
 
 ## Output Format
 

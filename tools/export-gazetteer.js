@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const { exportGazetteerTables } = require('../src/db/sqlite/v1/queries/gazetteer.export');
 
 // Core gazetteer tables to export
 const GAZETTEER_TABLES = [
@@ -85,52 +86,44 @@ function parseArgs(argv) {
   return options;
 }
 
-function exportTableToNDJSON(dbPath, tableName, outputPath) {
-  console.log(`Exporting table '${tableName}' to ${path.basename(outputPath)}...`);
-
-  // Create a fresh connection for each table to avoid isolation issues
-  const db = new Database('data/news.db', { readonly: true }); // Use relative path like the working command
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  db.pragma('busy_timeout = 5000');
-  db.pragma('synchronous = NORMAL');
-
-  try {
-    // Get row count first
-    const count = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get().count;
-    console.log(`  Found ${count} rows in ${tableName}`);
-
-    if (count > 0) {
-      const stmt = db.prepare(`SELECT * FROM ${tableName}`);
-      console.log(`  Prepared SELECT statement for ${tableName}`);
-      const rows = stmt.all();
-      console.log(`  Retrieved ${rows.length} rows from ${tableName}`);
-
-      const writeStream = fs.createWriteStream(outputPath);
-      let writtenCount = 0;
-
-      for (const row of rows) {
-        writeStream.write(JSON.stringify(row) + '\n');
-        writtenCount++;
-      }
-
-      writeStream.end();
-      console.log(`  Exported ${writtenCount} rows from ${tableName}`);
-      return writtenCount;
-    } else {
-      console.log(`  No rows to export from ${tableName}`);
-      return 0;
-    }
-  } catch (err) {
-    console.error(`  Failed to export ${tableName}: ${err.message}`);
-    return 0;
-  } finally {
-    db.close();
-  }
-}
-
 function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const args = process.argv.slice(2);
+
+  // Check for help
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Gazetteer Data Exporter
+
+Export gazetteer data to NDJSON files for backup.
+
+USAGE:
+  node tools/export-gazetteer.js [options]
+
+OPTIONS:
+  --help, -h           Show this help message
+  --db=PATH            Path to SQLite database (default: data/news.db)
+  --output-dir=DIR     Output directory (default: gazetteer-export)
+  --tables=LIST        Comma-separated list of tables to export (default: all gazetteer tables)
+
+DEFAULT TABLES:
+  places, place_names, place_hierarchy, place_attributes, place_attribute_values,
+  place_external_ids, place_hubs, place_hub_unknown_terms, place_provenance, place_sources
+
+EXAMPLES:
+  node tools/export-gazetteer.js                              # Export all tables to gazetteer-export/
+  node tools/export-gazetteer.js --db=./data/test.db          # Export from specific database
+  node tools/export-gazetteer.js --output-dir=./backup        # Export to custom directory
+  node tools/export-gazetteer.js --tables=places,place_names  # Export only specific tables
+
+OUTPUT:
+  - NDJSON files for each table
+  - manifest.json with export metadata
+  - Console progress and statistics
+`);
+    process.exit(0);
+  }
+
+  const options = parseArgs(args);
 
   const dbPath = options.dbPath
     ? path.resolve(process.cwd(), options.dbPath)
@@ -156,18 +149,20 @@ function main() {
   console.log('');
 
   try {
-    let totalRows = 0;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const db = new Database(dbPath, { readonly: true });
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+    db.pragma('busy_timeout = 5000');
+    db.pragma('synchronous = NORMAL');
 
-    for (const tableName of tablesToExport) {
-      const outputPath = path.join(outputDir, `${tableName}.ndjson`);
-      const rowCount = exportTableToNDJSON(dbPath, tableName, outputPath);
-      totalRows += rowCount;
-    }
+    const { exportedTables, totalRecords } = exportGazetteerTables(db, {
+      outputDir,
+      tables: tablesToExport
+    });
 
     console.log('');
     console.log(`Export complete!`);
-    console.log(`Total rows exported: ${totalRows}`);
+    console.log(`Total rows exported: ${totalRecords}`);
     console.log(`Output directory: ${outputDir}`);
 
     // Create a manifest file
@@ -175,13 +170,15 @@ function main() {
     const manifest = {
       exported_at: new Date().toISOString(),
       database_path: dbPath,
-      tables: tablesToExport,
-      total_rows: totalRows,
+      tables: exportedTables.map(t => t.tableName),
+      total_rows: totalRecords,
       format: 'ndjson'
     };
 
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     console.log(`Manifest created: ${manifestPath}`);
+
+    db.close();
 
   } catch (err) {
     console.error(`Export failed: ${err.message}`);

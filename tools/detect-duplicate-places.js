@@ -35,6 +35,14 @@
 
 const { ensureDatabase } = require('../src/db/sqlite');
 const path = require('path');
+const {
+  findWikidataDuplicates,
+  findOSMDuplicates,
+  findExternalIDDupes,
+  findPlacesWithCoords,
+  findNameDuplicates,
+  getTotalPlacesCount
+} = require('../src/db/sqlite/v1/queries/gazetteer.duplicates');
 
 function getArg(name, fallback) {
   const a = process.argv.find(x => x.startsWith(`--${name}=`));
@@ -74,24 +82,7 @@ let totalDuplicates = 0;
 if (!typeFilter || typeFilter === 'wikidata') {
   console.log('📊 Checking Wikidata QID duplicates...');
 
-  const wikidataQuery = `
-    SELECT
-      p.wikidata_qid,
-      GROUP_CONCAT(DISTINCT p.id) as ids,
-      COUNT(DISTINCT p.id) as count,
-      GROUP_CONCAT(DISTINCT p.kind) as kinds,
-      GROUP_CONCAT(DISTINCT p.country_code) as countries,
-      MIN(COALESCE(pn.name, 'unnamed')) as example_name
-    FROM places p
-    LEFT JOIN place_names pn ON p.id = pn.place_id AND pn.is_preferred = 1
-    ${baseWhere} ${baseWhere ? 'AND' : 'WHERE'} p.wikidata_qid IS NOT NULL
-    GROUP BY p.wikidata_qid
-    HAVING count > 1
-    ORDER BY count DESC
-    LIMIT ${resultLimit}
-  `;
-
-  const wikidataDups = db.prepare(wikidataQuery).all();
+  const wikidataDups = findWikidataDuplicates(db, baseWhere, resultLimit);
   results.wikidata = wikidataDups;
   totalDuplicates += wikidataDups.length;
 
@@ -102,24 +93,7 @@ if (!typeFilter || typeFilter === 'wikidata') {
 if (!typeFilter || typeFilter === 'osm') {
   console.log('🗺️  Checking OSM ID duplicates...');
 
-  const osmQuery = `
-    SELECT
-      p.osm_type || ':' || p.osm_id as osm_key,
-      GROUP_CONCAT(DISTINCT p.id) as ids,
-      COUNT(DISTINCT p.id) as count,
-      GROUP_CONCAT(DISTINCT p.kind) as kinds,
-      GROUP_CONCAT(DISTINCT p.country_code) as countries,
-      MIN(COALESCE(pn.name, 'unnamed')) as example_name
-    FROM places p
-    LEFT JOIN place_names pn ON p.id = pn.place_id AND pn.is_preferred = 1
-    ${baseWhere} ${baseWhere ? 'AND' : 'WHERE'} p.osm_type IS NOT NULL AND p.osm_id IS NOT NULL
-    GROUP BY p.osm_type, p.osm_id
-    HAVING count > 1
-    ORDER BY count DESC
-    LIMIT ${resultLimit}
-  `;
-
-  const osmDups = db.prepare(osmQuery).all();
+  const osmDups = findOSMDuplicates(db, baseWhere, resultLimit);
   results.osm = osmDups;
   totalDuplicates += osmDups.length;
 
@@ -132,25 +106,7 @@ if (!typeFilter || typeFilter === 'external') {
 
   const externalWhere = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ').replace(/p\./g, 'p.')}` : '';
 
-  const externalQuery = `
-    SELECT
-      pe.source || ':' || pe.ext_id as ext_key,
-      GROUP_CONCAT(DISTINCT pe.place_id) as ids,
-      COUNT(DISTINCT pe.place_id) as count,
-      GROUP_CONCAT(DISTINCT p.kind) as kinds,
-      GROUP_CONCAT(DISTINCT p.country_code) as countries,
-      MIN(COALESCE(pn.name, 'unnamed')) as example_name
-    FROM place_external_ids pe
-    JOIN places p ON pe.place_id = p.id
-    LEFT JOIN place_names pn ON p.id = pn.place_id AND pn.is_preferred = 1
-    ${externalWhere}
-    GROUP BY pe.source, pe.ext_id
-    HAVING count > 1
-    ORDER BY count DESC
-    LIMIT ${resultLimit}
-  `;
-
-  const externalDups = db.prepare(externalQuery).all();
+  const externalDups = findExternalIDDupes(db, externalWhere, resultLimit);
   results.external = externalDups;
   totalDuplicates += externalDups.length;
 
@@ -162,15 +118,7 @@ if (!typeFilter || typeFilter === 'coords') {
   console.log('📍 Checking coordinate proximity duplicates...');
 
   // Get all places with coordinates
-  const coordsQuery = `
-    SELECT id, lat, lng, kind, country_code,
-           (SELECT name FROM place_names WHERE place_id = p.id AND is_preferred = 1 LIMIT 1) as name
-    FROM places p
-    ${baseWhere} ${baseWhere ? 'AND' : 'WHERE'} lat IS NOT NULL AND lng IS NOT NULL
-    ORDER BY lat, lng
-  `;
-
-  const placesWithCoords = db.prepare(coordsQuery).all();
+  const placesWithCoords = findPlacesWithCoords(db, baseWhere);
 
   // Group by proximity (simple grid-based approach)
   const proximityGroups = {};
@@ -225,24 +173,7 @@ if (!typeFilter || typeFilter === 'coords') {
 if (!typeFilter || typeFilter === 'names') {
   console.log('🏷️  Checking name-based duplicates...');
 
-  const namesQuery = `
-    SELECT
-      p.country_code || ':' || p.kind || ':' || pn.normalized as name_key,
-      GROUP_CONCAT(DISTINCT p.id) as ids,
-      COUNT(DISTINCT p.id) as count,
-      GROUP_CONCAT(DISTINCT p.kind) as kinds,
-      GROUP_CONCAT(DISTINCT p.country_code) as countries,
-      pn.normalized as example_name
-    FROM places p
-    JOIN place_names pn ON p.id = pn.place_id
-    ${baseWhere}
-    GROUP BY p.country_code, p.kind, pn.normalized
-    HAVING count > 1
-    ORDER BY count DESC
-    LIMIT ${resultLimit}
-  `;
-
-  const nameDups = db.prepare(namesQuery).all();
+  const nameDups = findNameDuplicates(db, baseWhere, resultLimit);
   results.names = nameDups;
   totalDuplicates += nameDups.length;
 
@@ -317,7 +248,7 @@ if (totalDuplicates === 0) {
 
 // Summary stats
 const summaryWhere = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ').replace(/p\./g, '')}` : '';
-const totalPlaces = db.prepare(`SELECT COUNT(*) as count FROM places ${summaryWhere}`).get().count;
+const totalPlaces = getTotalPlacesCount(db, summaryWhere);
 console.log('=' .repeat(80));
 console.log('📊 SUMMARY');
 console.log('=' .repeat(80));

@@ -12,7 +12,7 @@ related: ["docs/agents/testing-guidelines.md", "docs/agents/command-rules.md", "
 ## Summary
 Core execution principles for autonomous agent work including research limits, fast-path development, test discipline, and quality validation. Establishes patterns for efficient, reliable code changes with built-in quality gates.
 
-## When to use
+## When to Read
 - When starting any coding task or feature implementation
 - When deciding how much research to do before coding
 - When running or validating tests during development

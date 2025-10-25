@@ -18,17 +18,46 @@
  *   node tools/migrate-test-logs.js --audit   # Audit existing testlogs
  */
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-
-// Configuration
-const ROOT_DIR = path.join(__dirname, '..');
-const TESTLOGS_DIR = path.join(ROOT_DIR, 'testlogs');
-const MIN_TESTS_FOR_ALL_SUITE = 100; // "ALL" should have at least this many tests
-
 // Parse command line args
 const args = process.argv.slice(2);
+
+// Check for help first
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`
+Test Log Migration and Cleanup Tool
+
+Migrates legacy test-timing-*.log files from root to testlogs/ directory,
+validates existing logs, and safely removes migrated files.
+
+USAGE:
+  node tools/migrate-test-logs.js [options]
+
+OPTIONS:
+  --help, -h       Show this help message
+  --execute        Actually perform migration and delete old files (default: dry-run)
+  --verbose        Show detailed analysis during migration
+  --audit          Audit existing testlogs/ directory without migration
+
+FEATURES:
+  - Only imports from last full test run (ignores old logs)
+  - Validates "ALL" suite claims (checks test count)
+  - Detects duplicate imports (checks existing testlogs)
+  - Dry-run mode by default (safe preview)
+
+EXAMPLES:
+  node tools/migrate-test-logs.js              # Dry run (show what would happen)
+  node tools/migrate-test-logs.js --execute    # Actually migrate and delete
+  node tools/migrate-test-logs.js --verbose    # Show detailed analysis
+  node tools/migrate-test-logs.js --audit      # Audit existing testlogs/
+
+SAFETY:
+  - Dry-run by default - no files deleted without --execute
+  - Keeps most recent log until verified in testlogs/
+  - Detects duplicates to avoid overwriting good data
+`);
+  process.exit(0);
+}
+
 const dryRun = !args.includes('--execute');
 const verbose = args.includes('--verbose');
 const auditOnly = args.includes('--audit');
