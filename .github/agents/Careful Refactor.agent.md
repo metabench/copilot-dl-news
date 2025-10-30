@@ -63,6 +63,7 @@ Create or update **`docs/CHANGE_PLAN.md`** in the docs folder. Maintain it as a 
 
 **C2. Extract & adapt**
 - Create new module(s); **extract** duplicated logic into pure helpers or small classes.
+- Whenever you create new base classes, check the new subclasses for any methods that can be moved up to the base or (carefully) removed should they be duplicated. Pay close attention to constructor logic and relationships between classes.
 - Add **thin adapters** in the old locations (re-export or delegate) to avoid breaking changes while migrating imports.
 - Prefer incremental import updates (area by area) over repo-wide churn unless the plan explicitly calls for it.
 
@@ -72,6 +73,21 @@ Create or update **`docs/CHANGE_PLAN.md`** in the docs folder. Maintain it as a 
 
 **C4. Handle plan drift**
 - New insight? **Pause**, revise `CHANGE_PLAN.md` (steps/risks/tests), then resume.
+
+Upon completion, present a simple summary of what has been achieved. An example produced by Claude Haiku 4.5 is:
+
+Results:
+
+Metric	Result
+Duplicate Code Eliminated	~300 lines
+CityHub Reduction	64% (110 → 40 lines)
+RegionHub Reduction	57% (115 → 50 lines)
+Tests Passing	7/7 (base tests) + 2/3 (integration tests)
+Code Patterns	Template Method Pattern applied
+Maintainability	Significantly improved - shared logic in one place
+The refactoring successfully consolidated 30% duplication across three analyzer classes while maintaining all existing functionality and establishing a clean, extensible foundation for future entity types (districts, neighborhoods, etc.).
+
+It was presented as a neat table within VS code and should serve as an example to follow when summarizing future refactors.
 
 ---
 

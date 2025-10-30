@@ -1,41 +1,75 @@
 /**
- * CountryHubGapAnalyzer - Standalone service for analyzing country hub coverage gaps
+ * CountryHubGapAnalyzer - Service for analyzing country hub coverage gaps
  * 
- * This is the core implementation that can be used independently of the crawler.
+ * Extends HubGapAnalyzerBase to provide country-specific hub URL prediction
+ * and gap analysis for news website coverage.
+ * 
  * Provides gap analysis, predictions, and pattern learning for country-level place hubs.
- * 
  * Uses database query module for all SQL operations (no inline SQL).
  * Learns URL patterns from existing data via Domain-Specific Pattern Libraries (DSPLs).
  */
 
 const { getAllCountries, getTopCountries } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { getCountryHubCoverage } = require('../db/sqlite/v1/queries/placePageMappings');
-const path = require('path');
-const { loadDsplLibrary, getDsplForDomain } = require('./shared/dspl');
+const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
+const { getDsplForDomain } = require('./shared/dspl');
+const { slugify } = require('../tools/slugify');
 
-class CountryHubGapAnalyzer {
+class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   constructor({ 
     db,
     gazetteerData = null,
     logger = console,
-    dsplDir = path.join(__dirname, '..', '..', 'data', 'dspls')
+    dsplDir
   } = {}) {
-    if (!db) {
-      throw new Error('CountryHubGapAnalyzer requires a database connection');
-    }
+    super({ db, logger, dsplDir });
     
-    this.db = db;
     this.gazetteerData = gazetteerData;
-    this.logger = logger;
-    this.dsplDir = dsplDir;
     
     // Cache for analysis results
     this.lastAnalysis = null;
     this.lastAnalysisTime = 0;
     this.analysisCacheMs = 5000;
+  }
+
+  /**
+   * Country label for DSPL lookups and logging
+   */
+  getEntityLabel() {
+    return 'country';
+  }
+
+  /**
+   * Fallback patterns for country hubs
+   */
+  getFallbackPatterns() {
+    return [
+      '/world/{slug}',
+      '/news/world/{slug}',
+      '/world/{code}',
+      '/news/{code}',
+      '/{slug}',
+      '/international/{slug}',
+      '/news/world-{region}-{slug}'
+    ];
+  }
+
+  /**
+   * Build metadata for country entity
+   */
+  buildEntityMetadata(country) {
+    if (!country || !country.name) return null;
     
-    // Load DSPLs on initialization
-    this.dspls = loadDsplLibrary({ dsplDir: this.dsplDir, logger: this.logger });
+    const slug = slugify(country.name);
+    const code = country.code ? country.code.toLowerCase() : '';
+    const region = this._getRegion(country.code);
+
+    return {
+      slug,
+      code,
+      region,
+      name: country.name
+    };
   }
 
   /**
@@ -124,7 +158,7 @@ class CountryHubGapAnalyzer {
   predictFromGazetteer(countryName, countryCode, domain) {
     const predictions = [];
     const baseUrl = `https://${domain}`;
-    const countrySlug = this._generateCountrySlug(countryName);
+    const countrySlug = slugify(countryName);
     const countryCodeLower = countryCode.toLowerCase();
 
     // Look for existing mappings to learn patterns
@@ -166,7 +200,7 @@ class CountryHubGapAnalyzer {
   predictFromCommonPatterns(countryName, countryCode, domain) {
     const predictions = [];
     const baseUrl = `https://${domain}`;
-    const countrySlug = this._generateCountrySlug(countryName);
+    const countrySlug = slugify(countryName);
     const countryCodeLower = countryCode.toLowerCase();
     const region = this._getRegion(countryCode);
 
@@ -249,7 +283,7 @@ class CountryHubGapAnalyzer {
    */
   generateUrlFromPattern(pattern, countryName, countryCode, domain) {
     const baseUrl = `https://${domain}`;
-    const countrySlug = this._generateCountrySlug(countryName);
+    const countrySlug = slugify(countryName);
     const countryCodeLower = countryCode.toLowerCase();
 
     const url = pattern
@@ -286,30 +320,6 @@ class CountryHubGapAnalyzer {
     }
 
     return Array.from(patterns);
-  }
-
-  /**
-   * Remove duplicates and score predictions
-   */
-  deduplicateAndScore(predictions) {
-    const seen = new Map();
-    const unique = [];
-
-    for (const pred of predictions) {
-      if (!seen.has(pred.url)) {
-        seen.set(pred.url, pred);
-        unique.push(pred);
-      } else {
-        // Keep the higher confidence version
-        const existing = seen.get(pred.url);
-        if (pred.confidence > existing.confidence) {
-          seen.set(pred.url, pred);
-        }
-      }
-    }
-
-    // Sort by confidence descending
-    return unique.sort((a, b) => b.confidence - a.confidence);
   }
 
   /**
@@ -420,13 +430,6 @@ class CountryHubGapAnalyzer {
 
   // Private methods
 
-  _generateCountrySlug(countryName) {
-    return countryName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-  }
-
   _getRegion(countryCode) {
     const regionMap = {
       'CN': 'asia', 'JP': 'asia', 'IN': 'asia', 'KR': 'asia',
@@ -435,23 +438,6 @@ class CountryHubGapAnalyzer {
       'AU': 'oceania'
     };
     return regionMap[countryCode] || 'international';
-  }
-
-  _normalizeHost(domain) {
-    if (!domain) return '';
-    const trimmed = String(domain).trim();
-    if (!trimmed) return '';
-
-    try {
-      const parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
-      return parsed.hostname.replace(/^www\./, '').toLowerCase();
-    } catch (_) {
-      return trimmed
-        .replace(/^https?:\/\//, '')
-        .replace(/^www\./, '')
-        .replace(/\/.*$/, '')
-        .toLowerCase();
-    }
   }
 
   _calculateConfidence(country) {

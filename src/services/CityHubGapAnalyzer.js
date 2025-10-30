@@ -3,12 +3,12 @@
 const path = require('path');
 const { getTopCities } = require('../db/sqlite/v1/queries/gazetteer.places');
 const { slugify } = require('../tools/slugify');
-const { loadDsplLibrary, getDsplForDomain } = require('./shared/dspl');
+const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 
 /**
- * CityHubGapAnalyzer provides heuristics and predictions for city-level hubs.
+ * CityHubGapAnalyzer extends HubGapAnalyzerBase to provide city-specific hub URL predictions.
  */
-class CityHubGapAnalyzer {
+class CityHubGapAnalyzer extends HubGapAnalyzerBase {
   /**
    * @param {object} options
    * @param {import('better-sqlite3').Database} options.db - Database handle.
@@ -16,12 +16,51 @@ class CityHubGapAnalyzer {
    * @param {string} [options.dsplDir] - Directory containing DSPL JSON files.
    */
   constructor({ db, logger = console, dsplDir = path.join(__dirname, '..', '..', 'data', 'dspls') } = {}) {
-    if (!db) {
-      throw new Error('CityHubGapAnalyzer requires a database connection');
-    }
-    this.db = db;
-    this.logger = logger;
-    this.dspls = loadDsplLibrary({ dsplDir, logger });
+    super({ db, logger, dsplDir });
+  }
+
+  /**
+   * City label for DSPL lookups and logging
+   */
+  getEntityLabel() {
+    return 'city';
+  }
+
+  /**
+   * Fallback patterns for city hubs
+   */
+  getFallbackPatterns() {
+    return [
+      '/{citySlug}',
+      '/city/{citySlug}',
+      '/cities/{citySlug}',
+      '/{countryCode}/{citySlug}',
+      '/{countryCode}/{regionSlug}/{citySlug}',
+      '/world/{citySlug}',
+      '/world/{countryCode}/{citySlug}',
+      '/travel/{citySlug}',
+      '/{regionSlug}/{citySlug}'
+    ];
+  }
+
+  /**
+   * Build metadata for city entity
+   */
+  buildEntityMetadata(city) {
+    if (!city?.name) return null;
+
+    const citySlug = slugify(city.name);
+    if (!citySlug) return null;
+
+    const countryCode = city.countryCode ? String(city.countryCode).toLowerCase() : null;
+    const regionSlug = city.regionName ? slugify(city.regionName) : null;
+
+    return {
+      citySlug,
+      countryCode,
+      regionSlug,
+      name: city.name
+    };
   }
 
   /**
@@ -36,6 +75,7 @@ class CityHubGapAnalyzer {
 
   /**
    * Generate candidate URLs for a city hub.
+   * Delegates to base class predictHubUrls() method.
    *
    * @param {string} domain - Target domain (hostname).
    * @param {object} city - City metadata.
@@ -45,55 +85,7 @@ class CityHubGapAnalyzer {
    * @returns {string[]} Array of candidate URLs (absolute).
    */
   predictCityHubUrls(domain, city) {
-    if (!city?.name) return [];
-    const citySlug = slugify(city.name);
-    if (!citySlug) return [];
-
-    const baseUrl = `https://${domain}`;
-    const countryCode = city.countryCode ? String(city.countryCode).toLowerCase() : null;
-    const countrySlug = countryCode || null;
-    const regionSlug = city.regionName ? slugify(city.regionName) : null;
-
-    const urls = new Set();
-    const addPattern = (pattern) => {
-      if (!pattern) return;
-      try {
-        const formatted = pattern
-          .replace('{citySlug}', citySlug)
-          .replace('{countryCode}', countrySlug || '')
-          .replace('{countrySlug}', countrySlug || '')
-          .replace('{regionSlug}', regionSlug || citySlug);
-        const normalized = new URL(formatted, baseUrl).href;
-        urls.add(normalized);
-      } catch (_) {
-        // Ignore invalid URLs
-      }
-    };
-
-    const dspl = getDsplForDomain(this.dspls, domain);
-    const dsplPatterns = dspl?.cityHubPatterns || [];
-    for (const entry of dsplPatterns) {
-      if (!entry) continue;
-      if (entry.verified === false) continue;
-      addPattern(entry.pattern || entry);
-    }
-
-    const fallbackPatterns = [
-      '/{citySlug}',
-      '/city/{citySlug}',
-      '/cities/{citySlug}',
-      '/{countryCode}/{citySlug}',
-      '/{countryCode}/{regionSlug}/{citySlug}',
-      '/world/{citySlug}',
-      '/world/{countryCode}/{citySlug}',
-      '/travel/{citySlug}',
-      '/{regionSlug}/{citySlug}'
-    ];
-    for (const pattern of fallbackPatterns) {
-      addPattern(pattern);
-    }
-
-    return Array.from(urls);
+    return this.predictHubUrls(domain, city);
   }
 }
 
