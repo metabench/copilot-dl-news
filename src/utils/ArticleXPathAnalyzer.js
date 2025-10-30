@@ -1,8 +1,7 @@
 /**
  * ArticleXPathAnalyzer - Analyzes HTML structure to identify XPath patterns for article content extraction
  */
-
-const { JSDOM, VirtualConsole } = require('jsdom');
+const { createJsdom } = require('./jsdomUtils');
 
 class ArticleXPathAnalyzer {
   constructor(options = {}) {
@@ -22,11 +21,9 @@ class ArticleXPathAnalyzer {
    * @returns {object} Analysis results with top patterns
    */
   async analyzeHtml(html) {
+    let dom = null;
     try {
-      const virtualConsole = new VirtualConsole();
-      virtualConsole.on('jsdomError', () => {});
-
-      const dom = new JSDOM(html, { virtualConsole });
+      ({ dom } = createJsdom(html));
       const document = dom.window.document;
 
       const candidates = this.findArticleCandidates(document);
@@ -44,6 +41,10 @@ class ArticleXPathAnalyzer {
 
     } catch (error) {
       throw new Error(`HTML analysis failed: ${error.message}`);
+    } finally {
+      if (dom) {
+        dom.window.close();
+      }
     }
   }
 

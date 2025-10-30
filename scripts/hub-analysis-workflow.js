@@ -9,8 +9,10 @@
 
 const https = require('https');
 const http = require('http');
-const { ensureDatabase } = require('./src/db/sqlite');
-const HubValidator = require('./src/hub-validation/HubValidator');
+const { ensureDatabase } = require('../src/db/sqlite');
+const HubValidator = require('../src/hub-validation/HubValidator');
+const { createJsdom } = require('../src/utils/jsdomUtils');
+const { summarizeLinks } = require('../src/utils/linkClassification');
 
 class HubAnalysisWorkflow {
   constructor(db) {
@@ -180,58 +182,124 @@ class HubAnalysisWorkflow {
     return {
       navigationPatterns: this.analyzeNavigationPatterns(html),
       contentStructure: this.classifyContentStructure(html),
-      linkAnalysis: this.analyzeLinkStructure(html),
+      linkAnalysis: this.analyzeLinkStructure(content),
       temporalPatterns: this.analyzeTemporalPatterns(content.url, html),
       semanticFeatures: this.extractSemanticFeatures(html)
     };
   }
 
-  analyzeNavigationPatterns(html) {
-    // Simple regex-based analysis (would use cheerio in full implementation)
-    const navPatterns = {
-      breadcrumb: /<nav[^>]*class="[^"]*breadcrumb|<div[^>]*class="[^"]*breadcrumb/gi,
-      sidebar: /<aside|<div[^>]*class="[^"]*sidebar/gi,
-      mainNav: /<nav[^>]*class="[^"]*main|<nav[^>]*class="[^"]*primary/gi,
-      footerNav: /<footer[^>]*nav|<nav[^>]*class="[^"]*footer/gi,
-      categorySections: /<section[^>]*class="[^"]*categor|<div[^>]*class="[^"]*section/gi
+  analyzeLinkStructure(content) {
+    const html = content?.html || '';
+    const baseUrl = content?.url || null;
+
+    const fallback = () => {
+      const links = html.match(/<a[^>]+href="([^\"]*)"[^>]*>([^<]*)<\/a>/gi) || [];
+      const linkTypes = {
+        total: links.length,
+        internal: 0,
+        external: 0,
+        category: 0,
+        article: 0
+      };
+
+      for (const link of links) {
+        const hrefMatch = link.match(/href="([^\"]*)"/);
+        if (!hrefMatch) continue;
+        const href = hrefMatch[1];
+        if (!href) continue;
+
+        if (/\/category\/|\/topic\/|\/tag\//.test(href)) {
+          linkTypes.category += 1;
+        }
+
+        if (/\d{4}\/\d{2}\/\d{2}/.test(href)) {
+          linkTypes.article += 1;
+        }
+
+        try {
+          if (href.startsWith('/')) {
+            linkTypes.internal += 1;
+          } else if (href.startsWith('http') && baseUrl) {
+            const linkUrl = new URL(href);
+            const contentUrl = new URL(baseUrl);
+            if (linkUrl.hostname === contentUrl.hostname) {
+              linkTypes.internal += 1;
+            } else {
+              linkTypes.external += 1;
+            }
+          } else if (href.startsWith('http')) {
+            linkTypes.external += 1;
+          }
+        } catch (_) {
+          // Ignore malformed URLs in fallback mode
+        }
+      }
+
+      return {
+        ...linkTypes,
+        internalRatio: linkTypes.total > 0 ? linkTypes.internal / linkTypes.total : 0,
+        categoryRatio: linkTypes.total > 0 ? linkTypes.category / linkTypes.total : 0,
+        navigation: Math.max(0, linkTypes.internal - linkTypes.article),
+        samples: null
+      };
     };
 
-    const results = {};
-    for (const [key, pattern] of Object.entries(navPatterns)) {
-      results[key] = (html.match(pattern) || []).length;
+    if (!html || !baseUrl) {
+      return fallback();
     }
 
-    const totalScore = Object.values(results).reduce((sum, val) => sum + val, 0);
-    return {
-      indicators: results,
-      score: Math.min(totalScore / 10, 1.0),
-      strength: totalScore > 5 ? 'strong' : totalScore > 2 ? 'moderate' : 'weak'
-    };
+    let dom = null;
+    try {
+      ({ dom } = createJsdom(html, { url: baseUrl }));
+      const document = dom.window.document;
+      const anchorNodes = Array.from(document.querySelectorAll('a[href]'));
+      const linkSummary = summarizeLinks({ url: baseUrl, anchors: anchorNodes });
+
+      let category = 0;
+      for (const node of anchorNodes) {
+        if (!node) continue;
+        let href = null;
+        if (typeof node.getAttribute === 'function') {
+          href = node.getAttribute('href');
+        } else if (typeof node.href === 'string') {
+          href = node.href;
+        }
+        if (!href) continue;
+        try {
+          const normalized = new URL(href, baseUrl);
+          if (/\/category\/|\/topic\/|\/tag\//.test(normalized.pathname)) {
+            category += 1;
+          }
+        } catch (_) {
+          if (/\/category\/|\/topic\/|\/tag\//.test(href)) {
+            category += 1;
+          }
+        }
+      }
+
+      const totalAnchors = anchorNodes.length;
+      return {
+        total: totalAnchors,
+        internal: linkSummary.total,
+        external: linkSummary.external,
+        category,
+        article: linkSummary.article,
+        navigation: linkSummary.navigation,
+        internalRatio: totalAnchors > 0 ? linkSummary.total / totalAnchors : 0,
+        categoryRatio: totalAnchors > 0 ? category / totalAnchors : 0,
+        samples: {
+          navigation: linkSummary.navigationSamples,
+          article: linkSummary.articleSamples
+        }
+      };
+    } catch (_) {
+      return fallback();
+    } finally {
+      if (dom) {
+        dom.window.close();
+      }
+    }
   }
-
-  classifyContentStructure(html) {
-    // Article indicators (specific to individual articles)
-    const articleIndicators = {
-      byline: /class="[^"]*byline|class="[^"]*author|<span[^>]*author/gi,
-      publishDate: /class="[^"]*date|class="[^"]*published|<time[^>]*datetime/gi,
-      socialSharing: /class="[^"]*share|class="[^"]*social/gi,
-      comments: /class="[^"]*comment|#comments/gi,
-      readingTime: /class="[^"]*reading|class="[^"]*time/gi
-    };
-
-    // Hub indicators (aggregation/listing pages)
-    const hubIndicators = {
-      multipleH2: /<h2[^>]*>/gi,
-      categoryList: /class="[^"]*category|class="[^"]*list|class="[^"]*section/gi,
-      navigationSections: /<section[^>]*nav|<nav[^>]*section/gi,
-      archiveStructure: /class="[^"]*archive|class="[^"]*listing|class="[^"]*feed/gi,
-      subNavigation: /class="[^"]*subnav|<nav[^>]*nav/gi,
-      manyLinks: /<a[^>]+href/gi // Hubs typically have many links
-    };
-
-    const articleScore = Object.values(articleIndicators)
-      .reduce((sum, pattern) => sum + (html.match(pattern) || []).length, 0);
-
     const hubScore = Object.values(hubIndicators)
       .reduce((sum, pattern) => {
         const matches = html.match(pattern) || [];

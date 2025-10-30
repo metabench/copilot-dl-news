@@ -1,5 +1,4 @@
 const { Readability } = require('@mozilla/readability');
-const { JSDOM, VirtualConsole } = require('jsdom');
 const cheerio = require('cheerio');
 const {
   extractGazetteerPlacesFromText,
@@ -13,8 +12,9 @@ const { detectPlaceHub } = require('../tools/placeHubDetector');
 const { performDeepAnalysis } = require('./deep-analyzer');
 const { extractDomain } = require('../services/shared/dxpl');
 const { performance } = require('perf_hooks');
-
-const WORD_BOUNDARY_REGEX = /\s+/g;
+const { createJsdom } = require('../utils/jsdomUtils');
+const { countWords } = require('../utils/textMetrics');
+const { summarizeLinks } = require('../utils/linkClassification');
 
 async function analyzePage({
   url,
@@ -133,6 +133,10 @@ async function analyzePage({
 
   analysis.meta = analysis.meta || {};
   analysis.meta.timings = timingSummary;
+
+  if (preparation?.linkSummary) {
+    analysis.meta.linkSummary = preparation.linkSummary;
+  }
 
   return {
     analysis,
@@ -297,6 +301,7 @@ async function prepareArticleContent({
       article: null,
       total: null
     },
+    linkSummary: null,
     contentSignals: null,
     htmlUsed: Boolean(html),
     extraction: {
@@ -366,6 +371,7 @@ async function prepareArticleContent({
   }
 
   if (!extractedText) {
+    let dom = null;
     try {
       const readabilityStart = performance.now();
 
@@ -374,44 +380,20 @@ async function prepareArticleContent({
       result.contentSignals = articleSignalsService.computeContentSignals($, html);
 
       const jsdomStart = performance.now();
-      const virtualConsole = new VirtualConsole();
-      virtualConsole.on('jsdomError', () => {});
-      const dom = new JSDOM(html, { url, virtualConsole });
+      ({ dom } = createJsdom(html, { url }));
       const jsdomMs = Math.max(0, performance.now() - jsdomStart);
+      const document = dom.window.document;
 
-      const links = Array.from(dom.window.document.querySelectorAll('a[href]'));
-      result.linkCounts.total = links.length;
-      
-      // Simple link classification heuristic
-      let navLinks = 0;
-      let articleLinks = 0;
-      const currentHost = new URL(url).hostname;
-
-      for (const link of links) {
-        try {
-          const href = link.getAttribute('href');
-          if (!href || href.startsWith('#')) continue;
-
-          const linkUrl = new URL(href, url);
-          if (linkUrl.hostname !== currentHost) continue; // Skip external links
-
-          // Heuristic: paths with year/month/day or long slugs are articles
-          if (/\/\d{4}\/\w{3}\/\d{1,2}\//.test(linkUrl.pathname) || linkUrl.pathname.split('/').length > 4) {
-            articleLinks++;
-          } else {
-            navLinks++;
-          }
-        } catch (e) {
-          // Ignore invalid URLs
-        }
-      }
-      result.linkCounts.nav = navLinks;
-      result.linkCounts.article = articleLinks;
+      const linkSummary = summarizeLinks({ url, document });
+      result.linkCounts.total = linkSummary.total;
+      result.linkCounts.nav = linkSummary.navigation;
+      result.linkCounts.article = linkSummary.article;
+      result.linkSummary = linkSummary;
 
       const readabilityAlgoStart = performance.now();
-      const readable = new Readability(dom.window.document).parse();
+      const readable = new Readability(document).parse();
       const readabilityAlgoMs = Math.max(0, performance.now() - readabilityAlgoStart);
-      
+
       if (readable && readable.textContent) {
         extractedText = readable.textContent.trim();
         extractionMethod = extractionMethod || 'readability';
@@ -422,6 +404,10 @@ async function prepareArticleContent({
       timings.readabilityAlgoMs = (timings.readabilityAlgoMs || 0) + readabilityAlgoMs;
     } catch (_) {
       // ignore readability failures
+    } finally {
+      if (dom) {
+        dom.window.close();
+      }
     }
   }
 
@@ -454,14 +440,6 @@ function extractWordCount(analysis) {
   if (!analysis || !analysis.meta) return null;
   if (typeof analysis.meta.wordCount === 'number') return analysis.meta.wordCount;
   return null;
-}
-
-function countWords(text) {
-  if (!text) return 0;
-  const trimmed = text.trim();
-  if (!trimmed) return 0;
-  const matches = trimmed.split(WORD_BOUNDARY_REGEX).filter(Boolean);
-  return matches.length;
 }
 
 function safeExtractDomain(url) {

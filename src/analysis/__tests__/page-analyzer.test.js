@@ -25,11 +25,11 @@ function createGazetteer() {
 }
 
 describe('analyzePage', () => {
-  test('extracts places, deep analysis, and hub candidate', () => {
+  test('extracts places, deep analysis, and hub candidate', async () => {
     const gazetteer = createGazetteer();
     const url = 'https://www.theguardian.com/sport/iceland';
 
-    const { analysis, places, hubCandidate, deepAnalysis } = analyzePage({
+    const { analysis, places, hubCandidate, deepAnalysis } = await analyzePage({
       url,
       title: 'Iceland sport hub',
       section: 'Sport',
@@ -50,7 +50,7 @@ describe('analyzePage', () => {
     });
 
     expect(analysis.analysis_version).toBe(7);
-    expect(analysis.kind).toBe('article');
+    expect(analysis.kind).toBe('hub');
     expect(analysis.meta).toHaveProperty('wordCount', 150);
 
     expect(Array.isArray(places)).toBe(true);

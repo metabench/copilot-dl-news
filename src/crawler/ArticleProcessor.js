@@ -2,9 +2,10 @@
 
 const cheerio = require('cheerio');
 const crypto = require('crypto');
-const { JSDOM, VirtualConsole } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const { extractSchemaSignals } = require('./schemaSignals');
+const { createJsdom } = require('../utils/jsdomUtils');
+const { countWords } = require('../utils/textMetrics');
 
 class ArticleProcessor {
   constructor(options = {}) {
@@ -215,21 +216,23 @@ class ArticleProcessor {
     } catch (_) { /* ignore hash errors */ }
 
     try {
-      const vc = new VirtualConsole();
-      vc.on('jsdomError', (err) => {
-        const msg = err && err.message ? err.message : String(err);
-        if (/Could not parse CSS stylesheet/i.test(msg)) {
-          return;
+      let dom = null;
+      try {
+        ({ dom } = createJsdom(html, { url }));
+        const document = dom.window.document;
+        const reader = new Readability(document);
+        const article = reader.parse();
+
+        if (article && article.textContent) {
+          text = article.textContent.trim();
+          wordCount = countWords(text);
+          language = document.documentElement.getAttribute('lang') || null;
+          articleXPath = this._findArticleXPath(document, article);
         }
-      });
-      const dom = new JSDOM(html, { url, virtualConsole: vc });
-      const reader = new Readability(dom.window.document);
-      const article = reader.parse();
-      if (article && article.textContent) {
-        text = article.textContent.trim();
-        wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
-        language = dom.window.document.documentElement.getAttribute('lang') || null;
-        articleXPath = this._findArticleXPath(dom.window.document, article);
+      } finally {
+        if (dom) {
+          dom.window.close();
+        }
       }
     } catch (err) {
       this._log('warn', 'Readability parsing failed:', err && err.message ? err.message : err);

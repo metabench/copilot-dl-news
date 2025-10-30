@@ -1,51 +1,41 @@
 # CHANGE_PLAN.md
 
-## Goal
-- Provide a reusable, testable workflow for geography crawl SPARQL queries by introducing a query runner CLI, centralizing query templates, tightening their structure, and aligning documentation with the new tooling.
+## Goal / Non-Goals
+- **Goal:** Centralise navigation vs. article link heuristics so that analyzers, CLIs, and crawler components share the same classification and counting logic.
+- **Non-Goals:** We are not refactoring the crawler’s `LinkExtractor` internals or changing how fetch records persist link arrays. The focus is on consolidating the lightweight counting code paths used outside the crawler pipeline.
 
 ## Current Behavior
-- Geography-focused SPARQL strings live inline in `WikidataCountryIngestor`, `WikidataAdm1Ingestor`, and `WikidataCitiesIngestor`, making review and reuse outside the ingestion pipeline difficult.
-- `WikidataService` offers caching and query helpers but ingestors construct strings manually and the wider codebase lacks a lightweight way to execute the queries ad hoc.
-- There is no CLI to validate or debug the SPARQL queries used by the geography crawl, so verifying query changes requires running the entire ingestion flow.
-- Documentation for the geography crawl references SPARQL usage conceptually but does not surface the exact queries or describe how to test them in isolation.
+- `src/analysis/page-analyzer.js` hand-rolls link counts by scanning anchors with inline heuristics (date-like paths, slug depth, host comparison).
+- Scripts such as `src/tools/show-analysis.js` and `src/tools/analyse-pages-core.js` reconstruct similar counts when presenting results, leading to divergent heuristics over time.
+- The crawler already exposes a richer `LinkExtractor`, but the offline analyzers cannot reuse it without bespoke plumbing, so they drift.
 
-## Proposed Changes
-1. **Centralize query construction — ✅** Shared builders now live in `src/crawler/gazetteer/queries/geographyQueries.js` with reusable language lists and helper exports.
-2. **Adopt builders in ingestors — ✅** Country, ADM1, and city ingestors call the shared builders instead of ad-hoc multiline templates, keeping telemetry and caching intact.
-3. **Create CLI query runner — ✅** Added `src/tools/geography-crawl-queries.js` with list/print/run modes, country scoping, and JSON output for direct SPARQL validation.
-4. **Improve SPARQL templates — ✅** Queries use `VALUES` blocks, `[AUTO_LANGUAGE]` label services, optional filters, and consistent ordering to reduce drift across call sites.
-5. **Update docs and tests — ✅** Geography crawl docs highlight the CLI workflow, and `tests/unit/geography/GeographyQueries.test.js` guards the builders.
+## Refactor & Modularization Plan
+1. **Introduce `linkClassification` utility:** Create `src/utils/linkClassification.js` exporting a `summarizeLinks({ url, document })` helper that encapsulates the existing anchor-iteration heuristics and returns `{ total, nav, article, details }` data.
+2. **Adopt helper in page analyzer:** Replace the inline link counting block in `src/analysis/page-analyzer.js` (including preparation timings) with a call to the new helper so the high-level function focuses on orchestration only, and extend the same helper to ancillary analysis scripts (e.g., `scripts/hub-analysis-workflow.js`) so offline tooling shares the exact classification.
+3. **Surface helper output in analysis metadata:** Persist the helper’s summary (e.g., under `analysis.meta.linkSummary`) so offline tooling can consume consistent counts without recalculating HTML.
+4. **Backfill unit coverage:** Add targeted tests for the new helper (e.g., in `src/utils/__tests__/linkClassification.test.js`) to guard the heuristics that were previously implicit.
+
+## Patterns to Introduce
+- `summarizeLinks({ url, document })` will expose a neutral API that callers can feed with a JSDOM document or raw HTML (internally building cheerio as needed).
+- The helper will normalise host comparisons and slug heuristics in one place, making it easier to evolve the rules without surveying every consumer.
 
 ## Risks & Unknowns
-- Real-time SPARQL execution from the CLI may hit Wikidata rate limits; need sensible defaults (sleep, max rows) and clear warnings.
-- Refactoring ingestors must avoid subtle behavior changes (ordering, limits, or clauses that downstream logic expects).
-- Some countries rely on fallback query logic; ensure centralization does not remove country-specific handling or reduce coverage.
-- Documentation might reference legacy command names; need to audit for consistency after edits.
-
-## Integration Points
-- `src/crawler/gazetteer/ingestors/WikidataCountryIngestor.js`
-- `src/crawler/gazetteer/ingestors/WikidataAdm1Ingestor.js`
-- `src/crawler/gazetteer/ingestors/WikidataCitiesIngestor.js`
-- `src/crawler/gazetteer/services/WikidataService.js`
-- New query module under `src/crawler/gazetteer/queries`
-- CLI entry in `src/tools/geography-crawl-queries.js` (and potential package.json script shortcut)
-- Geography crawl documentation under `docs/`
+- The helper must match existing behaviour exactly; otherwise hub detection metrics may shift. Mitigate by porting the current logic verbatim and validating with unit tests that capture representative URLs.
+- Some consumers may run without full HTML (e.g., fetch rows from DB only). Ensure the helper gracefully handles missing DOM input and callers keep existing fallbacks.
 
 ## Docs Impact
-- `docs/GEOGRAPHY_CRAWL_TYPE.md` – add CLI usage and note the centralized queries.
-- `docs/GEOGRAPHY_E2E_TESTING.md` (and any related quick references) – mention how to validate queries outside the crawl.
-- If other docs enumerate tooling, add the CLI to the relevant section (e.g., tooling indexes or README snippets).
+- No public docs change is required. Internal module comments will describe the helper for future contributors.
 
 ## Focused Test Plan
-- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath tests/unit/gazetteer/WikidataCountryIngestor.test.js`
-- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath tests/unit/geography/GeographyQueries.test.js`
-- (Optional) When dedicated ADM1/cities suites are introduced, run their counterparts to keep ingestion coverage aligned.
+- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/analysis/__tests__/page-analyzer.test.js`
+- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/analysis/__tests__/page-analyzer-xpath.test.js`
+- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/utils/__tests__/linkClassification.test.js`
 
 ## Rollback Plan
-- Delete the query builder module and CLI file; revert ingestor imports to their previous inline strings.
-- Restore documentation changes and remove any package.json script additions.
-- Re-run targeted Jest suites to confirm ingestion behavior matches baseline.
+- Delete `src/utils/linkClassification.js`, restore the previous inline logic in `page-analyzer` and the CLI consumer, and remove the new unit tests.
+- Re-run the focused tests above to confirm behaviour matches baseline after reverting.
 
-## Latest Summary
-- Centralized the Wikidata queries into `geographyQueries.js`, updated the country/ADM1/city ingestors to reuse them, and shipped the `geography-crawl-queries.js` CLI with documentation.
-- Tests executed: `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath tests/unit/gazetteer/WikidataCountryIngestor.test.js`, `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath tests/unit/geography/GeographyQueries.test.js`.
+## Refactor Index
+- `page-analyzer` link counting block → `linkClassification.summarizeLinks`.
+- `analysis.meta.linkSummary` stores helper output for downstream tooling.
+- New unit suite `src/utils/__tests__/linkClassification.test.js` protects the shared behaviour.

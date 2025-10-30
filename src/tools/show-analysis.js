@@ -238,7 +238,35 @@ async function main() {
         if (analysisData.meta && Object.keys(analysisData.meta).length > 0) {
           console.log(`\n${colors.bold}Metadata:${colors.reset}`);
           Object.entries(analysisData.meta).forEach(([key, value]) => {
-            console.log(`  ${key}: ${value}`);
+            if (key === 'linkSummary' && value && typeof value === 'object') {
+              const navigation = typeof value.navigation === 'number' ? value.navigation : 0;
+              const article = typeof value.article === 'number' ? value.article : 0;
+              const totalInternal = typeof value.total === 'number' ? value.total : navigation + article;
+              const external = typeof value.external === 'number' ? value.external : 0;
+              const skipped = typeof value.skipped === 'number' ? value.skipped : 0;
+              console.log('  linkSummary:');
+              console.log(`    internalClassified: ${totalInternal}`);
+              console.log(`    navigation:    ${navigation}`);
+              console.log(`    article:       ${article}`);
+              console.log(`    external:      ${external}`);
+              console.log(`    skipped:       ${skipped}`);
+              if (Array.isArray(value.navigationSamples) && value.navigationSamples.length) {
+                console.log(`    navigationSamples:`);
+                value.navigationSamples.slice(0, 5).forEach((sample) => {
+                  console.log(`      - ${sample}`);
+                });
+              }
+              if (Array.isArray(value.articleSamples) && value.articleSamples.length) {
+                console.log(`    articleSamples:`);
+                value.articleSamples.slice(0, 5).forEach((sample) => {
+                  console.log(`      - ${sample}`);
+                });
+              }
+            } else if (value && typeof value === 'object') {
+              console.log(`  ${key}: ${formatJson(value, 2)}`);
+            } else {
+              console.log(`  ${key}: ${value}`);
+            }
           });
         }
 

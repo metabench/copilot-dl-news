@@ -8,7 +8,7 @@
 // - Ensure any JSDOM windows are explicitly closed to free memory.
 
 const path = require('path');
-const { JSDOM, VirtualConsole } = require('jsdom');
+const { createJsdom } = require('../utils/jsdomUtils');
 
 // Gracefully handle broken pipe (e.g., piping to `Select-Object -First N`)
 try {
@@ -83,15 +83,12 @@ function extractDate(html) {
 
   // Fall back to JSDOM when necessary
   try {
-    // Use a silent VirtualConsole to avoid noisy jsdomError logs (e.g., CSS parse warnings)
-    const vc = new VirtualConsole();
-    vc.on('jsdomError', () => {});
-    vc.on('error', () => {});
-    vc.on('warn', () => {});
-    vc.on('info', () => {});
-    vc.on('log', () => {});
-    const dom = new JSDOM(html || '', { virtualConsole: vc, runScripts: 'outside-only' });
-    const doc = dom.window.document;
+    let dom = null;
+    try {
+      ({ dom } = createJsdom(html || '', {
+        jsdomOptions: { runScripts: 'outside-only' }
+      }));
+      const doc = dom.window.document;
     const pick = (sel, attr) => {
       const el = doc.querySelector(sel);
       if (!el) return null;
@@ -110,16 +107,21 @@ function extractDate(html) {
       ['.published', null],
       ['.timestamp', null]
     ];
-    for (const [sel, attr] of candidates) {
-      const v = pick(sel, attr);
-      if (!v) continue;
-      const iso = toIso(v);
-      if (iso) {
+      for (const [sel, attr] of candidates) {
+        const v = pick(sel, attr);
+        if (!v) continue;
+        const iso = toIso(v);
+        if (iso) {
+          dom.window.close();
+          dom = null;
+          return iso;
+        }
+      }
+    } finally {
+      if (dom) {
         dom.window.close();
-        return iso;
       }
     }
-    dom.window.close();
   } catch (_) {}
   return null;
 }

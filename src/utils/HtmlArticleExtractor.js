@@ -7,6 +7,7 @@
 
 const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
+const { countWords } = require('./textMetrics');
 
 /**
  * HTML Article Extractor
@@ -397,8 +398,7 @@ class HtmlArticleExtractor {
    * Count words in text
    */
   _countWords(text) {
-    if (!text) return 0;
-    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    return countWords(text);
   }
 
   /**
