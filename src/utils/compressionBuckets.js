@@ -3,10 +3,13 @@
  * 
  * Manages compression buckets that store multiple similar files in a single compressed archive.
  * Uses tar format for packaging and applies compression algorithms (gzip/brotli) to the entire archive.
+ * 
+ * Uses CompressionFacade for all compression operations, ensuring consistent algorithm
+ * validation, preset definitions, and stats calculation across bucket operations.
  */
 
 const tar = require('tar-stream');
-const { compress, decompress, getCompressionType } = require('./compression');
+const { compress, decompress, getCompressionType } = require('./CompressionFacade');
 
 /**
  * Create a compression bucket from multiple items
@@ -85,12 +88,9 @@ function createBucket(db, options) {
       try {
         const tarBuffer = Buffer.concat(chunks);
         
-        // Compress the entire tar archive
+        // Compress the entire tar archive using CompressionFacade
         const result = compress(tarBuffer, {
-          algorithm: type.algorithm,
-          level: type.level,
-          windowBits: type.window_bits,
-          blockBits: type.block_bits
+          preset: compressionType
         });
         
         // Insert into database
@@ -121,9 +121,8 @@ function createBucket(db, options) {
         
         resolve({
           bucketId: insertResult.id,
-          compressionType: type.name,
-          algorithm: type.algorithm,
-          level: type.level,
+          compressionType: compressionType,
+          algorithm: result.algorithm,
           itemCount: items.length,
           uncompressedSize: totalUncompressedSize,
           compressedSize: result.compressedSize,

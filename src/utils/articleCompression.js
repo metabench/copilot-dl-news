@@ -3,9 +3,12 @@
  * 
  * Helper functions for compressing and decompressing article HTML content
  * Supports both individual compression and compression bucket storage
+ * 
+ * Uses CompressionFacade for all compression operations, ensuring consistent
+ * algorithm validation, preset definitions, and stats calculation.
  */
 
-const { compress, decompress, getCompressionType } = require('./compression');
+const { compress, decompress, getCompressionType, PRESETS } = require('./CompressionFacade');
 const { retrieveFromBucket } = require('./compressionBuckets');
 const { getGlobalCache } = require('./bucketCache');
 
@@ -81,11 +84,13 @@ async function decompressArticleHtml(db, articleId, options = {}) {
  * @param {Database} db - better-sqlite3 database instance
  * @param {number} articleId - Article ID
  * @param {Object} options - Compression options
- * @param {string} [options.compressionType] - Compression type name (default: 'brotli_10')
+ * @param {string} [options.preset] - Compression preset name (default: PRESETS.BROTLI_6)
+ *                                    Or use legacy format: { compressionType: 'brotli_10' }
  * @returns {Object} Compression result with statistics
  */
 function compressAndStoreArticleHtml(db, articleId, options = {}) {
-  const { compressionType: compressionTypeName = 'brotli_10' } = options;
+  // Support both new preset API and legacy compressionType API
+  const presetName = options.preset || options.compressionType || PRESETS.BROTLI_6;
   
   try {
     // Get article HTML
@@ -95,13 +100,15 @@ function compressAndStoreArticleHtml(db, articleId, options = {}) {
       throw new Error(`Article ${articleId} not found or has no HTML`);
     }
     
-    // Get compression type
-    const compressionType = getCompressionType(db, compressionTypeName);
+    // Get compression type from database
+    const compressionType = getCompressionType(db, presetName);
+    if (!compressionType) {
+      throw new Error(`Compression type not found: ${presetName}`);
+    }
     
-    // Compress HTML
+    // Compress HTML using CompressionFacade
     const result = compress(article.html, {
-      algorithm: compressionType.algorithm,
-      level: compressionType.level,
+      preset: presetName,
       windowBits: compressionType.window_bits,
       blockBits: compressionType.block_bits
     });
@@ -126,7 +133,7 @@ function compressAndStoreArticleHtml(db, articleId, options = {}) {
     
     return {
       articleId,
-      compressionType: compressionType.name,
+      compressionType: presetName,
       originalSize: result.uncompressedSize,
       compressedSize: result.compressedSize,
       ratio: result.ratio,

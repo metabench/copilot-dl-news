@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 
+/**
+ * Detect article candidates with beautiful formatted output.
+ * 
+ * Usage:
+ *   node detect-articles.js                           (detect articles from all URLs)
+ *   node detect-articles.js --limit=100               (limit to first 100)
+ *   node detect-articles.js --host=bbc.com            (only URLs from specific host)
+ *   node detect-articles.js --sample=50 --explain     (random sample with reasoning)
+ *   node detect-articles.js --scores                  (include confidence scores)
+ */
+
 'use strict';
 
 const path = require('path');
@@ -9,6 +20,10 @@ const {
 } = require('../analysis/articleDetection');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite/ensureDb');
+const { CliFormatter, ICONS } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
+
+const fmt = new CliFormatter();
 
 function toInt(value) {
   if (value == null) return null;
@@ -17,76 +32,24 @@ function toInt(value) {
   return Math.max(0, Math.floor(parsed));
 }
 
+/**
+ * Parse CLI arguments using CliArgumentParser
+ */
 function parseCliArgs(argv) {
-  const options = {
-    dbPath: null,
-    limit: null,
-    host: null,
-    sample: null,
-    explain: false,
-    includeScores: false,
-    help: false
-  };
+  const parser = new CliArgumentParser(
+    'detect-articles',
+    'Detect likely article pages from crawled URLs'
+  );
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const raw = argv[i];
-    if (!raw) continue;
+  parser
+    .add('--db <path>', 'Path to SQLite database', null)
+    .add('--limit <number>', 'Maximum records to inspect', null, 'number')
+    .add('--sample <number>', 'Random sample size', null, 'number')
+    .add('--host <host>', 'Restrict to specific host', null, 'string')
+    .add('--explain', 'Print reasoning for each decision', false, 'boolean')
+    .add('--scores', 'Include score/confidence in output', false, 'boolean');
 
-    if (raw === '--help' || raw === '-h') {
-      options.help = true;
-      continue;
-    }
-    if (raw === '--explain') {
-      options.explain = true;
-      continue;
-    }
-    if (raw === '--no-explain') {
-      options.explain = false;
-      continue;
-    }
-    if (raw === '--scores') {
-      options.includeScores = true;
-      continue;
-    }
-
-    if (!raw.startsWith('--')) {
-      options.host = raw;
-      continue;
-    }
-
-    const sep = raw.indexOf('=');
-    const key = sep === -1 ? raw : raw.slice(0, sep);
-    let value = sep === -1 ? null : raw.slice(sep + 1);
-
-    if (value === null && argv[i + 1] && !argv[i + 1].startsWith('-')) {
-      value = argv[i + 1];
-      i += 1;
-    }
-
-    switch (key) {
-      case '--db':
-      case '--db-path':
-        options.dbPath = value || null;
-        break;
-      case '--limit':
-        options.limit = toInt(value);
-        break;
-      case '--sample':
-      case '--random-sample':
-        options.sample = toInt(value);
-        break;
-      case '--host':
-        options.host = value || null;
-        break;
-      default:
-        break;
-    }
-  }
-
-  if (options.limit === 0) options.limit = null;
-  if (options.sample === 0) options.sample = null;
-
-  return options;
+  return parser.parse(argv);
 }
 
 function buildCandidateQuery(options) {
@@ -121,20 +84,6 @@ function buildCandidateQuery(options) {
   `;
 }
 
-function printUsage() {
-  const usage = `detect_articles - detect likely article pages\n\n` +
-    `Usage: node src/tools/detect-articles.js [options] [host]\n\n` +
-    `Options:\n` +
-    `  --db <path>            Path to SQLite database (defaults to data/news.db)\n` +
-    `  --limit <n>            Maximum records to inspect (unlimited by default)\n` +
-    `  --sample <n>           Random sample size from articles table\n` +
-    `  --host <host>          Restrict to a specific host\n` +
-    `  --explain              Print reasoning for each decision\n` +
-    `  --scores               Include score/confidence in summary output\n` +
-    `  --help                 Show this help message\n`;
-  console.log(usage);
-}
-
 function resolveDbPath(dbPath) {
   if (dbPath) {
     return path.isAbsolute(dbPath) ? dbPath : path.join(process.cwd(), dbPath);
@@ -154,9 +103,21 @@ function loadCandidates(db, options) {
 }
 
 function runDetectArticles(options) {
-  const dbPath = resolveDbPath(options.dbPath);
+  const dbPath = resolveDbPath(options.db);
   const db = ensureDb(dbPath);
   const articleSignals = createArticleSignalsService();
+
+  fmt.header('Article Detection Analysis');
+
+  // Build query info
+  const filters = [];
+  if (options.host) filters.push(`host = ${options.host}`);
+  if (options.limit) filters.push(`limit = ${options.limit}`);
+  if (options.sample) filters.push(`sample = ${options.sample}`);
+  if (filters.length > 0) {
+    fmt.info(`Filters: ${filters.join(', ')}`);
+  }
+  fmt.blank();
 
   const fetchDetailsStmt = db.prepare(`
     SELECT nav_links_count,
@@ -170,9 +131,14 @@ function runDetectArticles(options) {
   `);
 
   const rows = loadCandidates(db, options);
+
+  fmt.pending(`Loading ${rows.length} candidate(s)...`);
+  fmt.blank();
+
   let processed = 0;
   let detected = 0;
   let rejected = 0;
+  const results = [];
 
   for (const row of rows) {
     const fetchDetails = fetchDetailsStmt.get(row.url) || {};
@@ -196,28 +162,30 @@ function runDetectArticles(options) {
     processed += 1;
     if (result.isArticle) detected += 1; else rejected += 1;
 
-    const label = result.isArticle ? 'ARTICLE ' : 'NOT    ';
-    const summary = options.includeScores
-      ? `${label} ${result.url} (score ${result.score}, confidence ${result.confidence.toFixed(2)})`
-      : `${label} ${result.url}`;
-    console.log(summary);
-
+    // Display detailed output for each URL if explain mode
     if (options.explain) {
+      const icon = result.isArticle ? fmt.ICONS.success : fmt.ICONS.error;
+      const color = result.isArticle ? 'success' : 'error';
+      console.log(`${fmt.COLORS[color](`${icon} ${result.url}`)}`);
+
       if (result.title) {
-        console.log(`  title: ${result.title}`);
+        fmt.dataPair('Title', result.title, 'muted');
       }
+
+      if (options.scores) {
+        fmt.dataPair('Score', result.score.toFixed(2), 'cyan');
+        fmt.dataPair('Confidence', result.confidence.toFixed(2), 'cyan');
+      }
+
       if (result.reasons.length) {
-        console.log('  reasons:');
-        for (const reason of result.reasons) {
-          console.log(`    - ${reason}`);
-        }
+        fmt.list('Reasons', result.reasons);
       }
+
       if (result.rejections.length) {
-        console.log('  rejections:');
-        for (const rejection of result.rejections) {
-          console.log(`    - ${rejection}`);
-        }
+        fmt.list('Rejections', result.rejections);
       }
+
+      // Signal details
       const sig = result.signals;
       if (sig) {
         const parts = [];
@@ -225,33 +193,64 @@ function runDetectArticles(options) {
         if (typeof sig.navLinksCount === 'number') parts.push(`navLinks=${sig.navLinksCount}`);
         if (typeof sig.articleLinksCount === 'number') parts.push(`articleLinks=${sig.articleLinksCount}`);
         if (sig.combinedHint) parts.push(`combined=${sig.combinedHint}`);
-        if (typeof sig.combinedConfidence === 'number') parts.push(`combinedConfidence=${sig.combinedConfidence.toFixed(2)}`);
+        if (typeof sig.combinedConfidence === 'number') parts.push(`confidence=${sig.combinedConfidence.toFixed(2)}`);
         if (sig.latestClassification) parts.push(`latest=${sig.latestClassification}`);
-        if (sig.contentSource) parts.push(`contentSource=${sig.contentSource}`);
+        if (sig.contentSource) parts.push(`source=${sig.contentSource}`);
         if (typeof sig.schemaScore === 'number') parts.push(`schemaScore=${sig.schemaScore.toFixed(1)}`);
         if (sig.schemaStrength) parts.push(`schemaStrength=${sig.schemaStrength}`);
         if (Array.isArray(sig.schemaTypes) && sig.schemaTypes.length) {
-          parts.push(`schemaTypes=${sig.schemaTypes.join('|')}`);
+          parts.push(`types=${sig.schemaTypes.join('|')}`);
         }
-        if (Array.isArray(sig.schemaSources) && sig.schemaSources.length) {
-          parts.push(`schemaSources=${sig.schemaSources.join('|')}`);
+        if (parts.length) {
+          console.log(`  ${fmt.COLORS.dim(`Signals: ${parts.join(', }`)}`);
         }
-        if (parts.length) console.log(`  signals: ${parts.join(', ')}`);
       }
+      fmt.blank();
+    } else {
+      // Simple mode - collect results for table display
+      results.push({
+        status: result.isArticle ? `${ICONS.success}` : `${ICONS.error}`,
+        url: result.url,
+        title: result.title ? result.title.substring(0, 40) : '(untitled)',
+        score: options.scores ? result.score.toFixed(2) : '-',
+        confidence: options.scores ? result.confidence.toFixed(2) : '-'
+      });
+    }
+
+    // Progress indicator for long runs
+    if ((processed % 50 === 0) && !options.explain) {
+      fmt.progress(`Processing`, processed, rows.length);
     }
   }
 
-  console.log(`\nProcessed ${processed} URLs. Detected ${detected} articles, rejected ${rejected}.`);
+  // Show table if not in explain mode
+  if (!options.explain && results.length > 0) {
+    fmt.section('Results');
+    fmt.table(results, {
+      columns: options.scores ? ['status', 'url', 'title', 'score', 'confidence'] : ['status', 'url', 'title'],
+      format: {
+        status: (v) => v === fmt.ICONS.success ? fmt.COLORS.success(v) : fmt.COLORS.error(v),
+        score: (v) => fmt.COLORS.cyan(v),
+        confidence: (v) => fmt.COLORS.cyan(v)
+      }
+    });
+  }
+
+  fmt.blank();
+  fmt.summary({
+    'Total processed': processed,
+    'Articles detected': detected,
+    'Not articles': rejected,
+    'Detection rate': `${((detected / processed) * 100).toFixed(1)}%`
+  });
+
+  fmt.footer();
 
   try { db.close(); } catch (_) { /* ignore */ }
 }
 
 function main() {
-  const options = parseCliArgs(process.argv.slice(2));
-  if (options.help) {
-    printUsage();
-    return;
-  }
+  const options = parseCliArgs(process.argv);
   runDetectArticles(options);
 }
 
@@ -259,7 +258,7 @@ if (require.main === module) {
   try {
     main();
   } catch (error) {
-    console.error('[detect_articles] fatal error:', error && error.message ? error.message : error);
+    fmt.error('Fatal error: ' + (error && error.message ? error.message : error));
     process.exit(1);
   }
 }

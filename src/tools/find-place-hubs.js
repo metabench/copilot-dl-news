@@ -9,6 +9,8 @@ const { buildGazetteerMatchers, extractPlacesFromUrl } = require('../analysis/pl
 const { detectPlaceHub } = require('./placeHubDetector');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const HubValidator = require('../hub-validation/HubValidator');
+const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
 
 function toBoolean(value, fallback = false) {
   if (value === undefined || value === null) return fallback;
@@ -19,153 +21,84 @@ function toBoolean(value, fallback = false) {
   return fallback;
 }
 
-function parseCliArgs(rawArgs) {
-  const options = {
-    dbPath: null,
-    limit: null,  // null = no limit, process all articles
-    host: null,
-    dryRun: true,
-  list: true,
-  listLimit: null,
-  unknownListLimit: 20,
-    includeEvidence: false,
-    json: false,
-    minNavLinks: 10,
-    maxPathSegments: 5,
-    verbose: false
-  };
+/**
+ * Parse CLI arguments for find-place-hubs
+ * @param {string[]} argv - Command line arguments
+ * @returns {Object} Parsed options
+ */
+function parseCliArgs(argv) {
+  const parser = new CliArgumentParser('find-place-hubs', 'Fast place hub discovery based on URL heuristics');
+  
+  parser.add('--db <path>', 'Path to SQLite database (defaults to data/news.db)', null);
+  parser.add('--limit <n>', 'Maximum articles to scan (no limit by default, scans all)', null);
+  parser.add('--host <domain>', 'Restrict to a single host/domain', null);
+  parser.add('--dry-run', 'Do not write to place_hubs (default)', true);
+  parser.add('--apply', 'Persist detected hubs to place_hubs table', false);
+  parser.add('--list', 'Show detected hubs (default: true)', true);
+  parser.add('--no-list', 'Suppress hub list display', false);
+  parser.add('--list-limit <n>', 'Limit number of listed hubs/variants (default: unlimited)', null);
+  parser.add('--unknown-list-limit <n>', 'Limit number of listed unknown terms (default: 20)', 20);
+  parser.add('--min-nav-links <n>', 'Minimum nav_links_count to consider (default: 10)', 10);
+  parser.add('--max-path-segments <n>', 'Maximum URL path segments to inspect (default: 5)', 5);
+  parser.add('--include-evidence', 'Include JSON evidence payload in listings', false);
+  parser.add('--json', 'Emit JSON summary (includes hubs array)', false);
+  parser.add('--verbose', 'Print warnings when URL analysis fails', false);
 
-  for (let i = 0; i < rawArgs.length; i++) {
-    const raw = rawArgs[i];
-    if (!raw) continue;
+  const args = parser.parse(argv);
 
-    if (raw === '--help' || raw === '-h') {
-      options.help = true;
-      continue;
-    }
-    if (raw === '--apply' || raw === '--no-dry-run') {
-      options.dryRun = false;
-      continue;
-    }
-    if (raw === '--dry-run') {
-      options.dryRun = true;
-      continue;
-    }
-    if (raw === '--no-list') {
-      options.list = false;
-      continue;
-    }
-    if (raw === '--list') {
-      options.list = true;
-      continue;
-    }
-    if (raw === '--include-evidence') {
-      options.includeEvidence = true;
-      continue;
-    }
-    if (raw === '--json') {
-      options.json = true;
-      continue;
-    }
-    if (raw === '--verbose') {
-      options.verbose = true;
-      continue;
-    }
-
-    if (!raw.startsWith('--')) {
-      // positional arg -> host filter for convenience
-      options.host = raw;
-      continue;
-    }
-
-    const sep = raw.indexOf('=');
-    let key = sep === -1 ? raw : raw.slice(0, sep);
-    let value = sep === -1 ? null : raw.slice(sep + 1);
-
-    // If no value and next arg doesn't start with --, use it as the value
-    if (value === null && i + 1 < rawArgs.length && !rawArgs[i + 1].startsWith('-')) {
-      value = rawArgs[i + 1];
-      i += 1;
-    }
-
-    switch (key) {
-      case '--db':
-      case '--db-path':
-        options.dbPath = value || null;
-        break;
-      case '--host':
-        options.host = value || null;
-        break;
-      case '--limit':
-        options.limit = Number(value);
-        break;
-      case '--list-limit':
-        options.listLimit = Number(value);
-        break;
-      case '--unknown-list-limit':
-        options.unknownListLimit = Number(value);
-        break;
-      case '--min-nav-links':
-        options.minNavLinks = Number(value);
-        break;
-      case '--max-path-segments':
-        options.maxPathSegments = Number(value);
-        break;
-      case '--dry-run':
-        options.dryRun = toBoolean(value, true);
-        break;
-      case '--list':
-        options.list = toBoolean(value, true);
-        break;
-      case '--include-evidence':
-        options.includeEvidence = toBoolean(value, false);
-        break;
-      case '--json':
-        options.json = toBoolean(value, false);
-        break;
-      default:
-        // ignore unknown flags for flexibility
-        break;
-    }
+  // Handle positional argument as host filter
+  if (args.positional && args.positional.length > 0) {
+    args.host = args.positional[0];
   }
 
-  if (options.limit == null || Number.isNaN(Number(options.limit))) {
-    options.limit = null;  // null means no limit, process all
+  // Handle --apply flag (overrides --dry-run)
+  if (args.apply) {
+    args.dryRun = false;
+  }
+
+  // Handle --no-list flag (overrides --list)
+  if (args.noList === true) {
+    args.list = false;
+  }
+  delete args.noList;
+
+  // Normalize numeric values
+  const parsedLimit = Number.parseInt(args.limit, 10);
+  if (args.limit != null && !Number.isNaN(parsedLimit)) {
+    args.limit = Math.max(1, Math.min(Math.floor(parsedLimit), 50000));
   } else {
-    options.limit = Math.max(1, Math.min(Math.floor(options.limit), 50000));
+    args.limit = null;
   }
 
-  if (options.listLimit != null) {
-    const parsedListLimit = Number(options.listLimit);
-    if (Number.isFinite(parsedListLimit) && parsedListLimit >= 0) {
-      options.listLimit = Math.floor(parsedListLimit);
-    } else {
-      options.listLimit = null;
-    }
-  }
-
-  if (options.unknownListLimit != null) {
-    const parsedUnknownLimit = Number(options.unknownListLimit);
-    if (Number.isFinite(parsedUnknownLimit) && parsedUnknownLimit >= 0) {
-      options.unknownListLimit = Math.floor(parsedUnknownLimit);
-    } else {
-      options.unknownListLimit = 20;
-    }
+  const parsedListLimit = Number.parseInt(args.listLimit, 10);
+  if (args.listLimit != null && Number.isFinite(parsedListLimit) && parsedListLimit >= 0) {
+    args.listLimit = Math.floor(parsedListLimit);
   } else {
-    options.unknownListLimit = 20;
+    args.listLimit = null;
   }
 
-  if (options.minNavLinks == null || Number.isNaN(Number(options.minNavLinks))) {
-    options.minNavLinks = 10;
+  const parsedUnknownListLimit = Number.parseInt(args.unknownListLimit, 10);
+  if (args.unknownListLimit != null && Number.isFinite(parsedUnknownListLimit) && parsedUnknownListLimit >= 0) {
+    args.unknownListLimit = Math.floor(parsedUnknownListLimit);
+  } else {
+    args.unknownListLimit = 20;
   }
-  options.minNavLinks = Math.max(0, Math.floor(options.minNavLinks));
 
-  if (options.maxPathSegments == null || Number.isNaN(Number(options.maxPathSegments))) {
-    options.maxPathSegments = 5;
+  const parsedMinNavLinks = Number.parseInt(args.minNavLinks, 10);
+  if (args.minNavLinks != null && !Number.isNaN(parsedMinNavLinks)) {
+    args.minNavLinks = Math.max(0, Math.floor(parsedMinNavLinks));
+  } else {
+    args.minNavLinks = 10;
   }
-  options.maxPathSegments = Math.max(1, Math.floor(options.maxPathSegments));
 
-  return options;
+  const parsedMaxPathSegments = Number.parseInt(args.maxPathSegments, 10);
+  if (args.maxPathSegments != null && !Number.isNaN(parsedMaxPathSegments)) {
+    args.maxPathSegments = Math.max(1, Math.floor(parsedMaxPathSegments));
+  } else {
+    args.maxPathSegments = 5;
+  }
+
+  return args;
 }
 
 function collectGazetteerPlaceNames(matchers) {
@@ -226,10 +159,18 @@ function normalizeClassification(value) {
   return normalized;
 }
 
+function tableHasColumn(db, tableName, columnName) {
+  if (!db || !tableName || !columnName) return false;
+  const safeTable = String(tableName).replace(/[^A-Za-z0-9_]/g, '');
+  if (!safeTable) return false;
+  const rows = db.prepare(`PRAGMA table_info(${safeTable})`).all();
+  return rows.some((row) => row && row.name === columnName);
+}
+
 function findPlaceHubs(options = {}) {
   const projectRoot = findProjectRoot(__dirname);
-  const resolvedDbPath = options.dbPath
-    ? path.isAbsolute(options.dbPath) ? options.dbPath : path.join(process.cwd(), options.dbPath)
+  const resolvedDbPath = options.db
+    ? path.isAbsolute(options.db) ? options.db : path.join(process.cwd(), options.db)
     : path.join(projectRoot, 'data', 'news.db');
 
   const dryRun = options.dryRun !== false ? true : false;
@@ -251,6 +192,21 @@ function findPlaceHubs(options = {}) {
   validator.initialize();
 
   try {
+        const hasSectionColumn = tableHasColumn(db, 'articles', 'section');
+        const hasArticleHost = tableHasColumn(db, 'articles', 'host');
+        const hasArticleAnalysis = tableHasColumn(db, 'articles', 'analysis');
+        const hasArticleWordCount = tableHasColumn(db, 'articles', 'word_count');
+        const hasArticleCrawledAt = tableHasColumn(db, 'articles', 'crawled_at');
+
+        const sectionSelect = hasSectionColumn ? 'a.section AS section' : 'NULL AS section';
+        const hostSelect = hasArticleHost ? 'a.host AS host' : 'NULL AS host';
+        const analysisSelect = hasArticleAnalysis ? 'a.analysis AS analysis' : 'NULL AS analysis';
+        const articleWordCountSelect = hasArticleWordCount ? 'a.word_count AS article_word_count' : 'NULL AS article_word_count';
+        const crawledAtSelect = hasArticleCrawledAt ? 'a.crawled_at AS crawled_at' : 'NULL AS crawled_at';
+
+        const orderByExpr = hasArticleCrawledAt ? `COALESCE(lf.ts, a.crawled_at)` : 'lf.ts';
+        const hostWhereClause = options.host && hasArticleHost ? 'AND LOWER(a.host) = LOWER(?)' : '';
+
     const gazetteerMatchers = buildGazetteerMatchers(db);
     const gazetteerPlaceNames = collectGazetteerPlaceNames(gazetteerMatchers);
     const nonGeoTopicSlugData = loadNonGeoTopicSlugs(db);
@@ -261,19 +217,19 @@ function findPlaceHubs(options = {}) {
     const selectCandidates = db.prepare(`
       SELECT a.url,
         a.title,
-        a.section,
-        a.host,
-        a.analysis,
-        a.word_count AS article_word_count,
+        ${sectionSelect},
+         ${hostSelect},
+         ${analysisSelect},
+         ${articleWordCountSelect},
              lf.classification,
              lf.word_count AS fetch_word_count,
              lf.ts AS last_fetch_at,
-             a.crawled_at
+           ${crawledAtSelect}
         FROM articles a
    LEFT JOIN latest_fetch lf ON lf.url = a.url
        WHERE a.url LIKE 'http%'
-         ${options.host ? 'AND LOWER(a.host) = LOWER(?)' : ''}
-    ORDER BY COALESCE(lf.ts, a.crawled_at) DESC
+          ${hostWhereClause}
+        ORDER BY ${orderByExpr} DESC
        ${limitClause}
     `);
 
@@ -344,8 +300,10 @@ function findPlaceHubs(options = {}) {
 
     // Execute query with only host parameter if provided (LIMIT is now part of query string)
     const candidateRows = selectCandidates.all(
-      ...(options.host ? [options.host] : [])
+      ...(options.host && hasArticleHost ? [options.host] : [])
     );
+
+    const normalizedHostFilter = options.host ? String(options.host).trim().toLowerCase() : null;
 
     if (options.verbose) {
       console.error(`[find-place-hubs] query params: host=${options.host || 'none'}, limit=${options.limit}, rows=${candidateRows.length}`);
@@ -372,6 +330,22 @@ function findPlaceHubs(options = {}) {
 
       if (!row?.url) continue;
       if (shouldSkipByPath(row.url, maxPathSegments)) continue;
+
+      let derivedHost = null;
+      try {
+        derivedHost = new URL(row.url).host || null;
+      } catch (_) {
+        derivedHost = null;
+      }
+
+      const rowHost = row.host || derivedHost;
+
+      if (normalizedHostFilter && !hasArticleHost) {
+        const comparableHost = rowHost ? rowHost.toLowerCase() : null;
+        if (!comparableHost || comparableHost !== normalizedHostFilter) {
+          continue;
+        }
+      }
 
       const classification = normalizeClassification(row.classification);
       const fetchStats = selectFetchStats.get(row.url) || {};
@@ -442,6 +416,14 @@ function findPlaceHubs(options = {}) {
         continue;
       }
 
+      const candidateHost = hubCandidate.host || rowHost;
+      if (!candidateHost) {
+        if (verbose) {
+          console.warn('[find-place-hubs] skipping candidate without host', row.url);
+        }
+        continue;
+      }
+
       if (hubCandidate.kind === 'article-screened') {
         articleScreened += 1;
         if (list) {
@@ -449,7 +431,7 @@ function findPlaceHubs(options = {}) {
           articleRejections.push({
             url: row.url,
             canonical_url: hubCandidate.canonicalUrl || row.url,
-            host: hubCandidate.host,
+            host: candidateHost,
             nav_links_count: hubCandidate.navLinksCount,
             article_links_count: hubCandidate.articleLinksCount,
             word_count: hubCandidate.wordCount,
@@ -466,7 +448,7 @@ function findPlaceHubs(options = {}) {
         if (Array.isArray(hubCandidate.unknownTerms) && hubCandidate.unknownTerms.length) {
           for (const term of hubCandidate.unknownTerms) {
             const entry = {
-              host: hubCandidate.host,
+              host: candidateHost,
               url: row.url,
               canonical_url: hubCandidate.canonicalUrl || row.url,
               term_slug: term.slug,
@@ -523,7 +505,7 @@ function findPlaceHubs(options = {}) {
           const entry = {
             url: row.url,
             canonical_url: canonicalUrl,
-            host: hubCandidate.host,
+            host: candidateHost,
             title: row.title || null,
             place_slug: hubCandidate.placeSlug,
             place_label: hubCandidate.placeLabel || null,
@@ -555,7 +537,7 @@ function findPlaceHubs(options = {}) {
       if (!dryRun) {
         try {
           insertHub.run(
-            hubCandidate.host,
+            candidateHost,
             canonicalUrl,
             hubCandidate.placeSlug,
             hubCandidate.placeKind,
@@ -593,7 +575,7 @@ function findPlaceHubs(options = {}) {
       if (list) {
         const entry = {
           url: row.url,
-          host: hubCandidate.host,
+          host: candidateHost,
           title: row.title || null,
           place_slug: hubCandidate.placeSlug,
           place_label: hubCandidate.placeLabel || null,
@@ -648,39 +630,14 @@ function findPlaceHubs(options = {}) {
   }
 }
 
-function printHelp() {
-  console.log(`
-find-place-hubs.js — Fast place hub discovery based on URL heuristics
-
-Usage:
-  node src/tools/find-place-hubs.js [options]
-
-Options:
-  --db=PATH               Path to SQLite database (defaults to data/news.db)
-  --limit=N               Maximum articles to scan (no limit by default, scans all)
-  --host=example.com      Restrict to a single host/domain
-  --dry-run               Do not write to place_hubs (default)
-  --apply                 Persist detected hubs to place_hubs table
-  --list                  Show detected hubs (default: true)
-  --no-list               Suppress hub list display
-  --list-limit=N          Limit number of listed hubs/variants (default: unlimited, 0 = unlimited)
-  --unknown-list-limit=N  Limit number of listed unknown terms (default: 20, 0 = unlimited)
-  --min-nav-links=N       Minimum nav_links_count to consider (default: 10)
-  --max-path-segments=N   Maximum URL path segments to inspect (default: 5)
-  --include-evidence      Include JSON evidence payload in listings
-  --json                  Emit JSON summary (includes hubs array)
-  --verbose               Print warnings when URL analysis fails
-  --help                  Show this message
-
-You can also pass a bare hostname (e.g. "theguardian.com") as a positional argument.
-`);
-}
-
 function main() {
+  const fmt = new CliFormatter();
   const options = parseCliArgs(process.argv.slice(2));
+
+  // If help was shown by commander, it exits before we get here
+  // But just in case, check explicitly
   if (options.help) {
-    printHelp();
-    return;
+    process.exit(0);
   }
 
   const { summary, hubs, variants, unknownTerms, articleRejections } = findPlaceHubs(options);
@@ -690,73 +647,114 @@ function main() {
     return;
   }
 
-  const dryLabel = summary.dryRun ? 'DRY-RUN' : 'APPLY';
-  const unknownPart = summary.unknown ? `, unknown terms ${summary.unknown}` : '';
-  const articlePart = summary.articleRejected ? `, screened ${summary.articleRejected} article-like pages` : '';
-  console.log(`[find-place-hubs] ${dryLabel} processed ${summary.processed} articles, evaluated ${summary.evaluated}, validated ${summary.validated} hubs (${summary.inserted} new, ${summary.updated} existing), variants ${summary.variants}${unknownPart}${articlePart}.`);
+  // Header
+  fmt.header('Place Hub Discovery Results');
+  
+  // Summary stats
+  fmt.section('Summary');
+  const mode = summary.dryRun ? 'DRY-RUN (preview only)' : 'APPLY (writing to database)';
+  fmt.stat('Mode', mode, summary.dryRun ? 'warning' : 'success');
+  fmt.stat('Processed', `${summary.processed} articles`);
+  fmt.stat('Evaluated', `${summary.evaluated}/${summary.processed}` );
+  fmt.stat('Validated', `${summary.validated} hubs (${summary.inserted} new, ${summary.updated} existing)`);
+  fmt.stat('Variants', summary.variants);
+  fmt.stat('Unknown Terms', summary.unknown);
+  fmt.stat('Screened Articles', summary.articleRejected);
+  fmt.stat('Skipped', summary.processed - summary.matched);
+  
+  if (summary.host) {
+    fmt.stat('Filter', `host: ${summary.host}`);
+  }
+  if (summary.limit) {
+    fmt.stat('Limit', summary.limit);
+  }
 
-  const listLimit = Number.isFinite(summary.listLimit) && summary.listLimit >= 0 ? summary.listLimit : 0;
-  const unknownListLimit = Number.isFinite(summary.unknownListLimit) && summary.unknownListLimit >= 0 ? summary.unknownListLimit : 0;
-
+  // Hubs list
   if (options.list && hubs.length) {
-    const limit = listLimit > 0 ? Math.min(listLimit, hubs.length) : hubs.length;
-    console.log(`\nTop ${limit}${hubs.length > limit ? ` of ${hubs.length}` : ''} hub front pages:`);
-    for (let i = 0; i < limit; i += 1) {
-      const hub = hubs[i];
-      const topicPart = hub.topic_slug ? ` · ${hub.topic_slug}` : '';
-      const reason = hub.validation_reason ? ` (${hub.validation_reason})` : '';
-      console.log(` - [${hub.action}] ${hub.place_slug}@${hub.host}${topicPart} → ${hub.url}${reason}`);
-    }
-    if (hubs.length > limit) {
-      console.log(`… ${hubs.length - limit} additional hub front pages not shown (adjust --list-limit).`);
+    fmt.section(`Hub Front Pages (${hubs.length} total)`);
+    const listLimit = summary.listLimit > 0 ? Math.min(summary.listLimit, hubs.length) : hubs.length;
+    
+    const rows = hubs.slice(0, listLimit).map(hub => ({
+      'Action': hub.action.toUpperCase(),
+      'Place': hub.place_slug,
+      'Host': hub.host,
+      'Topic': hub.topic_slug || '—',
+      'Links': `${hub.nav_links_count}/${hub.article_links_count}`,
+      'URL': hub.url.substring(0, 50) + (hub.url.length > 50 ? '...' : '')
+    }));
+    
+    fmt.table(rows);
+    
+    if (hubs.length > listLimit) {
+      fmt.muted(`… ${hubs.length - listLimit} additional hub front pages not shown (adjust --list-limit)\n`);
     }
   }
 
+  // Variants list
   if (options.list && variants.length) {
-    const limit = listLimit > 0 ? Math.min(listLimit, variants.length) : variants.length;
-    console.log(`\nTop ${limit}${variants.length > limit ? ` of ${variants.length}` : ''} hub variants (non-front pages):`);
-    for (let i = 0; i < limit; i += 1) {
-      const variant = variants[i];
-      const topicPart = variant.topic_slug ? ` · ${variant.topic_slug}` : '';
-      const variantInfo = variant.variant_kind ? ` [${variant.variant_kind}${variant.variant_value != null ? `=${variant.variant_value}` : ''}]` : '';
-      const reason = variant.validation_reason ? ` (${variant.validation_reason})` : '';
-      console.log(` - [variant] ${variant.place_slug}@${variant.host}${topicPart}${variantInfo} → ${variant.url}${reason}`);
-    }
-    if (variants.length > limit) {
-      console.log(`… ${variants.length - limit} additional variants not shown (adjust --list-limit).`);
+    fmt.section(`Hub Variants (${variants.length} total, non-front pages)`);
+    const listLimit = summary.listLimit > 0 ? Math.min(summary.listLimit, variants.length) : variants.length;
+    
+    const rows = variants.slice(0, listLimit).map(v => ({
+      'Place': v.place_slug,
+      'Host': v.host,
+      'Variant Type': v.variant_kind || '—',
+      'Variant Value': v.variant_value || '—',
+      'Links': `${v.nav_links_count}/${v.article_links_count}`,
+      'URL': v.url.substring(0, 45) + (v.url.length > 45 ? '...' : '')
+    }));
+    
+    fmt.table(rows);
+    
+    if (variants.length > listLimit) {
+      fmt.muted(`… ${variants.length - listLimit} additional variants not shown (adjust --list-limit)\n`);
     }
   }
 
+  // Screened articles list
   if (options.list && articleRejections.length) {
-    const limit = listLimit > 0 ? Math.min(listLimit, articleRejections.length) : articleRejections.length;
-    console.log(`\nArticle-like pages screened (${limit}${articleRejections.length > limit ? ` of ${articleRejections.length}` : ''}):`);
-    for (let i = 0; i < limit; i += 1) {
-      const entry = articleRejections[i];
-      const confidencePart = typeof entry.confidence === 'number' ? ` confidence=${entry.confidence.toFixed(2)}` : '';
-      const scorePart = typeof entry.score === 'number' ? ` score=${entry.score}` : '';
-      console.log(` - [article] ${entry.host} → ${entry.canonical_url}${scorePart}${confidencePart}`);
-    }
-    if (articleRejections.length > limit) {
-      console.log(`… ${articleRejections.length - limit} additional article-like pages not shown (adjust --list-limit).`);
+    fmt.section(`Screened Article-Like Pages (${articleRejections.length} total)`);
+    const listLimit = summary.listLimit > 0 ? Math.min(summary.listLimit, articleRejections.length) : articleRejections.length;
+    
+    const rows = articleRejections.slice(0, listLimit).map(a => ({
+      'Host': a.host,
+      'Score': typeof a.score === 'number' ? a.score.toFixed(2) : '—',
+      'Confidence': typeof a.confidence === 'number' ? a.confidence.toFixed(2) : '—',
+      'URL': a.canonical_url.substring(0, 45) + (a.canonical_url.length > 45 ? '...' : '')
+    }));
+    
+    fmt.table(rows);
+    
+    if (articleRejections.length > listLimit) {
+      fmt.muted(`… ${articleRejections.length - listLimit} additional article-like pages not shown (adjust --list-limit)\n`);
     }
   }
 
+  // Unknown terms list
   if (options.list && unknownTerms.length) {
-    const limit = unknownListLimit > 0 ? Math.min(unknownListLimit, unknownTerms.length) : unknownTerms.length;
-    console.log(`\nUnknown terms encountered (${limit}${unknownTerms.length > limit ? ` of ${unknownTerms.length}` : ''}):`);
-    for (let i = 0; i < limit; i += 1) {
-      const entry = unknownTerms[i];
-      const reason = entry.reason ? ` (${entry.reason})` : '';
-      console.log(` - [unknown] ${entry.term_slug}@${entry.host} → ${entry.canonical_url || entry.url}${reason}`);
-    }
-    if (unknownTerms.length > limit) {
-      const hintFlag = options.unknownListLimit != null ? '--unknown-list-limit' : '--list-limit';
-      console.log(`… ${unknownTerms.length - limit} additional unknown term(s) not shown (adjust ${hintFlag}).`);
+    fmt.section(`Unknown Terms (${unknownTerms.length} total)`);
+    const listLimit = summary.unknownListLimit > 0 ? Math.min(summary.unknownListLimit, unknownTerms.length) : unknownTerms.length;
+    
+    const rows = unknownTerms.slice(0, listLimit).map(u => ({
+      'Term': u.term_slug,
+      'Host': u.host,
+      'Reason': u.reason || '—',
+      'URL': u.canonical_url.substring(0, 40) + (u.canonical_url.length > 40 ? '...' : '')
+    }));
+    
+    fmt.table(rows);
+    
+    if (unknownTerms.length > listLimit) {
+      const hintFlag = summary.unknownListLimit != summary.listLimit ? '--unknown-list-limit' : '--list-limit';
+      fmt.muted(`… ${unknownTerms.length - listLimit} additional unknown term(s) not shown (adjust ${hintFlag})\n`);
     }
   }
 
+  // Footer
   if (summary.dryRun) {
-    console.log('\nRun again with --apply to persist these hubs.');
+    fmt.footer('Run with --apply to persist these hubs to the database');
+  } else {
+    fmt.footer(`Persisted ${summary.inserted + summary.updated} hub records`);
   }
 }
 
@@ -764,7 +762,11 @@ if (require.main === module) {
   try {
     main();
   } catch (error) {
-    console.error('[find-place-hubs] fatal error:', error?.stack || error?.message || error);
+    const fmt = new CliFormatter();
+    fmt.error('Fatal error', error?.message || error);
+    if (process.env.DEBUG) {
+      console.error(error?.stack || error);
+    }
     process.exit(1);
   }
 }

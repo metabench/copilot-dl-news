@@ -1,41 +1,82 @@
 #!/usr/bin/env node
-// Validate gazetteer data quality: prints a summary and optionally details.
+/**
+ * Validate gazetteer data quality with beautiful formatted output.
+ * 
+ * Usage:
+ *   node validate-gazetteer.js                    (default summary)
+ *   node validate-gazetteer.js --details          (detailed issue lists)
+ *   node validate-gazetteer.js --json             (JSON output)
+ *   node validate-gazetteer.js --db=custom.db     (custom database)
+ */
 
 const path = require('path');
 const { ensureDb, openDbReadOnly } = require('../db/sqlite');
 const { validateGazetteer } = require('../db/sqlite/tools/gazetteerQA');
+const { CliFormatter, ICONS } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
 
+const fmt = new CliFormatter();
+
+/**
+ * Parse command-line arguments using CliArgumentParser
+ */
 function parseArgs(argv) {
-  const args = { details: false, json: false };
-  for (const a of argv.slice(2)) {
-    const m = /^--([^=]+)=(.*)$/.exec(a);
-    if (m) args[m[1]] = m[2]; else if (a.startsWith('--')) args[a.slice(2)] = true;
-  }
-  // normalize booleans
-  args.details = args.details === true || String(args.details).toLowerCase() === '1' || String(args.details).toLowerCase() === 'true';
-  args.json = args.json === true || String(args.json).toLowerCase() === '1' || String(args.json).toLowerCase() === 'true';
-  return args;
+  const parser = new CliArgumentParser(
+    'validate-gazetteer',
+    'Validate gazetteer data quality and consistency'
+  );
+
+  parser
+    .add('--db <path>', 'Path to gazetteer database', 'data/gazetteer.db')
+    .add('--details', 'Print detailed issue lists', false, 'boolean')
+    .add('--json', 'Output as JSON instead of formatted text', false, 'boolean');
+
+  return parser.parse(argv);
 }
 
-// Validation moved to shared module
-
+/**
+ * Print human-readable formatted output
+ */
 function printHuman(summary, details) {
-  const lines = [];
-  lines.push(`# Gazetteer validation`);
-  const add = (label, arr) => lines.push(`${label}: ${arr.length}`);
-  add('Nameless places', details.nameless);
-  add('Bad canonical refs', details.badCanonical);
-  add('Regions missing codes', details.badRegions);
-  add('Countries missing/invalid code', details.badCountries);
-  add('Orphan hierarchy edges', details.orphanEdges);
-  add('Two-node cycles', details.twoNodeCycles);
-  add('Long cycles (depth<=20)', details.longCycles);
-  add('Duplicate names (by norm/lang/kind)', details.dupNames);
-  add('Missing normalized', details.missingNormalized);
-  add('External IDs linked to >1 place', details.dupExternalIds);
-  console.log(lines.join('\n'));
+  fmt.header('Gazetteer Validation Report');
+
+  fmt.section('Issues Summary');
+  fmt.stat('Nameless places', details.nameless.length, 'number');
+  fmt.stat('Bad canonical refs', details.badCanonical.length, 'number');
+  fmt.stat('Regions missing codes', details.badRegions.length, 'number');
+  fmt.stat('Countries invalid/missing code', details.badCountries.length, 'number');
+  fmt.stat('Orphan hierarchy edges', details.orphanEdges.length, 'number');
+  fmt.stat('Two-node cycles', details.twoNodeCycles.length, 'number');
+  fmt.stat('Long cycles (depth ≤ 20)', details.longCycles.length, 'number');
+  fmt.stat('Duplicate names', details.dupNames.length, 'number');
+  fmt.stat('Missing normalized', details.missingNormalized.length, 'number');
+  fmt.stat('Duplicate external IDs', details.dupExternalIds.length, 'number');
+
+  fmt.blank();
+  const totalIssues = details.nameless.length +
+    details.badCanonical.length +
+    details.badRegions.length +
+    details.badCountries.length +
+    details.orphanEdges.length +
+    details.twoNodeCycles.length +
+    details.longCycles.length +
+    details.dupNames.length +
+    details.missingNormalized.length +
+    details.dupExternalIds.length;
+
+  if (totalIssues === 0) {
+    fmt.success('All validations passed!');
+  } else {
+    fmt.warn(`Found ${totalIssues} total issues`);
+    fmt.info('Run with --details to see full issue lists');
+  }
+
+  fmt.footer();
 }
 
+/**
+ * Print detailed issue lists
+ */
 function printDetails(details) {
   const sections = [
     ['Nameless places', details.nameless],
@@ -44,33 +85,57 @@ function printDetails(details) {
     ['Countries missing/invalid code', details.badCountries],
     ['Orphan hierarchy edges', details.orphanEdges],
     ['Two-node cycles', details.twoNodeCycles],
-    ['Long cycles (depth<=20)', details.longCycles],
+    ['Long cycles (depth≤20)', details.longCycles],
     ['Duplicate names (by norm/lang/kind)', details.dupNames],
     ['Missing normalized', details.missingNormalized],
     ['External IDs linked to >1 place', details.dupExternalIds],
   ];
+
   for (const [label, arr] of sections) {
     if (!arr || arr.length === 0) continue;
-    console.log(`\n## ${label}`);
-    for (const row of arr.slice(0, 1000)) {
-      console.log(JSON.stringify(row));
+
+    fmt.section(label);
+    fmt.info(`${arr.length} total`);
+
+    // Show first 10, summarize if more
+    const showing = Math.min(10, arr.length);
+    for (const row of arr.slice(0, showing)) {
+      console.log(`  ${fmt.ICONS.bullet} ${JSON.stringify(row)}`);
     }
+
+    if (arr.length > showing) {
+      fmt.info(`... and ${arr.length - showing} more`);
+    }
+    fmt.blank();
   }
 }
 
 function main() {
   const args = parseArgs(process.argv);
   const dbPath = args.db;
-  // Prefer read-only for validation speed; if file is missing and caller passed --db, fallback to ensureDb
+
+  // Prefer read-only for validation speed; fallback to ensureDb if needed
   let db;
-  try { db = openDbReadOnly(dbPath); } catch (_) { db = ensureDb(dbPath); }
+  try {
+    db = openDbReadOnly(dbPath);
+  } catch (_) {
+    db = ensureDb(dbPath);
+  }
+
   try {
     const { details, summary } = validateGazetteer(db);
+
     if (args.json) {
-      console.log(JSON.stringify({ summary, details: args.details ? details : undefined }, null, 2));
+      console.log(JSON.stringify({
+        summary,
+        details: args.details ? details : undefined
+      }, null, 2));
     } else {
       printHuman(summary, details);
-      if (args.details) printDetails(details);
+      if (args.details) {
+        fmt.blank();
+        printDetails(details);
+      }
     }
   } finally {
     try { db.close(); } catch (_) {}

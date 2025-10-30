@@ -7,11 +7,16 @@ const fs = require('fs');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite/ensureDb');
 const { createSQLiteDatabase } = require('../db/sqlite');
+const { createPlaceHubCandidatesStore } = require('../db/placeHubCandidatesStore');
+const { createGuessPlaceHubsQueries } = require('../db/sqlite/v1/queries/guessPlaceHubsQueries');
 const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
 const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
 const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
 const HubValidator = require('../hub-validation/HubValidator');
 const { slugify } = require('./slugify');
+const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const { createFetchRecorder } = require('../utils/fetch/fetchRecorder');
 
 const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
@@ -25,12 +30,6 @@ function defaultLogger() {
   };
 }
 
-function toNumber(value, fallback = null) {
-  if (value == null) return fallback;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
 function parseCsv(value) {
   if (!value) return [];
   return String(value)
@@ -39,129 +38,77 @@ function parseCsv(value) {
     .filter(Boolean);
 }
 
-function parseCliArgs(rawArgs) {
-  const options = {
-    domain: null,
-    dbPath: null,
-    kinds: ['country'],
-    limit: null,
-    patternsPerPlace: 3,
-    apply: false,
-    maxAgeDays: 7,
-    refresh404Days: 180,
-    retry4xxDays: 7,
-    verbose: false,
-    help: false,
-    scheme: 'https'
+function parseCliArgs(argv) {
+  const parser = new CliArgumentParser('guess-place-hubs', 'Predict candidate place hubs and verify them');
+
+  parser.add('--domain <domain>', 'Domain or host to inspect (positional arg supported)', null);
+  parser.add('--db <path>', 'Path to SQLite database (defaults to data/news.db)', null);
+  parser.add('--db-path <path>', 'Alias for --db', null);
+  parser.add('--kinds <csv>', 'Place kinds to consider (country, region, city)', 'country');
+  parser.add('--limit <n>', 'Limit number of places to evaluate', null, 'number');
+  parser.add('--patterns-per-place <n>', 'Maximum URL patterns to test per place (default 3)', 3, 'number');
+  parser.add('--max-age-days <n>', 'Skip re-fetch when success newer than N days (default 7)', 7, 'number');
+  parser.add('--refresh-404-days <n>', 'Skip re-fetching known 404s newer than N days (default 180)', 180, 'number');
+  parser.add('--retry-4xx-days <n>', 'Skip retrying other 4xx statuses newer than N days (default 7)', 7, 'number');
+  parser.add('--apply', 'Persist confirmed hubs to place_hubs table', false, 'boolean');
+  parser.add('--dry-run', 'Do not persist hubs (default behaviour)', false, 'boolean');
+  parser.add('--verbose', 'Enable verbose logging', false, 'boolean');
+  parser.add('--http', 'Use http scheme instead of https', false, 'boolean');
+  parser.add('--scheme <scheme>', 'Override URL scheme (http or https)', 'https');
+  parser.add('--json', 'Emit JSON summary output', false, 'boolean');
+
+  const parsedArgs = parser.parse(Array.isArray(argv) ? argv : process.argv);
+
+  const positionalDomain = parsedArgs.positional && parsedArgs.positional.length > 0
+    ? parsedArgs.positional[0]
+    : null;
+
+  const domain = parsedArgs.domain || positionalDomain || process.env.GPH_DOMAIN || null;
+
+  const schemeInput = parsedArgs.http ? 'http' : (parsedArgs.scheme ? String(parsedArgs.scheme).toLowerCase() : 'https');
+  const scheme = ['http', 'https'].includes(schemeInput) ? schemeInput : 'https';
+
+  const kindsInput = parsedArgs.kinds != null ? parsedArgs.kinds : 'country';
+  const kinds = parseCsv(kindsInput);
+  if (!kinds.length) kinds.push('country');
+  const uniqueKinds = Array.from(new Set(kinds.map((kind) => kind.toLowerCase())));
+
+  const limit = Number.isFinite(parsedArgs.limit) ? parsedArgs.limit : null;
+  const patternsPerPlace = Number.isFinite(parsedArgs.patternsPerPlace)
+    ? Math.max(1, parsedArgs.patternsPerPlace)
+    : 3;
+  const maxAgeDays = Number.isFinite(parsedArgs.maxAgeDays)
+    ? Math.max(0, parsedArgs.maxAgeDays)
+    : 7;
+  const refresh404Days = Number.isFinite(parsedArgs.refresh404Days)
+    ? Math.max(0, parsedArgs.refresh404Days)
+    : 180;
+  const retry4xxDays = Number.isFinite(parsedArgs.retry4xxDays)
+    ? Math.max(0, parsedArgs.retry4xxDays)
+    : 7;
+
+  let apply = parsedArgs.apply === true;
+  if (parsedArgs.dryRun === true) {
+    apply = false;
+  }
+
+  const dbPath = parsedArgs.dbPath || parsedArgs.db || null;
+
+  return {
+    domain,
+    dbPath,
+    kinds: uniqueKinds,
+    limit,
+    patternsPerPlace,
+    apply,
+    maxAgeDays,
+    refresh404Days,
+    retry4xxDays,
+    verbose: Boolean(parsedArgs.verbose),
+    scheme,
+    json: Boolean(parsedArgs.json),
+    dryRun: !apply
   };
-
-  for (let i = 0; i < rawArgs.length; i += 1) {
-    const token = rawArgs[i];
-    if (!token) continue;
-
-    if (token === '--help' || token === '-h') {
-      options.help = true;
-      continue;
-    }
-    if (token === '--apply') {
-      options.apply = true;
-      continue;
-    }
-    if (token === '--dry-run') {
-      options.apply = false;
-      continue;
-    }
-    if (token === '--verbose') {
-      options.verbose = true;
-      continue;
-    }
-    if (token === '--http') {
-      options.scheme = 'http';
-      continue;
-    }
-
-    if (!token.startsWith('-')) {
-      options.domain = token;
-      continue;
-    }
-
-    const eq = token.indexOf('=');
-    const key = eq === -1 ? token : token.slice(0, eq);
-    let value = eq === -1 ? null : token.slice(eq + 1);
-    if (value === null && rawArgs[i + 1] && !rawArgs[i + 1].startsWith('-')) {
-      value = rawArgs[i + 1];
-      i += 1;
-    }
-
-    switch (key) {
-      case '--domain':
-        options.domain = value;
-        break;
-      case '--db':
-      case '--db-path':
-        options.dbPath = value;
-        break;
-      case '--limit':
-        options.limit = toNumber(value, null);
-        break;
-      case '--patterns-per-place':
-        options.patternsPerPlace = Math.max(1, toNumber(value, 3) || 3);
-        break;
-      case '--kinds':
-        options.kinds = parseCsv(value);
-        break;
-      case '--max-age-days':
-        options.maxAgeDays = Math.max(0, toNumber(value, options.maxAgeDays) || options.maxAgeDays);
-        break;
-      case '--refresh-404-days':
-        options.refresh404Days = Math.max(0, toNumber(value, options.refresh404Days) || options.refresh404Days);
-        break;
-      case '--retry-4xx-days':
-        options.retry4xxDays = Math.max(0, toNumber(value, options.retry4xxDays) || options.retry4xxDays);
-        break;
-      case '--scheme':
-        options.scheme = (value || 'https').toLowerCase();
-        break;
-      default:
-        break;
-    }
-  }
-
-  if (!options.domain && process.env.GPH_DOMAIN) {
-    options.domain = process.env.GPH_DOMAIN;
-  }
-
-  if (!options.kinds || options.kinds.length === 0) {
-    options.kinds = ['country'];
-  }
-
-  options.kinds = Array.from(new Set(options.kinds.map((kind) => kind.toLowerCase())));
-
-  return options;
-}
-
-function printUsage() {
-  const usage = `guess-place-hubs - predict candidate place hubs and verify them\n\n` +
-    `Usage: node src/tools/guess-place-hubs.js [options] <domain>\n\n` +
-    `Options:\n` +
-    `  --domain <domain>           Domain or host to inspect (positional arg supported)\n` +
-    `  --db <path>                Path to SQLite database (defaults to data/news.db)\n` +
-  `  --kinds <csv>              Place kinds to consider (country, region, city)\n` +
-    `  --limit <n>                Limit number of places to evaluate\n` +
-    `  --patterns-per-place <n>   Maximum URL patterns to test per place (default 3)\n` +
-    `  --max-age-days <n>         Skip re-fetch when success newer than N days (default 7)\n` +
-    `  --refresh-404-days <n>     Skip re-fetching known 404s newer than N days (default 180)\n` +
-  `  --retry-4xx-days <n>       Skip retrying other 4xx statuses newer than N days (default 7)\n` +
-    `  --apply                    Persist confirmed hubs to place_hubs table\n` +
-    `  --http                     Use http scheme instead of https\n` +
-    `  --scheme <scheme>          Override URL scheme (http or https)\n` +
-    `  --verbose                  Enable verbose logging\n` +
-    `  --help                     Show this help message\n\n` +
-    `Notes:\n` +
-    `  • Fetch metadata is always cached so that future runs can skip known results.\n` +
-  `  • Use --apply to persist successful hubs to place_hubs (otherwise dry-run for hubs).\n` +
-  `  • Region and city heuristics fall back to generic patterns unless DSPL entries exist.\n`;
-  console.log(usage);
 }
 
 function resolveDbPath(dbPath) {
@@ -222,6 +169,46 @@ function buildEvidence(place, patternSource, status, extra = {}) {
     place,
     ...extra
   });
+}
+
+function extractPredictionSignals(predictionSource) {
+  if (!predictionSource) return null;
+  if (typeof predictionSource !== 'object') {
+    return { value: String(predictionSource) };
+  }
+  const allowedKeys = ['pattern', 'score', 'confidence', 'strategy', 'exampleUrl', 'weight'];
+  const extracted = {};
+  for (const key of allowedKeys) {
+    if (predictionSource[key] != null) {
+      extracted[key] = predictionSource[key];
+    }
+  }
+  if (Object.keys(extracted).length === 0) {
+    return { raw: predictionSource }; // fallback if structure unexpected
+  }
+  return extracted;
+}
+
+function composeCandidateSignals({ predictionSource, patternSource, place, attemptId, validationMetrics = null }) {
+  const signals = {
+    patternSource: patternSource || null,
+    attempt: attemptId ? { id: attemptId } : null
+  };
+  if (place) {
+    signals.place = {
+      kind: place.kind || null,
+      name: place.name || null,
+      code: place.code || place.countryCode || null
+    };
+  }
+  const predictionSignals = extractPredictionSignals(predictionSource);
+  if (predictionSignals) {
+    signals.prediction = predictionSignals;
+  }
+  if (validationMetrics) {
+    signals.validation = validationMetrics;
+  }
+  return signals;
 }
 
 async function fetchUrl(url, fetchFn, { logger, timeoutMs = 15000, method = 'GET' } = {}) {
@@ -405,46 +392,32 @@ async function guessPlaceHubs(options = {}, deps = {}) {
   const regionAnalyzer = new RegionHubGapAnalyzer({ db, logger });
   const cityAnalyzer = new CityHubGapAnalyzer({ db, logger });
   const hubValidator = new HubValidator(db);
+  const queries = createGuessPlaceHubsQueries(db);
+  let candidatesStore = null;
 
-  const selectLatestFetch = db.prepare(`
-    SELECT http_status, fetched_at, request_started_at
-      FROM fetches
-     WHERE url = ?
-  ORDER BY COALESCE(fetched_at, request_started_at) DESC
-     LIMIT 1
-  `);
-  const selectHubByUrl = db.prepare('SELECT id, place_slug FROM place_hubs WHERE url = ?');
-  const insertHubStmt = db.prepare(`
-    INSERT OR IGNORE INTO place_hubs(
-      host,
-      url,
-      place_slug,
-      place_kind,
-      topic_slug,
-      topic_label,
-      topic_kind,
-      title,
-      first_seen_at,
-      last_seen_at,
-      nav_links_count,
-      article_links_count,
-      evidence
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?, ?, ?)
-  `);
-  const updateHubStmt = db.prepare(`
-    UPDATE place_hubs
-       SET place_slug = COALESCE(?, place_slug),
-           place_kind = COALESCE(?, place_kind),
-           topic_slug = COALESCE(?, topic_slug),
-           topic_label = COALESCE(?, topic_label),
-           topic_kind = COALESCE(?, topic_kind),
-           title = COALESCE(?, title),
-           last_seen_at = datetime('now'),
-           nav_links_count = COALESCE(?, nav_links_count),
-           article_links_count = COALESCE(?, article_links_count),
-           evidence = COALESCE(?, evidence)
-     WHERE url = ?
-  `);
+  try {
+    candidatesStore = createPlaceHubCandidatesStore(db);
+  } catch (error) {
+    if (options.verbose) {
+      logger?.warn?.(`[guess-place-hubs] Candidate store unavailable: ${error?.message || error}`);
+    }
+  }
+
+  const fetchRecorder = createFetchRecorder({
+    newsDb,
+    legacyDb: db,
+    logger,
+    source: 'guess-place-hubs'
+  });
+
+  if (typeof hubValidator.initialize === 'function') {
+    try {
+      hubValidator.initialize();
+    } catch (_) {
+      /* ignore validator initialization errors */
+    }
+  }
+
 
   const summary = {
     domain: normalizedDomain.host,
@@ -462,6 +435,36 @@ async function guessPlaceHubs(options = {}, deps = {}) {
     rateLimited: 0,
     unsupportedKinds: [],
     decisions: []
+  };
+
+  let attemptCounter = 0;
+
+  const recordFetch = (fetchRow, meta = {}) => {
+    if (!fetchRow) return null;
+    const tags = {
+      stage: meta.stage || 'GET',
+      attemptId: meta.attemptId || null,
+      cacheHit: Boolean(meta.cacheHit)
+    };
+    if (fetchRecorder && typeof fetchRecorder.record === 'function') {
+      return fetchRecorder.record(fetchRow, tags);
+    }
+
+    // Fallback path if fetchRecorder unavailable (legacy behaviour)
+    try {
+      newsDb.insertFetch(fetchRow);
+    } catch (_) {
+      /* ignore normalized insert errors */
+    }
+    try {
+      queries.insertLegacyFetch(fetchRow);
+    } catch (legacyError) {
+      if (options.verbose) {
+        const message = legacyError?.message || String(legacyError);
+        logger?.warn?.(`[guess-place-hubs] Failed to record legacy fetch for ${fetchRow.url}: ${message}`);
+      }
+    }
+    return null;
   };
 
   const recordDecision = ({ level = 'info', message, ...rest }) => {
@@ -523,25 +526,100 @@ async function guessPlaceHubs(options = {}, deps = {}) {
         predictions = cityAnalyzer.predictCityHubUrls(normalizedDomain.host, place);
       }
 
-      predictions = Array.from(new Set(predictions)).slice(0, patternLimit);
-      if (!predictions.length) {
+      const normalizedPredictions = [];
+      const seenCandidates = new Set();
+
+      for (const candidate of Array.isArray(predictions) ? predictions : []) {
+        const baseUrl = typeof candidate === 'string' ? candidate : candidate?.url;
+        if (typeof baseUrl !== 'string' || baseUrl.trim() === '') continue;
+        const candidateUrl = applyScheme(baseUrl, normalizedDomain.scheme);
+        if (typeof candidateUrl !== 'string' || candidateUrl.trim() === '') continue;
+        const key = candidateUrl.toLowerCase();
+        if (seenCandidates.has(key)) continue;
+        seenCandidates.add(key);
+        normalizedPredictions.push({
+          url: candidateUrl,
+          rawUrl: baseUrl,
+          source: candidate
+        });
+      }
+
+      if (!normalizedPredictions.length) {
         continue;
       }
 
-      for (const predicted of predictions) {
+      for (const { url: candidateUrl, source: predictionSource } of normalizedPredictions.slice(0, patternLimit)) {
         if (rateLimitTriggered) {
           break;
         }
-        const candidateUrl = applyScheme(predicted, normalizedDomain.scheme);
         summary.totalUrls += 1;
 
-        const latestFetch = selectLatestFetch.get(candidateUrl);
+        const attemptId = `${placeKey}:${++attemptCounter}`;
+        const attemptStartedAt = new Date().toISOString();
+        const placeSignalsInfo = {
+          kind: place.kind,
+          name: place.name,
+          code: place.code || place.countryCode || null
+        };
+        const analyzerName = typeof predictionSource === 'object' && predictionSource
+          ? (predictionSource.analyzer || predictionSource.source || place.kind)
+          : place.kind;
+        const strategyValue = typeof predictionSource === 'object' && predictionSource
+          ? (predictionSource.strategy || patternSource)
+          : patternSource;
+        const scoreValue = typeof predictionSource === 'object' ? predictionSource.score : null;
+        const confidenceValue = typeof predictionSource === 'object' ? predictionSource.confidence : null;
+        const patternValue = typeof predictionSource === 'object' ? predictionSource.pattern : null;
+        const candidateSignals = composeCandidateSignals({
+          predictionSource,
+          patternSource,
+          place: placeSignalsInfo,
+          attemptId
+        });
+
+        if (candidatesStore && typeof candidatesStore.saveCandidate === 'function') {
+          try {
+            candidatesStore.saveCandidate({
+              domain: normalizedDomain.host,
+              candidateUrl,
+              normalizedUrl: candidateUrl,
+              placeKind: place.kind,
+              placeName: place.name,
+              placeCode: placeSignalsInfo.code,
+              analyzer: analyzerName,
+              strategy: strategyValue,
+              score: scoreValue,
+              confidence: confidenceValue,
+              pattern: patternValue,
+              signals: candidateSignals,
+              attemptId,
+              attemptStartedAt,
+              status: 'pending',
+              validationStatus: null,
+              source: 'guess-place-hubs',
+              lastSeenAt: attemptStartedAt
+            });
+          } catch (storeError) {
+            if (options.verbose) {
+              logger?.warn?.(`[guess-place-hubs] Failed to save candidate ${candidateUrl}: ${storeError?.message || storeError}`);
+            }
+          }
+        }
+
+        const latestFetch = queries.getLatestFetch(candidateUrl);
         const ageMs = computeAgeMs(latestFetch, nowMs);
         if (latestFetch && latestFetch.http_status >= 200 && latestFetch.http_status < 300 && ageMs < maxAgeMs) {
           summary.cached += 1;
           if (options.verbose) {
             logger.info(`[guess-place-hubs] Cached OK (${latestFetch.http_status}) ${candidateUrl}`);
           }
+          candidatesStore?.markStatus?.({
+            domain: normalizedDomain.host,
+            candidateUrl,
+            status: 'cached-ok',
+            validationStatus: 'cache-hit',
+            lastSeenAt: attemptStartedAt
+          });
           continue;
         }
         if (latestFetch && latestFetch.http_status === 404 && ageMs < refresh404Ms) {
@@ -549,6 +627,13 @@ async function guessPlaceHubs(options = {}, deps = {}) {
           if (options.verbose) {
             logger.info(`[guess-place-hubs] Known 404 cached ${candidateUrl}`);
           }
+          candidatesStore?.markStatus?.({
+            domain: normalizedDomain.host,
+            candidateUrl,
+            status: 'cached-404',
+            validationStatus: 'cache-404',
+            lastSeenAt: attemptStartedAt
+          });
           continue;
         }
         if (
@@ -562,6 +647,13 @@ async function guessPlaceHubs(options = {}, deps = {}) {
           if (options.verbose) {
             logger.info(`[guess-place-hubs] Recent ${latestFetch.http_status} cached ${candidateUrl}`);
           }
+          candidatesStore?.markStatus?.({
+            domain: normalizedDomain.host,
+            candidateUrl,
+            status: 'cached-4xx',
+            validationStatus: 'cache-4xx',
+            lastSeenAt: attemptStartedAt
+          });
           continue;
         }
 
@@ -594,8 +686,15 @@ async function guessPlaceHubs(options = {}, deps = {}) {
           if (headResult) {
             if (headResult.status === 429) {
               summary.rateLimited += 1;
-              newsDb.insertFetch(createFetchRow(headResult, normalizedDomain.host));
               rateLimitTriggered = true;
+              candidatesStore?.markStatus?.({
+                domain: normalizedDomain.host,
+                candidateUrl,
+                status: 'rate-limited',
+                validationStatus: 'http-429',
+                lastSeenAt: attemptStartedAt
+              });
+              recordFetch(createFetchRow(headResult, normalizedDomain.host), { stage: 'HEAD', attemptId });
               recordDecision({
                 stage: 'HEAD',
                 status: 429,
@@ -609,7 +708,14 @@ async function guessPlaceHubs(options = {}, deps = {}) {
 
             if (headResult.status === 404 || headResult.status === 410) {
               summary.stored404 += 1;
-              newsDb.insertFetch(createFetchRow(headResult, normalizedDomain.host));
+              candidatesStore?.markStatus?.({
+                domain: normalizedDomain.host,
+                candidateUrl,
+                status: 'fetched-404',
+                validationStatus: `head-${headResult.status}`,
+                lastSeenAt: attemptStartedAt
+              });
+              recordFetch(createFetchRow(headResult, normalizedDomain.host), { stage: 'HEAD', attemptId });
               recordDecision({
                 stage: 'HEAD',
                 status: headResult.status,
@@ -641,10 +747,18 @@ async function guessPlaceHubs(options = {}, deps = {}) {
           }
 
           const result = await fetchUrl(candidateUrl, fetchFn, { logger });
-          newsDb.insertFetch(createFetchRow(result, normalizedDomain.host));
+          const fetchRow = createFetchRow(result, normalizedDomain.host);
+          const httpResponseId = recordFetch(fetchRow, { stage: 'GET', attemptId });
 
           if (result.status === 404) {
             summary.stored404 += 1;
+            candidatesStore?.markStatus?.({
+              domain: normalizedDomain.host,
+              candidateUrl,
+              status: 'fetched-404',
+              validationStatus: 'http-404',
+              lastSeenAt: attemptStartedAt
+            });
             recordDecision({
               stage: 'GET',
               status: 404,
@@ -658,6 +772,13 @@ async function guessPlaceHubs(options = {}, deps = {}) {
           if (result.status === 429) {
             summary.rateLimited += 1;
             rateLimitTriggered = true;
+            candidatesStore?.markStatus?.({
+              domain: normalizedDomain.host,
+              candidateUrl,
+              status: 'rate-limited',
+              validationStatus: 'http-429',
+              lastSeenAt: attemptStartedAt
+            });
             recordDecision({
               stage: 'GET',
               status: 429,
@@ -678,8 +799,32 @@ async function guessPlaceHubs(options = {}, deps = {}) {
               message: `GET ${result.status} ${candidateUrl} -> fetched`
             });
 
-            // Validate that this is actually a hub page, not just any page
-            const validation = await hubValidator.validateHubContent(result.finalUrl, place.name);
+            const title = extractTitle(result.body);
+            let validation;
+            const validationInput = {
+              url: result.finalUrl,
+              title,
+              html: result.body
+            };
+            if (result.body && typeof hubValidator.analyzeHubContent === 'function') {
+              validation = hubValidator.analyzeHubContent(validationInput, place.name, { htmlSource: 'network-fetch' });
+            } else {
+              validation = await hubValidator.validateHubContent(result.finalUrl, place.name, {
+                html: result.body,
+                title,
+                htmlSource: 'network-fetch'
+              });
+            }
+            if (!validation || typeof validation !== 'object') {
+              validation = { isValid: false, reason: 'Validation unavailable', metrics: null };
+            }
+
+            const validationMetrics = {
+              ...(validation.metrics || {}),
+              httpStatus: result.status,
+              httpResponseId
+            };
+
             if (!validation.isValid) {
               summary.errors += 1;
               recordDecision({
@@ -690,6 +835,35 @@ async function guessPlaceHubs(options = {}, deps = {}) {
                 level: 'warn',
                 message: `Content validation failed for ${candidateUrl}: ${validation.reason}`
               });
+
+              const invalidTimestamp = new Date().toISOString();
+              candidatesStore?.saveCandidate?.({
+                domain: normalizedDomain.host,
+                candidateUrl,
+                normalizedUrl: result.finalUrl,
+                placeKind: place.kind,
+                placeName: place.name,
+                placeCode: placeSignalsInfo.code,
+                analyzer: analyzerName,
+                strategy: strategyValue,
+                score: scoreValue,
+                confidence: confidenceValue,
+                pattern: patternValue,
+                signals: composeCandidateSignals({
+                  predictionSource,
+                  patternSource,
+                  place: placeSignalsInfo,
+                  attemptId,
+                  validationMetrics
+                }),
+                attemptId,
+                attemptStartedAt,
+                status: 'validated',
+                validationStatus: 'invalid',
+                source: 'guess-place-hubs',
+                lastSeenAt: invalidTimestamp
+              });
+
               continue;
             }
 
@@ -701,51 +875,94 @@ async function guessPlaceHubs(options = {}, deps = {}) {
               message: `Content validation passed for ${candidateUrl}: ${validation.reason}`
             });
 
+            const candidateStatus = options.apply ? 'persisted' : 'validated';
+            const validationTimestamp = new Date().toISOString();
+            candidatesStore?.saveCandidate?.({
+              domain: normalizedDomain.host,
+              candidateUrl,
+              normalizedUrl: result.finalUrl,
+              placeKind: place.kind,
+              placeName: place.name,
+              placeCode: placeSignalsInfo.code,
+              analyzer: analyzerName,
+              strategy: strategyValue,
+              score: scoreValue,
+              confidence: confidenceValue,
+              pattern: patternValue,
+              signals: composeCandidateSignals({
+                predictionSource,
+                patternSource,
+                place: placeSignalsInfo,
+                attemptId,
+                validationMetrics
+              }),
+              attemptId,
+              attemptStartedAt,
+              status: candidateStatus,
+              validationStatus: 'valid',
+              source: 'guess-place-hubs',
+              lastSeenAt: validationTimestamp
+            });
+
             if (options.apply) {
-              const existing = selectHubByUrl.get(result.finalUrl) || null;
-              const title = extractTitle(result.body);
-              const evidence = buildEvidence({ name: place.name, code: place.code, slug, kind: place.kind }, patternSource, result.status, { candidatesTested: predictions.length });
+              const existing = queries.getHubByUrl(result.finalUrl) || null;
+              const evidence = buildEvidence(
+                { name: place.name, code: place.code, slug, kind: place.kind },
+                patternSource,
+                result.status,
+                {
+                  candidatesTested: normalizedPredictions.length,
+                  strategy: strategyValue,
+                  confidence: confidenceValue,
+                  pattern: patternValue,
+                  validationMetrics
+                }
+              );
 
-              insertHubStmt.run(
-                normalizedDomain.host,
-                result.finalUrl,
-                slug,
-                place.kind,
-                null,
-                null,
-                null,
+              queries.insertHub({
+                host: normalizedDomain.host,
+                url: result.finalUrl,
+                placeSlug: slug,
+                placeKind: place.kind,
                 title,
-                null,
-                null,
+                navLinksCount: validationMetrics?.linkCount ?? null,
+                articleLinksCount: validationMetrics?.articleLinkCount ?? null,
                 evidence
-              );
+              });
 
-              updateHubStmt.run(
-                slug,
-                place.kind,
-                null,
-                null,
-                null,
+              queries.updateHub({
+                url: result.finalUrl,
+                placeSlug: slug,
+                placeKind: place.kind,
                 title,
-                null,
-                null,
-                evidence,
-                result.finalUrl
-              );
+                navLinksCount: validationMetrics?.linkCount ?? null,
+                articleLinksCount: validationMetrics?.articleLinkCount ?? null,
+                evidence
+              });
 
               if (!existing) summary.insertedHubs += 1;
               else summary.updatedHubs += 1;
             }
           } else {
             summary.errors += 1;
+            const outcome = result.status === 429 ? 'rate-limited' : 'error';
             recordDecision({
               stage: 'GET',
               status: result.status,
               url: candidateUrl,
-              outcome: 'error',
+              outcome,
               level: 'warn',
-              message: `GET ${result.status} ${candidateUrl} -> error`
+              message: `GET ${result.status} ${candidateUrl} -> ${outcome}`
             });
+            if (result.status !== 429) {
+              candidatesStore?.markStatus?.({
+                domain: normalizedDomain.host,
+                candidateUrl,
+                status: 'fetch-error',
+                validationStatus: `http-${result.status}`,
+                lastSeenAt: attemptStartedAt
+              });
+            }
           }
         } catch (err) {
           summary.errors += 1;
@@ -757,12 +974,22 @@ async function guessPlaceHubs(options = {}, deps = {}) {
             level: 'error',
             message: `GET failed for ${candidateUrl}: ${err.message || err}`
           });
+          candidatesStore?.markStatus?.({
+            domain: normalizedDomain.host,
+            candidateUrl,
+            status: 'exception',
+            validationStatus: err?.kind || 'exception',
+            lastSeenAt: new Date().toISOString()
+          });
+          const errorDetails = err?.cause
+            ? { name: err.cause.name, message: err.cause.message, attemptId }
+            : { attemptId };
           newsDb.insertError({
             url: candidateUrl,
             kind: err.kind || 'network',
             code: null,
             message: err.message,
-            details: err.cause ? { name: err.cause.name, message: err.cause.message } : null
+            details: errorDetails
           });
         }
       }
@@ -770,24 +997,195 @@ async function guessPlaceHubs(options = {}, deps = {}) {
 
     return summary;
   } finally {
+    try { queries.dispose(); } catch (_) {}
     try { db.close(); } catch (_) {}
+    try { newsDb.close?.(); } catch (_) {}
   }
+}
+
+function formatDays(days) {
+  if (!Number.isFinite(days)) return 'not set';
+  if (days === 0) return '0 days (always refresh)';
+  if (days === 1) return '1 day';
+  return `${days} days`;
+}
+
+function truncate(text, maxLength = 100) {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
+function formatStatus(fmt, value) {
+  if (value == null || value === '') return '';
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    if (numeric >= 200 && numeric < 300) return fmt.COLORS.success(String(value));
+    if (numeric >= 300 && numeric < 400) return fmt.COLORS.info(String(value));
+    if (numeric >= 400 && numeric < 500) return fmt.COLORS.warning(String(value));
+    if (numeric >= 500) return fmt.COLORS.error(String(value));
+  }
+  return String(value);
+}
+
+function formatOutcome(fmt, value) {
+  if (!value) return '';
+  const normalized = String(value);
+  if (['valid-hub', 'fetched', 'probe-ok'].includes(normalized)) {
+    return fmt.COLORS.success(normalized);
+  }
+  if (['cached-miss', 'retry-get', 'fallback-get', 'head-failed'].includes(normalized)) {
+    return fmt.COLORS.warning(normalized);
+  }
+  if (normalized.includes('error') || normalized.includes('exception') || normalized.includes('rate')) {
+    return fmt.COLORS.error(normalized);
+  }
+  return normalized;
+}
+
+function renderSummary(summary, options, logBuffer = []) {
+  const fmt = new CliFormatter();
+  const domainDisplay = summary.domain || options.domain || '(unknown)';
+  const schemeDisplay = (options.scheme || 'https').toUpperCase();
+  const kindsDisplay = Array.isArray(options.kinds) && options.kinds.length
+    ? options.kinds.join(', ')
+    : 'country';
+  const patternsPerPlace = Number.isFinite(options.patternsPerPlace)
+    ? options.patternsPerPlace
+    : 3;
+  const limitLabel = Number.isFinite(options.limit) ? options.limit : null;
+
+  fmt.header('Guess Place Hubs');
+
+  fmt.section('Target Configuration');
+  fmt.stat('Domain', domainDisplay);
+  fmt.stat('Scheme', schemeDisplay);
+  fmt.stat('Kinds requested', kindsDisplay);
+  fmt.stat('Patterns per place', patternsPerPlace, 'number');
+  if (limitLabel != null) {
+    fmt.stat('Place limit', limitLabel, 'number');
+  } else {
+    fmt.stat('Place limit', 'unbounded');
+  }
+  fmt.stat('Mode', options.apply ? 'Apply (persist hubs)' : 'Dry run (no database writes)');
+  fmt.stat('Max success cache window', formatDays(options.maxAgeDays));
+  fmt.stat('Known 404 cache window', formatDays(options.refresh404Days));
+  fmt.stat('Other 4xx retry window', formatDays(options.retry4xxDays));
+
+  fmt.section('Results');
+  fmt.stat('Places evaluated', summary.totalPlaces, 'number');
+  fmt.stat('URL candidates generated', summary.totalUrls, 'number');
+  fmt.stat('Fetched (HTTP OK)', summary.fetched, 'number');
+  fmt.stat('Cached successes reused', summary.cached, 'number');
+  fmt.stat('Duplicates skipped', summary.skippedDuplicatePlace, 'number');
+  fmt.stat('Recent 4xx skipped', summary.skippedRecent4xx, 'number');
+  fmt.stat('Stored 404 responses', summary.stored404, 'number');
+  fmt.stat('Inserted hubs', summary.insertedHubs, 'number');
+  fmt.stat('Updated hubs', summary.updatedHubs, 'number');
+  fmt.stat('Errors', summary.errors, 'number');
+  fmt.stat('Rate limit responses', summary.rateLimited, 'number');
+
+  if (summary.insertedHubs > 0 || summary.updatedHubs > 0) {
+    fmt.success(`Persisted ${summary.insertedHubs} new hub(s) and ${summary.updatedHubs} update(s).`);
+  } else if (!options.apply) {
+    fmt.info('Dry run: pass --apply to write confirmed hubs to place_hubs.');
+  }
+
+  if (summary.errors > 0) {
+    fmt.error(`${summary.errors} request(s) failed. Inspect recent decisions for details.`);
+  }
+
+  if (summary.rateLimited > 0) {
+    fmt.warn(`${summary.rateLimited} rate limit response(s) encountered — processing halted early.`);
+  }
+
+  if (Array.isArray(summary.unsupportedKinds) && summary.unsupportedKinds.length) {
+    fmt.list('Unsupported place kinds ignored', summary.unsupportedKinds);
+  }
+
+  const decisions = Array.isArray(summary.decisions) ? summary.decisions : [];
+  const recentDecisions = decisions.slice(-12);
+  fmt.section('Recent decisions');
+  if (recentDecisions.length) {
+    fmt.table(
+      recentDecisions.map((decision) => ({
+        stage: decision.stage || '',
+        status: decision.status == null ? '' : String(decision.status),
+        outcome: decision.outcome || '',
+        message: truncate(decision.message || '', 100)
+      })),
+      {
+        columns: ['stage', 'status', 'outcome', 'message'],
+        format: {
+          status: (value) => formatStatus(fmt, value),
+          outcome: (value) => formatOutcome(fmt, value)
+        }
+      }
+    );
+    const remaining = decisions.length - recentDecisions.length;
+    if (remaining > 0) {
+      fmt.info(`${remaining} additional decision entry(ies) truncated. Use --json for the full log.`);
+    }
+  } else {
+    fmt.info('No new HTTP requests were required; cached data satisfied all predictions.');
+  }
+
+  if (options.verbose && logBuffer.length) {
+    fmt.section('Verbose log');
+    for (const entry of logBuffer) {
+      const cleaned = entry.message.replace(/^\[guess-place-hubs\]\s*/, '');
+      if (entry.level === 'warn') {
+        fmt.warn(cleaned);
+      } else if (entry.level === 'error') {
+        fmt.error(cleaned);
+      } else {
+        fmt.info(cleaned);
+      }
+    }
+  }
+
+  fmt.footer();
 }
 
 async function main(argv) {
   const options = parseCliArgs(argv);
-  if (options.help) {
-    printUsage();
+
+  if (!options.domain) {
+    console.error('Domain or host is required. Provide a positional argument or --domain.');
+    process.exitCode = 1;
     return;
   }
 
-  if (!options.domain) {
-    printUsage();
-    throw new Error('Domain or host is required.');
+  const logBuffer = [];
+  const logger = {
+    info(message) {
+      if (options.verbose) {
+        logBuffer.push({ level: 'info', message });
+      }
+    },
+    warn(message) {
+      if (options.verbose) {
+        logBuffer.push({ level: 'warn', message });
+      }
+    },
+    error(message) {
+      logBuffer.push({ level: 'error', message });
+    }
+  };
+
+  const summary = await guessPlaceHubs(options, { logger });
+
+  if (options.json) {
+    for (const entry of logBuffer) {
+      if (entry.level === 'error' || (options.verbose && (entry.level === 'warn' || entry.level === 'info'))) {
+        console.error(entry.message);
+      }
+    }
+    console.log(JSON.stringify(summary, null, 2));
+    return;
   }
 
-  const summary = await guessPlaceHubs(options, { logger: console });
-  console.log(JSON.stringify(summary, null, 2));
+  renderSummary(summary, options, logBuffer);
 }
 
 if (require.main === module) {

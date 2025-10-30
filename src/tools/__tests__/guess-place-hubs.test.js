@@ -39,6 +39,11 @@ function stubLogger() {
   };
 }
 
+function createHubHtml(title) {
+  const links = Array.from({ length: 25 }, (_, index) => `<a href='/article-${index}'>Story ${index}</a>`).join('');
+  return `<html><head><title>${title}</title></head><body>${links}</body></html>`;
+}
+
 describe('guess-place-hubs tool', () => {
   test('persists fetch and hub when apply flag set', async () => {
     const dbPath = createTempDbPath('apply');
@@ -65,7 +70,7 @@ describe('guess-place-hubs tool', () => {
       }
       return Promise.resolve(createResponse({
         status: 200,
-        body: '<html><title>Testland Hub</title></html>',
+        body: createHubHtml('Testland Hub'),
         url
       }));
     });
@@ -209,7 +214,7 @@ describe('guess-place-hubs tool', () => {
       return Promise.resolve(createResponse({
         status: 200,
         url,
-        body: '<html><title>California Hub</title></html>'
+        body: createHubHtml('California Hub')
       }));
     });
     const logger = stubLogger();
@@ -296,7 +301,7 @@ describe('guess-place-hubs tool', () => {
       return Promise.resolve(createResponse({
         status: 200,
         url,
-        body: '<html><title>San Jose Hub</title></html>'
+        body: createHubHtml('San Jose Hub')
       }));
     });
     const logger = stubLogger();

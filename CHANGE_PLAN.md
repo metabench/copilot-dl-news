@@ -1,41 +1,97 @@
-# CHANGE_PLAN.md
+# CHANGE_PLAN.md — ACTIVE REFACTORING TRACK
+
+**📌 CURRENT (Oct 30, 2025): Hub Guessing Workflow Modernization**
+
+**Previous:** CLI Output Modularization (Phase 2 complete) — see `CLI_REFACTORING_TASKS.md`
+
+---
 
 ## Goal / Non-Goals
-- **Goal:** Centralise navigation vs. article link heuristics so that analyzers, CLIs, and crawler components share the same classification and counting logic.
-- **Non-Goals:** We are not refactoring the crawler’s `LinkExtractor` internals or changing how fetch records persist link arrays. The focus is on consolidating the lightweight counting code paths used outside the crawler pipeline.
 
-## Current Behavior
-- `src/analysis/page-analyzer.js` hand-rolls link counts by scanning anchors with inline heuristics (date-like paths, slug depth, host comparison).
-- Scripts such as `src/tools/show-analysis.js` and `src/tools/analyse-pages-core.js` reconstruct similar counts when presenting results, leading to divergent heuristics over time.
-- The crawler already exposes a richer `LinkExtractor`, but the offline analyzers cannot reuse it without bespoke plumbing, so they drift.
+### Goal
+- Transform `guess-place-hubs` from a standalone CLI into a reusable system service that powers crawls, background tasks, and analyst tooling.
+- Capture richer scoring inputs, persist evidence, and surface telemetry so that hub discovery decisions become auditable and schedulable.
+- Keep the CLI pathway operational as the primary manual entry point while sharing code with automation layers.
+
+### Non-Goals
+- Do not redesign analyzer algorithms from scratch; focus on feeding them more context and tuning with real data.
+- Do not deprecate existing CLI modes until the new workflow reaches feature parity (apply, JSON output, dry runs).
+- Avoid rewriting unrelated crawlers or background task runners beyond what is required for scheduling hooks.
+
+---
+
+## Current Behavior (Baseline)
+- `src/tools/guess-place-hubs.js` runs analyzers sequentially, logs output via `CliFormatter`, and optionally persists hubs using `HubValidator`.
+- Candidate scoring is ephemeral; only the winning hub is inserted into `place_hubs` and `fetches`/`http_responses` via inline `recordFetch` helpers.
+- Validation fetches HTML each time, even if the analyzer already downloaded it, and no structured metrics are stored.
+- CLI handles a single domain per invocation; no batching, diff previews, or import automation.
+- Intelligent crawl planner and background tasks are unaware of the guesser; manual runs only.
+- Observability is limited to console output; `/analysis` dashboards and SSE streams do not reflect guesses.
+- Test coverage targets the CLI happy path with limited fixtures; documentation focuses on refactored output rather than workflow usage.
+
+---
 
 ## Refactor & Modularization Plan
-1. **Introduce `linkClassification` utility:** Create `src/utils/linkClassification.js` exporting a `summarizeLinks({ url, document })` helper that encapsulates the existing anchor-iteration heuristics and returns `{ total, nav, article, details }` data.
-2. **Adopt helper in page analyzer:** Replace the inline link counting block in `src/analysis/page-analyzer.js` (including preparation timings) with a call to the new helper so the high-level function focuses on orchestration only, and extend the same helper to ancillary analysis scripts (e.g., `scripts/hub-analysis-workflow.js`) so offline tooling shares the exact classification.
-3. **Surface helper output in analysis metadata:** Persist the helper’s summary (e.g., under `analysis.meta.linkSummary`) so offline tooling can consume consistent counts without recalculating HTML.
-4. **Backfill unit coverage:** Add targeted tests for the new helper (e.g., in `src/utils/__tests__/linkClassification.test.js`) to guard the heuristics that were previously implicit.
+
+### Phase A — Shared Storage & Telemetry Foundations
+1. **Candidate Repository**: Introduce `src/db/placeHubCandidatesStore.js` with CRUD helpers backed by a new `place_hub_candidates` table (domain, candidate_url, analyzer, score, signals JSON, created_at, attempt_id, validation_status).
+2. **Fetch Recording Helper**: Extract a `recordFetchResult({ db, url, status, headers, body, source, retryOfId })` utility that dual-writes to `http_responses` + legacy `fetches` and emits telemetry (rate-limit counters, retry tags).
+3. **HubValidator Updates**: Allow validator to accept pre-fetched HTML, fall back to cached discovery/content tables, and return structured metrics (`{ status, evidence, issues }`).
+
+### Phase B — CLI Enhancements & Evidence Persistence
+4. **CLI Orchestration Module**: Split orchestration into `guessPlaceHubsWorkflow.js` so CLI and background jobs share batching, import, and reporting logic.
+5. **Batching & Import**: Add positional multi-domain support, CSV ingestion (`--import path.csv`), and queued execution with rate-limit awareness.
+6. **Apply Preview**: Implement `--apply` preview mode showing diff of inserts/updates (leveraging CliFormatter tables) before confirmation.
+7. **Report Emission**: Support `--emit-report path` storing JSON snapshots under `testlogs/guess-place-hubs/` for analyzer/test integration.
+8. **Evidence Storage**: Persist validator evidence to `place_hubs` (new JSON column) and create `place_hub_audit` table for historical validation events.
+
+### Phase C — Scheduling & Observability Integration
+9. **Priority Config Wiring**: Extend `config/priority-config.json` with thresholds (score floor, retry delay) consumed by the workflow.
+10. **Planner Integration**: Add hooks so intelligent crawl planner enqueues guess tasks when coverage snapshots reveal gaps; expose queue through background task manager.
+11. **Background Task Runner**: Implement a background task that replays pending candidate batches, reusing the workflow module.
+12. **SSE & Analysis Dashboards**: Stream decisions via SSE, update `/analysis` dashboards with success/failure metrics, and persist run summaries to `analysis_runs` tying to `background_task_id`.
+
+### Phase D — Testing & Documentation
+13. **Fixtures & Tests**: Add fixtures covering cached HTML reuse, mixed HTTP responses, audit persistence, and CLI CSV import/batch flows (targeted Jest suites).
+14. **Docs & Guides**: Update `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md`, CLI quick-start docs, and `CLI_REFACTORING_TASKS.md` execution log with the new workflow.
+15. **Developer Telemetry Docs**: Document new SSE events and analysis dashboard metrics in relevant architecture guides.
+
+---
 
 ## Patterns to Introduce
-- `summarizeLinks({ url, document })` will expose a neutral API that callers can feed with a JSDOM document or raw HTML (internally building cheerio as needed).
-- The helper will normalise host comparisons and slug heuristics in one place, making it easier to evolve the rules without surveying every consumer.
+- **Workflow Module**: Pure orchestration functions (`runGuessBatch`, `persistEvidence`) to keep CLI, planner, and background tasks aligned.
+- **Telemetry Contract**: A shared event interface for rate-limit updates and SSE broadcasting.
+- **Evidence Schema**: Normalized JSON structures for validator metrics stored both inline (`place_hubs.evidence_json`) and in audit history.
 
-## Risks & Unknowns
-- The helper must match existing behaviour exactly; otherwise hub detection metrics may shift. Mitigate by porting the current logic verbatim and validating with unit tests that capture representative URLs.
-- Some consumers may run without full HTML (e.g., fetch rows from DB only). Ensure the helper gracefully handles missing DOM input and callers keep existing fallbacks.
+---
 
-## Docs Impact
-- No public docs change is required. Internal module comments will describe the helper for future contributors.
+## Risks & Mitigations
+- **Schema Migrations**: New tables/columns risk breaking older SQLite snapshots. Mitigate with migrations that check for existing columns and provide backfill scripts.
+- **Analyzer Performance**: Batching and additional signals may slow runs. Profile with staged rollouts and configurable limits.
+- **Scheduler Coupling**: Ensure planner hooks are feature-flagged to avoid accidental load spikes; default to manual mode until validated.
+- **Telemetry Volume**: SSE/event noise can overwhelm dashboards. Add throttling and summary aggregation before emitting.
 
-## Focused Test Plan
-- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/analysis/__tests__/page-analyzer.test.js`
-- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/analysis/__tests__/page-analyzer-xpath.test.js`
-- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/utils/__tests__/linkClassification.test.js`
+---
+
+## Focused Test Plan (Per Phase)
+- **Phase A**: `jest --runTestsByPath src/tools/__tests__/guess-place-hubs.test.js src/db/__tests__/placeHubCandidatesStore.test.js`
+- **Phase B**: CLI behavioural tests via `jest --runTestsByPath src/tools/__tests__/guess-place-hubs.cli.test.js` plus manual `node src/tools/guess-place-hubs.js --help` and sample CSV import run.
+- **Phase C**: Integration tests for planner/background hooks (`jest --runTestsByPath src/analysis/__tests__/intelligent-crawl-planner.test.js`).
+- **Phase D**: Documentation lint scripts (if any) and regenerate CLI examples.
+
+---
 
 ## Rollback Plan
-- Delete `src/utils/linkClassification.js`, restore the previous inline logic in `page-analyzer` and the CLI consumer, and remove the new unit tests.
-- Re-run the focused tests above to confirm behaviour matches baseline after reverting.
+- Isolate schema changes behind migrations with down scripts (drop new tables/columns if necessary).
+- Keep existing CLI code path (pre-workflow module) available behind feature flag until end-to-end tests pass; revert by toggling the flag and removing new scheduler hooks.
+- SSE/dashboard integration guarded by config; disable to stop emitting if regressions surface.
 
-## Refactor Index
-- `page-analyzer` link counting block → `linkClassification.summarizeLinks`.
-- `analysis.meta.linkSummary` stores helper output for downstream tooling.
-- New unit suite `src/utils/__tests__/linkClassification.test.js` protects the shared behaviour.
+---
+
+## Refactor Index (Will Update As Work Lands)
+- `src/tools/guess-place-hubs.js` → delegates to `src/workflows/guessPlaceHubsWorkflow.js` (new).
+- `src/db/placeHubCandidatesStore.js` (new) consumed by CLI, planner, background tasks.
+- `src/utils/fetch/recordFetchResult.js` (new helper) replaces inline logic in guesser and other tools.
+- `src/validation/HubValidator.js` gains HTML reuse + metrics API.
+- `config/priority-config.json` extended with guesser thresholds.
+- `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` and CLI docs updated with new workflow guidance.

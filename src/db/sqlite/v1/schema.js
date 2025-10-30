@@ -788,6 +788,32 @@ function initPlaceHubsTables(db, { verbose, logger }) {
       FOREIGN KEY (place_id) REFERENCES places(id) ON DELETE CASCADE,
       FOREIGN KEY (hub_id) REFERENCES place_hubs(id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS place_hub_candidates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      domain TEXT NOT NULL,
+      candidate_url TEXT NOT NULL,
+      normalized_url TEXT NOT NULL,
+      place_kind TEXT,
+      place_name TEXT,
+      place_code TEXT,
+      place_id INTEGER REFERENCES places(id) ON DELETE SET NULL,
+      analyzer TEXT,
+      strategy TEXT,
+      score REAL,
+      confidence REAL,
+      pattern TEXT,
+      signals_json TEXT,
+      attempt_id TEXT,
+      attempt_started_at TEXT,
+      status TEXT DEFAULT 'pending',
+      validation_status TEXT,
+      source TEXT DEFAULT 'guess-place-hubs',
+      last_seen_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(domain, candidate_url)
+    );
   `);
 
   try {
@@ -819,6 +845,30 @@ function initPlaceHubsTables(db, { verbose, logger }) {
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_page_mappings_host_kind ON place_page_mappings(host, page_kind)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_page_mappings_place ON place_page_mappings(place_id)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_page_mappings_status ON place_page_mappings(status)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_candidates_domain_status ON place_hub_candidates(domain, status)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_candidates_place_kind ON place_hub_candidates(place_kind)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_candidates_attempt ON place_hub_candidates(attempt_id)'); } catch (_) {}
+
+  try {
+    const candidateCols = db.prepare('PRAGMA table_info(place_hub_candidates)').all().map((row) => row.name);
+    const ensureCandidateCol = (name, ddl) => {
+      if (!candidateCols.includes(name)) {
+        db.exec(`ALTER TABLE place_hub_candidates ADD COLUMN ${name} ${ddl}`);
+        candidateCols.push(name);
+      }
+    };
+
+    ensureCandidateCol('pattern', 'TEXT');
+    ensureCandidateCol('signals_json', 'TEXT');
+    ensureCandidateCol('attempt_id', 'TEXT');
+    ensureCandidateCol('attempt_started_at', 'TEXT');
+    ensureCandidateCol('status', "TEXT DEFAULT 'pending'");
+    ensureCandidateCol('validation_status', 'TEXT');
+    ensureCandidateCol('source', "TEXT DEFAULT 'guess-place-hubs'");
+    ensureCandidateCol('last_seen_at', 'TEXT');
+    ensureCandidateCol('created_at', "TEXT NOT NULL DEFAULT (datetime('now'))");
+    ensureCandidateCol('updated_at', "TEXT NOT NULL DEFAULT (datetime('now'))");
+  } catch (_) {}
 
   try {
     db.exec(`

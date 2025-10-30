@@ -8,7 +8,7 @@
 /**
  * Get all countries from gazetteer with their preferred names
  * @param {import('better-sqlite3').Database} db
- * @returns {Array<{name: string, code: string, importance: number, population: number, wikidataQid: string}>}
+ * @returns {Array<{id: number, name: string, code: string, importance: number, population: number, wikidataQid: string}>}
  */
 function getAllCountries(db) {
   try {
@@ -31,7 +31,7 @@ function getAllCountries(db) {
         WHERE p.kind = 'country'
           AND p.country_code IS NOT NULL
       )
-      SELECT name, code, importance, wikidataQid, population
+      SELECT id, name, code, importance, wikidataQid, population
       FROM country_names
       WHERE name IS NOT NULL
       ORDER BY importance DESC, name ASC
@@ -48,7 +48,7 @@ function getAllCountries(db) {
  * Get top N countries by importance/priority
  * @param {import('better-sqlite3').Database} db
  * @param {number} limit - Maximum number of countries to return
- * @returns {Array<{name: string, code: string, importance: number, population: number, wikidataQid: string}>}
+ * @returns {Array<{id: number, name: string, code: string, importance: number, population: number, wikidataQid: string}>}
  */
 function getTopCountries(db, limit = 50) {
   try {
@@ -71,7 +71,7 @@ function getTopCountries(db, limit = 50) {
         WHERE p.kind = 'country'
           AND p.country_code IS NOT NULL
       )
-      SELECT name, code, importance, wikidataQid, population
+      SELECT id, name, code, importance, wikidataQid, population
       FROM country_names
       WHERE name IS NOT NULL
       ORDER BY importance DESC, name ASC

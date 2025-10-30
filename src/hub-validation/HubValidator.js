@@ -10,6 +10,22 @@ const { getAllPlaceNames } = require('../db/sqlite/v1/queries/gazetteerPlaceName
 const { getTopicTermsForLanguage } = require('../db/sqlite/v1/queries/topicKeywords');
 const { getSkipTermsForLanguage } = require('../db/sqlite/v1/queries/crawlSkipTerms');
 
+function bufferToString(input) {
+  if (input == null) return null;
+  if (typeof input === 'string') return input;
+  if (Buffer.isBuffer(input)) return input.toString('utf8');
+  return String(input);
+}
+
+function countLinks(html) {
+  if (!html) return 0;
+  return (String(html).match(/<a\b[^>]*href/gi) || []).length;
+}
+
+function toLower(value) {
+  return typeof value === 'string' ? value.toLowerCase() : '';
+}
+
 class HubValidator {
   constructor(db) {
     this.db = db;
@@ -65,12 +81,60 @@ class HubValidator {
    * @returns {Object|null} - Article record or null
    */
   getCachedArticle(url) {
+    const legacy = this._getLegacyArticle(url);
+    if (legacy) return legacy;
+    const normalized = this._getNormalizedArticle(url);
+    if (normalized) return normalized;
+    return null;
+  }
+
+  _getLegacyArticle(url) {
     try {
-      const article = this.db.prepare(
+      const row = this.db.prepare(
         'SELECT id, url, title, html, text FROM articles WHERE url = ?'
       ).get(url);
-      return article || null;
-    } catch (error) {
+      if (!row) return null;
+      return {
+        url: row.url,
+        title: row.title,
+        html: bufferToString(row.html || row.text || null),
+        text: row.text || null,
+        source: 'articles-table'
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _getNormalizedArticle(url) {
+    try {
+      const row = this.db.prepare(`
+        SELECT
+          u.url AS url,
+          ca.title AS title,
+          cs.content_blob AS html,
+          ca.word_count AS wordCount,
+          ca.nav_links_count AS navLinksCount,
+          ca.article_links_count AS articleLinksCount
+        FROM urls u
+        JOIN http_responses hr ON hr.url_id = u.id
+        LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+        LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+        WHERE u.url = ? OR u.canonical_url = ?
+        ORDER BY hr.fetched_at DESC
+        LIMIT 1
+      `).get(url, url);
+      if (!row) return null;
+      return {
+        url: row.url,
+        title: row.title,
+        html: bufferToString(row.html),
+        wordCount: row.wordCount,
+        navLinksCount: row.navLinksCount,
+        articleLinksCount: row.articleLinksCount,
+        source: 'normalized-http'
+      };
+    } catch (_) {
       return null;
     }
   }
@@ -81,73 +145,91 @@ class HubValidator {
    * @param {string} placeName - Expected place name
    * @returns {Promise<Object>} - { isValid: boolean, reason: string }
    */
-  async validateHubContent(url, placeName) {
-    // First check if we have cached content
-    let article = this.getCachedArticle(url);
-    
-    if (article) {
-      // Validate cached content
-      return this.analyzeHubContent(article, placeName);
+  async validateHubContent(url, placeName, overrides = {}) {
+    const providedHtml = overrides.html ? bufferToString(overrides.html) : null;
+    const providedTitle = overrides.title || overrides.pageTitle || null;
+    const providedMetrics = overrides.metrics || {};
+    let article = null;
+    let htmlSource = overrides.htmlSource || (providedHtml ? 'provided-html' : null);
+
+    if (providedHtml) {
+      article = {
+        url,
+        title: providedTitle || this.extractTitle(providedHtml),
+        html: providedHtml,
+        text: overrides.text || this.extractText(providedHtml),
+        wordCount: providedMetrics.wordCount,
+        navLinksCount: providedMetrics.navLinksCount,
+        articleLinksCount: providedMetrics.articleLinksCount,
+        source: overrides.source || 'provided'
+      };
+    } else {
+      article = this.getCachedArticle(url);
+      htmlSource = htmlSource || (article ? article.source : null);
     }
-    
-    // If not cached, try to fetch it
+
+    if (article) {
+      return this.analyzeHubContent(article, placeName, { htmlSource });
+    }
+
     try {
       const https = require('https');
       const http = require('http');
-      
-      return await new Promise((resolve, reject) => {
+
+      return await new Promise((resolve) => {
         const urlObj = new URL(url);
         const protocol = urlObj.protocol === 'https:' ? https : http;
-        
-        const options = {
+
+        const requestOptions = {
           method: 'GET',
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
           },
           timeout: 10000
         };
-        
-        const req = protocol.get(url, options, (res) => {
+
+        const req = protocol.get(url, requestOptions, (res) => {
           if (res.statusCode !== 200) {
-            resolve({ 
-              isValid: false, 
-              reason: `HTTP ${res.statusCode} response` 
+            resolve({
+              isValid: false,
+              reason: `HTTP ${res.statusCode} response`
             });
             return;
           }
-          
+
           let data = '';
-          res.on('data', chunk => data += chunk);
+          res.on('data', chunk => { data += chunk; });
           res.on('end', () => {
-            const mockArticle = { 
-              url, 
+            const fetchedArticle = {
+              url,
               title: this.extractTitle(data),
               html: data,
-              text: this.extractText(data)
+              text: this.extractText(data),
+              source: 'network-fetch'
             };
-            resolve(this.analyzeHubContent(mockArticle, placeName));
+            resolve(this.analyzeHubContent(fetchedArticle, placeName, { htmlSource: 'network-fetch' }));
           });
         });
-        
+
         req.on('error', (error) => {
-          resolve({ 
-            isValid: false, 
-            reason: `Fetch error: ${error.message}` 
+          resolve({
+            isValid: false,
+            reason: `Fetch error: ${error.message}`
           });
         });
-        
+
         req.on('timeout', () => {
           req.destroy();
-          resolve({ 
-            isValid: false, 
-            reason: 'Request timeout' 
+          resolve({
+            isValid: false,
+            reason: 'Request timeout'
           });
         });
       });
     } catch (error) {
-      return { 
-        isValid: false, 
-        reason: `Validation error: ${error.message}` 
+      return {
+        isValid: false,
+        reason: `Validation error: ${error.message}`
       };
     }
   }
@@ -155,35 +237,66 @@ class HubValidator {
   /**
    * Analyze article content to verify it's a hub page
    */
-  analyzeHubContent(article, placeName) {
-    // Check 1: Title should contain place name
-    if (!article.title || !article.title.toLowerCase().includes(placeName.toLowerCase())) {
-      return { 
-        isValid: false, 
-        reason: `Title does not contain place name "${placeName}"` 
+  analyzeHubContent(article, placeName, options = {}) {
+    const evaluated = this._evaluateHub(article, placeName, options);
+    return evaluated;
+  }
+
+  _evaluateHub(article, placeName, options = {}) {
+    if (!article) {
+      return {
+        isValid: false,
+        reason: 'No article content available',
+        metrics: { htmlSource: options.htmlSource || 'unknown' }
       };
     }
-    
-    // Check 2: Content should have multiple links (hubs have many article links)
-    const linkCount = (article.html || '').match(/<a[^>]+href/gi)?.length || 0;
-    if (linkCount < 20) {
-      return { 
-        isValid: false, 
-        reason: `Too few links (${linkCount}) - not a hub page` 
-      };
+
+    const metrics = this._buildValidationMetrics(article, placeName, options);
+
+    let isValid = true;
+    let reason = 'Content validates as hub page';
+
+    if (!metrics.titleContainsPlace) {
+      isValid = false;
+      reason = `Title does not contain place name "${placeName}"`;
+    } else if (metrics.linkCount < 20) {
+      isValid = false;
+      reason = `Too few links (${metrics.linkCount}) - not a hub page`;
+    } else if (metrics.urlLooksDated) {
+      isValid = false;
+      reason = 'URL contains date - appears to be article, not hub';
     }
-    
-    // Check 3: Should not be a dated article
-    if (article.url.match(/\/\d{4}\/[a-z]{3}\/\d{1,2}\//i)) {
-      return { 
-        isValid: false, 
-        reason: 'URL contains date - is an article, not hub' 
-      };
-    }
-    
-    return { 
-      isValid: true, 
-      reason: 'Content validates as hub page' 
+
+    return {
+      isValid,
+      reason,
+      metrics
+    };
+  }
+
+  _buildValidationMetrics(article, placeName, options = {}) {
+    const html = bufferToString(article.html);
+    const title = article.title || '';
+    const linkCount = Number.isFinite(article.navLinksCount)
+      ? article.navLinksCount
+      : countLinks(html);
+    const articleLinks = Number.isFinite(article.articleLinksCount)
+      ? article.articleLinksCount
+      : null;
+    const titleContainsPlace = title.toLowerCase().includes((placeName || '').toLowerCase());
+    const urlLooksDated = article.url ? this.isDatedArticle(article.url) : false;
+    const paginated = article.url ? this.isPaginated(article.url) : false;
+
+    return {
+      htmlSource: options.htmlSource || article.source || 'unknown',
+      linkCount,
+      articleLinkCount: articleLinks,
+      titleContainsPlace,
+      urlLooksDated,
+      paginated,
+      placeName,
+      title,
+      wordCount: Number.isFinite(article.wordCount) ? article.wordCount : null
     };
   }
   

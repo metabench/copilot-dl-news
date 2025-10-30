@@ -1,14 +1,26 @@
 #!/usr/bin/env node
 
-// Analyze domains to infer categories like "news" and store analysis JSON in domains.analysis.
-// Heuristics:
-// - Number of article-classified fetches
-// - Number of distinct sections
-// - Proportion of URLs with date patterns (/yyyy/mm/dd/)
-// - Presence of meta og:type=news.article (in articles table text if available)
+/**
+ * Analyze domains to infer categories like "news" with beautiful formatted output.
+ * 
+ * Heuristics:
+ * - Number of article-classified fetches
+ * - Number of distinct sections
+ * - Proportion of URLs with date patterns (/yyyy/mm/dd/)
+ * - Presence of meta og:type=news.article
+ * 
+ * Usage:
+ *   node analyze-domains.js                      (analyze all domains)
+ *   node analyze-domains.js --limit=50           (limit to first 50)
+ *   node analyze-domains.js --db=custom.db       (custom database)
+ */
 
 const path = require('path');
 const { evaluateDomainFromDb } = require('../is_this_a_news_website');
+const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
+
+const fmt = new CliFormatter();
 
 function compute429Stats(db, host, minutes) {
   if (!db || typeof db.getHttp429Stats !== 'function') {
@@ -17,30 +29,56 @@ function compute429Stats(db, host, minutes) {
   return db.getHttp429Stats(host, minutes);
 }
 
-function main(){
-  const dbPathArg = process.argv.find(a => a.startsWith('--db='));
-  const limitArg = process.argv.find(a => a.startsWith('--limit='));
-  const dbPath = dbPathArg ? dbPathArg.split('=')[1] : path.join(process.cwd(), 'data', 'news.db');
-  const LIMIT = limitArg ? Math.max(0, parseInt(limitArg.split('=')[1], 10) || 0) : 0;
+/**
+ * Parse command-line arguments
+ */
+function parseArgs(argv) {
+  const parser = new CliArgumentParser(
+    'analyze-domains',
+    'Analyze domains to infer news site categories'
+  );
+
+  parser
+    .add('--db <path>', 'Path to news database', path.join(process.cwd(), 'data', 'news.db'))
+    .add('--limit <number>', 'Limit number of domains to analyze', 0, 'number');
+
+  return parser.parse(argv);
+}
+
+function main() {
+  const args = parseArgs(process.argv);
+
   let NewsDatabase;
-  try { NewsDatabase = require('../db'); } catch (e) {
-    console.error('Database unavailable:', e.message); process.exit(1);
+  try {
+    NewsDatabase = require('../db');
+  } catch (e) {
+    fmt.error('Database unavailable: ' + e.message);
+    process.exit(1);
   }
-  const db = new NewsDatabase(dbPath);
 
-  // Get list of domains (optionally limited)
+  const db = new NewsDatabase(args.db);
+
   if (typeof db.listDomainHosts !== 'function') {
-    throw new Error('NewsDatabase#listDomainHosts is required for domain analysis');
+    fmt.error('NewsDatabase#listDomainHosts is required for domain analysis');
+    process.exit(1);
   }
 
-  const hosts = db.listDomainHosts({ limit: LIMIT });
+  const hosts = db.listDomainHosts({ limit: args.limit });
 
-  for (const host of hosts) {
+  fmt.header('Domain Analysis Results');
+  fmt.settings(`Analyzing ${hosts.length} domain(s)...`);
+  fmt.blank();
+
+  const results = [];
+
+  for (let i = 0; i < hosts.length; i++) {
+    const host = hosts[i];
     if (!host) continue;
+
     const { analysis } = evaluateDomainFromDb(db, host);
-    // Compute 429 metrics for 15m and 60m windows
     const w15 = compute429Stats(db, host, 15);
     const w60 = compute429Stats(db, host, 60);
+
     const extended = {
       ...analysis,
       http429: {
@@ -51,10 +89,52 @@ function main(){
         }
       }
     };
+
     db.upsertDomain(host, JSON.stringify(extended));
-    if (extended.kind === 'news') db.tagDomainWithCategory(host, 'news');
-    process.stdout.write(`${host}\t${extended.kind}\t${extended.score.toFixed(3)}\t429rpm15=${extended.http429.windows.m15.rpm.toFixed(3)}\t429rpm60=${extended.http429.windows.m60.rpm.toFixed(3)}\n`);
+    if (extended.kind === 'news') {
+      db.tagDomainWithCategory(host, 'news');
+    }
+
+    // Show progress for long runs
+    if ((i + 1) % 50 === 0) {
+      fmt.progress(`Processing domains`, i + 1, hosts.length);
+    }
+
+    // Build table row
+    results.push({
+      domain: host,
+      type: extended.kind,
+      score: extended.score.toFixed(3),
+      articles: extended.articleCount || 0,
+      sections: extended.sectionCount || 0,
+      '429/15m': extended.http429.windows.m15.rpm.toFixed(2),
+      '429/60m': extended.http429.windows.m60.rpm.toFixed(2),
+    });
   }
+
+  fmt.blank();
+
+  // Display formatted table
+  fmt.table(results, {
+    columns: ['domain', 'type', 'score', 'articles', 'sections', '429/15m', '429/60m'],
+    format: {
+      type: (v) => v === 'news' ? fmt.COLORS.success(v) : v,
+      score: (v) => fmt.COLORS.cyan(v),
+      '429/15m': (v) => v > 0 ? fmt.COLORS.warning(v) : v,
+      '429/60m': (v) => v > 0 ? fmt.COLORS.warning(v) : v,
+    }
+  });
+
+  // Summary statistics
+  const newsCount = results.filter(r => r.type === 'news').length;
+  fmt.summary({
+    'Total domains': results.length,
+    'News domains': newsCount,
+    'Other domains': results.length - newsCount,
+    'Analyzed in': new Date().toISOString()
+  });
+
+  fmt.footer();
   db.close();
 }
 
