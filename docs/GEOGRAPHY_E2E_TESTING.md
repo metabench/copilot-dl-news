@@ -6,6 +6,23 @@
 
 This document describes the comprehensive end-to-end testing for geography crawls. Geography crawls use the gazetteer system to sequentially process countries, regions, and boundaries from external APIs (Wikidata SPARQL, Overpass).
 
+### Pre-flight SPARQL checks
+
+Before running long E2E suites, you can validate the underlying Wikidata queries without launching a crawl:
+
+```bash
+# List available geography queries
+node src/tools/geography-crawl-queries.js list
+
+# Preview the ADM1 query for the United States without executing it
+node src/tools/geography-crawl-queries.js adm1 --country-code=US --country-qid=Q30 --print-only
+
+# Execute the cities query with a higher population floor and JSON output
+node src/tools/geography-crawl-queries.js cities --country-code=BR --country-qid=Q155 --min-population=500000 --json
+```
+
+The CLI shares its builders with the ingestion pipeline, so any failing validation here mirrors what the crawler would run later.
+
 ## Test Files
 
 ### 1. Basic E2E Tests (Fast) ✅ Run in Normal Suite

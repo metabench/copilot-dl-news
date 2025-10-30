@@ -22,6 +22,11 @@ const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const { AttributeBuilder } = require('../../../utils/attributeBuilder');
 const ingestQueries = require('../../../db/sqlite/queries/gazetteer.ingest');
+const {
+  DEFAULT_LABEL_LANGUAGES,
+  buildCitiesDiscoveryQuery,
+  buildCountryClause
+} = require('../queries/geographyQueries');
 
 class WikidataCitiesIngestor {
   constructor({
@@ -52,6 +57,7 @@ class WikidataCitiesIngestor {
   this.targetCountries = Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null;
   this.countryFilter = this.targetCountries ? this._buildCountryFilter(this.targetCountries) : null;
     this.cacheDir = cacheDir || path.join(process.cwd(), 'data', 'cache', 'sparql');
+    this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
 
     this.id = 'wikidata-cities';
     this.name = 'Wikidata Cities Ingestor';
@@ -224,23 +230,12 @@ class WikidataCitiesIngestor {
 
     const countryClause = this._buildCountryClause(country, 'city');
 
-    const populationFilter = this.minPopulation > 0
-      ? `FILTER(?pop > ${this.minPopulation})  # Minimum population`
-      : '';
-
-    // SPARQL query for cities in this country (handles constituent hierarchies)
-    const sparql = `
-      SELECT DISTINCT ?city ?cityLabel ?coord ?pop WHERE {
-        ?city wdt:P31/wdt:P279* wd:Q515.  # Instance of city (or subclass)
-        ${countryClause}
-        OPTIONAL { ?city wdt:P625 ?coord. }  # Coordinates
-        OPTIONAL { ?city wdt:P1082 ?pop. }  # Population
-        ${populationFilter}
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,pt,it,ja,und". }
-      }
-      ORDER BY DESC(?pop)
-      LIMIT ${this.maxCitiesPerCountry}
-    `;
+    const sparql = buildCitiesDiscoveryQuery({
+      countryClause,
+      languages: this.labelLanguages,
+      limit: this.maxCitiesPerCountry,
+      minPopulation: this.minPopulation > 0 ? this.minPopulation : null
+    });
 
     try {
       const sparqlResult = await this._fetchSparql(sparql);
@@ -334,30 +329,11 @@ class WikidataCitiesIngestor {
   }
 
   _buildCountryClause(country, subjectVar = 'city') {
-    const clauses = [];
-
-    if (country.wikidata_qid) {
-      clauses.push(`{
-        VALUES ?targetCountry { wd:${country.wikidata_qid} }
-        ?${subjectVar} wdt:P17 ?country.
-        ?targetCountry (wdt:P150*) ?country.
-      }`);
-    }
-
-    if (country.country_code) {
-      clauses.push(`{
-        ?${subjectVar} wdt:P17 ?country.
-        ?country wdt:P297 "${country.country_code}".
-      }`);
-    }
-
-    if (clauses.length === 0) {
-      clauses.push(`{
-        ?${subjectVar} wdt:P17 ?country.
-      }`);
-    }
-
-    return clauses.length === 1 ? clauses[0] : clauses.join('\n      UNION\n      ');
+    return buildCountryClause({
+      subjectVar,
+      countryCode: country?.country_code,
+      countryQid: country?.wikidata_qid
+    });
   }
 
   async _fallbackIngestCities(country, emitProgress) {

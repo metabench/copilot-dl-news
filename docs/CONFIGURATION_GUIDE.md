@@ -124,6 +124,51 @@ export UI_GAZETTEER_WARMUP_CODE=US  # Use USA for warmup
 node src/ui/express/server.js
 ```
 
+### Gazetteer Ingestor Overrides
+
+You can tune Wikidata and OSM ingestion directly through the crawler options. Provide overrides via either `gazetteer.<name>` or `gazetteer.ingestors.<name>`; both forms merge and later keys win. Convenience keys `freshnessIntervalDays` and `freshnessIntervalHours` are converted to milliseconds automatically.
+
+```javascript
+const crawler = new NewsCrawler(startUrl, {
+  gazetteer: {
+    wikidataCountry: {
+      entitiesBatchSize: 25,
+      transactionChunkSize: 15,
+      freshnessIntervalDays: 1
+    },
+    osmBoundaries: {
+      maxConcurrentFetches: 3,
+      maxBatchSize: 4,
+      freshnessIntervalHours: 6
+    }
+  }
+});
+```
+
+Supported keys:
+
+| Ingestor | Key | Default | Notes |
+|----------|-----|---------|-------|
+| `wikidataCountry` | `entitiesBatchSize` | `50` | Maximum entities per `wbgetentities` request (≤50). |
+| | `entityBatchDelayMs` | `250` | Delay between entity batches; set `0` to disable. |
+| | `transactionChunkSize` | `25` | Places written per SQLite transaction chunk. |
+| | `freshnessIntervalMs` | `7 days` | Minimum interval before refetching a country. Use `freshnessIntervalDays` or `freshnessIntervalHours` for readability. |
+| | `timeoutMs` | `60000` | SPARQL timeout override. |
+| | `sleepMs` | `250` | Base delay applied to SPARQL retries (also used when no batch delay supplied). |
+| | `useCache` | `true` | Toggle on-disk caching of SPARQL/entity responses. |
+| | `maxRetries` | `3` | Retry budget for SPARQL requests. |
+| `osmBoundaries` | `batchSize` | `10` | Discovery limit per execute pass (maps to `limit` argument when unspecified). |
+| | `maxBatchSize` | `5` | Maximum features grouped into a single Overpass request. |
+| | `maxConcurrentFetches` | `2` | Worker pool size for concurrent Overpass calls; automatically capped by the crawler’s `concurrency` option. |
+| | `overpassTimeout` | `60` | Overpass timeout (seconds) appended to generated queries. |
+| | `freshnessIntervalMs` | `7 days` | Skip boundaries fetched within the window; accepts `freshnessIntervalDays`/`freshnessIntervalHours`. |
+
+**Precedence rules**:
+
+- Keys defined under `gazetteer.ingestors.<name>` merge with top-level `gazetteer.<name>`.
+- Only the options listed above are forwarded to respective ingestors; critical wiring such as `db` and `logger` remains internal.
+- `maxConcurrentFetches` never exceeds the crawler-level `concurrency` guard to respect global throttle policies.
+
 ---
 
 ### Test Environment Variables

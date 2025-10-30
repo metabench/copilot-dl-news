@@ -118,6 +118,17 @@ CREATE TABLE place_attributes (
 node src/crawl.js https://placeholder.example.com --crawl-type=geography --max-pages=100
 ```
 
+## Query Tooling
+
+Geography crawls now expose their Wikidata SPARQL templates through a shared query module (`src/crawler/gazetteer/queries/geographyQueries.js`) and a lightweight CLI helper.
+
+- **Inspect or run queries**: `node src/tools/geography-crawl-queries.js <countries|adm1|cities> [options]`
+- **Quick preview**: append `--print-only` (or use the `print` sub-command) to dump the exact SPARQL string without hitting Wikidata.
+- **Narrow scope**: provide `--country-code=US` and/or `--country-qid=Q30` when running ADM1 or city discovery.
+- **Adjust defaults**: tweak `--limit`, `--min-population`, `--languages`, or `--preview` to control result size and output formatting.
+
+Behind the scenes, the same builders power the runtime ingestors, so any edits to `geographyQueries.js` stay in lockstep across the CLI, tests, and the crawl pipeline. Queries now standardize on `VALUES` blocks for type selection, `[AUTO_LANGUAGE]`-aware `SERVICE wikibase:label` clauses, and optional filters that can be toggled from the CLI.
+
 ### Via API
 ```bash
 curl -X POST http://localhost:41001/api/crawl \

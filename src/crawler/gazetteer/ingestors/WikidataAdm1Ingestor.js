@@ -6,9 +6,12 @@ const crypto = require('crypto');
 const { tof, is_array, each } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
-
-// Classes treated as first-level regions when querying Wikidata.
-const REGION_CLASS_QIDS = ['Q10864048', 'Q15284', 'Q3336843'];
+const {
+  DEFAULT_LABEL_LANGUAGES,
+  DEFAULT_REGION_CLASS_QIDS,
+  buildAdm1DiscoveryQuery,
+  buildCountryClause
+} = require('../queries/geographyQueries');
 
 const DEFAULT_SNAPSHOT_PATH = path.join(
   __dirname,
@@ -73,6 +76,8 @@ class WikidataAdm1Ingestor {
     this.id = 'wikidata-adm1';
     this.name = 'Wikidata ADM1 Ingestor';
   this.defaultWikidataAdminLevel = 4;
+    this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
+    this.regionClassQids = [...DEFAULT_REGION_CLASS_QIDS];
 
     if (this.useCache && this.useDynamicFetch) {
       try {
@@ -584,22 +589,12 @@ class WikidataAdm1Ingestor {
     }
 
     const countryClause = this._buildCountryClause(country);
-
-    // SPARQL query for first-level administrative divisions (handles constituent hierarchies)
-    const regionClassValues = REGION_CLASS_QIDS.map(qid => `wd:${qid}`).join(' ');
-    const sparql = `
-      SELECT DISTINCT ?region ?regionLabel ?isoCode ?pop ?coord WHERE {
-        VALUES ?regionClass { ${regionClassValues} }
-        ?region wdt:P31/wdt:P279* ?regionClass.
-        ${countryClause}
-        OPTIONAL { ?region wdt:P300 ?isoCode. }  # ISO 3166-2 code
-        OPTIONAL { ?region wdt:P1082 ?pop. }      # Population
-        OPTIONAL { ?region wdt:P625 ?coord. }     # Coordinates
-        SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,pt,it,ja,und". }
-      }
-      ORDER BY DESC(?pop)
-      LIMIT ${this.maxRegionsPerCountry}
-    `;
+    const sparql = buildAdm1DiscoveryQuery({
+      countryClause,
+      regionClassQids: this.regionClassQids,
+      languages: this.labelLanguages,
+      limit: this.maxRegionsPerCountry
+    });
 
     try {
       const sparqlResult = await this._fetchSparql(sparql);
@@ -855,32 +850,11 @@ class WikidataAdm1Ingestor {
   }
 
   _buildCountryClause(country) {
-    const unionClauses = [];
-
-    if (country?.wikidata_qid) {
-      unionClauses.push(`{
-        VALUES ?targetCountry { wd:${country.wikidata_qid} }
-        ?region wdt:P17 ?country.
-        ?targetCountry (wdt:P150*) ?country.
-      }`);
-    }
-
-    if (country?.country_code) {
-      unionClauses.push(`{
-        ?region wdt:P17 ?country.
-        ?country wdt:P297 "${country.country_code}".
-      }`);
-    }
-
-    if (unionClauses.length === 0) {
-      unionClauses.push(`{
-        ?region wdt:P17 ?country.
-      }`);
-    }
-
-    return unionClauses.length === 1
-      ? unionClauses[0]
-      : unionClauses.join('\n      UNION\n      ');
+    return buildCountryClause({
+      subjectVar: 'region',
+      countryCode: country?.country_code,
+      countryQid: country?.wikidata_qid
+    });
   }
 
   _resolveWikidataAdminLevel(source) {
@@ -1001,7 +975,7 @@ class WikidataAdm1Ingestor {
   async _fetchRegionQidsSimple(country) {
     try {
       const countryClause = this._buildCountryClause(country);
-      const regionClassValues = REGION_CLASS_QIDS.map(qid => `wd:${qid}`).join(' ');
+      const regionClassValues = this.regionClassQids.map(qid => `wd:${qid}`).join(' ');
       const sparql = `
         SELECT DISTINCT ?region WHERE {
           VALUES ?regionClass { ${regionClassValues} }

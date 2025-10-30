@@ -1209,6 +1209,101 @@ class NewsCrawler {
       : path.join(this.dataDir, 'cache', 'gazetteer');
 
     const stages = [];
+
+    const resolveIngestorOverrides = (...keys) => {
+      if (!this.gazetteerOptions || typeof this.gazetteerOptions !== 'object') {
+        return {};
+      }
+      const sources = [this.gazetteerOptions];
+      if (this.gazetteerOptions.ingestors && typeof this.gazetteerOptions.ingestors === 'object') {
+        sources.push(this.gazetteerOptions.ingestors);
+      }
+      const merged = {};
+      for (const source of sources) {
+        for (const key of keys) {
+          const value = source?.[key];
+          if (value && typeof value === 'object') {
+            Object.assign(merged, value);
+          }
+        }
+      }
+      return merged;
+    };
+
+    const pickIngestorOptions = (source, allowedKeys) => {
+      if (!source || typeof source !== 'object') {
+        return {};
+      }
+      const picked = {};
+      for (const key of allowedKeys) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          picked[key] = source[key];
+        }
+      }
+      return picked;
+    };
+
+    const normalizeFreshnessWindow = (options) => {
+      if (!options || typeof options !== 'object') {
+        return {};
+      }
+      const normalized = { ...options };
+      if (normalized.freshnessIntervalMs == null) {
+        if (normalized.freshnessIntervalDays != null) {
+          const days = Number(normalized.freshnessIntervalDays);
+          if (Number.isFinite(days) && days >= 0) {
+            normalized.freshnessIntervalMs = days * 24 * 60 * 60 * 1000;
+          }
+        } else if (normalized.freshnessIntervalHours != null) {
+          const hours = Number(normalized.freshnessIntervalHours);
+          if (Number.isFinite(hours) && hours >= 0) {
+            normalized.freshnessIntervalMs = hours * 60 * 60 * 1000;
+          }
+        }
+      }
+      delete normalized.freshnessIntervalDays;
+      delete normalized.freshnessIntervalHours;
+      return normalized;
+    };
+
+    const wikidataCountryOverrides = normalizeFreshnessWindow(pickIngestorOptions(
+      resolveIngestorOverrides('countries', 'country', 'wikidataCountry'),
+      [
+        'entitiesBatchSize',
+        'entityBatchDelayMs',
+        'freshnessIntervalMs',
+        'freshnessIntervalDays',
+        'freshnessIntervalHours',
+        'transactionChunkSize',
+        'timeoutMs',
+        'sleepMs',
+        'useCache',
+        'maxRetries'
+      ]
+    ));
+
+    const osmBoundaryOverrides = normalizeFreshnessWindow(pickIngestorOptions(
+      resolveIngestorOverrides('boundaries', 'boundary', 'osmBoundaries', 'osmBoundary'),
+      [
+        'batchSize',
+        'overpassTimeout',
+        'maxConcurrentFetches',
+        'maxBatchSize',
+        'freshnessIntervalMs',
+        'freshnessIntervalDays',
+        'freshnessIntervalHours'
+      ]
+    ));
+
+    if (osmBoundaryOverrides.maxConcurrentFetches != null) {
+      const cap = Math.max(1, this.concurrency || 1);
+      const requested = Number(osmBoundaryOverrides.maxConcurrentFetches);
+      if (Number.isFinite(requested) && requested > 0) {
+        osmBoundaryOverrides.maxConcurrentFetches = Math.max(1, Math.min(Math.floor(requested), cap));
+      } else {
+        delete osmBoundaryOverrides.maxConcurrentFetches;
+      }
+    }
     
     // Emit milestone before creating WikidataCountryIngestor
     log.debug('[GAZETTEER-DEBUG] About to create WikidataCountryIngestor');
@@ -1231,7 +1326,8 @@ class NewsCrawler {
       useCache: this.preferCache !== false,
       maxCountries: maxCountriesForQuery,
       targetCountries: this.targetCountries,
-      verbose: VERBOSE_MODE
+      verbose: VERBOSE_MODE,
+      ...wikidataCountryOverrides
     });
 
     if (variant === 'wikidata') {
@@ -1302,7 +1398,8 @@ class NewsCrawler {
           ingestors: [
             new OsmBoundaryIngestor({
               db,
-              logger
+              logger,
+              ...osmBoundaryOverrides
             })
           ]
         });

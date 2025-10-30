@@ -21,7 +21,8 @@ function createOsmBoundaryStatements(db) {
         pav.value_json AS osmRelationAttr,
         p.osm_tags AS osmTags,
         p.bbox AS bbox,
-        p.priority_score AS priorityScore
+        p.priority_score AS priorityScore,
+        p.last_crawled_at AS lastCrawledAt
       FROM places p
       LEFT JOIN place_names pn ON pn.id = p.canonical_name_id
       LEFT JOIN place_attribute_values pav
@@ -55,7 +56,8 @@ function listBoundaryCandidates(statements, { limit = 25 } = {}) {
     osmRelationAttr: row.osmRelationAttr ? safeParse(row.osmRelationAttr) : null,
     osmTags: row.osmTags ? safeParse(row.osmTags) : null,
     bbox: row.bbox ? safeParse(row.bbox) : null,
-    priorityScore: row.priorityScore
+    priorityScore: row.priorityScore,
+    lastCrawledAt: row.lastCrawledAt || null
   }));
 }
 

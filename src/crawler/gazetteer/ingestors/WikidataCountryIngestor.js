@@ -8,6 +8,10 @@ const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const { AttributeBuilder } = require('../../../utils/attributeBuilder');
 const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
+const {
+  DEFAULT_LABEL_LANGUAGES,
+  buildCountryDiscoveryQuery
+} = require('../queries/geographyQueries');
 
 /**
  * WikidataCountryIngestor
@@ -33,7 +37,11 @@ class WikidataCountryIngestor {
     maxRetries = 3,
     maxCountries = null,
     targetCountries = null,
-    verbose = false
+    verbose = false,
+    entitiesBatchSize = 50,
+    entityBatchDelayMs = 250,
+    freshnessIntervalMs = 7 * 24 * 60 * 60 * 1000,
+    transactionChunkSize = 25
   } = {}) {
     const baseLogger = logger || console;
     const globalVerbose = global.__COPILOT_GAZETTEER_VERBOSE === true;
@@ -79,6 +87,14 @@ class WikidataCountryIngestor {
     this.cacheDir = cacheDir || path.join(process.cwd(), 'data', 'cache', 'sparql');
     this.targetCountries = Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null;
     this.countryFilter = this.targetCountries ? this._buildCountryFilter(this.targetCountries) : null;
+    const normalizedBatchSize = Number.isFinite(entitiesBatchSize) && entitiesBatchSize > 0
+      ? Math.min(50, Math.floor(entitiesBatchSize))
+      : 50;
+    this.entitiesBatchSize = normalizedBatchSize;
+    this.entityBatchDelayMs = Number.isFinite(entityBatchDelayMs) && entityBatchDelayMs > 0 ? Math.floor(entityBatchDelayMs) : 0;
+    this.freshnessIntervalMs = Number.isFinite(freshnessIntervalMs) && freshnessIntervalMs > 0 ? freshnessIntervalMs : null;
+    this.transactionChunkSize = Number.isFinite(transactionChunkSize) && transactionChunkSize > 0 ? Math.floor(transactionChunkSize) : 25;
+    this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
 
     this.id = 'wikidata-countries';
     this.name = 'Wikidata Country Ingestor';
@@ -125,6 +141,7 @@ class WikidataCountryIngestor {
     const queryStart = Date.now();  // Track query/processing start time for progress reporting
     let recordsProcessed = 0;
     let recordsUpserted = 0;
+    let recordsSkipped = 0;
     let errors = 0;
     this._emitTelemetry(emitProgress, 'info', 'Starting Wikidata country discovery', {
       maxCountries: this.maxCountries,
@@ -139,17 +156,10 @@ class WikidataCountryIngestor {
       if (this.verbose) this._debugStderr('[WikidataCountryIngestor] Step 1: Building SPARQL query');
       this._emitProgress(emitProgress, { phase: 'discovery', message: 'Querying Wikidata SPARQL endpoint for countries' });
       
-      const limitClause = this.maxCountries ? `LIMIT ${this.maxCountries}` : '';
-      if (this.verbose) this._debugStderr('[WikidataCountryIngestor] Limit clause:', limitClause);
-      
-      const sparql = `SELECT DISTINCT ?country ?countryLabel ?iso2 ?coord WHERE {
-  ?country wdt:P31 wd:Q3624078 .
-  OPTIONAL { ?country wdt:P297 ?iso2 . }
-  OPTIONAL { ?country wdt:P625 ?coord . }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr,de,es,ru,zh,ar,pt,it,ja,ko,und" . }
-}
-ORDER BY ?countryLabel
-${limitClause}`.trim();
+      const sparql = buildCountryDiscoveryQuery({
+        limit: this.maxCountries,
+        languages: this.labelLanguages
+      });
 
       if (this.verbose) {
         this._debugStderr('[WikidataCountryIngestor] SPARQL query built, length:', sparql.length);
@@ -252,7 +262,7 @@ ${limitClause}`.trim();
             targetSpecifierCount: this.countryFilter.specifiers.length,
             unmatchedSpecifiers: unmatchedSpecifiers.map(spec => spec.raw || spec.value || spec.key)
           });
-          return { recordsProcessed: 0, recordsUpserted: 0, errors: 0 };
+          return { recordsProcessed: 0, recordsUpserted: 0, recordsSkipped: 0, errors: 0 };
         }
 
         if (unmatchedSpecifiers.length > 0) {
@@ -271,7 +281,7 @@ ${limitClause}`.trim();
           cacheUsed: this.useCache,
           endpointUrl: 'https://query.wikidata.org/sparql'
         });
-        return { recordsProcessed: 0, recordsUpserted: 0, errors: 0 };
+        return { recordsProcessed: 0, recordsUpserted: 0, recordsSkipped: 0, errors: 0 };
       }
 
   this.logger.info(`[WikidataCountryIngestor] Found ${bindings.length} countries${this.countryFilter ? ` (filtered from ${originalBindingCount})` : ''}`);
@@ -281,6 +291,34 @@ ${limitClause}`.trim();
         totalItems: bindings.length,
         current: 0
       });
+
+      if (this.freshnessIntervalMs) {
+        const { retainedBindings, skipped } = this._filterBindingsByFreshness(bindings);
+        if (skipped.length) {
+          recordsSkipped += skipped.length;
+          this.logger.info(`[WikidataCountryIngestor] Skipping ${skipped.length} countries within freshness window (${Math.round(this.freshnessIntervalMs / (24 * 60 * 60 * 1000))}d)`);
+          this._emitTelemetry(emitProgress, 'info', `Skipped ${skipped.length} fresh countries`, {
+            skippedCount: skipped.length,
+            freshnessIntervalMs: this.freshnessIntervalMs,
+            sample: skipped.slice(0, 5).map(entry => ({ qid: entry.qid, lastCrawledAt: entry.lastCrawledAt }))
+          });
+        }
+        bindings = retainedBindings;
+      }
+
+      if (bindings.length === 0) {
+        const finishedAt = Date.now();
+        const summary = {
+          recordsProcessed,
+          recordsUpserted,
+          recordsSkipped,
+          errors,
+          durationMs: finishedAt - startedAt
+        };
+        this.logger.info('[WikidataCountryIngestor] All discovered countries are fresh; skipping ingestion');
+        this._emitProgress(emitProgress, { phase: 'complete', summary });
+        return summary;
+      }
 
       // Step 2: Fetch full entity data for each country
       const qids = compact(bindings, b => this._extractQid(b.country?.value));
@@ -333,20 +371,87 @@ ${limitClause}`.trim();
         current: 0
       });
 
-      // Step 3: Upsert each country
+      // Step 3: Upsert each country (transactional batches)
+      const transactionalUpsert = this.db.transaction((items) => {
+        for (const item of items) {
+          item.result = this._upsertCountry(item.qid, item.entity, item.binding);
+        }
+      });
+      const singleUpsert = this.db.transaction((item) => {
+        item.result = this._upsertCountry(item.qid, item.entity, item.binding);
+      });
+
+      const flushBatch = (batch) => {
+        if (!Array.isArray(batch) || batch.length === 0) {
+          return;
+        }
+
+        try {
+          transactionalUpsert(batch);
+        } catch (batchErr) {
+          this.logger.error('[WikidataCountryIngestor] Batch upsert failed, retrying individually:', batchErr.message);
+          this._emitTelemetry(emitProgress, 'warning', 'Country upsert batch failed, retrying individually', {
+            batchSize: batch.length,
+            errorMessage: batchErr.message
+          });
+
+          for (const item of batch) {
+            try {
+              singleUpsert(item);
+            } catch (itemErr) {
+              item.error = itemErr;
+            }
+          }
+        }
+
+        for (const item of batch) {
+          if (item.error) {
+            this.logger.error(`[WikidataCountryIngestor] Error upserting ${item.qid}:`, item.error.message);
+            errors++;
+            recordsProcessed++;
+          } else {
+            if (item.result) {
+              recordsUpserted++;
+            }
+            recordsProcessed++;
+          }
+
+          const processedIndex = item.index;
+          if (processedIndex % 5 === 0 || processedIndex === bindings.length - 1) {
+            const elapsed = Date.now() - queryStart;
+            this._emitProgress(emitProgress, {
+              phase: 'processing',
+              current: processedIndex + 1,
+              totalItems: bindings.length,
+              message: `Processing countries: ${processedIndex + 1}/${bindings.length} (${recordsUpserted} upserted, ${Math.round(elapsed / 1000)}s)`
+            });
+          }
+
+          if (recordsProcessed % 10 === 0) {
+            this._emitProgress(emitProgress, {
+              phase: 'processing',
+              recordsProcessed,
+              recordsUpserted,
+              totalRecords: bindings.length
+            });
+          }
+        }
+      };
+
+      let pendingBatch = [];
+
       for (let i = 0; i < bindings.length; i++) {
         if (signal?.aborted) {
           throw new Error('WikidataCountryIngestor aborted');
         }
 
-        // Defensive: Validate binding exists
         const binding = bindings[i];
         if (!binding || typeof binding !== 'object') {
           this.logger.warn(`[WikidataCountryIngestor] Skipping invalid binding at index ${i}`);
           errors++;
           continue;
         }
-        
+
         const qid = this._extractQid(binding.country?.value);
         if (!qid) {
           this.logger.warn(`[WikidataCountryIngestor] Skipping binding ${i}: no valid QID extracted`);
@@ -362,41 +467,26 @@ ${limitClause}`.trim();
           continue;
         }
 
-        try {
-          const upserted = this._upsertCountry(qid, entity, binding);
-          if (upserted) recordsUpserted++;
-          recordsProcessed++;
+        pendingBatch.push({ binding, qid, entity, index: i, result: null, error: null });
 
-          // Emit progress every 5 records or on last record for more frequent updates
-          if (i % 5 === 0 || i === bindings.length - 1) {
-            const elapsed = Date.now() - queryStart;
-            this._emitProgress(emitProgress, {
-              phase: 'processing',
-              current: i + 1,
-              totalItems: bindings.length,
-              message: `Processing countries: ${i+1}/${bindings.length} (${recordsUpserted} upserted, ${Math.round(elapsed/1000)}s)`
-            });
-          }
-
-          if (recordsProcessed % 10 === 0) {
-            this._emitProgress(emitProgress, {
-              phase: 'processing',
-              recordsProcessed,
-              recordsUpserted,
-              totalRecords: bindings.length
-            });
-          }
-        } catch (err) {
-          this.logger.error(`[WikidataCountryIngestor] Error upserting ${qid}:`, err.message);
-          errors++;
-          recordsProcessed++;
+        if (pendingBatch.length >= this.transactionChunkSize) {
+          const batch = pendingBatch;
+          pendingBatch = [];
+          flushBatch(batch);
         }
+      }
+
+      if (pendingBatch.length) {
+        const batch = pendingBatch;
+        pendingBatch = [];
+        flushBatch(batch);
       }
 
       const finishedAt = Date.now();
       const summary = {
         recordsProcessed,
         recordsUpserted,
+        recordsSkipped,
         errors,
         durationMs: finishedAt - startedAt
       };
@@ -711,6 +801,60 @@ ${limitClause}`.trim();
     return { filteredBindings, matchDetails, unmatchedSpecifiers };
   }
 
+  _filterBindingsByFreshness(bindings) {
+    if (!Array.isArray(bindings) || bindings.length === 0) {
+      return { retainedBindings: [], skipped: [] };
+    }
+    if (!this.freshnessIntervalMs || !this.stmts?.getPlaceFreshnessByWikidata) {
+      return { retainedBindings: [...bindings], skipped: [] };
+    }
+
+    const retainedBindings = [];
+    const skipped = [];
+    const now = Date.now();
+
+    for (const binding of bindings) {
+      const qid = this._extractQid(binding?.country?.value);
+      if (!qid) {
+        retainedBindings.push(binding);
+        continue;
+      }
+
+      const lastCrawledAt = this._shouldSkipCountry(qid, now);
+      if (lastCrawledAt != null) {
+        skipped.push({ qid, lastCrawledAt });
+      } else {
+        retainedBindings.push(binding);
+      }
+    }
+
+    return { retainedBindings, skipped };
+  }
+
+  _shouldSkipCountry(qid, now = Date.now()) {
+    if (!this.freshnessIntervalMs || !this.stmts?.getPlaceFreshnessByWikidata) {
+      return null;
+    }
+
+    try {
+      const row = this.stmts.getPlaceFreshnessByWikidata.get(qid);
+      if (!row || row.lastCrawledAt == null) {
+        return null;
+      }
+      const lastCrawledAt = Number(row.lastCrawledAt);
+      if (!Number.isFinite(lastCrawledAt)) {
+        return null;
+      }
+      if (now - lastCrawledAt < this.freshnessIntervalMs) {
+        return lastCrawledAt;
+      }
+    } catch (err) {
+      this.logger.warn('[WikidataCountryIngestor] Freshness lookup failed for', qid, err.message);
+    }
+
+    return null;
+  }
+
   _bindingMatchesCountryFilter(binding, filter) {
     if (!binding || !filter) return null;
 
@@ -1014,14 +1158,14 @@ ${limitClause}`.trim();
     if (qids.length === 0) return { entities: {} };
 
     const fetchStartTime = Date.now();
-    const BATCH_SIZE = 50; // Wikidata API limit
+    const batchSize = this.entitiesBatchSize || 50;
     
-    this.logger.info(`[WikidataCountryIngestor] Fetching ${qids.length} entities in batches of ${BATCH_SIZE}`);
+    this.logger.info(`[WikidataCountryIngestor] Fetching ${qids.length} entities in batches of ${batchSize}`);
     
     // Split QIDs into batches
     const batches = [];
-    for (let i = 0; i < qids.length; i += BATCH_SIZE) {
-      batches.push(qids.slice(i, i + BATCH_SIZE));
+    for (let i = 0; i < qids.length; i += batchSize) {
+      batches.push(qids.slice(i, i + batchSize));
     }
     
   this._debugStderr(`[WikidataCountryIngestor] Split ${qids.length} QIDs into ${batches.length} batches`);
@@ -1029,7 +1173,7 @@ ${limitClause}`.trim();
     this._emitTelemetry(emitProgress, 'info', `Starting entity fetch: ${batches.length} batches`, {
       totalQids: qids.length,
       batchCount: batches.length,
-      batchSize: BATCH_SIZE
+      batchSize
     });
     
     // Fetch all batches
@@ -1067,8 +1211,9 @@ ${limitClause}`.trim();
       }
       
       // Sleep between batches to respect rate limits
-      if (this.sleepMs > 0 && batchIndex < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, this.sleepMs));
+      const delayMs = this.entityBatchDelayMs > 0 ? this.entityBatchDelayMs : this.sleepMs;
+      if (delayMs > 0 && batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
     

@@ -39,6 +39,13 @@ function createIngestionStatements(db) {
       SELECT id FROM places WHERE wikidata_qid = ?
     `),
 
+    getPlaceFreshnessByWikidata: db.prepare(`
+      SELECT id, last_crawled_at AS lastCrawledAt
+      FROM places
+      WHERE wikidata_qid = ?
+      LIMIT 1
+    `),
+
     getPlaceByExternalId: db.prepare(`
       SELECT place_id AS id FROM place_external_ids WHERE source = ? AND ext_id = ?
     `),
