@@ -20,10 +20,8 @@ const {
 } = require('../analysis/articleDetection');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite/ensureDb');
-const { CliFormatter, ICONS } = require('../utils/CliFormatter');
+const { COLORS, ICONS } = require('../utils/CliFormatter');
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
-
-const fmt = new CliFormatter();
 
 function toInt(value) {
   if (value == null) return null;
@@ -53,13 +51,13 @@ function parseCliArgs(argv) {
 }
 
 function buildCandidateQuery(options) {
-  const where = ["a.url LIKE 'http%'"]; // only consider http(s) URLs
+  const where = ["u.url LIKE 'http%'"]; // only consider http(s) URLs
   if (options.host) {
-    where.push('LOWER(a.host) = LOWER(?)');
+    where.push('LOWER(u.host) = LOWER(?)');
   }
   const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-  const orderClause = options.sample ? 'ORDER BY RANDOM()' : 'ORDER BY COALESCE(a.fetched_at, a.crawled_at) DESC';
+  const orderClause = options.sample ? 'ORDER BY RANDOM()' : 'ORDER BY COALESCE(hr.fetched_at, u.created_at) DESC';
 
   let limitClause = '';
   if (options.sample) {
@@ -69,15 +67,16 @@ function buildCandidateQuery(options) {
   }
 
   return `
-    SELECT a.url,
-           a.title,
-           a.host,
-           a.word_count AS article_word_count,
-           a.analysis AS article_analysis,
-           lf.classification AS latest_classification,
-           lf.word_count AS latest_word_count
-      FROM articles a
- LEFT JOIN latest_fetch lf ON lf.url = a.url
+    SELECT u.url,
+           ca.title,
+           u.host,
+           ca.word_count AS content_word_count,
+           ca.analysis_json AS content_analysis,
+           hr.fetched_at AS latest_fetched_at
+      FROM urls u
+ LEFT JOIN http_responses hr ON hr.url_id = u.id
+ LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+ LEFT JOIN content_analysis ca ON ca.content_id = cs.id AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
       ${whereClause}
       ${orderClause}
       ${limitClause}
@@ -107,7 +106,7 @@ function runDetectArticles(options) {
   const db = ensureDb(dbPath);
   const articleSignals = createArticleSignalsService();
 
-  fmt.header('Article Detection Analysis');
+  console.log(`\n${COLORS.bold(COLORS.cyan('╔ Article Detection Analysis ═══════════════════════════════════════'))}`);
 
   // Build query info
   const filters = [];
@@ -115,25 +114,29 @@ function runDetectArticles(options) {
   if (options.limit) filters.push(`limit = ${options.limit}`);
   if (options.sample) filters.push(`sample = ${options.sample}`);
   if (filters.length > 0) {
-    fmt.info(`Filters: ${filters.join(', ')}`);
+    console.log(`${COLORS.info('[INFO]')} Filters: ${filters.join(', ')}`);
   }
-  fmt.blank();
+  console.log();
 
   const fetchDetailsStmt = db.prepare(`
-    SELECT nav_links_count,
-           article_links_count,
-           word_count,
-           analysis
-      FROM fetches
-     WHERE url = ?
-  ORDER BY COALESCE(fetched_at, request_started_at) DESC
+    SELECT hr.bytes_downloaded,
+           ca.word_count,
+           ca.nav_links_count,
+           ca.article_links_count,
+           ca.analysis_json
+      FROM urls u
+ LEFT JOIN http_responses hr ON hr.url_id = u.id
+ LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+ LEFT JOIN content_analysis ca ON ca.content_id = cs.id AND ca.analysis_version = (SELECT MAX(analysis_version) FROM content_analysis WHERE content_id = cs.id)
+     WHERE u.url = ?
+  ORDER BY hr.fetched_at DESC
      LIMIT 1
   `);
 
   const rows = loadCandidates(db, options);
 
-  fmt.pending(`Loading ${rows.length} candidate(s)...`);
-  fmt.blank();
+  console.log(`${COLORS.cyan('[WAIT]')} Loading ${rows.length} candidate(s)...`);
+  console.log();
 
   let processed = 0;
   let detected = 0;
@@ -146,15 +149,11 @@ function runDetectArticles(options) {
     const result = evaluateArticleCandidate({
       url: row.url,
       title: row.title,
-      articleWordCount: typeof row.article_word_count === 'number' ? row.article_word_count : (row.article_word_count != null ? Number(row.article_word_count) : null),
-      fetchWordCount: typeof fetchDetails.word_count === 'number'
-        ? fetchDetails.word_count
-        : (typeof row.latest_word_count === 'number'
-          ? row.latest_word_count
-          : (row.latest_word_count != null ? Number(row.latest_word_count) : null)),
-      articleAnalysis: row.article_analysis,
-      fetchAnalysis: fetchDetails.analysis || null,
-      latestClassification: row.latest_classification,
+      articleWordCount: typeof row.content_word_count === 'number' ? row.content_word_count : null,
+      fetchWordCount: typeof fetchDetails.word_count === 'number' ? fetchDetails.word_count : null,
+      articleAnalysis: row.content_analysis,
+      fetchAnalysis: fetchDetails.analysis_json || null,
+      latestClassification: null, // Not available in normalized schema
       navLinksCount: typeof fetchDetails.nav_links_count === 'number' ? fetchDetails.nav_links_count : null,
       articleLinksCount: typeof fetchDetails.article_links_count === 'number' ? fetchDetails.article_links_count : null
     }, { signalsService: articleSignals });
@@ -164,25 +163,31 @@ function runDetectArticles(options) {
 
     // Display detailed output for each URL if explain mode
     if (options.explain) {
-      const icon = result.isArticle ? fmt.ICONS.success : fmt.ICONS.error;
+      const icon = result.isArticle ? ICONS.success : ICONS.error;
       const color = result.isArticle ? 'success' : 'error';
-      console.log(`${fmt.COLORS[color](`${icon} ${result.url}`)}`);
+      console.log(`${COLORS[color](`${icon} ${result.url}`)}`);
 
       if (result.title) {
-        fmt.dataPair('Title', result.title, 'muted');
+        console.log(`${COLORS.bold('Title')}: ${COLORS.muted(result.title)}`);
       }
 
       if (options.scores) {
-        fmt.dataPair('Score', result.score.toFixed(2), 'cyan');
-        fmt.dataPair('Confidence', result.confidence.toFixed(2), 'cyan');
+        console.log(`${COLORS.bold('Score')}: ${COLORS.cyan(result.score.toFixed(2))}`);
+        console.log(`${COLORS.bold('Confidence')}: ${COLORS.cyan(result.confidence.toFixed(2))}`);
       }
 
       if (result.reasons.length) {
-        fmt.list('Reasons', result.reasons);
+        console.log(`\nReasons:`);
+        for (const reason of result.reasons) {
+          console.log(`  ${COLORS.muted('•')} ${reason}`);
+        }
       }
 
       if (result.rejections.length) {
-        fmt.list('Rejections', result.rejections);
+        console.log(`\nRejections:`);
+        for (const rejection of result.rejections) {
+          console.log(`  ${COLORS.muted('•')} ${rejection}`);
+        }
       }
 
       // Signal details
@@ -202,10 +207,10 @@ function runDetectArticles(options) {
           parts.push(`types=${sig.schemaTypes.join('|')}`);
         }
         if (parts.length) {
-          console.log(`  ${fmt.COLORS.dim(`Signals: ${parts.join(', ')}`)}`);
+          console.log(`  ${COLORS.dim(`Signals: ${parts.join(', ')} (normalized schema - some legacy fields unavailable)`)}`);
         }
       }
-      fmt.blank();
+      console.log();
     } else {
       // Simple mode - collect results for table display
       results.push({
@@ -219,32 +224,42 @@ function runDetectArticles(options) {
 
     // Progress indicator for long runs
     if ((processed % 50 === 0) && !options.explain) {
-      fmt.progress(`Processing`, processed, rows.length);
+      const pct = Math.round((processed / rows.length) * 100);
+      const filled = Math.floor((pct / 100) * 20);
+      const empty = 20 - filled;
+      const bar = '█'.repeat(filled) + '░'.repeat(empty);
+      const pctStr = `${pct.toString().padStart(3)}%`;
+      console.log(`  Processing ${COLORS.cyan(`[${bar}]`)} ${pctStr}`);
     }
   }
 
   // Show table if not in explain mode
   if (!options.explain && results.length > 0) {
-    fmt.section('Results');
-    fmt.table(results, {
-      columns: options.scores ? ['status', 'url', 'title', 'score', 'confidence'] : ['status', 'url', 'title'],
-      format: {
-        status: (v) => v === fmt.ICONS.success ? fmt.COLORS.success(v) : fmt.COLORS.error(v),
-        score: (v) => fmt.COLORS.cyan(v),
-        confidence: (v) => fmt.COLORS.cyan(v)
+    console.log(`\n${COLORS.bold(COLORS.accent('Results'))}`);
+    console.log(COLORS.dim('───────'));
+    
+    // Simple table output
+    for (const result of results) {
+      const statusIcon = result.status === ICONS.success ? COLORS.success(result.status) : COLORS.error(result.status);
+      const score = options.scores ? COLORS.cyan(result.score) : result.score;
+      const confidence = options.scores ? COLORS.cyan(result.confidence) : result.confidence;
+      if (options.scores) {
+        console.log(`  ${statusIcon} ${result.url} - ${result.title} (Score: ${score}, Conf: ${confidence})`);
+      } else {
+        console.log(`  ${statusIcon} ${result.url} - ${result.title}`);
       }
-    });
+    }
+    console.log();
   }
 
-  fmt.blank();
-  fmt.summary({
-    'Total processed': processed,
-    'Articles detected': detected,
-    'Not articles': rejected,
-    'Detection rate': `${((detected / processed) * 100).toFixed(1)}%`
-  });
+  console.log();
+  console.log(`  ${'Total processed'.padEnd(30)} ${processed}`);
+  console.log(`  ${'Articles detected'.padEnd(30)} ${detected}`);
+  console.log(`  ${'Not articles'.padEnd(30)} ${rejected}`);
+  console.log(`  ${'Detection rate'.padEnd(30)} ${((detected / processed) * 100).toFixed(1)}%`);
 
-  fmt.footer();
+  const line = '═'.repeat(80);
+  console.log(`${COLORS.cyan(line)}\n`);
 
   try { db.close(); } catch (_) { /* ignore */ }
 }
@@ -258,7 +273,7 @@ if (require.main === module) {
   try {
     main();
   } catch (error) {
-    fmt.error('Fatal error: ' + (error && error.message ? error.message : error));
+    console.log(`${COLORS.error('[ERROR]')} Fatal error: ${error?.message || error}`);
     process.exit(1);
   }
 }

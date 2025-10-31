@@ -345,41 +345,49 @@ Fix autonomously, report once when done. Don't report after each fix.
 
 ### Running Focused Tests
 
-**Windows PowerShell**: `npm test --` does NOT forward `--testPathPattern` properly. Use these instead:
+**Windows PowerShell**: Use safe npm scripts that avoid confirmation dialogs:
 
 ```bash
-# ✅ RECOMMENDED: Use test:file script (NO CONFIRMATION REQUIRED)
-npm run test:file "dbAccess"
-npm run test:file "gazetteer.*http"
-npm run test:file "background-tasks.api"
+# ✅ RECOMMENDED: List tests first (safe, no execution)
+npm run test:list
 
-# ✅ Alternative: Direct Jest
-node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern="dbAccess"
+# ✅ RECOMMENDED: Run specific test files (safest)
+npm run test:by-path -- path/to/test.js
 
-# ❌ WRONG: Silently runs ALL tests
-npm test -- --testPathPattern=dbAccess
+# ✅ RECOMMENDED: Run tests related to changed files
+npm run test:related -- src/changed-file.js
+
+# ✅ RECOMMENDED: Run tests by name pattern
+npm run test:name -- "test name pattern"
+
+# ❌ WRONG: Unfiltered runs everything
+npm test
 
 # ❌ WRONG: Complex piping REQUIRES CONFIRMATION (DO NOT USE)
 npm run test:file "pattern" 2>&1 | Select-String -Pattern "..."
-# Use npm run test:file directly - Jest output is already concise
+# Use npm run test:by-path directly - Jest output is already concise
 ```
 
-**CRITICAL: Always use `npm run test:file` directly**:
+**CRITICAL: Always use safe scripts**:
 - ✅ **NO confirmation required** - runs immediately
 - ✅ **Full output visible** - see all passes/failures
 - ✅ **Simple single command** - no piping complexity
 - ❌ **DO NOT pipe to Select-String** - triggers confirmation dialog
 - ❌ **DO NOT chain multiple commands** - triggers confirmation dialog
 
+**See**: `docs/tests/FOCUSED_TESTS.md` for canonical focused test commands.
+
 ### Test Categories
 
 ```bash
-npm test                    # Full suite (~75s, 127 files)
-npm run test:fast           # Unit only (~30s)
-npm run test:integration    # HTTP integration
-npm run test:e2e            # Puppeteer E2E
-npm run test:file "pattern" # Single file(s) - NO CONFIRMATION
+npm run test:unit         # Unit tests only (~30s)
+npm run test:integration  # HTTP integration tests
+npm run test:e2e-quick    # Basic E2E smoke tests
+npm run test:dev-geography # Full geography E2E (5-15 min)
+npm run test:by-path -- path/to/test.js # Single file(s) - NO CONFIRMATION
 ```
+
+**See**: `docs/tests/RUNNERS.md` for complete runner guide.
 
 ### Telemetry Regression Pack
 

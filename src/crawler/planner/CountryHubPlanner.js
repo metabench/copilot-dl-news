@@ -239,23 +239,8 @@ class CountryHubPlanner {
           isSuccess: status >= 200 && status < 300
         };
       }
-    } catch (_) {
-      // ignore errors and fall back to legacy check
-    }
-
-    try {
-      const articleStmt = db.prepare('SELECT http_status FROM articles WHERE url = ?');
-      const articleRow = articleStmt.get(url);
-      if (articleRow && typeof articleRow.http_status === 'number') {
-        const status = articleRow.http_status;
-        return {
-          exists: true,
-          status,
-          isSuccess: status >= 200 && status < 300
-        };
-      }
-    } catch (_) {
-      // Ignore errors
+    } catch (error) {
+      this.logger?.warn?.(`[CountryHubPlanner] Failed to check URL status for ${url}:`, error.message);
     }
 
     return { exists: false, status: null, isSuccess: false };

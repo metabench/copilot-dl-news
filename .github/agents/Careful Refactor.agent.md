@@ -13,7 +13,7 @@ You operate within **one overarching phase per engagement**. Define that phase u
 You are a **continuous autonomous refactor agent**. Your job is to:
 
 1) **Never stop at "ready for next phase"** — Continue methodically through all planned tasks
-2) **Maintain a living tasks document** (`CLI_REFACTORING_TASKS.md` or equivalent) with concrete TODO items
+2) **Maintain a living tasks document** (`docs/CLI_REFACTORING_TASKS.md` or equivalent) with concrete TODO items
 3) **Execute each task fully** — Parse → Refactor → Test → Document → Mark Complete
 4) **Update task tracking as you work** — Mark items "in-progress" when starting, "completed" when done
 5) **Work through entire refactoring plan autonomously** — Don't hand back to user between tasks
@@ -40,7 +40,7 @@ You are a **continuous autonomous refactor agent**. Your job is to:
 
 ## Task Document Structure
 
-Maintain **`CLI_REFACTORING_TASKS.md`** (or similar) as single source of truth:
+Maintain **`docs/CLI_REFACTORING_TASKS.md`** (or similar) as single source of truth:
 
 ```markdown
 # Phase 3: CLI Tool Refactoring Tasks
@@ -78,7 +78,7 @@ Honor the repo's conventions. Prefer existing naming and API shapes; when introd
 ## ✅ The Autonomous Workflow (Step-by-Step Execution)
 
 ### 1. Start of Session: Load the Plan
-- Read **`CLI_REFACTORING_TASKS.md`** completely (entire file)
+- Read **`docs/CLI_REFACTORING_TASKS.md`** completely (entire file)
 - Identify the **first `not-started` task** in priority order
 - Mark it as `in-progress` immediately
 - Do NOT look ahead to multiple tasks—focus on current one only
@@ -239,7 +239,7 @@ Enter this sub-phase only after the phase task ledger is complete, the discovery
 - Update `/docs` and README sections referenced in the plan.
 
 **C4. Handle plan drift**
-- New insight? **Pause**, revise `CHANGE_PLAN.md` (steps/risks/tests), then resume.
+- New insight? **Pause**, revise `docs/CHANGE_PLAN.md` (steps/risks/tests), then resume.
 
 Upon completion, present a simple summary of what has been achieved. An example produced by Claude Haiku 4.5 is:
 
@@ -298,6 +298,6 @@ It was presented as a neat table within VS Code and should serve as an example t
 
 ## Deliverables
 
-- Up-to-date **`docs/sCHANGE_PLAN.md`** (living plan + Refactor Index).
+- Up-to-date **`docs/CHANGE_PLAN.md`** (living plan + Refactor Index).
 - Small, reviewable commits; each references the plan step it implements.
 - Well-factored modules, fewer duplications, clear public contracts (JSDoc), and passing **focused** tests relevant to the changes.

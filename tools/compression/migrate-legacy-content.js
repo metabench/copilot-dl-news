@@ -2,53 +2,16 @@
 /**
  * tools/compression/migrate-legacy-content.js
  *
- * Migration tool for legacy content compression.
- * Migrates uncompressed content from legacy articles table to normalized schema with compression.
+ * DEPRECATED: Legacy content migration tool
  *
- * Usage:
- *   node tools/compression/migrate-legacy-content.js              # Dry run (default)
- *   node tools/compression/migrate-legacy-content.js --fix        # Apply changes
- *   node tools/compression/migrate-legacy-content.js --limit 100  # Process only 100 items
+ * The articles table has been removed and all content has been migrated to the normalized schema.
+ * This script is kept for historical reference but is no longer functional.
  */
 
-const path = require('path');
-const { ensureDatabase } = require('../../src/db/sqlite/v1');
-const { compressAndStore } = require('../../src/utils/CompressionFacade');
-
-// Check for help flag first
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  printHelp();
-  process.exit(0);
-}
-
-// Default to dry-run mode, require --fix to apply changes
-const dryRun = !process.argv.includes('--fix');
-
-// Get limit from command line args
-const limitIndex = process.argv.indexOf('--limit');
-const limit = limitIndex !== -1 && process.argv[limitIndex + 1] 
-  ? parseInt(process.argv[limitIndex + 1], 10) 
-  : null;
-
-function printHelp() {
-  console.log(`
-Legacy Content Migration Tool
-
-Migrates uncompressed content from the legacy articles table to the normalized schema with compression.
-
-USAGE:
-  node tools/compression/migrate-legacy-content.js [options]
-
-OPTIONS:
-  --help, -h              Show this help message
-  --fix                   Apply migration changes (default: dry run only)
-  --limit <number>        Process only the specified number of items
-
-EXAMPLES:
-  node tools/compression/migrate-legacy-content.js               # Dry run all legacy content
-  node tools/compression/migrate-legacy-content.js --fix          # Migrate all legacy content
-  node tools/compression/migrate-legacy-content.js --limit 100    # Process only 100 items
-  node tools/compression/migrate-legacy-content.js --fix --limit 50 # Migrate 50 items
+console.log('ℹ️  Articles table has been removed. Content migration is complete.');
+console.log('📊 All content is now stored in normalized schema: urls, http_responses, content_storage, content_analysis');
+console.log('🗂️  Compression is handled automatically during content ingestion.');
+process.exit(0);
 
 COMPRESSION TIERS:
   Hot (< 7 days):         No compression

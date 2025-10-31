@@ -124,44 +124,50 @@ class NewsWebsiteStatsCache {
    * @private
    */
   _computeFullStats(pattern) {
-    // Article statistics
+    // Article statistics from normalized schema
     const articleStats = this.db.db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as count,
-        MAX(date) as latest_date,
-        MAX(crawled_at) as latest_crawled_at,
-        MIN(crawled_at) as first_seen_at
-      FROM articles 
-      WHERE url LIKE ?
+        MAX(ca.date) as latest_date,
+        MAX(hr.fetched_at) as latest_crawled_at,
+        MIN(hr.fetched_at) as first_seen_at
+      FROM urls u
+      JOIN http_responses hr ON hr.url_id = u.id
+      JOIN content_storage cs ON cs.http_response_id = hr.id
+      JOIN content_analysis ca ON ca.content_id = cs.id
+      WHERE u.url LIKE ?
     `).get(pattern);
 
-    // Fetch statistics
+    // Fetch statistics from normalized schema
     const fetchStats = this.db.db.prepare(`
-      SELECT 
+      SELECT
         COUNT(*) as count,
-        SUM(CASE WHEN http_status >= 200 AND http_status < 300 THEN 1 ELSE 0 END) as ok_count,
-        SUM(CASE WHEN http_status >= 400 THEN 1 ELSE 0 END) as error_count,
-        MAX(fetched_at) as last_at,
-        MIN(fetched_at) as first_at,
-        SUM(CASE WHEN http_status = 200 THEN 1 ELSE 0 END) as status_200,
-        SUM(CASE WHEN http_status = 404 THEN 1 ELSE 0 END) as status_404,
-        SUM(CASE WHEN http_status = 403 THEN 1 ELSE 0 END) as status_403,
-        SUM(CASE WHEN http_status = 500 THEN 1 ELSE 0 END) as status_500,
-        SUM(CASE WHEN http_status = 503 THEN 1 ELSE 0 END) as status_503,
-        AVG(CASE WHEN fetch_time_ms > 0 THEN fetch_time_ms ELSE NULL END) as avg_fetch_time
-      FROM fetches 
-      WHERE url LIKE ?
+        SUM(CASE WHEN hr.http_status >= 200 AND hr.http_status < 300 THEN 1 ELSE 0 END) as ok_count,
+        SUM(CASE WHEN hr.http_status >= 400 THEN 1 ELSE 0 END) as error_count,
+        MAX(hr.fetched_at) as last_at,
+        MIN(hr.fetched_at) as first_at,
+        SUM(CASE WHEN hr.http_status = 200 THEN 1 ELSE 0 END) as status_200,
+        SUM(CASE WHEN hr.http_status = 404 THEN 1 ELSE 0 END) as status_404,
+        SUM(CASE WHEN hr.http_status = 403 THEN 1 ELSE 0 END) as status_403,
+        SUM(CASE WHEN hr.http_status = 500 THEN 1 ELSE 0 END) as status_500,
+        SUM(CASE WHEN hr.http_status = 503 THEN 1 ELSE 0 END) as status_503,
+        AVG(CASE WHEN hr.ttfb_ms > 0 THEN hr.ttfb_ms ELSE NULL END) as avg_fetch_time
+      FROM urls u
+      JOIN http_responses hr ON hr.url_id = u.id
+      WHERE u.url LIKE ?
     `).get(pattern);
 
-    // Content statistics
+    // Content statistics from normalized schema
     const contentStats = this.db.db.prepare(`
-      SELECT 
-        AVG(LENGTH(body_text)) as avg_size,
-        SUM(LENGTH(body_text)) as total_size,
-        SUM(CASE WHEN body_text IS NOT NULL AND body_text != '' THEN 1 ELSE 0 END) as successful,
-        SUM(CASE WHEN body_text IS NULL OR body_text = '' THEN 1 ELSE 0 END) as failed
-      FROM articles 
-      WHERE url LIKE ?
+      SELECT
+        AVG(cs.uncompressed_size) as avg_size,
+        SUM(cs.uncompressed_size) as total_size,
+        SUM(CASE WHEN cs.content_blob IS NOT NULL AND cs.content_blob != '' THEN 1 ELSE 0 END) as successful,
+        SUM(CASE WHEN cs.content_blob IS NULL OR cs.content_blob = '' THEN 1 ELSE 0 END) as failed
+      FROM urls u
+      JOIN http_responses hr ON hr.url_id = u.id
+      JOIN content_storage cs ON cs.http_response_id = hr.id
+      WHERE u.url LIKE ?
     `).get(pattern);
 
     return {

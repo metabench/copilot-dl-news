@@ -8,35 +8,37 @@ const dbPath = path.join(projectRoot, 'data', 'news.db');
 const db = ensureDb(dbPath);
 
 try {
-  // Test simple query first
-  const simple = db.prepare(`SELECT COUNT(*) as cnt FROM articles WHERE url LIKE 'http%'`).get();
-  console.log('Simple count:', simple);
+  // Test simple query first - count URLs in normalized schema
+  const simple = db.prepare(`SELECT COUNT(*) as cnt FROM urls WHERE url LIKE 'http%'`).get();
+  console.log('Simple count (urls):', simple);
 
-  // Test with LIMIT
+  // Test with LIMIT - count HTTP responses
   const withLimit = db.prepare(`
-    SELECT COUNT(*) as cnt 
-      FROM articles a
-      LEFT JOIN latest_fetch lf ON lf.url = a.url
-     WHERE a.url LIKE 'http%'
+    SELECT COUNT(*) as cnt
+      FROM urls u
+      LEFT JOIN http_responses hr ON hr.url_id = u.id
+     WHERE u.url LIKE 'http%'
      LIMIT ?
   `).all(10);
-  console.log('With LIMIT 10:', withLimit);
+  console.log('With LIMIT 10 (http_responses):', withLimit);
 
-  // Test the actual query structure (no host filter)
+  // Test the actual query structure using normalized schema
   const actual = db.prepare(`
-    SELECT a.url,
-           a.title,
-           a.section,
-           a.host,
-           a.analysis,
-           lf.classification,
-           lf.word_count AS fetch_word_count,
-           lf.ts AS last_fetch_at,
-           a.crawled_at
-      FROM articles a
-      LEFT JOIN latest_fetch lf ON lf.url = a.url
-     WHERE a.url LIKE 'http%'
-     ORDER BY COALESCE(lf.ts, a.crawled_at) DESC
+    SELECT u.url,
+           ca.title,
+           ca.section,
+           u.host,
+           ca.analysis_json as analysis,
+           ca.classification,
+           ca.word_count,
+           hr.fetched_at as last_fetch_at,
+           hr.fetched_at as crawled_at
+      FROM urls u
+      LEFT JOIN http_responses hr ON hr.url_id = u.id
+      LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+      LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+     WHERE u.url LIKE 'http%'
+     ORDER BY COALESCE(hr.fetched_at, hr.fetched_at) DESC
      LIMIT ?
   `).all(10);
   console.log('Actual query result count:', actual.length);

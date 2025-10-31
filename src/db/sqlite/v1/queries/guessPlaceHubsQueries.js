@@ -1,9 +1,13 @@
 'use strict';
 
+const { UrlResolver } = require('../../../../utils/UrlResolver');
+
 function createGuessPlaceHubsQueries(db) {
   if (!db || typeof db.prepare !== 'function') {
     throw new Error('createGuessPlaceHubsQueries requires a valid SQLite database instance');
   }
+
+  const urlResolver = new UrlResolver(db);
 
   try {
     db.exec(`
@@ -38,7 +42,7 @@ function createGuessPlaceHubsQueries(db) {
   const selectLatestFetchStmt = db.prepare(`
     SELECT http_status, fetched_at, request_started_at
       FROM fetches
-     WHERE url = ?
+     WHERE url_id = ?
   ORDER BY COALESCE(fetched_at, request_started_at) DESC
      LIMIT 1
   `);
@@ -46,14 +50,14 @@ function createGuessPlaceHubsQueries(db) {
   const selectHubByUrlStmt = db.prepare(`
     SELECT id, place_slug
       FROM place_hubs
-     WHERE url = ?
+     WHERE url_id = ?
      LIMIT 1
   `);
 
   const insertHubStmt = db.prepare(`
     INSERT OR IGNORE INTO place_hubs(
       host,
-      url,
+      url_id,
       place_slug,
       place_kind,
       topic_slug,
@@ -67,7 +71,7 @@ function createGuessPlaceHubsQueries(db) {
       evidence
     ) VALUES (
       @host,
-      @url,
+      @url_id,
       @place_slug,
       @place_kind,
       NULL,
@@ -94,14 +98,14 @@ function createGuessPlaceHubsQueries(db) {
            nav_links_count = COALESCE(@nav_links_count, place_hubs.nav_links_count),
            article_links_count = COALESCE(@article_links_count, place_hubs.article_links_count),
            evidence = COALESCE(@evidence, place_hubs.evidence)
-     WHERE url = @url
+     WHERE url_id = @url_id
   `);
 
   let insertLegacyFetchStmt = null;
   try {
     insertLegacyFetchStmt = db.prepare(`
       INSERT INTO fetches (
-        url,
+        url_id,
         request_started_at,
         fetched_at,
         http_status,
@@ -112,7 +116,7 @@ function createGuessPlaceHubsQueries(db) {
         download_ms,
         host
       ) VALUES (
-        @url,
+        @url_id,
         @request_started_at,
         @fetched_at,
         @http_status,
@@ -194,19 +198,20 @@ function createGuessPlaceHubsQueries(db) {
   try {
     insertAuditStmt = db.prepare(`
       INSERT INTO place_hub_audit (
-        domain, url, place_kind, place_name, decision,
+        domain, url_id, place_kind, place_name, decision,
         validation_metrics_json, attempt_id, run_id, created_at
       ) VALUES (
-        @domain, @url, @place_kind, @place_name, @decision,
+        @domain, @url_id, @place_kind, @place_name, @decision,
         @validation_metrics_json, @attempt_id, @run_id, datetime('now')
       )
     `);
     loadAuditTrailStmt = db.prepare(`
-      SELECT domain, url, place_kind, place_name, decision,
-             validation_metrics_json, attempt_id, run_id, created_at
-        FROM place_hub_audit
-       WHERE domain = ?
-    ORDER BY created_at DESC
+      SELECT pha.domain, u.url, pha.place_kind, pha.place_name, pha.decision,
+             pha.validation_metrics_json, pha.attempt_id, pha.run_id, pha.created_at
+        FROM place_hub_audit pha
+        JOIN urls u ON pha.url_id = u.id
+       WHERE pha.domain = ?
+    ORDER BY pha.created_at DESC
        LIMIT ?
     `);
   } catch (error) {
@@ -217,12 +222,16 @@ function createGuessPlaceHubsQueries(db) {
   return {
     getLatestFetch(url) {
       if (!url) return null;
-      return selectLatestFetchStmt.get(url) || null;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return null;
+      return selectLatestFetchStmt.get(urlId) || null;
     },
 
     getHubByUrl(url) {
       if (!url) return null;
-      return selectHubByUrlStmt.get(url) || null;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return null;
+      return selectHubByUrlStmt.get(urlId) || null;
     },
 
     getPlaceHub(domain, url) {
@@ -231,9 +240,11 @@ function createGuessPlaceHubsQueries(db) {
 
     insertPlaceHub({ url, domain, placeSlug, placeKind, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!url) return;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return;
       insertHubStmt.run({
         host: resolveHost(domain, url),
-        url,
+        url_id: urlId,
         place_slug: placeSlug || null,
         place_kind: placeKind || null,
         topic_slug: null,
@@ -248,8 +259,10 @@ function createGuessPlaceHubsQueries(db) {
 
     updatePlaceHub({ url, placeSlug = null, placeKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null, topicSlug = null, topicLabel = null, topicKind = null }) {
       if (!url) return 0;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return 0;
       const info = updateHubStmt.run({
-        url,
+        url_id: urlId,
         place_slug: placeSlug,
         place_kind: placeKind,
         topic_slug: topicSlug,
@@ -269,9 +282,11 @@ function createGuessPlaceHubsQueries(db) {
 
     insertTopicHub({ url, domain, topicSlug, topicLabel, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!url) return;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return;
       insertHubStmt.run({
         host: resolveHost(domain, url),
-        url,
+        url_id: urlId,
         place_slug: null,
         place_kind: null,
         topic_slug: topicSlug || null,
@@ -286,8 +301,10 @@ function createGuessPlaceHubsQueries(db) {
 
     updateTopicHub({ url, topicSlug = null, topicLabel = null, topicKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!url) return 0;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return 0;
       const info = updateHubStmt.run({
-        url,
+        url_id: urlId,
         place_slug: null,
         place_kind: null,
         topic_slug: topicSlug,
@@ -307,9 +324,11 @@ function createGuessPlaceHubsQueries(db) {
 
     insertCombinationHub({ url, domain, placeSlug, placeKind, topicSlug, topicLabel, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!url) return;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return;
       insertHubStmt.run({
         host: resolveHost(domain, url),
-        url,
+        url_id: urlId,
         place_slug: placeSlug || null,
         place_kind: placeKind || null,
         topic_slug: topicSlug || null,
@@ -324,8 +343,10 @@ function createGuessPlaceHubsQueries(db) {
 
     updateCombinationHub({ url, placeSlug = null, placeKind = null, topicSlug = null, topicLabel = null, topicKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!url) return 0;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return 0;
       const info = updateHubStmt.run({
-        url,
+        url_id: urlId,
         place_slug: placeSlug,
         place_kind: placeKind,
         topic_slug: topicSlug,
@@ -341,9 +362,11 @@ function createGuessPlaceHubsQueries(db) {
 
     insertHub({ host, url, placeSlug, placeKind, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!host || !url) return;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return;
       insertHubStmt.run({
         host,
-        url,
+        url_id: urlId,
         place_slug: placeSlug || null,
         place_kind: placeKind || null,
         title: title || null,
@@ -355,8 +378,10 @@ function createGuessPlaceHubsQueries(db) {
 
     updateHub({ url, placeSlug = null, placeKind = null, topicSlug = null, topicLabel = null, topicKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null }) {
       if (!url) return 0;
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return 0;
       const info = updateHubStmt.run({
-        url,
+        url_id: urlId,
         place_slug: placeSlug,
         place_kind: placeKind,
         topic_slug: topicSlug,
@@ -372,8 +397,10 @@ function createGuessPlaceHubsQueries(db) {
 
     insertLegacyFetch(fetchRow) {
       if (!insertLegacyFetchStmt || !fetchRow) return;
+      const urlId = urlResolver.ensureUrlId(fetchRow.url);
+      if (!urlId) return;
       insertLegacyFetchStmt.run({
-        url: fetchRow.url || null,
+        url_id: urlId,
         request_started_at: fetchRow.request_started_at || fetchRow.fetched_at || null,
         fetched_at: fetchRow.fetched_at || fetchRow.request_started_at || null,
         http_status: fetchRow.http_status ?? null,
@@ -494,9 +521,11 @@ function createGuessPlaceHubsQueries(db) {
       if (!insertAuditStmt || !domain || !url || !decision) {
         return 0;
       }
+      const urlId = urlResolver.ensureUrlId(url);
+      if (!urlId) return 0;
       const payload = {
         domain,
-        url,
+        url_id: urlId,
         place_kind: placeKind || null,
         place_name: placeName || null,
         decision,

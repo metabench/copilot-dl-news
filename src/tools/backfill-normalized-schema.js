@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Backfill Normalized Schema
+ * Backfill Normalized Schema - DEPRECATED
  *
- * Migrates existing articles from the legacy articles table to the normalized schema.
- * This script is part of Phase 3 of the database normalization plan.
+ * This script was used to migrate data from the legacy articles table to the normalized schema.
+ * The articles table has been removed and the migration is complete.
  *
- * Usage:
- *   node src/tools/backfill-normalized-schema.js              # Full backfill
- *   node src/tools/backfill-normalized-schema.js --limit 100  # Test with first 100 articles
- *   node src/tools/backfill-normalized-schema.js --dry-run     # Show what would be migrated
- *   node src/tools/backfill-normalized-schema.js --resume      # Resume from last checkpoint
+ * This script is kept for historical reference but is no longer functional.
  */
 
-const path = require('path');
-const { ensureDb } = require('../db/sqlite/v1/ensureDb');
-const SQLiteNewsDatabase = require('../db/sqlite/v1/SQLiteNewsDatabase');
+console.log('ℹ️  Database normalization migration is complete.');
+console.log('📊 The articles table has been removed and all data migrated to normalized schema.');
+console.log('🗂️  Normalized tables: urls, http_responses, content_storage, content_analysis');
+process.exit(0);
 
 class BackfillNormalizedSchema {
   constructor(dbPath) {

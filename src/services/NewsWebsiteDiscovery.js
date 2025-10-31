@@ -113,12 +113,12 @@ class NewsWebsiteDiscovery {
         `https://www.${host}/news%`
       ];
       const likeClause = pats.map(() => 'url LIKE ?').join(' OR ');
-      
+
       const result = this.db.db.prepare(
-        `SELECT COUNT(*) as count FROM articles WHERE (${likeClause})`
+        `SELECT COUNT(*) as count FROM urls WHERE (${likeClause})`
       ).get(...pats);
 
-      return (result?.count || 0) > 5; // At least 5 articles in /news path
+      return (result?.count || 0) > 5; // At least 5 URLs in /news path
     } catch (error) {
       return false;
     }

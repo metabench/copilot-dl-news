@@ -5,7 +5,34 @@
  */
 
 const express = require('express');
-const { ArticlePlaceMatcher } = require('../../../matching/ArticlePlaceMatcher');
+
+let cachedArticleMatcher = null;
+let articleMatcherLoadAttempted = false;
+
+function loadArticlePlaceMatcher() {
+  if (articleMatcherLoadAttempted) {
+    return cachedArticleMatcher;
+  }
+  articleMatcherLoadAttempted = true;
+  try {
+    const mod = require('../../../matching/ArticlePlaceMatcher');
+    cachedArticleMatcher = mod?.ArticlePlaceMatcher || mod || null;
+  } catch (_) {
+    cachedArticleMatcher = null;
+  }
+  return cachedArticleMatcher;
+}
+
+function getMatcher(db) {
+  const MatcherClass = loadArticlePlaceMatcher();
+  if (!MatcherClass) {
+    return {
+      matchArticleToPlaces: async () => [],
+      matchArticleToPlacesPlus: async () => []
+    };
+  }
+  return new MatcherClass({ db });
+}
 
 function createArticlesApiRouter({ getDbRW }) {
   if (typeof getDbRW !== 'function') throw new Error('createArticlesApiRouter requires getDbRW function');

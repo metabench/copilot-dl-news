@@ -596,18 +596,22 @@ Get detailed information about a specific place.
 
 Get articles associated with places.
 
-**⚠️ CURRENT STATUS**: Returns empty array due to schema normalization. The `article_places` table was removed during database schema evolution. This endpoint remains available for API compatibility but currently returns no results.
+**⚠️ CURRENT STATUS**: Returns an empty result set after schema normalization. The legacy `articles` table (and the associated `article_places` join helper) has been removed; place/article relationships now require reconstruction from `urls`, `http_responses`, and `content_analysis`, which this endpoint has not yet been updated to query. The route remains for compatibility and currently responds with a legacy fallback payload containing zero rows.
 
 **Query Parameters**:
-- `placeId` (string, optional) - Filter by place ID
+- `id` (string, optional) - Place identifier (numeric) to filter by
 - `limit` (number, optional) - Max results
 
 **Response** (200 OK):
 ```json
-[]
+{
+  "articles": [],
+  "total": 0,
+  "system": "legacy_fallback"
+}
 ```
 
-**Note**: This endpoint currently returns an empty array because the direct article-place relationship table was removed during schema normalization. If this functionality is needed, it would require reimplementation using content analysis or a new relationship mechanism.
+**Note**: Restoring this endpoint will require a new implementation that pivots on normalized URL/content tables (e.g., `urls`, `http_responses`, `content_analysis`) rather than the removed `articles` table.
 
 ---
 

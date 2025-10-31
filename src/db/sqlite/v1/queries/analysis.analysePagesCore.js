@@ -1,5 +1,7 @@
 'use strict';
 
+const { UrlResolver } = require('../../../../utils/UrlResolver');
+
 function assertDatabase(db) {
   if (!db || typeof db.prepare !== 'function') {
     throw new Error('createAnalysePagesCoreQueries requires a better-sqlite3 database handle');
@@ -8,6 +10,8 @@ function assertDatabase(db) {
 
 function createAnalysePagesCoreQueries(db) {
   assertDatabase(db);
+
+  const urlResolver = new UrlResolver(db);
 
   const optionalErrors = Object.create(null);
 
@@ -83,7 +87,7 @@ function createAnalysePagesCoreQueries(db) {
   const placeHubInsertStmt = db.prepare(`
     INSERT OR IGNORE INTO place_hubs(
       host,
-      url,
+      url_id,
       place_slug,
       place_kind,
       topic_slug,
@@ -110,7 +114,7 @@ function createAnalysePagesCoreQueries(db) {
            nav_links_count = COALESCE(?, nav_links_count),
            article_links_count = COALESCE(?, article_links_count),
            evidence = COALESCE(?, evidence)
-     WHERE url = ?
+     WHERE url_id = ?
   `);
 
   const placeHubUnknownTermStmt = (() => {
@@ -118,8 +122,8 @@ function createAnalysePagesCoreQueries(db) {
       return db.prepare(`
         INSERT INTO place_hub_unknown_terms(
           host,
-          url,
-          canonical_url,
+          url_id,
+          canonical_url_id,
           term_slug,
           term_label,
           source,
@@ -130,7 +134,7 @@ function createAnalysePagesCoreQueries(db) {
           first_seen_at,
           last_seen_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-        ON CONFLICT(host, canonical_url, term_slug) DO UPDATE SET
+        ON CONFLICT(host, canonical_url_id, term_slug) DO UPDATE SET
           term_label = COALESCE(excluded.term_label, term_label),
           source = COALESCE(excluded.source, source),
           reason = COALESCE(excluded.reason, reason),
@@ -146,7 +150,7 @@ function createAnalysePagesCoreQueries(db) {
 
   const selectHubByUrlStmt = (() => {
     try {
-      return db.prepare('SELECT id, place_slug, topic_slug, topic_label FROM place_hubs WHERE url = ?');
+      return db.prepare('SELECT id, place_slug, topic_slug, topic_label FROM place_hubs WHERE url_id = ?');
     } catch (_) {
       return null;
     }
@@ -183,9 +187,12 @@ function createAnalysePagesCoreQueries(db) {
     articleLinksCount,
     evidenceJson
   }) {
+    const urlId = urlResolver.ensureUrlId(url);
+    if (!urlId) return false;
+
     placeHubInsertStmt.run(
       host,
-      url,
+      urlId,
       placeSlug,
       placeKind,
       topicSlug,
@@ -207,7 +214,7 @@ function createAnalysePagesCoreQueries(db) {
       navLinksCount,
       articleLinksCount,
       evidenceJson,
-      url
+      urlId
     );
     return true;
   }
@@ -224,10 +231,14 @@ function createAnalysePagesCoreQueries(db) {
     evidence
   }) {
     if (!placeHubUnknownTermStmt) return false;
+    const urlId = urlResolver.ensureUrlId(url);
+    const canonicalUrlId = urlResolver.ensureUrlId(canonicalUrl);
+    if (!urlId || !canonicalUrlId) return false;
+
     placeHubUnknownTermStmt.run(
       host,
-      url,
-      canonicalUrl,
+      urlId,
+      canonicalUrlId,
       termSlug,
       termLabel,
       source,
@@ -240,7 +251,17 @@ function createAnalysePagesCoreQueries(db) {
 
   function getPlaceHubByUrl(url) {
     if (!selectHubByUrlStmt) return null;
-    return selectHubByUrlStmt.get(url) || null;
+    if (!url) return null;
+
+    let urlId;
+    try {
+      urlId = urlResolver.ensureUrlId(url);
+    } catch (error) {
+      optionalErrors.urlResolution = error;
+      return null;
+    }
+
+    return selectHubByUrlStmt.get(urlId) || null;
   }
 
   function getOptionalErrors() {

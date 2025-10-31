@@ -36,7 +36,13 @@ async function main() {
       { table: 'links', column: 'src_url' },
       { table: 'links', column: 'dst_url' },
       { table: 'url_aliases', column: 'url' },
-      { table: 'url_aliases', column: 'alias_url' }
+      { table: 'url_aliases', column: 'alias_url' },
+      { table: 'place_hubs', column: 'url' },
+      { table: 'place_hub_candidates', column: 'candidate_url' },
+      { table: 'place_hub_candidates', column: 'normalized_url' },
+      { table: 'place_hub_unknown_terms', column: 'url' },
+      { table: 'place_hub_unknown_terms', column: 'canonical_url' },
+      { table: 'fetches', column: 'url' }
     ];
 
     console.log('\nTables to update:');
@@ -94,7 +100,26 @@ async function main() {
         const newTableName = `${table}_new`;
         const columnDefs = info
           .filter(col => col.name !== column)
-          .map(col => `${col.name} ${col.type}${col.pk ? ' PRIMARY KEY' : ''}${col.notnull ? ' NOT NULL' : ''}${col.dflt_value ? ` DEFAULT ${col.dflt_value}` : ''}`)
+          .map(col => {
+            let def = col.name + ' ' + col.type;
+            if (col.pk) def += ' PRIMARY KEY';
+            if (col.notnull) def += ' NOT NULL';
+            if (col.dflt_value !== null && col.dflt_value !== undefined) {
+              const rawDefault = String(col.dflt_value).trim();
+              if (rawDefault.length > 0) {
+                const isQuotedString = rawDefault.startsWith("'") && rawDefault.endsWith("'");
+                const isNumeric = /^[+-]?\d+(\.\d+)?$/.test(rawDefault);
+                const isNullLiteral = rawDefault.toUpperCase() === 'NULL';
+                const needsParens = !isQuotedString && !isNumeric && !isNullLiteral;
+                if (needsParens && !(rawDefault.startsWith('(') && rawDefault.endsWith(')'))) {
+                  def += ' DEFAULT (' + rawDefault + ')';
+                } else {
+                  def += ' DEFAULT ' + rawDefault;
+                }
+              }
+            }
+            return def;
+          })
           .join(', ');
 
         db.exec(`CREATE TABLE ${newTableName} (${columnDefs})`);

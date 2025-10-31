@@ -11,7 +11,7 @@ function buildArticleScope(onlyArticles, onlyUrl) {
   const params = [];
 
   if (onlyArticles !== false) {
-    where.push("EXISTS (SELECT 1 FROM fetches f WHERE f.url = a.url AND f.classification = 'article')");
+    where.push("EXISTS (SELECT 1 FROM fetches f WHERE f.url_id = a.url_id AND f.classification = 'article')");
   }
 
   const normalizedUrl = typeof onlyUrl === 'string' ? onlyUrl.trim() : '';

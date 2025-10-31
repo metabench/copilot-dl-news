@@ -11,6 +11,15 @@ const {
   listPlaceHubsBySlug
 } = require('../data/gazetteerPlace');
 
+function tableExists(db, tableName) {
+  try {
+    const row = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name = ?`).get(tableName);
+    return Boolean(row);
+  } catch (error) {
+    return false;
+  }
+}
+
 describe('gazetteerPlace data helpers', () => {
   let tmpDir;
   let dbPath;
@@ -41,18 +50,25 @@ describe('gazetteerPlace data helpers', () => {
 
   function seedFixture(database) {
     cityId = null;
-    database.db.exec(`
-      DELETE FROM places;
-      DELETE FROM place_names;
-      DELETE FROM place_external_ids;
-      DELETE FROM place_hierarchy;
-      DELETE FROM articles;
-      DELETE FROM place_hubs;
-    `);
+    const tablesInDeleteOrder = [
+      'article_places',
+      'place_hubs',
+      'place_hierarchy',
+      'place_external_ids',
+      'place_names',
+      'places',
+      'urls'
+    ];
+
+    for (const table of tablesInDeleteOrder) {
+      if (tableExists(database.db, table)) {
+        database.db.prepare(`DELETE FROM ${table}`).run();
+      }
+    }
 
     const insertPlace = database.db.prepare(`INSERT INTO places(kind, country_code, adm1_code, population, canonical_name_id) VALUES (?,?,?,?,NULL)`);
     const countryId = insertPlace.run('country', 'US', null, 100000000).lastInsertRowid;
-  cityId = insertPlace.run('city', 'US', 'CA', 5000000).lastInsertRowid;
+    cityId = insertPlace.run('city', 'US', 'CA', 5000000).lastInsertRowid;
     const parkId = insertPlace.run('poi', 'US', 'CA', null).lastInsertRowid;
 
     const insertName = database.db.prepare(`INSERT INTO place_names(place_id, name, normalized, lang, name_kind, is_preferred, is_official) VALUES (?,?,?,?,?,?,?)`);
@@ -68,14 +84,6 @@ describe('gazetteerPlace data helpers', () => {
     const insertHierarchy = database.db.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?,?,?,?)`);
     insertHierarchy.run(countryId, cityId, 'admin_parent', 1);
     insertHierarchy.run(cityId, parkId, 'contains', 1);
-
-    const articleUrl = 'https://example.com/metropolis-news';
-    const now = new Date().toISOString();
-    database.db.prepare('INSERT INTO articles (url, title, date, section, html, crawled_at) VALUES (?,?,?,?,?,?)')
-      .run(articleUrl, 'Metropolis headlines', now, 'news', '<html></html>', now);
-    // Note: article_places table removed from schema
-    // database.db.prepare(`INSERT OR IGNORE INTO article_places(article_url, place, place_kind, method, source, first_seen_at) VALUES (?,?,?,?,?,?)`)
-    //   .run(articleUrl, 'Metropolis', 'city', 'gazetteer', 'title', now);
 
     database.db.prepare(`INSERT OR IGNORE INTO place_hubs(host, url, place_slug, place_kind, topic_slug, topic_label, topic_kind, title, first_seen_at, last_seen_at, nav_links_count, article_links_count, evidence) VALUES (?,?,?,?,?,?,?,?,datetime('now'),datetime('now'),?,?,?)`)
       .run('news.example.com', 'https://news.example.com/metropolis', 'metropolis', 'city', null, null, null, 'Metropolis coverage', 3, 1, JSON.stringify({ sample: true }));
@@ -98,7 +106,6 @@ describe('gazetteerPlace data helpers', () => {
   test('fetchPlaceArticles and listPlaceHubsBySlug reuse canonical data', () => {
     const details = fetchPlaceDetails(db.db, cityId);
     const articles = fetchPlaceArticles(db.db, cityId, { limit: 5, canonicalName: details.canonicalName });
-    // article_places table removed from schema - should return empty array
     expect(articles).toHaveLength(0);
 
     const hubs = listPlaceHubsBySlug(db.db, details.canonicalSlug, { limit: 5 });

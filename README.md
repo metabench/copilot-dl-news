@@ -1201,19 +1201,30 @@ The CLI tool `npm run analyze:domains` will compute metrics per domain, write a 
 Run the test suite:
 
 ```bash
-# Full test suite (excludes expensive E2E tests)
-npm test --silent
+# List all tests (safe, no execution)
+npm run test:list
 
-# Fast unit tests only
-npm run test:fast
+# Run specific test files (safest)
+npm run test:by-path -- path/to/test.js
+
+# Run tests related to changed files
+npm run test:related -- src/changed-file.js
+
+# Run tests by name pattern
+npm run test:name -- "test name pattern"
+
+# Full test suite (excludes expensive E2E tests)
+npm run test:unit
 
 # Basic E2E tests (quick smoke tests)
-npm test -- geography.crawl.e2e
+npm run test:e2e-quick
 
 # Full geography E2E (5-15 min, requires network)
-npm run test:geography-full
+npm run test:dev-geography
 ```
 
+**See**: `docs/tests/FOCUSED_TESTS.md` for canonical focused test commands.  
+**See**: `docs/tests/JEST_PITFALLS.md` for common mistakes to avoid.  
 **See**: `docs/GEOGRAPHY_E2E_TESTING.md` for detailed E2E test documentation.
 
 ## License
