@@ -16,58 +16,84 @@
  * @returns {Promise<Object>} - Fetch result
  */
 async function fetchUrl(url, fetchFn, { logger, timeoutMs = 15000, method = 'GET' } = {}) {
-  const startTime = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    try { controller.abort(); } catch (_) {}
+  }, timeoutMs);
+  const started = Date.now();
+  const requestStartedIso = new Date(started).toISOString();
+  const requestMethod = typeof method === 'string' && method.trim()
+    ? method.trim().toUpperCase()
+    : 'GET';
 
   try {
-    logger?.debug?.(`Fetching ${method} ${url}`);
-
-    const result = await fetchFn(url, {
-      method,
-      timeout: timeoutMs,
+    const response = await fetchFn(url, {
+      signal: controller.signal,
+      method: requestMethod,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
-      }
+        'User-Agent': 'Mozilla/5.0 (compatible; GuessPlaceHubs/1.0)',
+        'Accept': 'text/html,application/xhtml+xml'
+      },
+      redirect: 'follow'
     });
-
-    const duration = Date.now() - startTime;
-
-    if (result.error) {
-      logger?.warn?.(`Fetch failed for ${url}: ${result.error.message}`);
-      return {
-        url,
-        error: result.error,
-        duration,
-        timestamp: new Date().toISOString()
-      };
+    const finished = Date.now();
+    clearTimeout(timeout);
+    const finalUrl = response.url || url;
+    let body = '';
+    let bytesDownloaded = 0;
+    if (requestMethod !== 'HEAD') {
+      try {
+        body = await response.text();
+        bytesDownloaded = Buffer.byteLength(body, 'utf8');
+      } catch (err) {
+        logger?.warn?.(`[http] Failed to read body for ${finalUrl}: ${err.message || err}`);
+      }
     }
 
-    logger?.debug?.(`Fetched ${url} in ${duration}ms (status: ${result.statusCode})`);
+    const headers = response.headers || { get: () => null };
+    const contentType = headers.get ? headers.get('content-type') : null;
+    const contentLengthHeader = headers.get ? headers.get('content-length') : null;
+    const contentLength = contentLengthHeader != null ? Number(contentLengthHeader) : null;
 
     return {
-      url,
-      status: 'success',
-      statusCode: result.statusCode,
-      contentType: result.contentType,
-      contentLength: result.contentLength,
-      title: result.title,
-      html: result.html,
-      duration,
-      timestamp: new Date().toISOString()
-    };
-
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    logger?.error?.(`Fetch error for ${url}: ${error.message}`);
-
-    return {
-      url,
-      error: {
-        message: error.message,
-        code: error.code || 'FETCH_ERROR',
-        stack: error.stack
+      ok: response.ok,
+      status: response.status,
+      finalUrl,
+      body,
+      metrics: {
+        request_started_at: requestStartedIso,
+        fetched_at: new Date(finished).toISOString(),
+        bytes_downloaded: bytesDownloaded,
+        duration_ms: finished - started,
+        content_type: contentType,
+        content_length: contentLength
       },
-      duration,
-      timestamp: new Date().toISOString()
+      headers
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') {
+      logger?.warn?.(`[http] ${requestMethod} ${url} timed out after ${timeoutMs}ms`);
+      error.code = 'FETCH_TIMEOUT';
+    } else {
+      logger?.error?.(`[http] ${requestMethod} ${url} failed: ${error.message || error}`);
+    }
+
+    return {
+      ok: false,
+      status: error.code === 'FETCH_TIMEOUT' ? 408 : 500,
+      finalUrl: url,
+      body: '',
+      error,
+      metrics: {
+        request_started_at: requestStartedIso,
+        fetched_at: new Date().toISOString(),
+        bytes_downloaded: 0,
+        duration_ms: Date.now() - started,
+        content_type: null,
+        content_length: null
+      },
+      headers: { get: () => null }
     };
   }
 }

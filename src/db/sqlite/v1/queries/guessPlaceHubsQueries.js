@@ -129,6 +129,16 @@ function createGuessPlaceHubsQueries(db) {
   }
 
   const normalizeNumber = (value) => (Number.isFinite(value) ? value : null);
+  const resolveHost = (domain, url) => {
+    if (domain) return domain;
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname ? parsed.hostname.toLowerCase() : null;
+    } catch (_) {
+      return null;
+    }
+  };
 
   const prepareCountStmt = (sql) => {
     try {
@@ -213,6 +223,120 @@ function createGuessPlaceHubsQueries(db) {
     getHubByUrl(url) {
       if (!url) return null;
       return selectHubByUrlStmt.get(url) || null;
+    },
+
+    getPlaceHub(domain, url) {
+      return this.getHubByUrl(url);
+    },
+
+    insertPlaceHub({ url, domain, placeSlug, placeKind, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
+      if (!url) return;
+      insertHubStmt.run({
+        host: resolveHost(domain, url),
+        url,
+        place_slug: placeSlug || null,
+        place_kind: placeKind || null,
+        topic_slug: null,
+        topic_label: null,
+        topic_kind: null,
+        title: title || null,
+        nav_links_count: normalizeNumber(navLinksCount),
+        article_links_count: normalizeNumber(articleLinksCount),
+        evidence: evidence || null
+      });
+    },
+
+    updatePlaceHub({ url, placeSlug = null, placeKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null, topicSlug = null, topicLabel = null, topicKind = null }) {
+      if (!url) return 0;
+      const info = updateHubStmt.run({
+        url,
+        place_slug: placeSlug,
+        place_kind: placeKind,
+        topic_slug: topicSlug,
+        topic_label: topicLabel,
+        topic_kind: topicKind,
+        title,
+        nav_links_count: normalizeNumber(navLinksCount),
+        article_links_count: normalizeNumber(articleLinksCount),
+        evidence
+      });
+      return info?.changes || 0;
+    },
+
+    getTopicHub(domain, url) {
+      return this.getHubByUrl(url);
+    },
+
+    insertTopicHub({ url, domain, topicSlug, topicLabel, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
+      if (!url) return;
+      insertHubStmt.run({
+        host: resolveHost(domain, url),
+        url,
+        place_slug: null,
+        place_kind: null,
+        topic_slug: topicSlug || null,
+        topic_label: topicLabel || null,
+        topic_kind: null,
+        title: title || null,
+        nav_links_count: normalizeNumber(navLinksCount),
+        article_links_count: normalizeNumber(articleLinksCount),
+        evidence: evidence || null
+      });
+    },
+
+    updateTopicHub({ url, topicSlug = null, topicLabel = null, topicKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null }) {
+      if (!url) return 0;
+      const info = updateHubStmt.run({
+        url,
+        place_slug: null,
+        place_kind: null,
+        topic_slug: topicSlug,
+        topic_label: topicLabel,
+        topic_kind: topicKind,
+        title,
+        nav_links_count: normalizeNumber(navLinksCount),
+        article_links_count: normalizeNumber(articleLinksCount),
+        evidence
+      });
+      return info?.changes || 0;
+    },
+
+    getCombinationHub(domain, url) {
+      return this.getHubByUrl(url);
+    },
+
+    insertCombinationHub({ url, domain, placeSlug, placeKind, topicSlug, topicLabel, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
+      if (!url) return;
+      insertHubStmt.run({
+        host: resolveHost(domain, url),
+        url,
+        place_slug: placeSlug || null,
+        place_kind: placeKind || null,
+        topic_slug: topicSlug || null,
+        topic_label: topicLabel || null,
+        topic_kind: null,
+        title: title || null,
+        nav_links_count: normalizeNumber(navLinksCount),
+        article_links_count: normalizeNumber(articleLinksCount),
+        evidence: evidence || null
+      });
+    },
+
+    updateCombinationHub({ url, placeSlug = null, placeKind = null, topicSlug = null, topicLabel = null, topicKind = null, title = null, navLinksCount = null, articleLinksCount = null, evidence = null }) {
+      if (!url) return 0;
+      const info = updateHubStmt.run({
+        url,
+        place_slug: placeSlug,
+        place_kind: placeKind,
+        topic_slug: topicSlug,
+        topic_label: topicLabel,
+        topic_kind: topicKind,
+        title,
+        nav_links_count: normalizeNumber(navLinksCount),
+        article_links_count: normalizeNumber(articleLinksCount),
+        evidence
+      });
+      return info?.changes || 0;
     },
 
     insertHub({ host, url, placeSlug, placeKind, title, navLinksCount = null, articleLinksCount = null, evidence = null }) {
@@ -355,6 +479,14 @@ function createGuessPlaceHubsQueries(db) {
       } catch (_) {
         return null;
       }
+    },
+
+    getGazetteerPlaceNames() {
+      return null;
+    },
+
+    getNonGeoTopicSlugs() {
+      return null;
     },
 
     // Audit trail helpers for Task 4.4

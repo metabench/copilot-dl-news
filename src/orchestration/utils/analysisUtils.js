@@ -105,44 +105,92 @@ function assessDomainReadiness({ domain, kinds, metrics = {}, dsplEntry = null, 
 function selectPlaces({ countryAnalyzer, regionAnalyzer, cityAnalyzer }, requestedKinds, limit) {
   const places = [];
   const unsupported = [];
+  let remaining = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : null;
 
-  for (const kind of requestedKinds) {
-    let analyzer;
-    let kindPlaces = [];
-
-    switch (kind) {
-      case 'country':
-        analyzer = countryAnalyzer;
-        if (analyzer && typeof analyzer.getTopCountries === 'function') {
-          kindPlaces = analyzer.getTopCountries(limit).map(country => ({
-            kind: 'country',
-            name: country.name,
-            code: country.code,
-            importance: country.importance
-          }));
-        }
-        break;
-      case 'region':
-        analyzer = regionAnalyzer;
-        // Regions would need similar method - for now mark as unsupported
-        unsupported.push(kind);
-        break;
-      case 'city':
-        analyzer = cityAnalyzer;
-        // Cities would need similar method - for now mark as unsupported
-        unsupported.push(kind);
-        break;
-      default:
-        unsupported.push(kind);
-        continue;
+  const take = (items, transform) => {
+    if (!Array.isArray(items) || items.length === 0) {
+      return;
     }
 
-    if (kindPlaces.length > 0) {
-      places.push(...kindPlaces);
+    for (const item of items) {
+      if (remaining !== null && remaining <= 0) {
+        return;
+      }
+
+      places.push(transform(item));
+      if (remaining !== null) {
+        remaining -= 1;
+      }
+    }
+  };
+
+  for (const kind of requestedKinds) {
+    if (remaining !== null && remaining <= 0) {
+      break;
+    }
+
+    switch (kind) {
+      case 'country': {
+        const analyzer = countryAnalyzer;
+        if (!analyzer || typeof analyzer.getTopCountries !== 'function') {
+          unsupported.push(kind);
+          break;
+        }
+
+        const count = remaining !== null ? Math.max(remaining, 0) : undefined;
+        const countries = analyzer.getTopCountries(count);
+        take(countries, (country) => ({
+          kind: 'country',
+          name: country.name,
+          code: country.code,
+          importance: country.importance || 0
+        }));
+        break;
+      }
+      case 'region': {
+        const analyzer = regionAnalyzer;
+        if (!analyzer || typeof analyzer.getTopRegions !== 'function') {
+          unsupported.push(kind);
+          break;
+        }
+
+        const count = remaining !== null ? Math.max(remaining, 0) : undefined;
+        const regions = analyzer.getTopRegions(count);
+        take(regions, (region) => ({
+          kind: 'region',
+          name: region.name,
+          code: region.code || null,
+          countryCode: region.countryCode || null,
+          importance: region.importance || 0
+        }));
+        break;
+      }
+      case 'city': {
+        const analyzer = cityAnalyzer;
+        if (!analyzer || typeof analyzer.getTopCities !== 'function') {
+          unsupported.push(kind);
+          break;
+        }
+
+        const count = remaining !== null ? Math.max(remaining, 0) : undefined;
+        const cities = analyzer.getTopCities(count);
+        take(cities, (city) => ({
+          kind: 'city',
+          name: city.name,
+          code: city.code || null,
+          countryCode: city.countryCode || null,
+          regionName: city.regionName || null,
+          importance: city.importance || 0
+        }));
+        break;
+      }
+      default:
+        unsupported.push(kind);
+        break;
     }
   }
 
-  return { places: places.slice(0, limit), unsupported };
+  return { places, unsupported };
 }
 
 /**

@@ -88,18 +88,40 @@ function composeCandidateSignals({ predictionSource, patternSource, place, attem
  * @returns {Object} - Standardized fetch row
  */
 function createFetchRow(result, fallbackHost) {
-  const host = result.host || fallbackHost || 'unknown';
+  if (!result) {
+    return null;
+  }
+
+  const finalUrl = result.finalUrl || result.url || null;
+  let host = result.host || fallbackHost || null;
+  if (!host && finalUrl) {
+    try {
+      const parsed = new URL(finalUrl);
+      host = parsed.hostname ? parsed.hostname.toLowerCase() : host;
+    } catch (_) {
+      // ignore URL parsing errors
+    }
+  }
+
+  const metrics = result.metrics || {};
+
   return {
-    url: result.url,
-    host,
-    status: result.status || (result.error ? 'error' : 'success'),
-    statusCode: result.statusCode || null,
-    contentType: result.contentType || null,
-    contentLength: result.contentLength || null,
+    url: finalUrl,
+    host: host || null,
+    status: Number.isFinite(result.status) ? result.status : (result.error ? 'error' : null),
+    statusCode: Number.isFinite(result.status) ? result.status : null,
+    http_status: Number.isFinite(result.status) ? result.status : null,
+    contentType: result.contentType || metrics.content_type || null,
+    contentLength: result.contentLength || metrics.content_length || null,
     title: result.title || null,
     error: result.error || null,
-    duration: result.duration || null,
-    timestamp: result.timestamp || new Date().toISOString(),
+    duration: result.duration || metrics.duration_ms || null,
+    timestamp: result.timestamp || metrics.fetched_at || new Date().toISOString(),
+    fetched_at: metrics.fetched_at || result.fetched_at || null,
+    request_started_at: metrics.request_started_at || result.request_started_at || null,
+    bytes_downloaded: metrics.bytes_downloaded || result.bytes_downloaded || null,
+    total_ms: metrics.duration_ms || result.total_ms || null,
+    download_ms: metrics.download_ms || result.download_ms || null,
     attemptId: result.attemptId || null
   };
 }

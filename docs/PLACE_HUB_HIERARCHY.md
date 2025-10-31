@@ -49,22 +49,31 @@ Place Hubs
    - Pattern learning and prioritization
    - Completion detection
 
-3. **Region Hubs**: ⚠️ Partially Implemented
-   - Database support exists
-   - UK constituent countries are imported via the ADM1 ingestor
-   - `guess-place-hubs` CLI can propose URLs using heuristics (DSPL + fallbacks)
-   - Not yet integrated into intelligent planner
+3. **Region Hubs**: ✅ Implemented (Updated October 2025)
+   - Database support exists (~11 regions including UK constituent countries)
+   - `guess-place-hubs` CLI now supports region hub discovery via `--kinds region`
+   - Hierarchical place-place hub gap analysis implemented (`PlacePlaceHubGapAnalyzer`)
+   - Multi-strategy URL prediction (DSPL patterns, gazetteer learning, common patterns)
+   - Audit trail system for validation evidence persistence
    
-4. **City Hubs**: ⚠️ Partially Implemented
+4. **City Hubs**: ✅ Implemented (Updated October 2025)
    - Database support exists (~257 cities)
-   - `guess-place-hubs` CLI can propose URLs using heuristics (DSPL + fallbacks)
-   - Not yet integrated into intelligent planner
+   - `guess-place-hubs` CLI supports city hub discovery via `--kinds city`
+   - Hierarchical relationship discovery from parent-child place mappings
+   - Priority scoring based on population and importance
+   - Batch processing with CSV import and JSON report emission
+
+5. **Hierarchical Place-Place Hubs**: ✅ NEW (October 2025)
+   - PlacePlaceHubGapAnalyzer for geographic hierarchies like `/us/california`
+   - Gap analysis with confidence scoring and priority calculation
+   - Pattern extraction from existing verified URLs for learning
+   - Integration with existing database query modules
 
 ### Code References
 
 **Continent Data**: `src/data/continents.js`
 - Continent list with codes and slugs
-- Helper functions for lookupby name/slug
+- Helper functions for lookup by name/slug
 
 **Country Hub Gap Service**: `src/crawler/CountryHubGapService.js`
 - Detects missing country hubs
@@ -72,10 +81,29 @@ Place Hubs
 - Learns URL patterns
 - Emits completion milestone
 
+**Place-Place Hub Gap Service**: `src/services/PlacePlaceHubGapAnalyzer.js` ⭐ NEW (October 2025)
+- Hierarchical place-place hub gap analysis for geographic hierarchies
+- Multi-strategy URL prediction (DSPL, gazetteer-learned, common patterns, regional fallbacks)
+- Confidence scoring based on population, importance, and pattern verification
+- Integration with existing database query modules
+
 **Hub Categorization**: `src/crawler/planner/HubSeeder.js`
 - `_categorizeHubsByType()` - Classifies hubs by type
 - `seedPlan()` - Seeds hubs with categorization
 - Displays breakdown: `🗺️ N place (X continent, Y country) + 📂 N topic`
+
+**CLI Tools**: 
+- `src/tools/guess-place-hubs.js` - Main CLI for hub discovery with batch processing, CSV import, JSON reporting
+- `tests/fixtures/mixed-hub-responses.js` - Test fixtures for mixed response scenarios (success, 404, rate limit, server errors)
+
+**Orchestration Layer**: `src/orchestration/placeHubGuessing.js`
+- Pure business logic separated from CLI interface
+- Batch processing and validation orchestration
+- Audit trail and evidence persistence
+
+**Database Queries**: 
+- `src/db/sqlite/v1/queries/gazetteer.places.js` - Place hierarchy and relationship queries
+- `src/db/sqlite/v1/queries/guessPlaceHubsQueries.js` - Hub guessing and audit queries
 
 ### Database Schema
 
@@ -121,8 +149,88 @@ Place hubs have different priorities based on their scope:
 
 1. **Continent Hubs**: Priority bias 20 (high - broad coverage)
 2. **Country Hubs**: Priority bias 20 (high - comprehensive coverage goal)
-3. **Region Hubs**: TBD (when implemented)
-4. **City Hubs**: TBD (when implemented)
+3. **Region Hubs**: Priority bias 15 (high - regional coverage)
+4. **City Hubs**: Priority bias 10 (medium - local coverage)
+5. **Hierarchical Place-Place Hubs**: Priority bias 12 (medium-high - geographic hierarchies)
+
+## Guess → Validate → Export Workflow
+
+**Updated October 2025**: Complete workflow for place hub discovery and validation.
+
+### Step 1: Hub Discovery (guess-place-hubs CLI)
+
+```bash
+# Single domain discovery
+node src/tools/guess-place-hubs.js example.com --kinds country,region,city --apply
+
+# Multi-domain batch processing
+node src/tools/guess-place-hubs.js news1.com news2.com news3.com --apply --emit-report
+
+# CSV import for large batches
+node src/tools/guess-place-hubs.js --import domains.csv --apply --emit-report batch-report.json
+
+# Hierarchical place-place hub discovery
+node src/tools/guess-place-hubs.js example.com --kinds region,city --hierarchical --apply
+```
+
+**New Features (October 2025)**:
+- **Batch Processing**: Multiple domains in single invocation
+- **CSV Import**: Process domain lists from files
+- **JSON Reports**: Structured output for automation
+- **Hierarchical Discovery**: Parent-child place relationships
+- **Audit Trail**: Evidence persistence in `place_hub_audit` table
+
+### Step 2: Validation & Gap Analysis
+
+```bash
+# Validate existing hubs
+node src/tools/analyse-pages-core.js --validate-hubs
+
+# Gap analysis for missing hubs
+node src/services/CountryHubGapService.js analyze
+node src/services/PlacePlaceHubGapAnalyzer.js analyze
+```
+
+### Step 3: Data Export
+
+```bash
+# Export gazetteer data
+node src/tools/export-gazetteer.js --format ndjson > gazetteer.ndjson
+
+# Export with summary
+node src/tools/export-gazetteer.js --format json --summary-format ascii
+```
+
+### Step 4: Dashboard & Monitoring
+
+- **Analysis Dashboard**: `/analysis` endpoint shows hub guessing runs
+- **SSE Events**: Real-time progress for batch operations
+- **Report Archives**: JSON reports stored for historical analysis
+
+### Error Handling & Recovery
+
+- **Rate Limiting**: Automatic retry with exponential backoff
+- **Server Errors**: Graceful degradation with retry logic
+- **Audit Trail**: Complete evidence chain for troubleshooting
+- **Timeout Protection**: Readiness probes prevent hanging operations
+
+### Testing Infrastructure
+
+**Mixed Response Fixtures**: `tests/fixtures/mixed-hub-responses.js`
+- Success responses (200) with realistic hub HTML
+- Error responses (404, 429, 500, 503) for failure scenarios
+- Redirect responses (301, 302) for URL changes
+- Batch response generation for multi-domain testing
+
+```javascript
+// Example usage in tests
+const { createMockFetch, scenarios, createMixedBatchResponses } = require('../fixtures/mixed-hub-responses');
+
+const mockFetch = createMockFetch({
+  'https://example.com/world/france': scenarios.successfulCountryHub.response,
+  'https://example.com/world/atlantis': scenarios.notFoundCountryHub.response
+});
+```
 
 ## Future Enhancements
 
@@ -130,21 +238,33 @@ Place hubs have different priorities based on their scope:
    - Add `kind='continent'` to places table
    - Populate from `src/data/continents.js`
 
-3. **Region Hub Integration**
-   - Add region hub gap service
-   - Integrate into intelligent planner
-   - Add URL pattern detection
-   - Extend coverage checks to ensure UK constituent countries remain present
+2. **Enhanced Hierarchical Discovery** ✅ PARTIALLY COMPLETE (October 2025)
+   - ✅ PlacePlaceHubGapAnalyzer implemented for geographic hierarchies
+   - ✅ Multi-strategy URL prediction (DSPL, gazetteer-learned, common patterns)
+   - ✅ Confidence scoring and gap analysis
+   - ⏳ Integration with intelligent planner (pending)
 
-3. **City Hub Integration**
-   - Add city hub gap service
-   - Integrate into intelligent planner
-   - Priority system for major cities
+3. **Region Hub Integration** ✅ COMPLETE (October 2025)
+   - ✅ Region hub gap analysis via PlacePlaceHubGapAnalyzer
+   - ✅ CLI support via `--kinds region` and `--hierarchical`
+   - ✅ URL pattern detection and learning
+   - ✅ UK constituent countries coverage maintained
 
-4. **Place-Topic Combinations**
+4. **City Hub Integration** ✅ COMPLETE (October 2025)
+   - ✅ City hub gap analysis via PlacePlaceHubGapAnalyzer
+   - ✅ CLI support via `--kinds city` and `--hierarchical`
+   - ✅ Priority system based on population and importance
+   - ⏳ Integration with intelligent planner (pending)
+
+5. **Place-Topic Combinations**
    - Track hubs like `/world/politics` (country + topic)
    - Special categorization for combined hubs
    - Enhanced coverage tracking
+
+6. **Advanced Batch Processing**
+   - Parallel domain processing (currently sequential)
+   - Resume capability for interrupted batches
+   - Progress persistence across sessions
 
 ## Related Documentation
 

@@ -493,7 +493,7 @@ Tasks map to the expanded modernization initiative captured in `CHANGE_PLAN.md`.
 | 4.4 | Evidence Persistence & Auditing | Persist validator metrics into `place_hubs` and populate new `place_hub_audit` table | ✅ COMPLETED | HIGH | Requires 4.1 structured validator output — 2025-10-31: Schema added, queries implemented, store extended, orchestration integrated with audit recording after all validation types (place, topic, combination). CLI summary now includes audit counts (total/accepted/rejected) in both ASCII and JSON output. |
 | 4.5 | Scheduling & Batch Automation | Integrate background scheduler + queue definitions, persist batch metadata for reuse | ✅ COMPLETED | MEDIUM | GuessPlaceHubsTask created with run metadata persistence, task definition added, server registration complete, database migration executed successfully |
 | 4.6 | Observability & Dashboards | SSE events, /analysis dashboard updates, archive summaries to `analysis_runs` | ✅ COMPLETED | MEDIUM | SSE events added for hub guessing tasks, analysis dashboard now shows both analysis and hub guessing runs |
-| 4.7 | Testing & Documentation Updates | Fixtures for mixed responses, docs refresh for guess → validate → export workflow | ⏳ NOT_STARTED | HIGH | Final verification phase |
+| 4.7 | Testing & Documentation Updates | Fixtures for mixed responses, docs refresh for guess → validate → export workflow | ✅ COMPLETED | HIGH | Final verification phase |
 
 #### Phase 4 Sub-Phase Tracker
 - **Active phase:** Phase 4 — Hub Guessing Workflow Modernization
@@ -749,14 +749,18 @@ Tasks for implementing hierarchical place-place hub discovery and gap analysis f
 - ✅ Updated task tracking: HubValidator modularization complete (6/6 tasks).
 - 🏁 HubValidator modularization complete. Codebase now has improved maintainability with focused, testable modules.
 
-### Session 28: October 31, 2025
-- ✅ Completed Phase 4.6 (Observability & Dashboards) - SSE events added for hub guessing tasks, analysis dashboard now shows both analysis and hub guessing runs.
-- ✅ Created placeHubGuessRuns service for hub guessing run persistence.
-- ✅ Updated SSR analysis routes to combine analysis and hub guessing runs.
-- ✅ Modified view model to format hub guessing configurations.
-- ✅ Enhanced SSE broadcasting for analysis-progress events.
-- ✅ Updated progress tracking: All 32 tasks complete (100% completion rate).
-- 🏁 All CLI refactoring tasks complete. Hub guessing workflow fully modernized with comprehensive observability and dashboard integration.
+### Session 29: October 31, 2025
+- ✅ Completed Task 4.7 (Testing & Documentation Updates) - Created comprehensive mixed response fixtures and updated documentation for the modernized guess → validate → export workflow.
+- ✅ Created `tests/fixtures/mixed-hub-responses.js` with realistic response scenarios (success, 404, rate limit, server errors, redirects).
+- ✅ Added `tests/fixtures/mixed-hub-responses.test.js` with comprehensive fixture tests (9/9 passing).
+- ✅ Updated `docs/PLACE_HUB_HIERARCHY.md` with current implementation status and complete workflow documentation.
+- ✅ Added guess → validate → export workflow guide with CLI examples and new features.
+- ✅ Documented batch processing, CSV import, JSON reporting, and hierarchical discovery capabilities.
+- 🏁 **CLI REFACTORING SESSION COMPLETE** - All 32 tasks completed (100% success rate).
+- **Final Status:** Hub guessing workflow fully modernized with comprehensive observability, audit trails, and testing infrastructure.
+
+### Session 30: October 31, 2025
+- ✅ Deduplicated GET decision logging in `src/orchestration/DomainProcessor.js` so guess-place-hubs summaries record a single fetch outcome per attempt while keeping capture/persistence logic unchanged.
 
 ---
 

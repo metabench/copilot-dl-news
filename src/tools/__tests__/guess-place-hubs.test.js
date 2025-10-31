@@ -32,11 +32,15 @@ function createResponse({ status = 200, body = '<html></html>', url = 'https://e
 }
 
 function stubLogger() {
-  return {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn()
+  const calls = { info: [], warn: [], error: [] };
+  const logger = {
+    info: (msg) => calls.info.push(msg),
+    warn: (msg) => calls.warn.push(msg),
+    error: (msg) => calls.error.push(msg)
   };
+  // Add calls property for testing
+  logger.calls = calls;
+  return logger;
 }
 
 function createHubHtml(title) {
@@ -92,8 +96,8 @@ describe('guess-place-hubs tool', () => {
       expect(fetchFn).toHaveBeenCalledTimes(2);
       expect((fetchFn.mock.calls[0][1]?.method || 'GET').toUpperCase()).toBe('HEAD');
       expect((fetchFn.mock.calls[1][1]?.method || 'GET').toUpperCase()).toBe('GET');
-      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('HEAD 200 https://example.com/world/testland'));
-      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('GET 200 https://example.com/world/testland'));
+      expect(logger.calls.info.some(msg => msg.includes('HEAD 200 https://example.com/world/testland'))).toBe(true);
+      expect(logger.calls.info.some(msg => msg.includes('GET 200 https://example.com/world/testland'))).toBe(true);
       expect(summary.fetched).toBe(1);
       const verifyDb = ensureDb(dbPath);
       try {
@@ -159,7 +163,7 @@ describe('guess-place-hubs tool', () => {
     expect((fetchFn.mock.calls[0][1]?.method || 'GET').toUpperCase()).toBe('HEAD');
       expect(summary.stored404).toBe(1);
       expect(summary.insertedHubs).toBe(0);
-      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('HEAD 404 https://example.com/world/nowhere-federation'));
+      expect(logger.calls.info.some(msg => msg.includes('HEAD 404 https://example.com/world/nowhere-federation'))).toBe(true);
 
       const verifyDb = ensureDb(dbPath);
       try {

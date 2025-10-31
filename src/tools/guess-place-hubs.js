@@ -14,841 +14,106 @@ const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../utils/project-root');
 const { CliFormatter } = require('../utils/CliFormatter');
-const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { guessPlaceHubsBatch } = require('../orchestration/placeHubGuessing');
+const { BatchLoader } = require('./cli/BatchLoader');
+const { ArgumentNormalizer } = require('./cli/ArgumentNormalizer');
+const { ReportWriter } = require('./cli/ReportWriter');
+const { guessPlaceHubsForDomain, guessPlaceHubsBatch } = require('../orchestration/placeHubGuessing');
 const { createPlaceHubDependencies } = require('../orchestration/dependencies');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-
-function parseCsv(value) {
-  if (!value) return [];
-  return String(value)
-    .split(',')
-    .map((part) => part.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function collectFlagValues(argv, flag) {
-  if (!Array.isArray(argv) || argv.length === 0 || !flag) {
-    return [];
-  }
-
-  const results = [];
-  const flagWithEquals = `${flag}=`;
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (token === flag) {
-      const next = argv[index + 1];
-      if (typeof next === 'string' && !next.startsWith('-')) {
-        results.push(next);
-        index += 1;
-      }
-      continue;
-    }
-
-    if (token.startsWith(flagWithEquals)) {
-      const value = token.slice(flagWithEquals.length);
-      if (value) {
-        results.push(value);
-      }
-    }
-  }
-
-  return results;
-}
-
-function splitCsvLine(line) {
-  if (typeof line !== 'string' || line.length === 0) {
-    return [];
-  }
-
-  const segments = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-
-    if (char === '"') {
-      if (inQuotes && line[index + 1] === '"') {
-        current += '"';
-        index += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (char === ',' && !inQuotes) {
-      segments.push(current.trim());
-      current = '';
-      continue;
-    }
-
-    current += char;
-  }
-
-  segments.push(current.trim());
-  return segments.map((segment) => segment.trim());
-}
-
-function parseDomainImportFile(importPath) {
-  if (!importPath) {
-    return [];
-  }
-
-  const resolvedPath = path.isAbsolute(importPath)
-    ? importPath
-    : path.join(process.cwd(), importPath);
-
-  let contents;
-  try {
-    contents = fs.readFileSync(resolvedPath, 'utf8');
-  } catch (error) {
-    throw Object.assign(new Error(`Failed to read domain import file at ${resolvedPath}: ${error.message || error}`), {
-      cause: error
-    });
-  }
-
-  const lines = contents
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith('#'));
-
-  if (!lines.length) {
-    return [];
-  }
-
-  const headerFields = splitCsvLine(lines[0]).map((field) => field.toLowerCase());
-  const hasHeader = headerFields.includes('domain');
-  const headers = hasHeader ? headerFields : null;
-  const startIndex = hasHeader ? 1 : 0;
-
-  const resolveField = (fields, name, fallbackIndex) => {
-    if (headers) {
-      const headerIndex = headers.indexOf(name);
-      if (headerIndex !== -1 && fields[headerIndex] != null) {
-        return fields[headerIndex].trim();
-      }
-    }
-    if (typeof fallbackIndex === 'number' && fallbackIndex < fields.length) {
-      return fields[fallbackIndex].trim();
-    }
-    return '';
-  };
-
-  const entries = [];
-
-  for (let idx = startIndex; idx < lines.length; idx += 1) {
-    const line = lines[idx];
-    if (!line) continue;
-    const fields = splitCsvLine(line);
-    if (!fields.length) continue;
-
-    const domainValue = resolveField(fields, 'domain', 0);
-    if (!domainValue) continue;
-
-    const kindsValue = resolveField(fields, 'kinds', 1);
-    const limitValue = resolveField(fields, 'limit', 2);
-
-    let kinds = parseCsv(kindsValue);
-    if (!kinds.length) {
-      kinds = null;
-    }
-
-    const parsedLimit = Number.parseInt(limitValue, 10);
-    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : null;
-
-    entries.push({
-      domain: domainValue,
-      kinds,
-      limit,
-      raw: line,
-      rowNumber: idx + 1,
-      source: resolvedPath
-    });
-  }
-
-  return entries;
-}
-
-function buildDomainBatchInputs({
-  repeatedDomains = [],
-  positionalDomains = [],
-  csvDomains = [],
-  importedDomains = [],
-  envDomain = null,
-  defaultKinds = [],
-  defaultLimit = null,
-  scheme = 'https'
-}) {
-  const entryMap = new Map();
-  const order = [];
-
-  const upsert = (rawValue, origin, overrides = {}) => {
-    if (!rawValue) return;
-    const trimmed = String(rawValue).trim();
-    if (!trimmed) return;
-
-    const normalized = normalizeDomain(trimmed, scheme);
-    const host = normalized?.host || trimmed.toLowerCase();
-    if (!host) return;
-
-    const sourceTag = origin || 'unknown';
-    const kindsOverride = Array.isArray(overrides.kinds) && overrides.kinds.length ? overrides.kinds : null;
-    const limitOverride = Number.isFinite(overrides.limit) ? overrides.limit : null;
-
-    if (entryMap.has(host)) {
-      const existing = entryMap.get(host);
-      existing.sources.add(sourceTag);
-      if (!existing.raw) existing.raw = trimmed;
-      if (normalized?.scheme && !existing.schemeFromInput) {
-        existing.schemeFromInput = normalized.scheme;
-      }
-      if (kindsOverride) {
-        existing.kinds = kindsOverride;
-      }
-      if (limitOverride != null) {
-        existing.limit = limitOverride;
-      }
-      return;
-    }
-
-    entryMap.set(host, {
-      raw: trimmed,
-      domain: host,
-      schemeFromInput: normalized?.scheme || null,
-      sources: new Set([sourceTag]),
-      kinds: kindsOverride,
-      limit: limitOverride
-    });
-    order.push(host);
-  };
-
-  for (const value of repeatedDomains) {
-    upsert(value, '--domain');
-  }
-
-  for (const value of positionalDomains) {
-    upsert(value, 'positional');
-  }
-
-  for (const value of csvDomains) {
-    upsert(value, '--domains');
-  }
-
-  for (const item of importedDomains) {
-    if (!item) continue;
-    upsert(item.domain, '--import', { kinds: item.kinds || null, limit: item.limit ?? null });
-  }
-
-  if (!entryMap.size && envDomain) {
-    upsert(envDomain, 'env');
-  }
-
-  return order.map((host) => {
-    const entry = entryMap.get(host);
-    const resolvedKinds = entry.kinds && entry.kinds.length ? entry.kinds : defaultKinds;
-    const effectiveKinds = Array.isArray(resolvedKinds) ? [...resolvedKinds] : [];
-    const effectiveLimit = entry.limit != null ? entry.limit : defaultLimit;
-    const selectedScheme = entry.schemeFromInput || scheme;
-
-    return {
-      raw: entry.raw,
-      domain: host,
-      scheme: selectedScheme,
-      base: `${selectedScheme}://${host}`,
-      kinds: effectiveKinds,
-      kindsOverride: entry.kinds || null,
-      limit: effectiveLimit,
-      limitOverride: entry.limit,
-      sources: Array.from(entry.sources)
-    };
-  });
-}
-
-const DSPL_KIND_PROPERTY_MAP = Object.freeze({
-  country: 'countryHubPatterns',
-  region: 'regionHubPatterns',
-  city: 'cityHubPatterns'
-});
-
-function resolveReportOutput({ requested = false, explicitPath = null, reportDir = null }) {
-  if (!requested) {
-    return {
-      requested: false,
-      path: null,
-      directory: null
-    };
-  }
-
-  const projectRoot = findProjectRoot(__dirname);
-  const cwd = process.cwd();
-  const normalizedReportDir = reportDir && typeof reportDir === 'string' && reportDir.trim().length
-    ? (path.isAbsolute(reportDir) ? reportDir.trim() : path.resolve(cwd, reportDir.trim()))
-    : path.join(projectRoot, 'place-hub-reports');
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const defaultFile = `guess-place-hubs-${timestamp}.json`;
-
-  let targetDir = normalizedReportDir;
-  let targetPath = null;
-
-  const resolveCandidate = (candidate) => {
-    if (!candidate || typeof candidate !== 'string') {
-      return null;
-    }
-    const trimmed = candidate.trim();
-    if (!trimmed) {
-      return null;
-    }
-    return path.isAbsolute(trimmed) ? trimmed : path.resolve(cwd, trimmed);
-  };
-
-  const explicitResolved = resolveCandidate(explicitPath);
-
-  if (explicitResolved) {
-    let stats = null;
-    try {
-      stats = fs.statSync(explicitResolved);
-    } catch (_) {
-      stats = null;
-    }
-
-    if (stats?.isDirectory?.()) {
-      targetDir = explicitResolved;
-    } else if (stats?.isFile?.()) {
-      targetDir = path.dirname(explicitResolved);
-      targetPath = explicitResolved;
-    } else {
-      const endsWithSep = /[\\/]+$/.test(explicitResolved);
-      if (endsWithSep) {
-        targetDir = explicitResolved.replace(/[\\/]+$/, '') || normalizedReportDir;
-      } else {
-        const ext = path.extname(explicitResolved);
-        if (ext) {
-          targetDir = path.dirname(explicitResolved);
-          targetPath = explicitResolved;
-        } else {
-          targetDir = explicitResolved;
-        }
-      }
-    }
-  }
-
-  if (!targetDir) {
-    targetDir = normalizedReportDir;
-  }
-
-  if (!targetPath) {
-    targetPath = path.join(targetDir, defaultFile);
-  }
-
-  return {
-    requested: true,
-    path: targetPath,
-    directory: targetDir
-  };
-}
-
-function collectHubChanges(existingHub, nextSnapshot) {
-  if (!existingHub || !nextSnapshot) {
-    return [];
-  }
-
-  const descriptors = [
-    { label: 'Place slug', nextKey: 'placeSlug', existingKey: 'place_slug' },
-    { label: 'Place kind', nextKey: 'placeKind', existingKey: 'place_kind' },
-    { label: 'Title', nextKey: 'title', existingKey: 'title' },
-    { label: 'Nav links', nextKey: 'navLinksCount', existingKey: 'nav_links_count' },
-    { label: 'Article links', nextKey: 'articleLinksCount', existingKey: 'article_links_count' }
-  ];
-
-  const changes = [];
-  for (const descriptor of descriptors) {
-    const after = nextSnapshot[descriptor.nextKey];
-    if (after === undefined || after === null) {
-      continue;
-    }
-    const before = existingHub[descriptor.existingKey];
-    const normalizedBefore = before === undefined ? null : before;
-    const normalizedAfter = after;
-    if (normalizedBefore === normalizedAfter) {
-      continue;
-    }
-    if (typeof normalizedBefore === 'number' && typeof normalizedAfter === 'number' && Number.isFinite(normalizedBefore) && Number.isFinite(normalizedAfter)) {
-      if (normalizedBefore === normalizedAfter) {
-        continue;
-      }
-    }
-    changes.push({
-      field: descriptor.label,
-      before: normalizedBefore === undefined ? null : normalizedBefore,
-      after: normalizedAfter
-    });
-  }
-
-  return changes;
-}
-
-function summarizeDsplPatterns(dsplEntry, kinds) {
-  const normalizedKinds = (Array.isArray(kinds) && kinds.length ? kinds : ['country'])
-    .map((kind) => String(kind).toLowerCase());
-
-  const summary = {
-    available: Boolean(dsplEntry),
-    requestedKinds: normalizedKinds,
-    verifiedKinds: [],
-    totalPatterns: 0,
-    verifiedPatternCount: 0,
-    byKind: {}
-  };
-
-  if (!dsplEntry) {
-    return summary;
-  }
-
-  for (const kind of normalizedKinds) {
-    const property = DSPL_KIND_PROPERTY_MAP[kind] || `${kind}HubPatterns`;
-    const patterns = Array.isArray(dsplEntry[property]) ? dsplEntry[property] : [];
-    const verifiedPatterns = patterns.filter((pattern) => pattern && pattern.verified !== false);
-
-    summary.byKind[kind] = {
-      total: patterns.length,
-      verified: verifiedPatterns.length
-    };
-
-    summary.totalPatterns += patterns.length;
-    summary.verifiedPatternCount += verifiedPatterns.length;
-
-    if (verifiedPatterns.length) {
-      summary.verifiedKinds.push(kind);
-    }
-  }
-
-  return summary;
-}
-
-
-function parseCliArgs(argv) {
-  const rawArgv = Array.isArray(argv) ? [...argv] : process.argv.slice(2);
-  const parser = new CliArgumentParser('guess-place-hubs', 'Predict candidate place hubs and verify them');
-
-  parser.add('--domain <domain>', 'Domain or host to inspect (repeatable; positional args supported)', [], (value, previous) => {
-    const acc = Array.isArray(previous) ? previous.slice() : [];
-    acc.push(value);
-    return acc;
-  });
-  parser.add('--domains <csv>', 'Comma-separated list of domains to inspect (batch mode)', null);
-  parser.add('--import <file>', 'CSV file of domains (columns: domain,kinds,limit)', null);
-  parser.add('--db <path>', 'Path to SQLite database (defaults to data/news.db)', null);
-  parser.add('--db-path <path>', 'Alias for --db', null);
-  parser.add('--kinds <csv>', 'Place kinds to consider (country, region, city)', 'country');
-  parser.add('--limit <n>', 'Limit number of places to evaluate', null, 'number');
-  parser.add('--patterns-per-place <n>', 'Maximum URL patterns to test per place (default 3)', 3, 'number');
-  parser.add('--max-age-days <n>', 'Skip re-fetch when success newer than N days (default 7)', 7, 'number');
-  parser.add('--refresh-404-days <n>', 'Skip re-fetching known 404s newer than N days (default 180)', 180, 'number');
-  parser.add('--retry-4xx-days <n>', 'Skip retrying other 4xx statuses newer than N days (default 7)', 7, 'number');
-  parser.add('--apply', 'Persist confirmed hubs to place_hubs table', false, 'boolean');
-  parser.add('--dry-run', 'Do not persist hubs (default behaviour)', false, 'boolean');
-  parser.add('--verbose', 'Enable verbose logging', false, 'boolean');
-  parser.add('--http', 'Use http scheme instead of https', false, 'boolean');
-  parser.add('--scheme <scheme>', 'Override URL scheme (http or https)', 'https');
-  parser.add('--readiness-timeout <seconds>', 'Maximum seconds allotted to readiness probes (0 = unlimited, default 10)', 10, 'number');
-  parser.add('--json', 'Emit JSON summary output', false, 'boolean');
-  parser.add('--emit-report [path]', 'Write detailed JSON report to disk (optional path or directory)', null);
-  parser.add('--report-dir <path>', 'Directory used when --emit-report omits a filename', null);
-  parser.add('--hierarchical', 'Enable hierarchical place-place hub discovery (parent/child relationships)', false, 'boolean');
-
-  const parsedArgs = parser.parse(rawArgv);
-
-  const schemeInput = parsedArgs.http ? 'http' : (parsedArgs.scheme ? String(parsedArgs.scheme).toLowerCase() : 'https');
-  const scheme = ['http', 'https'].includes(schemeInput) ? schemeInput : 'https';
-
-  const kindsInput = parsedArgs.kinds != null ? parsedArgs.kinds : 'country';
-  const kinds = parseCsv(kindsInput);
-  if (!kinds.length) kinds.push('country');
-  const uniqueKinds = Array.from(new Set(kinds.map((kind) => kind.toLowerCase())));
-
-  const limit = Number.isFinite(parsedArgs.limit) ? parsedArgs.limit : null;
-  const patternsPerPlace = Number.isFinite(parsedArgs.patternsPerPlace)
-    ? Math.max(1, parsedArgs.patternsPerPlace)
-    : 3;
-  const maxAgeDays = Number.isFinite(parsedArgs.maxAgeDays)
-    ? Math.max(0, parsedArgs.maxAgeDays)
-    : 7;
-  const refresh404Days = Number.isFinite(parsedArgs.refresh404Days)
-    ? Math.max(0, parsedArgs.refresh404Days)
-    : 180;
-  const retry4xxDays = Number.isFinite(parsedArgs.retry4xxDays)
-    ? Math.max(0, parsedArgs.retry4xxDays)
-    : 7;
-  const readinessTimeoutSeconds = Number.isFinite(parsedArgs.readinessTimeout)
-    ? Math.max(0, parsedArgs.readinessTimeout)
-    : 10;
-  const readinessTimeoutMs = readinessTimeoutSeconds > 0 ? readinessTimeoutSeconds * 1000 : null;
-
-  let apply = parsedArgs.apply === true;
-  if (parsedArgs.dryRun === true) {
-    apply = false;
-  }
-
-  const emitReportRaw = parsedArgs.emitReport;
-  const reportDirRaw = parsedArgs.reportDir;
-  const reportResolution = resolveReportOutput({
-    requested: emitReportRaw !== undefined && emitReportRaw !== null,
-    explicitPath: typeof emitReportRaw === 'string' ? emitReportRaw : null,
-    reportDir: reportDirRaw || null
-  });
-
-  const dbPath = parsedArgs.dbPath || parsedArgs.db || null;
-
-  const positionalDomains = Array.isArray(parsedArgs.positional) ? parsedArgs.positional : [];
-  const domainFlags = Array.isArray(parsedArgs.domain) ? parsedArgs.domain : (parsedArgs.domain ? [parsedArgs.domain] : []);
-
-  const csvDomainArgs = collectFlagValues(rawArgv, '--domains');
-  if (parsedArgs.domains && !csvDomainArgs.includes(parsedArgs.domains)) {
-    csvDomainArgs.push(parsedArgs.domains);
-  }
-  const csvDomainList = csvDomainArgs.flatMap((value) => parseCsv(value));
-
-  const importFlagValues = collectFlagValues(rawArgv, '--import');
-  if (parsedArgs.import && !importFlagValues.includes(parsedArgs.import)) {
-    importFlagValues.push(parsedArgs.import);
-  }
-  const importedDomains = [];
-  for (const importCandidate of importFlagValues) {
-    if (!importCandidate) continue;
-    const entries = parseDomainImportFile(importCandidate);
-    if (entries.length) {
-      importedDomains.push(...entries);
-    }
-  }
-
-  const envDomain = process.env.GPH_DOMAIN || null;
-
-  const domainBatch = buildDomainBatchInputs({
-    repeatedDomains: domainFlags,
-    positionalDomains,
-    csvDomains: csvDomainList,
-    importedDomains,
-    envDomain,
-    defaultKinds: uniqueKinds,
-    defaultLimit: limit,
-    scheme
-  });
-
-  const primaryDomain = domainBatch.length ? domainBatch[0].domain : null;
-
-  return {
-    domain: primaryDomain,
-    domains: domainBatch,
-    domainBatch,
-    domainInputs: {
-      repeated: domainFlags,
-      positional: positionalDomains,
-      csv: csvDomainList,
-      imported: importedDomains,
-      env: envDomain ? [envDomain] : []
-    },
-    importPaths: importFlagValues,
-    dbPath,
-    kinds: uniqueKinds,
-    limit,
-    patternsPerPlace,
-    apply,
-    maxAgeDays,
-    refresh404Days,
-    retry4xxDays,
-    verbose: Boolean(parsedArgs.verbose),
-    scheme,
-    readinessTimeoutSeconds,
-    readinessTimeoutMs,
-    json: Boolean(parsedArgs.json),
-    dryRun: !apply,
-    emitReport: reportResolution.requested,
-    reportPath: reportResolution.path,
-    reportDirectory: reportResolution.directory,
-    hierarchical: Boolean(parsedArgs.hierarchical)
-  };
-}
-
-const SUMMARY_NUMERIC_FIELDS = [
-  'totalPlaces',
-  'totalUrls',
-  'fetched',
-  'cached',
-  'skipped',
-  'skippedDuplicatePlace',
-  'skippedRecent4xx',
-  'stored404',
-  'insertedHubs',
-  'updatedHubs',
-  'errors',
-  'rateLimited',
-  'readinessTimedOut',
-  'validationSucceeded',
-  'validationFailed'
-];
-
 const MAX_DECISION_HISTORY = 200;
 
-
-function aggregateSummaryInto(target, source, entry) {
-  if (!target || !source) return;
-
-  for (const field of SUMMARY_NUMERIC_FIELDS) {
-    const value = Number(source[field]) || 0;
-    target[field] = (target[field] || 0) + value;
-  }
-
-  if (Array.isArray(source.unsupportedKinds) && source.unsupportedKinds.length) {
-    const merged = new Set(target.unsupportedKinds);
-    for (const kind of source.unsupportedKinds) {
-      if (kind) merged.add(kind);
-    }
-    target.unsupportedKinds = Array.from(merged);
-  }
-
-  if (Array.isArray(source.decisions) && source.decisions.length) {
-    for (const decision of source.decisions) {
-      if (decision && typeof decision === 'object') {
-        target.decisions.push({
-          ...decision,
-          domain: decision.domain || source.domain || entry?.domain || null
-        });
-      } else {
-        target.decisions.push(decision);
-      }
-    }
-  }
-
-  if (source.diffPreview && typeof source.diffPreview === 'object') {
-    if (!target.diffPreview || typeof target.diffPreview !== 'object') {
-      target.diffPreview = {
-        inserted: [],
-        updated: []
+/**
+ * Backward compatibility wrapper for tests and legacy usage
+ * Maps old interface to new orchestration layer
+ */
+async function guessPlaceHubs(options = {}, legacyDeps = {}) {
+  // Extract database path if provided
+  const dbPath = options.dbPath || resolveDbPath(null);
+  
+  // Create a logger that proxies to provided legacy logger (defaults to no-op)
+  const legacyLogger = legacyDeps.logger || {};
+  const logger = {
+    info: typeof legacyLogger.info === 'function'
+      ? (message, ...args) => legacyLogger.info(message, ...args)
+      : () => {},
+    warn: typeof legacyLogger.warn === 'function'
+      ? (message, ...args) => legacyLogger.warn(message, ...args)
+      : () => {},
+    error: typeof legacyLogger.error === 'function'
+      ? (message, ...args) => legacyLogger.error(message, ...args)
+      : () => {}
+  };
+  
+  // Create dependencies manually to avoid factory function creating console logger
+  const { ensureDb } = require('../db/sqlite/ensureDb');
+  const { createSQLiteDatabase } = require('../db/sqlite');
+  const { createGuessPlaceHubsQueries } = require('../db/sqlite/v1/queries/guessPlaceHubsQueries');
+  const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
+  const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
+  const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
+  const { TopicHubGapAnalyzer } = require('../services/TopicHubGapAnalyzer');
+  const HubValidator = require('../hub-validation/HubValidator');
+  
+  const db = ensureDb(dbPath);
+  const newsDb = createSQLiteDatabase(dbPath);
+  const queries = createGuessPlaceHubsQueries(db);
+  
+  const analyzers = {
+    country: new CountryHubGapAnalyzer({ db, logger }),
+    region: new RegionHubGapAnalyzer({ db, logger }),
+    city: new CityHubGapAnalyzer({ db, logger }),
+    topic: new TopicHubGapAnalyzer({ db, logger })
+  };
+  
+  const validator = new HubValidator(db);
+  const fetchFn = typeof legacyDeps.fetchFn === 'function'
+    ? legacyDeps.fetchFn
+    : async (...fetchArgs) => {
+        const { default: fetch } = await import('node-fetch');
+        return fetch(...fetchArgs);
       };
+  const now = legacyDeps.now || (() => new Date());
+  
+  const deps = {
+    db,
+    newsDb,
+    logger,
+    fetchFn,
+    now,
+    queries,
+    analyzers,
+    validator,
+    stores: {
+      candidates: null, // Not needed for basic functionality
+      fetchRecorder: null // Not needed for basic functionality
     }
-
-    if (Array.isArray(source.diffPreview.inserted)) {
-      for (const inserted of source.diffPreview.inserted) {
-        if (!inserted || typeof inserted !== 'object') continue;
-        target.diffPreview.inserted.push({
-          ...inserted,
-          domain: inserted.domain || entry?.domain || source.domain || null
-        });
-      }
-    }
-
-    if (Array.isArray(source.diffPreview.updated)) {
-      for (const updated of source.diffPreview.updated) {
-        if (!updated || typeof updated !== 'object') continue;
-        const cloned = {
-          ...updated,
-          domain: updated.domain || entry?.domain || source.domain || null
-        };
-        if (Array.isArray(updated.changes)) {
-          cloned.changes = updated.changes.map((change) => ({ ...change }));
-        }
-        target.diffPreview.updated.push(cloned);
-      }
-    }
+  };
+  
+  // Map options to new format
+  const orchestrationOptions = {
+    domain: options.domain,
+    scheme: options.scheme || 'https',
+    kinds: options.kinds || ['country'],
+    limit: options.limit,
+    patternsPerPlace: options.patternsPerPlace || 3,
+    apply: options.apply || false,
+    maxAgeDays: options.maxAgeDays !== undefined ? options.maxAgeDays : 7,
+    refresh404Days: options.refresh404Days !== undefined ? options.refresh404Days : 180,
+    retry4xxDays: options.retry4xxDays !== undefined ? options.retry4xxDays : 7,
+    verbose: options.verbose || false,
+    readinessTimeoutMs: options.readinessTimeoutMs
+  };
+  
+  // Call new orchestration function
+  try {
+    return await guessPlaceHubsForDomain(orchestrationOptions, deps);
+  } finally {
+    // Close database connections to avoid EBUSY errors in tests
+    try { if (deps.db && typeof deps.db.close === 'function') deps.db.close(); } catch (_) {}
+    try { if (deps.newsDb && typeof deps.newsDb.close === 'function') deps.newsDb.close(); } catch (_) {}
   }
-
-  if (source.validationFailureReasons && typeof source.validationFailureReasons === 'object') {
-    if (!target.validationFailureReasons || typeof target.validationFailureReasons !== 'object') {
-      target.validationFailureReasons = {};
-    }
-    for (const [reason, count] of Object.entries(source.validationFailureReasons)) {
-      if (reason) {
-        const numericCount = Number(count) || 0;
-        target.validationFailureReasons[reason] = (target.validationFailureReasons[reason] || 0) + numericCount;
-      }
-    }
-  }
-}
-
-function snapshotDiffPreview(diffPreview) {
-  const inserted = Array.isArray(diffPreview?.inserted)
-    ? diffPreview.inserted.map((item) => (item && typeof item === 'object' ? { ...item } : item))
-    : [];
-  const updated = Array.isArray(diffPreview?.updated)
-    ? diffPreview.updated.map((item) => {
-        if (!item || typeof item !== 'object') {
-          return item;
-        }
-        const cloned = { ...item };
-        if (Array.isArray(item.changes)) {
-          cloned.changes = item.changes.map((change) => (change && typeof change === 'object' ? { ...change } : change));
-        }
-        return cloned;
-      })
-    : [];
-
-  return {
-    insertedCount: inserted.length,
-    updatedCount: updated.length,
-    totalChanges: inserted.length + updated.length,
-    inserted,
-    updated
-  };
-}
-
-function buildJsonSummary(summary, options = {}, logEntries = []) {
-  const totals = SUMMARY_NUMERIC_FIELDS.reduce((acc, field) => {
-    acc[field] = summary && summary[field] != null ? summary[field] : 0;
-    return acc;
-  }, {});
-
-  const diffSnapshot = snapshotDiffPreview(summary?.diffPreview || {});
-
-  const cloneFailureReasons = (source) => {
-    if (!source || typeof source !== 'object') {
-      return {};
-    }
-    const cloned = {};
-    for (const [reason, count] of Object.entries(source)) {
-      if (!reason) continue;
-      const numeric = Number(count);
-      cloned[reason] = Number.isFinite(numeric) ? numeric : 0;
-    }
-    return cloned;
-  };
-
-  const deriveCandidateMetrics = (numericMetrics = {}, summarySource = {}) => ({
-    generated: numericMetrics.totalUrls ?? 0,
-    cachedHits: numericMetrics.cached ?? 0,
-    cachedKnown404: summarySource.skipped ?? numericMetrics.skipped ?? 0,
-    cachedRecent4xx: numericMetrics.skippedRecent4xx ?? 0,
-    duplicates: numericMetrics.skippedDuplicatePlace ?? 0,
-    stored404: numericMetrics.stored404 ?? 0,
-    fetchedOk: numericMetrics.fetched ?? 0,
-    validationPassed: summarySource.validationSucceeded ?? numericMetrics.validationSucceeded ?? 0,
-    validationFailed: summarySource.validationFailed ?? numericMetrics.validationFailed ?? 0,
-    rateLimited: numericMetrics.rateLimited ?? 0,
-    persistedInserts: numericMetrics.insertedHubs ?? 0,
-    persistedUpdates: numericMetrics.updatedHubs ?? 0,
-    errors: numericMetrics.errors ?? 0
-  });
-
-  const domainSummaries = Array.isArray(summary?.domainSummaries)
-    ? summary.domainSummaries.map((entry) => {
-        const domainSummary = entry?.summary || {};
-        const domainDiff = snapshotDiffPreview(entry?.diffPreview || domainSummary?.diffPreview || {});
-        const metrics = SUMMARY_NUMERIC_FIELDS.reduce((acc, field) => {
-          acc[field] = domainSummary[field] != null ? domainSummary[field] : 0;
-          return acc;
-        }, {});
-        const statusValue = entry?.determination
-          || entry?.readiness?.status
-          || (entry?.error ? 'error' : 'processed');
-        const validationSummary = {
-          passed: domainSummary.validationSucceeded ?? metrics.validationSucceeded ?? 0,
-          failed: domainSummary.validationFailed ?? metrics.validationFailed ?? 0,
-          failureReasons: cloneFailureReasons(domainSummary.validationFailureReasons)
-        };
-        const candidateMetrics = deriveCandidateMetrics(metrics, domainSummary);
-        const timing = {
-          startedAt: domainSummary.startedAt || null,
-          completedAt: domainSummary.completedAt || null,
-          durationMs: Number.isFinite(domainSummary.durationMs) ? domainSummary.durationMs : null
-        };
-
-        return {
-          index: entry?.index ?? null,
-          domain: entry?.domain ?? null,
-          scheme: entry?.scheme ?? null,
-          base: entry?.base ?? null,
-          kinds: Array.isArray(entry?.kinds) ? [...entry.kinds] : [],
-          limit: entry?.limit ?? null,
-          sources: Array.isArray(entry?.sources) ? [...entry.sources] : [],
-          status: statusValue,
-          determination: entry?.determination || null,
-          determinationReason: entry?.determinationReason || null,
-          readiness: entry?.readiness || null,
-          readinessProbe: entry?.readinessProbe || null,
-          latestDetermination: entry?.latestDetermination || null,
-          recommendations: Array.isArray(entry?.recommendations) ? [...entry.recommendations] : [],
-          diffPreview: domainDiff,
-          metrics,
-          candidateMetrics,
-          validationSummary,
-          timing,
-          error: entry?.error || null
-        };
-      })
-    : [];
-
-  const logs = Array.isArray(logEntries)
-    ? logEntries.map((entry) => ({ level: entry.level || 'info', message: entry.message || '' }))
-    : [];
-
-  const reportDirectory = options?.reportDirectory
-    || (options?.reportPath ? path.dirname(options.reportPath) : null);
-
-  const validationSummary = {
-    passed: summary?.validationSucceeded ?? totals.validationSucceeded ?? 0,
-    failed: summary?.validationFailed ?? totals.validationFailed ?? 0,
-    failureReasons: cloneFailureReasons(summary?.validationFailureReasons)
-  };
-
-  const candidateMetrics = deriveCandidateMetrics(totals, summary || {});
-
-  const auditCounts = summary?.auditCounts || null;
-
-  return {
-    version: 1,
-    generatedAt: new Date().toISOString(),
-    domain: summary?.domain ?? null,
-    run: {
-      startedAt: summary?.startedAt || null,
-      completedAt: summary?.completedAt || null,
-      durationMs: Number.isFinite(summary?.durationMs) ? summary.durationMs : null,
-      runId: summary?.runId || null
-    },
-    batch: {
-      totalDomains: summary?.batch?.totalDomains ?? null,
-      processedDomains: summary?.batch?.processedDomains ?? null,
-      truncatedDecisionCount: summary?.batch?.truncatedDecisionCount ?? 0
-    },
-    totals,
-    diffPreview: diffSnapshot,
-    candidateMetrics,
-    validationSummary,
-    auditCounts,
-    unsupportedKinds: Array.isArray(summary?.unsupportedKinds) ? [...summary.unsupportedKinds] : [],
-    options: {
-      scheme: options?.scheme || 'https',
-      kinds: Array.isArray(options?.kinds) ? [...options.kinds] : [],
-      limit: options?.limit ?? null,
-      patternsPerPlace: options?.patternsPerPlace ?? null,
-      apply: Boolean(options?.apply),
-      dryRun: Boolean(options?.dryRun),
-      maxAgeDays: options?.maxAgeDays ?? null,
-      refresh404Days: options?.refresh404Days ?? null,
-      retry4xxDays: options?.retry4xxDays ?? null,
-      readinessTimeoutSeconds: options?.readinessTimeoutSeconds ?? null,
-      domainBatchSize: Array.isArray(options?.domainBatch) ? options.domainBatch.length : null,
-      emitReport: Boolean(options?.emitReport),
-      reportPath: options?.reportPath || null,
-      reportDirectory
-    },
-    domainInputs: options?.domainInputs || null,
-    domainSummaries,
-    decisions: Array.isArray(summary?.decisions)
-      ? summary.decisions.map((decision) => (decision && typeof decision === 'object' ? { ...decision } : decision))
-      : [],
-    logs,
-    report: {
-      requested: Boolean(options?.emitReport),
-      targetPath: options?.reportPath || null,
-      directory: reportDirectory,
-      written: false
-    }
-  };
 }
 
 function writeReportFile(payload, options = {}) {
@@ -1451,7 +716,7 @@ function renderSummary(summary, options, logBuffer = [], extras = {}) {
 }
 
 async function main(argv) {
-  const options = parseCliArgs(argv);
+  const options = ArgumentNormalizer.parseCliArgs(argv);
 
   const domainBatch = Array.isArray(options.domainBatch) ? options.domainBatch : [];
   if (domainBatch.length === 0) {
@@ -1567,12 +832,14 @@ if (require.main === module) {
 }
 
 module.exports = {
-  parseCliArgs,
+  guessPlaceHubs,
+  parseCliArgs: ArgumentNormalizer.parseCliArgs,
   resolveDbPath,
   normalizeDomain,
   extractTitle,
-  buildDomainBatchInputs,
-  parseDomainImportFile,
-  buildJsonSummary,
-  writeReportFile
+  buildDomainBatchInputs: BatchLoader.buildDomainBatchInputs,
+  parseDomainImportFile: BatchLoader.parseDomainImportFile,
+  buildJsonSummary: ReportWriter.buildJsonSummary,
+  writeReportFile,
+  renderSummary
 };
