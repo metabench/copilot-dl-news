@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This audit examines the codebase for duplication, poor separation of concerns, and opportunities for modularisation. The analysis identifies **7 major refactoring candidates** with recommendations prioritized by impact and feasibility.
+This audit examines the codebase for duplication, poor separation of concerns, and opportunities for modularisation. The analysis identifies **8 major refactoring candidates** with recommendations prioritized by impact and feasibility. These findings anchor the next wave of refactors tracked in `CHANGE_PLAN.md`.
 
 **Audit Scope:**
 - Services (`src/services/`)
@@ -12,6 +12,26 @@ This audit examines the codebase for duplication, poor separation of concerns, a
 - Database helpers
 - Compression infrastructure
 - Hub analysis & validation
+
+## Methodology Snapshot
+
+- **Static analysis:** manual review of 150+ files focusing on large classes (>150 lines), repeated helper patterns, and ad-hoc utilities.
+- **Search heuristics:** `grep_search` for repeated snippets (`parseCliArgs`, compression presets, slug regexes).
+- **Cross-reference:** compared CLI tools with docs in `AGENTS.md`, `CHANGE_PLAN*.md`, and prior refactor notes to avoid duplicating solved problems.
+- **Status validation:** spot-checked refactors already landed (hub gap analyzers) to ensure audit only lists active opportunities.
+
+## Opportunity Heatmap
+
+| # | Area | Priority | Estimated Effort | Payoff | Status |
+|---|------|----------|------------------|--------|--------|
+| 1 | Hub Gap Analyzer hierarchy | ✅ Done | High (historic) | High | Completed |
+| 2 | Compression utilities | 🔴 High | Medium | High | In progress (facade adoption underway) |
+| 3 | Hub analysis toolkit | 🔴 High | Medium-High | High | Active candidate |
+| 4 | CLI argument parsing | 🟡 Medium | Low | Medium | Active candidate |
+| 5 | Content download + cache | 🟡 Medium | Low-Medium | Medium | Bundled with #3 |
+| 6 | Database query helpers | 🟢 Low | Medium | Low | Future consideration |
+| 7 | Slug generation | 🟢 Low | Trivial | Low | Quick win |
+| 8 | Page analysis detectors | 🟡 Medium | High | High | Dependent on #2 & #3 |
 
 ---
 
@@ -76,35 +96,24 @@ This audit examines the codebase for duplication, poor separation of concerns, a
 ### Pattern: Multiple Compression Interfaces
 
 **Files:**
-- `src/utils/compression.js` (314 lines) — Main compression API
-- `src/utils/articleCompression.js` (150+ lines) — Article-specific wrapper
-- `src/config/compression.js` (100+ lines) — Configuration helpers
-- `src/utils/compressionBuckets.js` (150+ lines) — Bucket lifecycle management
-- `src/utils/CompressionAnalytics.js` — Telemetry around compression
+- `src/utils/compression.js` (314 lines) — Legacy compression API retained for compatibility; scheduled to become a thin shim once straggler imports are gone
+- `src/utils/CompressionFacade.js` (240 lines) — New unified interface (primary entry point as of Oct 30, 2025)
+- `src/utils/articleCompression.js` (150+ lines) — Uses facade but retains legacy fallback switches
+- `src/config/compression.js` (100+ lines) — Configuration helpers with duplicated presets
+- `src/utils/compressionBuckets.js` (150+ lines) — Uses facade
+- `src/utils/CompressionAnalytics.js` — Telemetry around compression ratios
+- Background tasks (`CompressionTask`, `CompressionLifecycleTask`, `decompressionWorker`) — migrated to the facade (Oct 30, 2025) but legacy export remains for backwards compatibility
 
 ### Duplication Details
 
 **Repeated Concerns:**
-1. **Compression algorithm selection:**
-   - `compression.js` has `switch(algorithm)` for gzip/brotli/zstd/none
-   - `articleCompression.js` wraps this with article-specific defaults
-   - `compressionBuckets.js` replicates algorithm selection for bucket transitions
+1. **Dual entry points:** both `compression.js` and `CompressionFacade.js` export overlapping APIs. Some modules call facade (article compression, buckets) while others (background tasks, SQLite wrappers) call legacy helpers, so maintenance touches two layers.
 
-2. **Level/quality normalization:**
-   ```javascript
-   level = Math.max(1, Math.min(9, level))  // Clamping logic
-   ```
-   Appears in multiple files without centralization.
+2. **Level/quality normalization drift:** facade clamps levels, but legacy callers still pass raw levels to `compression.js`, duplicating clamping logic and risking divergence (e.g., windowBits/blockBits only handled in facade).
 
-3. **Statistics collection:**
-   - `compression.js` returns `{ compressed, uncompressedSize, compressedSize, ratio, sha256 }`
-   - `CompressionAnalytics.js` duplicates ratio calculations and adds analytics overhead
-   - `compressionBuckets.js` recalculates stats per transition
+3. **Stats calculation spread:** facade enriches stats with timestamps, while direct consumers of `compression.js` manually compute ratios for telemetry. `CompressionAnalytics.js` recomputes metrics because inputs differ between APIs.
 
-4. **Configuration defaults:**
-   - `config/compression.js` defines BROTLI_6 defaults
-   - `articleCompression.js` hard-codes BROTLI_6 as default
-   - `compressionBuckets.js` has its own defaults
+4. **Configuration defaults duplication:** presets live in `CompressionFacade` and `config/compression.js`, while background tasks hard-code fallbacks (e.g., `'brotli_6'` literal) instead of using shared presets.
 
 ### Metrics
 
@@ -121,23 +130,25 @@ Compression infrastructure evolved incrementally without a unified facade. Each 
 
 ### Recommended Solution: **Unified Compression Facade**
 
-**Refactoring Approach:**
-1. Create `src/utils/CompressionFacade.js` (or rename `compression.js` and extend it):
-   - Centralize algorithm validation and level normalization
-   - Provide preset constants: `PRESETS = { BROTLI_6, BROTLI_11, GZIP_9, NONE }`
-   - Export standard stats object shape
+**Refactoring Approach (Implementation Checklist):**
+1. Introduce `src/utils/CompressionFacade.js` exporting a cohesive API:
+   - `createCompressionContext(preset | options)` — resolves algorithm + normalized level
+   - `compressBuffer(context, buffer)` — returns `{ compressed, stats }`
+   - `decompressBuffer(context, buffer)` — shared error handling
+   - Embed preset constants: `PRESETS = { BROTLI_6, BROTLI_11, GZIP_9, NONE }`
 
-2. Refactor `articleCompression.js`:
-   - Remove algorithm/level validation; delegate to facade
-   - Becomes a thin wrapper around article-specific defaults and telemetry
+2. Update consumers to delegate:
+   - `articleCompression.js` becomes a thin adapter composing presets + telemetry
+   - `compressionBuckets.js` calls the facade for tier transitions and ratio reporting
+   - `CompressionAnalytics.js` reads unified stats instead of recomputing ratios
 
-3. Refactor `compressionBuckets.js`:
-   - Use facade for algorithm transitions
-   - Remove duplicate stats calculations
+3. Centralize configuration values:
+   - Move hard-coded defaults to `config/compression.js`
+   - Facade imports config; other modules import facade
 
-4. Consolidate config in `config/compression.js`:
-   - Single source for BROTLI_6, GZIP_9 presets
-   - Used by facade, articles, and buckets
+4. Guard backwards compatibility:
+   - Keep existing `require('../utils/compression')` entry point by re-exporting facade functions
+   - Provide migration shim (`module.exports = new CompressionFacade()`) while updating call sites batch-by-batch
 
 **Impact:**
 - **Lines removed:** ~150 (duplicate validation/stats code)
@@ -147,6 +158,13 @@ Compression infrastructure evolved incrementally without a unified facade. Each 
 **Risks:**
 - May expose areas where compression config is tightly coupled to crawl/article logic
 - Mitigate with focused unit tests on facade
+
+### Progress Snapshot (Oct 30, 2025)
+- ✅ `COMPRESSION_PRESETS` exported from `src/config/compression.js` and consumed by `CompressionFacade` — removes duplicate constant maps.
+- ✅ `CompressionFacade` now re-exports `compressAndStore`, `retrieveAndDecompress`, and `selectCompressionType`, enabling tools/background tasks to drop direct `compression.js` imports.
+- ✅ All runtime consumers (background tasks, SQLite adapters, worker scripts, CLI tools, tests) now require `CompressionFacade` instead of `compression.js`.
+- ✅ Compression schema aligned: `compression_buckets` exposes `bucket_type`, `domain_pattern`, binary payload, and JSON index columns with defensive ALTERs for legacy snapshots.
+- ⏳ Remaining: collapse `compression.js` into a thin shim (or new core module) so facade is the sole public interface; ensure documentation fully reflects the new entry point.
 
 ---
 

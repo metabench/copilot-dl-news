@@ -6,7 +6,7 @@
  * Tracks progress, handles errors, and supports pause/resume.
  */
 
-const { compressAndStore } = require('../../utils/compression');
+const { compressAndStore, getCompressionType } = require('../../utils/CompressionFacade');
 const { tof } = require('lang-tools');
 
 /**

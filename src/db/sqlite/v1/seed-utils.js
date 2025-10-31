@@ -1,5 +1,3 @@
-const NewsDatabase = require('./SQLiteNewsDatabase');
-
 function getCounts(db) {
     try {
         const places = db.prepare('SELECT COUNT(*) as count FROM places').get().count;

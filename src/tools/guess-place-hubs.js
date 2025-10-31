@@ -2,33 +2,24 @@
 
 'use strict';
 
+/**
+ * Place Hub Guessing CLI Tool
+ * 
+ * Thin wrapper around orchestration layer for place hub discovery.
+ * Handles: CLI argument parsing, output formatting, progress display.
+ * Contains NO business logic - delegates to orchestration layer.
+ */
+
 const path = require('path');
 const fs = require('fs');
 const { findProjectRoot } = require('../utils/project-root');
-const { ensureDb } = require('../db/sqlite/ensureDb');
-const { createSQLiteDatabase } = require('../db/sqlite');
-const { createPlaceHubCandidatesStore } = require('../db/placeHubCandidatesStore');
-const { createGuessPlaceHubsQueries } = require('../db/sqlite/v1/queries/guessPlaceHubsQueries');
-const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
-const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
-const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
-const HubValidator = require('../hub-validation/HubValidator');
-const { slugify } = require('./slugify');
 const { CliFormatter } = require('../utils/CliFormatter');
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
-const { createFetchRecorder } = require('../utils/fetch/fetchRecorder');
-
-const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const { guessPlaceHubsBatch } = require('../orchestration/placeHubGuessing');
+const { createPlaceHubDependencies } = require('../orchestration/dependencies');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function defaultLogger() {
-  return {
-    info: console.log.bind(console),
-    warn: console.warn.bind(console),
-    error: console.error.bind(console)
-  };
-}
 
 function parseCsv(value) {
   if (!value) return [];
@@ -38,10 +29,420 @@ function parseCsv(value) {
     .filter(Boolean);
 }
 
+function collectFlagValues(argv, flag) {
+  if (!Array.isArray(argv) || argv.length === 0 || !flag) {
+    return [];
+  }
+
+  const results = [];
+  const flagWithEquals = `${flag}=`;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (token === flag) {
+      const next = argv[index + 1];
+      if (typeof next === 'string' && !next.startsWith('-')) {
+        results.push(next);
+        index += 1;
+      }
+      continue;
+    }
+
+    if (token.startsWith(flagWithEquals)) {
+      const value = token.slice(flagWithEquals.length);
+      if (value) {
+        results.push(value);
+      }
+    }
+  }
+
+  return results;
+}
+
+function splitCsvLine(line) {
+  if (typeof line !== 'string' || line.length === 0) {
+    return [];
+  }
+
+  const segments = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      segments.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  segments.push(current.trim());
+  return segments.map((segment) => segment.trim());
+}
+
+function parseDomainImportFile(importPath) {
+  if (!importPath) {
+    return [];
+  }
+
+  const resolvedPath = path.isAbsolute(importPath)
+    ? importPath
+    : path.join(process.cwd(), importPath);
+
+  let contents;
+  try {
+    contents = fs.readFileSync(resolvedPath, 'utf8');
+  } catch (error) {
+    throw Object.assign(new Error(`Failed to read domain import file at ${resolvedPath}: ${error.message || error}`), {
+      cause: error
+    });
+  }
+
+  const lines = contents
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+
+  if (!lines.length) {
+    return [];
+  }
+
+  const headerFields = splitCsvLine(lines[0]).map((field) => field.toLowerCase());
+  const hasHeader = headerFields.includes('domain');
+  const headers = hasHeader ? headerFields : null;
+  const startIndex = hasHeader ? 1 : 0;
+
+  const resolveField = (fields, name, fallbackIndex) => {
+    if (headers) {
+      const headerIndex = headers.indexOf(name);
+      if (headerIndex !== -1 && fields[headerIndex] != null) {
+        return fields[headerIndex].trim();
+      }
+    }
+    if (typeof fallbackIndex === 'number' && fallbackIndex < fields.length) {
+      return fields[fallbackIndex].trim();
+    }
+    return '';
+  };
+
+  const entries = [];
+
+  for (let idx = startIndex; idx < lines.length; idx += 1) {
+    const line = lines[idx];
+    if (!line) continue;
+    const fields = splitCsvLine(line);
+    if (!fields.length) continue;
+
+    const domainValue = resolveField(fields, 'domain', 0);
+    if (!domainValue) continue;
+
+    const kindsValue = resolveField(fields, 'kinds', 1);
+    const limitValue = resolveField(fields, 'limit', 2);
+
+    let kinds = parseCsv(kindsValue);
+    if (!kinds.length) {
+      kinds = null;
+    }
+
+    const parsedLimit = Number.parseInt(limitValue, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : null;
+
+    entries.push({
+      domain: domainValue,
+      kinds,
+      limit,
+      raw: line,
+      rowNumber: idx + 1,
+      source: resolvedPath
+    });
+  }
+
+  return entries;
+}
+
+function buildDomainBatchInputs({
+  repeatedDomains = [],
+  positionalDomains = [],
+  csvDomains = [],
+  importedDomains = [],
+  envDomain = null,
+  defaultKinds = [],
+  defaultLimit = null,
+  scheme = 'https'
+}) {
+  const entryMap = new Map();
+  const order = [];
+
+  const upsert = (rawValue, origin, overrides = {}) => {
+    if (!rawValue) return;
+    const trimmed = String(rawValue).trim();
+    if (!trimmed) return;
+
+    const normalized = normalizeDomain(trimmed, scheme);
+    const host = normalized?.host || trimmed.toLowerCase();
+    if (!host) return;
+
+    const sourceTag = origin || 'unknown';
+    const kindsOverride = Array.isArray(overrides.kinds) && overrides.kinds.length ? overrides.kinds : null;
+    const limitOverride = Number.isFinite(overrides.limit) ? overrides.limit : null;
+
+    if (entryMap.has(host)) {
+      const existing = entryMap.get(host);
+      existing.sources.add(sourceTag);
+      if (!existing.raw) existing.raw = trimmed;
+      if (normalized?.scheme && !existing.schemeFromInput) {
+        existing.schemeFromInput = normalized.scheme;
+      }
+      if (kindsOverride) {
+        existing.kinds = kindsOverride;
+      }
+      if (limitOverride != null) {
+        existing.limit = limitOverride;
+      }
+      return;
+    }
+
+    entryMap.set(host, {
+      raw: trimmed,
+      domain: host,
+      schemeFromInput: normalized?.scheme || null,
+      sources: new Set([sourceTag]),
+      kinds: kindsOverride,
+      limit: limitOverride
+    });
+    order.push(host);
+  };
+
+  for (const value of repeatedDomains) {
+    upsert(value, '--domain');
+  }
+
+  for (const value of positionalDomains) {
+    upsert(value, 'positional');
+  }
+
+  for (const value of csvDomains) {
+    upsert(value, '--domains');
+  }
+
+  for (const item of importedDomains) {
+    if (!item) continue;
+    upsert(item.domain, '--import', { kinds: item.kinds || null, limit: item.limit ?? null });
+  }
+
+  if (!entryMap.size && envDomain) {
+    upsert(envDomain, 'env');
+  }
+
+  return order.map((host) => {
+    const entry = entryMap.get(host);
+    const resolvedKinds = entry.kinds && entry.kinds.length ? entry.kinds : defaultKinds;
+    const effectiveKinds = Array.isArray(resolvedKinds) ? [...resolvedKinds] : [];
+    const effectiveLimit = entry.limit != null ? entry.limit : defaultLimit;
+    const selectedScheme = entry.schemeFromInput || scheme;
+
+    return {
+      raw: entry.raw,
+      domain: host,
+      scheme: selectedScheme,
+      base: `${selectedScheme}://${host}`,
+      kinds: effectiveKinds,
+      kindsOverride: entry.kinds || null,
+      limit: effectiveLimit,
+      limitOverride: entry.limit,
+      sources: Array.from(entry.sources)
+    };
+  });
+}
+
+const DSPL_KIND_PROPERTY_MAP = Object.freeze({
+  country: 'countryHubPatterns',
+  region: 'regionHubPatterns',
+  city: 'cityHubPatterns'
+});
+
+function resolveReportOutput({ requested = false, explicitPath = null, reportDir = null }) {
+  if (!requested) {
+    return {
+      requested: false,
+      path: null,
+      directory: null
+    };
+  }
+
+  const projectRoot = findProjectRoot(__dirname);
+  const cwd = process.cwd();
+  const normalizedReportDir = reportDir && typeof reportDir === 'string' && reportDir.trim().length
+    ? (path.isAbsolute(reportDir) ? reportDir.trim() : path.resolve(cwd, reportDir.trim()))
+    : path.join(projectRoot, 'place-hub-reports');
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const defaultFile = `guess-place-hubs-${timestamp}.json`;
+
+  let targetDir = normalizedReportDir;
+  let targetPath = null;
+
+  const resolveCandidate = (candidate) => {
+    if (!candidate || typeof candidate !== 'string') {
+      return null;
+    }
+    const trimmed = candidate.trim();
+    if (!trimmed) {
+      return null;
+    }
+    return path.isAbsolute(trimmed) ? trimmed : path.resolve(cwd, trimmed);
+  };
+
+  const explicitResolved = resolveCandidate(explicitPath);
+
+  if (explicitResolved) {
+    let stats = null;
+    try {
+      stats = fs.statSync(explicitResolved);
+    } catch (_) {
+      stats = null;
+    }
+
+    if (stats?.isDirectory?.()) {
+      targetDir = explicitResolved;
+    } else if (stats?.isFile?.()) {
+      targetDir = path.dirname(explicitResolved);
+      targetPath = explicitResolved;
+    } else {
+      const endsWithSep = /[\\/]+$/.test(explicitResolved);
+      if (endsWithSep) {
+        targetDir = explicitResolved.replace(/[\\/]+$/, '') || normalizedReportDir;
+      } else {
+        const ext = path.extname(explicitResolved);
+        if (ext) {
+          targetDir = path.dirname(explicitResolved);
+          targetPath = explicitResolved;
+        } else {
+          targetDir = explicitResolved;
+        }
+      }
+    }
+  }
+
+  if (!targetDir) {
+    targetDir = normalizedReportDir;
+  }
+
+  if (!targetPath) {
+    targetPath = path.join(targetDir, defaultFile);
+  }
+
+  return {
+    requested: true,
+    path: targetPath,
+    directory: targetDir
+  };
+}
+
+function collectHubChanges(existingHub, nextSnapshot) {
+  if (!existingHub || !nextSnapshot) {
+    return [];
+  }
+
+  const descriptors = [
+    { label: 'Place slug', nextKey: 'placeSlug', existingKey: 'place_slug' },
+    { label: 'Place kind', nextKey: 'placeKind', existingKey: 'place_kind' },
+    { label: 'Title', nextKey: 'title', existingKey: 'title' },
+    { label: 'Nav links', nextKey: 'navLinksCount', existingKey: 'nav_links_count' },
+    { label: 'Article links', nextKey: 'articleLinksCount', existingKey: 'article_links_count' }
+  ];
+
+  const changes = [];
+  for (const descriptor of descriptors) {
+    const after = nextSnapshot[descriptor.nextKey];
+    if (after === undefined || after === null) {
+      continue;
+    }
+    const before = existingHub[descriptor.existingKey];
+    const normalizedBefore = before === undefined ? null : before;
+    const normalizedAfter = after;
+    if (normalizedBefore === normalizedAfter) {
+      continue;
+    }
+    if (typeof normalizedBefore === 'number' && typeof normalizedAfter === 'number' && Number.isFinite(normalizedBefore) && Number.isFinite(normalizedAfter)) {
+      if (normalizedBefore === normalizedAfter) {
+        continue;
+      }
+    }
+    changes.push({
+      field: descriptor.label,
+      before: normalizedBefore === undefined ? null : normalizedBefore,
+      after: normalizedAfter
+    });
+  }
+
+  return changes;
+}
+
+function summarizeDsplPatterns(dsplEntry, kinds) {
+  const normalizedKinds = (Array.isArray(kinds) && kinds.length ? kinds : ['country'])
+    .map((kind) => String(kind).toLowerCase());
+
+  const summary = {
+    available: Boolean(dsplEntry),
+    requestedKinds: normalizedKinds,
+    verifiedKinds: [],
+    totalPatterns: 0,
+    verifiedPatternCount: 0,
+    byKind: {}
+  };
+
+  if (!dsplEntry) {
+    return summary;
+  }
+
+  for (const kind of normalizedKinds) {
+    const property = DSPL_KIND_PROPERTY_MAP[kind] || `${kind}HubPatterns`;
+    const patterns = Array.isArray(dsplEntry[property]) ? dsplEntry[property] : [];
+    const verifiedPatterns = patterns.filter((pattern) => pattern && pattern.verified !== false);
+
+    summary.byKind[kind] = {
+      total: patterns.length,
+      verified: verifiedPatterns.length
+    };
+
+    summary.totalPatterns += patterns.length;
+    summary.verifiedPatternCount += verifiedPatterns.length;
+
+    if (verifiedPatterns.length) {
+      summary.verifiedKinds.push(kind);
+    }
+  }
+
+  return summary;
+}
+
+
 function parseCliArgs(argv) {
+  const rawArgv = Array.isArray(argv) ? [...argv] : process.argv.slice(2);
   const parser = new CliArgumentParser('guess-place-hubs', 'Predict candidate place hubs and verify them');
 
-  parser.add('--domain <domain>', 'Domain or host to inspect (positional arg supported)', null);
+  parser.add('--domain <domain>', 'Domain or host to inspect (repeatable; positional args supported)', [], (value, previous) => {
+    const acc = Array.isArray(previous) ? previous.slice() : [];
+    acc.push(value);
+    return acc;
+  });
+  parser.add('--domains <csv>', 'Comma-separated list of domains to inspect (batch mode)', null);
+  parser.add('--import <file>', 'CSV file of domains (columns: domain,kinds,limit)', null);
   parser.add('--db <path>', 'Path to SQLite database (defaults to data/news.db)', null);
   parser.add('--db-path <path>', 'Alias for --db', null);
   parser.add('--kinds <csv>', 'Place kinds to consider (country, region, city)', 'country');
@@ -55,15 +456,12 @@ function parseCliArgs(argv) {
   parser.add('--verbose', 'Enable verbose logging', false, 'boolean');
   parser.add('--http', 'Use http scheme instead of https', false, 'boolean');
   parser.add('--scheme <scheme>', 'Override URL scheme (http or https)', 'https');
+  parser.add('--readiness-timeout <seconds>', 'Maximum seconds allotted to readiness probes (0 = unlimited, default 10)', 10, 'number');
   parser.add('--json', 'Emit JSON summary output', false, 'boolean');
+  parser.add('--emit-report [path]', 'Write detailed JSON report to disk (optional path or directory)', null);
+  parser.add('--report-dir <path>', 'Directory used when --emit-report omits a filename', null);
 
-  const parsedArgs = parser.parse(Array.isArray(argv) ? argv : process.argv);
-
-  const positionalDomain = parsedArgs.positional && parsedArgs.positional.length > 0
-    ? parsedArgs.positional[0]
-    : null;
-
-  const domain = parsedArgs.domain || positionalDomain || process.env.GPH_DOMAIN || null;
+  const parsedArgs = parser.parse(rawArgv);
 
   const schemeInput = parsedArgs.http ? 'http' : (parsedArgs.scheme ? String(parsedArgs.scheme).toLowerCase() : 'https');
   const scheme = ['http', 'https'].includes(schemeInput) ? schemeInput : 'https';
@@ -86,16 +484,75 @@ function parseCliArgs(argv) {
   const retry4xxDays = Number.isFinite(parsedArgs.retry4xxDays)
     ? Math.max(0, parsedArgs.retry4xxDays)
     : 7;
+  const readinessTimeoutSeconds = Number.isFinite(parsedArgs.readinessTimeout)
+    ? Math.max(0, parsedArgs.readinessTimeout)
+    : 10;
+  const readinessTimeoutMs = readinessTimeoutSeconds > 0 ? readinessTimeoutSeconds * 1000 : null;
 
   let apply = parsedArgs.apply === true;
   if (parsedArgs.dryRun === true) {
     apply = false;
   }
 
+  const emitReportRaw = parsedArgs.emitReport;
+  const reportDirRaw = parsedArgs.reportDir;
+  const reportResolution = resolveReportOutput({
+    requested: emitReportRaw !== undefined && emitReportRaw !== null,
+    explicitPath: typeof emitReportRaw === 'string' ? emitReportRaw : null,
+    reportDir: reportDirRaw || null
+  });
+
   const dbPath = parsedArgs.dbPath || parsedArgs.db || null;
 
+  const positionalDomains = Array.isArray(parsedArgs.positional) ? parsedArgs.positional : [];
+  const domainFlags = Array.isArray(parsedArgs.domain) ? parsedArgs.domain : (parsedArgs.domain ? [parsedArgs.domain] : []);
+
+  const csvDomainArgs = collectFlagValues(rawArgv, '--domains');
+  if (parsedArgs.domains && !csvDomainArgs.includes(parsedArgs.domains)) {
+    csvDomainArgs.push(parsedArgs.domains);
+  }
+  const csvDomainList = csvDomainArgs.flatMap((value) => parseCsv(value));
+
+  const importFlagValues = collectFlagValues(rawArgv, '--import');
+  if (parsedArgs.import && !importFlagValues.includes(parsedArgs.import)) {
+    importFlagValues.push(parsedArgs.import);
+  }
+  const importedDomains = [];
+  for (const importCandidate of importFlagValues) {
+    if (!importCandidate) continue;
+    const entries = parseDomainImportFile(importCandidate);
+    if (entries.length) {
+      importedDomains.push(...entries);
+    }
+  }
+
+  const envDomain = process.env.GPH_DOMAIN || null;
+
+  const domainBatch = buildDomainBatchInputs({
+    repeatedDomains: domainFlags,
+    positionalDomains,
+    csvDomains: csvDomainList,
+    importedDomains,
+    envDomain,
+    defaultKinds: uniqueKinds,
+    defaultLimit: limit,
+    scheme
+  });
+
+  const primaryDomain = domainBatch.length ? domainBatch[0].domain : null;
+
   return {
-    domain,
+    domain: primaryDomain,
+    domains: domainBatch,
+    domainBatch,
+    domainInputs: {
+      repeated: domainFlags,
+      positional: positionalDomains,
+      csv: csvDomainList,
+      imported: importedDomains,
+      env: envDomain ? [envDomain] : []
+    },
+    importPaths: importFlagValues,
     dbPath,
     kinds: uniqueKinds,
     limit,
@@ -106,10 +563,335 @@ function parseCliArgs(argv) {
     retry4xxDays,
     verbose: Boolean(parsedArgs.verbose),
     scheme,
+    readinessTimeoutSeconds,
+    readinessTimeoutMs,
     json: Boolean(parsedArgs.json),
-    dryRun: !apply
+    dryRun: !apply,
+    emitReport: reportResolution.requested,
+    reportPath: reportResolution.path,
+    reportDirectory: reportResolution.directory
   };
 }
+
+const SUMMARY_NUMERIC_FIELDS = [
+  'totalPlaces',
+  'totalUrls',
+  'fetched',
+  'cached',
+  'skipped',
+  'skippedDuplicatePlace',
+  'skippedRecent4xx',
+  'stored404',
+  'insertedHubs',
+  'updatedHubs',
+  'errors',
+  'rateLimited',
+  'readinessTimedOut',
+  'validationSucceeded',
+  'validationFailed'
+];
+
+const MAX_DECISION_HISTORY = 200;
+
+
+function aggregateSummaryInto(target, source, entry) {
+  if (!target || !source) return;
+
+  for (const field of SUMMARY_NUMERIC_FIELDS) {
+    const value = Number(source[field]) || 0;
+    target[field] = (target[field] || 0) + value;
+  }
+
+  if (Array.isArray(source.unsupportedKinds) && source.unsupportedKinds.length) {
+    const merged = new Set(target.unsupportedKinds);
+    for (const kind of source.unsupportedKinds) {
+      if (kind) merged.add(kind);
+    }
+    target.unsupportedKinds = Array.from(merged);
+  }
+
+  if (Array.isArray(source.decisions) && source.decisions.length) {
+    for (const decision of source.decisions) {
+      if (decision && typeof decision === 'object') {
+        target.decisions.push({
+          ...decision,
+          domain: decision.domain || source.domain || entry?.domain || null
+        });
+      } else {
+        target.decisions.push(decision);
+      }
+    }
+  }
+
+  if (source.diffPreview && typeof source.diffPreview === 'object') {
+    if (!target.diffPreview || typeof target.diffPreview !== 'object') {
+      target.diffPreview = {
+        inserted: [],
+        updated: []
+      };
+    }
+
+    if (Array.isArray(source.diffPreview.inserted)) {
+      for (const inserted of source.diffPreview.inserted) {
+        if (!inserted || typeof inserted !== 'object') continue;
+        target.diffPreview.inserted.push({
+          ...inserted,
+          domain: inserted.domain || entry?.domain || source.domain || null
+        });
+      }
+    }
+
+    if (Array.isArray(source.diffPreview.updated)) {
+      for (const updated of source.diffPreview.updated) {
+        if (!updated || typeof updated !== 'object') continue;
+        const cloned = {
+          ...updated,
+          domain: updated.domain || entry?.domain || source.domain || null
+        };
+        if (Array.isArray(updated.changes)) {
+          cloned.changes = updated.changes.map((change) => ({ ...change }));
+        }
+        target.diffPreview.updated.push(cloned);
+      }
+    }
+  }
+
+  if (source.validationFailureReasons && typeof source.validationFailureReasons === 'object') {
+    if (!target.validationFailureReasons || typeof target.validationFailureReasons !== 'object') {
+      target.validationFailureReasons = {};
+    }
+    for (const [reason, count] of Object.entries(source.validationFailureReasons)) {
+      if (reason) {
+        const numericCount = Number(count) || 0;
+        target.validationFailureReasons[reason] = (target.validationFailureReasons[reason] || 0) + numericCount;
+      }
+    }
+  }
+}
+
+function snapshotDiffPreview(diffPreview) {
+  const inserted = Array.isArray(diffPreview?.inserted)
+    ? diffPreview.inserted.map((item) => (item && typeof item === 'object' ? { ...item } : item))
+    : [];
+  const updated = Array.isArray(diffPreview?.updated)
+    ? diffPreview.updated.map((item) => {
+        if (!item || typeof item !== 'object') {
+          return item;
+        }
+        const cloned = { ...item };
+        if (Array.isArray(item.changes)) {
+          cloned.changes = item.changes.map((change) => (change && typeof change === 'object' ? { ...change } : change));
+        }
+        return cloned;
+      })
+    : [];
+
+  return {
+    insertedCount: inserted.length,
+    updatedCount: updated.length,
+    totalChanges: inserted.length + updated.length,
+    inserted,
+    updated
+  };
+}
+
+function buildJsonSummary(summary, options = {}, logEntries = []) {
+  const totals = SUMMARY_NUMERIC_FIELDS.reduce((acc, field) => {
+    acc[field] = summary && summary[field] != null ? summary[field] : 0;
+    return acc;
+  }, {});
+
+  const diffSnapshot = snapshotDiffPreview(summary?.diffPreview || {});
+
+  const cloneFailureReasons = (source) => {
+    if (!source || typeof source !== 'object') {
+      return {};
+    }
+    const cloned = {};
+    for (const [reason, count] of Object.entries(source)) {
+      if (!reason) continue;
+      const numeric = Number(count);
+      cloned[reason] = Number.isFinite(numeric) ? numeric : 0;
+    }
+    return cloned;
+  };
+
+  const deriveCandidateMetrics = (numericMetrics = {}, summarySource = {}) => ({
+    generated: numericMetrics.totalUrls ?? 0,
+    cachedHits: numericMetrics.cached ?? 0,
+    cachedKnown404: summarySource.skipped ?? numericMetrics.skipped ?? 0,
+    cachedRecent4xx: numericMetrics.skippedRecent4xx ?? 0,
+    duplicates: numericMetrics.skippedDuplicatePlace ?? 0,
+    stored404: numericMetrics.stored404 ?? 0,
+    fetchedOk: numericMetrics.fetched ?? 0,
+    validationPassed: summarySource.validationSucceeded ?? numericMetrics.validationSucceeded ?? 0,
+    validationFailed: summarySource.validationFailed ?? numericMetrics.validationFailed ?? 0,
+    rateLimited: numericMetrics.rateLimited ?? 0,
+    persistedInserts: numericMetrics.insertedHubs ?? 0,
+    persistedUpdates: numericMetrics.updatedHubs ?? 0,
+    errors: numericMetrics.errors ?? 0
+  });
+
+  const domainSummaries = Array.isArray(summary?.domainSummaries)
+    ? summary.domainSummaries.map((entry) => {
+        const domainSummary = entry?.summary || {};
+        const domainDiff = snapshotDiffPreview(entry?.diffPreview || domainSummary?.diffPreview || {});
+        const metrics = SUMMARY_NUMERIC_FIELDS.reduce((acc, field) => {
+          acc[field] = domainSummary[field] != null ? domainSummary[field] : 0;
+          return acc;
+        }, {});
+        const statusValue = entry?.determination
+          || entry?.readiness?.status
+          || (entry?.error ? 'error' : 'processed');
+        const validationSummary = {
+          passed: domainSummary.validationSucceeded ?? metrics.validationSucceeded ?? 0,
+          failed: domainSummary.validationFailed ?? metrics.validationFailed ?? 0,
+          failureReasons: cloneFailureReasons(domainSummary.validationFailureReasons)
+        };
+        const candidateMetrics = deriveCandidateMetrics(metrics, domainSummary);
+        const timing = {
+          startedAt: domainSummary.startedAt || null,
+          completedAt: domainSummary.completedAt || null,
+          durationMs: Number.isFinite(domainSummary.durationMs) ? domainSummary.durationMs : null
+        };
+
+        return {
+          index: entry?.index ?? null,
+          domain: entry?.domain ?? null,
+          scheme: entry?.scheme ?? null,
+          base: entry?.base ?? null,
+          kinds: Array.isArray(entry?.kinds) ? [...entry.kinds] : [],
+          limit: entry?.limit ?? null,
+          sources: Array.isArray(entry?.sources) ? [...entry.sources] : [],
+          status: statusValue,
+          determination: entry?.determination || null,
+          determinationReason: entry?.determinationReason || null,
+          readiness: entry?.readiness || null,
+          readinessProbe: entry?.readinessProbe || null,
+          latestDetermination: entry?.latestDetermination || null,
+          recommendations: Array.isArray(entry?.recommendations) ? [...entry.recommendations] : [],
+          diffPreview: domainDiff,
+          metrics,
+          candidateMetrics,
+          validationSummary,
+          timing,
+          error: entry?.error || null
+        };
+      })
+    : [];
+
+  const logs = Array.isArray(logEntries)
+    ? logEntries.map((entry) => ({ level: entry.level || 'info', message: entry.message || '' }))
+    : [];
+
+  const reportDirectory = options?.reportDirectory
+    || (options?.reportPath ? path.dirname(options.reportPath) : null);
+
+  const validationSummary = {
+    passed: summary?.validationSucceeded ?? totals.validationSucceeded ?? 0,
+    failed: summary?.validationFailed ?? totals.validationFailed ?? 0,
+    failureReasons: cloneFailureReasons(summary?.validationFailureReasons)
+  };
+
+  const candidateMetrics = deriveCandidateMetrics(totals, summary || {});
+
+  return {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    domain: summary?.domain ?? null,
+    run: {
+      startedAt: summary?.startedAt || null,
+      completedAt: summary?.completedAt || null,
+      durationMs: Number.isFinite(summary?.durationMs) ? summary.durationMs : null
+    },
+    batch: {
+      totalDomains: summary?.batch?.totalDomains ?? null,
+      processedDomains: summary?.batch?.processedDomains ?? null,
+      truncatedDecisionCount: summary?.batch?.truncatedDecisionCount ?? 0
+    },
+    totals,
+    diffPreview: diffSnapshot,
+    candidateMetrics,
+    validationSummary,
+    unsupportedKinds: Array.isArray(summary?.unsupportedKinds) ? [...summary.unsupportedKinds] : [],
+    options: {
+      scheme: options?.scheme || 'https',
+      kinds: Array.isArray(options?.kinds) ? [...options.kinds] : [],
+      limit: options?.limit ?? null,
+      patternsPerPlace: options?.patternsPerPlace ?? null,
+      apply: Boolean(options?.apply),
+      dryRun: Boolean(options?.dryRun),
+      maxAgeDays: options?.maxAgeDays ?? null,
+      refresh404Days: options?.refresh404Days ?? null,
+      retry4xxDays: options?.retry4xxDays ?? null,
+      readinessTimeoutSeconds: options?.readinessTimeoutSeconds ?? null,
+      domainBatchSize: Array.isArray(options?.domainBatch) ? options.domainBatch.length : null,
+      emitReport: Boolean(options?.emitReport),
+      reportPath: options?.reportPath || null,
+      reportDirectory
+    },
+    domainInputs: options?.domainInputs || null,
+    domainSummaries,
+    decisions: Array.isArray(summary?.decisions)
+      ? summary.decisions.map((decision) => (decision && typeof decision === 'object' ? { ...decision } : decision))
+      : [],
+    logs,
+    report: {
+      requested: Boolean(options?.emitReport),
+      targetPath: options?.reportPath || null,
+      directory: reportDirectory,
+      written: false
+    }
+  };
+}
+
+function writeReportFile(payload, options = {}) {
+  if (!options?.emitReport) {
+    return { skipped: true };
+  }
+
+  const targetPath = options.reportPath;
+  if (!targetPath) {
+    return { error: 'Report path could not be resolved. Provide a file or directory to --emit-report.' };
+  }
+
+  const targetDir = options.reportDirectory || path.dirname(targetPath);
+
+  try {
+    if (targetDir) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+  } catch (error) {
+    return { error: `Failed to ensure report directory at ${targetDir}: ${error?.message || error}` };
+  }
+
+  const savedAt = new Date().toISOString();
+  const payloadForWrite = {
+    ...payload,
+    report: {
+      ...(payload.report || {}),
+      requested: true,
+      targetPath,
+      directory: targetDir,
+      written: true,
+      savedAt
+    }
+  };
+
+  try {
+    fs.writeFileSync(targetPath, `${JSON.stringify(payloadForWrite, null, 2)}\n`, 'utf8');
+    return {
+      path: targetPath,
+      directory: targetDir,
+      savedAt,
+      payload: payloadForWrite
+    };
+  } catch (error) {
+    return { error: `Failed to write report at ${targetPath}: ${error?.message || error}` };
+  }
+}
+
+
 
 function resolveDbPath(dbPath) {
   if (dbPath) {
@@ -189,27 +971,6 @@ function extractPredictionSignals(predictionSource) {
   return extracted;
 }
 
-function composeCandidateSignals({ predictionSource, patternSource, place, attemptId, validationMetrics = null }) {
-  const signals = {
-    patternSource: patternSource || null,
-    attempt: attemptId ? { id: attemptId } : null
-  };
-  if (place) {
-    signals.place = {
-      kind: place.kind || null,
-      name: place.name || null,
-      code: place.code || place.countryCode || null
-    };
-  }
-  const predictionSignals = extractPredictionSignals(predictionSource);
-  if (predictionSignals) {
-    signals.prediction = predictionSignals;
-  }
-  if (validationMetrics) {
-    signals.validation = validationMetrics;
-  }
-  return signals;
-}
 
 async function fetchUrl(url, fetchFn, { logger, timeoutMs = 15000, method = 'GET' } = {}) {
   const controller = new AbortController();
@@ -299,715 +1060,24 @@ function createFetchRow(result, fallbackHost) {
   };
 }
 
-function selectPlaces(analyzerMap, kinds, limit) {
-  const selected = [];
-  const unsupported = [];
-  const remaining = typeof limit === 'number' && limit > 0 ? { value: limit } : { value: null };
 
-  const enqueue = (items, transform) => {
-    if (!items?.length) return;
-    for (const item of items) {
-      if (remaining.value != null && remaining.value <= 0) return;
-      selected.push(transform(item));
-      if (remaining.value != null) {
-        remaining.value -= 1;
-      }
-    }
-  };
-
-  for (const kind of kinds) {
-    switch (kind) {
-      case 'country': {
-        const countries = remaining.value != null
-          ? analyzerMap.countryAnalyzer.getTopCountries(remaining.value)
-          : analyzerMap.countryAnalyzer.getAllCountries();
-        enqueue(countries, (country) => ({
-          kind: 'country',
-          name: country.name,
-          code: country.code,
-          importance: country.importance || 0
-        }));
-        break;
-      }
-      case 'region': {
-        if (!analyzerMap.regionAnalyzer) {
-          unsupported.push('region');
-          break;
-        }
-        const regions = analyzerMap.regionAnalyzer.getTopRegions(remaining.value != null ? remaining.value : 50);
-        enqueue(regions, (region) => ({
-          kind: 'region',
-          name: region.name,
-          code: region.code,
-          countryCode: region.countryCode,
-          importance: region.importance || 0
-        }));
-        break;
-      }
-      case 'city': {
-        if (!analyzerMap.cityAnalyzer) {
-          unsupported.push('city');
-          break;
-        }
-        const cities = analyzerMap.cityAnalyzer.getTopCities(remaining.value != null ? remaining.value : 50);
-        enqueue(cities, (city) => ({
-          kind: 'city',
-          name: city.name,
-          countryCode: city.countryCode,
-          regionName: city.regionName,
-          importance: city.importance || 0
-        }));
-        break;
-      }
-      default:
-        unsupported.push(kind);
-        break;
-    }
-  }
-
-  return { places: selected, unsupported };
-}
-
-async function guessPlaceHubs(options = {}, deps = {}) {
-  const {
-    fetchFn = fetchImpl,
-    logger = defaultLogger(),
-    now = () => new Date()
-  } = deps;
-
-  const normalizedDomain = normalizeDomain(options.domain, options.scheme);
-  if (!normalizedDomain) {
-    throw new Error('A domain or host is required. Pass via positional argument or --domain.');
-  }
-
-  const dbPath = resolveDbPath(options.dbPath);
-  const dbExists = fs.existsSync(dbPath);
-  if (!dbExists) {
-    throw new Error(`Database not found at ${dbPath}`);
-  }
-
-  const db = ensureDb(dbPath);
-  const newsDb = createSQLiteDatabase(dbPath);
-  const analyzer = new CountryHubGapAnalyzer({ db, logger });
-  const regionAnalyzer = new RegionHubGapAnalyzer({ db, logger });
-  const cityAnalyzer = new CityHubGapAnalyzer({ db, logger });
-  const hubValidator = new HubValidator(db);
-  const queries = createGuessPlaceHubsQueries(db);
-  let candidatesStore = null;
-
-  try {
-    candidatesStore = createPlaceHubCandidatesStore(db);
-  } catch (error) {
-    if (options.verbose) {
-      logger?.warn?.(`[guess-place-hubs] Candidate store unavailable: ${error?.message || error}`);
-    }
-  }
-
-  const fetchRecorder = createFetchRecorder({
-    newsDb,
-    legacyDb: db,
-    logger,
-    source: 'guess-place-hubs'
-  });
-
-  if (typeof hubValidator.initialize === 'function') {
-    try {
-      hubValidator.initialize();
-    } catch (_) {
-      /* ignore validator initialization errors */
-    }
-  }
-
-
-  const summary = {
-    domain: normalizedDomain.host,
-    totalPlaces: 0,
-    totalUrls: 0,
-    fetched: 0,
-    cached: 0,
-    skipped: 0,
-    skippedDuplicatePlace: 0,
-    skippedRecent4xx: 0,
-    stored404: 0,
-    insertedHubs: 0,
-    updatedHubs: 0,
-    errors: 0,
-    rateLimited: 0,
-    unsupportedKinds: [],
-    decisions: []
-  };
-
-  let attemptCounter = 0;
-
-  const recordFetch = (fetchRow, meta = {}) => {
-    if (!fetchRow) return null;
-    const tags = {
-      stage: meta.stage || 'GET',
-      attemptId: meta.attemptId || null,
-      cacheHit: Boolean(meta.cacheHit)
-    };
-    if (fetchRecorder && typeof fetchRecorder.record === 'function') {
-      return fetchRecorder.record(fetchRow, tags);
-    }
-
-    // Fallback path if fetchRecorder unavailable (legacy behaviour)
-    try {
-      newsDb.insertFetch(fetchRow);
-    } catch (_) {
-      /* ignore normalized insert errors */
-    }
-    try {
-      queries.insertLegacyFetch(fetchRow);
-    } catch (legacyError) {
-      if (options.verbose) {
-        const message = legacyError?.message || String(legacyError);
-        logger?.warn?.(`[guess-place-hubs] Failed to record legacy fetch for ${fetchRow.url}: ${message}`);
-      }
-    }
-    return null;
-  };
-
-  const recordDecision = ({ level = 'info', message, ...rest }) => {
-    summary.decisions.push({ level, message, ...rest });
-    const loggerFn = logger?.[level];
-    if (typeof loggerFn === 'function' && message) {
-      loggerFn(`[guess-place-hubs] ${message}`);
-    }
-  };
-
-  const maxAgeMs = Number.isFinite(options.maxAgeDays) ? options.maxAgeDays * DAY_MS : 7 * DAY_MS;
-  const refresh404Ms = Number.isFinite(options.refresh404Days) ? options.refresh404Days * DAY_MS : 180 * DAY_MS;
-  const retry4xxMs = Number.isFinite(options.retry4xxDays) ? options.retry4xxDays * DAY_MS : 7 * DAY_MS;
-  const patternLimit = Math.max(1, Number(options.patternsPerPlace) || 3);
-  const nowMs = now().getTime();
-
-  try {
-    const processedPlaceKeys = new Set();
-    let rateLimitTriggered = false;
-
-    const { places, unsupported } = selectPlaces({
-      countryAnalyzer: analyzer,
-      regionAnalyzer,
-      cityAnalyzer
-    }, options.kinds, options.limit);
-    summary.unsupportedKinds = unsupported;
-    if (unsupported.length && options.verbose) {
-      logger.warn(`[guess-place-hubs] Unsupported place kinds ignored: ${unsupported.join(', ')}`);
-    }
-
-    summary.totalPlaces = places.length;
-    if (!places.length) {
-      return summary;
-    }
-
-    for (const place of places) {
-      if (rateLimitTriggered) {
-        break;
-      }
-      const slug = slugify(place.name);
-      const placeKey = `${place.kind}:${slug}`;
-      if (processedPlaceKeys.has(placeKey)) {
-        summary.skippedDuplicatePlace += 1;
-        if (options.verbose) {
-          logger.info(`[guess-place-hubs] Duplicate place skipped ${placeKey}`);
-        }
-        continue;
-      }
-      processedPlaceKeys.add(placeKey);
-
-      const patternSource = `${place.kind}-patterns`;
-      let predictions = [];
-
-      if (place.kind === 'country') {
-        predictions = analyzer.predictCountryHubUrls(normalizedDomain.host, place.name, place.code);
-      } else if (place.kind === 'region') {
-        predictions = regionAnalyzer.predictRegionHubUrls(normalizedDomain.host, place);
-      } else if (place.kind === 'city') {
-        predictions = cityAnalyzer.predictCityHubUrls(normalizedDomain.host, place);
-      }
-
-      const normalizedPredictions = [];
-      const seenCandidates = new Set();
-
-      for (const candidate of Array.isArray(predictions) ? predictions : []) {
-        const baseUrl = typeof candidate === 'string' ? candidate : candidate?.url;
-        if (typeof baseUrl !== 'string' || baseUrl.trim() === '') continue;
-        const candidateUrl = applyScheme(baseUrl, normalizedDomain.scheme);
-        if (typeof candidateUrl !== 'string' || candidateUrl.trim() === '') continue;
-        const key = candidateUrl.toLowerCase();
-        if (seenCandidates.has(key)) continue;
-        seenCandidates.add(key);
-        normalizedPredictions.push({
-          url: candidateUrl,
-          rawUrl: baseUrl,
-          source: candidate
-        });
-      }
-
-      if (!normalizedPredictions.length) {
-        continue;
-      }
-
-      for (const { url: candidateUrl, source: predictionSource } of normalizedPredictions.slice(0, patternLimit)) {
-        if (rateLimitTriggered) {
-          break;
-        }
-        summary.totalUrls += 1;
-
-        const attemptId = `${placeKey}:${++attemptCounter}`;
-        const attemptStartedAt = new Date().toISOString();
-        const placeSignalsInfo = {
-          kind: place.kind,
-          name: place.name,
-          code: place.code || place.countryCode || null
-        };
-        const analyzerName = typeof predictionSource === 'object' && predictionSource
-          ? (predictionSource.analyzer || predictionSource.source || place.kind)
-          : place.kind;
-        const strategyValue = typeof predictionSource === 'object' && predictionSource
-          ? (predictionSource.strategy || patternSource)
-          : patternSource;
-        const scoreValue = typeof predictionSource === 'object' ? predictionSource.score : null;
-        const confidenceValue = typeof predictionSource === 'object' ? predictionSource.confidence : null;
-        const patternValue = typeof predictionSource === 'object' ? predictionSource.pattern : null;
-        const candidateSignals = composeCandidateSignals({
-          predictionSource,
-          patternSource,
-          place: placeSignalsInfo,
-          attemptId
-        });
-
-        if (candidatesStore && typeof candidatesStore.saveCandidate === 'function') {
-          try {
-            candidatesStore.saveCandidate({
-              domain: normalizedDomain.host,
-              candidateUrl,
-              normalizedUrl: candidateUrl,
-              placeKind: place.kind,
-              placeName: place.name,
-              placeCode: placeSignalsInfo.code,
-              analyzer: analyzerName,
-              strategy: strategyValue,
-              score: scoreValue,
-              confidence: confidenceValue,
-              pattern: patternValue,
-              signals: candidateSignals,
-              attemptId,
-              attemptStartedAt,
-              status: 'pending',
-              validationStatus: null,
-              source: 'guess-place-hubs',
-              lastSeenAt: attemptStartedAt
-            });
-          } catch (storeError) {
-            if (options.verbose) {
-              logger?.warn?.(`[guess-place-hubs] Failed to save candidate ${candidateUrl}: ${storeError?.message || storeError}`);
-            }
-          }
-        }
-
-        const latestFetch = queries.getLatestFetch(candidateUrl);
-        const ageMs = computeAgeMs(latestFetch, nowMs);
-        if (latestFetch && latestFetch.http_status >= 200 && latestFetch.http_status < 300 && ageMs < maxAgeMs) {
-          summary.cached += 1;
-          if (options.verbose) {
-            logger.info(`[guess-place-hubs] Cached OK (${latestFetch.http_status}) ${candidateUrl}`);
-          }
-          candidatesStore?.markStatus?.({
-            domain: normalizedDomain.host,
-            candidateUrl,
-            status: 'cached-ok',
-            validationStatus: 'cache-hit',
-            lastSeenAt: attemptStartedAt
-          });
-          continue;
-        }
-        if (latestFetch && latestFetch.http_status === 404 && ageMs < refresh404Ms) {
-          summary.skipped += 1;
-          if (options.verbose) {
-            logger.info(`[guess-place-hubs] Known 404 cached ${candidateUrl}`);
-          }
-          candidatesStore?.markStatus?.({
-            domain: normalizedDomain.host,
-            candidateUrl,
-            status: 'cached-404',
-            validationStatus: 'cache-404',
-            lastSeenAt: attemptStartedAt
-          });
-          continue;
-        }
-        if (
-          latestFetch &&
-          latestFetch.http_status >= 400 &&
-          latestFetch.http_status < 500 &&
-          latestFetch.http_status !== 404 &&
-          ageMs < retry4xxMs
-        ) {
-          summary.skippedRecent4xx += 1;
-          if (options.verbose) {
-            logger.info(`[guess-place-hubs] Recent ${latestFetch.http_status} cached ${candidateUrl}`);
-          }
-          candidatesStore?.markStatus?.({
-            domain: normalizedDomain.host,
-            candidateUrl,
-            status: 'cached-4xx',
-            validationStatus: 'cache-4xx',
-            lastSeenAt: attemptStartedAt
-          });
-          continue;
-        }
-
-        try {
-          let headResult = null;
-          try {
-            headResult = await fetchUrl(candidateUrl, fetchFn, {
-              logger,
-              method: 'HEAD',
-              timeoutMs: 10000
-            });
-            recordDecision({
-              stage: 'HEAD',
-              status: headResult.status,
-              url: candidateUrl,
-              outcome: headResult.status >= 200 && headResult.status < 300 ? 'probe-ok' : headResult.status,
-              message: `HEAD ${headResult.status} ${candidateUrl}`
-            });
-          } catch (headError) {
-            recordDecision({
-              stage: 'HEAD',
-              status: null,
-              url: candidateUrl,
-              outcome: 'head-failed',
-              level: 'warn',
-              message: `HEAD failed for ${candidateUrl}: ${headError.message || headError}`
-            });
-          }
-
-          if (headResult) {
-            if (headResult.status === 429) {
-              summary.rateLimited += 1;
-              rateLimitTriggered = true;
-              candidatesStore?.markStatus?.({
-                domain: normalizedDomain.host,
-                candidateUrl,
-                status: 'rate-limited',
-                validationStatus: 'http-429',
-                lastSeenAt: attemptStartedAt
-              });
-              recordFetch(createFetchRow(headResult, normalizedDomain.host), { stage: 'HEAD', attemptId });
-              recordDecision({
-                stage: 'HEAD',
-                status: 429,
-                url: candidateUrl,
-                outcome: 'rate-limited',
-                level: 'warn',
-                message: `HEAD 429 rate limit for ${candidateUrl} (halting)`
-              });
-              continue;
-            }
-
-            if (headResult.status === 404 || headResult.status === 410) {
-              summary.stored404 += 1;
-              candidatesStore?.markStatus?.({
-                domain: normalizedDomain.host,
-                candidateUrl,
-                status: 'fetched-404',
-                validationStatus: `head-${headResult.status}`,
-                lastSeenAt: attemptStartedAt
-              });
-              recordFetch(createFetchRow(headResult, normalizedDomain.host), { stage: 'HEAD', attemptId });
-              recordDecision({
-                stage: 'HEAD',
-                status: headResult.status,
-                url: candidateUrl,
-                outcome: 'cached-miss',
-                message: `HEAD ${headResult.status} ${candidateUrl} -> cached`
-              });
-              continue;
-            }
-
-            if (headResult.status === 405) {
-              recordDecision({
-                stage: 'HEAD',
-                status: 405,
-                url: candidateUrl,
-                outcome: 'fallback-get',
-                message: `HEAD 405 ${candidateUrl} -> retry with GET`
-              });
-              headResult = null; // Method not allowed, fall back to GET
-            } else if (headResult.status >= 400 && headResult.status < 500) {
-              recordDecision({
-                stage: 'HEAD',
-                status: headResult.status,
-                url: candidateUrl,
-                outcome: 'retry-get',
-                message: `HEAD ${headResult.status} ${candidateUrl} -> retry with GET`
-              });
-            }
-          }
-
-          const result = await fetchUrl(candidateUrl, fetchFn, { logger });
-          const fetchRow = createFetchRow(result, normalizedDomain.host);
-          const httpResponseId = recordFetch(fetchRow, { stage: 'GET', attemptId });
-
-          if (result.status === 404) {
-            summary.stored404 += 1;
-            candidatesStore?.markStatus?.({
-              domain: normalizedDomain.host,
-              candidateUrl,
-              status: 'fetched-404',
-              validationStatus: 'http-404',
-              lastSeenAt: attemptStartedAt
-            });
-            recordDecision({
-              stage: 'GET',
-              status: 404,
-              url: candidateUrl,
-              outcome: 'cached-miss',
-              message: `GET 404 ${candidateUrl} -> cached`
-            });
-            continue;
-          }
-
-          if (result.status === 429) {
-            summary.rateLimited += 1;
-            rateLimitTriggered = true;
-            candidatesStore?.markStatus?.({
-              domain: normalizedDomain.host,
-              candidateUrl,
-              status: 'rate-limited',
-              validationStatus: 'http-429',
-              lastSeenAt: attemptStartedAt
-            });
-            recordDecision({
-              stage: 'GET',
-              status: 429,
-              url: candidateUrl,
-              outcome: 'rate-limited',
-              level: 'warn',
-              message: `GET 429 rate limit for ${candidateUrl}`
-            });
-          }
-
-          if (result.ok) {
-            summary.fetched += 1;
-            recordDecision({
-              stage: 'GET',
-              status: result.status,
-              url: candidateUrl,
-              outcome: 'fetched',
-              message: `GET ${result.status} ${candidateUrl} -> fetched`
-            });
-
-            const title = extractTitle(result.body);
-            let validation;
-            const validationInput = {
-              url: result.finalUrl,
-              title,
-              html: result.body
-            };
-            if (result.body && typeof hubValidator.analyzeHubContent === 'function') {
-              validation = hubValidator.analyzeHubContent(validationInput, place.name, { htmlSource: 'network-fetch' });
-            } else {
-              validation = await hubValidator.validateHubContent(result.finalUrl, place.name, {
-                html: result.body,
-                title,
-                htmlSource: 'network-fetch'
-              });
-            }
-            if (!validation || typeof validation !== 'object') {
-              validation = { isValid: false, reason: 'Validation unavailable', metrics: null };
-            }
-
-            const validationMetrics = {
-              ...(validation.metrics || {}),
-              httpStatus: result.status,
-              httpResponseId
-            };
-
-            if (!validation.isValid) {
-              summary.errors += 1;
-              recordDecision({
-                stage: 'VALIDATION',
-                status: null,
-                url: candidateUrl,
-                outcome: 'invalid-content',
-                level: 'warn',
-                message: `Content validation failed for ${candidateUrl}: ${validation.reason}`
-              });
-
-              const invalidTimestamp = new Date().toISOString();
-              candidatesStore?.saveCandidate?.({
-                domain: normalizedDomain.host,
-                candidateUrl,
-                normalizedUrl: result.finalUrl,
-                placeKind: place.kind,
-                placeName: place.name,
-                placeCode: placeSignalsInfo.code,
-                analyzer: analyzerName,
-                strategy: strategyValue,
-                score: scoreValue,
-                confidence: confidenceValue,
-                pattern: patternValue,
-                signals: composeCandidateSignals({
-                  predictionSource,
-                  patternSource,
-                  place: placeSignalsInfo,
-                  attemptId,
-                  validationMetrics
-                }),
-                attemptId,
-                attemptStartedAt,
-                status: 'validated',
-                validationStatus: 'invalid',
-                source: 'guess-place-hubs',
-                lastSeenAt: invalidTimestamp
-              });
-
-              continue;
-            }
-
-            recordDecision({
-              stage: 'VALIDATION',
-              status: null,
-              url: candidateUrl,
-              outcome: 'valid-hub',
-              message: `Content validation passed for ${candidateUrl}: ${validation.reason}`
-            });
-
-            const candidateStatus = options.apply ? 'persisted' : 'validated';
-            const validationTimestamp = new Date().toISOString();
-            candidatesStore?.saveCandidate?.({
-              domain: normalizedDomain.host,
-              candidateUrl,
-              normalizedUrl: result.finalUrl,
-              placeKind: place.kind,
-              placeName: place.name,
-              placeCode: placeSignalsInfo.code,
-              analyzer: analyzerName,
-              strategy: strategyValue,
-              score: scoreValue,
-              confidence: confidenceValue,
-              pattern: patternValue,
-              signals: composeCandidateSignals({
-                predictionSource,
-                patternSource,
-                place: placeSignalsInfo,
-                attemptId,
-                validationMetrics
-              }),
-              attemptId,
-              attemptStartedAt,
-              status: candidateStatus,
-              validationStatus: 'valid',
-              source: 'guess-place-hubs',
-              lastSeenAt: validationTimestamp
-            });
-
-            if (options.apply) {
-              const existing = queries.getHubByUrl(result.finalUrl) || null;
-              const evidence = buildEvidence(
-                { name: place.name, code: place.code, slug, kind: place.kind },
-                patternSource,
-                result.status,
-                {
-                  candidatesTested: normalizedPredictions.length,
-                  strategy: strategyValue,
-                  confidence: confidenceValue,
-                  pattern: patternValue,
-                  validationMetrics
-                }
-              );
-
-              queries.insertHub({
-                host: normalizedDomain.host,
-                url: result.finalUrl,
-                placeSlug: slug,
-                placeKind: place.kind,
-                title,
-                navLinksCount: validationMetrics?.linkCount ?? null,
-                articleLinksCount: validationMetrics?.articleLinkCount ?? null,
-                evidence
-              });
-
-              queries.updateHub({
-                url: result.finalUrl,
-                placeSlug: slug,
-                placeKind: place.kind,
-                title,
-                navLinksCount: validationMetrics?.linkCount ?? null,
-                articleLinksCount: validationMetrics?.articleLinkCount ?? null,
-                evidence
-              });
-
-              if (!existing) summary.insertedHubs += 1;
-              else summary.updatedHubs += 1;
-            }
-          } else {
-            summary.errors += 1;
-            const outcome = result.status === 429 ? 'rate-limited' : 'error';
-            recordDecision({
-              stage: 'GET',
-              status: result.status,
-              url: candidateUrl,
-              outcome,
-              level: 'warn',
-              message: `GET ${result.status} ${candidateUrl} -> ${outcome}`
-            });
-            if (result.status !== 429) {
-              candidatesStore?.markStatus?.({
-                domain: normalizedDomain.host,
-                candidateUrl,
-                status: 'fetch-error',
-                validationStatus: `http-${result.status}`,
-                lastSeenAt: attemptStartedAt
-              });
-            }
-          }
-        } catch (err) {
-          summary.errors += 1;
-          recordDecision({
-            stage: 'GET',
-            status: null,
-            url: candidateUrl,
-            outcome: 'exception',
-            level: 'error',
-            message: `GET failed for ${candidateUrl}: ${err.message || err}`
-          });
-          candidatesStore?.markStatus?.({
-            domain: normalizedDomain.host,
-            candidateUrl,
-            status: 'exception',
-            validationStatus: err?.kind || 'exception',
-            lastSeenAt: new Date().toISOString()
-          });
-          const errorDetails = err?.cause
-            ? { name: err.cause.name, message: err.cause.message, attemptId }
-            : { attemptId };
-          newsDb.insertError({
-            url: candidateUrl,
-            kind: err.kind || 'network',
-            code: null,
-            message: err.message,
-            details: errorDetails
-          });
-        }
-      }
-    }
-
-    return summary;
-  } finally {
-    try { queries.dispose(); } catch (_) {}
-    try { db.close(); } catch (_) {}
-    try { newsDb.close?.(); } catch (_) {}
-  }
-}
 
 function formatDays(days) {
   if (!Number.isFinite(days)) return 'not set';
   if (days === 0) return '0 days (always refresh)';
   if (days === 1) return '1 day';
   return `${days} days`;
+}
+
+function formatDurationMs(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return 'n/a';
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60000) {
+    const seconds = ms / 1000;
+    return seconds >= 10 ? `${seconds.toFixed(0)} s` : `${seconds.toFixed(1)} s`;
+  }
+  const minutes = ms / 60000;
+  return minutes >= 10 ? `${minutes.toFixed(0)} min` : `${minutes.toFixed(1)} min`;
 }
 
 function truncate(text, maxLength = 100) {
@@ -1043,7 +1113,22 @@ function formatOutcome(fmt, value) {
   return normalized;
 }
 
-function renderSummary(summary, options, logBuffer = []) {
+function formatDeterminationStatus(fmt, value) {
+  if (!value) return '';
+  const normalized = String(value).toLowerCase();
+  if (['processed', 'ready', 'complete', 'completed'].includes(normalized)) {
+    return fmt.COLORS.success(value);
+  }
+  if (normalized === 'data-limited') {
+    return fmt.COLORS.warning(value);
+  }
+  if (normalized === 'insufficient-data' || normalized === 'error') {
+    return fmt.COLORS.error(value);
+  }
+  return value;
+}
+
+function renderSummary(summary, options, logBuffer = [], extras = {}) {
   const fmt = new CliFormatter();
   const domainDisplay = summary.domain || options.domain || '(unknown)';
   const schemeDisplay = (options.scheme || 'https').toUpperCase();
@@ -1054,6 +1139,20 @@ function renderSummary(summary, options, logBuffer = []) {
     ? options.patternsPerPlace
     : 3;
   const limitLabel = Number.isFinite(options.limit) ? options.limit : null;
+  const domainSummaries = Array.isArray(summary.domainSummaries) ? summary.domainSummaries : [];
+  const multiDomain = domainSummaries.length > 1;
+  const singleDomainEntry = domainSummaries.length === 1 ? domainSummaries[0] : null;
+  const primarySummary = singleDomainEntry?.summary || summary;
+  const readinessInfo = primarySummary?.readiness || null;
+  const determinationStatus = singleDomainEntry?.determination || primarySummary?.determination || null;
+  const determinationReason = singleDomainEntry?.determinationReason || primarySummary?.determinationReason || null;
+  const latestDetermination = singleDomainEntry?.latestDetermination
+    || primarySummary?.latestDetermination
+    || summary.latestDetermination
+    || null;
+  const recommendationList = Array.isArray(primarySummary?.recommendations) && primarySummary.recommendations.length
+    ? primarySummary.recommendations
+    : (Array.isArray(summary.recommendations) ? summary.recommendations : []);
 
   fmt.header('Guess Place Hubs');
 
@@ -1071,6 +1170,65 @@ function renderSummary(summary, options, logBuffer = []) {
   fmt.stat('Max success cache window', formatDays(options.maxAgeDays));
   fmt.stat('Known 404 cache window', formatDays(options.refresh404Days));
   fmt.stat('Other 4xx retry window', formatDays(options.retry4xxDays));
+  if (Number.isFinite(options.readinessTimeoutSeconds)) {
+    if (options.readinessTimeoutSeconds === 0) {
+      fmt.stat('Readiness probe timeout', 'disabled');
+    } else {
+      fmt.stat('Readiness probe timeout', `${options.readinessTimeoutSeconds}s`);
+    }
+  }
+
+  if (domainSummaries.length <= 1 && (readinessInfo || determinationStatus || recommendationList.length || latestDetermination)) {
+    fmt.section('Domain readiness');
+
+    if (readinessInfo) {
+      fmt.stat('Status', readinessInfo.status || 'unknown');
+      if (readinessInfo.reason) {
+        fmt.stat('Reason', readinessInfo.reason);
+      }
+      if (readinessInfo.metrics) {
+        const metrics = readinessInfo.metrics;
+        fmt.stat('Fetch records', metrics.fetchCount ?? 0, 'number');
+        fmt.stat('Stored hubs', metrics.storedHubCount ?? 0, 'number');
+        fmt.stat('Verified mappings', metrics.verifiedHubMappingCount ?? 0, 'number');
+        fmt.stat('Known candidates', metrics.candidateCount ?? 0, 'number');
+        if (Number.isFinite(metrics.elapsedMs)) {
+          fmt.stat('Readiness probe duration', formatDurationMs(metrics.elapsedMs));
+        }
+        if (metrics.timedOut) {
+          const completedCount = Array.isArray(metrics.completedMetrics) ? metrics.completedMetrics.length : 0;
+          const skippedCount = Array.isArray(metrics.skippedMetrics) ? metrics.skippedMetrics.length : 0;
+          fmt.stat('Readiness probes completed', `${completedCount} metric(s)`);
+          fmt.stat('Readiness probes skipped', `${skippedCount} metric(s)`);
+        }
+      }
+      if (readinessInfo.dspl) {
+        const dsplSummary = readinessInfo.dspl;
+        const dsplStatus = dsplSummary.available
+          ? (dsplSummary.verifiedPatternCount > 0
+            ? `verified patterns for ${dsplSummary.verifiedKinds.join(', ') || 'requested kinds'}`
+            : 'available but no verified patterns for requested kinds')
+          : 'not available';
+        fmt.stat('DSPL coverage', dsplStatus);
+        fmt.stat('Verified pattern count', dsplSummary.verifiedPatternCount, 'number');
+      }
+    }
+
+    if (determinationStatus) {
+      fmt.stat('Determination', determinationStatus);
+      if (determinationReason) {
+        fmt.stat('Determination reason', determinationReason);
+      }
+    }
+
+    if (latestDetermination?.created_at) {
+      fmt.stat('Recorded at', latestDetermination.created_at);
+    }
+
+    if (recommendationList.length) {
+      fmt.list('Recommended next steps', recommendationList);
+    }
+  }
 
   fmt.section('Results');
   fmt.stat('Places evaluated', summary.totalPlaces, 'number');
@@ -1084,6 +1242,14 @@ function renderSummary(summary, options, logBuffer = []) {
   fmt.stat('Updated hubs', summary.updatedHubs, 'number');
   fmt.stat('Errors', summary.errors, 'number');
   fmt.stat('Rate limit responses', summary.rateLimited, 'number');
+  if (Number.isFinite(summary.durationMs)) {
+    fmt.stat('Run duration', formatDurationMs(summary.durationMs));
+  }
+  fmt.stat('Validation passed', summary.validationSucceeded, 'number');
+  fmt.stat('Validation failed', summary.validationFailed, 'number');
+  if (Number.isFinite(summary.readinessTimedOut) && summary.readinessTimedOut > 0) {
+    fmt.stat('Domains with readiness timeout', summary.readinessTimedOut, 'number');
+  }
 
   if (summary.insertedHubs > 0 || summary.updatedHubs > 0) {
     fmt.success(`Persisted ${summary.insertedHubs} new hub(s) and ${summary.updatedHubs} update(s).`);
@@ -1097,6 +1263,116 @@ function renderSummary(summary, options, logBuffer = []) {
 
   if (summary.rateLimited > 0) {
     fmt.warn(`${summary.rateLimited} rate limit response(s) encountered — processing halted early.`);
+  }
+
+  if (summary.validationFailed > 0 && summary.validationFailureReasons) {
+    const failureReasons = Object.entries(summary.validationFailureReasons)
+      .filter(([reason, count]) => reason && Number(count) > 0)
+      .sort(([, a], [, b]) => Number(b) - Number(a))
+      .slice(0, 5)
+      .map(([reason, count]) => `${reason} (${count})`);
+    if (failureReasons.length) {
+      fmt.list('Top validation failure reasons', failureReasons);
+    }
+  }
+
+  const diffPreview = primarySummary?.diffPreview || summary.diffPreview || { inserted: [], updated: [] };
+  const insertedDiff = Array.isArray(diffPreview?.inserted) ? diffPreview.inserted : [];
+  const updatedDiff = Array.isArray(diffPreview?.updated) ? diffPreview.updated : [];
+
+  if (insertedDiff.length || updatedDiff.length) {
+    const formatPlaceLabel = (entry) => {
+      const name = entry?.placeName || '(unknown)';
+      const kind = entry?.placeKind ? String(entry.placeKind).toLowerCase() : '';
+      if (kind && kind !== 'unknown') {
+        return `${name} (${kind})`;
+      }
+      return name;
+    };
+
+    const summarizeChanges = (changes) => {
+      if (!Array.isArray(changes) || !changes.length) {
+        return '';
+      }
+      return changes
+        .map((change) => {
+          const beforeValue = change?.before ?? '—';
+          const afterValue = change?.after ?? '—';
+          return `${change?.field || 'Field'}: ${beforeValue} → ${afterValue}`;
+        })
+        .slice(0, 4)
+        .join('; ');
+    };
+
+    const insertedRows = insertedDiff.map((item) => ({
+      ...(multiDomain ? { domain: item?.domain || domainDisplay } : {}),
+      place: formatPlaceLabel(item),
+      url: truncate(item?.url || '', multiDomain ? 70 : 80),
+      title: truncate(item?.title || '', 60),
+      strategy: item?.strategy || ''
+    }));
+
+    const updatedRows = updatedDiff.map((item) => ({
+      ...(multiDomain ? { domain: item?.domain || domainDisplay } : {}),
+      place: formatPlaceLabel(item),
+      url: truncate(item?.url || '', multiDomain ? 60 : 70),
+      changes: truncate(summarizeChanges(item?.changes), 100)
+    }));
+
+    const diffSectionLabel = options.apply ? 'Persisted hub changes' : 'Proposed hub changes';
+    fmt.section(diffSectionLabel);
+
+    if (insertedRows.length) {
+      const columns = multiDomain
+        ? ['domain', 'place', 'url', 'title', 'strategy']
+        : ['place', 'url', 'title', 'strategy'];
+      fmt.table(insertedRows, { columns });
+    }
+
+    if (updatedRows.length) {
+      const columns = multiDomain
+        ? ['domain', 'place', 'url', 'changes']
+        : ['place', 'url', 'changes'];
+      fmt.table(updatedRows, { columns });
+    }
+
+  } else {
+    fmt.info('No hub changes detected.');
+  }
+
+  if (domainSummaries.length > 1) {
+    fmt.section('Per-domain overview');
+    fmt.table(
+      domainSummaries.map((entry) => {
+        const domainSummary = entry.summary || {};
+        const statusValue = entry.determination || entry.readiness?.status || (entry.error ? 'error' : 'processed');
+        let note = entry.determinationReason
+          || entry.readiness?.reason
+          || entry.error?.message
+          || '';
+        if (!note && entry.readinessProbe?.timedOut) {
+          note = 'Readiness probes timed out';
+        }
+        return {
+          domain: entry.domain,
+          status: statusValue,
+          urls: domainSummary.totalUrls ?? 0,
+          inserted: options.apply
+            ? domainSummary.insertedHubs ?? 0
+            : (entry.diffPreview?.inserted?.length ?? domainSummary.diffPreview?.inserted?.length ?? 0),
+          updated: options.apply
+            ? domainSummary.updatedHubs ?? 0
+            : (entry.diffPreview?.updated?.length ?? domainSummary.diffPreview?.updated?.length ?? 0),
+          notes: truncate(note, 80)
+        };
+      }),
+      {
+        columns: ['domain', 'status', 'urls', 'inserted', 'updated', 'notes'],
+        format: {
+          status: (value) => formatDeterminationStatus(fmt, value)
+        }
+      }
+    );
   }
 
   if (Array.isArray(summary.unsupportedKinds) && summary.unsupportedKinds.length) {
@@ -1144,36 +1420,90 @@ function renderSummary(summary, options, logBuffer = []) {
     }
   }
 
+  if (options.emitReport && extras?.reportStatus) {
+    const status = extras.reportStatus;
+    if (status.error) {
+      fmt.error(`Report not saved: ${status.error}`);
+    } else if (status.path) {
+      fmt.success(`Report written to ${status.path}`);
+    }
+  }
+
   fmt.footer();
 }
 
 async function main(argv) {
   const options = parseCliArgs(argv);
 
-  if (!options.domain) {
-    console.error('Domain or host is required. Provide a positional argument or --domain.');
+  const domainBatch = Array.isArray(options.domainBatch) ? options.domainBatch : [];
+  if (domainBatch.length === 0) {
+    console.error('At least one domain or host is required. Provide positional arguments, --domain, --domains, or --import.');
     process.exitCode = 1;
     return;
   }
 
   const logBuffer = [];
-  const logger = {
+  
+  // Create dependencies using orchestration layer factory
+  const dbPath = resolveDbPath(options.dbPath);
+  const deps = createPlaceHubDependencies({
+    dbPath,
+    verbose: options.verbose
+  });
+  
+  // Capture log entries from orchestration layer
+  const originalLogger = deps.logger;
+  deps.logger = {
     info(message) {
       if (options.verbose) {
         logBuffer.push({ level: 'info', message });
       }
+      originalLogger.info(message);
     },
     warn(message) {
       if (options.verbose) {
         logBuffer.push({ level: 'warn', message });
       }
+      originalLogger.warn(message);
     },
     error(message) {
       logBuffer.push({ level: 'error', message });
+      originalLogger.error(message);
     }
   };
 
-  const summary = await guessPlaceHubs(options, { logger });
+  // Call orchestration layer (pure business logic, no CLI concerns)
+  const { aggregate: batchSummary } = await guessPlaceHubsBatch(options, deps);
+  
+  const renderOptions = {
+    ...options,
+    domain: batchSummary.domain
+  };
+
+  const jsonSummary = buildJsonSummary(batchSummary, options, logBuffer);
+  let reportStatus = null;
+
+  if (options.emitReport) {
+    const reportResult = writeReportFile(jsonSummary, options);
+    if (reportResult?.payload) {
+      Object.assign(jsonSummary, reportResult.payload);
+      reportStatus = {
+        path: reportResult.path,
+        directory: reportResult.directory,
+        savedAt: reportResult.savedAt
+      };
+    } else if (reportResult?.error) {
+      jsonSummary.report = {
+        ...(jsonSummary.report || {}),
+        requested: true,
+        targetPath: options.reportPath || null,
+        directory: options.reportDirectory || null,
+        written: false,
+        error: reportResult.error
+      };
+      reportStatus = { error: reportResult.error };
+    }
+  }
 
   if (options.json) {
     for (const entry of logBuffer) {
@@ -1181,11 +1511,16 @@ async function main(argv) {
         console.error(entry.message);
       }
     }
-    console.log(JSON.stringify(summary, null, 2));
+    if (reportStatus?.error) {
+      console.error(`Failed to write report: ${reportStatus.error}`);
+    } else if (reportStatus?.path) {
+      console.error(`Report written to ${reportStatus.path}`);
+    }
+    console.log(JSON.stringify(jsonSummary, null, 2));
     return;
   }
 
-  renderSummary(summary, options, logBuffer);
+  renderSummary(batchSummary, renderOptions, logBuffer, { reportStatus });
 }
 
 if (require.main === module) {
@@ -1197,8 +1532,11 @@ if (require.main === module) {
 
 module.exports = {
   parseCliArgs,
-  guessPlaceHubs,
   resolveDbPath,
   normalizeDomain,
-  extractTitle
+  extractTitle,
+  buildDomainBatchInputs,
+  parseDomainImportFile,
+  buildJsonSummary,
+  writeReportFile
 };

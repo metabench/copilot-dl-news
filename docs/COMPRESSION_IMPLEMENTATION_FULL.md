@@ -596,7 +596,7 @@ module.exports = {
  */
 
 const tar = require('tar-stream');
-const { compress, decompress, getCompressionType } = require('./compression');
+const { compress, decompress, getCompressionType } = require('./CompressionFacade');
 
 /**
  * Create compression bucket from multiple content items
@@ -831,7 +831,7 @@ module.exports = {
  */
 
 const { ensureDb } = require('../db/sqlite/ensureDb');
-const { compress, getCompressionType } = require('../utils/compression');
+const { compress, getCompressionType } = require('../utils/CompressionFacade');
 const fs = require('fs');
 const path = require('path');
 
@@ -989,7 +989,7 @@ module.exports = {
 ### Usage Example
 
 ```javascript
-const { compressAndStore } = require('./utils/compression');
+const { compressAndStore } = require('./utils/CompressionFacade');
 const { createBucket } = require('./utils/compressionBuckets');
 const compressionConfig = require('./config/compressionConfig');
 

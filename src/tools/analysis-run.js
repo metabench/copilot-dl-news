@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { is_array, tof, fp } = require('lang-tools');
+const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
 const { findProjectRoot } = require('../utils/project-root');
 const { ensureDb } = require('../db/sqlite');
 const {
@@ -21,76 +23,49 @@ const { analysePages } = require('./analyse-pages-core');
 const { countArticlesNeedingAnalysis } = require('../db/queries/analysisQueries');
 let NewsDatabase;
 
-function parseArgs(argv = []) {
-  if (!is_array(argv)) return {};
-  const args = {};
-  for (const raw of argv.slice(2)) {
-    if (tof(raw) !== 'string' || !raw.startsWith('--')) continue;
-    const eq = raw.indexOf('=');
-    const keyPart = eq === -1 ? raw.slice(2) : raw.slice(2, eq);
-    if (!keyPart) continue;
-    const key = toCamelCase(keyPart.trim());
-    if (!key) continue;
-    if (eq === -1) {
-      args[key] = true;
-    } else {
-      const value = raw.slice(eq + 1);
-      args[key] = coerceArgValue(value);
-    }
+function createArgumentParser() {
+  const projectRoot = findProjectRoot(__dirname);
+  const defaultDbPath = path.join(projectRoot, 'data', 'news.db');
+  const parser = new CliArgumentParser(
+    'analysis-run',
+    'Run page/domain analysis and award crawl milestones.'
+  );
+
+  parser
+    .add('--db <path>', 'Path to news database (defaults to data/news.db)', defaultDbPath)
+    .add('--analysis-version <number>', 'Override analysis version', undefined, 'int')
+    .add('--limit <number>', 'Limit page analysis to N articles', undefined, 'int')
+    .add('--domain-limit <number>', 'Limit domain analysis to N domains', undefined, 'int')
+    .add('--run-id <id>', 'Provide a custom run identifier')
+    .add('--skip-pages', 'Skip page analysis stage', false, 'boolean')
+    .add('--skip-domains', 'Skip domain analysis stage', false, 'boolean')
+    .add('--dry-run', 'Preview milestone awarding without writes', false, 'boolean')
+    .add('--verbose', 'Enable verbose logging output', false, 'boolean')
+    .add('--benchmark', 'Collect benchmark timings', false, 'boolean')
+    .add('--piechart', 'Emit pie chart SVG for benchmark breakdown', false, 'boolean');
+
+  const program = parser.getProgram();
+  program.option('--no-progress-logging', 'Disable CLI progress logging');
+
+  return parser;
+}
+
+let cachedParser = null;
+function getParser() {
+  if (!cachedParser) {
+    cachedParser = createArgumentParser();
   }
-  return args;
+  return cachedParser;
+}
+
+function parseArgs(argv = process.argv) {
+  return getParser().parse(argv);
 }
 
 function toCamelCase(text) {
   if (!text) return text;
   return text.replace(/-([a-zA-Z0-9])/g, (_, ch) => ch.toUpperCase());
 }
-
-/**
- * Polymorphic argument value coercion.
- * Uses functional polymorphism (fp) from lang-tools for signature-based dispatch.
- * 
- * Converts string literals to appropriate types and parses numeric strings.
- * 
- * Signature handlers:
- * - '[u]': undefined returns as-is
- * - '[s]': String with special literal handling ('true' → true, 'false' → false, etc.)
- *          Empty or numeric strings are parsed accordingly
- */
-const coerceArgValue = fp((a, sig) => {
-  // Undefined - return as-is
-  if (sig === '[u]') {
-    return undefined;
-  }
-  
-  // String - handle literal conversions and numeric parsing
-  if (sig === '[s]') {
-    const value = a[0];
-    
-    // Empty string
-    if (value === '') return '';
-    
-    // Boolean literals
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    
-    // Null/undefined literals
-    if (value === 'null') return null;
-    if (value === 'undefined') return undefined;
-    
-    // Numeric string parsing
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    const numeric = Number(trimmed);
-    if (!Number.isNaN(numeric)) return numeric;
-    
-    // Non-numeric, non-literal string
-    return value;
-  }
-  
-  // Default: return value as-is
-  return a[0];
-});
 
 /**
  * Polymorphic boolean coercion with fallback support.
@@ -164,6 +139,35 @@ function formatNumberIntl(value) {
   } catch (_) {
     return String(num);
   }
+}
+
+function formatDuration(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value < 0) {
+    return 'n/a';
+  }
+  if (value < 1000) {
+    return `${Math.round(value)} ms`;
+  }
+  const totalSeconds = Math.round(value / 1000);
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) {
+    return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const parts = [`${hours}h`];
+  if (remainingMinutes) {
+    parts.push(`${remainingMinutes}m`);
+  }
+  if (seconds) {
+    parts.push(`${seconds}s`);
+  }
+  return parts.join(' ');
 }
 
 function buildRunHighlights(summary = {}) {
@@ -1262,9 +1266,140 @@ async function runAnalysis(rawOptions = {}) {
   return runSummary;
 }
 
+function buildStageRows(summary = {}) {
+  const steps = summary.steps || {};
+  const rows = [];
+
+  const dbSetup = steps.dbSetup || {};
+  rows.push({
+    Stage: 'DB setup',
+    Status: dbSetup.ensured ? 'completed' : 'skipped',
+    Details: dbSetup.ensured ? 'Schema ensured' : 'Skipped (used existing schema)'
+  });
+
+  const pages = steps.pages || {};
+  const pagesSkipped = pages.skipped === true;
+  const pagesStatus = pagesSkipped ? 'skipped' : 'completed';
+  const processed = formatNumberIntl(pages.processed ?? pages.analysed);
+  const updated = formatNumberIntl(pages.updated);
+  const places = formatNumberIntl(pages.placesInserted);
+  const hubsNew = formatNumberIntl(pages.hubsInserted);
+  const hubsUpdated = formatNumberIntl(pages.hubsUpdated);
+  const pageDetails = pagesSkipped
+    ? 'skip-pages flag set'
+    : [
+        processed ? `${processed} processed` : null,
+        updated ? `${updated} updated` : null,
+        places ? `${places} places` : null,
+        hubsNew ? `${hubsNew} hubs` : null,
+        hubsUpdated ? `${hubsUpdated} hubs refreshed` : null
+      ].filter(Boolean).join(', ') || 'Completed';
+  rows.push({ Stage: 'Page analysis', Status: pagesStatus, Details: pageDetails });
+
+  const domains = steps.domains || {};
+  const domainsSkipped = domains.skipped === true;
+  const domainsStatus = domainsSkipped ? 'skipped' : domains.completed ? 'completed' : 'pending';
+  const domainLimitStr = formatNumberIntl(domains.limit);
+  const domainDetails = domainsSkipped
+    ? 'skip-domains flag set'
+    : domains.completed
+      ? domainLimitStr ? `Completed (limit ${domainLimitStr})` : 'Completed'
+      : 'Not executed';
+  rows.push({ Stage: 'Domain analysis', Status: domainsStatus, Details: domainDetails });
+
+  const milestones = steps.milestones || {};
+  const milestoneCount = Number(milestones.count || 0);
+  const milestonesStatus = milestones.dryRun
+    ? milestoneCount > 0 ? 'dry-run' : 'dry-run (none)'
+    : milestoneCount > 0 ? 'awarded' : 'none';
+  const milestoneDetails = milestoneCount > 0
+    ? `${formatNumberIntl(milestoneCount) || milestoneCount} ${milestones.dryRun ? 'would be awarded (dry-run)' : 'awarded'}`
+    : milestones.dryRun
+      ? 'Dry-run, no awards'
+      : 'No new milestones';
+  rows.push({ Stage: 'Milestones', Status: milestonesStatus, Details: milestoneDetails });
+
+  return rows;
+}
+
+function colorizeStatus(fmt, status) {
+  const normalized = typeof status === 'string' ? status.toLowerCase() : '';
+  switch (normalized) {
+    case 'completed':
+    case 'awarded':
+      return fmt.COLORS.success(status);
+    case 'dry-run':
+    case 'dry-run (none)':
+      return fmt.COLORS.info(status);
+    case 'none':
+      return fmt.COLORS.muted(status);
+    case 'skipped':
+      return fmt.COLORS.warning(status);
+    case 'pending':
+      return fmt.COLORS.accent(status);
+    default:
+      return status;
+  }
+}
+
+function emitCliSummary(fmt, summary) {
+  if (!fmt || !summary || typeof summary !== 'object') return;
+  const config = summary.config || {};
+  const highlights = buildRunHighlights(summary);
+  const rows = buildStageRows(summary);
+  const milestoneCount = Number(summary.steps?.milestones?.count || 0);
+
+  fmt.header('analysis-run summary');
+  fmt.summary({
+    'Run ID': summary.runId || '(auto)',
+    'Duration': formatDuration(summary.durationMs),
+    'Milestones': milestoneCount ? formatNumberIntl(milestoneCount) : '0',
+    'Dry run': config.dryRun ? 'Yes' : 'No'
+  });
+
+  fmt.section('Configuration');
+  fmt.stat('Database', config.dbPath || '(default)');
+  fmt.stat('Analysis version', config.analysisVersion != null ? config.analysisVersion : 'auto');
+  fmt.stat('Page limit', config.pageLimit != null ? formatNumberIntl(config.pageLimit) : 'all');
+  fmt.stat('Domain limit', config.domainLimit != null ? formatNumberIntl(config.domainLimit) : 'all');
+  fmt.stat('Verbose logging', config.verbose ? 'Enabled' : 'Disabled');
+  fmt.stat('Benchmark mode', summary.steps?.benchmark ? 'Enabled' : (config.benchmark ? 'Requested' : 'Off'));
+
+  if (Array.isArray(rows) && rows.length) {
+    fmt.section('Stages');
+    fmt.table(rows, {
+      columns: ['Stage', 'Status', 'Details'],
+      format: {
+        Status: (value) => colorizeStatus(fmt, value)
+      }
+    });
+  }
+
+  if (highlights.length) {
+    fmt.list('Highlights', highlights);
+  }
+
+  fmt.footer();
+}
+
 async function cli(argv = process.argv) {
-  const args = parseArgs(argv);
-  return runAnalysis(args);
+  const fmt = new CliFormatter();
+  let args;
+  try {
+    args = parseArgs(argv);
+  } catch (error) {
+    fmt.error(error?.message || 'Failed to parse arguments');
+    throw error;
+  }
+
+  try {
+    const summary = await runAnalysis(args);
+    emitCliSummary(fmt, summary);
+    return summary;
+  } catch (error) {
+    fmt.error(`Analysis run failed: ${error?.message || error}`);
+    throw error;
+  }
 }
 
 if (require.main === module) {

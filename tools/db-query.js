@@ -1,156 +1,233 @@
 #!/usr/bin/env node
 /**
- * Database query runner - execute read-only queries without approval dialogs.
- * 
- * Usage:
- *   node tools/db-query.js "SELECT * FROM articles LIMIT 5"
- *   node tools/db-query.js "SELECT COUNT(*) FROM articles WHERE host='bbc.co.uk'"
- *   node tools/db-query.js --json "SELECT * FROM analysis_runs ORDER BY started_at DESC LIMIT 3"
+ * Database query runner — execute read-only queries without triggering approval dialogs.
  */
 
-const Database = require('better-sqlite3');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const { CliFormatter } = require('../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+const { openDatabase } = require('../src/db/sqlite/v1');
+const { findProjectRoot } = require('../src/utils/project-root');
 
-const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
-
-function getDbPath() {
-  const envPath = process.env.DB_PATH;
-  if (envPath && fs.existsSync(envPath)) {
-    return envPath;
+class CliError extends Error {
+  constructor(message, exitCode = 1) {
+    super(message);
+    this.exitCode = exitCode;
   }
-  if (fs.existsSync(DEFAULT_DB_PATH)) {
-    return DEFAULT_DB_PATH;
-  }
-  console.error('Error: Database not found at', DEFAULT_DB_PATH);
-  console.error('Set DB_PATH environment variable or create data/news.db');
-  process.exit(1);
 }
 
-function formatTable(rows) {
-  if (!rows || rows.length === 0) {
-    return '(no results)';
-  }
-  
-  const keys = Object.keys(rows[0]);
-  const maxWidths = {};
-  
-  keys.forEach(key => {
-    maxWidths[key] = Math.max(
-      key.length,
-      ...rows.map(row => {
-        const val = row[key];
-        if (val === null) return 4; // 'null'
-        return String(val).length;
-      })
-    );
-  });
-  
-  const lines = [];
-  const header = keys.map(key => key.padEnd(maxWidths[key])).join(' | ');
-  const separator = keys.map(key => '-'.repeat(maxWidths[key])).join('-+-');
-  
-  lines.push(header);
-  lines.push(separator);
-  
-  rows.forEach(row => {
-    const line = keys.map(key => {
-      const val = row[key];
-      const str = val === null ? 'null' : String(val);
-      return str.padEnd(maxWidths[key]);
-    }).join(' | ');
-    lines.push(line);
-  });
-  
-  return lines.join('\n');
+const fmt = new CliFormatter();
+const projectRoot = findProjectRoot(__dirname);
+const DEFAULT_DB_PATH = path.join(projectRoot, 'data', 'news.db');
+
+function createParser() {
+  const parser = new CliArgumentParser(
+    'db-query',
+    'Execute read-only SQL queries against the news database.'
+  );
+
+  parser
+    .add('--db <path>', 'Path to SQLite database', DEFAULT_DB_PATH)
+    .add('--sql <statement>', 'Provide the SQL query explicitly')
+    .add('--file <path>', 'Read SQL query from file')
+    .add('--json', 'Output results as JSON (alias for --format json)', false, 'boolean')
+    .add('--format <mode>', 'Output format: table | json', 'table')
+    .add('--limit <number>', 'Limit displayed rows in table output', undefined, 'int')
+    .add('--quiet', 'Suppress footer summary when using table output', false, 'boolean')
+    .add('--list', 'List tables/views (overrides query)', false, 'boolean');
+
+  return parser;
 }
 
-function main() {
-  const args = process.argv.slice(2);
-  
-  if (args.length === 0 || args[0] === 'help' || args[0] === '--help') {
-    console.log(`
-Database Query Runner (read-only)
-
-Usage:
-  node tools/db-query.js [--json] "<SQL query>"
-
-Options:
-  --json                    Output results as JSON
-
-Environment:
-  DB_PATH                   Path to SQLite database (default: data/news.db)
-
-Examples:
-  node tools/db-query.js "SELECT * FROM articles LIMIT 5"
-  node tools/db-query.js "SELECT COUNT(*) as count FROM articles WHERE host='bbc.co.uk'"
-  node tools/db-query.js --json "SELECT * FROM analysis_runs ORDER BY started_at DESC LIMIT 3"
-
-Security:
-  - Database opened in read-only mode
-  - Only SELECT queries permitted
-  - Write operations will fail
-`);
-    process.exit(0);
+function resolveDatabasePath(optionPath) {
+  const candidate = optionPath || process.env.DB_PATH || DEFAULT_DB_PATH;
+  const resolved = path.resolve(candidate);
+  if (fs.existsSync(resolved)) {
+    return resolved;
   }
-  
-  let outputJson = false;
-  let query;
-  
-  if (args[0] === '--json') {
-    outputJson = true;
-    query = args.slice(1).join(' ');
-  } else {
-    query = args.join(' ');
+  throw new CliError(`Database not found at ${resolved}. Use --db or set DB_PATH.`);
+}
+
+function readQueryFromFile(filePath) {
+  const resolved = path.resolve(filePath);
+  if (!fs.existsSync(resolved)) {
+    throw new CliError(`SQL file not found: ${resolved}`);
   }
-  
+  return fs.readFileSync(resolved, 'utf-8');
+}
+
+function ensureAllowedQuery(query) {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    throw new CliError('SQL query is empty.');
+  }
+  const normalized = trimmed.toLowerCase();
+  if (
+    normalized.startsWith('select') ||
+    normalized.startsWith('pragma') ||
+    normalized.startsWith('explain') ||
+    normalized.startsWith('with ')
+  ) {
+    return trimmed;
+  }
+  throw new CliError('Only SELECT, PRAGMA, EXPLAIN, or WITH queries are permitted (connection is read-only).');
+}
+
+function normalizeOptions(rawOptions) {
+  const positional = Array.isArray(rawOptions.positional) ? rawOptions.positional : [];
+  const positionalTokens = positional
+    .filter((token) => typeof token === 'string')
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0 && !token.startsWith('-'));
+
+  if (rawOptions.sql && positionalTokens.length) {
+    throw new CliError('Provide the query via --sql, --file, or positional arguments — not multiple sources.');
+  }
+  if (rawOptions.sql && rawOptions.file) {
+    throw new CliError('Use either --sql or --file to provide the query (not both).');
+  }
+
+  const format = (rawOptions.json ? 'json' : rawOptions.format || 'table').toLowerCase();
+  if (!['table', 'json'].includes(format)) {
+    throw new CliError(`Unsupported format: ${rawOptions.format}. Use table or json.`);
+  }
+
+  const limit = rawOptions.limit != null ? rawOptions.limit : null;
+  if (limit != null && (!Number.isFinite(limit) || limit <= 0)) {
+    throw new CliError('The --limit option must be a positive integer.');
+  }
+
+  let query = null;
+  if (rawOptions.file) {
+    query = readQueryFromFile(rawOptions.file);
+  } else if (rawOptions.sql) {
+    query = rawOptions.sql;
+  } else if (positionalTokens.length) {
+    query = positionalTokens.join(' ');
+  }
+
+  if (rawOptions.list) {
+    if (query) {
+      throw new CliError('The --list flag cannot be combined with a custom SQL query.');
+    }
+    query = `SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') ORDER BY name`;
+  }
+
   if (!query) {
-    console.error('Error: SQL query required');
-    process.exit(1);
+    throw new CliError('No SQL query provided. Use --sql, --file, positional SQL, or --list.');
   }
-  
-  // Basic safety check (database is read-only anyway)
-  const normalized = query.trim().toLowerCase();
-  if (!normalized.startsWith('select') && 
-      !normalized.startsWith('pragma') && 
-      !normalized.startsWith('explain')) {
-    console.error('Error: Only SELECT, PRAGMA, and EXPLAIN queries permitted');
-    console.error('Database is opened in read-only mode for safety');
-    process.exit(1);
-  }
-  
-  const dbPath = getDbPath();
-  const db = new Database(dbPath, { readonly: true });
-  
+
+  const validatedQuery = ensureAllowedQuery(query);
+  const dbPath = resolveDatabasePath(rawOptions.db);
+
+  return {
+    dbPath,
+    query: validatedQuery,
+    format,
+    limit: limit != null ? Math.floor(limit) : null,
+    quiet: Boolean(rawOptions.quiet)
+  };
+}
+
+function executeQuery(dbPath, query) {
+  const db = openDatabase(dbPath, { readonly: true, fileMustExist: true });
   try {
-    const stmt = db.prepare(query);
-    let results;
-    
-    // Check if query returns rows
-    if (normalized.startsWith('pragma') || 
-        normalized.includes('returning') || 
-        !/^(insert|update|delete)/i.test(normalized)) {
-      results = stmt.all();
-    } else {
-      // Just run it
-      const info = stmt.run();
-      results = [{ changes: info.changes, lastInsertRowid: info.lastInsertRowid }];
-    }
-    
-    if (outputJson) {
-      console.log(JSON.stringify(results, null, 2));
-    } else {
-      console.log('');
-      console.log(formatTable(results));
-      console.log('');
-      console.log(`${results.length} row${results.length === 1 ? '' : 's'} returned`);
-    }
-  } catch (err) {
-    console.error('Query error:', err.message);
-    process.exit(1);
+    const statement = db.prepare(query);
+    return statement.all();
   } finally {
-    db.close();
+    try { db.close(); } catch (_) {}
   }
 }
 
-main();
+function renderTableOutput(options, rows) {
+  const truncatedQuery = options.query.length > 200
+    ? `${options.query.slice(0, 197)}…`
+    : options.query;
+
+  fmt.header('Database Query Results');
+  fmt.section('Execution');
+  fmt.stat('Database', options.dbPath);
+  fmt.stat('Query', truncatedQuery);
+
+  fmt.section('Rows');
+  if (!rows.length) {
+    fmt.info('No rows returned.');
+  } else {
+    const displayRows = options.limit != null ? rows.slice(0, options.limit) : rows;
+    fmt.table(displayRows);
+    if (options.limit != null && rows.length > options.limit) {
+      const hiddenCount = rows.length - options.limit;
+      fmt.info(`${hiddenCount} additional row${hiddenCount === 1 ? '' : 's'} not shown (adjust --limit to view all).`);
+    }
+  }
+
+  if (!options.quiet) {
+    fmt.summary({
+      'Rows returned': rows.length,
+      'Output format': options.format
+    });
+  }
+
+  fmt.footer();
+}
+
+function main(argv = process.argv) {
+  const argvArray = Array.isArray(argv) ? argv : [];
+  const effectiveArgv = argvArray.length ? argvArray : process.argv;
+  const parser = createParser();
+  let rawOptions;
+
+  try {
+    rawOptions = parser.parse(effectiveArgv);
+  } catch (error) {
+    fmt.error(error?.message || 'Failed to parse arguments.');
+    process.exit(1);
+  }
+
+  if (process.env.DB_QUERY_DEBUG) {
+    // Helpful for diagnosing positional parsing edge cases
+    console.error('[debug] raw options:', JSON.stringify(rawOptions));
+  }
+
+  let options;
+  try {
+    const sanitizedOptions = Array.isArray(rawOptions.positional)
+      ? {
+          ...rawOptions,
+          positional: rawOptions.positional.filter((token) => ![effectiveArgv[0], effectiveArgv[1]].includes(token))
+        }
+      : rawOptions;
+    options = normalizeOptions(sanitizedOptions);
+  } catch (error) {
+    const exitCode = error instanceof CliError ? error.exitCode : 1;
+    fmt.error(error.message || 'Invalid configuration.');
+    process.exit(exitCode);
+  }
+
+  let rows;
+  try {
+    rows = executeQuery(options.dbPath, options.query);
+  } catch (error) {
+    fmt.error(`Query error: ${error.message || error}`);
+    process.exit(1);
+  }
+
+  if (options.format === 'json') {
+    console.log(JSON.stringify(rows, null, 2));
+    return;
+  }
+
+  renderTableOutput(options, rows);
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  main,
+  ensureAllowedQuery,
+  normalizeOptions,
+  executeQuery
+};

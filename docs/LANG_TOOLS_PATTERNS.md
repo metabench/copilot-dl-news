@@ -372,68 +372,26 @@ coerceNumeric({value: {value: 5}});   // 5 (recursive unwrapping)
 coerceNumeric(null, 99);              // 99 (fallback via '[N,n]')
 ```
 
-#### Real-World Example 3: Literal String Parsing
+#### Real-World Example 3: Prefer CliArgumentParser Over Manual Coercion
 
-**Source**: `src/tools/analysis-run.js` - `coerceArgValue` function
+**Update (October 2025):** The earlier `coerceArgValue` helper in `analysis-run.js` has been retired in favour of [`CliArgumentParser`](../src/utils/CliArgumentParser.js), which provides validated literals and numbers out of the box. Instead of hand-rolling polymorphic coercion, declare the option's type when defining the CLI flag:
 
 ```javascript
-// BEFORE (imperative literal checking):
-function coerceArgValue(value) {
-  if (value === undefined) return undefined;
-  if (typeof value !== 'string') return value;
-  
-  const trimmed = value.trim();
-  if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-  if (trimmed === 'null') return null;
-  if (trimmed === 'undefined') return undefined;
-  
-  const asNumber = Number(trimmed);
-  if (!isNaN(asNumber)) return asNumber;
-  
-  return value;
-}
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
 
-// AFTER (fp with literal parsing):
-const coerceArgValue = fp((a, sig) => {
-  // Undefined → pass through
-  if (sig === '[u]') {
-    return undefined;
-  }
-  
-  // String → parse literals or numbers
-  if (sig === '[s]') {
-    const trimmed = a[0].trim();
-    
-    // Boolean literals
-    if (trimmed === 'true') return true;
-    if (trimmed === 'false') return false;
-    
-    // Null/undefined literals
-    if (trimmed === 'null') return null;
-    if (trimmed === 'undefined') return undefined;
-    
-    // Empty string → empty string (not undefined)
-    if (trimmed === '') return a[0];
-    
-    // Numeric strings
-    const asNumber = Number(trimmed);
-    if (!isNaN(asNumber)) return asNumber;
-    
-    return a[0]; // Return original string
-  }
-  
-  // All other types → pass through
-  return a[0];
-});
+const parser = new CliArgumentParser('analysis-run', 'Run page/domain analysis and award milestones.');
+parser
+  .add('--limit <number>', 'Limit page analysis to N articles', undefined, 'int')
+  .add('--dry-run', 'Preview milestone awarding without writes', false, 'boolean')
+  .add('--no-progress-logging', 'Disable CLI progress updates');
 
-// Usage:
-coerceArgValue('true');       // true (boolean)
-coerceArgValue('42');         // 42 (number)
-coerceArgValue('null');       // null
-coerceArgValue('hello');      // 'hello' (string)
-coerceArgValue(undefined);    // undefined (pass through)
+const options = parser.parse(process.argv);
+// options.limit is already a Number
+// options.dryRun is a Boolean
+// options.progressLogging respects the negated flag automatically
 ```
+
+**Why this matters:** `CliArgumentParser` encapsulates the literal parsing pattern that `coerceArgValue` implemented manually (handling `'true'`, `'false'`, `'null'`, numeric strings, etc.). Reusing the shared parser keeps our CLIs consistent, reduces bespoke fp helpers, and avoids duplication when new flags are introduced.
 
 #### Real-World Example 4: Simple Truthy Flag Detection
 

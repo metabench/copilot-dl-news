@@ -9,6 +9,12 @@
 
 const path = require('path');
 const { createJsdom } = require('../utils/jsdomUtils');
+const { ensureDb } = require('../db/sqlite');
+const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const { createBackfillDatesQueries } = require('../db/sqlite/v1/queries/articles.backfillDates');
+
+const fmt = new CliFormatter();
 
 // Gracefully handle broken pipe (e.g., piping to `Select-Object -First N`)
 try {
@@ -18,6 +24,111 @@ try {
     });
   }
 } catch (_) {}
+
+function parseCliArgs(argv) {
+  const parser = new CliArgumentParser(
+    'backfill-dates',
+    'Backfill article publication dates from stored HTML'
+  );
+
+  parser
+    .add('--db <path>', 'Path to SQLite database', 'data/news.db')
+    .add('--limit <number>', 'Maximum number of rows to process (0 = unlimited)', 0, 'number')
+    .add('--batch-size <number>', 'Rows per transaction batch', 50, 'number')
+    .add('--no-list-existing', 'Skip listing rows that already have a date', false, 'boolean')
+    .add('--redo', 'Reprocess rows even if a date already exists', false, 'boolean')
+    .add('--force', 'Alias for --redo', false, 'boolean')
+    .add('--include-nav', 'Include non-article pages (navigation, etc.)', false, 'boolean')
+    .add('--url <value>', 'Only process a specific URL', '')
+    .add('--stream <boolean>', 'Emit per-row legacy event lines (true/false)', true, 'boolean')
+    .add('--quiet', 'Suppress formatted summary output (JSON only)', false, 'boolean')
+    .add('--summary-format <mode>', 'Summary output format: ascii | json', 'ascii');
+
+  return parser.parse(argv);
+}
+
+function normalizeOptions(rawArgs) {
+  const dbOption = rawArgs.db || 'data/news.db';
+  const dbPath = path.isAbsolute(dbOption) ? dbOption : path.join(process.cwd(), dbOption);
+
+  const limit = Number.isFinite(rawArgs.limit) ? Math.max(0, rawArgs.limit) : 0;
+  const batchSize = Number.isFinite(rawArgs.batchSize) && rawArgs.batchSize > 0 ? rawArgs.batchSize : 50;
+  const listExisting = rawArgs.noListExisting ? false : true;
+  const redo = Boolean(rawArgs.redo || rawArgs.force);
+  const includeNav = Boolean(rawArgs.includeNav);
+  const onlyUrl = typeof rawArgs.url === 'string' ? rawArgs.url.trim() : '';
+  const stream = rawArgs.stream === undefined ? true : Boolean(rawArgs.stream);
+  const quiet = Boolean(rawArgs.quiet);
+  const summaryFormatRaw = typeof rawArgs.summaryFormat === 'string' ? rawArgs.summaryFormat.toLowerCase() : 'ascii';
+  if (!['ascii', 'json'].includes(summaryFormatRaw)) {
+    throw new Error(`Unsupported summary format: ${rawArgs.summaryFormat}`);
+  }
+
+  return {
+    dbPath,
+    limit,
+    batchSize,
+    listExisting,
+    redo,
+    includeNav,
+    onlyUrl,
+    stream,
+    quiet,
+    summaryFormat: summaryFormatRaw
+  };
+}
+
+function createEventEmitter(streamEnabled) {
+  const counts = Object.create(null);
+
+  return {
+    emit(type, date, url) {
+      counts[type] = (counts[type] || 0) + 1;
+      if (!streamEnabled) return;
+      const safeDate = date ? String(date) : '';
+      const safeUrl = url ? String(url) : '';
+      process.stdout.write(`${type}\t${safeDate}\t${safeUrl}\n`);
+    },
+    counts
+  };
+}
+
+function emitSummary(summary, { quiet, format }) {
+  const payload = {
+    processed: summary.processed,
+    batches: summary.batches,
+    backfilled: summary.backfilled,
+    updated: summary.updated,
+    unchanged: summary.unchanged,
+    missing: summary.missing,
+    existingListed: summary.existingListed,
+    redo: summary.redo,
+    includeNav: summary.includeNav,
+    limited: summary.limited,
+    limit: summary.limit
+  };
+
+  if (quiet || format === 'json') {
+    const spacing = quiet ? undefined : 2;
+    console.log(JSON.stringify(payload, null, spacing));
+    return;
+  }
+
+  fmt.section('Summary');
+  fmt.stat('Rows processed', summary.processed, 'number');
+  fmt.stat('Batches', summary.batches, 'number');
+  fmt.stat('Backfilled', summary.backfilled, 'number');
+  fmt.stat('Updated', summary.updated, 'number');
+  fmt.stat('Unchanged', summary.unchanged, 'number');
+  fmt.stat('Missing', summary.missing, 'number');
+  fmt.stat('Existing listed', summary.existingListed, 'number');
+  fmt.stat('Redo mode', summary.redo ? 'enabled' : 'disabled');
+  fmt.stat('Include nav pages', summary.includeNav ? 'yes' : 'no');
+  if (summary.limit) {
+    fmt.stat('Limit reached', summary.limited ? 'yes' : 'no');
+  }
+  fmt.footer();
+}
 
 // Lightweight extraction: scan HTML for common meta/time tags without building a DOM
 function quickExtractDate(html) {
@@ -135,113 +246,145 @@ function toIso(v) {
   return null;
 }
 
-function main() {
-  const dbPathArg = process.argv.find(a => a.startsWith('--db='));
-  const limitArg = process.argv.find(a => a.startsWith('--limit='));
-  const batchArg = process.argv.find(a => a.startsWith('--batch-size='));
-  const noListExisting = process.argv.includes('--no-list-existing');
-  const redo = process.argv.includes('--redo') || process.argv.includes('--force');
-  const includeNav = process.argv.includes('--include-nav');
-  const onlyArticles = includeNav ? false : true; // default: only article pages
-  const urlArg = process.argv.find(a => a.startsWith('--url='));
-  const onlyUrl = urlArg ? urlArg.split('=')[1] : '';
-  const dbPath = dbPathArg ? dbPathArg.split('=')[1] : path.join(process.cwd(), 'data', 'news.db');
-  const LIMIT = limitArg ? Math.max(0, parseInt(limitArg.split('=')[1], 10) || 0) : 0; // 0 = no limit
-  const BATCH_SIZE_CLI = batchArg ? Math.max(1, parseInt(batchArg.split('=')[1], 10) || 50) : 50;
-  let NewsDatabase;
-  try { NewsDatabase = require('../db'); } catch (e) {
-    console.error('Database unavailable:', e.message);
-    process.exit(1);
-  }
-  const db = new NewsDatabase(dbPath);
-  // Print rows that already have dates (no HTML read)
-  if (!noListExisting && !redo) {
-    // List existing dates for the selected scope (articles by default)
-    const baseWhere = [ 'a.date IS NOT NULL' ];
-    const params = [];
-    if (onlyArticles) {
-      baseWhere.push("EXISTS (SELECT 1 FROM fetches f WHERE f.url = a.url AND f.classification = 'article')");
+if (require.main === module) {
+  (async () => {
+    let options;
+    try {
+      const rawArgs = parseCliArgs(process.argv);
+      options = normalizeOptions(rawArgs);
+    } catch (error) {
+      fmt.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+      return;
     }
-    if (onlyUrl) {
-      baseWhere.push('a.url = ?');
-      params.push(onlyUrl);
-    }
-    const rows = db.db.prepare(`SELECT a.url, a.date FROM articles a WHERE ${baseWhere.join(' AND ')}`).iterate(...params);
-    for (const r of rows) {
-      const existing = (r.date || '').trim();
-      process.stdout.write(`existing\t${existing}\t${r.url}\n`);
-    }
-  }
 
-  // Process rows missing dates; stream to keep memory stable
-  const updateStmt = db.db.prepare('UPDATE articles SET date = ? WHERE url = ?');
-  // Batch processor transaction
-  const tx = db.db.transaction((items) => {
-    for (const r of items) {
-      const iso = extractDate(r.html || '');
-      if (iso) {
-        updateStmt.run(iso, r.url);
-        process.stdout.write(`backfilled\t${iso}\t${r.url}\n`);
-      } else {
-        process.stdout.write(`missing\t\t${r.url}\n`);
-      }
-    }
-  });
+    const {
+      dbPath,
+      limit,
+      batchSize,
+      listExisting,
+      redo,
+      includeNav,
+      onlyUrl,
+      stream,
+      quiet,
+      summaryFormat
+    } = options;
 
-  // Paginate over rows missing dates to avoid holding a cursor during updates
-  const PAGE = Math.max(1, BATCH_SIZE_CLI);
-  let lastId = 0;
-  let processed = 0;
-  while (true) {
-    let toFetch = PAGE;
-    if (LIMIT) {
-      const remaining = LIMIT - processed;
-      if (remaining <= 0) break;
-      toFetch = Math.min(toFetch, remaining);
+    if (!quiet) {
+      fmt.header('Backfill Publication Dates');
+      fmt.section('Configuration');
+      fmt.stat('Database path', dbPath);
+      fmt.stat('Batch size', batchSize, 'number');
+      if (limit) fmt.stat('Row limit', limit, 'number');
+      if (onlyUrl) fmt.stat('Filter URL', onlyUrl);
+      fmt.stat('Include nav pages', includeNav ? 'yes' : 'no');
+      fmt.stat('Redo mode', redo ? 'enabled' : 'disabled');
+      fmt.stat('List existing', listExisting && !redo ? 'yes' : 'no');
     }
-    // Build base WHERE: scope by only-articles and optional single URL
-    const where = [ 'a.id > ?' ];
-    const params = [ lastId ];
-    if (!redo) {
-      where.push('a.date IS NULL');
+
+    let dbHandle;
+    try {
+      dbHandle = ensureDb(dbPath);
+    } catch (error) {
+      fmt.error(`Failed to open database: ${error.message || error}`);
+      process.exitCode = 1;
+      return;
     }
-    if (onlyArticles) {
-      where.push("EXISTS (SELECT 1 FROM fetches f WHERE f.url = a.url AND f.classification = 'article')");
-    }
-    if (onlyUrl) {
-      where.push('a.url = ?');
-      params.push(onlyUrl);
-    }
-    params.push(toFetch);
-    const rows = db.db
-      .prepare(`SELECT a.id, a.url, a.html, a.date FROM articles a WHERE ${where.join(' AND ')} ORDER BY a.id LIMIT ?`)
-      .all(...params);
-    if (!rows.length) break;
-    // Process rows with redo-aware logic
-    if (redo) {
-      const missingRows = rows.filter(r => !r.date);
-      if (missingRows.length) tx(missingRows.map(r => ({ id: r.id, url: r.url, html: r.html })));
-      // Emit redo-specific statuses for rows that already had a date
-      for (const r of rows) {
-        const existing = (r.date || '').trim();
-        if (!existing) continue; // handled above as missing
-        const iso = extractDate(r.html || '');
-        if (iso && iso !== existing) {
-          updateStmt.run(iso, r.url);
-          process.stdout.write(`updated\t${iso}\t${r.url}\n`);
-        } else {
-          process.stdout.write(`unchanged\t${existing}\t${r.url}\n`);
+
+    const queries = createBackfillDatesQueries(dbHandle);
+    const onlyArticles = includeNav ? false : true;
+    const events = createEventEmitter(stream);
+
+    let processed = 0;
+    let batches = 0;
+    let listedExisting = 0;
+
+    try {
+      if (listExisting && !redo) {
+        for (const row of queries.iterateExistingDates({ onlyArticles, onlyUrl })) {
+          const existing = (row.date || '').trim();
+          events.emit('existing', existing, row.url);
+          listedExisting++;
         }
       }
-    } else {
-      // Normal mode: only missing-date rows are selected, send to tx
-      tx(rows.map(r => ({ id: r.id, url: r.url, html: r.html })));
+
+      const tx = dbHandle.transaction((items) => {
+        for (const row of items) {
+          const iso = extractDate(row.html || '');
+          if (iso) {
+            queries.updateArticleDate(row.url, iso);
+            events.emit('backfilled', iso, row.url);
+          } else {
+            events.emit('missing', '', row.url);
+          }
+        }
+      });
+
+      let lastId = 0;
+      while (true) {
+        let toFetch = batchSize;
+        if (limit) {
+          const remaining = limit - processed;
+          if (remaining <= 0) break;
+          toFetch = Math.min(toFetch, remaining);
+        }
+
+        const rows = queries.fetchBatch({
+          lastId,
+          limit: toFetch,
+          includeExistingDates: redo,
+          onlyArticles,
+          onlyUrl
+        });
+
+        if (!rows.length) break;
+
+        if (redo) {
+          const missingRows = rows.filter((row) => !row.date);
+          if (missingRows.length) tx(missingRows);
+
+          for (const row of rows) {
+            if (!row.date) continue;
+            const existing = (row.date || '').trim();
+            const iso = extractDate(row.html || '');
+            if (iso && iso !== existing) {
+              queries.updateArticleDate(row.url, iso);
+              events.emit('updated', iso, row.url);
+            } else {
+              events.emit('unchanged', existing, row.url);
+            }
+          }
+        } else {
+          tx(rows);
+        }
+
+        processed += rows.length;
+        batches += 1;
+        lastId = rows[rows.length - 1].id;
+      }
+
+      const counts = events.counts;
+      const summary = {
+        processed,
+        batches,
+        backfilled: counts.backfilled || 0,
+        updated: counts.updated || 0,
+        unchanged: counts.unchanged || 0,
+        missing: counts.missing || 0,
+        existingListed: listedExisting,
+        redo,
+        includeNav,
+        limit,
+        limited: Boolean(limit && processed >= limit)
+      };
+
+      emitSummary(summary, { quiet, format: summaryFormat });
+    } catch (error) {
+      fmt.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    } finally {
+      try { dbHandle.close(); } catch (_) {}
     }
-    processed += rows.length;
-    lastId = rows[rows.length - 1].id;
-  }
-
-  db.close();
+  })();
 }
-
-if (require.main === module) main();

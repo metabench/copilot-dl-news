@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+'use strict';
 /**
  * Get Test Summary - Quick Test Status Overview
  * 
@@ -14,20 +15,92 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { CliFormatter } = require('../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+
+class CliError extends Error {
+  constructor(message, exitCode = 1) {
+    super(message);
+    this.exitCode = exitCode;
+  }
+}
+
+const fmt = new CliFormatter();
+
+try {
+  if (process.stdout && typeof process.stdout.on === 'function') {
+    process.stdout.on('error', (err) => {
+      if (err && err.code === 'EPIPE') process.exit(0);
+    });
+  }
+} catch (_) {}
 
 const FAILURE_SUMMARY_PATH = path.join(__dirname, '..', 'test-failure-summary.json');
 const TESTLOGS_DIR = path.join(__dirname, '..', 'testlogs');
 
+function createParser() {
+  const parser = new CliArgumentParser(
+    'get-test-summary',
+    'Extract key metrics from the latest test log without rerunning tests.'
+  );
+
+  parser
+    .add('--suite <name>', 'Suite filter (unit, e2e, all)')
+    .add('--json', 'Emit JSON summary (alias for --summary-format json)', false, 'boolean')
+    .add('--compact', 'Emit single-line summary', false, 'boolean')
+    .add('--summary-format <mode>', 'Summary output format: ascii | json', 'ascii')
+    .add('--quiet', 'Suppress ASCII output and emit JSON only', false, 'boolean');
+
+  return parser;
+}
+
+function normalizeOptions(rawOptions) {
+  const positional = Array.isArray(rawOptions.positional) ? rawOptions.positional : [];
+  const filteredPositional = positional.filter((value) => {
+    if (!value) return false;
+    const normalized = value.toString();
+    return normalized !== process.argv[0] && normalized !== process.argv[1];
+  });
+
+  const suiteFilter = rawOptions.suite || filteredPositional[0] || null;
+
+  let summaryFormat = rawOptions.summaryFormat;
+  if (rawOptions.json) {
+    summaryFormat = 'json';
+  }
+  if (typeof summaryFormat === 'string') {
+    summaryFormat = summaryFormat.trim().toLowerCase();
+  } else {
+    summaryFormat = 'ascii';
+  }
+
+  if (!['ascii', 'json'].includes(summaryFormat)) {
+    throw new CliError(`Unsupported summary format: ${rawOptions.summaryFormat}`);
+  }
+
+  const quiet = Boolean(rawOptions.quiet);
+  if (quiet && summaryFormat !== 'json') {
+    throw new CliError('Quiet mode requires JSON summary output. Use --summary-format json or --json.');
+  }
+
+  return {
+    suiteFilter,
+    summaryFormat,
+    quiet,
+    compact: Boolean(rawOptions.compact)
+  };
+}
+
 function getLatestLogPath(suiteFilter) {
-  const cmd = suiteFilter 
-    ? `node "${path.join(__dirname, 'get-latest-log.js')}" ${suiteFilter}`
-    : `node "${path.join(__dirname, 'get-latest-log.js')}"`;
-  
+  const scriptPath = path.join(__dirname, 'get-latest-log.js');
+  const command = suiteFilter
+    ? `node "${scriptPath}" "${suiteFilter}"`
+    : `node "${scriptPath}"`;
+
   try {
-    return execSync(cmd, { encoding: 'utf8' }).trim();
-  } catch (err) {
-    console.error('Error: Could not find latest log file');
-    process.exit(1);
+    return execSync(command, { encoding: 'utf8' }).trim();
+  } catch (_) {
+    throw new CliError('Could not find latest log file.');
   }
 }
 
@@ -372,152 +445,213 @@ function formatFailureLabel(testPath, failureDetails, brokenInfo) {
   return `${baseLabel} — ${message}`;
 }
 
-function printSummary(summary, options) {
-  const { asJson, compact, failureDetails, brokenInfo } = options;
-
-  if (asJson) {
-    console.log(JSON.stringify(summary, null, 2));
-    return;
+function formatRuntime(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return value;
   }
+  return value.toFixed(2);
+}
 
-  if (compact) {
-    const pieces = [];
-    const suiteLabel = summary.suiteDisplay || summary.suite || 'unknown';
-    pieces.push(`suite=${suiteLabel}`);
-    pieces.push(`at=${(summary.timestamp || 'unknown').replace('T', ' ').replace('Z', 'Z')}`);
-    const runtimeValue = typeof summary.totalRuntime === 'number' && !Number.isNaN(summary.totalRuntime)
-      ? summary.totalRuntime.toFixed(2)
-      : summary.totalRuntime;
-    pieces.push(`runtime=${runtimeValue}s`);
-    pieces.push(`files=${summary.totalFiles}`);
-    pieces.push(`tests=${summary.passedTests}/${summary.totalTests}`);
-    pieces.push(`fail=${summary.failedTests}`);
-    pieces.push(`slow>${summary.slowTests}`);
-    if (summary.usedFallback && summary.fallbackLogPath) {
-      const fallbackName = path.basename(summary.fallbackLogPath);
-      pieces.push(`fallback-from=${fallbackName}`);
-    }
-    if (summary.failingFiles.length > 0) {
-      const failingLabels = summary.failingFiles
-        .slice(0, 3)
-        .map(f => {
-          const normalized = normalizePath(f);
-          return isBrokenTest(normalized, brokenInfo) ? `${normalized} [broken-suite]` : `${normalized}`;
-        })
-        .join(', ');
-      pieces.push(`failures=${failingLabels}${summary.failingFiles.length > 3 ? ', …' : ''}`);
-    } else {
-      pieces.push('status=pass');
-    }
-    if (typeof summary.activeFailingCount === 'number') {
-      pieces.push(`activeFailing=${summary.activeFailingCount}`);
-    }
-    if (summary.resolvedCount && summary.resolvedCount > 0) {
-      pieces.push(`resolved=${summary.resolvedCount}`);
-    }
-    if (summary.brokenFailingCount && summary.brokenFailingCount > 0) {
-      pieces.push(`broken=${summary.brokenFailingCount}`);
-    }
-    console.log(pieces.join(' | '));
-    return;
-  }
-
-  // Human-readable format
+function renderAsciiSummary(summary, context) {
   const suiteHeadline = summary.suiteDisplay || summary.suite || 'unknown';
-  console.log(`\n📊 Test Summary (${suiteHeadline})`);
-  console.log(`   Timestamp: ${summary.timestamp || 'unknown'}`);
-  console.log(`   Runtime: ${summary.totalRuntime}s`);
-  console.log('');
-  console.log(`   Files:  ${summary.totalFiles} test files`);
-  if (summary.isSuspectAllSuite) {
-    console.log(`   Note:  Suite labeled 'ALL' but only ${summary.totalFiles} file(s) detected (threshold ${summary.minimumAllThreshold})`);
-  } else if (summary.usedFallback && summary.fallbackLogPath) {
-    const skippedName = path.basename(summary.fallbackLogPath);
-    const activeName = path.basename(summary.logPath || '');
-    console.log(`   Note:  Using earlier ALL run (${activeName}); skipped newer log ${skippedName} (< ${summary.minimumAllThreshold} files)`);
+
+  fmt.header(`Test Summary (${suiteHeadline})`);
+  if (summary.logPath) {
+    fmt.settings(`Log: ${summary.logPath}`);
   }
-  console.log(`   Tests:  ${summary.totalTests} total (${summary.passedTests} passed, ${summary.failedTests} failed)`);
-  console.log(`   Slow:   ${summary.slowTests} files >5s, ${summary.verySlowTests} files >10s`);
+
+  if (summary.isLikelyAllSuite) {
+    const logName = path.basename(summary.logPath || '');
+    fmt.info(`Identified full-suite log ${logName} -> suites: ${summary.totalFiles}, tests run: ${summary.totalTests}, passed: ${summary.passedTests}, failed: ${summary.failedTests}`);
+  }
+
+  if (summary.usedFallback && summary.fallbackLogPath) {
+    const fallbackName = path.basename(summary.fallbackLogPath);
+    fmt.info(`Using earlier ALL log (fallback from ${fallbackName}) due to low file count.`);
+  }
+
+  if (summary.isSuspectAllSuite) {
+    fmt.warn(`Suite labeled 'ALL' but only ${summary.totalFiles} file(s) detected (threshold ${summary.minimumAllThreshold}).`);
+  }
+
+  const stats = {
+    'Timestamp': summary.timestamp || 'unknown',
+    'Runtime (s)': formatRuntime(summary.totalRuntime),
+    'Test files': summary.totalFiles,
+    'Tests (passed/total)': `${summary.passedTests}/${summary.totalTests}`,
+    'Failed tests': summary.failedTests,
+    'Slow files (>5s)': summary.slowTests,
+    'Very slow files (>10s)': summary.verySlowTests
+  };
+
   if (typeof summary.activeFailingCount === 'number') {
-    console.log(`   Active failing files: ${summary.activeFailingCount}`);
+    stats['Active failing files'] = summary.activeFailingCount;
+  }
+
+  if (typeof summary.resolvedCount === 'number') {
+    stats['Resolved since baseline'] = summary.resolvedCount;
   }
 
   if (summary.brokenFailingCount && summary.brokenFailingCount > 0) {
-    const brokenList = (summary.brokenFailingFiles || [])
-      .slice(0, 3)
-      .map(f => normalizePath(f))
-      .join(', ');
-    const suffix = ((summary.brokenFailingFiles || []).length > 3) ? ', …' : '';
-    console.log(`   Broken: ${summary.brokenFailingCount} test(s) quarantined [${brokenList}${suffix}]`);
+    stats['Broken test failures'] = summary.brokenFailingCount;
   }
 
-  if (summary.resolvedCount && summary.resolvedCount > 0) {
-    console.log(`
-   ✅ Fixed since baseline (${summary.resolvedCount})`);
-    summary.resolvedSinceBaseline.forEach(entry => {
+  fmt.summary(stats);
+
+  if (summary.resolvedCount && summary.resolvedCount > 0 && Array.isArray(summary.resolvedSinceBaseline)) {
+    const resolvedEntries = summary.resolvedSinceBaseline.map(entry => {
       const when = entry.resolvedIsoTimestamp ? entry.resolvedIsoTimestamp.replace('T', ' ').replace('Z', 'Z') : 'unknown time';
-      console.log(`      • ${normalizePath(entry.testPath)} (resolved in ${entry.resolvedInLog} via suite ${entry.suite}, ${when})`);
+      return `${normalizePath(entry.testPath)} (resolved in ${entry.resolvedInLog}, suite ${entry.suite}, ${when})`;
     });
+    fmt.section('Resolved Since Baseline');
+    fmt.list('Resolved tests', resolvedEntries);
+  }
+
+  if (summary.brokenFailingCount && summary.brokenFailingCount > 0) {
+    fmt.section('Broken Suite Failures');
+    const samples = (summary.brokenFailingFiles || []).map(normalizePath);
+    fmt.list('Broken tests', samples);
   }
 
   if (summary.failingFiles.length > 0) {
-    console.log(`\n   ❌ ${summary.failingFiles.length} failing file(s):`);
-    summary.failingFiles.forEach(f => console.log(`      - ${formatFailureLabel(f, failureDetails, brokenInfo)}`));
+    fmt.section('Failing Files');
+    const failingLabels = summary.failingFiles.map(f => formatFailureLabel(f, context.failureDetails, context.brokenInfo));
+    fmt.list('Failures', failingLabels);
   } else {
-    console.log(`\n   ✅ All tests passing`);
+    fmt.success('All tests passing.');
   }
-  console.log('');
+
+  fmt.footer();
 }
 
-// Parse arguments
-const args = process.argv.slice(2);
-let suiteFilter = null;
-let asJson = false;
-let compact = false;
+function renderCompactSummary(summary, context) {
+  const pieces = [];
+  const suiteLabel = summary.suiteDisplay || summary.suite || 'unknown';
+  pieces.push(`suite=${suiteLabel}`);
+  pieces.push(`at=${(summary.timestamp || 'unknown').replace('T', ' ').replace('Z', 'Z')}`);
+  pieces.push(`runtime=${formatRuntime(summary.totalRuntime)}s`);
+  pieces.push(`files=${summary.totalFiles}`);
+  pieces.push(`tests=${summary.passedTests}/${summary.totalTests}`);
+  pieces.push(`fail=${summary.failedTests}`);
+  pieces.push(`slow>${summary.slowTests}`);
+  if (summary.usedFallback && summary.fallbackLogPath) {
+    const fallbackName = path.basename(summary.fallbackLogPath);
+    pieces.push(`fallback-from=${fallbackName}`);
+  }
+  if (typeof summary.activeFailingCount === 'number') {
+    pieces.push(`activeFailing=${summary.activeFailingCount}`);
+  }
+  if (summary.resolvedCount && summary.resolvedCount > 0) {
+    pieces.push(`resolved=${summary.resolvedCount}`);
+  }
+  if (summary.brokenFailingCount && summary.brokenFailingCount > 0) {
+    pieces.push(`broken=${summary.brokenFailingCount}`);
+  }
+  if (summary.failingFiles.length > 0) {
+    const failingLabels = summary.failingFiles
+      .slice(0, 3)
+      .map(f => {
+        const normalized = normalizePath(f);
+        return isBrokenTest(normalized, context.brokenInfo) ? `${normalized} [broken-suite]` : normalized;
+      })
+      .join(', ');
+    pieces.push(`failures=${failingLabels}${summary.failingFiles.length > 3 ? ', …' : ''}`);
+  } else {
+    pieces.push('status=pass');
+  }
+  if (summary.isLikelyAllSuite) {
+    const logName = path.basename(summary.logPath || '');
+    pieces.push(`log=${logName}`);
+  }
+  console.log(pieces.join(' | '));
+}
 
-for (const arg of args) {
-  if (arg === '--json') {
-    asJson = true;
-  } else if (arg === '--compact') {
-    compact = true;
-  } else if (!arg.startsWith('--')) {
-    suiteFilter = arg;
+function buildJsonSummary(summary) {
+  return summary;
+}
+
+function emitSummary(summary, context, options) {
+  if (options.summaryFormat === 'json') {
+    const indent = options.quiet ? undefined : 2;
+    console.log(JSON.stringify(buildJsonSummary(summary), null, indent));
+    return;
+  }
+
+  if (options.compact) {
+    if (summary.isLikelyAllSuite) {
+      const logName = path.basename(summary.logPath || '');
+      fmt.info(`Identified full-suite log ${logName} -> suites: ${summary.totalFiles}, tests run: ${summary.totalTests}, passed: ${summary.passedTests}, failed: ${summary.failedTests}`);
+    }
+    renderCompactSummary(summary, context);
+    return;
+  }
+
+  renderAsciiSummary(summary, context);
+}
+
+function main() {
+  const parser = createParser();
+  let rawArgs;
+
+  try {
+    rawArgs = parser.parse(process.argv);
+  } catch (error) {
+    fmt.error(error.message);
+    process.exit(1);
+  }
+
+  let options;
+  try {
+    options = normalizeOptions(rawArgs);
+  } catch (error) {
+    if (error instanceof CliError) {
+      fmt.error(error.message);
+      process.exit(error.exitCode);
+    }
+    fmt.error(error.message);
+    process.exit(1);
+  }
+
+  try {
+    let logPath = getLatestLogPath(options.suiteFilter);
+    let summary = extractSummary(logPath);
+    summary.logPath = logPath;
+
+    const fallbackResult = maybeFindBetterAllLog(logPath, summary, options.suiteFilter);
+    if (fallbackResult.changed) {
+      logPath = fallbackResult.path;
+      summary = fallbackResult.summary;
+      summary.usedFallback = true;
+    }
+
+    summary.logPath = logPath;
+
+    const resolutionResult = resolveFailuresFromLaterLogs(logPath, summary.failingFiles);
+    summary.resolvedSinceBaseline = resolutionResult.resolved;
+    summary.resolvedCount = resolutionResult.resolved.length;
+    summary.failingFiles = resolutionResult.remaining;
+    summary.activeFailingCount = summary.failingFiles.length;
+
+    const failureDetails = loadFailureDetails();
+    const brokenInfo = collectBrokenTests();
+    const brokenFailingFiles = summary.failingFiles.filter(f => isBrokenTest(f, brokenInfo));
+    summary.brokenFailingFiles = brokenFailingFiles;
+    summary.brokenFailingCount = brokenFailingFiles.length;
+
+    emitSummary(summary, { failureDetails, brokenInfo }, options);
+
+    process.exit(summary.failedTests > 0 ? 1 : 0);
+  } catch (error) {
+    if (error instanceof CliError) {
+      fmt.error(error.message);
+      process.exit(error.exitCode);
+    }
+    fmt.error(error.message);
+    if (process.env.DEBUG_CLI === '1') {
+      console.error(error);
+    }
+    process.exit(1);
   }
 }
 
-// Execute
-let logPath = getLatestLogPath(suiteFilter);
-let summary = extractSummary(logPath);
-summary.logPath = logPath;
-
-const fallbackResult = maybeFindBetterAllLog(logPath, summary, suiteFilter);
-if (fallbackResult.changed) {
-  logPath = fallbackResult.path;
-  summary = fallbackResult.summary;
-  summary.usedFallback = true;
-}
-
-summary.logPath = logPath;
-
-const resolutionResult = resolveFailuresFromLaterLogs(logPath, summary.failingFiles);
-summary.resolvedSinceBaseline = resolutionResult.resolved;
-summary.resolvedCount = resolutionResult.resolved.length;
-summary.failingFiles = resolutionResult.remaining;
-summary.activeFailingCount = summary.failingFiles.length;
-
-const failureDetails = loadFailureDetails();
-const brokenInfo = collectBrokenTests();
-const brokenFailingFiles = summary.failingFiles.filter(f => isBrokenTest(f, brokenInfo));
-summary.brokenFailingFiles = brokenFailingFiles;
-summary.brokenFailingCount = brokenFailingFiles.length;
-
-const announceFullRun = !asJson && summary.isLikelyAllSuite;
-if (announceFullRun) {
-  const logName = path.basename(summary.logPath || '');
-  console.log(`Identified full-suite log ${logName} -> test suites: ${summary.totalFiles}, tests run: ${summary.totalTests}, passed: ${summary.passedTests}, failed: ${summary.failedTests}`);
-}
-
-printSummary(summary, { asJson, compact, failureDetails, brokenInfo });
-
-// Exit with appropriate code
-process.exit(summary.failedTests > 0 ? 1 : 0);
+main();

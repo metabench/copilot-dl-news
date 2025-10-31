@@ -1,385 +1,482 @@
 #!/usr/bin/env node
+'use strict';
 
-/**
- * crawl-place-hubs - Crawl place hub URLs to a specified depth
- *
- * Usage:
- *   node tools/crawl-place-hubs.js [--depth N] [--concurrency N] [--max-pages N] [--host HOST]
- *
- * Options:
- *   --depth N          Maximum depth to crawl into each place hub (default: 1)
- *   --concurrency N    Number of parallel downloads (default: 1)
- *   --max-pages N      Maximum total pages to download (default: unlimited)
- *   --host HOST        Only crawl place hubs from this host (default: all hosts)
- *   --verbose          Show detailed output
- *
- * This tool crawls all discovered place hub URLs, using the depth parameter
- * to control how many pages deep to crawl into each hub.
- */
-
-const NewsCrawler = require('../src/crawl.js');
-const fs = require('fs');
 const path = require('path');
-const { ensureDatabase } = require('../src/db/sqlite');
+const NewsCrawler = require('../src/crawl.js');
+const { ensureDb } = require('../src/db/sqlite');
+const { CliFormatter } = require('../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+const { findProjectRoot } = require('../src/utils/project-root');
 const { sleep, nowMs } = require('../src/crawler/utils');
+const { createCrawlPlaceHubsQueries } = require('../src/db/sqlite/v1/queries/placeHubs.crawlTool');
 
-// Logging utilities (copied from NewsCrawler)
-const chalk = require('chalk');
+const VIRTUAL_START_URL = 'https://place-hubs-crawl.local/virtual-start';
+const fmt = new CliFormatter();
 
-const CLI_COLORS = Object.freeze({
-  success: chalk.green,
-  error: chalk.red,
-  warning: chalk.yellow,
-  info: chalk.blue,
-  progress: chalk.cyan,
-  muted: chalk.gray,
-  neutral: chalk.white,
-  accent: chalk.magenta,
-  dim: chalk.dim
-});
+function parseCliArgs(argv) {
+  const parser = new CliArgumentParser(
+    'crawl-place-hubs',
+    'Crawl discovered place hub URLs to a specified depth'
+  );
 
-const CLI_ICONS = Object.freeze({
-  info: 'ℹ',
-  success: '✓',
-  warning: '⚠',
-  error: '✖',
-  progress: '⚙',
-  pending: '⏳',
-  complete: '✅',
-  geography: '🌍',
-  schema: '🗂',
-  compass: '🧭',
-  features: '🧠',
-  stageCountries: '🌐',
-  stageRegions: '🗺️',
-  stageCities: '🏙️',
-  stageBoundaries: '🛡️',
-  summary: '📊',
-  idle: '○',
-  bullet: '•',
-  debug: '…'
-});
+  parser
+    .add('--db <path>', 'Path to news SQLite database', 'data/news.db')
+    .add('--depth <number>', 'Maximum crawl depth per hub', 1, 'number')
+    .add('--concurrency <number>', 'Number of parallel downloads', 1, 'number')
+    .add(
+      '--max-pages <number>',
+      'Maximum total pages to download (positive integer, omit for unlimited)',
+      undefined,
+      'number'
+    )
+    .add('--host <value>', 'Only crawl place hubs from this host')
+    .add('--verbose', 'Enable verbose crawler output', false, 'boolean')
+    .add('--summary-format <mode>', 'Summary output format: ascii | json', 'ascii')
+    .add('--quiet', 'Suppress formatted summary output (JSON only)', false, 'boolean');
 
-const log = {
-  success: (msg) => console.log(CLI_COLORS.success(CLI_ICONS.success), msg),
-  error: (msg) => console.log(CLI_COLORS.error(CLI_ICONS.error), msg),
-  warn: (msg) => console.log(CLI_COLORS.warning(CLI_ICONS.warning), msg),
-  info: (msg) => console.log(CLI_COLORS.info(CLI_ICONS.info), msg),
-  progress: (stage, current, total, details = '') => {
-    const pct = Math.round((current / total) * 100);
-    const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));
-    const detailText = details ? CLI_COLORS.muted(` ${details}`) : '';
-    console.log(CLI_COLORS.progress(`[${bar}] ${pct}% ${stage}`) + detailText);
-  },
-  stat: (label, value) => console.log(CLI_COLORS.muted(`${label}:`), CLI_COLORS.neutral(value)),
-  debug: (...args) => VERBOSE_MODE && console.error(CLI_COLORS.dim('[DEBUG]'), ...args)
-};
-
-// Global verbose flag (set by CLI argument)
-let VERBOSE_MODE = false;
-
-// Check for help flag first
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  console.log(`
-Crawl Place Hubs Tool
-
-Crawls all discovered place hub URLs to a specified depth.
-
-USAGE:
-  node tools/crawl-place-hubs.js [options]
-
-OPTIONS:
-  --help, -h              Show this help message
-  --depth N               Maximum depth to crawl into each hub (default: 1)
-  --concurrency N         Number of parallel downloads (default: 1)
-  --max-pages N           Maximum total pages to download (default: unlimited)
-  --host HOST             Only crawl hubs from this host (e.g., 'www.theguardian.com')
-  --verbose               Show detailed output
-
-EXAMPLES:
-  node tools/crawl-place-hubs.js                                    # Crawl all hubs to depth 1
-  node tools/crawl-place-hubs.js --depth 2 --concurrency 3         # Deeper crawl with parallelism
-  node tools/crawl-place-hubs.js --host www.theguardian.com        # Only Guardian hubs
-  node tools/crawl-place-hubs.js --max-pages 100 --verbose         # Limited pages with details
-
-The tool automatically discovers place hubs from the database and crawls each one
-to the specified depth, respecting robots.txt and rate limits.
-`);
-  process.exit(0);
+  return parser.parse(argv);
 }
 
-// Parse command line arguments
-const args = process.argv.slice(2);
-const verbose = args.includes('--verbose');
+function normalizeOptions(rawArgs) {
+  const projectRoot = findProjectRoot(__dirname);
+  const dbOption = rawArgs.db || 'data/news.db';
+  const dbPath = path.isAbsolute(dbOption) ? dbOption : path.join(projectRoot, dbOption);
 
-// Set global verbose flag
-VERBOSE_MODE = verbose;
+  const depthRaw = Number.isFinite(rawArgs.depth) ? rawArgs.depth : 1;
+  const depth = Math.max(0, Math.trunc(depthRaw));
 
-// Parse --depth parameter
-let depth = 1;
-const depthIndex = args.indexOf('--depth');
-if (depthIndex !== -1 && args[depthIndex + 1]) {
-  depth = parseInt(args[depthIndex + 1], 10);
-  if (isNaN(depth) || depth < 0) {
-    console.error('Error: --depth must be a non-negative integer');
-    process.exit(1);
-  }
-}
+  const concurrencyRaw = Number.isFinite(rawArgs.concurrency) ? rawArgs.concurrency : 1;
+  const concurrency = Math.max(1, Math.trunc(concurrencyRaw));
 
-// Parse --concurrency parameter
-let concurrency = 1;
-const concurrencyIndex = args.indexOf('--concurrency');
-if (concurrencyIndex !== -1 && args[concurrencyIndex + 1]) {
-  concurrency = parseInt(args[concurrencyIndex + 1], 10);
-  if (isNaN(concurrency) || concurrency < 1) {
-    console.error('Error: --concurrency must be a positive integer');
-    process.exit(1);
-  }
-}
-
-// Parse --max-pages parameter
-let maxPages = undefined;
-const maxPagesIndex = args.indexOf('--max-pages');
-if (maxPagesIndex !== -1 && args[maxPagesIndex + 1]) {
-  maxPages = parseInt(args[maxPagesIndex + 1], 10);
-  if (isNaN(maxPages) || maxPages < 1) {
-    console.error('Error: --max-pages must be a positive integer');
-    process.exit(1);
-  }
-}
-
-// Parse --host parameter
-let targetHost = undefined;
-const hostIndex = args.indexOf('--host');
-if (hostIndex !== -1 && args[hostIndex + 1]) {
-  targetHost = args[hostIndex + 1];
-}
-
-// Initialize database
-const dbPath = path.join(__dirname, '..', 'data', 'news.db');
-const db = ensureDatabase(dbPath);
-
-// Get place hub URLs from database
-let query = `
-  SELECT url, host, place_slug, title
-  FROM place_hubs
-  WHERE 1=1
-`;
-const params = [];
-
-if (targetHost) {
-  query += ' AND host = ?';
-  params.push(targetHost);
-}
-
-query += ' ORDER BY host, place_slug';
-
-const placeHubs = db.prepare(query).all(...params);
-
-if (placeHubs.length === 0) {
-  console.log('No place hubs found in database');
-  if (targetHost) {
-    console.log(`Try removing --host ${targetHost} to crawl all hosts`);
-  }
-  process.exit(0);
-}
-
-console.log(`Found ${placeHubs.length} place hub${placeHubs.length === 1 ? '' : 's'} to crawl`);
-if (targetHost) {
-  console.log(`Host filter: ${targetHost}`);
-}
-console.log(`Crawl depth: ${depth}`);
-console.log(`Concurrency: ${concurrency}`);
-if (maxPages) {
-  console.log(`Max pages: ${maxPages}`);
-}
-console.log('---');
-
-// Create a virtual start URL that will seed all place hubs
-const virtualStartUrl = 'https://place-hubs-crawl.local/virtual-start';
-
-// Create crawler with place-hubs crawl type
-const crawler = new NewsCrawler(virtualStartUrl, {
-  crawlType: 'place-hubs',
-  concurrency,
-  maxDepth: depth,
-  maxDownloads: maxPages,
-  enableDb: true,
-  useSitemap: false,
-  preferCache: true,
-  placeHubs: placeHubs, // Pass the place hubs data
-  verbose
-});
-
-// Override domain filtering for place-hubs crawl type to allow all domains
-if (crawler.crawlType === 'place-hubs') {
-  crawler.isOnDomain = (url) => true; // Allow all domains for place-hubs
-}
-
-// Override the seeding logic to use our place hubs instead of the virtual URL
-const originalInit = crawler.init.bind(crawler);
-crawler.init = async function() {
-  await originalInit();
-
-  // The original init enqueued the virtual start URL. Remove it and seed with place hubs.
-  console.log('Replacing virtual start URL with place hub URLs...');
-
-  // Clear the queue (removes the virtual URL)
-  if (this.queue && typeof this.queue.clear === 'function') {
-    this.queue.clear();
-  }
-
-  // Seed with actual place hubs
-  console.log('Seeding crawl with place hub URLs...');
-  for (const hub of placeHubs) {
-    this.enqueueRequest({
-      url: hub.url,
-      depth: 0,
-      type: 'hub-seed',
-      meta: {
-        placeHub: true,
-        placeSlug: hub.place_slug,
-        host: hub.host
-      }
-    });
-  }
-
-  console.log(`Seeded ${placeHubs.length} place hub URLs`);
-  // Don't call _markStartupComplete here - the original init already did it
-};
-
-// Override the crawl method to prevent re-enqueuing the start URL
-const originalCrawl = crawler.crawl.bind(crawler);
-crawler.crawl = async function() {
-  if (this.isGazetteerMode) {
-    return this.crawlConcurrent();
-  }
-  if (this.usePriorityQueue) {
-    return this.crawlConcurrent();
-  }
-  await this.init();
-
-  // Skip the start URL enqueuing for place-hubs crawl type
-  if (this.crawlType === 'place-hubs') {
-    // Start URL already replaced in init override above
-    this._markStartupComplete();
+  let maxPages;
+  if (rawArgs.maxPages === undefined || rawArgs.maxPages === null) {
+    maxPages = undefined;
   } else {
-    // Original behavior for other crawl types
-    this.enqueueRequest({
-      url: this.startUrl,
-      depth: 0,
-      type: 'nav'
-    });
-    this._markStartupComplete();
+    const parsedMaxPages = Math.trunc(rawArgs.maxPages);
+    if (!Number.isFinite(parsedMaxPages) || parsedMaxPages <= 0) {
+      throw new Error('--max-pages must be a positive integer');
+    }
+    maxPages = parsedMaxPages;
   }
 
-  // Rest of the crawl logic...
-  while (true) {
-    if (this.isAbortRequested()) {
-      break;
+  const host = typeof rawArgs.host === 'string' && rawArgs.host.trim().length
+    ? rawArgs.host.trim()
+    : undefined;
+
+  const summaryFormat = typeof rawArgs.summaryFormat === 'string'
+    ? rawArgs.summaryFormat.trim().toLowerCase()
+    : 'ascii';
+  if (!['ascii', 'json'].includes(summaryFormat)) {
+    throw new Error(`Unsupported summary format: ${rawArgs.summaryFormat}`);
+  }
+
+  const quiet = Boolean(rawArgs.quiet);
+  if (quiet && summaryFormat !== 'json') {
+    throw new Error('--quiet requires --summary-format json');
+  }
+
+  return {
+    dbPath,
+    depth,
+    concurrency,
+    maxPages,
+    host,
+    verbose: Boolean(rawArgs.verbose),
+    summaryFormat,
+    quiet
+  };
+}
+
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return 'n/a';
+  if (ms < 1000) return `${ms.toFixed(0)} ms`;
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${seconds.toFixed(2)} s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds - minutes * 60;
+  return `${minutes}m ${remainingSeconds.toFixed(1)}s`;
+}
+
+function loadPlaceHubs(dbPath, host) {
+  let db;
+  try {
+    db = ensureDb(dbPath);
+  } catch (error) {
+    throw new Error(`Failed to open database: ${error.message || error}`);
+  }
+
+  try {
+    const queries = createCrawlPlaceHubsQueries(db);
+    return queries.listPlaceHubs({ host });
+  } finally {
+    try { db.close(); } catch (_) {}
+  }
+}
+
+function createCrawler(placeHubs, options) {
+  const crawler = new NewsCrawler(VIRTUAL_START_URL, {
+    crawlType: 'place-hubs',
+    concurrency: options.concurrency,
+    maxDepth: options.depth,
+    maxDownloads: options.maxPages,
+    enableDb: true,
+    useSitemap: false,
+    preferCache: true,
+    placeHubs,
+    verbose: options.verbose
+  });
+
+  crawler.__articleCount = null;
+
+  if (crawler.crawlType === 'place-hubs') {
+    crawler.isOnDomain = () => true;
+  }
+
+  const originalInit = crawler.init.bind(crawler);
+  crawler.init = async function initOverride() {
+    await originalInit();
+
+    if (this.queue && typeof this.queue.clear === 'function') {
+      this.queue.clear();
     }
-    // honor pause
-    while (this.isPaused() && !this.isAbortRequested()) {
-      await sleep(200);
-      this.emitProgress();
+
+    if (!options.quiet) {
+      fmt.info('Seeding crawl with place hub URLs...');
     }
-    if (this.isAbortRequested()) {
-      break;
+
+    for (const hub of placeHubs) {
+      this.enqueueRequest({
+        url: hub.url,
+        depth: 0,
+        type: 'hub-seed',
+        meta: {
+          placeHub: true,
+          placeSlug: hub.place_slug,
+          host: hub.host
+        }
+      });
     }
-    // Stop if we've reached the download limit
-    if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
-      console.log(`Reached max downloads limit: ${this.maxDownloads}`);
-      break;
+
+    if (!options.quiet) {
+      fmt.success(`Seeded ${placeHubs.length} place hub${placeHubs.length === 1 ? '' : 's'}`);
     }
-    const pick = await this._pullNextWorkItem();
-    if (this.isAbortRequested()) {
-      break;
+  };
+
+  const originalCrawl = crawler.crawl.bind(crawler);
+  crawler.crawl = async function crawlOverride() {
+    if (this.isGazetteerMode || this.usePriorityQueue) {
+      return originalCrawl();
     }
-    const now = nowMs();
-    if (!pick || !pick.item) {
-      const queueSize = this.queue.size();
-      if (queueSize === 0 && !this.isPaused()) {
+
+    await this.init();
+
+    if (this.crawlType === 'place-hubs') {
+      this._markStartupComplete();
+    } else {
+      this.enqueueRequest({
+        url: this.startUrl,
+        depth: 0,
+        type: 'nav'
+      });
+      this._markStartupComplete();
+    }
+
+    while (true) {
+      if (this.isAbortRequested()) {
         break;
       }
-      const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : (this.rateLimitMs || 100);
-      const waitMs = Math.min(Math.max(wakeTarget, 50), 1000);
-      await sleep(waitMs);
-      continue;
+
+      while (this.isPaused() && !this.isAbortRequested()) {
+        await sleep(200);
+        this.emitProgress();
+      }
+
+      if (this.isAbortRequested()) {
+        break;
+      }
+
+      if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
+        if (!options.quiet) {
+          fmt.warn(`Reached max downloads limit: ${this.maxDownloads}`);
+        }
+        break;
+      }
+
+      const pick = await this._pullNextWorkItem();
+      if (this.isAbortRequested()) {
+        break;
+      }
+
+      const now = nowMs();
+      if (!pick || !pick.item) {
+        const queueSize = this.queue.size();
+        if (queueSize === 0 && !this.isPaused()) {
+          break;
+        }
+        const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : (this.rateLimitMs || 100);
+        const waitMs = Math.min(Math.max(wakeTarget, 50), 1000);
+        await sleep(waitMs);
+        continue;
+      }
+
+      const item = pick.item;
+      const extraCtx = pick.context || {};
+      try {
+        const host = this._safeHostFromUrl(item.url);
+        this.telemetry.queueEvent({
+          action: 'dequeued',
+          url: item.url,
+          depth: item.depth,
+          host,
+          queueSize: this.queue.size()
+        });
+      } catch (_) {}
+
+      const processContext = {
+        type: item.type,
+        allowRevisit: item.allowRevisit
+      };
+      if (extraCtx && extraCtx.forceCache) {
+        processContext.forceCache = true;
+        if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
+        if (extraCtx.rateLimitedHost) processContext.rateLimitedHost = extraCtx.rateLimitedHost;
+      }
+
+      await this.processPage(item.url, item.depth, processContext);
+      if (this.isAbortRequested()) {
+        break;
+      }
+
+      if (this.stats.pagesVisited % 10 === 0 && !options.quiet && options.verbose) {
+        fmt.info(`Visited ${this.stats.pagesVisited} pages`);
+      }
     }
 
-    const item = pick.item;
-    const extraCtx = pick.context || {};
-    try {
-      const host = this._safeHostFromUrl(item.url);
-      this.telemetry.queueEvent({
-        action: 'dequeued',
-        url: item.url,
-        depth: item.depth,
-        host,
-        queueSize: this.queue.size()
-      });
-    } catch (_) {}
+    const outcomeErr = this._determineOutcomeError();
 
-    const processContext = {
-      type: item.type,
-      allowRevisit: item.allowRevisit
+    this.emitProgress(true);
+    this.milestoneTracker.emitCompletionMilestone({ outcomeErr });
+
+    if (this.dbAdapter && this.dbAdapter.isEnabled()) {
+      try {
+        crawler.__articleCount = this.dbAdapter.getArticleCount();
+      } catch (_) {
+        crawler.__articleCount = null;
+      }
+      try {
+        this.dbAdapter.close();
+      } catch (_) {}
+    }
+
+    this._cleanupEnhancedFeatures();
+
+    if (outcomeErr) {
+      outcomeErr.details = outcomeErr.details || {};
+      if (!outcomeErr.details.stats) {
+        outcomeErr.details.stats = { ...this.stats };
+      }
+      if (crawler.__articleCount != null && !outcomeErr.details.articleCount) {
+        outcomeErr.details.articleCount = crawler.__articleCount;
+      }
+      throw outcomeErr;
+    }
+
+    if (!options.quiet) {
+      fmt.success('Crawl completed');
+    }
+
+    return this.stats;
+  };
+
+  return crawler;
+}
+
+async function run(argv) {
+  let rawArgs;
+  try {
+    rawArgs = parseCliArgs(argv);
+  } catch (error) {
+    fmt.error(error && error.message ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  let options;
+  try {
+    options = normalizeOptions(rawArgs);
+  } catch (error) {
+    fmt.error(error && error.message ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  let placeHubs;
+  try {
+    placeHubs = loadPlaceHubs(options.dbPath, options.host);
+  } catch (error) {
+    fmt.error(error && error.message ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  if (placeHubs.length === 0) {
+    if (!options.quiet) {
+      fmt.warn('No place hubs found in database');
+      if (options.host) {
+        fmt.info(`Try removing --host ${options.host} to crawl all hosts`);
+      }
+    }
+    return;
+  }
+
+  const showAsciiSummary = options.summaryFormat === 'ascii' && !options.quiet;
+
+  if (showAsciiSummary) {
+    fmt.header('Place Hub Crawl');
+    fmt.section('Configuration');
+    fmt.stat('Database path', options.dbPath);
+    fmt.stat('Depth', options.depth, 'number');
+    fmt.stat('Concurrency', options.concurrency, 'number');
+    fmt.stat('Max pages', options.maxPages ?? 'unlimited (default)');
+    fmt.stat('Host filter', options.host ?? 'none');
+    fmt.stat('Verbose mode', options.verbose ? 'enabled' : 'disabled');
+
+    fmt.section('Discovery');
+    fmt.stat('Place hubs to crawl', placeHubs.length, 'number');
+  } else if (!options.quiet) {
+    fmt.info(`Crawling ${placeHubs.length} place hub${placeHubs.length === 1 ? '' : 's'}`);
+  }
+
+  const crawler = createCrawler(placeHubs, options);
+
+  const startedAt = Date.now();
+  try {
+    await crawler.crawl();
+    const finishedAt = Date.now();
+    const durationMs = finishedAt - startedAt;
+
+    const stats = crawler.stats || {
+      pagesVisited: 0,
+      pagesDownloaded: 0,
+      articlesFound: 0,
+      articlesSaved: 0
     };
-    if (extraCtx && extraCtx.forceCache) {
-      processContext.forceCache = true;
-      if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
-      if (extraCtx.rateLimitedHost) processContext.rateLimitedHost = extraCtx.rateLimitedHost;
-    }
 
-    await this.processPage(item.url, item.depth, processContext);
-    if (this.isAbortRequested()) {
-      break;
-    }
-
-    if (this.stats.pagesVisited % 10 === 0) {
-      // Suppressed: too verbose for CLI
-    }
-  }
-
-  const outcomeErr = this._determineOutcomeError();
-  if (outcomeErr) {
-    log.error(`Crawl ended: ${outcomeErr.message}`);
-  } else {
-    log.success('Crawl completed');
-  }
-  log.stat('Pages visited', this.stats.pagesVisited);
-  log.stat('Pages downloaded', this.stats.pagesDownloaded);
-  log.stat('Articles found', this.stats.articlesFound);
-  log.stat('Articles saved', this.stats.articlesSaved);
-  this.emitProgress(true);
-  this.milestoneTracker.emitCompletionMilestone({
-    outcomeErr
-  });
-
-  if (this.dbAdapter && this.dbAdapter.isEnabled()) {
-    const count = this.dbAdapter.getArticleCount();
-    log.stat('Database articles', count);
-    this.dbAdapter.close();
-  }
-
-  // Cleanup enhanced features
-  this._cleanupEnhancedFeatures();
-
-  if (outcomeErr) {
-    if (!outcomeErr.details) outcomeErr.details = {};
-    if (!outcomeErr.details.stats) outcomeErr.details.stats = {
-      ...this.stats
+    const payload = {
+      status: 'ok',
+      config: {
+        dbPath: options.dbPath,
+        depth: options.depth,
+        concurrency: options.concurrency,
+        maxPages: options.maxPages ?? null,
+        host: options.host ?? null,
+        verbose: options.verbose
+      },
+      counts: {
+        placeHubs: placeHubs.length,
+        databaseArticles: crawler.__articleCount
+      },
+      stats: {
+        pagesVisited: stats.pagesVisited,
+        pagesDownloaded: stats.pagesDownloaded,
+        articlesFound: stats.articlesFound,
+        articlesSaved: stats.articlesSaved
+      },
+      timings: {
+        durationMs
+      },
+      startedAt: new Date(startedAt).toISOString(),
+      finishedAt: new Date(finishedAt).toISOString()
     };
-    throw outcomeErr;
-  }
-};
 
-// Start the crawl
-crawler.crawl()
-  .then(() => {
-    console.log('✓ Place hubs crawl completed');
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error('✗ Place hubs crawl failed:', error.message);
-    process.exit(1);
+    if (options.summaryFormat === 'json') {
+      if (options.quiet) {
+        console.log(JSON.stringify(payload));
+      } else {
+        console.log(JSON.stringify(payload, null, 2));
+      }
+      return;
+    }
+
+    if (!options.quiet) {
+      fmt.section('Results');
+      fmt.stat('Pages visited', payload.stats.pagesVisited, 'number');
+      fmt.stat('Pages downloaded', payload.stats.pagesDownloaded, 'number');
+      fmt.stat('Articles found', payload.stats.articlesFound, 'number');
+      fmt.stat('Articles saved', payload.stats.articlesSaved, 'number');
+      if (payload.counts.databaseArticles != null) {
+        fmt.stat('Database articles', payload.counts.databaseArticles, 'number');
+      }
+      fmt.stat('Duration', formatDuration(durationMs));
+      fmt.success('Place hub crawl completed');
+      fmt.footer();
+    }
+  } catch (error) {
+    const finishedAt = Date.now();
+    const durationMs = finishedAt - startedAt;
+    const message = error && error.message ? error.message : String(error);
+    const stats = crawler.stats || {
+      pagesVisited: 0,
+      pagesDownloaded: 0,
+      articlesFound: 0,
+      articlesSaved: 0
+    };
+
+    const payload = {
+      status: 'error',
+      error: message,
+      config: {
+        dbPath: options.dbPath,
+        depth: options.depth,
+        concurrency: options.concurrency,
+        maxPages: options.maxPages ?? null,
+        host: options.host ?? null,
+        verbose: options.verbose
+      },
+      counts: {
+        placeHubs: placeHubs.length,
+        databaseArticles: crawler.__articleCount
+      },
+      stats: {
+        pagesVisited: stats.pagesVisited,
+        pagesDownloaded: stats.pagesDownloaded,
+        articlesFound: stats.articlesFound,
+        articlesSaved: stats.articlesSaved
+      },
+      timings: {
+        durationMs
+      },
+      startedAt: new Date(startedAt).toISOString(),
+      finishedAt: new Date(finishedAt).toISOString()
+    };
+
+    if (options.summaryFormat === 'json') {
+      if (options.quiet) {
+        console.log(JSON.stringify(payload));
+      } else {
+        console.log(JSON.stringify(payload, null, 2));
+      }
+    } else if (!options.quiet) {
+      fmt.error(`Place hub crawl failed: ${message}`);
+      fmt.section('Partial Results');
+      fmt.stat('Pages visited', payload.stats.pagesVisited, 'number');
+      fmt.stat('Pages downloaded', payload.stats.pagesDownloaded, 'number');
+      fmt.stat('Articles found', payload.stats.articlesFound, 'number');
+      fmt.stat('Articles saved', payload.stats.articlesSaved, 'number');
+      fmt.stat('Duration', formatDuration(durationMs));
+      fmt.footer();
+    } else {
+      fmt.error(`Place hub crawl failed: ${message}`);
+    }
+
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  run(process.argv).catch((error) => {
+    const message = error && error.message ? error.message : String(error);
+    fmt.error(message);
+    process.exitCode = 1;
   });
+}

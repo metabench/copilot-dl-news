@@ -5,6 +5,36 @@ function createGuessPlaceHubsQueries(db) {
     throw new Error('createGuessPlaceHubsQueries requires a valid SQLite database instance');
   }
 
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS place_hub_determinations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain TEXT NOT NULL,
+        determination TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        details_json TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_place_hub_determinations_domain
+        ON place_hub_determinations(domain, created_at DESC);
+    `);
+  } catch (error) {
+    /* If schema creation fails, continue without determinations table */
+  }
+
+  const ensureIndex = (sql) => {
+    try {
+      db.exec(sql);
+    } catch (_) {
+      /* ignore missing table or other index creation errors */
+    }
+  };
+
+  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_fetches_host ON fetches(host);`);
+  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_place_page_mappings_host_status ON place_page_mappings(host, status, page_kind);`);
+  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_place_hubs_host ON place_hubs(host);`);
+  ensureIndex(`CREATE INDEX IF NOT EXISTS idx_place_hub_candidates_domain ON place_hub_candidates(domain);`);
+
   const selectLatestFetchStmt = db.prepare(`
     SELECT http_status, fetched_at, request_started_at
       FROM fetches
@@ -100,6 +130,54 @@ function createGuessPlaceHubsQueries(db) {
 
   const normalizeNumber = (value) => (Number.isFinite(value) ? value : null);
 
+  const prepareCountStmt = (sql) => {
+    try {
+      return db.prepare(sql);
+    } catch (_) {
+      return null;
+    }
+  };
+
+  const fetchCountStmt = prepareCountStmt('SELECT COUNT(*) AS count FROM fetches WHERE host = ?');
+  const verifiedMappingCountStmt = prepareCountStmt(`
+    SELECT COUNT(*) AS count
+      FROM place_page_mappings
+     WHERE host = ?
+       AND status = 'verified'
+       AND page_kind IN ('country-hub', 'region-hub', 'city-hub')
+  `);
+  const storedHubCountStmt = prepareCountStmt('SELECT COUNT(*) AS count FROM place_hubs WHERE host = ?');
+  const candidateCountStmt = prepareCountStmt('SELECT COUNT(*) AS count FROM place_hub_candidates WHERE domain = ?');
+
+  const runCountStmt = (stmt, value) => {
+    if (!stmt) return { count: 0, error: null };
+    try {
+      const row = stmt.get(value);
+      return { count: Number.isFinite(row?.count) ? row.count : 0, error: null };
+    } catch (error) {
+      return { count: 0, error };
+    }
+  };
+
+  let insertDeterminationStmt = null;
+  let latestDeterminationStmt = null;
+  try {
+    insertDeterminationStmt = db.prepare(`
+      INSERT INTO place_hub_determinations (domain, determination, reason, details_json, created_at)
+      VALUES (@domain, @determination, @reason, @details_json, datetime('now'))
+    `);
+    latestDeterminationStmt = db.prepare(`
+      SELECT domain, determination, reason, details_json, created_at
+        FROM place_hub_determinations
+       WHERE domain = ?
+    ORDER BY created_at DESC
+       LIMIT 1
+    `);
+  } catch (error) {
+    insertDeterminationStmt = null;
+    latestDeterminationStmt = null;
+  }
+
   return {
     getLatestFetch(url) {
       if (!url) return null;
@@ -158,6 +236,101 @@ function createGuessPlaceHubsQueries(db) {
       });
     },
 
+    getDomainCoverageMetrics(domain, options = {}) {
+      if (!domain) {
+        return {
+          fetchCount: 0,
+          verifiedHubMappingCount: 0,
+          storedHubCount: 0,
+          candidateCount: 0,
+          timedOut: false,
+          elapsedMs: 0,
+          completedMetrics: [],
+          skippedMetrics: []
+        };
+      }
+
+      const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : null;
+      const timeSource = typeof options.now === 'function' ? options.now : () => Date.now();
+      const started = timeSource();
+      let timedOut = false;
+      const completedMetrics = [];
+      const skippedMetrics = [];
+
+      const results = {
+        fetchCount: 0,
+        verifiedHubMappingCount: 0,
+        storedHubCount: 0,
+        candidateCount: 0
+      };
+
+      const measure = (key, stmt, value) => {
+        if (!stmt) {
+          skippedMetrics.push(key);
+          return;
+        }
+        if (timedOut) {
+          skippedMetrics.push(key);
+          return;
+        }
+        if (timeoutMs != null && timeSource() - started >= timeoutMs) {
+          timedOut = true;
+          skippedMetrics.push(key);
+          return;
+        }
+        const { count, error } = runCountStmt(stmt, value);
+        if (error) {
+          skippedMetrics.push(key);
+          return;
+        }
+        results[key] = Number.isFinite(count) ? count : 0;
+        completedMetrics.push(key);
+        if (timeoutMs != null && timeSource() - started >= timeoutMs) {
+          timedOut = true;
+        }
+      };
+
+      measure('fetchCount', fetchCountStmt, domain);
+      measure('verifiedHubMappingCount', verifiedMappingCountStmt, domain);
+      measure('storedHubCount', storedHubCountStmt, domain);
+      measure('candidateCount', candidateCountStmt, domain);
+
+      return {
+        ...results,
+        timedOut,
+        elapsedMs: timeSource() - started,
+        completedMetrics,
+        skippedMetrics
+      };
+    },
+
+    recordDomainDetermination({ domain, determination, reason, details = null }) {
+      if (!insertDeterminationStmt || !domain || !determination || !reason) {
+        return 0;
+      }
+      const payload = {
+        domain,
+        determination,
+        reason,
+        details_json: details ? JSON.stringify(details) : null
+      };
+      try {
+        const info = insertDeterminationStmt.run(payload);
+        return info?.changes || 0;
+      } catch (_) {
+        return 0;
+      }
+    },
+
+    getLatestDomainDetermination(domain) {
+      if (!latestDeterminationStmt || !domain) return null;
+      try {
+        return latestDeterminationStmt.get(domain) || null;
+      } catch (_) {
+        return null;
+      }
+    },
+
     dispose() {
       const finalize = (stmt) => {
         if (stmt && typeof stmt.finalize === 'function') {
@@ -173,6 +346,12 @@ function createGuessPlaceHubsQueries(db) {
       finalize(insertHubStmt);
       finalize(updateHubStmt);
       finalize(insertLegacyFetchStmt);
+      finalize(fetchCountStmt);
+      finalize(verifiedMappingCountStmt);
+      finalize(storedHubCountStmt);
+      finalize(candidateCountStmt);
+      finalize(insertDeterminationStmt);
+      finalize(latestDeterminationStmt);
     }
   };
 }

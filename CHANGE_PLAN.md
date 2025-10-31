@@ -1,97 +1,186 @@
 # CHANGE_PLAN.md — ACTIVE REFACTORING TRACK
 
-**📌 CURRENT (Oct 30, 2025): Hub Guessing Workflow Modernization**
+**📌 CURRENT (Oct 30, 2025): Hub Guessing Workflow Modernization — Phase 4**
 
-**Previous:** CLI Output Modularization (Phase 2 complete) — see `CLI_REFACTORING_TASKS.md`
+**Previous Initiative:** Compression Facade Adoption & Legacy Cleanup (stabilized — remaining follow-ups parked in `CHANGE_PLAN_COMPRESSION_UTILITIES.md`).
 
 ---
 
 ## Goal / Non-Goals
 
 ### Goal
-- Transform `guess-place-hubs` from a standalone CLI into a reusable system service that powers crawls, background tasks, and analyst tooling.
-- Capture richer scoring inputs, persist evidence, and surface telemetry so that hub discovery decisions become auditable and schedulable.
-- Keep the CLI pathway operational as the primary manual entry point while sharing code with automation layers.
+- Transform the `guess-place-hubs` workflow into a batch-friendly, auditable pipeline that can ingest multiple domains, persist validation evidence, and surface actionable reports for operators and dashboards.
+- Extend the telemetry foundations added in Task 4.1 so every candidate, validation decision, and persisted hub produces structured artefacts (DB rows, JSON reports, SSE events).
+- Prepare the workflow for automation by integrating with the background task scheduler and analysis dashboards.
 
 ### Non-Goals
-- Do not redesign analyzer algorithms from scratch; focus on feeding them more context and tuning with real data.
-- Do not deprecate existing CLI modes until the new workflow reaches feature parity (apply, JSON output, dry runs).
-- Avoid rewriting unrelated crawlers or background task runners beyond what is required for scheduling hooks.
+- Do not redesign the underlying hub analyzers or validation heuristics (Country/Region/City analyzers, `HubValidator`).
+- Avoid changing the schema of the existing `place_hubs` table beyond adding evidence metadata required for auditing.
+- No crawler scheduling changes beyond what is needed to orchestrate batch CLI runs for the hub guessing workflow.
 
 ---
 
 ## Current Behavior (Baseline)
-- `src/tools/guess-place-hubs.js` runs analyzers sequentially, logs output via `CliFormatter`, and optionally persists hubs using `HubValidator`.
-- Candidate scoring is ephemeral; only the winning hub is inserted into `place_hubs` and `fetches`/`http_responses` via inline `recordFetch` helpers.
-- Validation fetches HTML each time, even if the analyzer already downloaded it, and no structured metrics are stored.
-- CLI handles a single domain per invocation; no batching, diff previews, or import automation.
-- Intelligent crawl planner and background tasks are unaware of the guesser; manual runs only.
-- Observability is limited to console output; `/analysis` dashboards and SSE streams do not reflect guesses.
-- Test coverage targets the CLI happy path with limited fixtures; documentation focuses on refactored output rather than workflow usage.
+- `guess-place-hubs.js` processes a single domain per invocation. Operators must loop manually to cover multiple hosts.
+- `--apply` writes directly to `place_hubs` with limited insight — there is no dry-run diff preview or staging layer.
+- Telemetry from Task 4.1 captures candidate rows in `place_hub_candidates`, but there is no durable audit trail for validation decisions or persisted hubs.
+- The CLI emits a JSON summary (`--json`) but lacks export/report tooling for downstream dashboards.
+- No scheduler integration exists; the workflow relies on ad-hoc CLI invocation.
 
 ---
 
 ## Refactor & Modularization Plan
 
-### Phase A — Shared Storage & Telemetry Foundations
-1. **Candidate Repository**: Introduce `src/db/placeHubCandidatesStore.js` with CRUD helpers backed by a new `place_hub_candidates` table (domain, candidate_url, analyzer, score, signals JSON, created_at, attempt_id, validation_status).
-2. **Fetch Recording Helper**: Extract a `recordFetchResult({ db, url, status, headers, body, source, retryOfId })` utility that dual-writes to `http_responses` + legacy `fetches` and emits telemetry (rate-limit counters, retry tags).
-3. **HubValidator Updates**: Allow validator to accept pre-fetched HTML, fall back to cached discovery/content tables, and return structured metrics (`{ status, evidence, issues }`).
+### Phase 4A — CLI Workflow Enhancements (Task 4.2)
+1. **Multi-domain batching:**
+	- Accept `--domain` multiple times and positional lists (`guess-place-hubs host1 host2`).
+	- Add `--domains <csv>` and `--import <file>` (CSV with `domain,[kinds]` columns) to seed batch queues.
+	- Introduce `loadDomainBatch()` helper that normalizes hosts, deduplicates entries, and associates per-domain overrides (kinds, limits).
+2. **Dry-run diff preview for `--apply`:**
+	- Collect existing hub rows before writes; compute insertion/update sets.
+	- Render preview via CliFormatter (table of new vs updated hubs) and expose JSON structure in summary payload.
+	- Wrap DB writes in a transaction; if preview fails confirmation (future hook), rollback.
+3. **`--emit-report` JSON snapshots:**
+	- Allow writing detailed run artefacts to disk (`--emit-report report.json` or directory default `place-hub-reports/<timestamp>.json`).
+	- Include candidate metrics, diff preview, validation summaries, and timing info per domain.
+4. **Batch summary output:**
+	- Extend `renderSummary` to show per-domain stats plus roll-up totals, respecting quiet/JSON modes.
+5. **Implementation touchpoints:**
+	- `parseCliArgs` (batch options), `guessPlaceHubs` (loop orchestrator), `renderSummary` (batch aware), new `summarizeHubDiff()` utility under `src/tools/guess-place-hubs/` if needed, `placeHubCandidatesStore` (ensure multi-domain runs reuse store safely).
 
-### Phase B — CLI Enhancements & Evidence Persistence
-4. **CLI Orchestration Module**: Split orchestration into `guessPlaceHubsWorkflow.js` so CLI and background jobs share batching, import, and reporting logic.
-5. **Batching & Import**: Add positional multi-domain support, CSV ingestion (`--import path.csv`), and queued execution with rate-limit awareness.
-6. **Apply Preview**: Implement `--apply` preview mode showing diff of inserts/updates (leveraging CliFormatter tables) before confirmation.
-7. **Report Emission**: Support `--emit-report path` storing JSON snapshots under `testlogs/guess-place-hubs/` for analyzer/test integration.
-8. **Evidence Storage**: Persist validator evidence to `place_hubs` (new JSON column) and create `place_hub_audit` table for historical validation events.
 
-### Phase C — Scheduling & Observability Integration
-9. **Priority Config Wiring**: Extend `config/priority-config.json` with thresholds (score floor, retry delay) consumed by the workflow.
-10. **Planner Integration**: Add hooks so intelligent crawl planner enqueues guess tasks when coverage snapshots reveal gaps; expose queue through background task manager.
-11. **Background Task Runner**: Implement a background task that replays pending candidate batches, reusing the workflow module.
-12. **SSE & Analysis Dashboards**: Stream decisions via SSE, update `/analysis` dashboards with success/failure metrics, and persist run summaries to `analysis_runs` tying to `background_task_id`.
+##### Early Exit & Readiness Investigation (γ discovery log — 2025-10-30)
+- **Status quo:** `guessPlaceHubs` always builds analyzers and walks prediction loops even when the target domain has no historical coverage. Operators bail manually (Ctrl+C) because readiness checks scan large tables (`fetches`, `place_page_mappings`, `place_hubs`) without indexes, causing multi-minute blocking on cold domains.
+- **Intended behavior:** detect “insufficient data” (no DSPL patterns, no stored hubs, no verified mappings, no prior candidates) and exit immediately with actionable messaging and a persisted determination (`place_hub_determinations`).
+- **Gap analysis:**
+  - Coverage probes issue full-table `COUNT(*)` queries which exhaustively scan millions of rows when no matches exist. Without host indexes the CLI appears hung.
+  - No guard rails on readiness probe duration; operators cannot cap probe time when running large batch inputs.
+  - Determination persistence existed but the CLI never surfaced readiness metadata in summaries/JSON, so dashboards can’t observe early exit reasons.
+- **Remediation plan:**
+	- [x] Add lightweight host/domain indexes (idempotent) for readiness-critical tables and guard queries behind fast probes.
+	- [x] Introduce a configurable readiness budget (`--readiness-timeout`, default 10s) and propagate budget exhaustion as a soft “data-limited” determination with guidance.
+	- [x] Surface readiness diagnostics (metrics, DSPL availability, recommendations, determination) in both ASCII and JSON outputs (including per-domain batch reporting).
+	- [ ] Extend unit coverage to assert the insufficient-data early exit path (no network fetches, determinations recorded) and readiness timeout messaging.
 
-### Phase D — Testing & Documentation
-13. **Fixtures & Tests**: Add fixtures covering cached HTML reuse, mixed HTTP responses, audit persistence, and CLI CSV import/batch flows (targeted Jest suites).
-14. **Docs & Guides**: Update `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md`, CLI quick-start docs, and `CLI_REFACTORING_TASKS.md` execution log with the new workflow.
-15. **Developer Telemetry Docs**: Document new SSE events and analysis dashboard metrics in relevant architecture guides.
+> **Next steps:** add targeted Jest coverage for the readiness pathways, then resume diff preview work once tests codify the insufficient-data and timeout flows.
+
+**Implementation update (2025-10-30, γ sub-phase):** `guess-place-hubs` now creates host/domain indexes on readiness-critical tables, exposes a `--readiness-timeout` flag (default 10s), short-circuits probes when the budget is exhausted, and reports completed/skipped metrics plus timeout counts in both ASCII and JSON summaries.
+
+**Diff preview progress (2025-10-30):** ✅ COMPLETE — The summary renderer surfaces proposed hub inserts/updates with formatted tables, per-domain dry-run counts, and cloned diff arrays inside the JSON summary payload.
+
+**Report emission progress (2025-10-30):** ✅ COMPLETE — Added `buildJsonSummary` and `writeReportFile` helpers so `--json` emits enriched batch summaries while `--emit-report` writes structured JSON artefacts to disk. Report payloads now include:
+  - Candidate metrics: generated, cached hits, cached 404s, cached recent 4xx, duplicates, fetched OK, validated (pass/fail), rate limited, persisted (inserts/updates), errors
+  - Validation summaries: pass/fail counts + failure reason distribution (aggregate + per-domain)
+  - Diff preview: insert/update snapshots with full row details
+  - Timing metadata: run duration, per-domain start/complete/elapsed
+  - Batch context: total/processed domains, options snapshot, domain input sources
+
+**CLI summary enhancements (2025-10-30/31):** ✅ COMPLETE — Extended ASCII summary output to display run duration, validation pass/fail counts, and top 5 failure reasons when validation failures occur.
+
+##### Circular dependency remediation (2025-10-30)
+- **Symptoms:** Node emitted `Accessing non-existent property 'ensureDb'/'ensureGazetteer' of module exports inside circular dependency` warnings when CLI crawls bootstrapped the SQLite layer.
+- **Root cause:** `ensureDb.js` eagerly required `seed-utils.js`, which in turn required `SQLiteNewsDatabase.js`. That constructor re-imported `ensureDb`, forming a loop that left the export object half-populated during module evaluation.
+- **Fix strategy:**
+	1. Remove the unused `seedData` import from `ensureDb.js` so the file no longer pulls `seed-utils.js` on load.
+	2. Drop the unused `require('./SQLiteNewsDatabase')` statement from `seed-utils.js` to break the cycle permanently.
+	3. Smoke-test by invoking a CLI that touches the SQLite bridge (e.g., `node src/tools/guess-place-hubs.js example.com --limit 0 --json`) and confirm the warning no longer appears.
+- **Follow-up:** If additional modules introduce new cycles, add lint tooling (ESLint `import/no-cycle`) to surface them earlier, but current scope stops at eliminating the observed loop.
+### Phase 4B — Evidence Persistence & Auditing (Task 4.3)
+1. **Schema additions:**
+	- Create `place_hub_audit` table capturing `{domain, url, place_kind, place_name, decision, validation_metrics_json, attempt_id, run_id, created_at}`.
+	- Ensure migrations/ALTERs reside in `src/db/sqlite/v1/schema.js` with idempotent guards (legacy snapshots).
+2. **Queries & stores:**
+	- Extend `createGuessPlaceHubsQueries` with `recordAuditEntry()` and `loadAuditTrail()` helpers.
+	- Update `createPlaceHubCandidatesStore` to persist validation metrics/evidence references.
+3. **Evidence payloads:**
+	- Promote `buildEvidence` to include references to candidate row IDs, attempt metadata, and validation metrics.
+4. **Summary integration:**
+	- Surface audit counts in CLI summaries/report file; optionally gate with `--audit-log-limit`.
+
+### Phase 4C — Scheduling & Batch Automation (Task 4.4)
+1. **Scheduler integration:**
+	- Add a thin wrapper (`src/background/tasks/GuessPlaceHubsTask.js`) leveraging the CLI internals with structured arguments.
+	- Register configuration in `tests/test-config.json` (if needed) and background task manifest.
+2. **Run metadata:**
+	- Persist batch run state (`place_hub_guess_runs`) capturing input set, timestamps, result counts.
+	- Link audit entries/candidates to `run_id` for roll-ups (supports dashboards, `analysis_runs`).
+3. **CLI coordination:**
+	- Expose `--run-id` for scheduler-provided identifiers to keep CLI + background task aligned.
+
+### Phase 4D — Observability & Dashboards (Task 4.5)
+1. **SSE events:**
+	- Emit progress events per domain (start, candidate fetched, validation, diff preview, persist).
+	- Hook into existing SSE infrastructure used by crawls/background tasks.
+2. **Dashboard updates:**
+	- Extend `/analysis` dashboard to show recent guess-place-hubs runs (counts, success rate, rate-limit events).
+	- Archive summaries into `analysis_runs` (align with scheduler metadata).
+3. **Report ingestion:**
+	- Ensure `--emit-report` files can be imported by dashboard utilities (define spec in docs).
+
+### Phase 4E — Testing & Documentation (Task 4.6)
+1. **Automated tests:**
+	- Add unit tests for batch parsing (`parseCliArgs`), diff preview generator, audit store.
+	- Create fixtures representing mixed responses (success, 404, rate limit) for CLI batch testing.
+2. **Documentation:**
+	- Update CLI usage docs (`README`, `docs/PLACE_HUB_HIERARCHY.md`, relevant quick references) with new flags.
+	- Document audit schema and report format.
+3. **Operational playbook:**
+	- Refresh runbooks describing the guess → validate → export workflow with new automation steps.
 
 ---
 
 ## Patterns to Introduce
-- **Workflow Module**: Pure orchestration functions (`runGuessBatch`, `persistEvidence`) to keep CLI, planner, and background tasks aligned.
-- **Telemetry Contract**: A shared event interface for rate-limit updates and SSE broadcasting.
-- **Evidence Schema**: Normalized JSON structures for validator metrics stored both inline (`place_hubs.evidence_json`) and in audit history.
+- **Batch orchestrator abstraction:** Shared helper to normalize domain inputs and feed them into the existing `guessPlaceHubs` core.
+- **Diff preview staging:** Compute and render changes before committing `--apply` writes; reuse JSON structure in reports.
+- **Audit trail pipeline:** Candidate store → validation metrics → `place_hub_audit` table → report exporter.
+- **Run metadata cohesion:** Consistent `run_id` propagated across candidates, audits, reports, and scheduler tasks.
 
 ---
 
 ## Risks & Mitigations
-- **Schema Migrations**: New tables/columns risk breaking older SQLite snapshots. Mitigate with migrations that check for existing columns and provide backfill scripts.
-- **Analyzer Performance**: Batching and additional signals may slow runs. Profile with staged rollouts and configurable limits.
-- **Scheduler Coupling**: Ensure planner hooks are feature-flagged to avoid accidental load spikes; default to manual mode until validated.
-- **Telemetry Volume**: SSE/event noise can overwhelm dashboards. Add throttling and summary aggregation before emitting.
+- **Database contention:** Multi-domain batches may hold transactions longer.
+  - *Mitigation:* Process domains sequentially within a run, wrap each domain’s apply step in its own transaction, expose `--parallel` explicitly unsupported for now.
+- **Large report files:** Emitting full decision logs for large batches could grow rapidly.
+  - *Mitigation:* Allow `--report-max-decisions` to cap per-domain entries; default to recent subset already used in summaries.
+- **Scheduler drift:** Background task wrapper must stay in sync with CLI behavior.
+  - *Mitigation:* Reuse core helper (`runGuessPlaceHubsBatch(options)`), keep scheduler-specific logic thin, add integration test harness.
+- **Legacy snapshot compatibility:** Older databases may lack new columns/tables.
+  - *Mitigation:* Schema migrations use `CREATE TABLE IF NOT EXISTS` and column guards; fallback to JSON-only reports if schema upgrade fails.
 
 ---
 
-## Focused Test Plan (Per Phase)
-- **Phase A**: `jest --runTestsByPath src/tools/__tests__/guess-place-hubs.test.js src/db/__tests__/placeHubCandidatesStore.test.js`
-- **Phase B**: CLI behavioural tests via `jest --runTestsByPath src/tools/__tests__/guess-place-hubs.cli.test.js` plus manual `node src/tools/guess-place-hubs.js --help` and sample CSV import run.
-- **Phase C**: Integration tests for planner/background hooks (`jest --runTestsByPath src/analysis/__tests__/intelligent-crawl-planner.test.js`).
-- **Phase D**: Documentation lint scripts (if any) and regenerate CLI examples.
+## Focused Test Plan
+- CLI smoke tests:
+  - `node src/tools/guess-place-hubs.js bbc.com theguardian.com --json`
+  - `node src/tools/guess-place-hubs.js --import fixtures/domains.csv --limit 2 --emit-report tmp/report.json`
+  - `node src/tools/guess-place-hubs.js cnn.com --apply --diff-preview`
+- Unit tests (to add):
+  - `npx jest --runTestsByPath src/tools/__tests__/guess-place-hubs.batch.test.js`
+  - `npx jest --runTestsByPath src/db/__tests__/placeHubCandidatesStore.audit.test.js`
+- Scheduler integration (after 4.4):
+  - `node src/background/tasks/GuessPlaceHubsTask.js --dry-run --import fixtures/domains.csv`
+- Dashboard verification (after 4.5):
+  - Hit `/analysis` endpoint locally; ensure new sections render without regressions.
 
 ---
 
 ## Rollback Plan
-- Isolate schema changes behind migrations with down scripts (drop new tables/columns if necessary).
-- Keep existing CLI code path (pre-workflow module) available behind feature flag until end-to-end tests pass; revert by toggling the flag and removing new scheduler hooks.
-- SSE/dashboard integration guarded by config; disable to stop emitting if regressions surface.
+- CLI enhancements: keep batch logic behind feature flags (`--legacy-single`) during rollout; revert by toggling flags and removing new options.
+- Audit schema: migrations are additive; revert by dropping `place_hub_audit` table and removing optional columns (guards remain).
+- Scheduler integration: disable task registration and remove run metadata tables; CLI remains functional manually.
+- Reports: if file emission causes issues, disable via config flag (`REPORTS_ENABLED=false`).
 
 ---
 
-## Refactor Index (Will Update As Work Lands)
-- `src/tools/guess-place-hubs.js` → delegates to `src/workflows/guessPlaceHubsWorkflow.js` (new).
-- `src/db/placeHubCandidatesStore.js` (new) consumed by CLI, planner, background tasks.
-- `src/utils/fetch/recordFetchResult.js` (new helper) replaces inline logic in guesser and other tools.
-- `src/validation/HubValidator.js` gains HTML reuse + metrics API.
-- `config/priority-config.json` extended with guesser thresholds.
-- `docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md` and CLI docs updated with new workflow guidance.
+## Refactor Index
+- `src/tools/guess-place-hubs.js` — Batch orchestration, diff preview, report emission.
+- `src/tools/guess-place-hubs/` (new) — Helper modules (`batchLoader.js`, `diffPreview.js`, `reportWriter.js`).
+- `src/db/placeHubCandidatesStore.js` — Audit metadata persistence.
+- `src/db/sqlite/v1/queries/guessPlaceHubsQueries.js` — Audit + run metadata helpers.
+- `src/db/sqlite/v1/schema.js` — `place_hub_audit` table, run metadata table definitions.
+- `src/background/tasks/GuessPlaceHubsTask.js` (new) — Scheduler entry point.
+- `docs/PLACE_HUB_HIERARCHY.md`, `docs/hub-content-analysis-workflow.md`, Runbooks — Documentation refresh.
+
+---
+
+**Status (Oct 30, 2025):** Task 4.1 delivered candidate storage + validation telemetry foundations. Sub-phase β requires finalizing this plan (done) so implementation of Task 4.2 can begin.

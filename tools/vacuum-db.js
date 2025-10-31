@@ -11,123 +11,226 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ensureDb } = require('../src/db/sqlite/ensureDb');
+const { CliFormatter } = require('../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+const { openDatabase } = require('../src/db/sqlite/v1');
 const { vacuumDatabase } = require('../src/db/sqlite/v1/queries/maintenance');
+const { findProjectRoot } = require('../src/utils/project-root');
 
-function getFileSize(filePath) {
+class CliError extends Error {
+  constructor(message, exitCode = 1) {
+    super(message);
+    this.exitCode = exitCode;
+  }
+}
+
+const fmt = new CliFormatter();
+const projectRoot = findProjectRoot(__dirname);
+const DEFAULT_DB_PATH = path.join(projectRoot, 'data', 'news.db');
+
+function createParser() {
+  const parser = new CliArgumentParser(
+    'vacuum-db',
+    'Run VACUUM against the SQLite database to reclaim unused space.'
+  );
+
+  parser
+    .add('--db <path>', 'Path to SQLite database file', DEFAULT_DB_PATH)
+    .add('--summary-format <mode>', 'Summary output format: ascii | json', 'ascii')
+    .add('--json', 'Shortcut for --summary-format json', false, 'boolean')
+    .add('--quiet', 'Suppress ASCII summary when emitting JSON', false, 'boolean');
+
+  return parser;
+}
+
+function resolveDatabasePath(overriddenPath) {
+  const candidate = overriddenPath ? path.resolve(overriddenPath) : DEFAULT_DB_PATH;
+  if (!fs.existsSync(candidate)) {
+    throw new CliError(`Database not found at ${candidate}. Use --db to provide a valid path.`);
+  }
+  return candidate;
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) {
+    return '0 B';
+  }
+  if (value === 0) {
+    return '0 B';
+  }
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const exponent = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const scaled = value / Math.pow(1024, exponent);
+  const precision = scaled >= 100 || exponent === 0 ? 0 : scaled >= 10 ? 1 : 2;
+  return `${scaled.toFixed(precision)} ${units[exponent]}`;
+}
+
+function formatDuration(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0 ms';
+  }
+  if (value < 1000) {
+    return `${value.toFixed(0)} ms`;
+  }
+  if (value < 60_000) {
+    return `${(value / 1000).toFixed(2)} s`;
+  }
+  const minutes = Math.floor(value / 60_000);
+  const seconds = ((value % 60_000) / 1000).toFixed(1);
+  return `${minutes}m ${seconds}s`;
+}
+
+function getFileSizeBytes(filePath) {
   try {
     const stats = fs.statSync(filePath);
     return stats.size;
   } catch (error) {
-    return null;
+    throw new CliError(`Unable to read file size for ${filePath}: ${error.message}`);
   }
 }
 
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function calculatePercentage(before, after) {
-  if (before === 0) return 0;
-  return ((before - after) / before * 100).toFixed(2);
-}
-
-function parseArgs() {
-  const args = process.argv.slice(2);
-  let dbPath = path.join(__dirname, '../data/news.db');
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-
-    if (arg === '--help' || arg === '-h') {
-      console.log(`
-Vacuum SQLite Database Tool
-
-Usage: node tools/vacuum-db.js [options]
-
-Options:
-  --db=path     Path to SQLite database file (default: data/news.db)
-  --help, -h    Show this help message
-
-Examples:
-  node tools/vacuum-db.js                    # Vacuum default database
-  node tools/vacuum-db.js --db=./data/test.db  # Vacuum specific database
-
-This tool will:
-1. Check the current database file size
-2. Run VACUUM to reclaim unused space
-3. Show the new file size and space saved
-`);
-      process.exit(0);
-    }
-
-    if (arg.startsWith('--db=')) {
-      dbPath = arg.split('=')[1];
-    }
+function normalizeOptions(rawOptions) {
+  const normalizedFormat = rawOptions.json ? 'json' : (rawOptions.summaryFormat || 'ascii');
+  const summaryFormat = normalizedFormat.toLowerCase();
+  if (!['ascii', 'json'].includes(summaryFormat)) {
+    throw new CliError('Unsupported summary format. Choose between ascii or json.');
   }
 
-  return { dbPath };
+  const quiet = Boolean(rawOptions.quiet);
+  if (quiet && summaryFormat !== 'json') {
+    throw new CliError('--quiet can only be used when --summary-format json is active.');
+  }
+
+  const dbPath = resolveDatabasePath(rawOptions.db);
+
+  return {
+    dbPath,
+    summaryFormat,
+    quiet
+  };
 }
 
-async function main() {
-  const { dbPath } = parseArgs();
+function runVacuum(dbPath) {
+  const sizeBefore = getFileSizeBytes(dbPath);
+  const startedAt = process.hrtime.bigint();
 
-  console.log('='.repeat(60));
-  console.log('VACUUM SQLITE DATABASE');
-  console.log('='.repeat(60));
-
-  // Check if database file exists
-  if (!fs.existsSync(dbPath)) {
-    console.error(`❌ Database file not found: ${dbPath}`);
-    process.exit(1);
-  }
-
-  const sizeBefore = getFileSize(dbPath);
-  if (sizeBefore === null) {
-    console.error(`❌ Cannot read file size: ${dbPath}`);
-    process.exit(1);
-  }
-
-  console.log(`Database: ${dbPath}`);
-  console.log(`Size before vacuum: ${formatBytes(sizeBefore)}`);
-
+  const db = openDatabase(dbPath, { fileMustExist: true });
   try {
-    // Open database and run vacuum
-    console.log('\nRunning VACUUM...');
-    const db = ensureDb(dbPath);
-
-    // Run vacuum
     vacuumDatabase(db);
-
+  } finally {
     db.close();
+  }
 
-    // Check size after vacuum
-    const sizeAfter = getFileSize(dbPath);
-    if (sizeAfter === null) {
-      console.error(`❌ Cannot read file size after vacuum: ${dbPath}`);
-      process.exit(1);
-    }
+  const finishedAt = process.hrtime.bigint();
+  const sizeAfter = getFileSizeBytes(dbPath);
 
-    const saved = sizeBefore - sizeAfter;
-    const percentage = calculatePercentage(sizeBefore, sizeAfter);
+  const bytesReclaimed = Math.max(0, sizeBefore - sizeAfter);
+  const percentReclaimed = sizeBefore > 0 ? (bytesReclaimed / sizeBefore) * 100 : 0;
+  const durationMs = Number(finishedAt - startedAt) / 1_000_000;
 
-    console.log(`Size after vacuum:  ${formatBytes(sizeAfter)}`);
-    console.log(`Space saved:        ${formatBytes(saved)} (${percentage}%)`);
+  return {
+    dbPath,
+    sizeBeforeBytes: sizeBefore,
+    sizeAfterBytes: sizeAfter,
+    bytesReclaimed,
+    percentReclaimed,
+    durationMs,
+    savingsDetected: bytesReclaimed > 0
+  };
+}
 
-    if (saved > 0) {
-      console.log('\n✅ Database vacuumed successfully!');
-    } else {
-      console.log('\nℹ️  No space was reclaimed (database was already optimized)');
-    }
+function renderAscii(summary) {
+  fmt.header('Vacuum SQLite Database');
+  fmt.settings(`Database: ${summary.dbPath}`);
 
-  } catch (error) {
-    console.error('❌ Error during vacuum operation:', error.message);
-    process.exit(1);
+  fmt.section('Before Vacuum');
+  fmt.stat('Size', formatBytes(summary.sizeBeforeBytes));
+
+  fmt.section('After Vacuum');
+  fmt.stat('Size', formatBytes(summary.sizeAfterBytes));
+  fmt.stat('Space reclaimed', formatBytes(summary.bytesReclaimed));
+  fmt.stat('Percent reclaimed', `${summary.percentReclaimed.toFixed(2)}%`);
+  fmt.stat('Elapsed', formatDuration(summary.durationMs));
+
+  if (summary.savingsDetected) {
+    fmt.success('Database vacuum completed and reclaimed space.');
+  } else {
+    fmt.info('Database already optimized — no space reclaimed.');
   }
 }
 
-main().catch(console.error);
+function emitJson(summary, options) {
+  const payload = {
+    databasePath: summary.dbPath,
+    sizeBeforeBytes: summary.sizeBeforeBytes,
+    sizeBeforeFormatted: formatBytes(summary.sizeBeforeBytes),
+    sizeAfterBytes: summary.sizeAfterBytes,
+    sizeAfterFormatted: formatBytes(summary.sizeAfterBytes),
+    bytesReclaimed: summary.bytesReclaimed,
+    bytesReclaimedFormatted: formatBytes(summary.bytesReclaimed),
+    percentReclaimed: Number(summary.percentReclaimed.toFixed(2)),
+    vacuumDurationMs: Number(summary.durationMs.toFixed(2)),
+    vacuumDurationFormatted: formatDuration(summary.durationMs),
+    savingsDetected: summary.savingsDetected,
+    executedAt: new Date().toISOString()
+  };
+
+  const spacing = options.quiet ? undefined : 2;
+  console.log(JSON.stringify(payload, null, spacing));
+}
+
+function main(argv = process.argv) {
+  let rawOptions;
+  try {
+    const parser = createParser();
+    rawOptions = parser.parse(argv);
+  } catch (error) {
+    fmt.error(error?.message || 'Failed to parse arguments.');
+    process.exit(1);
+  }
+
+  let options;
+  try {
+    options = normalizeOptions(rawOptions);
+  } catch (error) {
+    const exitCode = error instanceof CliError ? error.exitCode : 1;
+    fmt.error(error.message || 'Invalid configuration.');
+    process.exit(exitCode);
+  }
+
+  let summary;
+  try {
+    summary = runVacuum(options.dbPath);
+  } catch (error) {
+    const exitCode = error instanceof CliError ? error.exitCode : 1;
+    fmt.error(error.message || 'Vacuum operation failed.');
+    process.exit(exitCode);
+  }
+
+  const asciiEnabled = options.summaryFormat !== 'json' || !options.quiet;
+  const jsonEnabled = options.summaryFormat === 'json';
+
+  if (asciiEnabled) {
+    renderAscii(summary);
+  }
+
+  if (jsonEnabled) {
+    emitJson(summary, options);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  main,
+  createParser,
+  normalizeOptions,
+  formatBytes,
+  formatDuration,
+  runVacuum
+};

@@ -9,6 +9,7 @@ const { findProjectRoot } = require('../utils/project-root');
 const { loadNonGeoTopicSlugs } = require('./nonGeoTopicSlugs');
 const { ArticleXPathService } = require('../services/ArticleXPathService');
 const { DecompressionWorkerPool } = require('../background/workers/DecompressionWorkerPool');
+const { createAnalysePagesCoreQueries } = require('../db/sqlite/v1/queries/analysis.analysePagesCore');
 
 function toNumber(value, fallback) {
   const num = Number(value);
@@ -85,50 +86,18 @@ async function analysePages({
       gazetteer = null;
     }
 
-    const rowsStmt = db.db.prepare(`
-      SELECT
-        ca.id AS analysis_id,
-        ca.content_id AS content_id,
-        ca.analysis_json AS existing_analysis,
-        ca.analysis_version AS existing_version,
-        ca.title AS title,
-        ca.section AS section,
-        ca.word_count AS word_count,
-        ca.article_xpath AS article_xpath,
-        ca.classification AS classification,
-        ca.nav_links_count AS nav_links_count,
-        ca.article_links_count AS article_links_count,
-        u.url AS url,
-        u.host AS host,
-        u.canonical_url AS canonical_url,
-        hr.id AS http_response_id,
-        hr.http_status AS http_status,
-        hr.content_type AS content_type,
-        hr.fetched_at AS fetched_at,
-        cs.storage_type AS storage_type,
-        cs.content_blob AS content_blob,
-        cs.compression_type_id AS compression_type_id,
-        cs.compression_bucket_id AS compression_bucket_id,
-        cs.bucket_entry_key AS bucket_entry_key,
-        cs.uncompressed_size AS uncompressed_size,
-        cs.compressed_size AS compressed_size,
-        cs.compression_ratio AS compression_ratio,
-        ct.algorithm AS compression_algorithm,
-        ct.name AS compression_type_name
-      FROM content_analysis ca
-      JOIN content_storage cs ON ca.content_id = cs.id
-      JOIN http_responses hr ON cs.http_response_id = hr.id
-      JOIN urls u ON hr.url_id = u.id
-      LEFT JOIN compression_types ct ON cs.compression_type_id = ct.id
-      WHERE (
-        ca.analysis_json IS NULL
-        OR ca.analysis_version IS NULL
-        OR ca.analysis_version < ?
-      )
-      AND (ca.classification IS NULL OR ca.classification IN ('article','nav'))
-      ORDER BY hr.fetched_at DESC
-      LIMIT ?
-    `);
+    const queries = createAnalysePagesCoreQueries(db.db);
+    const optionalErrors = typeof queries.getOptionalErrors === 'function'
+      ? queries.getOptionalErrors()
+      : {};
+    if (optionalErrors.compressionBucket) {
+      emit(
+        logger,
+        'warn',
+        '[analyse-pages] Compression bucket retrieval unavailable',
+        verbose ? optionalErrors.compressionBucket : optionalErrors.compressionBucket?.message
+      );
+    }
 
     const timingTotals = Object.create(null);
     const timingCounts = Object.create(null);
@@ -142,99 +111,6 @@ async function analysePages({
       timingTotals[key] = (timingTotals[key] || 0) + value;
       timingCounts[key] = (timingCounts[key] || 0) + 1;
     };
-
-    let selectBucketStmt = null;
-    try {
-      selectBucketStmt = db.db.prepare(`
-        SELECT cb.bucket_blob, cb.index_json, ct.algorithm
-          FROM compression_buckets cb
-          JOIN compression_types ct ON cb.compression_type_id = ct.id
-         WHERE cb.id = ?
-      `);
-    } catch (error) {
-      selectBucketStmt = null;
-      emit(logger, 'warn', '[analyse-pages] Compression bucket retrieval unavailable', verbose ? error : error?.message);
-    }
-
-    const updateAnalysisStmt = db.db.prepare(`
-      UPDATE content_analysis
-         SET analysis_json = @analysis_json,
-             analysis_version = @analysis_version,
-             analyzed_at = datetime('now'),
-             word_count = @word_count,
-             article_xpath = @article_xpath
-       WHERE id = @analysis_id
-    `);
-
-    const upsertPlaceHubInsert = db.db.prepare(`
-      INSERT OR IGNORE INTO place_hubs(
-        host,
-        url,
-        place_slug,
-        place_kind,
-        topic_slug,
-        topic_label,
-        topic_kind,
-        title,
-        first_seen_at,
-        last_seen_at,
-        nav_links_count,
-        article_links_count,
-        evidence
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?, ?, ?)
-    `);
-
-    const upsertPlaceHubUpdate = db.db.prepare(`
-      UPDATE place_hubs
-         SET place_slug = COALESCE(?, place_slug),
-             place_kind = COALESCE(?, place_kind),
-             topic_slug = COALESCE(?, topic_slug),
-             topic_label = COALESCE(?, topic_label),
-             topic_kind = COALESCE(?, topic_kind),
-             title = COALESCE(?, title),
-             last_seen_at = datetime('now'),
-             nav_links_count = COALESCE(?, nav_links_count),
-             article_links_count = COALESCE(?, article_links_count),
-             evidence = COALESCE(?, evidence)
-       WHERE url = ?
-    `);
-
-    let upsertUnknownTerm = null;
-    try {
-      upsertUnknownTerm = db.db.prepare(`
-        INSERT INTO place_hub_unknown_terms(
-          host,
-          url,
-          canonical_url,
-          term_slug,
-          term_label,
-          source,
-          reason,
-          confidence,
-          evidence,
-          occurrences,
-          first_seen_at,
-          last_seen_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-        ON CONFLICT(host, canonical_url, term_slug) DO UPDATE SET
-          term_label = COALESCE(excluded.term_label, term_label),
-          source = COALESCE(excluded.source, source),
-          reason = COALESCE(excluded.reason, reason),
-          confidence = COALESCE(excluded.confidence, confidence),
-          evidence = COALESCE(excluded.evidence, evidence),
-          occurrences = occurrences + 1,
-          last_seen_at = datetime('now')
-      `);
-    } catch (_) {
-      upsertUnknownTerm = null;
-    }
-
-    let selectHubByUrl = null;
-    try {
-      selectHubByUrl = db.db.prepare('SELECT id, place_slug, topic_slug, topic_label FROM place_hubs WHERE url = ?');
-    } catch (_) {
-      selectHubByUrl = null;
-    }
 
     let processed = 0;
     let updated = 0;
@@ -265,7 +141,9 @@ async function analysePages({
       }
     };
 
-    const rows = rowsStmt.all(analysisVersion, limit ?? 9999999);
+    const rows = queries.getPendingAnalyses(analysisVersion, limit);
+    const hasCompressionBucketSupport = queries.hasCompressionBucketSupport();
+    const getCompressionBucketById = queries.getCompressionBucketById;
     const benchmarkEnabled = Boolean(benchmark && benchmark.enabled);
     const benchmarkRecorder = benchmarkEnabled && typeof benchmark.onResult === 'function'
       ? benchmark.onResult
@@ -295,10 +173,10 @@ async function analysePages({
 
       const loadStartedAt = benchmarkEnabled ? performance.now() : null;
       const htmlInfo = await loadHtmlForRow(row, {
-        dbHandle: db.db,
         decompressPool,
         bucketCache,
-        selectBucketStmt,
+        hasCompressionBucketSupport,
+        getCompressionBucketById,
         logger,
         verbose
       });
@@ -462,7 +340,7 @@ async function analysePages({
       if (shouldPersist) {
         const persistStart = performance.now();
         try {
-          updateAnalysisStmt.run({
+          queries.updateAnalysis({
             analysis_json: JSON.stringify(analysis),
             analysis_version: analysisVersion,
             word_count: wordCountForUpdate,
@@ -484,39 +362,42 @@ async function analysePages({
       }
 
       if (hubCandidate) {
+        const evidenceJson = hubCandidate.evidence ? JSON.stringify(hubCandidate.evidence) : null;
+
         if (hubCandidate.kind === 'unknown') {
           if (Array.isArray(hubCandidate.unknownTerms) && hubCandidate.unknownTerms.length) {
+            const canonicalUrl = hubCandidate.canonicalUrl || row.url;
             for (const term of hubCandidate.unknownTerms) {
-              if (shouldPersist && upsertUnknownTerm) {
+              if (shouldPersist) {
                 try {
-                  upsertUnknownTerm.run(
-                    hubCandidate.host,
-                    row.url,
-                    hubCandidate.canonicalUrl || row.url,
-                    term.slug,
-                    term.label || null,
-                    term.source || null,
-                    term.reason || null,
-                    term.confidence || null,
-                    hubCandidate.evidence ? JSON.stringify(hubCandidate.evidence) : null
-                  );
-                  unknownInserted += 1;
+                  const saved = queries.saveUnknownTerm({
+                    host: hubCandidate.host,
+                    url: row.url,
+                    canonicalUrl,
+                    termSlug: term.slug,
+                    termLabel: term.label || null,
+                    source: term.source || null,
+                    reason: term.reason || null,
+                    confidence: term.confidence || null,
+                    evidence: evidenceJson
+                  });
+                  if (saved) {
+                    unknownInserted += 1;
+                  }
                 } catch (error) {
                   emit(logger, 'warn', `[analyse-pages] Failed to persist unknown term for ${row.url}`, verbose ? error : error?.message);
                 }
-              } else if (!shouldPersist) {
+              } else {
                 unknownInserted += 1;
               }
             }
           }
         } else if (hubCandidate.kind === 'place') {
           let existingHub = null;
-          if (selectHubByUrl) {
-            try {
-              existingHub = selectHubByUrl.get(row.url) || null;
-            } catch (_) {
-              existingHub = null;
-            }
+          try {
+            existingHub = queries.getPlaceHubByUrl(row.url) || null;
+          } catch (_) {
+            existingHub = null;
           }
 
           const isNewHub = !existingHub;
@@ -524,34 +405,19 @@ async function analysePages({
 
           if (shouldPersist) {
             try {
-              const evidenceJson = hubCandidate.evidence ? JSON.stringify(hubCandidate.evidence) : null;
-              upsertPlaceHubInsert.run(
-                hubCandidate.host,
-                row.url,
-                hubCandidate.placeSlug,
-                hubCandidate.placeKind,
-                hubCandidate.topic?.slug ?? null,
-                hubCandidate.topic?.label ?? null,
-                hubCandidate.topic?.kind ?? null,
-                row.title || null,
-                hubCandidate.navLinksCount,
-                hubCandidate.articleLinksCount,
+              queries.savePlaceHub({
+                host: hubCandidate.host,
+                url: row.url,
+                placeSlug: hubCandidate.placeSlug,
+                placeKind: hubCandidate.placeKind,
+                topicSlug: hubCandidate.topic?.slug ?? null,
+                topicLabel: hubCandidate.topic?.label ?? null,
+                topicKind: hubCandidate.topic?.kind ?? null,
+                title: row.title || null,
+                navLinksCount: hubCandidate.navLinksCount,
+                articleLinksCount: hubCandidate.articleLinksCount,
                 evidenceJson
-              );
-
-              upsertPlaceHubUpdate.run(
-                hubCandidate.placeSlug,
-                hubCandidate.placeKind,
-                hubCandidate.topic?.slug ?? null,
-                hubCandidate.topic?.label ?? null,
-                hubCandidate.topic?.kind ?? null,
-                row.title || null,
-                hubCandidate.navLinksCount,
-                hubCandidate.articleLinksCount,
-                evidenceJson,
-                row.url
-              );
-
+              });
               hubPersisted = true;
             } catch (error) {
               emit(logger, 'warn', `[analyse-pages] Failed to persist place hub for ${row.url}`, verbose ? error : error?.message);
@@ -640,7 +506,7 @@ async function analysePages({
   }
 }
 
-async function loadHtmlForRow(row, { dbHandle, decompressPool, bucketCache, selectBucketStmt, logger, verbose }) {
+async function loadHtmlForRow(row, { decompressPool, bucketCache, hasCompressionBucketSupport, getCompressionBucketById, logger, verbose }) {
   const overallStart = performance.now();
   const finalizeMeta = (meta) => {
     const totalDurationMs = Math.max(0, performance.now() - overallStart);
@@ -654,7 +520,7 @@ async function loadHtmlForRow(row, { dbHandle, decompressPool, bucketCache, sele
   };
   try {
     if (row.compression_bucket_id && row.bucket_entry_key) {
-      if (!selectBucketStmt) {
+      if (!hasCompressionBucketSupport) {
         return { html: null, error: new Error('Bucket retrieval unavailable'), meta: finalizeMeta({ source: 'bucket' }) };
       }
 
@@ -666,7 +532,9 @@ async function loadHtmlForRow(row, { dbHandle, decompressPool, bucketCache, sele
 
       if (!cacheEntry) {
         const dbFetchStart = performance.now();
-        const bucketRow = selectBucketStmt.get(bucketId);
+        const bucketRow = typeof getCompressionBucketById === 'function'
+          ? getCompressionBucketById(bucketId)
+          : null;
         bucketFetchMs = Math.max(0, performance.now() - dbFetchStart);
         if (!bucketRow) {
           return {

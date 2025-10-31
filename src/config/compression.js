@@ -234,6 +234,18 @@ const compressionConfig = {
 };
 
 /**
+ * Canonical set of compression preset names (ALL_CAPS) mapped to the
+ * underlying lowercase identifiers stored in the configuration map.
+ *
+ * Example: COMPRESSION_PRESETS.BROTLI_6 === 'brotli_6'
+ */
+const COMPRESSION_PRESETS = Object.freeze(
+  Object.fromEntries(
+    Object.keys(compressionConfig.types).map((name) => [name.toUpperCase(), name])
+  )
+);
+
+/**
  * Get compression type configuration by name
  */
 function getCompressionType(name) {
@@ -281,6 +293,7 @@ function shouldCompressContentSize(sizeBytes) {
 
 module.exports = {
   compressionConfig,
+  COMPRESSION_PRESETS,
   getCompressionType,
   getCompressionTypeById,
   getTierForAge,

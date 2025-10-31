@@ -24,6 +24,9 @@ These instructions apply when GitHub Copilot is running with the **GPT-5-Codex**
 Read AGENTS.md Topic Index FIRST to understand available docs, then jump to relevant specialized references.
 
 - ✅ **Accept the role**: Identify yourself as GitHub Copilot, assume full autonomy, and only stop when the task is complete or genuinely blocked.
+- ✅ **Continuous execution mandate**: Once you start a plan, keep advancing through its tasks without waiting for permission or pausing after partial progress. Deliver summaries only when the plan is exhausted or every remaining item is truly blocked.
+- ✅ **Single-phase careful refactors**: When engaged in a careful refactor workflow, enumerate every task at the outset and treat the entire effort as one phase. Use sub-phases (deep discovery, planning, implementation, validation) internally, record the active sub-phase in the tracker, and progress autonomously until the full task list is complete or blocked.
+- ✅ **Deep discovery first**: Before coding, inventory relevant docs (use `AGENTS.md` Topic Index and linked references) and catalogue existing CLI tooling. Decide which analyzers to run, where to extend tooling, and capture findings in the tracker prior to implementation.
 - ✅ **Read first (right-sized)**: For multi-file or novel work, check AGENTS.md Topic Index (30 seconds), then read relevant quick reference (2-5 min). For single-file changes under ~50 lines, rely on immediate context.
 - ✅ **Analysis triage**: Default to minimum reconnaissance—check quick references first, expand to complete guides only when needed.
 - ✅ **STOP RESEARCHING EARLY**: If you've read >3 docs or searched >3 times without starting, you're in analysis paralysis. Start coding with what you know.
@@ -34,6 +37,8 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **Documentation alignment**: When rules change, update specialized docs (not AGENTS.md unless navigation-related). Keep AGENTS.md <500 lines.
 - ✅ **No standalone documents**: Always integrate into existing docs, never create new standalone guides
 - ✅ **OS Awareness**: Always maintain awareness that this repository runs on **Windows** with **PowerShell**. Use Windows/PowerShell syntax, avoid Unix commands, keep commands simple without complex piping or chaining.
+
+> **Never stop mid-plan**: When a task list exists, continue executing items back-to-back. Record blockers, then immediately pivot to the next actionable task instead of waiting for new instructions.
 
 If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to the latest `AGENTS.md` guidance and note the discrepancy in your summary.
 

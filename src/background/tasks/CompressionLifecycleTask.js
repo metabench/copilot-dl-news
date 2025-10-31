@@ -9,7 +9,7 @@
  * Runs as a scheduled background task (daily at 2 AM).
  */
 
-const { compressAndStore } = require('../../utils/compression');
+const { compressAndStore } = require('../../utils/CompressionFacade');
 const { tof } = require('lang-tools');
 
 /**

@@ -13,7 +13,7 @@
 
 const path = require('path');
 const { ensureDatabase } = require('../../src/db/sqlite/v1');
-const { compressAndStore } = require('../../src/utils/compression');
+const { compressAndStore } = require('../../src/utils/CompressionFacade');
 
 // Check for help flag first
 if (process.argv.includes('--help') || process.argv.includes('-h')) {

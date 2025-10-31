@@ -16,57 +16,31 @@
  *   const result = compress(content, { preset: PRESETS.BROTLI_6 });
  */
 
-const { compress: coreCompress, decompress: coreDecompress } = require('./compression');
+const {
+  compress: coreCompress,
+  decompress: coreDecompress,
+  getCompressionType: coreGetCompressionType,
+  selectCompressionType: coreSelectCompressionType,
+  compressAndStore: coreCompressAndStore,
+  retrieveAndDecompress: coreRetrieveAndDecompress
+} = require('./compression');
+const { compressionConfig, COMPRESSION_PRESETS } = require('../config/compression');
 
 /**
  * Compression type presets — standardized across the codebase
  * Use these constants instead of hardcoded strings
  */
-const PRESETS = {
-  NONE: 'none',
-  GZIP_1: 'gzip_1',
-  GZIP_3: 'gzip_3',
-  GZIP_6: 'gzip_6',
-  GZIP_9: 'gzip_9',
-  BROTLI_0: 'brotli_0',
-  BROTLI_1: 'brotli_1',
-  BROTLI_3: 'brotli_3',
-  BROTLI_4: 'brotli_4',
-  BROTLI_5: 'brotli_5',
-  BROTLI_6: 'brotli_6',     // Warm tier default (7-30 days)
-  BROTLI_7: 'brotli_7',
-  BROTLI_8: 'brotli_8',
-  BROTLI_9: 'brotli_9',
-  BROTLI_10: 'brotli_10',
-  BROTLI_11: 'brotli_11',   // Cold tier default (30+ days)
-  ZSTD_3: 'zstd_3',
-  ZSTD_19: 'zstd_19'
-};
+const PRESETS = COMPRESSION_PRESETS;
 
 /**
  * Mapping of preset names to algorithm + level
  * @private
  */
-const PRESET_DEFINITIONS = {
-  none: { algorithm: 'none', level: 0 },
-  gzip_1: { algorithm: 'gzip', level: 1 },
-  gzip_3: { algorithm: 'gzip', level: 3 },
-  gzip_6: { algorithm: 'gzip', level: 6 },
-  gzip_9: { algorithm: 'gzip', level: 9 },
-  brotli_0: { algorithm: 'brotli', level: 0 },
-  brotli_1: { algorithm: 'brotli', level: 1 },
-  brotli_3: { algorithm: 'brotli', level: 3 },
-  brotli_4: { algorithm: 'brotli', level: 4 },
-  brotli_5: { algorithm: 'brotli', level: 5 },
-  brotli_6: { algorithm: 'brotli', level: 6 },
-  brotli_7: { algorithm: 'brotli', level: 7 },
-  brotli_8: { algorithm: 'brotli', level: 8 },
-  brotli_9: { algorithm: 'brotli', level: 9 },
-  brotli_10: { algorithm: 'brotli', level: 10 },
-  brotli_11: { algorithm: 'brotli', level: 11 },
-  zstd_3: { algorithm: 'zstd', level: 3 },
-  zstd_19: { algorithm: 'zstd', level: 19 }
-};
+const PRESET_DEFINITIONS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(compressionConfig.types).map(([name, def]) => [name, { algorithm: def.algorithm, level: def.level }])
+  )
+);
 
 /**
  * Valid algorithms and their allowed level ranges
@@ -142,6 +116,22 @@ function normalizeCompressionOptions(options = {}) {
 }
 
 /**
+ * Assert that compression options are valid. Throws with a contextual
+ * message that can be tailored per call site.
+ *
+ * @param {Object} options - Compression options to validate
+ * @param {string} [label='compression options'] - Label for error context
+ */
+function assertCompressionOptions(options = {}, label = 'compression options') {
+  try {
+    normalizeCompressionOptions(options);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${label} invalid: ${message}`);
+  }
+}
+
+/**
  * Compress content with automatic option normalization
  * 
  * Wraps the core compress() function with validation and normalization.
@@ -207,24 +197,15 @@ function decompress(compressedBuffer, algorithm = 'gzip') {
  *   // => { id: 11, algorithm: 'brotli', level: 6, description: 'Brotli level 6 (balanced)' }
  */
 function getCompressionType(db, typeName) {
-  if (!db || !typeName) {
-    return null;
+  if (!db) {
+    throw new Error('CompressionFacade.getCompressionType requires a database connection');
   }
 
-  try {
-    const result = db.prepare(`
-      SELECT id, algorithm, level, description
-      FROM compression_types
-      WHERE algorithm || '_' || level = ?
-         OR name = ?
-      LIMIT 1
-    `).get(typeName, typeName);
-
-    return result || null;
-  } catch (error) {
-    console.error(`[CompressionFacade] Error fetching compression type ${typeName}:`, error);
-    return null;
+  if (!typeName) {
+    throw new Error('CompressionFacade.getCompressionType requires a compression type name');
   }
+
+  return coreGetCompressionType(db, typeName);
 }
 
 /**
@@ -279,12 +260,30 @@ function areCompressionOptionsEqual(options1 = {}, options2 = {}) {
  * @returns {string} Readable description (e.g., 'Brotli level 6 (balanced)')
  */
 function describePreset(preset) {
-  if (!PRESET_DEFINITIONS[preset]) {
+  const definition = PRESET_DEFINITIONS[preset];
+  if (!definition) {
     return `Unknown preset: ${preset}`;
   }
-  const def = PRESET_DEFINITIONS[preset];
-  const algorithm = def.algorithm.charAt(0).toUpperCase() + def.algorithm.slice(1);
-  return `${algorithm} level ${def.level}`;
+
+  const typeMetadata = compressionConfig.types[preset];
+  if (typeMetadata && typeMetadata.description) {
+    return typeMetadata.description;
+  }
+
+  const algorithm = definition.algorithm.charAt(0).toUpperCase() + definition.algorithm.slice(1);
+  return `${algorithm} level ${definition.level}`;
+}
+
+function compressAndStore(db, content, options = {}) {
+  return coreCompressAndStore(db, content, options);
+}
+
+function retrieveAndDecompress(db, contentId) {
+  return coreRetrieveAndDecompress(db, contentId);
+}
+
+function selectCompressionType(db, contentSize, useCase = 'balanced') {
+  return coreSelectCompressionType(db, contentSize, useCase);
 }
 
 module.exports = {
@@ -292,14 +291,19 @@ module.exports = {
   PRESETS,
   PRESET_DEFINITIONS,
   ALGORITHM_RANGES,
+  COMPRESSION_PRESETS,
 
   // Main functions
   compress,
   decompress,
   normalizeCompressionOptions,
+  assertCompressionOptions,
 
   // Database lookups
   getCompressionType,
+  selectCompressionType,
+  compressAndStore,
+  retrieveAndDecompress,
 
   // Utilities
   createStatsObject,

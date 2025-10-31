@@ -897,7 +897,35 @@ function initPlaceHubsTables(db, { verbose, logger }) {
 
 function initCompressionTables(db, { verbose, logger }) {
     if (verbose) logger.log('[schema] Initializing compression tables...');
-    // Tables are now created in ALL_TABLES_SCHEMA, just seed the data
+    // Tables are created in ALL_TABLES_SCHEMA, but we defensively ensure
+    // legacy deployments gain newer columns used by CompressionFacade.
+
+  try {
+    const columnRows = db.prepare("PRAGMA table_info('compression_buckets')").all();
+    const columnNames = new Set(columnRows.map((row) => row.name));
+    const ensureColumn = (name, ddl, postUpdateSql) => {
+      if (!columnNames.has(name)) {
+        db.exec(`ALTER TABLE compression_buckets ADD COLUMN ${ddl}`);
+        columnNames.add(name);
+        if (postUpdateSql) {
+          db.exec(postUpdateSql);
+        }
+      }
+    };
+
+    ensureColumn('bucket_type', "bucket_type TEXT", "UPDATE compression_buckets SET bucket_type = COALESCE(bucket_type, name, 'legacy')");
+    ensureColumn('domain_pattern', 'domain_pattern TEXT');
+    ensureColumn('bucket_blob', 'bucket_blob BLOB');
+    ensureColumn('content_count', 'content_count INTEGER DEFAULT 0', 'UPDATE compression_buckets SET content_count = COALESCE(total_entries, 0)');
+    ensureColumn('uncompressed_size', 'uncompressed_size INTEGER DEFAULT 0', 'UPDATE compression_buckets SET uncompressed_size = COALESCE(total_uncompressed_bytes, 0)');
+    ensureColumn('compressed_size', 'compressed_size INTEGER DEFAULT 0', 'UPDATE compression_buckets SET compressed_size = COALESCE(total_compressed_bytes, 0)');
+    ensureColumn('index_json', "index_json TEXT DEFAULT '{}'", "UPDATE compression_buckets SET index_json = '{}' WHERE index_json IS NULL");
+    ensureColumn('finalized_at', 'finalized_at TEXT');
+  } catch (migrationError) {
+    if (verbose) {
+      logger.warn('[schema] Compression buckets column migration failed:', migrationError.message);
+    }
+  }
 
   // Seed compression types (idempotent)
   const compressionTypes = [

@@ -5,7 +5,7 @@
  */
 
 const { parentPort } = require('worker_threads');
-const { decompress } = require('../src/utils/compression');
+const { decompress } = require('../src/utils/CompressionFacade');
 
 // Handle messages from main thread
 parentPort.on('message', (message) => {

@@ -279,7 +279,7 @@ Terminal> curl http://localhost:3000/api/test  # KILLS THE SERVER!
 
 ### Tool-First Approach
 
-**For 95% of operations, use tools instead of shell commands**:
+**For most operations, use tools instead of shell commands**:
 
 - **File Editing**: `replace_string_in_file` tool (not PowerShell replace)
 - **File Reading**: `read_file` tool (not Get-Content with logic)
@@ -315,6 +315,20 @@ Terminal> curl http://localhost:3000/api/test  # KILLS THE SERVER!
 - When implementing pre-implementation checklists
 
 **See**: `docs/agents/core-workflow-rules.md` for complete execution principles, research budgets, fast-path patterns, and quality gates.
+
+### Continuous Execution Mandate
+
+- Once you have an active plan or task list, execute its items back-to-back without waiting for new instructions or pausing after partial progress.
+- If a validation step or tool failure blocks progress, attempt remediation first; when it remains unresolved, document the blocker in the living task tracker and immediately pivot to the next actionable item.
+- Provide summaries only after every task in the plan is complete or every remaining item is explicitly documented as blocked.
+
+### Careful Refactor Engagements
+
+- Treat each careful refactor effort as **one phase** that lists every required task before implementation starts. Organize your work into sub-phases (discovery → plan → implementation → validation) but finish the entire task list before declaring the phase done.
+- Begin with a **deep discovery sweep**: read the Topic Index in this file, relevant docs in `docs/`, and `.github/agents/Careful Refactor.agent.md`. Inventory existing CLI tools that illuminate the target area, decide which to run, and consider building or enhancing analyzers when gaps appear.
+- Capture the discovery findings (docs consulted, tools evaluated/created, risks, preliminary targets) in the living task tracker so subsequent sub-phases have concrete evidence.
+- Ensure every refactor task routes database access through adapters—expand or author adapters instead of embedding SQL in tools or services.
+- Reference `.github/agents/Careful Refactor.agent.md` for the full sub-phase workflow and keep the tracker synchronized with the currently active sub-phase.
 
 ## Project Structure
 

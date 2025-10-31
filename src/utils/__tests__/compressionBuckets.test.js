@@ -15,8 +15,8 @@ describe('compressionBuckets', () => {
     db = new Database(':memory:');
     
     // Create schema
-    const { initCompressionTables } = require('../../db/sqlite/schema');
-    initCompressionTables(db, { verbose: false, logger: console });
+    const { initializeSchema } = require('../../db/sqlite/schema');
+    initializeSchema(db, { verbose: false, logger: console });
   });
   
   afterEach(() => {
@@ -213,7 +213,7 @@ describe('compressionBuckets', () => {
       
       // Get the decompressed tar buffer for caching simulation
       const bucket = db.prepare('SELECT bucket_blob FROM compression_buckets WHERE id = ?').get(bucketId);
-      const { decompress } = require('../compression');
+      const { decompress } = require('../CompressionFacade');
       const tarBuffer = decompress(bucket.bucket_blob, 'brotli');
       
       // Second retrieval with cached buffer

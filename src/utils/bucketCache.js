@@ -5,7 +5,7 @@
  * First access: ~150ms (decompress + extract), Cached: <1ms (memory lookup + extract)
  */
 
-const { decompress } = require('./compression');
+const { decompress } = require('./CompressionFacade');
 
 /**
  * LRU Cache for compression buckets

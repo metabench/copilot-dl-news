@@ -9,7 +9,7 @@
 
 const path = require('path');
 const { openDatabase } = require('../src/db/sqlite/v1/connection');
-const { compress } = require('../src/utils/compression');
+const { compress } = require('../src/utils/CompressionFacade');
 
 // ANSI color codes
 const colors = {

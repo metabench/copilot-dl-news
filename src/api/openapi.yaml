@@ -1,0 +1,691 @@
+openapi: 3.0.3
+info:
+  title: News Crawler API
+  version: 0.0.14
+  description: |
+    **News Crawler API** - Comprehensive REST API for managing web crawls, analyzing articles, 
+    and discovering place hubs across news websites.
+    
+    ## Features
+    - **Crawl Management**: Start, pause, resume, and monitor web crawls
+    - **Background Tasks**: Long-running operations (compression, analysis, export)
+    - **Analysis**: Article content analysis with structured findings
+    - **Place Hubs**: Intelligent place hub discovery and validation
+    - **Gazetteer**: Geographic place data and hierarchy management
+    
+    ## Authentication
+    Currently no authentication required. Future versions will support API keys and OAuth2.
+    
+    ## Rate Limiting
+    No rate limiting currently enforced. Use responsibly.
+    
+    ## Support
+    - Repository: https://github.com/metabench/copilot-dl-news
+    - Issues: https://github.com/metabench/copilot-dl-news/issues
+    
+  contact:
+    name: API Support
+    url: https://github.com/metabench/copilot-dl-news/issues
+  license:
+    name: ISC
+    url: https://opensource.org/licenses/ISC
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: http://localhost:3000/api
+    description: API base path
+
+tags:
+  - name: Crawls
+    description: Web crawl job management
+  - name: Background Tasks
+    description: Long-running background operations
+  - name: Analysis
+    description: Article content analysis
+  - name: Place Hubs
+    description: Place hub discovery and validation
+  - name: Gazetteer
+    description: Geographic place data management
+  - name: System
+    description: System information and health checks
+
+paths:
+  /api/health:
+    get:
+      tags:
+        - System
+      summary: Health check endpoint
+      description: Returns API health status and version information
+      operationId: getHealth
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                version: "0.0.14"
+                timestamp: "2025-10-31T12:00:00.000Z"
+                uptime: 3600
+
+  /api/crawls:
+    get:
+      tags:
+        - Crawls
+      summary: List all crawl jobs
+      description: Retrieve paginated list of crawl jobs with optional filtering
+      operationId: listCrawls
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+        - name: offset
+          in: query
+          description: Number of results to skip (for pagination)
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: status
+          in: query
+          description: Filter by job status
+          schema:
+            type: string
+            enum: [pending, running, paused, completed, failed, cancelled]
+      responses:
+        '200':
+          description: Successfully retrieved crawl list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CrawlJob'
+                  total:
+                    type: integer
+                    description: Total number of jobs matching filters
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /api/crawl:
+    post:
+      tags:
+        - Crawls
+      summary: Start new crawl job
+      description: Create and start a new web crawl job
+      operationId: startCrawl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCrawlRequest'
+            example:
+              url: "https://www.theguardian.com"
+              maxPages: 100
+              depth: 2
+      responses:
+        '201':
+          description: Crawl job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/place-hubs/guess:
+    post:
+      tags:
+        - Place Hubs
+      summary: Batch hub guessing
+      description: |
+        Predict and validate place hub URLs for one or more domains.
+        Supports synchronous processing for small batches (<= 3 domains) or
+        async job creation for larger batches.
+      operationId: guessPlaceHubs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuessPlaceHubsRequest'
+            example:
+              domains:
+                - "theguardian.com"
+                - "bbc.com"
+              options:
+                kinds: ["country", "region", "city"]
+                limit: 10
+                patternsPerPlace: 3
+                readinessTimeoutSeconds: 10
+                apply: false
+      responses:
+        '200':
+          description: Hub guessing completed (synchronous)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HubGuessReport'
+        '202':
+          description: Hub guessing job created (async)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [pending, running]
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/place-hubs/readiness/{domain}:
+    get:
+      tags:
+        - Place Hubs
+      summary: Check domain readiness
+      description: |
+        Check if a domain has sufficient data for hub guessing.
+        Returns readiness status, DSPL coverage, and actionable recommendations.
+      operationId: checkDomainReadiness
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          description: Domain or hostname to check
+          schema:
+            type: string
+          example: "theguardian.com"
+        - name: timeoutSeconds
+          in: query
+          description: Maximum seconds for readiness probes
+          schema:
+            type: integer
+            default: 10
+            minimum: 0
+      responses:
+        '200':
+          description: Readiness check completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessStatus'
+        '404':
+          description: Domain not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall API health status
+        version:
+          type: string
+          description: API version number
+        timestamp:
+          type: string
+          format: date-time
+          description: Current server timestamp
+        uptime:
+          type: integer
+          description: Server uptime in seconds
+        database:
+          type: object
+          description: Database connection status
+          properties:
+            connected:
+              type: boolean
+            path:
+              type: string
+
+    CrawlJob:
+      type: object
+      required:
+        - id
+        - url
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique job identifier
+        url:
+          type: string
+          format: uri
+          description: Target URL for crawl
+        status:
+          type: string
+          enum: [pending, running, paused, completed, failed, cancelled]
+          description: Current job status
+        progress:
+          type: object
+          properties:
+            pagesVisited:
+              type: integer
+            pagesFailed:
+              type: integer
+            queueSize:
+              type: integer
+        config:
+          type: object
+          description: Job configuration options
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    StartCrawlRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Starting URL for the crawl
+        maxPages:
+          type: integer
+          minimum: 1
+          default: 100
+          description: Maximum number of pages to crawl
+        depth:
+          type: integer
+          minimum: 0
+          default: 3
+          description: Maximum link depth to follow
+        respectRobotsTxt:
+          type: boolean
+          default: true
+        userAgent:
+          type: string
+
+    CrawlJobResponse:
+      type: object
+      required:
+        - success
+        - job
+      properties:
+        success:
+          type: boolean
+        job:
+          $ref: '#/components/schemas/CrawlJob'
+        message:
+          type: string
+
+    GuessPlaceHubsRequest:
+      type: object
+      required:
+        - domains
+      properties:
+        domains:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: List of domains to process
+          example: ["theguardian.com", "bbc.com"]
+        options:
+          type: object
+          properties:
+            kinds:
+              type: array
+              items:
+                type: string
+                enum: [country, region, city]
+              default: ["country"]
+              description: Place types to discover
+            limit:
+              type: integer
+              minimum: 1
+              description: Maximum places to evaluate per domain
+            patternsPerPlace:
+              type: integer
+              minimum: 1
+              maximum: 10
+              default: 3
+              description: URL patterns to test per place
+            readinessTimeoutSeconds:
+              type: integer
+              minimum: 0
+              default: 10
+              description: Timeout for readiness probes (0 = unlimited)
+            apply:
+              type: boolean
+              default: false
+              description: Persist validated hubs to database
+            maxAgeDays:
+              type: integer
+              minimum: 0
+              default: 7
+              description: Skip re-fetch when success newer than N days
+            refresh404Days:
+              type: integer
+              minimum: 0
+              default: 180
+              description: Skip re-fetching known 404s newer than N days
+            retry4xxDays:
+              type: integer
+              minimum: 0
+              default: 7
+              description: Skip retrying other 4xx statuses newer than N days
+
+    HubGuessReport:
+      type: object
+      required:
+        - version
+        - generatedAt
+        - totals
+      properties:
+        version:
+          type: integer
+          description: Report schema version
+        generatedAt:
+          type: string
+          format: date-time
+        domain:
+          type: string
+          description: Primary domain (for single-domain runs)
+        run:
+          type: object
+          properties:
+            startedAt:
+              type: string
+              format: date-time
+            completedAt:
+              type: string
+              format: date-time
+            durationMs:
+              type: integer
+        batch:
+          type: object
+          properties:
+            totalDomains:
+              type: integer
+            processedDomains:
+              type: integer
+        totals:
+          type: object
+          description: Aggregate metrics across all domains
+          properties:
+            totalPlaces:
+              type: integer
+            totalUrls:
+              type: integer
+            fetched:
+              type: integer
+            cached:
+              type: integer
+            validationSucceeded:
+              type: integer
+            validationFailed:
+              type: integer
+            insertedHubs:
+              type: integer
+            updatedHubs:
+              type: integer
+            errors:
+              type: integer
+        diffPreview:
+          $ref: '#/components/schemas/DiffPreview'
+        candidateMetrics:
+          $ref: '#/components/schemas/CandidateMetrics'
+        validationSummary:
+          $ref: '#/components/schemas/ValidationSummary'
+        domainSummaries:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainSummary'
+
+    DiffPreview:
+      type: object
+      properties:
+        insertedCount:
+          type: integer
+        updatedCount:
+          type: integer
+        totalChanges:
+          type: integer
+        inserted:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              placeKind:
+                type: string
+              placeName:
+                type: string
+              status:
+                type: string
+        updated:
+          type: array
+          items:
+            type: object
+
+    CandidateMetrics:
+      type: object
+      description: Candidate hub generation and validation metrics
+      properties:
+        generated:
+          type: integer
+          description: Total candidate URLs generated
+        cachedHits:
+          type: integer
+          description: URLs retrieved from cache
+        cachedKnown404:
+          type: integer
+          description: Known 404s skipped
+        cachedRecent4xx:
+          type: integer
+          description: Recent 4xx errors skipped
+        duplicates:
+          type: integer
+          description: Duplicate candidates skipped
+        stored404:
+          type: integer
+          description: New 404 responses stored
+        fetchedOk:
+          type: integer
+          description: Successful HTTP fetches
+        validationPassed:
+          type: integer
+          description: Candidates passing validation
+        validationFailed:
+          type: integer
+          description: Candidates failing validation
+        rateLimited:
+          type: integer
+          description: Rate limit responses encountered
+        persistedInserts:
+          type: integer
+          description: New hubs inserted to database
+        persistedUpdates:
+          type: integer
+          description: Existing hubs updated
+
+    ValidationSummary:
+      type: object
+      description: Validation results summary
+      properties:
+        passed:
+          type: integer
+        failed:
+          type: integer
+        failureReasons:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Failure reason distribution
+
+    DomainSummary:
+      type: object
+      description: Per-domain results
+      properties:
+        domain:
+          type: string
+        status:
+          type: string
+          enum: [processed, error, insufficient-data, data-limited]
+        readiness:
+          $ref: '#/components/schemas/ReadinessStatus'
+        metrics:
+          type: object
+          description: Numeric metrics for this domain
+        candidateMetrics:
+          $ref: '#/components/schemas/CandidateMetrics'
+        validationSummary:
+          $ref: '#/components/schemas/ValidationSummary'
+        diffPreview:
+          $ref: '#/components/schemas/DiffPreview'
+        timing:
+          type: object
+          properties:
+            startedAt:
+              type: string
+              format: date-time
+            completedAt:
+              type: string
+              format: date-time
+            durationMs:
+              type: integer
+
+    ReadinessStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ready, data-limited, insufficient-data]
+          description: Readiness determination
+        reason:
+          type: string
+          description: Human-readable explanation
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Actionable next steps
+        hasFetchHistory:
+          type: boolean
+        hasStoredHubs:
+          type: boolean
+        hasVerifiedMappings:
+          type: boolean
+        hasCandidates:
+          type: boolean
+        hasVerifiedPatterns:
+          type: boolean
+        latestDetermination:
+          type: object
+          description: Most recent determination record from database
+        metrics:
+          type: object
+          description: Readiness probe metrics
+          properties:
+            fetchCount:
+              type: integer
+            storedHubCount:
+              type: integer
+            verifiedHubMappingCount:
+              type: integer
+            candidateCount:
+              type: integer
+            elapsedMs:
+              type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code or type
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error context
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "INVALID_REQUEST"
+            message: "Missing required field: domains"
+            timestamp: "2025-10-31T12:00:00.000Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"
+            timestamp: "2025-10-31T12:00:00.000Z"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication (not yet implemented)
+    
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication (not yet implemented)
+
+security: []

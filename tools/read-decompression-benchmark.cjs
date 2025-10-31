@@ -24,7 +24,7 @@ const path = require('path');
 const os = require('os');
 const { Worker } = require('worker_threads');
 const { openDatabase } = require('../src/db/sqlite/v1/connection');
-const { decompress } = require('../src/utils/compression');
+const { decompress } = require('../src/utils/CompressionFacade');
 
 // ANSI color codes
 const colors = {

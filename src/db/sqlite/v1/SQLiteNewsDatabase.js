@@ -382,7 +382,7 @@ class NewsDatabase {
       if (article.html) {
         if (compress) {
           // Compress content before storing
-          const { compressAndStore } = require('../../../utils/compression');
+          const { compressAndStore } = require('../../../utils/CompressionFacade');
           const result = compressAndStore(this.db, article.html, {
             compressionType,
             useCase,

@@ -2,7 +2,14 @@
  * Tests for compression utility module
  */
 
-const { compress, decompress, getCompressionType, selectCompressionType, compressAndStore, retrieveAndDecompress } = require('../compression');
+const {
+  compress,
+  decompress,
+  getCompressionType,
+  selectCompressionType,
+  compressAndStore,
+  retrieveAndDecompress
+} = require('../CompressionFacade');
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
@@ -15,8 +22,8 @@ describe('compression', () => {
     db = new Database(':memory:');
     
     // Create schema
-    const { initCompressionTables } = require('../../db/sqlite/schema');
-    initCompressionTables(db, { verbose: false, logger: console });
+    const { initializeSchema } = require('../../db/sqlite/schema');
+    initializeSchema(db, { verbose: false, logger: console });
   });
   
   afterEach(() => {

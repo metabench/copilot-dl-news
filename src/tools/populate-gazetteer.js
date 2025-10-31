@@ -19,7 +19,7 @@ const { ensureDb, ensureGazetteer } = require('../db/sqlite');
 const {
   createAttributeStatements,
   recordAttribute
-} = require('../db/sqlite/queries/gazetteer.attributes');
+} = require('../db/sqlite/v1/queries/gazetteer.attributes');
 const {
   createDeduplicationStatements,
   checkIngestionRun,
@@ -27,9 +27,14 @@ const {
   completeIngestionRun,
   generateCapitalExternalId,
   addCapitalRelationship
-} = require('../db/sqlite/queries/gazetteer.deduplication');
+} = require('../db/sqlite/v1/queries/gazetteer.deduplication');
+const { createPopulateGazetteerQueries } = require('../db/sqlite/v1/queries/gazetteer.populateTool');
 const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../utils/project-root');
+const { CliFormatter } = require('../utils/CliFormatter');
+const { CliArgumentParser } = require('../utils/CliArgumentParser');
+
+const fmt = new CliFormatter();
 
 // Multi-capital countries with correct coordinates per capital
 // REST Countries API only provides one latlng - use this map for accuracy
@@ -56,51 +61,226 @@ const MULTI_CAPITAL_COORDS = {
   }
 };
 
-function getArg(name, fallback) {
-  const a = process.argv.find(x => x.startsWith(`--${name}=`));
-  if (!a) return fallback;
-  const v = a.split('=')[1];
-  return v === undefined ? fallback : v;
+function parseCliArgs(argv) {
+  const parser = new CliArgumentParser(
+    'populate-gazetteer',
+    'Seed the gazetteer tables from REST Countries and Wikidata'
+  );
+
+  const offlineDefault = (() => {
+    const env = process.env.RESTCOUNTRIES_OFFLINE;
+    if (!env) return false;
+    const normalized = env.toString().trim().toLowerCase();
+    return ['1', 'true', 'yes', 'y', 'on'].includes(normalized);
+  })();
+
+  parser
+    .add('--db <path>', 'Path to SQLite database', 'data/news.db')
+    .add('--countries <csv>', 'Comma-separated ISO country codes', '')
+    .add('--region <name>', 'Filter by region name', '')
+    .add('--subregion <name>', 'Filter by subregion name', '')
+    .add('--include-blocs <csv>', 'Regional blocs to include (ALL or comma-separated list)', 'EU')
+    .add('--import-adm1', 'Import ADM1 regions from Wikidata', false, 'boolean')
+    .add('--import-adm2', 'Import ADM2 regions from Wikidata', false, 'boolean')
+    .add('--import-cities', 'Import top cities from Wikidata', false, 'boolean')
+    .add('--cities-per-country <number>', 'Max cities per country when importing', 50, 'number')
+    .add('--adm1-limit <number>', 'Maximum ADM1 rows to fetch per country', 200, 'number')
+    .add('--adm2-limit <number>', 'Maximum ADM2 rows to fetch per country', 400, 'number')
+    .add('--offline', 'Use cached REST Countries payload (avoid network)', offlineDefault, 'boolean')
+    .add('--rest-retries <number>', 'Retry attempts for REST Countries fetch', 2, 'number')
+    .add('--rest-timeout-ms <number>', 'Timeout for REST Countries requests (ms)', 12000, 'number')
+    .add('--cache-dir <path>', 'Directory for cached API responses', 'data/cache')
+    .add('--wikidata-timeout-ms <number>', 'Timeout for Wikidata requests (ms)', 20000, 'number')
+    .add('--wikidata-sleep-ms <number>', 'Sleep between Wikidata requests (ms)', 250, 'number')
+    .add('--wikidata-cache', 'Cache Wikidata responses to disk', true, 'boolean')
+    .add('--force', 'Force re-ingestion even if already completed', false, 'boolean')
+    .add('--verbose', 'Enable verbose logging', true, 'boolean')
+    .add('--quiet', 'Suppress formatted logs (JSON summary still emitted)', false, 'boolean')
+    .add('--summary-format <mode>', 'Summary output format: json | ascii', 'json');
+
+  return parser.parse(argv);
+}
+
+function parseCsv(value) {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+function resolvePath(projectRoot, input, defaultRelative) {
+  const candidate = input && input.length ? input : defaultRelative;
+  if (!candidate) return null;
+  return path.isAbsolute(candidate) ? candidate : path.join(projectRoot, candidate);
+}
+
+function normalizeOptions(rawArgs) {
+  const projectRoot = findProjectRoot(__dirname);
+  const summaryFormat = String(rawArgs.summaryFormat || 'json').trim().toLowerCase();
+  if (!['json', 'ascii'].includes(summaryFormat)) {
+    throw new Error(`Unsupported summary format: ${rawArgs.summaryFormat}`);
+  }
+
+  const countriesFilter = parseCsv(rawArgs.countries).map((code) => code.toUpperCase());
+  const includeBlocsRaw = String(rawArgs.includeBlocs || '').trim();
+  const includeBlocs = includeBlocsRaw.toUpperCase() === 'ALL'
+    ? 'ALL'
+    : parseCsv(includeBlocsRaw).map((code) => code.toUpperCase());
+
+  return {
+    projectRoot,
+    summaryFormat,
+    quiet: Boolean(rawArgs.quiet),
+    verbose: Boolean(rawArgs.verbose),
+    dbPath: resolvePath(projectRoot, rawArgs.db, 'data/news.db'),
+    cacheDir: resolvePath(projectRoot, rawArgs.cacheDir, 'data/cache'),
+    countriesFilter,
+    regionFilter: String(rawArgs.region || '').trim(),
+    subregionFilter: String(rawArgs.subregion || '').trim(),
+    includeBlocs,
+    importAdm1: Boolean(rawArgs.importAdm1),
+    importAdm2: Boolean(rawArgs.importAdm2),
+    importCities: Boolean(rawArgs.importCities),
+    maxCitiesPerCountry: Number.isFinite(rawArgs.citiesPerCountry) ? rawArgs.citiesPerCountry : 50,
+    adm1Limit: Number.isFinite(rawArgs.adm1Limit) ? rawArgs.adm1Limit : 200,
+    adm2Limit: Number.isFinite(rawArgs.adm2Limit) ? rawArgs.adm2Limit : 400,
+    offline: Boolean(rawArgs.offline),
+    restRetries: Number.isFinite(rawArgs.restRetries) ? rawArgs.restRetries : 2,
+    restTimeoutMs: Number.isFinite(rawArgs.restTimeoutMs) ? rawArgs.restTimeoutMs : 12000,
+    wikidataTimeoutMs: Number.isFinite(rawArgs.wikidataTimeoutMs) ? rawArgs.wikidataTimeoutMs : 20000,
+    wikidataSleepMs: Number.isFinite(rawArgs.wikidataSleepMs) ? rawArgs.wikidataSleepMs : 250,
+    wikidataCache: Boolean(rawArgs.wikidataCache),
+    force: Boolean(rawArgs.force)
+  };
+}
+
+function createLogger(options) {
+  const { quiet, verbose } = options;
+  const formatLine = (colorFn, icon, label, message) => {
+    const iconStr = fmt.useEmojis && icon ? `${icon} ` : '';
+    return `${colorFn(`[${iconStr}${label}]`)} ${message}`;
+  };
+
+  return {
+    info(message) {
+      if (!verbose || quiet) return;
+      process.stderr.write(`${formatLine(fmt.COLORS.info, fmt.ICONS.info, 'INFO', message)}\n`);
+    },
+    warn(message) {
+      if (quiet) return;
+      process.stderr.write(`${formatLine(fmt.COLORS.warning, fmt.ICONS.warning, 'WARN', message)}\n`);
+    },
+    error(message) {
+      process.stderr.write(`${formatLine(fmt.COLORS.error, fmt.ICONS.error, 'ERROR', message)}\n`);
+    },
+    success(message) {
+      if (quiet) return;
+      process.stderr.write(`${formatLine(fmt.COLORS.success, fmt.ICONS.complete, 'OK', message)}\n`);
+    }
+  };
+}
+
+function emitSummary(summary, { format, quiet }) {
+  const normalizedFormat = format === 'ascii' ? 'ascii' : 'json';
+
+  if (quiet) {
+    console.log(JSON.stringify(summary));
+    return;
+  }
+
+  if (normalizedFormat === 'json') {
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+
+  fmt.header('Gazetteer Population');
+
+  if (summary.message) {
+    fmt.info(summary.message);
+  }
+
+  const records = [
+    ['Countries processed', summary.countries],
+    ['Capitals processed', summary.capitals],
+    ['Names added', summary.names],
+    ['ADM1 regions imported', summary.adm1],
+    ['ADM2 regions imported', summary.adm2],
+    ['Cities imported', summary.cities]
+  ];
+
+  const hasCounts = records.some(([, value]) => Number.isFinite(value));
+
+  if (hasCounts) {
+    fmt.section('Records');
+    for (const [label, value] of records) {
+      if (!Number.isFinite(value)) continue;
+      fmt.stat(label, value, 'number');
+    }
+  }
+
+  if (summary.skipped) {
+    fmt.warn(`Skipped: ${summary.skipped}`);
+  }
+
+  if (summary.source) {
+    fmt.dataPair('Source', summary.source, 'info');
+  }
+
+  if (summary.rest_all_url) {
+    fmt.dataPair('REST Countries URL', summary.rest_all_url, 'info');
+  }
+
+  fmt.footer();
 }
 
 (async () => {
-  const log = (...args) => { try { console.error(...args); } catch (_) {} };
-  const projectRoot = findProjectRoot(__dirname);
-  const dbPath = getArg('db', path.join(projectRoot, 'data', 'news.db'));
+  let options;
+  try {
+    const rawArgs = parseCliArgs(process.argv);
+    options = normalizeOptions(rawArgs);
+  } catch (error) {
+    fmt.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  const logger = createLogger(options);
+  const {
+    projectRoot,
+    dbPath,
+    cacheDir,
+    countriesFilter,
+    regionFilter,
+    subregionFilter,
+    includeBlocs,
+    importAdm1,
+    importAdm2,
+    importCities,
+    maxCitiesPerCountry,
+    adm1Limit,
+    adm2Limit,
+    offline,
+    restRetries,
+    restTimeoutMs,
+    wikidataTimeoutMs,
+    wikidataSleepMs,
+    wikidataCache,
+    force,
+    summaryFormat,
+    quiet,
+    verbose
+  } = options;
+
   const raw = ensureDb(dbPath);
   try { ensureGazetteer(raw); } catch (_) {}
-  
-  // Create deduplication statements
+
   const dedupStmts = createDeduplicationStatements(raw);
-  
-  const countriesFilter = (getArg('countries', '') || '').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
-  const regionFilter = (getArg('region', '') || '').trim();
-  const subregionFilter = (getArg('subregion', '') || '').trim();
-  const includeBlocsArg = (getArg('include-blocs', 'EU') || 'EU');
-  const includeBlocs = includeBlocsArg.toUpperCase() === 'ALL' ? 'ALL' : includeBlocsArg.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
-  const importAdm1 = String(getArg('import-adm1', '0')) === '1';
-  const importCities = String(getArg('import-cities', '0')) === '1';
-  const maxCitiesPerCountry = parseInt(getArg('cities-per-country', '50'), 10) || 50;
-  const importAdm2 = String(getArg('import-adm2', '0')) === '1';
-  const adm1Limit = parseInt(getArg('adm1-limit', '200'), 10) || 200;
-  const adm2Limit = parseInt(getArg('adm2-limit', '400'), 10) || 400;
-  const offline = String(getArg('offline', process.env.RESTCOUNTRIES_OFFLINE || '0')) === '1';
-  const restRetries = parseInt(getArg('rest-retries', '2'), 10) || 2;
-  const restTimeoutMs = parseInt(getArg('rest-timeout-ms', '12000'), 10) || 12000;
-  const cacheDir = getArg('cache-dir', path.join(projectRoot, 'data', 'cache'));
-  const wikidataTimeoutMs = parseInt(getArg('wikidata-timeout-ms', '20000'), 10) || 20000;
-  const wikidataSleepMs = parseInt(getArg('wikidata-sleep-ms', '250'), 10) || 250;
-  const wikidataCache = String(getArg('wikidata-cache', '1')) === '1';
-  const force = String(getArg('force', '0')) === '1';
-  const verbose = String(getArg('verbose', '1')) === '1'; // default to verbose logging
+  const populateQueries = createPopulateGazetteerQueries(raw);
 
   // Helpers for summarizing existing data
   function getCountryRows() {
-    return raw.prepare(`
-      SELECT p.id, p.country_code AS cc,
-             COALESCE((SELECT name FROM place_names WHERE id = p.canonical_name_id), p.country_code) AS name
-      FROM places p WHERE p.kind='country'
-    `).all();
+    return populateQueries.fetchCountryRows();
   }
   function mapCountRows(rows) {
     const m = Object.create(null);
@@ -111,31 +291,55 @@ function getArg(name, fallback) {
     return m;
   }
   function getCounts(kindFilter) {
-    const rows = raw.prepare(`SELECT country_code AS cc, COUNT(*) AS c FROM places WHERE kind=? GROUP BY country_code`).all(kindFilter);
-    return mapCountRows(rows);
+    return mapCountRows(populateQueries.countPlacesByKind(kindFilter));
   }
   function getCountsRegionByCode(codeField) {
-    const rows = raw.prepare(`SELECT country_code AS cc, COUNT(*) AS c FROM places WHERE kind='region' AND ${codeField} IS NOT NULL GROUP BY country_code`).all();
-    return mapCountRows(rows);
+    if (codeField === 'adm1_code') {
+      return mapCountRows(populateQueries.countRegionsAdm1ByCountry());
+    }
+    if (codeField === 'adm2_code') {
+      return mapCountRows(populateQueries.countRegionsAdm2ByCountry());
+    }
+    return {};
   }
   function printExistingSummary(stageLabel) {
-    const countriesNow = raw.prepare(`SELECT COUNT(*) AS c FROM places WHERE kind='country'`).get()?.c || 0;
-    const citiesNow = raw.prepare(`SELECT COUNT(*) AS c FROM places WHERE kind='city'`).get()?.c || 0;
-    const adm1Now = raw.prepare(`SELECT COUNT(*) AS c FROM places WHERE kind='region' AND adm1_code IS NOT NULL`).get()?.c || 0;
-    const adm2Now = raw.prepare(`SELECT COUNT(*) AS c FROM places WHERE kind='region' AND adm2_code IS NOT NULL`).get()?.c || 0;
-    log(`[gazetteer] ${stageLabel} DB summary: countries=${countriesNow}, adm1=${adm1Now}, adm2=${adm2Now}, cities=${citiesNow}`);
+    const countriesNow = populateQueries.countTotalByKind('country');
+    const citiesNow = populateQueries.countTotalByKind('city');
+    const adm1Now = populateQueries.countTotalRegionsAdm1();
+    const adm2Now = populateQueries.countTotalRegionsAdm2();
+    logger.info(`[gazetteer] ${stageLabel} DB summary: countries=${countriesNow}, adm1=${adm1Now}, adm2=${adm2Now}, cities=${citiesNow}`);
     const rows = getCountryRows();
     const citiesPer = getCounts('city');
     const adm1Per = getCountsRegionByCode('adm1_code');
     const adm2Per = getCountsRegionByCode('adm2_code');
     const header = ['CC','Country','ADM1','ADM2','Cities'];
     const lines = [header.join('\t')];
+    const tableRows = [];
     for (const r of rows) {
       const cc = (r.cc || '').toUpperCase();
       const line = [cc, r.name || cc, String(adm1Per[cc] || 0), String(adm2Per[cc] || 0), String(citiesPer[cc] || 0)].join('\t');
       lines.push(line);
+      tableRows.push({
+        CC: cc,
+        Country: r.name || cc,
+        ADM1: adm1Per[cc] || 0,
+        ADM2: adm2Per[cc] || 0,
+        Cities: citiesPer[cc] || 0
+      });
     }
-    log(lines.join('\n'));
+    if (!quiet && tableRows.length) {
+      fmt.section(`${stageLabel} Snapshot`);
+      fmt.table(tableRows, {
+        columns: ['CC', 'Country', 'ADM1', 'ADM2', 'Cities'],
+        format: {
+          ADM1: (value) => fmt.COLORS.cyan(String(value)),
+          ADM2: (value) => fmt.COLORS.cyan(String(value)),
+          Cities: (value) => fmt.COLORS.cyan(String(value))
+        }
+      });
+    } else {
+      logger.info(lines.join('\n'));
+    }
   }
 
   // Capture baseline counts
@@ -146,7 +350,7 @@ function getArg(name, fallback) {
 
   // Register source
   try {
-    raw.prepare(`INSERT OR IGNORE INTO place_sources(name, version, url, license) VALUES ('restcountries', 'v3.1', 'https://restcountries.com', 'CC BY 4.0')`).run();
+    populateQueries.ensureRestCountriesSource();
   } catch (_) {}
 
   // Check if this ingestion has already been completed
@@ -163,8 +367,8 @@ function getArg(name, fallback) {
         lastRun: runDate,
         message: `REST Countries v3.1 already ingested at ${runDate}. Use --force=1 to re-ingest.`
       };
-      if (verbose) log(`[gazetteer] Skipping: already ingested on ${runDate}`);
-      console.log(JSON.stringify(summary));
+      logger.info(`[gazetteer] Skipping: already ingested on ${runDate}`);
+      emitSummary(summary, { format: summaryFormat, quiet });
       try { raw.close(); } catch (_) {}
       return;
     }
@@ -172,12 +376,12 @@ function getArg(name, fallback) {
   
   // Fast path: if already populated and no filters/enrichment, skip network fetch
   try {
-    const existingCountries = raw.prepare("SELECT COUNT(*) AS c FROM places WHERE kind='country'").get()?.c || 0;
+    const existingCountries = populateQueries.countTotalByKind('country');
     const noFilters = !countriesFilter.length && !regionFilter && !subregionFilter && !importAdm1 && !importCities;
     const populatedEnough = offline ? (existingCountries > 0) : (existingCountries >= 200);
     if (!force && noFilters && populatedEnough) {
       const summary = { countries: 0, capitals: 0, names: 0, source: 'restcountries@v3.1', skipped: 'already-populated' };
-      console.log(JSON.stringify(summary));
+      emitSummary(summary, { format: summaryFormat, quiet });
       try { raw.close(); } catch (_) {}
       return;
     }
@@ -195,7 +399,7 @@ function getArg(name, fallback) {
       offline
     });
   } catch (e) {
-    console.error('Failed to fetch REST Countries:', e.message);
+    logger.error(`Failed to fetch REST Countries: ${e.message}`);
     process.exit(1);
   }
   
@@ -206,44 +410,8 @@ function getArg(name, fallback) {
     importCities,
     offline
   });
-  if (verbose) log(`[gazetteer] Started ingestion run #${runId}`);
+  logger.info(`[gazetteer] Started ingestion run #${runId}`);
 
-  const insPlace = raw.prepare(`
-    INSERT INTO places(kind, country_code, population, timezone, lat, lng, bbox, canonical_name_id, source, extra)
-    VALUES(@kind, @country_code, @population, @timezone, @lat, @lng, @bbox, NULL, @source, @extra)
-  `);
-  const updPlaceByCode = raw.prepare(`
-    UPDATE places SET population = COALESCE(population, @population),
-                      timezone = COALESCE(timezone, @timezone),
-                      lat = COALESCE(lat, @lat),
-                      lng = COALESCE(lng, @lng),
-                      bbox = COALESCE(bbox, @bbox),
-                      source = COALESCE(NULLIF(source, ''), @source),
-                      extra = COALESCE(extra, @extra)
-    WHERE id = @id
-  `);
-  const getCountryByCode = raw.prepare(`SELECT id FROM places WHERE kind='country' AND country_code = ?`);
-  const insName = raw.prepare(`
-    INSERT OR IGNORE INTO place_names(place_id, name, normalized, lang, script, name_kind, is_preferred, is_official, source)
-    VALUES(?, ?, ?, ?, NULL, ?, ?, ?, 'restcountries')
-  `);
-  const updCanonical = raw.prepare(`UPDATE places SET canonical_name_id = ? WHERE id = ?`);
-  const getPlaceIdByKindAndNormName = raw.prepare(`
-    SELECT pn.place_id AS id
-    FROM place_names pn
-    JOIN places p ON p.id = pn.place_id
-    WHERE p.kind = ? AND pn.normalized = ?
-    LIMIT 1
-  `);
-  const getCityByCountryAndNormName = raw.prepare(`
-    SELECT p.id AS id
-    FROM place_names pn
-    JOIN places p ON p.id = pn.place_id
-    WHERE p.kind = 'city' AND p.country_code = ? AND pn.normalized = ?
-    LIMIT 1
-  `);
-  const insertExternalId = raw.prepare(`INSERT OR IGNORE INTO place_external_ids(source, ext_id, place_id) VALUES(?, ?, ?)`);
-  const getByExternalId = raw.prepare(`SELECT place_id AS id FROM place_external_ids WHERE source = ? AND ext_id = ?`);
 
   function normalizeName(s){
     if (!s) return null;
@@ -268,14 +436,51 @@ function getArg(name, fallback) {
   function getOrCreateBloc(acronym, fullName) {
     const norm = normalizeName(fullName);
     let id = null;
-    try { id = getPlaceIdByKindAndNormName.get('supranational', norm)?.id || null; } catch (_) { id = null; }
+    try {
+      id = populateQueries.findPlaceIdByKindAndNormalizedName('supranational', norm)?.id || null;
+    } catch (_) {
+      id = null;
+    }
     if (id) return id;
-    const ins = raw.prepare(`INSERT INTO places(kind, country_code, population, timezone, lat, lng, bbox, canonical_name_id, source, extra) VALUES ('supranational', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'restcountries@v3.1', ?)`);
     const extra = JSON.stringify({ bloc: acronym });
-    const res = ins.run(extra);
-    id = res.lastInsertRowid;
-    try { insName.run(id, fullName, norm, 'und', 'endonym', 1, 1); } catch (_) {}
-    try { if (acronym) insName.run(id, acronym, normalizeName(acronym), 'und', 'abbrev', 1, 0); } catch (_) {}
+    id = populateQueries.insertPlace({
+      kind: 'supranational',
+      countryCode: null,
+      population: null,
+      timezone: null,
+      lat: null,
+      lng: null,
+      bbox: null,
+      canonicalNameId: null,
+      source: 'restcountries@v3.1',
+      extra
+    });
+    try {
+      populateQueries.insertPlaceName({
+        placeId: id,
+        name: fullName,
+        normalized: norm,
+        lang: 'und',
+        nameKind: 'endonym',
+        isPreferred: true,
+        isOfficial: true,
+        source: 'restcountries'
+      });
+    } catch (_) {}
+    if (acronym) {
+      try {
+        populateQueries.insertPlaceName({
+          placeId: id,
+          name: acronym,
+          normalized: normalizeName(acronym),
+          lang: 'und',
+          nameKind: 'abbrev',
+          isPreferred: true,
+          isOfficial: false,
+          source: 'restcountries'
+        });
+      } catch (_) {}
+    }
     return id;
   }
 
@@ -284,9 +489,15 @@ function getArg(name, fallback) {
       if (!includeCountry(c)) continue;
       const cc2 = (c.cca2 || '').toUpperCase();
       if (!cc2) continue;
-  if (verbose) log(`[gazetteer] Upserting country ${cc2} ${c.name?.common?('('+c.name.common+')'):''}`);
-      // Upsert country place
-      let pid = getCountryByCode.get(cc2)?.id || null;
+      logger.info(`[gazetteer] Upserting country ${cc2} ${c.name?.common ? `(${c.name.common})` : ''}`);
+
+      let pid = null;
+      try {
+        pid = populateQueries.findCountryByCode(cc2)?.id || null;
+      } catch (_) {
+        pid = null;
+      }
+
       const latlng = is_array(c.latlng) && c.latlng.length === 2 ? c.latlng : null;
       const primTz = is_array(c.timezones) && c.timezones.length ? c.timezones[0] : null;
       const extraObj = {
@@ -309,11 +520,30 @@ function getArg(name, fallback) {
       };
       const extra = JSON.stringify(extraObj);
       if (!pid) {
-        const res = insPlace.run({ kind: 'country', country_code: cc2, population: c.population || null, timezone: primTz, lat: latlng?latlng[0]:null, lng: latlng?latlng[1]:null, bbox: null, source: 'restcountries@v3.1', extra });
-        pid = res.lastInsertRowid;
+        pid = populateQueries.insertPlace({
+          kind: 'country',
+          countryCode: cc2,
+          population: c.population ?? null,
+          timezone: primTz,
+          lat: latlng ? latlng[0] : null,
+          lng: latlng ? latlng[1] : null,
+          bbox: null,
+          canonicalNameId: null,
+          source: 'restcountries@v3.1',
+          extra
+        });
         countries++;
       } else {
-        updPlaceByCode.run({ id: pid, population: c.population || null, timezone: primTz, lat: latlng?latlng[0]:null, lng: latlng?latlng[1]:null, bbox: null, source: 'restcountries@v3.1', extra });
+        populateQueries.updatePlace({
+          id: pid,
+          population: c.population ?? null,
+          timezone: primTz,
+          lat: latlng ? latlng[0] : null,
+          lng: latlng ? latlng[1] : null,
+          bbox: null,
+          source: 'restcountries@v3.1',
+          extra
+        });
       }
 
       const attrSource = 'restcountries';
@@ -376,54 +606,69 @@ function getArg(name, fallback) {
           metadata: { provider: 'restcountries', version: 'v3.1' }
         });
       }
-      // Names: common + official + translations
+
+      const addRestCountryName = (placeId, text, lang, kind, preferred, official, normalizedOverride) => {
+        if (!text) return;
+        populateQueries.insertPlaceName({
+          placeId,
+          name: text,
+          normalized: normalizedOverride || normalizeName(text),
+          lang: lang || 'und',
+          nameKind: kind || 'endonym',
+          isPreferred: Boolean(preferred),
+          isOfficial: Boolean(official),
+          source: 'restcountries'
+        });
+        names++;
+      };
+
       const common = c.name?.common || null;
       const official = c.name?.official || null;
-      if (common) { insName.run(pid, common, normalizeName(common), 'und', 'common', 1, 0); names++; }
-      if (official && official !== common) { insName.run(pid, official, normalizeName(official), 'und', 'official', 0, 1); names++; }
-      // Native names if present
+      if (common) addRestCountryName(pid, common, 'und', 'common', true, false);
+      if (official && official !== common) addRestCountryName(pid, official, 'und', 'official', false, true);
+
       const native = c.name?.nativeName || {};
       for (const [lang, obj] of Object.entries(native)) {
         const cn = obj?.common || null;
         const on = obj?.official || null;
-        if (cn) { insName.run(pid, cn, normalizeName(cn), lang, 'endonym', 0, 0); names++; }
-        if (on && on !== cn) { insName.run(pid, on, normalizeName(on), lang, 'official', 0, 1); names++; }
+        if (cn) addRestCountryName(pid, cn, lang, 'endonym', false, false);
+        if (on && on !== cn) addRestCountryName(pid, on, lang, 'official', false, true);
       }
+
       const translations = c.translations || {};
       for (const [lang, obj] of Object.entries(translations)) {
         const cn = obj?.common || null;
         const on = obj?.official || null;
-        if (cn) { insName.run(pid, cn, normalizeName(cn), lang, 'endonym', 0, 0); names++; }
-        if (on && on !== cn) { insName.run(pid, on, normalizeName(on), lang, 'official', 0, 1); names++; }
+        if (cn) addRestCountryName(pid, cn, lang, 'endonym', false, false);
+        if (on && on !== cn) addRestCountryName(pid, on, lang, 'official', false, true);
       }
-      // Alt spellings as aliases
+
       const alt = is_array(c.altSpellings) ? c.altSpellings : [];
-      for (const a of alt) { if (a) { insName.run(pid, a, normalizeName(a), 'und', 'alias', 0, 0); names++; } }
-      // Demonyms as names (language-tagged where possible)
+      for (const a of alt) {
+        if (a) addRestCountryName(pid, a, 'und', 'alias', false, false);
+      }
+
       const dem = c.demonyms || {};
       for (const [lang, mf] of Object.entries(dem)) {
         if (mf && tof(mf) === 'object') {
-          const f = mf.f || null; const m = mf.m || null;
-          if (f) { insName.run(pid, f, normalizeName(f), lang, 'demonym', 0, 0); names++; }
-          if (m && m !== f) { insName.run(pid, m, normalizeName(m), lang, 'demonym', 0, 0); names++; }
+          const f = mf.f || null;
+          const m = mf.m || null;
+          if (f) addRestCountryName(pid, f, lang, 'demonym', false, false);
+          if (m && m !== f) addRestCountryName(pid, m, lang, 'demonym', false, false);
         }
       }
-  // Capitals (as cities with capital_of relationship)
+
       const capList = is_array(c.capital) ? c.capital : (c.capital ? [c.capital] : []);
       const capInfo = is_array(c.capitalInfo?.latlng) ? c.capitalInfo.latlng : null;
-      
+
       for (const cap of capList) {
         const normCap = normalizeName(cap);
-        
-        // Generate stable external ID for this capital
         const externalId = generateCapitalExternalId('restcountries', cc2, normCap);
-        
-        // Check if capital already exists via external ID
-  const existing = getByExternalId.get('restcountries', externalId);
+        const existing = populateQueries.findExternalId('restcountries', externalId);
         let cid = existing?.id || null;
-        
-        // Determine coordinates: use multi-capital map if available, fallback to API data
-        let capLat = null, capLng = null;
+
+        let capLat = null;
+        let capLng = null;
         const multiCapCoords = MULTI_CAPITAL_COORDS[cc2];
         if (multiCapCoords && multiCapCoords[normCap]) {
           capLat = multiCapCoords[normCap][0];
@@ -432,41 +677,32 @@ function getArg(name, fallback) {
           capLat = capInfo[0];
           capLng = capInfo[1];
         }
-        
+
         if (!cid) {
-          // Create new capital city
-          const res = insPlace.run({ 
-            kind: 'city', 
-            country_code: cc2, 
-            population: null, 
-            timezone: primTz, 
-            lat: capLat, 
-            lng: capLng, 
-            bbox: null, 
-            source: 'restcountries@v3.1', 
-            extra: JSON.stringify({ role: 'capital' }) 
+          cid = populateQueries.insertPlace({
+            kind: 'city',
+            countryCode: cc2,
+            population: null,
+            timezone: primTz,
+            lat: capLat,
+            lng: capLng,
+            bbox: null,
+            canonicalNameId: null,
+            source: 'restcountries@v3.1',
+            extra: JSON.stringify({ role: 'capital' })
           });
-          cid = res.lastInsertRowid;
           capitals++;
-          
-          // Register external ID to prevent future duplicates
           try {
-            insertExternalId.run('restcountries', externalId, cid);
+            populateQueries.insertExternalId('restcountries', externalId, cid);
           } catch (_) {}
-        } else {
-          // Update coordinates if we have better data and existing record lacks them
-          if (capLat && capLng) {
-            try {
-              raw.prepare(`UPDATE places SET lat = COALESCE(lat, ?), lng = COALESCE(lng, ?) WHERE id = ?`)
-                .run(capLat, capLng, cid);
-            } catch (_) {}
-          }
+        } else if (capLat && capLng) {
+          try {
+            populateQueries.updateCoordinatesIfMissing(cid, capLat, capLng);
+          } catch (_) {}
         }
-        
-        // Add name
-        insName.run(cid, cap, normCap, 'und', 'endonym', 1, 0); names++;
-        
-        // Record attributes
+
+        addRestCountryName(cid, cap, 'und', 'endonym', true, false, normCap);
+
         const cityFetchedAt = Date.now();
         if (capLat && capLng) {
           recordAttribute(attributeStatements, {
@@ -494,16 +730,24 @@ function getArg(name, fallback) {
           fetchedAt: cityFetchedAt,
           metadata: { provider: 'restcountries', version: 'v3.1' }
         });
-        
-        // Link hierarchy using capital_of relation (supports multi-parent)
+
         addCapitalRelationship(dedupStmts, pid, cid, { source: 'restcountries', version: 'v3.1' });
-        
-        // Set canonical for the city
+
         try {
-          const best = raw.prepare(`SELECT id FROM place_names WHERE place_id=? ORDER BY is_official DESC, is_preferred DESC, (lang='en') DESC, id ASC LIMIT 1`).get(cid)?.id;
-          if (best) updCanonical.run(best, cid);
+          const bestCityName = populateQueries.findBestNameId(cid);
+          if (bestCityName) {
+            populateQueries.updateCanonicalName(bestCityName, cid);
+          }
         } catch (_) {}
       }
+
+      try {
+        const bestCountryName = populateQueries.findBestNameId(pid);
+        if (bestCountryName) {
+          populateQueries.updateCanonicalName(bestCountryName, pid);
+        }
+      } catch (_) {}
+
       // Supranational blocs (e.g., EU) membership
       const blocs = is_array(c.regionalBlocs) ? c.regionalBlocs : [];
       for (const b of blocs) {
@@ -512,13 +756,10 @@ function getArg(name, fallback) {
         if (!ac || !nm) continue;
         if (includeBlocs !== 'ALL' && !includeBlocs.includes(ac)) continue;
         const blocId = getOrCreateBloc(ac, nm);
-  try { raw.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?, ?, 'member_of', NULL)`).run(blocId, pid); } catch (_) {}
+        try {
+          populateQueries.insertHierarchyRelation(blocId, pid, 'member_of', null);
+        } catch (_) {}
       }
-      // Set canonical for the country
-      try {
-        const best = raw.prepare(`SELECT id FROM place_names WHERE place_id=? ORDER BY is_official DESC, is_preferred DESC, (lang='en') DESC, id ASC LIMIT 1`).get(pid)?.id;
-        if (best) updCanonical.run(best, pid);
-      } catch (_) {}
     }
   });
 
@@ -567,13 +808,13 @@ function getArg(name, fallback) {
           const txt = fs.readFileSync(cpath, 'utf8');
           cacheHit = true;
           const parsed = JSON.parse(txt);
-          if (verbose) log(`[gazetteer] SPARQL cache hit: ${qurl}`);
+          logger.info(`[gazetteer] SPARQL cache hit: ${qurl}`);
           return parsed;
         }
       } catch (_) {}
     }
     const headers = { 'User-Agent': 'copilot-dl-news/1.0 (Wikidata importer)', 'Accept': 'application/sparql-results+json' };
-    if (verbose) log(`[gazetteer] SPARQL fetch: ${qurl}`);
+    logger.info(`[gazetteer] SPARQL fetch: ${qurl}`);
     const jr = await fetchJson(qurl, headers, wikidataTimeoutMs);
     try { if (wikidataCache) fs.writeFileSync(cpath, JSON.stringify(jr)); } catch (_) {}
     // Be nice to the endpoint
@@ -589,28 +830,53 @@ function getArg(name, fallback) {
   function insPlaceWithNames(kind, countryCode, lat, lng, pop, namesArr, source, extId, opts={}){
     let pid = null;
     let created = false;
-    if (extId) { pid = getByExternalId.get(source, extId)?.id || null; }
+    if (extId) {
+      pid = populateQueries.findExternalId(source, extId)?.id || null;
+    }
     if (!pid) {
-      const res = raw.prepare(`INSERT INTO places(kind, country_code, population, timezone, lat, lng, bbox, canonical_name_id, source, extra) VALUES (?,?,?,?,?,?,?,?,?,?)`)
-        .run(kind, countryCode||null, pop||null, null, lat||null, lng||null, null, null, source, null);
-      pid = res.lastInsertRowid;
+      pid = populateQueries.insertPlace({
+        kind,
+        countryCode: countryCode || null,
+        population: pop || null,
+        timezone: null,
+        lat: lat || null,
+        lng: lng || null,
+        bbox: null,
+        canonicalNameId: null,
+        source,
+        extra: null
+      });
       created = true;
-      if (extId) insertExternalId.run(source, extId, pid);
+      if (extId) {
+        try { populateQueries.insertExternalId(source, extId, pid); } catch (_) {}
+      }
     }
-    for (const nm of namesArr||[]) {
-      try { insName.run(pid, nm.name, normalizeName(nm.name), nm.lang||'und', nm.kind||'endonym', nm.preferred?1:0, nm.official?1:0); } catch (_) {}
+    for (const nm of namesArr || []) {
+      if (!nm || !nm.name) continue;
+      try {
+        populateQueries.insertPlaceName({
+          placeId: pid,
+          name: nm.name,
+          normalized: normalizeName(nm.name),
+          lang: nm.lang || 'und',
+          nameKind: nm.kind || 'endonym',
+          isPreferred: Boolean(nm.preferred),
+          isOfficial: Boolean(nm.official),
+          source: source || 'wikidata'
+        });
+      } catch (_) {}
     }
-    // Update ADM codes if provided
     if (opts.adm1Code) {
-  try { raw.prepare(`UPDATE places SET adm1_code = COALESCE(?, adm1_code) WHERE id = ?`).run(opts.adm1Code, pid); } catch (_) {}
+      try { populateQueries.updateAdm1IfMissing(opts.adm1Code, pid); } catch (_) {}
     }
     if (opts.adm2Code) {
-  try { raw.prepare(`UPDATE places SET adm2_code = COALESCE(?, adm2_code) WHERE id = ?`).run(opts.adm2Code, pid); } catch (_) {}
+      try { populateQueries.updateAdm2IfMissing(opts.adm2Code, pid); } catch (_) {}
     }
-    // Set canonical name for the place
     try {
-  const best = raw.prepare(`SELECT id FROM place_names WHERE place_id=? ORDER BY is_official DESC, is_preferred DESC, (lang='en') DESC, id ASC LIMIT 1`).get(pid)?.id;
-      if (best) updCanonical.run(best, pid);
+      const best = populateQueries.findBestNameId(pid);
+      if (best) {
+        populateQueries.updateCanonicalName(best, pid);
+      }
     } catch (_) {}
     return { id: pid, created };
   }
@@ -626,7 +892,7 @@ function getArg(name, fallback) {
       return jr;
     } catch (e) {
       const idsStr = set.join(',');
-      log(`[gazetteer] Wikidata entity fetch failed: ${e.message} ids: ${idsStr} url: ${url}`);
+      logger.warn(`[gazetteer] Wikidata entity fetch failed: ${e.message} ids: ${idsStr} url: ${url}`);
       return {};
     }
   }
@@ -644,10 +910,10 @@ function getArg(name, fallback) {
 
   // For each included country, optionally import ADM1 and top cities
   if (importAdm1 || importAdm2 || importCities) {
-  const countryRows = raw.prepare(`SELECT id, country_code FROM places WHERE kind='country'`).all();
+  const countryRows = populateQueries.fetchCountries();
     for (const crow of countryRows) {
       if (countriesFilter.length && !countriesFilter.includes((crow.country_code||'').toUpperCase())) continue;
-  if (verbose) log(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''} from Wikidata (SPARQL)`);
+  logger.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''} from Wikidata (SPARQL)`);
       // Find Wikidata QID for the country via restcountries cca2→ Wikidata is not reliable here without mapping; skip if not available.
       // As a pragmatic fallback, import top cities via GeoNames-like heuristic from Wikipedia/Wikidata SPARQL is too heavy; keep constrained:
     if (importCities) {
@@ -662,7 +928,7 @@ function getArg(name, fallback) {
           } ORDER BY DESC(?pop) LIMIT ${Math.max(1, Math.min(maxCitiesPerCountry, 200))}`;
       const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          if (verbose) log(`[gazetteer] Cities query for ${crow.country_code} returned ${rows.length}`);
+          logger.info(`[gazetteer] Cities query for ${crow.country_code} returned ${rows.length}`);
           const ids = rows.map(r => (r.city?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
@@ -675,10 +941,10 @@ function getArg(name, fallback) {
             const namesArr = ent ? labelMap(ent) : (r.cityLabel?.value ? [{ name: r.cityLabel.value, lang: 'und', kind:'endonym', preferred:1, official:0 }] : []);
             const { id: cid, created } = insPlaceWithNames('city', crow.country_code, lat, lon, pop, namesArr, 'wikidata', qid);
             if (created) cityCount++;
-            try { raw.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?, ?, 'admin_parent', 1)`).run(crow.id, cid); } catch (_) {}
+            try { populateQueries.insertHierarchyRelation(crow.id, cid, 'admin_parent', 1); } catch (_) {}
           }
         } catch (e) {
-          if (verbose) log(`[gazetteer] Cities import failed for ${crow.country_code}: ${e.message}`);
+          logger.warn(`[gazetteer] Cities import failed for ${crow.country_code}: ${e.message}`);
         }
       }
       if (importAdm1) {
@@ -693,7 +959,7 @@ function getArg(name, fallback) {
           } LIMIT ${Math.max(1, Math.min(adm1Limit, 500))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          if (verbose) log(`[gazetteer] ADM1 query for ${crow.country_code} returned ${rows.length}`);
+          logger.info(`[gazetteer] ADM1 query for ${crow.country_code} returned ${rows.length}`);
           const ids = rows.map(r => (r.adm?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
@@ -709,10 +975,10 @@ function getArg(name, fallback) {
             const namesArr = ent ? labelMap(ent) : (r.admLabel?.value ? [{ name: r.admLabel.value, lang: 'und', kind:'official', preferred:1, official:1 }] : []);
             const { id: rid, created } = insPlaceWithNames('region', crow.country_code, null, null, null, namesArr, 'wikidata', qid, { adm1Code });
             if (created) adm1Count++;
-            try { raw.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?, ?, 'admin_parent', 1)`).run(crow.id, rid); } catch (_) {}
+            try { populateQueries.insertHierarchyRelation(crow.id, rid, 'admin_parent', 1); } catch (_) {}
           }
         } catch (e) {
-          if (verbose) log(`[gazetteer] ADM1 import failed for ${crow.country_code}: ${e.message}`);
+          logger.warn(`[gazetteer] ADM1 import failed for ${crow.country_code}: ${e.message}`);
         }
       }
       if (importAdm2) {
@@ -729,7 +995,7 @@ function getArg(name, fallback) {
           } LIMIT ${Math.max(1, Math.min(adm2Limit, 1000))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          if (verbose) log(`[gazetteer] ADM2 query for ${crow.country_code} returned ${rows.length}`);
+          logger.info(`[gazetteer] ADM2 query for ${crow.country_code} returned ${rows.length}`);
           const ids = rows.map(r => (r.adm2?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
@@ -755,14 +1021,14 @@ function getArg(name, fallback) {
             const parentQ = (r.parent?.value||'').split('/').pop();
             let parentId = null;
             if (parentQ) {
-              parentId = getByExternalId.get('wikidata', parentQ)?.id || null;
+              parentId = populateQueries.findExternalId('wikidata', parentQ)?.id || null;
             }
             try {
-              raw.prepare(`INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth) VALUES (?, ?, 'admin_parent', 1)`).run(parentId || crow.id, rid);
+              populateQueries.insertHierarchyRelation(parentId || crow.id, rid, 'admin_parent', 1);
             } catch (_) {}
           }
         } catch (e) {
-          if (verbose) log(`[gazetteer] ADM2 import failed for ${crow.country_code}: ${e.message}`);
+          logger.warn(`[gazetteer] ADM2 import failed for ${crow.country_code}: ${e.message}`);
         }
       }
     }
@@ -770,7 +1036,7 @@ function getArg(name, fallback) {
 
   // Map countries to Wikidata QIDs via ISO alpha-2 (P297) and store in place_external_ids
   try {
-    const ccRows = raw.prepare(`SELECT id, country_code FROM places WHERE kind='country' AND country_code IS NOT NULL`).all();
+    const ccRows = populateQueries.fetchCountriesWithCodes();
     const cc2vals = ccRows.map(r => r.country_code).filter(Boolean);
     if (cc2vals.length) {
       // Batch in chunks to avoid overly long queries
@@ -789,7 +1055,7 @@ function getArg(name, fallback) {
             if (!cc2 || !qid) continue;
             const row = ccRows.find(x => x.country_code === cc2);
             if (!row) continue;
-            try { insertExternalId.run('wikidata', qid, row.id); } catch (_) {}
+            try { populateQueries.insertExternalId('wikidata', qid, row.id); } catch (_) {}
           }
         } catch (_) { /* continue next chunk */ }
       }
@@ -800,14 +1066,10 @@ function getArg(name, fallback) {
   const finalSummary = { countries, capitals, names, adm1: adm1Count, adm2: adm2Count, cities: cityCount, source: 'restcountries@v3.1', rest_all_url: `https://restcountries.com/v3.1/all?fields=${encodeURIComponent('name,cca2,cca3,latlng,capital,capitalInfo,timezones,region,subregion,translations')}` };
   // Cleanup: remove empty names and nameless places
   try {
-    raw.exec(`UPDATE place_names SET name=TRIM(name) WHERE name <> TRIM(name);`);
-    raw.exec(`DELETE FROM place_names WHERE name IS NULL OR TRIM(name) = ''`);
-    raw.exec(`
-      DELETE FROM places
-      WHERE (canonical_name_id IS NULL OR canonical_name_id NOT IN (SELECT id FROM place_names))
-        AND NOT EXISTS(SELECT 1 FROM place_names pn WHERE pn.place_id = places.id);
-    `);
-    raw.exec(`UPDATE places SET canonical_name_id = NULL WHERE canonical_name_id IS NOT NULL AND canonical_name_id NOT IN (SELECT id FROM place_names);`);
+    populateQueries.trimPlaceNames();
+    populateQueries.deleteEmptyPlaceNames();
+    populateQueries.deleteNamelessPlaces();
+    populateQueries.resetCanonicalNamePointers();
   } catch (_) {}
   if (verbose) {
     printExistingSummary('After import');
@@ -817,16 +1079,42 @@ function getArg(name, fallback) {
       const afterAdm1 = getCountsRegionByCode('adm1_code');
       const afterAdm2 = getCountsRegionByCode('adm2_code');
       const rows = getCountryRows();
+      const deltaRows = [];
       const header = ['CC','Country','ADM1(exist+added)','ADM2(exist+added)','Cities(exist+added)'];
       const lines = [header.join('\t')];
       for (const r of rows) {
         const cc = (r.cc || '').toUpperCase();
-        const e1 = baselineAdm1[cc] || 0; const a1 = (afterAdm1[cc]||0) - e1;
-        const e2 = baselineAdm2[cc] || 0; const a2 = (afterAdm2[cc]||0) - e2;
-        const ec = baselineCities[cc] || 0; const ac = (afterCities[cc]||0) - ec;
-        lines.push([cc, r.name || cc, `${e1}+${Math.max(0,a1)}`, `${e2}+${Math.max(0,a2)}`, `${ec}+${Math.max(0,ac)}`].join('\t'));
+        const e1 = baselineAdm1[cc] || 0; const a1 = Math.max(0, (afterAdm1[cc] || 0) - e1);
+        const e2 = baselineAdm2[cc] || 0; const a2 = Math.max(0, (afterAdm2[cc] || 0) - e2);
+        const ec = baselineCities[cc] || 0; const ac = Math.max(0, (afterCities[cc] || 0) - ec);
+        lines.push([cc, r.name || cc, `${e1}+${a1}`, `${e2}+${a2}`, `${ec}+${ac}`].join('\t'));
+        deltaRows.push({
+          CC: cc,
+          Country: r.name || cc,
+          'ADM1 (existing)': e1,
+          'ADM1 added': a1,
+          'ADM2 (existing)': e2,
+          'ADM2 added': a2,
+          'Cities (existing)': ec,
+          'Cities added': ac
+        });
       }
-      log(lines.join('\n'));
+      if (!quiet && deltaRows.length) {
+        fmt.section('Per-country delta');
+        fmt.table(deltaRows, {
+          columns: ['CC', 'Country', 'ADM1 (existing)', 'ADM1 added', 'ADM2 (existing)', 'ADM2 added', 'Cities (existing)', 'Cities added'],
+          format: {
+            'ADM1 (existing)': (value) => fmt.COLORS.cyan(String(value)),
+            'ADM1 added': (value) => fmt.COLORS.cyan(String(value)),
+            'ADM2 (existing)': (value) => fmt.COLORS.cyan(String(value)),
+            'ADM2 added': (value) => fmt.COLORS.cyan(String(value)),
+            'Cities (existing)': (value) => fmt.COLORS.cyan(String(value)),
+            'Cities added': (value) => fmt.COLORS.cyan(String(value))
+          }
+        });
+      } else {
+        logger.info(lines.join('\n'));
+      }
     } catch (_) {}
   }
   // Complete ingestion run
@@ -837,11 +1125,11 @@ function getArg(name, fallback) {
       places_updated: 0,
       names_added: finalSummary.names
     });
-    if (verbose) log(`[gazetteer] Completed ingestion run #${runId}`);
+    logger.info(`[gazetteer] Completed ingestion run #${runId}`);
   } catch (e) {
-    if (verbose) log(`[gazetteer] Failed to complete ingestion run: ${e.message}`);
+    logger.warn(`[gazetteer] Failed to complete ingestion run: ${e.message}`);
   }
   
-  console.log(JSON.stringify(finalSummary));
+  emitSummary(finalSummary, { format: summaryFormat, quiet });
   try { raw.close(); } catch (_) {}
 })();

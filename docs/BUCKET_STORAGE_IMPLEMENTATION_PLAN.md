@@ -125,7 +125,7 @@ getCompressionType(db, name)
 
 **Example**:
 ```javascript
-const { compress, decompress } = require('./utils/compression');
+const { compress, decompress } = require('./utils/CompressionFacade');
 
 // Compress with brotli level 11
 const result = compress(htmlContent, {

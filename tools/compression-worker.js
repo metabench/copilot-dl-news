@@ -10,7 +10,7 @@
 const { parentPort } = require('worker_threads');
 const zlib = require('zlib');
 const { HtmlArticleExtractor } = require('../src/utils/HtmlArticleExtractor');
-const { decompress } = require('../src/utils/compression');
+const { decompress } = require('../src/utils/CompressionFacade');
 
 // Listen for work from parent thread
 parentPort.on('message', (data) => {

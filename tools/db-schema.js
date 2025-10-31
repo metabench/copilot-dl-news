@@ -1,25 +1,15 @@
 #!/usr/bin/env node
-/**
- * Database schema inspector - query table structure, indexes, and metadata
- * without approval dialogs.
- * 
- * Usage:
- *   node tools/db-schema.js tables                    # List all tables
- *   node tools/db-schema.js table articles            # Show columns for 'articles'
- *   node tools/db-schema.js indexes                   # List all indexes
- *   node tools/db-schema.js indexes articles          # Show indexes for 'articles'
- *   node tools/db-schema.js foreign-keys articles     # Show foreign keys for 'articles'
- *   node tools/db-schema.js stats                     # Show table row counts
- */
+'use strict';
 
-const Database = require('better-sqlite3');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const Database = require('better-sqlite3');
+const { CliFormatter } = require('../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
 const {
   getTableInfo,
   getTableIndexes,
   getIndexInfo,
-  getTableIndexNames,
   getAllTablesAndViews,
   tableExists,
   getAllIndexes,
@@ -30,242 +20,458 @@ const {
 
 const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'news.db');
 
-function getDbPath() {
-  const envPath = process.env.DB_PATH;
-  if (envPath && fs.existsSync(envPath)) {
-    return envPath;
+class CliError extends Error {
+  constructor(message, exitCode = 1) {
+    super(message);
+    this.exitCode = exitCode;
   }
-  if (fs.existsSync(DEFAULT_DB_PATH)) {
-    return DEFAULT_DB_PATH;
-  }
-  console.error('Error: Database not found at', DEFAULT_DB_PATH);
-  console.error('Set DB_PATH environment variable or create data/news.db');
-  process.exit(1);
 }
 
-function formatTable(rows, options = {}) {
-  if (!rows || rows.length === 0) {
-    return '(no results)';
+const fmt = new CliFormatter();
+
+try {
+  if (process.stdout && typeof process.stdout.on === 'function') {
+    process.stdout.on('error', (err) => {
+      if (err && err.code === 'EPIPE') process.exit(0);
+    });
   }
-  
-  const keys = Object.keys(rows[0]);
-  const maxWidths = {};
-  
-  keys.forEach(key => {
-    maxWidths[key] = Math.max(
-      key.length,
-      ...rows.map(row => String(row[key] || '').length)
-    );
-  });
-  
-  const lines = [];
-  const header = keys.map(key => key.padEnd(maxWidths[key])).join(' | ');
-  const separator = keys.map(key => '-'.repeat(maxWidths[key])).join('-+-');
-  
-  lines.push(header);
-  lines.push(separator);
-  
-  rows.forEach(row => {
-    const line = keys.map(key => String(row[key] || '').padEnd(maxWidths[key])).join(' | ');
-    lines.push(line);
-  });
-  
-  return lines.join('\n');
+} catch (_) {}
+
+function createParser() {
+  const parser = new CliArgumentParser(
+    'db-schema',
+    'Inspect SQLite tables, indexes, and statistics without approval dialogs.'
+  );
+
+  parser
+    .add('--db <path>', 'Path to the SQLite database', DEFAULT_DB_PATH)
+    .add('--summary-format <mode>', 'Summary output format: ascii | json', 'ascii')
+    .add('--quiet', 'Suppress ASCII output and emit JSON only', false, 'boolean');
+
+  return parser;
 }
 
-function listTables(db) {
-  const tables = getAllTablesAndViews(db);
-  
-  console.log(`\n${tables.length} tables/views found:\n`);
-  console.log(formatTable(tables));
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+  const value = bytes / Math.pow(1024, index);
+  const decimals = index === 0 ? 0 : value < 10 ? 1 : 0;
+  return `${value.toFixed(decimals)} ${units[index]}`;
 }
 
-function describeTable(db, tableName) {
-  // Check if table exists
+function normalizeOptions(raw) {
+  const resolvedDb = raw.db || process.env.DB_PATH || DEFAULT_DB_PATH;
+  const dbPath = path.isAbsolute(resolvedDb)
+    ? resolvedDb
+    : path.join(process.cwd(), resolvedDb);
+
+  const summaryFormat = typeof raw.summaryFormat === 'string'
+    ? raw.summaryFormat.trim().toLowerCase()
+    : 'ascii';
+
+  if (!['ascii', 'json'].includes(summaryFormat)) {
+    throw new CliError(`Unsupported summary format: ${raw.summaryFormat}`);
+  }
+
+  if (!fs.existsSync(dbPath)) {
+    throw new CliError(`Database not found at ${dbPath}. Use --db to provide a valid path.`);
+  }
+
+  return {
+    dbPath,
+    summaryFormat,
+    quiet: Boolean(raw.quiet)
+  };
+}
+
+function openDatabase(dbPath) {
+  try {
+    return new Database(dbPath, { readonly: true });
+  } catch (error) {
+    throw new CliError(`Unable to open database at ${dbPath}: ${error.message}`);
+  }
+}
+
+function ensureTableExists(db, tableName) {
   const exists = tableExists(db, tableName);
-  
   if (!exists) {
-    console.error(`Error: Table '${tableName}' not found`);
-    process.exit(1);
+    throw new CliError(`Table '${tableName}' not found.`);
   }
-  
-  const columns = getTableInfo(db, tableName);
-  
-  console.log(`\nTable: ${tableName}`);
-  console.log(`${columns.length} columns:\n`);
-  
-  const formatted = columns.map(col => ({
-    cid: col.cid,
+}
+
+function handleTables(db, options) {
+  const tables = getAllTablesAndViews(db);
+  return {
+    type: 'tables',
+    dbPath: options.dbPath,
+    tables
+  };
+}
+
+function handleDescribeTable(db, tableName, options) {
+  if (!tableName) {
+    throw new CliError('Table name is required. Usage: table <name>.');
+  }
+
+  ensureTableExists(db, tableName);
+  const columns = getTableInfo(db, tableName).map((col) => ({
+    position: col.cid,
     name: col.name,
     type: col.type,
-    notnull: col.notnull ? 'NOT NULL' : '',
-    default: col.dflt_value || '',
-    pk: col.pk ? 'PK' : ''
+    notNull: Boolean(col.notnull),
+    defaultValue: col.dflt_value || null,
+    primaryKeyPosition: col.pk || 0
   }));
-  
-  console.log(formatTable(formatted));
+
+  return {
+    type: 'table',
+    dbPath: options.dbPath,
+    table: tableName,
+    columnCount: columns.length,
+    columns
+  };
 }
 
-function listIndexes(db, tableName = null) {
-  let indexes;
-  
+function handleIndexes(db, tableName, options) {
   if (tableName) {
-    indexes = getTableIndexes(db, tableName);
-    console.log(`\nIndexes for table '${tableName}':\n`);
-  } else {
-    indexes = getAllIndexes(db);
-    console.log(`\n${indexes.length} indexes found:\n`);
-  }
-  
-  if (indexes.length === 0) {
-    console.log('(no indexes)');
-    return;
-  }
-  
-  if (tableName) {
-    // Detailed view for single table
-    indexes.forEach(idx => {
-      console.log(`Index: ${idx.name}${idx.unique ? ' (UNIQUE)' : ''}`);
-      const info = getIndexInfo(db, idx.name);
-      info.forEach(col => {
-        console.log(`  ${col.seqno}: ${col.name}`);
-      });
-      console.log('');
+    ensureTableExists(db, tableName);
+    const indexes = getTableIndexes(db, tableName).map((idx) => {
+      const columns = getIndexInfo(db, idx.name).map((col) => col.name);
+      return {
+        name: idx.name,
+        unique: Boolean(idx.unique),
+        origin: idx.origin,
+        partial: Boolean(idx.partial),
+        columns
+      };
     });
-  } else {
-    // Summary view for all tables
-    const formatted = indexes.map(idx => ({
-      name: idx.name,
-      table: idx.tbl_name
-    }));
-    console.log(formatTable(formatted));
-  }
-}
 
-function listForeignKeys(db, tableName) {
-  const exists = tableExists(db, tableName);
-  
-  if (!exists) {
-    console.error(`Error: Table '${tableName}' not found`);
-    process.exit(1);
+    return {
+      type: 'indexes',
+      scope: 'table',
+      dbPath: options.dbPath,
+      table: tableName,
+      indexes
+    };
   }
-  
-  const fks = getForeignKeys(db, tableName);
-  
-  console.log(`\nForeign keys for table '${tableName}':\n`);
-  
-  if (fks.length === 0) {
-    console.log('(no foreign keys)');
-    return;
-  }
-  
-  const formatted = fks.map(fk => ({
-    id: fk.id,
-    from: fk.from,
-    to_table: fk.table,
-    to_column: fk.to,
-    on_update: fk.on_update,
-    on_delete: fk.on_delete
+
+  const indexes = getAllIndexes(db).map((idx) => ({
+    name: idx.name,
+    table: idx.tbl_name,
+    hasDefinition: Boolean(idx.sql),
+    definition: idx.sql || null
   }));
-  
-  console.log(formatTable(formatted));
+
+  return {
+    type: 'indexes',
+    scope: 'database',
+    dbPath: options.dbPath,
+    indexes
+  };
 }
 
-function showStats(db) {
+function handleForeignKeys(db, tableName, options) {
+  if (!tableName) {
+    throw new CliError('Table name is required. Usage: foreign-keys <name>.');
+  }
+
+  ensureTableExists(db, tableName);
+  const foreignKeys = getForeignKeys(db, tableName).map((fk) => ({
+    id: fk.id,
+    sequence: fk.seq,
+    from: fk.from,
+    toTable: fk.table,
+    toColumn: fk.to,
+    onUpdate: fk.on_update,
+    onDelete: fk.on_delete,
+    match: fk.match
+  }));
+
+  return {
+    type: 'foreign-keys',
+    dbPath: options.dbPath,
+    table: tableName,
+    foreignKeys
+  };
+}
+
+function handleStats(db, options) {
   const tables = getAllTables(db);
-  
-  console.log(`\nCounting rows in ${tables.length} tables...\n`);
-  
-  const stats = [];
-  for (let i = 0; i < tables.length; i++) {
-    const { name } = tables[i];
-    process.stderr.write(`\r[${i + 1}/${tables.length}] ${name}...`.padEnd(60));
+  const rows = [];
+
+  for (const { name } of tables) {
     try {
       const count = getTableRowCount(db, name);
-      stats.push({ table: name, rows: count });
-    } catch (err) {
-      stats.push({ table: name, rows: 'ERROR' });
+      rows.push({ table: name, rows: count });
+    } catch (error) {
+      rows.push({ table: name, rows: null, error: error.message });
     }
   }
-  process.stderr.write('\r' + ' '.repeat(60) + '\r');
-  
-  console.log(formatTable(stats));
-  
-  // Database file info
-  const dbPath = db.name;
-  if (fs.existsSync(dbPath)) {
-    const stats = fs.statSync(dbPath);
-    const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-    console.log(`\nDatabase: ${dbPath}`);
-    console.log(`Size: ${sizeMB} MB`);
+
+  let databaseSizeBytes = null;
+  try {
+    const stats = fs.statSync(options.dbPath);
+    databaseSizeBytes = stats.size;
+  } catch (_) {
+    databaseSizeBytes = null;
+  }
+
+  return {
+    type: 'stats',
+    dbPath: options.dbPath,
+    tables: rows,
+    tableCount: rows.length,
+    databaseSizeBytes
+  };
+}
+
+function executeCommand(db, command, params, options) {
+  switch (command) {
+    case 'tables':
+      return handleTables(db, options);
+    case 'table':
+      return handleDescribeTable(db, params[0], options);
+    case 'indexes':
+      return handleIndexes(db, params[0], options);
+    case 'foreign-keys':
+      return handleForeignKeys(db, params[0], options);
+    case 'stats':
+      return handleStats(db, options);
+    default:
+      throw new CliError(`Unknown command '${command}'. Run with --help for usage.`);
+  }
+}
+
+function renderTables(result) {
+  fmt.header('Database Tables');
+  fmt.settings(`Database: ${result.dbPath}`);
+  fmt.section('Summary');
+  fmt.stat('Tables & views', result.tables.length, 'number');
+
+  if (result.tables.length === 0) {
+    fmt.info('No tables or views found.');
+    return;
+  }
+
+  const rows = result.tables.map((row, index) => ({
+    '#': index + 1,
+    Name: row.name,
+    Type: row.type
+  }));
+
+  fmt.section('Tables');
+  fmt.table(rows, { columns: ['#', 'Name', 'Type'] });
+  fmt.success('Done.');
+}
+
+function renderTable(result) {
+  fmt.header(`Table: ${result.table}`);
+  fmt.settings(`Database: ${result.dbPath}`);
+  fmt.section('Summary');
+  fmt.stat('Columns', result.columnCount, 'number');
+
+  if (result.columnCount === 0) {
+    fmt.info('No columns returned.');
+    return;
+  }
+
+  const rows = result.columns.map((col) => ({
+    '#': col.position,
+    Name: col.name,
+    Type: col.type || '',
+    'Not Null': col.notNull ? 'Yes' : 'No',
+    Default: col.defaultValue === null ? '' : String(col.defaultValue),
+    'PK Position': col.primaryKeyPosition ? String(col.primaryKeyPosition) : ''
+  }));
+
+  fmt.section('Columns');
+  fmt.table(rows, { columns: ['#', 'Name', 'Type', 'Not Null', 'Default', 'PK Position'] });
+  fmt.success('Done.');
+}
+
+function renderIndexes(result) {
+  if (result.scope === 'table') {
+    fmt.header(`Indexes for ${result.table}`);
+    fmt.settings(`Database: ${result.dbPath}`);
+    fmt.section('Summary');
+    fmt.stat('Indexes', result.indexes.length, 'number');
+
+    if (result.indexes.length === 0) {
+      fmt.info('No indexes found for this table.');
+      return;
+    }
+
+    const rows = result.indexes.map((idx) => ({
+      Name: idx.name,
+      Unique: idx.unique ? 'Yes' : 'No',
+      Origin: idx.origin,
+      Partial: idx.partial ? 'Yes' : 'No',
+      Columns: idx.columns.join(', ')
+    }));
+
+    fmt.section('Indexes');
+    fmt.table(rows, { columns: ['Name', 'Unique', 'Origin', 'Partial', 'Columns'] });
+    fmt.success('Done.');
+    return;
+  }
+
+  fmt.header('Database Indexes');
+  fmt.settings(`Database: ${result.dbPath}`);
+  fmt.section('Summary');
+  fmt.stat('Indexes', result.indexes.length, 'number');
+
+  if (result.indexes.length === 0) {
+    fmt.info('No indexes found.');
+    return;
+  }
+
+  const rows = result.indexes.map((idx, index) => ({
+    '#': index + 1,
+    Name: idx.name,
+    Table: idx.table,
+    Defined: idx.hasDefinition ? 'Yes' : 'No'
+  }));
+
+  fmt.section('Indexes');
+  fmt.table(rows, { columns: ['#', 'Name', 'Table', 'Defined'] });
+  fmt.success('Done.');
+}
+
+function renderForeignKeys(result) {
+  fmt.header(`Foreign Keys for ${result.table}`);
+  fmt.settings(`Database: ${result.dbPath}`);
+  fmt.section('Summary');
+  fmt.stat('Foreign keys', result.foreignKeys.length, 'number');
+
+  if (result.foreignKeys.length === 0) {
+    fmt.info('No foreign keys defined for this table.');
+    return;
+  }
+
+  const rows = result.foreignKeys.map((fk) => ({
+    ID: fk.id,
+    Seq: fk.sequence,
+    From: fk.from,
+    'To Table': fk.toTable,
+    'To Column': fk.toColumn,
+    'On Update': fk.onUpdate,
+    'On Delete': fk.onDelete,
+    Match: fk.match || ''
+  }));
+
+  fmt.section('Foreign Keys');
+  fmt.table(rows, {
+    columns: ['ID', 'Seq', 'From', 'To Table', 'To Column', 'On Update', 'On Delete', 'Match']
+  });
+  fmt.success('Done.');
+}
+
+function renderStats(result) {
+  fmt.header('Table Statistics');
+  fmt.settings(`Database: ${result.dbPath}`);
+  fmt.section('Summary');
+  fmt.stat('Tables counted', result.tableCount, 'number');
+
+  if (Number.isFinite(result.databaseSizeBytes)) {
+    fmt.stat('Database size', formatBytes(result.databaseSizeBytes));
+  }
+
+  if (result.tables.length === 0) {
+    fmt.info('No tables found to count.');
+    return;
+  }
+
+  const rows = result.tables.map((entry, index) => ({
+    '#': index + 1,
+    Table: entry.table,
+    Rows: entry.rows === null ? 'error' : entry.rows,
+    Error: entry.rows === null ? (entry.error || '') : ''
+  }));
+
+  fmt.section('Row Counts');
+  fmt.table(rows, { columns: ['#', 'Table', 'Rows', 'Error'] });
+  fmt.success('Done.');
+}
+
+function buildJson(result) {
+  return result;
+}
+
+function emitResult(result, options) {
+  if (options.quiet || options.summaryFormat === 'json') {
+    console.log(JSON.stringify(buildJson(result), null, options.quiet ? undefined : 2));
+    return;
+  }
+
+  switch (result.type) {
+    case 'tables':
+      renderTables(result);
+      break;
+    case 'table':
+      renderTable(result);
+      break;
+    case 'indexes':
+      renderIndexes(result);
+      break;
+    case 'foreign-keys':
+      renderForeignKeys(result);
+      break;
+    case 'stats':
+      renderStats(result);
+      break;
+    default:
+      fmt.error(`Unhandled result type: ${result.type}`);
   }
 }
 
 function main() {
-  const args = process.argv.slice(2);
-  const command = args[0];
-  const param = args[1];
-  
-  if (!command || command === 'help' || command === '--help') {
-    console.log(`
-Database Schema Inspector
+  const parser = createParser();
+  let rawArgs;
 
-Usage:
-  node tools/db-schema.js <command> [options]
-
-Commands:
-  tables                    List all tables and views
-  table <name>              Show column details for a table
-  indexes                   List all indexes
-  indexes <table>           Show indexes for a specific table
-  foreign-keys <table>      Show foreign keys for a table
-  stats                     Show table row counts and database size
-
-Environment:
-  DB_PATH                   Path to SQLite database (default: data/news.db)
-
-Examples:
-  node tools/db-schema.js tables
-  node tools/db-schema.js table analysis_runs
-  node tools/db-schema.js indexes analysis_runs
-  node tools/db-schema.js stats
-`);
-    process.exit(0);
-  }
-  
-  const dbPath = getDbPath();
-  const db = new Database(dbPath, { readonly: true });
-  
   try {
-    switch (command) {
-      case 'tables':
-        listTables(db);
-        break;
-      case 'table':
-        if (!param) {
-          console.error('Error: table name required');
-          process.exit(1);
-        }
-        describeTable(db, param);
-        break;
-      case 'indexes':
-        listIndexes(db, param);
-        break;
-      case 'foreign-keys':
-        if (!param) {
-          console.error('Error: table name required');
-          process.exit(1);
-        }
-        listForeignKeys(db, param);
-        break;
-      case 'stats':
-        showStats(db);
-        break;
-      default:
-        console.error(`Error: Unknown command '${command}'`);
-        console.error('Run "node tools/db-schema.js help" for usage');
-        process.exit(1);
+    rawArgs = parser.parse(process.argv.slice(2));
+  } catch (error) {
+    fmt.error(error.message);
+    process.exit(1);
+  }
+
+  const positional = rawArgs.positional || [];
+
+  if (positional.length === 0 || positional[0] === 'help') {
+    parser.getProgram().outputHelp();
+    return;
+  }
+
+  let options;
+  try {
+    options = normalizeOptions(rawArgs);
+  } catch (error) {
+    if (error instanceof CliError) {
+      fmt.error(error.message);
+      process.exit(error.exitCode);
     }
+    fmt.error(error.message);
+    process.exit(1);
+  }
+
+  const db = openDatabase(options.dbPath);
+
+  try {
+    const command = positional[0];
+    const params = positional.slice(1);
+    const result = executeCommand(db, command, params, options);
+    emitResult(result, options);
+  } catch (error) {
+    if (error instanceof CliError) {
+      fmt.error(error.message);
+      process.exit(error.exitCode);
+    }
+    fmt.error(error.message);
+    if (process.env.DEBUG_CLI === '1') {
+      console.error(error);
+    }
+    process.exit(1);
   } finally {
     db.close();
   }

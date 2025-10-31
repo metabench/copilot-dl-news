@@ -405,16 +405,23 @@ CREATE TABLE IF NOT EXISTS compression_types (
 
 CREATE TABLE IF NOT EXISTS compression_buckets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT UNIQUE NOT NULL,
+  name TEXT UNIQUE,
+  bucket_type TEXT NOT NULL,
+  domain_pattern TEXT,
   compression_type_id INTEGER NOT NULL REFERENCES compression_types(id),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  total_entries INTEGER NOT NULL DEFAULT 0,
-  total_uncompressed_bytes INTEGER NOT NULL DEFAULT 0,
-  total_compressed_bytes INTEGER NOT NULL DEFAULT 0,
+  bucket_blob BLOB,
+  content_count INTEGER NOT NULL DEFAULT 0,
+  uncompressed_size INTEGER NOT NULL DEFAULT 0,
+  compressed_size INTEGER NOT NULL DEFAULT 0,
   compression_ratio REAL,
+  index_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  finalized_at TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'sealed', 'archived'))
 );
 CREATE INDEX IF NOT EXISTS idx_compression_buckets_status ON compression_buckets(status);
+CREATE INDEX IF NOT EXISTS idx_compression_buckets_type_status ON compression_buckets(bucket_type, status);
+CREATE INDEX IF NOT EXISTS idx_compression_buckets_domain ON compression_buckets(domain_pattern);
 
 CREATE TABLE IF NOT EXISTS bucket_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

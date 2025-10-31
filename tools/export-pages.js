@@ -25,7 +25,7 @@ const zlib = require('zlib');
 const os = require('os');
 const { Worker } = require('worker_threads');
 const { openDatabase } = require('../src/db/sqlite/v1/connection');
-const { decompress } = require('../src/utils/compression');
+const { decompress } = require('../src/utils/CompressionFacade');
 const { HtmlArticleExtractor } = require('../src/utils/HtmlArticleExtractor');
 const {
   tableExists,

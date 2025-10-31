@@ -1,64 +1,135 @@
 #!/usr/bin/env node
+'use strict';
 
 /**
- * intelligent_crawl - Simple CLI tool for running intelligent crawls
- *
- * Usage:
- *   node tools/intelligent-crawl.js [url] [--limit N] [--concurrency N] [--max-downloads N] [--verbose]
- *
- * Options:
- *   --limit N          Limit output to first N lines (useful for startup analysis)
- *   --concurrency N    Number of parallel downloads (default: 1 for reliability)
- *   --max-downloads N  Maximum number of pages to download (default: unlimited)
- *   --verbose          Show all output including structured events
- *
- * If no URL is provided, loads from config.json
+ * intelligent-crawl — Run intelligent crawls with hub discovery summaries.
  */
 
-// Check for help flag first, before any imports that might fail
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  console.log(`
-Intelligent Crawl Tool
-
-Runs intelligent web crawls with place and topic hub discovery.
-
-USAGE:
-  node tools/intelligent-crawl.js [url] [options]
-
-OPTIONS:
-  --help, -h              Show this help message
-  --verification          Check if crawl has all required systems and plugins loaded
-  --quick-verification    Fast verification without heavy initialization
-  --limit N               Limit output to first N lines (useful for startup analysis)
-  --concurrency N         Number of parallel downloads (default: 1 for reliability)
-  --max-downloads N       Maximum number of pages to download (default: unlimited)
-  --verbose               Show all output including structured events
-  --compact               Show minimal output focused on country hub discovery progress
-
-EXAMPLES:
-   node tools/intelligent-crawl.js                                    # Crawl URL from config.json
-   node tools/intelligent-crawl.js https://example.com               # Crawl specific URL
-   node tools/intelligent-crawl.js --verification                    # Check system readiness
-   node tools/intelligent-crawl.js --quick-verification              # Fast verification without heavy init
-   node tools/intelligent-crawl.js --limit 50                        # Show first 50 lines only
-   node tools/intelligent-crawl.js --concurrency 3 --max-downloads 100  # Parallel crawl with limit
-   node tools/intelligent-crawl.js --verbose                         # Show all detailed output
-   node tools/intelligent-crawl.js --compact                         # Show compact country hub discovery progress
-
-HUB DISCOVERY:
-  The tool automatically discovers and reports:
-  🌍 Country hubs (verified against gazetteer)
-  🗺️  Place hubs (cities, regions, etc.)
-  🗂️  Topic hubs (news categories, sections)
-
-If no URL is provided, the tool loads the URL from config.json.
-`);
-  process.exit(0);
-}
-
-const NewsCrawler = require('../src/crawl.js');
 const fs = require('fs');
 const path = require('path');
+const { CliFormatter } = require('../src/utils/CliFormatter');
+const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+
+class CliError extends Error {
+  constructor(message, exitCode = 1) {
+    super(message);
+    this.exitCode = exitCode;
+  }
+}
+
+const fmt = new CliFormatter();
+
+try {
+  if (process.stdout && typeof process.stdout.on === 'function') {
+    process.stdout.on('error', (err) => {
+      if (err && err.code === 'EPIPE') process.exit(0);
+    });
+  }
+} catch (_) {}
+
+function createParser() {
+  const parser = new CliArgumentParser(
+    'intelligent-crawl',
+    'Run intelligent crawls with hub discovery and verification modes.'
+  );
+
+  parser
+    .add('--url <url>', 'Override the start URL')
+    .add('--verification', 'Run full system verification without crawling', false, 'boolean')
+    .add('--quick-verification', 'Run lightweight verification (skip heavy checks)', false, 'boolean')
+    .add('--limit <lines>', 'Limit console output to N lines', undefined, 'int')
+    .add('--concurrency <count>', 'Crawler concurrency (default: 1)', 1, 'int')
+    .add('--max-downloads <count>', 'Maximum number of pages to download', undefined, 'int')
+    .add('--verbose', 'Stream full crawler output', false, 'boolean')
+    .add('--compact', 'Show compact progress output', false, 'boolean')
+    .add('--json', 'Emit JSON summary (alias for --summary-format json)', false, 'boolean')
+    .add('--summary-format <mode>', 'Summary format: ascii | json', 'ascii')
+    .add('--quiet', 'Suppress ASCII summary and emit JSON only', false, 'boolean');
+
+  return parser;
+}
+
+function normalizeOptions(rawOptions) {
+  const positional = Array.isArray(rawOptions.positional) ? rawOptions.positional : [];
+  const positionalUrl = positional.find((value) => typeof value === 'string' && value.startsWith('http')) || null;
+
+  const limit = rawOptions.limit !== undefined ? rawOptions.limit : null;
+  if (limit !== null && (!Number.isFinite(limit) || limit < 1)) {
+    throw new CliError('The --limit option must be a positive integer.');
+  }
+
+  const concurrency = rawOptions.concurrency !== undefined ? rawOptions.concurrency : 1;
+  if (!Number.isFinite(concurrency) || concurrency < 1) {
+    throw new CliError('The --concurrency option must be a positive integer.');
+  }
+
+  const maxDownloads = rawOptions.maxDownloads !== undefined ? rawOptions.maxDownloads : null;
+  if (maxDownloads !== null && (!Number.isFinite(maxDownloads) || maxDownloads < 1)) {
+    throw new CliError('The --max-downloads option must be a positive integer.');
+  }
+
+  let summaryFormat = rawOptions.summaryFormat || 'ascii';
+  if (rawOptions.json) {
+    summaryFormat = 'json';
+  }
+  if (typeof summaryFormat === 'string') {
+    summaryFormat = summaryFormat.trim().toLowerCase();
+  }
+  if (!['ascii', 'json'].includes(summaryFormat)) {
+    throw new CliError(`Unsupported summary format: ${rawOptions.summaryFormat}`);
+  }
+
+  const quiet = Boolean(rawOptions.quiet);
+  if (quiet && summaryFormat !== 'json') {
+    throw new CliError('Quiet mode requires JSON output. Use --json or --summary-format json.');
+  }
+
+  return {
+    providedUrl: rawOptions.url || positionalUrl,
+    limit,
+    concurrency,
+    maxDownloads,
+    verbose: Boolean(rawOptions.verbose),
+    compact: Boolean(rawOptions.compact),
+    verification: Boolean(rawOptions.verification),
+    quickVerification: Boolean(rawOptions.quickVerification),
+    summaryFormat,
+    quiet,
+    positional,
+  };
+}
+
+const parser = createParser();
+let rawArgs;
+try {
+  rawArgs = parser.parse(process.argv);
+} catch (error) {
+  fmt.error(error.message);
+  process.exit(1);
+}
+
+let options;
+try {
+  options = normalizeOptions(rawArgs);
+} catch (error) {
+  if (error instanceof CliError) {
+    fmt.error(error.message);
+    process.exit(error.exitCode);
+  }
+  fmt.error(error.message);
+  process.exit(1);
+}
+
+const shouldStreamOutput = options.summaryFormat === 'ascii' && !options.quiet;
+const captureLogsOnly = options.summaryFormat === 'json';
+const runLogs = [];
+const originalConsole = {
+  log: console.log,
+  warn: console.warn,
+  error: console.error
+};
+
+const NewsCrawler = require('../src/crawl.js');
 const { ensureDatabase } = require('../src/db/sqlite');
 const { getAllPlaceNames } = require('../src/db/sqlite/queries/gazetteerPlaceNames');
 const { getAllCountries } = require('../src/db/sqlite/queries/gazetteer.places');
@@ -124,48 +195,16 @@ function ensureGazetteerLoaded() {
   }
 }
 
-// Parse command line arguments early so logging (and --limit) apply to startup output
-const args = process.argv.slice(2);
-const verbose = args.includes('--verbose');
-const compact = args.includes('--compact');
-const verification = args.includes('--verification');
-const quickVerification = args.includes('--quick-verification');
-
-// Parse --limit parameter (used by console overrides)
-let outputLimit = null;
-const limitIndex = args.indexOf('--limit');
-if (limitIndex !== -1 && args[limitIndex + 1]) {
-  outputLimit = parseInt(args[limitIndex + 1], 10);
-  if (isNaN(outputLimit) || outputLimit < 1) {
-    console.error('Error: --limit must be a positive integer');
-    process.exit(1);
-  }
-}
-
-// Parse --concurrency parameter (default: 1 for reliability)
-let concurrency = 1;
-const concurrencyIndex = args.indexOf('--concurrency');
-if (concurrencyIndex !== -1 && args[concurrencyIndex + 1]) {
-  concurrency = parseInt(args[concurrencyIndex + 1], 10);
-  if (isNaN(concurrency) || concurrency < 1) {
-    console.error('Error: --concurrency must be a positive integer');
-    process.exit(1);
-  }
-}
-
-// Parse --max-downloads parameter (default: unlimited)
-let maxDownloads = undefined;
-const maxDownloadsIndex = args.indexOf('--max-downloads');
-if (maxDownloadsIndex !== -1 && args[maxDownloadsIndex + 1]) {
-  maxDownloads = parseInt(args[maxDownloadsIndex + 1], 10);
-  if (isNaN(maxDownloads) || maxDownloads < 1) {
-    console.error('Error: --max-downloads must be a positive integer');
-    process.exit(1);
-  }
-}
+const verbose = options.verbose;
+const compact = options.compact;
+const verification = options.verification;
+const quickVerification = options.quickVerification;
+let outputLimit = options.limit;
+let concurrency = options.concurrency;
+let maxDownloads = options.maxDownloads;
 
 // Suppress structured output unless in verbose/compact mode
-if (!verbose && !compact) {
+if (shouldStreamOutput && !verbose && !compact) {
   // Track output line count for --limit functionality
   let lineCount = 0;
   let limitReached = false;
@@ -376,6 +415,346 @@ if (!verbose && !compact) {
     }
     incrementLineCount();
   };
+} else if (captureLogsOnly) {
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  const originalError = console.error;
+
+  const record = (level, originalFn) => {
+    return (...logArgs) => {
+      const message = logArgs
+        .map((value) => {
+          if (typeof value === 'string') return value;
+          try {
+            return JSON.stringify(value);
+          } catch (serializationError) {
+            return String(value);
+          }
+        })
+        .join(' ');
+
+      runLogs.push({ level, message });
+
+      if (verbose) {
+        originalFn(...logArgs);
+      }
+    };
+  };
+
+  console.log = record('info', originalLog);
+  console.warn = record('warn', originalWarn);
+  console.error = record('error', originalError);
+}
+
+function runVerification({ quickVerification, startUrl, totalPrioritisation, priorityConfig }) {
+  const report = {
+    mode: quickVerification ? 'quick' : 'full',
+    startUrl,
+    success: true,
+    database: {
+      connected: Boolean(db),
+      placeNamesLoaded: null,
+      topicKeywordsLoaded: null,
+      error: null
+    },
+    priorityConfig: {
+      loaded: false,
+      enabledFeatures: [],
+      totalPrioritisation: Boolean(totalPrioritisation),
+      error: null
+    },
+    crawler: {
+      initialized: false,
+      enhancedDbAvailable: false,
+      availableFeatures: [],
+      missingFeatures: [],
+      error: null
+    },
+    gazetteer: {
+      skipped: quickVerification,
+      totalCountries: null,
+      continentsRepresented: null,
+      majorCountries: null,
+      error: null
+    },
+    errors: []
+  };
+
+  try {
+    if (!quickVerification) {
+      ensureGazetteerLoaded();
+      report.database.placeNamesLoaded = placeNames.size;
+      report.database.topicKeywordsLoaded = newsTopics.size;
+    }
+  } catch (error) {
+    report.database.error = error.message;
+    report.success = false;
+    report.errors.push(`Database: ${error.message}`);
+  }
+
+  try {
+    const loaded = priorityConfig && Object.keys(priorityConfig).length > 0;
+    report.priorityConfig.loaded = loaded;
+    if (loaded && priorityConfig.features) {
+      report.priorityConfig.enabledFeatures = Object.entries(priorityConfig.features)
+        .filter(([_, enabled]) => enabled)
+        .map(([feature]) => feature)
+        .sort();
+    }
+  } catch (error) {
+    report.priorityConfig.error = error.message;
+    report.success = false;
+    report.errors.push(`Priority configuration: ${error.message}`);
+  }
+
+  try {
+    const testCrawler = new NewsCrawler(startUrl, {
+      crawlType: 'intelligent',
+      concurrency: 1,
+      maxDepth: 2,
+      enableDb: true,
+      useSitemap: true,
+      preferCache: true,
+      maxDownloads: 1
+    });
+
+    report.crawler.initialized = true;
+    report.crawler.enhancedDbAvailable = Boolean(testCrawler.enhancedDbAdapter);
+
+    const criticalFeatures = ['gapDrivenPrioritization', 'patternDiscovery', 'countryHubGaps'];
+    const featuresEnabled = testCrawler.featuresEnabled || {};
+
+    report.crawler.availableFeatures = criticalFeatures.filter((feature) => featuresEnabled[feature]).sort();
+    report.crawler.missingFeatures = criticalFeatures.filter((feature) => !featuresEnabled[feature]).sort();
+  } catch (error) {
+    report.crawler.error = error.message;
+    report.success = false;
+    report.errors.push(`Crawler: ${error.message}`);
+  }
+
+  if (!quickVerification) {
+    try {
+      ensureGazetteerLoaded();
+
+      const continents = ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'];
+      const majorCountries = ['United States', 'United Kingdom', 'China', 'India', 'Germany', 'France'];
+
+      report.gazetteer.totalCountries = allCountries.length;
+      report.gazetteer.continentsRepresented = continents.filter((continent) =>
+        allCountries.some((country) => country.continent === continent)
+      ).length;
+      report.gazetteer.majorCountries = majorCountries.filter((countryName) =>
+        allCountries.some((country) => country.name === countryName)
+      ).length;
+    } catch (error) {
+      report.gazetteer.error = error.message;
+      report.success = false;
+      report.errors.push(`Gazetteer: ${error.message}`);
+    }
+  }
+
+  return report;
+}
+
+function emitVerificationReport(report, options) {
+  if (options.summaryFormat === 'json') {
+    const payload = {
+      ...report,
+      logs: captureLogsOnly && runLogs.length ? runLogs : undefined
+    };
+    originalConsole.log(JSON.stringify(payload, null, options.quiet ? 0 : 2));
+    return;
+  }
+
+  const isQuick = report.mode === 'quick';
+
+  fmt.header('Intelligent Crawl Verification');
+  fmt.summary({
+    Mode: isQuick ? 'Quick verification' : 'Full verification',
+    'Start URL': report.startUrl,
+    Status: report.success ? 'Ready to crawl' : 'Issues detected'
+  });
+
+  fmt.section('Database Systems');
+  if (report.database.error) {
+    fmt.error(report.database.error);
+  } else {
+    fmt.stat('SQLite database', report.database.connected ? 'connected' : 'not available');
+    if (isQuick) {
+      fmt.info('Gazetteer load skipped (quick verification mode).');
+    } else {
+      fmt.stat('Place names loaded', report.database.placeNamesLoaded ?? 0, 'number');
+      fmt.stat('Topic keywords loaded', report.database.topicKeywordsLoaded ?? 0, 'number');
+    }
+  }
+
+  fmt.section('Priority Configuration');
+  if (report.priorityConfig.error) {
+    fmt.error(report.priorityConfig.error);
+  } else {
+    fmt.stat('Config loaded', report.priorityConfig.loaded ? 'yes' : 'no');
+    fmt.stat('Total prioritisation', report.priorityConfig.totalPrioritisation ? 'ENABLED' : 'DISABLED');
+    if (report.priorityConfig.enabledFeatures.length > 0) {
+      fmt.list('Enabled features', report.priorityConfig.enabledFeatures);
+    } else {
+      fmt.info('No optional priority features enabled.');
+    }
+  }
+
+  fmt.section('Crawler Systems');
+  if (report.crawler.error) {
+    fmt.error(report.crawler.error);
+  } else {
+    fmt.stat('NewsCrawler initialization', report.crawler.initialized ? 'ok' : 'failed');
+    fmt.stat('Enhanced DB adapter', report.crawler.enhancedDbAvailable ? 'available' : 'unavailable (optional)');
+    if (report.crawler.availableFeatures.length > 0) {
+      fmt.list('Available features', report.crawler.availableFeatures);
+    }
+    if (report.crawler.missingFeatures.length > 0) {
+      fmt.warn(`Missing features: ${report.crawler.missingFeatures.join(', ')}`);
+    }
+  }
+
+  fmt.section('Gazetteer Quality');
+  if (isQuick) {
+    fmt.info('Quality checks skipped in quick mode.');
+  } else if (report.gazetteer.error) {
+    fmt.error(report.gazetteer.error);
+  } else {
+    fmt.stat('Total countries', report.gazetteer.totalCountries ?? 0, 'number');
+    fmt.stat('Continents represented', `${report.gazetteer.continentsRepresented ?? 0}/6`);
+    fmt.stat('Major countries present', `${report.gazetteer.majorCountries ?? 0}/6`);
+  }
+
+  if (report.success) {
+    fmt.success('All critical systems are ready for intelligent crawling.');
+    fmt.info('Ready to run: node tools/intelligent-crawl.js [url] [options]');
+  } else {
+    if (report.errors.length > 0) {
+      fmt.warn(`Issues detected: ${report.errors.join('; ')}`);
+    } else {
+      fmt.warn('Some systems are not ready. Fix issues and re-run verification.');
+    }
+  }
+
+  fmt.footer();
+}
+
+function summariseList(items, limit = 25) {
+  const bounded = items.slice(0, limit);
+  const omitted = Math.max(0, items.length - bounded.length);
+  return { bounded, omitted };
+}
+
+function buildCrawlReport({ startUrl, totalPrioritisation, crawlConfig }) {
+  ensureGazetteerLoaded();
+
+  const uniqueCountries = [...new Set(discoveredHubs.country)].sort((a, b) => a.localeCompare(b));
+  const uniquePlaces = [...new Set(discoveredHubs.place)].sort((a, b) => a.localeCompare(b));
+  const uniqueTopics = [...new Set(discoveredHubs.topic)].sort((a, b) => a.localeCompare(b));
+
+  const otherPlaceHubs = uniquePlaces.filter((place) =>
+    !uniqueCountries.some((country) => country.toLowerCase() === place.toLowerCase())
+  );
+
+  return {
+    success: true,
+    startUrl,
+    stats: {
+      countryHubs: uniqueCountries.length,
+      otherPlaceHubs: otherPlaceHubs.length,
+      topicHubs: uniqueTopics.length,
+      totalCountriesAvailable: allCountries ? allCountries.length : null
+    },
+    discoveredHubs: {
+      countries: uniqueCountries,
+      otherPlaces: otherPlaceHubs,
+      topics: uniqueTopics
+    },
+    totalPrioritisation: Boolean(totalPrioritisation),
+    config: crawlConfig
+  };
+}
+
+function emitCrawlReport(report, options) {
+  if (options.summaryFormat === 'json') {
+    const payload = {
+      ...report,
+      logs: captureLogsOnly && runLogs.length ? runLogs : undefined
+    };
+    originalConsole.log(JSON.stringify(payload, null, options.quiet ? 0 : 2));
+    return;
+  }
+
+  const maxDownloadsDisplay = (() => {
+    if (!report.config) {
+      return 'default (500)';
+    }
+    if (report.config.usedDefaultMaxDownloads) {
+      return `default (${report.config.maxDownloads})`;
+    }
+    return report.config.maxDownloads;
+  })();
+
+  fmt.header('Intelligent Crawl Summary');
+  fmt.success('Crawl completed');
+  fmt.summary({
+    'Target URL': report.startUrl,
+    Concurrency: report.config?.concurrency ?? 'n/a',
+    'Max downloads': maxDownloadsDisplay,
+    'Country hubs discovered': report.stats.countryHubs,
+    'Other place hubs': report.stats.otherPlaceHubs,
+    'Topic hubs': report.stats.topicHubs,
+    'Total prioritisation': report.totalPrioritisation ? 'ENABLED' : 'DISABLED'
+  });
+
+  if (report.discoveredHubs.countries.length > 0) {
+    const { bounded, omitted } = summariseList(report.discoveredHubs.countries, 25);
+    fmt.section('Country hubs');
+    fmt.list('Countries', bounded);
+    if (omitted > 0) {
+      fmt.info(`${omitted} additional country hubs omitted for brevity.`);
+    }
+  }
+
+  if (report.discoveredHubs.otherPlaces.length > 0) {
+    const { bounded, omitted } = summariseList(report.discoveredHubs.otherPlaces, 25);
+    fmt.section('Other place hubs');
+    fmt.list('Places', bounded);
+    if (omitted > 0) {
+      fmt.info(`${omitted} additional place hubs omitted for brevity.`);
+    }
+  }
+
+  if (report.discoveredHubs.topics.length > 0) {
+    const { bounded, omitted } = summariseList(report.discoveredHubs.topics, 25);
+    fmt.section('Topic hubs');
+    fmt.list('Topics', bounded);
+    if (omitted > 0) {
+      fmt.info(`${omitted} additional topic hubs omitted for brevity.`);
+    }
+  }
+
+  fmt.footer();
+}
+
+function emitCrawlFailure(error, options) {
+  if (options.summaryFormat === 'json') {
+    const payload = {
+      success: false,
+      error: error.message,
+      logs: captureLogsOnly && runLogs.length ? runLogs : undefined
+    };
+    originalConsole.log(JSON.stringify(payload, null, options.quiet ? 0 : 2));
+    return;
+  }
+
+  fmt.header('Intelligent Crawl Summary');
+  fmt.error(`Crawl failed: ${error.message}`);
+  if (verbose && error.stack) {
+    fmt.warn(error.stack);
+  }
+  fmt.footer();
 }
 
 // Load priority configuration
@@ -423,9 +802,8 @@ if (configPath) {
 }
 
 // Determine starting URL (command line arg overrides config)
-const urlArg = args.find(arg => !arg.startsWith('--') && arg.startsWith('http'));
 const configUrl = config.intelligentCrawl?.url || config.url;
-const startUrl = urlArg || configUrl || 'https://www.theguardian.com';
+const startUrl = options.providedUrl || configUrl || 'https://www.theguardian.com';
 
 function resolveTotalPrioritySetting(runConfig) {
   if (!runConfig || typeof runConfig !== 'object') {
@@ -564,135 +942,15 @@ function colorize(text, color) {
 
 // Handle verification mode
 if (verification || quickVerification) {
-  console.log(colorize('🔍 Intelligent Crawl System Verification', 'blue'));
-  console.log('');
+  const verificationReport = runVerification({
+    quickVerification,
+    startUrl,
+    totalPrioritisation,
+    priorityConfig
+  });
 
-  let allSystemsReady = true;
-
-  // Check database connectivity
-  try {
-    console.log(colorize('📊 Database Systems:', 'blue'));
-    console.log(colorize(`   ✓ SQLite database: ${db ? 'connected' : 'failed'}`, db ? 'green' : 'red'));
-
-    if (!quickVerification) {
-      // Load gazetteer data for full verification
-      ensureGazetteerLoaded();
-      console.log(colorize(`   ✓ Gazetteer data: ${placeNames.size} place names loaded`, placeNames.size > 0 ? 'green' : 'red'));
-      console.log(colorize(`   ✓ Topic keywords: ${newsTopics.size} topics loaded`, newsTopics.size > 0 ? 'green' : 'red'));
-    } else {
-      // Quick verification - just check DB connectivity
-      console.log(colorize(`   ✓ Gazetteer data: skipped (quick mode)`, 'yellow'));
-      console.log(colorize(`   ✓ Topic keywords: skipped (quick mode)`, 'yellow'));
-    }
-    console.log('');
-  } catch (error) {
-    console.log(colorize(`   ✗ Database systems: ${error.message}`, 'red'));
-    allSystemsReady = false;
-    console.log('');
-  }
-
-  // Check priority configuration
-  try {
-    console.log(colorize('⚙️  Priority Configuration:', 'blue'));
-    console.log(colorize(`   ✓ Config loaded: ${priorityConfig ? 'yes' : 'no'}`, priorityConfig ? 'green' : 'red'));
-    if (priorityConfig?.features) {
-      const enabledFeatures = Object.entries(priorityConfig.features)
-        .filter(([_, enabled]) => enabled)
-        .map(([feature, _]) => feature);
-      console.log(colorize(`   ✓ Enabled features: ${enabledFeatures.join(', ')}`, enabledFeatures.length > 0 ? 'green' : 'yellow'));
-    }
-    console.log(colorize(`   ✓ Total prioritisation: ${totalPrioritisation ? 'enabled' : 'disabled'}`, totalPrioritisation ? 'green' : 'yellow'));
-    console.log('');
-  } catch (error) {
-    console.log(colorize(`   ✗ Priority configuration: ${error.message}`, 'red'));
-    allSystemsReady = false;
-    console.log('');
-  }
-
-  // Check crawler initialization
-  try {
-    console.log(colorize('🤖 Crawler Systems:', 'blue'));
-    const testCrawler = new NewsCrawler(startUrl, {
-      crawlType: 'intelligent',
-      concurrency: 1,
-      maxDepth: 2,
-      enableDb: true,
-      useSitemap: true,
-      preferCache: true,
-      maxDownloads: 1 // Minimal for verification
-    });
-
-    console.log(colorize('   ✓ NewsCrawler instance created', 'green'));
-    console.log(colorize(`   ✓ Crawl type: intelligent`, 'green'));
-    console.log(colorize(`   ✓ Target URL: ${startUrl}`, 'green'));
-
-    // Check enhanced features status
-    const featuresEnabled = testCrawler.featuresEnabled || {};
-    const enhancedDbAvailable = !!testCrawler.enhancedDbAdapter;
-
-    console.log(colorize(`   ✓ Enhanced DB adapter: ${enhancedDbAvailable ? 'available' : 'unavailable (optional)'}`, enhancedDbAvailable ? 'green' : 'yellow'));
-
-    // Check specific feature availability
-    const criticalFeatures = ['gapDrivenPrioritization', 'patternDiscovery', 'countryHubGaps'];
-    const availableFeatures = criticalFeatures.filter(f => featuresEnabled[f]);
-    const missingFeatures = criticalFeatures.filter(f => !featuresEnabled[f]);
-
-    if (availableFeatures.length > 0) {
-      console.log(colorize(`   ✓ Available features: ${availableFeatures.join(', ')}`, 'green'));
-    }
-    if (missingFeatures.length > 0) {
-      console.log(colorize(`   ⚠️  Missing features: ${missingFeatures.join(', ')} (may affect functionality)`, 'yellow'));
-    }
-
-    console.log('');
-  } catch (error) {
-    console.log(colorize(`   ✗ Crawler initialization: ${error.message}`, 'red'));
-    allSystemsReady = false;
-    console.log('');
-  }
-
-  // Check gazetteer data quality (skip in quick mode)
-  if (!quickVerification) {
-    try {
-      console.log(colorize('🌍 Gazetteer Data Quality:', 'blue'));
-      ensureGazetteerLoaded();
-      console.log(colorize(`   ✓ Total countries: ${allCountries.length}`, allCountries.length > 0 ? 'green' : 'red'));
-
-      // Check for major world regions
-      const continents = ['Europe', 'Asia', 'Africa', 'North America', 'South America', 'Oceania'];
-      const continentCount = continents.filter(c =>
-        allCountries.some(country => country.continent === c)
-      ).length;
-      console.log(colorize(`   ✓ Continents represented: ${continentCount}/6`, continentCount >= 4 ? 'green' : 'yellow'));
-
-      // Check for major countries
-      const majorCountries = ['United States', 'United Kingdom', 'China', 'India', 'Germany', 'France'];
-      const majorCount = majorCountries.filter(name =>
-        allCountries.some(country => country.name === name)
-      ).length;
-      console.log(colorize(`   ✓ Major countries present: ${majorCount}/6`, majorCount >= 4 ? 'green' : 'yellow'));
-
-      console.log('');
-    } catch (error) {
-      console.log(colorize(`   ✗ Gazetteer quality check: ${error.message}`, 'red'));
-      allSystemsReady = false;
-      console.log('');
-    }
-  }
-
-  // Summary
-  console.log(colorize('📋 Verification Summary:', 'blue'));
-  if (allSystemsReady) {
-    console.log(colorize('✅ All critical systems are ready for intelligent crawling', 'green'));
-    console.log('');
-    console.log(colorize('🎯 Ready to run: node tools/intelligent-crawl.js [url] [options]', 'cyan'));
-  } else {
-    console.log(colorize('❌ Some systems are not ready - check errors above', 'red'));
-    console.log('');
-    console.log(colorize('🔧 Fix issues and re-run verification before crawling', 'yellow'));
-  }
-
-  process.exit(allSystemsReady ? 0 : 1);
+  emitVerificationReport(verificationReport, options);
+  process.exit(verificationReport.success ? 0 : 1);
 }
 
 if (verbose) {
@@ -703,7 +961,7 @@ if (verbose) {
   console.log(colorize('🌍 Country Hub Discovery', 'blue'));
   console.log(colorize(`Target: ${startUrl}`, 'cyan'));
   console.log('');
-} else {
+} else if (shouldStreamOutput) {
   console.log(colorize('🚀 Starting Intelligent Crawl', 'blue'));
   console.log(colorize(`📍 Target: ${startUrl}`, 'cyan'));
   console.log(colorize('🎯 Mode: Country Hub Prioritization', 'green'));
@@ -711,10 +969,8 @@ if (verbose) {
   console.log('');
 }
 
-  console.log('');
-
 // Show country hub validation status
-if (!verbose && !compact) {
+if (shouldStreamOutput && !verbose && !compact) {
   console.log(colorize('🌍 Country Hub Validation:', 'blue'));
   ensureGazetteerLoaded();
   console.log(colorize(`   ✓ ${allCountries.length} countries loaded from gazetteer`, 'green'));
@@ -723,11 +979,13 @@ if (!verbose && !compact) {
 }
 
 // Create crawler to EXHAUSTIVELY CRAWL ALL COUNTRY HUBS WITH PAGINATION
+const effectiveMaxDownloads = typeof maxDownloads === 'number' ? maxDownloads : 500;
+
 const crawler = new NewsCrawler(startUrl, {
   crawlType: 'intelligent',  // Use intelligent crawl to discover country hubs
-  concurrency: 1,            // Single thread for reliability
+  concurrency,               // Configurable concurrency (default 1)
   maxDepth: 1,               // Only crawl hub pages themselves (depth 0 = start, depth 1 = hubs)
-  maxDownloads: 500,         // Allow enough downloads for all country hubs + pagination
+  maxDownloads: effectiveMaxDownloads, // Allow enough downloads for all country hubs + pagination
   enableDb: true,
   useSitemap: false,         // DISABLE sitemap loading - interferes with country hub focus
   preferCache: true,
@@ -763,65 +1021,35 @@ const crawler = new NewsCrawler(startUrl, {
 });
 
 // Show planning phase with EXHAUSTIVE mode messaging
-if (!verbose && !compact) {
+if (shouldStreamOutput && !verbose && !compact) {
   console.log(colorize('🧠 Planning Phase - EXHAUSTIVE COUNTRY HUB MODE:', 'blue'));
   console.log(colorize('   🔍 Analyzing existing coverage and gaps...', 'cyan'));
   console.log(colorize('   📊 Prioritizing ALL 250 country hubs for discovery...', 'cyan'));
   console.log(colorize('   🎯 EXHAUSTIVE: Process all country hubs before other content', 'green'));
-  console.log(colorize('   🚀 HIGH CONCURRENCY: 3 parallel downloads for speed', 'yellow'));
+  console.log(colorize(`   🚀 Concurrency: ${concurrency} parallel download${concurrency === 1 ? '' : 's'}`, 'yellow'));
   console.log('');
 }
 
 // Start the crawl
 crawler.crawl()
   .then(() => {
-    if (verbose) {
-      console.log('---');
-    }
-    console.log('✓ Crawl completed');
-    
-    // Report discovered hubs
-    if (discoveredHubs.place.length > 0 || discoveredHubs.topic.length > 0) {
-      console.log('\n' + colorize('=== Hub Discovery Summary ===', 'blue'));
-      
-      if (discoveredHubs.place.length > 0) {
-        const uniquePlaces = [...new Set(discoveredHubs.place)];
-        const uniqueCountries = [...new Set(discoveredHubs.country)];
-        
-        console.log(colorize(`\n� Country Hubs Found (${uniqueCountries.length}):`, 'green'));
-        uniqueCountries.forEach(country => {
-          console.log(colorize(`  ✓ ${country}`, 'green'));
-        });
-        
-        // Show other places (non-country places)
-        const otherPlaces = uniquePlaces.filter(p => 
-          !uniqueCountries.some(c => c.toLowerCase() === p.toLowerCase())
-        );
-        if (otherPlaces.length > 0) {
-          console.log(colorize(`\n🗺️  Other Place Hubs Found (${otherPlaces.length}):`, 'green'));
-          otherPlaces.forEach(place => {
-            console.log(colorize(`  ✓ ${place}`, 'green'));
-          });
-        }
+    const report = buildCrawlReport({
+      startUrl,
+      totalPrioritisation,
+      crawlConfig: {
+        concurrency,
+        maxDownloads: effectiveMaxDownloads,
+        usedDefaultMaxDownloads: maxDownloads === null,
+        limit: outputLimit,
+        summaryFormat: options.summaryFormat,
+        verbose,
+        compact
       }
-      
-      if (discoveredHubs.topic.length > 0) {
-        console.log(colorize(`\n🗂️  Topic Hubs Found (${discoveredHubs.topic.length}):`, 'cyan'));
-        const uniqueTopics = [...new Set(discoveredHubs.topic)];
-        uniqueTopics.forEach(topic => {
-          console.log(colorize(`  ✓ ${topic}`, 'cyan'));
-        });
-      }
-      
-      console.log(colorize('\n=== End Summary ===\n', 'blue'));
-    }
-    
+    });
+    emitCrawlReport(report, options);
     process.exit(0);
   })
   .catch(error => {
-    if (verbose) {
-      console.error('---');
-    }
-    console.error('✗ Crawl failed:', error.message);
+    emitCrawlFailure(error, options);
     process.exit(1);
   });
