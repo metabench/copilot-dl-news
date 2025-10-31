@@ -2,10 +2,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { tof, is_array, each } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
 const ingestQueries = require('../../../db/sqlite/v1/queries/gazetteer.ingest');
+const { HttpRequestResponseFacade } = require('../../../utils/HttpRequestResponseFacade');
 const {
   DEFAULT_LABEL_LANGUAGES,
   DEFAULT_REGION_CLASS_QIDS,
@@ -79,17 +79,10 @@ class WikidataAdm1Ingestor {
     this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
     this.regionClassQids = [...DEFAULT_REGION_CLASS_QIDS];
 
-    if (this.useCache && this.useDynamicFetch) {
-      try {
-        if (!fs.existsSync(this.cacheDir)) {
-          fs.mkdirSync(this.cacheDir, { recursive: true });
-        }
-      } catch (err) {
-        this.logger.warn('[WikidataAdm1Ingestor] Could not create cache directory:', err.message);
-      }
-    }
-
     this.statements = ingestQueries.createIngestionStatements(this.db);
+    
+    // Initialize HTTP caching facade
+    this.httpFacade = new HttpRequestResponseFacade(this.db);
   }
 
   async execute({ signal = null, emitProgress = null } = {}) {
@@ -1444,39 +1437,25 @@ class WikidataAdm1Ingestor {
 
   // ========== Cache Methods ==========
 
-  _getCacheKey(countryCode) {
-    return `adm1-${countryCode.toLowerCase()}`;
-  }
-
-  _getCachePath(countryCode) {
-    const key = this._getCacheKey(countryCode);
-    const hash = crypto.createHash('md5').update(key).digest('hex').substring(0, 8);
-    return path.join(this.cacheDir, `${key}-${hash}.json`);
-  }
-
   _getCachedRegions(countryCode) {
     if (!this.useCache) {
       return null;
     }
 
     try {
-      const cachePath = this._getCachePath(countryCode);
-      if (!fs.existsSync(cachePath)) {
-        return null;
-      }
+      const metadata = {
+        category: 'wikidata',
+        subcategory: 'adm1-regions',
+        countryCode: countryCode.toLowerCase(),
+        requestMethod: 'SPARQL+API',
+        contentType: 'application/json',
+        ttlDays: 30
+      };
 
-      const raw = fs.readFileSync(cachePath, 'utf8');
-      const cached = JSON.parse(raw);
-
-      // Check cache age (refresh after 30 days)
-      const cacheAge = Date.now() - (cached.timestamp || 0);
-      const maxAge = 30 * 24 * 60 * 60 * 1000;  // 30 days
-      if (cacheAge > maxAge) {
-        return null;
-      }
-
-      return cached.regions || null;
+      const cached = this.httpFacade.getCachedHttpResponse(metadata);
+      return cached ? cached.regions || null : null;
     } catch (err) {
+      this.logger.warn(`[WikidataAdm1Ingestor] Failed to retrieve cached regions for ${countryCode}:`, err.message);
       return null;
     }
   }
@@ -1487,13 +1466,22 @@ class WikidataAdm1Ingestor {
     }
 
     try {
-      const cachePath = this._getCachePath(countryCode);
-      const cacheData = {
+      const metadata = {
+        category: 'wikidata',
+        subcategory: 'adm1-regions',
+        countryCode: countryCode.toLowerCase(),
+        requestMethod: 'SPARQL+API',
+        contentType: 'application/json',
+        ttlDays: 30
+      };
+
+      const responseData = {
         countryCode,
         timestamp: Date.now(),
         regions
       };
-      fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2), 'utf8');
+
+      this.httpFacade.cacheHttpResponse(metadata, responseData);
     } catch (err) {
       this.logger.warn(`[WikidataAdm1Ingestor] Failed to cache regions for ${countryCode}:`, err.message);
     }

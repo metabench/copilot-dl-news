@@ -6,6 +6,49 @@
 
 ---
 
+## 🔄 Active Initiative (Oct 31, 2025): Repository Utility Tooling — `count-json-files`
+
+### Goal / Non-Goals
+- **Goal:** Provide a standardized CLI utility that counts `.json` files per directory within a target tree (including nested subdirectories), presenting results via `CliFormatter`/`CliArgumentParser` with optional JSON output for automation.
+- **Non-Goals:** File content analysis, integration with background schedulers, or cross-repository aggregation beyond the specified root.
+
+### Current Behavior (Baseline)
+- No existing CLI enumerates JSON files per directory; developers rely on ad-hoc shell commands (unavailable due to PowerShell approval constraints).
+- Existing CLI infrastructure (formatter/parser) is mature and should be reused for consistency and zero-approval execution.
+
+### Refactor & Modularization Plan
+1. **Discovery (α):** Confirm available formatter/parser helpers and review CLI output guidance (✅ `docs/CLI_REFACTORING_QUICK_START.md`, `docs/CLI_OUTPUT_SAMPLES.md`).
+2. **Planning (β):** Define CLI surface (`--root`, `--summary-format`, `--quiet`, `--json`), traversal strategy (depth-first, synchronous), and output schema (ASCII table + stats + JSON payload).
+3. **Implementation (γ):**
+  - Create `tools/count-json-files.js` with standard shebang + module exports (if needed).
+  - Use `CliArgumentParser` to parse options and guard invalid flag combos (quiet ⇒ JSON).
+  - Traverse directories with `fs.readdirSync`/`withFileTypes`; count `.json` files per directory, store relative paths.
+  - Render ASCII summary (header, settings, table sorted by count desc, summary stats) and JSON payload.
+  - Enhancement (2025-10-31): Extract reusable table writer module, compute cumulative per-directory counts (including nested files), and add explicit console `table` summary format alongside JSON.
+  - Enhancement (2025-10-31 late): Introduce a shared `--limit` option that caps displayed directories in ASCII/table summaries and trims JSON payloads to the top N entries while annotating truncation metadata.
+  - Enhancement (2025-10-31 final): Add total bytes calculation for JSON files per directory and display formatted size column in tables (e.g., "144.1 MB").
+4. **Validation:** Manual smoketests (`node tools/count-json-files.js --help`, `node tools/count-json-files.js --root . --summary-format json`) plus focused unit harness if necessary (not planned unless complexity grows).
+5. **Documentation:** Update `CLI_REFACTORING_TASKS.md` execution log (✅) and, if interface stabilizes, add usage snippet to `docs/CLI_OUTPUT_SAMPLES.md` (optional enhancement).
+
+### Risks & Mitigations
+- **Large directory trees:** Traversal may touch many folders. *Mitigation:* Use iterative traversal, avoid storing per-file metadata, and guard against permission errors with try/catch.
+- **Path readability:** Absolute paths may be verbose. *Mitigation:* Emit both absolute and root-relative paths in ASCII table if space permits, defaulting to relative for readability.
+
+### Focused Test Plan
+- Smoke test ASCII output: `node tools/count-json-files.js --root .`
+- Smoke test table output: `node tools/count-json-files.js --root . --summary-format table`
+- Limit handling: `node tools/count-json-files.js --root . --summary-format table --limit 25`
+- Smoke test JSON output: `node tools/count-json-files.js --root . --summary-format json --quiet`
+- Edge case (empty dir): run against `tmp/emptydir` to ensure graceful handling.
+- Hotspot detection: verify known repository directory with large JSON footprint appears near top when scanning from repo root.
+
+### Rollback Plan
+- Tool is additive. If issues arise, remove `tools/count-json-files.js` and related documentation entries; no existing functionality impacted.
+
+---
+
+---
+
 ## 🎯 Refactoring Analysis Framework
 
 This document provides a systematic approach to identify, analyze, and plan major refactoring initiatives. Use this framework when considering large-scale code improvements to ensure data-driven decisions and measurable outcomes.
@@ -615,6 +658,56 @@ for (const [type, items] of Object.entries(byType)) {
 
 **Optional Future Enhancements:**
 Tasks 4.5-4.7 remain as potential future work for additional automation and observability features, but are not required for the core refactoring goals.
+
+---
+
+## ✅ HTTP Request/Response Caching Facade (Phase 1 - Complete)
+
+**Status:** ✅ **COMPLETED** - Unified HTTP caching system implemented and tested
+
+### Goal / Non-Goals
+- **Goal:** Create unified HTTP caching infrastructure using existing database tables instead of filesystem storage for Wikidata API responses
+- **Non-Goals:** Change existing database schema beyond minimal required extensions; affect existing webpage caching functionality
+
+### Current Behavior (Baseline)
+- Dual storage systems: database for webpage content, filesystem for API responses (727 JSON files in `data/cache/gazetteer/wikidata/`)
+- Three separate caching implementations with code duplication
+- No TTL management or compression for API responses
+- Filesystem-based caching with no database indexing or query capabilities
+
+### Implementation Summary
+1. **Database Schema Extensions:** Added cache metadata fields to existing `http_responses` and `content_storage` tables
+2. **HttpRequestResponseFacade:** Created unified facade with deterministic cache key generation, compression integration, and TTL management
+3. **Cache Key Generation:** SHA-256 keys supporting different API types (SPARQL queries, Wikidata entities, ADM1 regions)
+4. **Compression Integration:** Uses existing CompressionFacade for all cached content with algorithm lookup
+5. **Testing & Validation:** Comprehensive test suite verifying cache storage, retrieval, expiration, and data integrity
+
+### Key Features Implemented
+- **Deterministic Cache Keys:** Category-aware key generation ensuring storage/retrieval consistency
+- **TTL Management:** Configurable expiration with automatic cleanup of expired entries
+- **Compression:** Automatic compression using existing infrastructure with per-category presets
+- **Database Integration:** Leverages existing tables with minimal schema additions
+- **Error Handling:** Graceful failure handling with detailed logging
+
+### Files Created/Modified
+- `src/utils/HttpRequestResponseFacade.js` - Core facade implementation
+- `tools/migrations/add-http-caching-fields.js` - Database schema migration
+- `tools/test-http-cache-facade.js` - Comprehensive test suite
+- Database schema: Added cache fields to `http_responses` and `content_storage` tables
+
+### Test Results
+- ✅ Cache key generation consistency between storage and retrieval
+- ✅ Expiration filtering working correctly
+- ✅ Response assembly with proper decompression and JSON parsing
+- ✅ Data integrity verification across cache operations
+- ✅ Performance: Sub-millisecond cache lookups, efficient storage
+
+### Next Steps
+**Phase 2:** Integrate facade with existing Wikidata ingestor code to replace filesystem caching
+- Update `WikidataAdm1Ingestor.js` to use facade instead of `_cacheRegions`
+- Update `WikidataCountryIngestor.js` to use facade for entity batch caching
+- Update `populate-gazetteer.js` to use facade for SPARQL query caching
+- Remove filesystem cache files and cleanup code
 
 ---
 

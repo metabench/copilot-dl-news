@@ -12,7 +12,6 @@
 
 const { is_array, tof } = require('lang-tools');
 const fs = require('fs');
-const crypto = require('crypto');
 const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { ensureDb, ensureGazetteer } = require('../db/sqlite');
@@ -33,6 +32,7 @@ const { fetchCountries } = require('./restcountries');
 const { findProjectRoot } = require('../utils/project-root');
 const { CliFormatter } = require('../utils/CliFormatter');
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
+const { HttpRequestResponseFacade } = require('../utils/HttpRequestResponseFacade');
 
 const fmt = new CliFormatter();
 
@@ -274,6 +274,8 @@ function emitSummary(summary, { format, quiet }) {
 
   const raw = ensureDb(dbPath);
   try { ensureGazetteer(raw); } catch (_) {}
+
+  const facade = new HttpRequestResponseFacade(raw);
 
   const dedupStmts = createDeduplicationStatements(raw);
   const populateQueries = createPopulateGazetteerQueries(raw);
@@ -791,32 +793,51 @@ function emitSummary(summary, { format, quiet }) {
   }
   async function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
 
-  // Simple on-disk cache for SPARQL GET queries
-  function sparqlCachePath(query) {
-    const dir = path.join(cacheDir, 'sparql');
-    try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
-    const hash = crypto.createHash('sha1').update(query).digest('hex');
-    return path.join(dir, `${hash}.json`);
-  }
+  // SPARQL query caching via HttpRequestResponseFacade
   async function fetchSparql(query) {
     const qurl = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`;
-    const cpath = sparqlCachePath(query);
-    let cacheHit = false;
+
+    // Try cache first
     if (wikidataCache) {
       try {
-        if (fs.existsSync(cpath)) {
-          const txt = fs.readFileSync(cpath, 'utf8');
-          cacheHit = true;
-          const parsed = JSON.parse(txt);
+        const cached = facade.getCachedHttpResponse({
+          category: 'wikidata',
+          subcategory: 'sparql-query',
+          requestMethod: 'SPARQL',
+          contentCategory: 'sparql',
+          contentSubType: 'results',
+          query
+        });
+        if (cached) {
           logger.info(`[gazetteer] SPARQL cache hit: ${qurl}`);
-          return parsed;
+          return cached;
         }
-      } catch (_) {}
+      } catch (e) {
+        logger.warn(`[gazetteer] SPARQL cache read failed: ${e.message}`);
+      }
     }
+
+    // Fetch from Wikidata
     const headers = { 'User-Agent': 'copilot-dl-news/1.0 (Wikidata importer)', 'Accept': 'application/sparql-results+json' };
     logger.info(`[gazetteer] SPARQL fetch: ${qurl}`);
     const jr = await fetchJson(qurl, headers, wikidataTimeoutMs);
-    try { if (wikidataCache) fs.writeFileSync(cpath, JSON.stringify(jr)); } catch (_) {}
+
+    // Cache the result
+    if (wikidataCache) {
+      try {
+        facade.cacheHttpResponse({
+          category: 'wikidata',
+          subcategory: 'sparql-query',
+          requestMethod: 'SPARQL',
+          contentCategory: 'sparql',
+          contentSubType: 'results',
+          query
+        }, jr);
+      } catch (e) {
+        logger.warn(`[gazetteer] SPARQL cache write failed: ${e.message}`);
+      }
+    }
+
     // Be nice to the endpoint
     if (wikidataSleepMs > 0) await sleep(wikidataSleepMs);
     return jr;

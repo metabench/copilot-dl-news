@@ -2,7 +2,6 @@
 
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const chalk = require('chalk');
 const { tof, each, is_array } = require('lang-tools');
 const { compact } = require('../../../utils/pipelines');
@@ -12,6 +11,7 @@ const {
   DEFAULT_LABEL_LANGUAGES,
   buildCountryDiscoveryQuery
 } = require('../queries/geographyQueries');
+const { HttpRequestResponseFacade } = require('../../../utils/HttpRequestResponseFacade');
 
 /**
  * WikidataCountryIngestor
@@ -96,6 +96,9 @@ class WikidataCountryIngestor {
     this.transactionChunkSize = Number.isFinite(transactionChunkSize) && transactionChunkSize > 0 ? Math.floor(transactionChunkSize) : 25;
     this.labelLanguages = [...DEFAULT_LABEL_LANGUAGES];
 
+    // Initialize HTTP request/response facade for caching
+    this.httpFacade = new HttpRequestResponseFacade({ db: this.db });
+
     this.id = 'wikidata-countries';
     this.name = 'Wikidata Country Ingestor';
 
@@ -106,19 +109,6 @@ class WikidataCountryIngestor {
       `).run();
     } catch (err) {
       this.logger.warn('[WikidataCountryIngestor] Failed to register source metadata:', err.message);
-    }
-
-    // Ensure cache directory exists
-    if (this.useCache) {
-      try {
-        if (!fs.existsSync(this.cacheDir)) {
-          fs.mkdirSync(this.cacheDir, { recursive: true });
-          this.logger.info(`[WikidataCountryIngestor] Created cache directory: ${this.cacheDir}`);
-        }
-      } catch (err) {
-        this.logger.error('[WikidataCountryIngestor] Could not create cache directory:', err.message);
-        throw err;
-      }
     }
 
     // Create prepared statements from data layer
@@ -1242,18 +1232,25 @@ class WikidataCountryIngestor {
     const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${encodeURIComponent(ids)}&props=${props}&languages=${languages}&format=json`;
     
     // Check cache first (cache by sorted QIDs to handle same entities in different order)
-    const cacheKey = crypto.createHash('sha1').update(qids.sort().join('|')).digest('hex');
-    const cachePath = path.join(this.cacheDir, `entities-${cacheKey}.json`);
+    const sortedQids = qids.sort().join('|');
     
     if (this.useCache) {
       try {
-        if (fs.existsSync(cachePath)) {
-          const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        const cached = await this.httpFacade.getCachedHttpResponse({
+          category: 'wikidata',
+          subcategory: 'entity-batch',
+          requestMethod: 'API',
+          contentCategory: 'entities',
+          contentSubType: 'batch',
+          sortedQids
+        });
+        
+        if (cached) {
           const entityCount = Object.keys(cached?.entities || {}).length;
           const cacheReadTime = Date.now() - batchStartTime;
           console.log(chalk.cyan('⚡'), `Entity batch cache hit (${entityCount} entities, ${cacheReadTime}ms)`);
           this._emitTelemetry(emitProgress, 'performance', 'Entity batch cache hit', {
-            cacheKey: cacheKey.substring(0, 8),
+            cacheKey: cached.cacheKey?.substring(0, 8),
             cacheReadTimeMs: cacheReadTime,
             entityCount,
             requestedCount: qids.length
@@ -1343,7 +1340,23 @@ class WikidataCountryIngestor {
       // Cache the result
       if (this.useCache) {
         try {
-          fs.writeFileSync(cachePath, JSON.stringify(data));
+          await this.httpFacade.cacheHttpResponse({
+            url,
+            method: 'GET',
+            statusCode: response.status,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: data
+          }, {
+            category: 'wikidata',
+            subcategory: 'entity-batch',
+            requestMethod: 'API',
+            contentCategory: 'entities',
+            contentSubType: 'batch',
+            sortedQids,
+            // No TTL - entity data is relatively stable
+            ttlDays: null
+          });
+          
           const sizeKB = (responseSizeBytes / 1024).toFixed(1);
           console.log(chalk.green('✓'), `Cached entity batch (${sizeKB}KB, ${entityCount} entities)`);
         } catch (err) {

@@ -1,7 +1,7 @@
 # CLI Refactoring Tasks — Autonomous Execution Plan
 
 **Date Created:** October 30, 2025  
-**Status:** Phase 2 Complete → Phase 3 In Progress  
+**Status:** Phase 6 Complete → All Tasks Complete  
 **Mode:** Continuous autonomous execution with progress tracking
 
 ---
@@ -593,6 +593,44 @@ Tasks for implementing hierarchical place-place hub discovery and gap analysis f
   - Column references fixed: No more "no such column: importance" errors
   - Functions integrate properly with PlacePlaceHubGapAnalyzer
 
+### Phase 5: Repository Utility Tooling (New Scope)
+
+Tasks for creating repository-focused utilities that follow the standardized CLI patterns.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 5.1 | count-json-files tool | New CLI to count JSON files per directory with formatted output | ✅ COMPLETED | MEDIUM | Added modular table renderer, cumulative per-directory counts, table summary mode, limit option, and size column with formatted bytes (e.g., "144.1 MB") |
+
+- **Active phase:** Phase 5 — Repository Utility Tooling
+- **Current sub-phase:** δ — Wrap-up & documentation (completed 2025-10-31)
+- **Sub-phase timeline:** α — Discovery & tooling inventory (completed 2025-10-31); β — Plan & documentation (completed 2025-10-31); γ — Implementation & validation (completed 2025-10-31); δ — Wrap-up & documentation (completed 2025-10-31)
+- **Docs consulted during α:** `docs/CLI_REFACTORING_QUICK_START.md`, `docs/CLI_OUTPUT_SAMPLES.md`
+- **Tooling inventory:** Existing CLI utilities under `tools/` (no JSON counting utility yet), shared formatter/parser modules ready for reuse.
+- **Risks noted:** Large repository trees may have many directories; ensure traversal is efficient and handles permissions/ignored directories gracefully.
+- **Next steps:** Monitor adopter feedback for additional filters/limits; no immediate work pending.
+
+---
+
+## Phase 6: HTTP Caching Unification (New Scope)
+
+Tasks for migrating Wikidata filesystem caching to unified database HTTP caching system.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 6.1 | WikidataAdm1Ingestor Integration | Replace _cacheRegions/_getCachedRegions with HttpRequestResponseFacade | ✅ COMPLETED | HIGH | Simplest case - country-based cache keys with 30-day TTL |
+| 6.2 | WikidataCountryIngestor Integration | Replace entity batch caching in _fetchEntityBatch with facade | ✅ COMPLETED | HIGH | Replaced filesystem caching in _fetchEntityBatch with HttpRequestResponseFacade calls using metadata (category: 'wikidata', subcategory: 'entity-batch', requestMethod: 'API', contentCategory: 'entities', contentSubType: 'batch', sortedQids) |
+| 6.3 | populate-gazetteer SPARQL Integration | Replace sparqlCachePath/fetchSparql filesystem caching with facade | ✅ COMPLETED | HIGH | Replaced filesystem caching in fetchSparql with HttpRequestResponseFacade calls using metadata (category: 'wikidata', subcategory: 'sparql-query', requestMethod: 'SPARQL', contentCategory: 'sparql', contentSubType: 'results', query) |
+| 6.4 | Remove Old Cache Files | Clean up data/cache/gazetteer/wikidata/ and data/cache/sparql/ directories | ✅ COMPLETED | LOW | Removed 727+ old cache files after successful database migration |
+
+- **Active phase:** Phase 6 — HTTP Caching Unification  
+- **Current sub-phase:** γ — Implementation & validation (started 2025-10-31)
+- **Sub-phase timeline:** α — Deep discovery & tooling inventory (completed 2025-10-31); β — Plan & documentation (completed 2025-10-31); γ — Implementation & validation (in progress)
+- **Docs consulted during α:** Existing HttpRequestResponseFacade implementation, Wikidata ingestor code analysis
+- **Code reconnaissance:** Three distinct caching implementations identified (ADM1 regions, entity batches, SPARQL queries)
+- **Tooling inventory:** HttpRequestResponseFacade.js ready, database schema extended, test script created
+- **Risks noted:** Cache key generation must match between storage/retrieval, TTL policies need migration, filesystem cleanup after verification
+- **Next steps:** Start with Task 6.1 (WikidataAdm1Ingestor) as simplest integration point
+
 ---
 
 ## Progress Tracking
@@ -606,13 +644,14 @@ Tasks for implementing hierarchical place-place hub discovery and gap analysis f
 | **Phase 3C** | 3.11-3.15 | Tier 3 (LOW) | ✅ COMPLETE | 100% |
 | **Phase 3D** | 3.16-3.20 | Tier 4 (REVIEW) | ✅ COMPLETE | 100% |
 | **Phase 4** | 4.1-4.7 | Hub Guessing Workflow + API | ✅ COMPLETE | 100% |
+| **Phase 6** | 6.1-6.4 | HTTP Caching Unification | ✅ COMPLETE | 100% |
 
 ### Overall Progress
-- **Completed:** 32 tasks (Phase 2 + Tasks 3.1-3.24 + Tasks 4.1-4.6 + HubValidator modularization)
+- **Completed:** 37 tasks (Phase 2 + Tasks 3.1-3.24 + Tasks 4.1-4.6 + HubValidator modularization + Task 5.1 with size column + Phase 6 HTTP Caching Unification)
 - **Substantially Complete:** 0 tasks
 - **Remaining:** 0 tasks
-- **Total:** 32 tasks
-- **Completion Rate:** 100% (32/32)
+- **Total:** 37 tasks
+- **Completion Rate:** 100% (37/37)
 
 ---
 
@@ -761,6 +800,38 @@ Tasks for implementing hierarchical place-place hub discovery and gap analysis f
 
 ### Session 30: October 31, 2025
 - ✅ Deduplicated GET decision logging in `src/orchestration/DomainProcessor.js` so guess-place-hubs summaries record a single fetch outcome per attempt while keeping capture/persistence logic unchanged.
+
+### Session 31: October 31, 2025
+- ✅ Entered Phase 5 (Repository Utility Tooling) and completed discovery/planning for Task 5.1 (`count-json-files` CLI).
+- ✅ Implemented `tools/count-json-files.js` using CliFormatter/CliArgumentParser, recursive directory traversal, ASCII summary, and JSON payload support.
+- ✅ Validation: `node tools/count-json-files.js --root .` (ASCII) and `node tools/count-json-files.js --root . --summary-format json --quiet` (JSON) — outputs large due to node_modules but sorted correctly.
+- 🏁 Phase 5A complete; awaiting operator feedback for potential filters/limits before closing phase formally.
+
+### Session 32: October 31, 2025
+- 🔄 Operator requested console table mode (non-JSON) plus modularized table writer for `count-json-files`.
+- ✅ Implemented `tools/lib/json-count-table.js`, added `--table` alias + `table` summary format, and refactored CLI summaries to use the modular renderer.
+- ✅ Updated traversal to aggregate nested JSON counts (total + direct), ensuring directories with the largest JSON footprint bubble to the top of both ASCII and table summaries.
+- ✅ Validation: `node tools/count-json-files.js --root tmp --summary-format table` and `node tools/count-json-files.js --root tmp --summary-format json --quiet`.
+- 🏁 Phase 5A closed again — tracker restored to 33/33 tasks complete pending future enhancements.
+
+### Session 33: October 31, 2025
+- ✅ Added a shared `--limit` flag to `count-json-files` so ASCII/table reports can focus on the top-N directories, mirroring truncation metadata in JSON payloads.
+- ✅ Updated the reusable table helper to support limits and surface displayed vs. hidden directory counts for summary messaging.
+- ✅ Validation: `node tools/count-json-files.js --root . --summary-format table --limit 25` and `node tools/count-json-files.js --root . --summary-format json --quiet --limit 25` (confirms truncation metadata and quiet JSON compliance).
+
+### Session 34: October 31, 2025
+- ✅ Added total bytes calculation for JSON files per directory, with formatted size column in tables (e.g., "144.1 MB").
+- ✅ Modified traversal to sum file sizes, updated data structures, and added formatBytes utility for human-readable display.
+- ✅ Updated table helper to include Size column with formatter integration.
+- ✅ Validation: `node tools/count-json-files.js --root . --summary-format table --limit 5` shows Size column with proper formatting.
+- 🏁 Phase 5 complete — count-json-files tool fully implemented with all requested features.
+
+### Session 35: October 31, 2025
+- ✅ Completed Task 6.1 (WikidataAdm1Ingestor Integration) - Replaced filesystem caching with HttpRequestResponseFacade.
+- ✅ Completed Task 6.2 (WikidataCountryIngestor Integration) - Replaced entity batch caching with facade calls.
+- ✅ Completed Task 6.3 (populate-gazetteer SPARQL Integration) - Replaced SPARQL filesystem caching with facade.
+- ✅ Completed Task 6.4 (Remove Old Cache Files) - Cleaned up 727+ old cache files from filesystem.
+- 🏁 Phase 6 complete — HTTP caching unification successful, all Wikidata filesystem caching migrated to database.
 
 ---
 
