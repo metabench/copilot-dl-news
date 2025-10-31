@@ -130,6 +130,16 @@ function createPlaceHubCandidatesStore(db) {
      LIMIT 1
   `);
 
+  // Task 4.4: Add validation metrics persistence
+  const updateValidationMetricsStmt = db.prepare(`
+    UPDATE place_hub_candidates
+       SET validation_status = COALESCE(@validation_status, validation_status),
+           signals_json = COALESCE(@signals_json, signals_json),
+           updated_at = @updated_at
+     WHERE domain = @domain
+       AND candidate_url = @candidate_url
+  `);
+
   return {
     saveCandidate(candidate) {
       const domain = normalizeDomain(candidate?.domain);
@@ -196,6 +206,22 @@ function createPlaceHubCandidatesStore(db) {
       const normalizedUrl = normalizeUrl(candidateUrl);
       if (!normalizedDomain || !normalizedUrl) return null;
       return findCandidateStmt.get(normalizedDomain, normalizedUrl) || null;
+    },
+
+    // Task 4.4: Update validation metrics and evidence
+    updateValidationMetrics({ domain, candidateUrl, validationStatus = null, signals = null }) {
+      const normalizedDomain = normalizeDomain(domain);
+      const normalizedUrl = normalizeUrl(candidateUrl);
+      if (!normalizedDomain || !normalizedUrl) return 0;
+      const now = nowIso();
+      const info = updateValidationMetricsStmt.run({
+        domain: normalizedDomain,
+        candidate_url: normalizedUrl,
+        validation_status: validationStatus,
+        signals_json: serializeSignals(signals),
+        updated_at: now
+      });
+      return info?.changes || 0;
     }
   };
 }

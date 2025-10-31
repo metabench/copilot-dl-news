@@ -202,7 +202,7 @@ function runDetectArticles(options) {
           parts.push(`types=${sig.schemaTypes.join('|')}`);
         }
         if (parts.length) {
-          console.log(`  ${fmt.COLORS.dim(`Signals: ${parts.join(', }`)}`);
+          console.log(`  ${fmt.COLORS.dim(`Signals: ${parts.join(', ')}`)}`);
         }
       }
       fmt.blank();

@@ -12,7 +12,11 @@ CREATE INDEX idx_bucket_entries_bucket ON bucket_entries(bucket_id);
 
 CREATE INDEX idx_bucket_entries_key ON bucket_entries(entry_key);
 
+CREATE INDEX idx_compression_buckets_domain ON compression_buckets(domain_pattern);
+
 CREATE INDEX idx_compression_buckets_status ON compression_buckets(status);
+
+CREATE INDEX idx_compression_buckets_type_status ON compression_buckets(bucket_type, status);
 
 CREATE INDEX idx_content_analysis_classification ON content_analysis(classification);
 
@@ -93,6 +97,20 @@ CREATE INDEX idx_place_hierarchy_child ON place_hierarchy(child_id);
 CREATE INDEX idx_place_hierarchy_parent ON place_hierarchy(parent_id);
 
 CREATE INDEX idx_place_hierarchy_relation ON place_hierarchy(relation);
+
+CREATE INDEX idx_place_hub_audit_attempt ON place_hub_audit(attempt_id);
+
+CREATE INDEX idx_place_hub_audit_decision ON place_hub_audit(decision);
+
+CREATE INDEX idx_place_hub_audit_domain ON place_hub_audit(domain);
+
+CREATE INDEX idx_place_hub_audit_run ON place_hub_audit(run_id);
+
+CREATE INDEX idx_place_hub_candidates_attempt ON place_hub_candidates(attempt_id);
+
+CREATE INDEX idx_place_hub_candidates_domain_status ON place_hub_candidates(domain, status);
+
+CREATE INDEX idx_place_hub_candidates_place_kind ON place_hub_candidates(place_kind);
 
 CREATE INDEX idx_place_hubs_host ON place_hubs(host);
 
@@ -227,13 +245,18 @@ CREATE TABLE bucket_entries (
 
 CREATE TABLE compression_buckets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT UNIQUE NOT NULL,
+  name TEXT UNIQUE,
+  bucket_type TEXT NOT NULL,
+  domain_pattern TEXT,
   compression_type_id INTEGER NOT NULL REFERENCES compression_types(id),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  total_entries INTEGER NOT NULL DEFAULT 0,
-  total_uncompressed_bytes INTEGER NOT NULL DEFAULT 0,
-  total_compressed_bytes INTEGER NOT NULL DEFAULT 0,
+  bucket_blob BLOB,
+  content_count INTEGER NOT NULL DEFAULT 0,
+  uncompressed_size INTEGER NOT NULL DEFAULT 0,
+  compressed_size INTEGER NOT NULL DEFAULT 0,
   compression_ratio REAL,
+  index_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  finalized_at TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'sealed', 'archived'))
 );
 
@@ -579,6 +602,45 @@ CREATE TABLE place_hierarchy (
       FOREIGN KEY (child_id) REFERENCES places(id) ON DELETE CASCADE
     );
 
+CREATE TABLE place_hub_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain TEXT NOT NULL,
+        url TEXT NOT NULL,
+        place_kind TEXT,
+        place_name TEXT,
+        decision TEXT NOT NULL, -- 'accepted', 'rejected', 'pending'
+        validation_metrics_json TEXT, -- JSON blob of HubValidator metrics
+        attempt_id TEXT,
+        run_id TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+CREATE TABLE place_hub_candidates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      domain TEXT NOT NULL,
+      candidate_url TEXT NOT NULL,
+      normalized_url TEXT NOT NULL,
+      place_kind TEXT,
+      place_name TEXT,
+      place_code TEXT,
+      place_id INTEGER REFERENCES places(id) ON DELETE SET NULL,
+      analyzer TEXT,
+      strategy TEXT,
+      score REAL,
+      confidence REAL,
+      pattern TEXT,
+      signals_json TEXT,
+      attempt_id TEXT,
+      attempt_started_at TEXT,
+      status TEXT DEFAULT 'pending',
+      validation_status TEXT,
+      source TEXT DEFAULT 'guess-place-hubs',
+      last_seen_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(domain, candidate_url)
+    );
+
 CREATE TABLE place_hub_unknown_terms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host TEXT NOT NULL,
@@ -889,12 +951,12 @@ CREATE TRIGGER trg_places_country_upper_upd
 
 CREATE TRIGGER trg_places_kind_check_ins
       BEFORE INSERT ON places
-      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational')
+      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational', 'planet')
       BEGIN SELECT RAISE(ABORT, 'places.kind invalid'); END;
 
 CREATE TRIGGER trg_places_kind_check_upd
       BEFORE UPDATE ON places
-      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational')
+      WHEN NEW.kind NOT IN ('country','region','city','poi','supranational', 'planet')
       BEGIN SELECT RAISE(ABORT, 'places.kind invalid'); END;
 
 CREATE TRIGGER trg_places_latlng_check_ins

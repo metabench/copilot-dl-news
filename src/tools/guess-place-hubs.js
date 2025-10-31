@@ -460,6 +460,7 @@ function parseCliArgs(argv) {
   parser.add('--json', 'Emit JSON summary output', false, 'boolean');
   parser.add('--emit-report [path]', 'Write detailed JSON report to disk (optional path or directory)', null);
   parser.add('--report-dir <path>', 'Directory used when --emit-report omits a filename', null);
+  parser.add('--hierarchical', 'Enable hierarchical place-place hub discovery (parent/child relationships)', false, 'boolean');
 
   const parsedArgs = parser.parse(rawArgv);
 
@@ -569,7 +570,8 @@ function parseCliArgs(argv) {
     dryRun: !apply,
     emitReport: reportResolution.requested,
     reportPath: reportResolution.path,
-    reportDirectory: reportResolution.directory
+    reportDirectory: reportResolution.directory,
+    hierarchical: Boolean(parsedArgs.hierarchical)
   };
 }
 
@@ -795,6 +797,8 @@ function buildJsonSummary(summary, options = {}, logEntries = []) {
 
   const candidateMetrics = deriveCandidateMetrics(totals, summary || {});
 
+  const auditCounts = summary?.auditCounts || null;
+
   return {
     version: 1,
     generatedAt: new Date().toISOString(),
@@ -802,7 +806,8 @@ function buildJsonSummary(summary, options = {}, logEntries = []) {
     run: {
       startedAt: summary?.startedAt || null,
       completedAt: summary?.completedAt || null,
-      durationMs: Number.isFinite(summary?.durationMs) ? summary.durationMs : null
+      durationMs: Number.isFinite(summary?.durationMs) ? summary.durationMs : null,
+      runId: summary?.runId || null
     },
     batch: {
       totalDomains: summary?.batch?.totalDomains ?? null,
@@ -813,6 +818,7 @@ function buildJsonSummary(summary, options = {}, logEntries = []) {
     diffPreview: diffSnapshot,
     candidateMetrics,
     validationSummary,
+    auditCounts,
     unsupportedKinds: Array.isArray(summary?.unsupportedKinds) ? [...summary.unsupportedKinds] : [],
     options: {
       scheme: options?.scheme || 'https',
@@ -1167,6 +1173,11 @@ function renderSummary(summary, options, logBuffer = [], extras = {}) {
     fmt.stat('Place limit', 'unbounded');
   }
   fmt.stat('Mode', options.apply ? 'Apply (persist hubs)' : 'Dry run (no database writes)');
+  if (options.hierarchical) {
+    fmt.stat('Discovery mode', 'Hierarchical (place-place relationships)');
+  } else {
+    fmt.stat('Discovery mode', 'Standard (place hubs)');
+  }
   fmt.stat('Max success cache window', formatDays(options.maxAgeDays));
   fmt.stat('Known 404 cache window', formatDays(options.refresh404Days));
   fmt.stat('Other 4xx retry window', formatDays(options.retry4xxDays));
@@ -1249,6 +1260,13 @@ function renderSummary(summary, options, logBuffer = [], extras = {}) {
   fmt.stat('Validation failed', summary.validationFailed, 'number');
   if (Number.isFinite(summary.readinessTimedOut) && summary.readinessTimedOut > 0) {
     fmt.stat('Domains with readiness timeout', summary.readinessTimedOut, 'number');
+  }
+
+  // Add audit trail statistics if available
+  if (summary.auditCounts) {
+    fmt.stat('Audit trail entries', summary.auditCounts.total, 'number');
+    fmt.stat('Accepted hubs', summary.auditCounts.accepted, 'number');
+    fmt.stat('Rejected hubs', summary.auditCounts.rejected, 'number');
   }
 
   if (summary.insertedHubs > 0 || summary.updatedHubs > 0) {
@@ -1473,7 +1491,25 @@ async function main(argv) {
   };
 
   // Call orchestration layer (pure business logic, no CLI concerns)
-  const { aggregate: batchSummary } = await guessPlaceHubsBatch(options, deps);
+  const runId = `run-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const batchOptions = { ...options, runId };
+  const { aggregate: batchSummary } = await guessPlaceHubsBatch(batchOptions, deps);
+
+  // Add runId to summary for JSON output
+  batchSummary.runId = runId;
+
+  // Load audit trail for this run to include in summary
+  let auditCounts = { total: 0, accepted: 0, rejected: 0 };
+  try {
+    const auditTrail = deps.queries.loadAuditTrail(runId);
+    auditCounts.total = auditTrail.length;
+    auditCounts.accepted = auditTrail.filter(entry => entry.decision === 'accepted').length;
+    auditCounts.rejected = auditTrail.filter(entry => entry.decision === 'rejected').length;
+    batchSummary.auditCounts = auditCounts;
+  } catch (error) {
+    // Audit loading is optional - don't fail the run if it fails
+    deps.logger.warn(`[guess-place-hubs] Failed to load audit trail: ${error.message || error}`);
+  }
   
   const renderOptions = {
     ...options,

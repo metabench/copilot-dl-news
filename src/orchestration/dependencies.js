@@ -14,6 +14,7 @@ const { createGuessPlaceHubsQueries } = require('../db/sqlite/v1/queries/guessPl
 const { CountryHubGapAnalyzer } = require('../services/CountryHubGapAnalyzer');
 const { RegionHubGapAnalyzer } = require('../services/RegionHubGapAnalyzer');
 const { CityHubGapAnalyzer } = require('../services/CityHubGapAnalyzer');
+const { TopicHubGapAnalyzer } = require('../services/TopicHubGapAnalyzer');
 const HubValidator = require('../hub-validation/HubValidator');
 const { createFetchRecorder } = require('../utils/fetch/fetchRecorder');
 
@@ -73,7 +74,8 @@ function createPlaceHubDependencies(options = {}) {
   const analyzers = {
     country: new CountryHubGapAnalyzer({ db, logger }),
     region: new RegionHubGapAnalyzer({ db, logger }),
-    city: new CityHubGapAnalyzer({ db, logger })
+    city: new CityHubGapAnalyzer({ db, logger }),
+    topic: new TopicHubGapAnalyzer({ db, logger })
   };
   
   // Validator
@@ -136,8 +138,8 @@ function validateDependencies(deps) {
     throw new Error(`Missing required dependencies: ${missing.join(', ')}`);
   }
   
-  if (!deps.analyzers.country || !deps.analyzers.region || !deps.analyzers.city) {
-    throw new Error('Analyzers must include country, region, and city');
+  if (!deps.analyzers.country || !deps.analyzers.region || !deps.analyzers.city || !deps.analyzers.topic) {
+    throw new Error('Analyzers must include country, region, city, and topic');
   }
   
   if (!deps.stores.fetchRecorder) {

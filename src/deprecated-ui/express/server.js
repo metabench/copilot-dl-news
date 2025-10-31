@@ -219,6 +219,9 @@ const {
   CompressionLifecycleTask
 } = require('../../background/tasks/CompressionLifecycleTask');
 const {
+  GuessPlaceHubsTask
+} = require('../../background/tasks/GuessPlaceHubsTask');
+const {
   CompressionWorkerPool
 } = require('../../background/workers/CompressionWorkerPool');
 const {
@@ -670,6 +673,25 @@ function createApp(options = {}) {
         // Broadcast background task events via SSE with specific event types
         // This allows clients to listen for 'task-progress', 'task-created', etc.
         broadcast(eventType, data);
+
+        // Also broadcast 'analysis-progress' events for hub guessing tasks
+        // so they appear in the analysis dashboard alongside analysis runs
+        if (eventType === 'task-progress' && data?.task?.type === 'guess-place-hubs') {
+          const analysisProgressData = {
+            runId: data.task.id, // Use task ID as run ID for hub guessing
+            status: data.task.status,
+            stage: data.task.stage || 'running',
+            startedAt: data.task.created_at,
+            endedAt: data.task.completed_at,
+            ts: new Date().toISOString(),
+            summary: data.task.metadata || {},
+            diagnostics: data.task.metadata?.diagnostics || [],
+            backgroundTaskId: data.task.id,
+            backgroundTaskStatus: data.task.status,
+            runType: 'hub-guessing'
+          };
+          broadcast('analysis-progress', analysisProgressData);
+        }
       },
       updateMetrics: (stats) => {
         // Update metrics object with background task stats
@@ -718,6 +740,15 @@ function createApp(options = {}) {
     
     if (verbose) {
       console.log('[server] Registered compression-lifecycle task type');
+    }
+
+    // Register guess place hubs task type (no worker pool needed - hub guessing is CPU-light)
+    backgroundTaskManager.registerTaskType('guess-place-hubs', GuessPlaceHubsTask, {
+      dbPath: urlsDbPath
+    });
+    
+    if (verbose) {
+      console.log('[server] Registered guess-place-hubs task type');
     }
 
     // Resume paused tasks on startup (after a delay to ensure server is ready)

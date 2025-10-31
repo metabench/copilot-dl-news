@@ -40,6 +40,8 @@ function createPlaceHubsRouter(options = {}) {
    *     limit: 10,
    *     patternsPerPlace: 3,
    *     readinessTimeoutSeconds: 10,
+   *     enableTopicDiscovery: false,
+   *     topics: ["sport", "politics"],
    *     apply: false
    *   }
    * }
@@ -81,6 +83,9 @@ function createPlaceHubsRouter(options = {}) {
         limit = null,
         patternsPerPlace = 3,
         readinessTimeoutSeconds = 10,
+        enableTopicDiscovery = false,
+        enableCombinationDiscovery = false,
+        topics = [],
         apply = false,
         maxAgeDays = 7,
         refresh404Days = 180,
@@ -99,6 +104,58 @@ function createPlaceHubsRouter(options = {}) {
           details: {
             invalid: invalidKinds,
             valid: validKinds
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Validate enableTopicDiscovery
+      if (typeof enableTopicDiscovery !== 'boolean') {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'enableTopicDiscovery must be a boolean',
+          details: {
+            provided: typeof enableTopicDiscovery,
+            expected: 'boolean'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Validate enableCombinationDiscovery
+      if (typeof enableCombinationDiscovery !== 'boolean') {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'enableCombinationDiscovery must be a boolean',
+          details: {
+            provided: typeof enableCombinationDiscovery,
+            expected: 'boolean'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Validate topics
+      if (!Array.isArray(topics)) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'topics must be an array',
+          details: {
+            provided: typeof topics,
+            expected: 'Array of strings'
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const invalidTopics = topics.filter((t) => typeof t !== 'string' || t.trim() === '');
+      if (invalidTopics.length > 0) {
+        return res.status(400).json({
+          error: 'INVALID_REQUEST',
+          message: 'All topics must be non-empty strings',
+          details: {
+            invalidCount: invalidTopics.length,
+            totalCount: topics.length
           },
           timestamp: new Date().toISOString()
         });
@@ -153,6 +210,9 @@ function createPlaceHubsRouter(options = {}) {
         retry4xxDays,
         readinessTimeoutSeconds,
         readinessTimeoutMs: readinessTimeoutSeconds > 0 ? readinessTimeoutSeconds * 1000 : null,
+        enableTopicDiscovery,
+        enableCombinationDiscovery,
+        topics,
         verbose: verbose || guessOptions.verbose,
         dbPath
       };

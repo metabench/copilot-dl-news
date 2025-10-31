@@ -178,6 +178,32 @@ function createGuessPlaceHubsQueries(db) {
     latestDeterminationStmt = null;
   }
 
+  // Audit trail statements for Task 4.4
+  let insertAuditStmt = null;
+  let loadAuditTrailStmt = null;
+  try {
+    insertAuditStmt = db.prepare(`
+      INSERT INTO place_hub_audit (
+        domain, url, place_kind, place_name, decision,
+        validation_metrics_json, attempt_id, run_id, created_at
+      ) VALUES (
+        @domain, @url, @place_kind, @place_name, @decision,
+        @validation_metrics_json, @attempt_id, @run_id, datetime('now')
+      )
+    `);
+    loadAuditTrailStmt = db.prepare(`
+      SELECT domain, url, place_kind, place_name, decision,
+             validation_metrics_json, attempt_id, run_id, created_at
+        FROM place_hub_audit
+       WHERE domain = ?
+    ORDER BY created_at DESC
+       LIMIT ?
+    `);
+  } catch (error) {
+    insertAuditStmt = null;
+    loadAuditTrailStmt = null;
+  }
+
   return {
     getLatestFetch(url) {
       if (!url) return null;
@@ -331,6 +357,42 @@ function createGuessPlaceHubsQueries(db) {
       }
     },
 
+    // Audit trail helpers for Task 4.4
+    recordAuditEntry({ domain, url, placeKind, placeName, decision, validationMetrics, attemptId, runId }) {
+      if (!insertAuditStmt || !domain || !url || !decision) {
+        return 0;
+      }
+      const payload = {
+        domain,
+        url,
+        place_kind: placeKind || null,
+        place_name: placeName || null,
+        decision,
+        validation_metrics_json: validationMetrics ? JSON.stringify(validationMetrics) : null,
+        attempt_id: attemptId || null,
+        run_id: runId || null
+      };
+      try {
+        const info = insertAuditStmt.run(payload);
+        return info?.changes || 0;
+      } catch (_) {
+        return 0;
+      }
+    },
+
+    loadAuditTrail(domain, limit = 50) {
+      if (!loadAuditTrailStmt || !domain) return [];
+      try {
+        const rows = loadAuditTrailStmt.all(domain, Math.max(1, Math.min(500, Number(limit) || 50)));
+        return rows.map(row => ({
+          ...row,
+          validationMetrics: row.validation_metrics_json ? JSON.parse(row.validation_metrics_json) : null
+        }));
+      } catch (_) {
+        return [];
+      }
+    },
+
     dispose() {
       const finalize = (stmt) => {
         if (stmt && typeof stmt.finalize === 'function') {
@@ -352,6 +414,8 @@ function createGuessPlaceHubsQueries(db) {
       finalize(candidateCountStmt);
       finalize(insertDeterminationStmt);
       finalize(latestDeterminationStmt);
+      finalize(insertAuditStmt);
+      finalize(loadAuditTrailStmt);
     }
   };
 }

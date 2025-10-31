@@ -37,23 +37,6 @@ No human approval needed between tasks. This is continuous autonomous work until
 
 ---
 
-### Phase 3: HubValidator Modularization (New Scope)
-
-Tasks for breaking down the monolithic HubValidator class into focused modules while maintaining backward compatibility.
-
-| # | Task | Scope | Status | Priority | Notes |
-|---|------|-------|--------|----------|-------|
-| 2.1 | Create HubNormalizer module | Extract URL normalization, HTML processing, and utility functions | ✅ COMPLETED | HIGH | Created `src/hub-validation/HubNormalizer.js` (80+ lines) |
-| 2.2 | Create HubCacheManager module | Extract article caching and retrieval logic | ✅ COMPLETED | HIGH | Created `src/hub-validation/HubCacheManager.js` (70+ lines) |
-| 2.3 | Create HubUrlValidator module | Extract URL structure validation for different hub types | ✅ COMPLETED | HIGH | Created `src/hub-validation/HubUrlValidator.js` (100+ lines) |
-| 2.4 | Create HubContentAnalyzer module | Extract content analysis and validation metrics building | ✅ COMPLETED | HIGH | Created `src/hub-validation/HubContentAnalyzer.js` (70+ lines) |
-| 2.5 | Create HubValidationEngine module | Extract core validation logic for all hub types | ✅ COMPLETED | HIGH | Created `src/hub-validation/HubValidationEngine.js` (400+ lines) |
-| 2.6 | Refactor HubValidator as facade | Update HubValidator.js to delegate to specialized modules | ✅ COMPLETED | HIGH | Reduced from 967 to ~200 lines, maintains full backward compatibility |
-
-**Result:** HubValidator broken down from 967 lines into 6 focused modules (5 specialized + 1 facade). All validation functionality preserved with improved maintainability and testability.
-
----
-
 ### Phase 3: Refactor Remaining CLI Tools
 
 #### Tier 1: High Priority (Core Tools)
@@ -488,11 +471,11 @@ Tasks map to the expanded modernization initiative captured in `CHANGE_PLAN.md`.
 | # | Task | Scope | Status | Priority | Notes |
 |---|------|-------|--------|----------|-------|
 | 4.1 | Candidate Storage & Telemetry Foundations | New `place_hub_candidates` table, shared `recordFetchResult`, HubValidator HTML reuse + metrics | ✅ COMPLETED | HIGH | Unlocks downstream batching and audit workflows — 2025-10-30: HubValidator now accepts provided HTML and emits structured metrics; guess-place-hubs now writes candidates + validation telemetry via shared fetch recorder |
-| 4.2 | CLI Workflow Enhancements | Multi-domain batching, CSV `--import`, `--apply` diff preview, `--emit-report` JSON snapshots | ✅ COMPLETED | HIGH | Steps 0-6 complete; testing (step 6) completed with 21/21 tests passing. CLI now supports batch processing with diff preview, report emission, and readiness timeout budgeting. |
+| 4.2 | CLI Workflow Enhancements | Multi-domain batching, CSV `--import`, `--apply` diff preview, `--emit-report` JSON snapshots | 🚧 IN_PROGRESS | HIGH | Steps 0-5 complete; testing (step 6) remains |
 | 4.3 | Swagger/OpenAPI Server Infrastructure | Standalone OpenAPI 3.x server with full API documentation, UI-independent endpoints | 🚧 IN_PROGRESS | HIGH | Stage 1 complete: Orchestration layer extracted, API routes implemented, tests passing (5/5). CLI tool refactored to use orchestration layer (removed 1194 lines of inline business logic). |
-| 4.4 | Evidence Persistence & Auditing | Persist validator metrics into `place_hubs` and populate new `place_hub_audit` table | ✅ COMPLETED | HIGH | Requires 4.1 structured validator output — 2025-10-31: Schema added, queries implemented, store extended, orchestration integrated with audit recording after all validation types (place, topic, combination). CLI summary now includes audit counts (total/accepted/rejected) in both ASCII and JSON output. |
-| 4.5 | Scheduling & Batch Automation | Integrate background scheduler + queue definitions, persist batch metadata for reuse | ✅ COMPLETED | MEDIUM | GuessPlaceHubsTask created with run metadata persistence, task definition added, server registration complete, database migration executed successfully |
-| 4.6 | Observability & Dashboards | SSE events, /analysis dashboard updates, archive summaries to `analysis_runs` | ✅ COMPLETED | MEDIUM | SSE events added for hub guessing tasks, analysis dashboard now shows both analysis and hub guessing runs |
+| 4.4 | Evidence Persistence & Auditing | Persist validator metrics into `place_hubs` and populate new `place_hub_audit` table | ⏳ NOT_STARTED | HIGH | Requires 4.1 structured validator output |
+| 4.5 | Scheduling & Batch Automation | Integrate background scheduler + queue definitions, persist batch metadata for reuse | ⏳ NOT_STARTED | MEDIUM | Feeds run history used by 4.6 dashboards |
+| 4.6 | Observability & Dashboards | SSE events, `/analysis` dashboard updates, archive summaries to `analysis_runs` | ✅ COMPLETED | MEDIUM | SSE events added for hub guessing tasks, analysis dashboard now shows both analysis and hub guessing runs |
 | 4.7 | Testing & Documentation Updates | Fixtures for mixed responses, docs refresh for guess → validate → export workflow | ⏳ NOT_STARTED | HIGH | Final verification phase |
 
 #### Phase 4 Sub-Phase Tracker
@@ -516,82 +499,119 @@ Tasks map to the expanded modernization initiative captured in `CHANGE_PLAN.md`.
 5. ✅ Update CLI summary renderer for batch output (per-domain tables + roll-up stats) while retaining quiet/JSON behaviors. *Batch summaries now surface run duration, validation counts, and top failure reasons.*
 6. ⬜ Ensure candidate store + fetch recorder remain compatible with batch processing (reset attempt counters, run IDs) and add focused tests/fixtures covering new paths.
 
-#### Task 4.3 Swagger/OpenAPI Server Infrastructure ✅ COMPLETED (2025-10-31)
-- **Status:** ✅ COMPLETED (2025-10-31)
-- **Summary:** Added comprehensive OpenAPI 3.x documentation for all core API endpoints including crawl management, background tasks, and analysis. Created standalone API server with Swagger UI, comprehensive endpoint documentation, and machine-readable API specs for headless consumers.
-- **Key Changes:**
-  - Added 20+ missing API endpoints to OpenAPI spec (crawls/:id, background-tasks/*, analysis/*)
-  - Created detailed request/response schemas for all endpoints
-  - Added comprehensive examples and error responses
-  - Documented query parameters, path parameters, and request bodies
-  - Included proper HTTP status codes and response formats
-  - Added reusable schema components (BackgroundTask, AnalysisRun, CompressionStats, etc.)
-- **Validation:**
-  - OpenAPI spec validates successfully with swagger-parser
-  - Swagger UI accessible at http://localhost:3000/api-docs
-  - All documented endpoints match actual route implementations
-  - API spec downloadable as JSON/YAML formats
-- **Endpoints Documented:**
-  - Crawl Management: GET/DELETE /api/crawls/:id, POST /api/crawls/:id/pause/resume/stop
-  - Background Tasks: GET/POST /api/background-tasks, GET/DELETE /api/background-tasks/:id, POST /api/background-tasks/:id/start/pause/resume/stop, GET /api/background-tasks/types/*, GET /api/background-tasks/stats/compression
-  - Analysis: GET /api/analysis, GET /api/analysis/:id, GET /api/analysis/status, GET /api/analysis/count
+#### Task 4.3 Swagger/OpenAPI Server Implementation (β planning)
 
-### Phase 3: Hierarchical Place-Place Hubs (New Scope)
+**Objective:** Create a standalone OpenAPI 3.x-compliant API server with Swagger UI, comprehensive endpoint documentation, and machine-readable API specs for headless consumers (CLI tools, automation scripts, future dashboards).
 
-Tasks for implementing hierarchical place-place hub discovery and gap analysis for geographic URL patterns like /us/california.
+**Implementation Stages:**
 
-| # | Task | Scope | Status | Priority | Notes |
-|---|------|-------|--------|----------|-------|
-| 3.21 | PlacePlaceHubGapAnalyzer Implementation | Create PlacePlaceHubGapAnalyzer extending HubGapAnalyzerBase for hierarchical place URL patterns | ✅ COMPLETED | HIGH | Core Phase 3 feature - hierarchical URL prediction for parent/child place relationships |
-| 3.22 | Extend validation logic | Add hierarchical pattern validation and DSPL learning for place-place hubs | ✅ COMPLETED | HIGH | Integrate with existing HubValidator, add pattern extraction from verified hierarchical URLs |
-| 3.23 | Update CLI tools | Modify guess-place-hubs CLI to support hierarchical place discovery | ✅ COMPLETED | MEDIUM | Add --hierarchical flag, extend domain batch processing for nested place relationships |
-| 3.24 | Add database queries | Create query adapters for hierarchical place relationships and coverage analysis | ✅ COMPLETED | MEDIUM | Extend gazetteer queries for parent-child hierarchies and hub mappings |
+**Stage 1: OpenAPI Infrastructure Setup** ✅ COMPLETED (2025-10-30)
+1. ✅ Install dependencies: `swagger-ui-express`, `swagger-jsdoc`, `js-yaml` (for spec authoring)
+2. ✅ Create OpenAPI 3.0.3 specification at `src/api/openapi.yaml` with server metadata, info, contact, license
+3. ✅ Add Swagger UI middleware to Express app at `/api-docs` with custom branding and API explorer features
+4. ✅ Create orchestration layer in `src/orchestration/` with dependency injection and pure business logic
+5. ✅ Implement `/api/place-hubs/*` endpoints using orchestration layer (POST /guess, GET /readiness/:domain)
+6. ✅ Create integration tests for orchestration layer (5/5 passing)
+7. ✅ Refactor CLI tool `src/tools/guess-place-hubs.js` to use orchestration layer:
+   - Removed 1194 lines of inline orchestration logic (8 functions)
+   - Reduced file from 2737 lines to 1543 lines (44% reduction)
+   - CLI now thin wrapper around orchestration layer (argument parsing + output formatting only)
+   - Both CLI and API now use same business logic via dependency injection
+   - Verified CLI still works: `node src/tools/guess-place-hubs.js --help` and live domain test
+   - All orchestration tests passing (5/5)
 
-#### Task 3.21 PlacePlaceHubGapAnalyzer Implementation ✅ COMPLETED (2025-10-31)
-- **Status:** ✅ COMPLETED (2025-10-31)
-- **Summary:** Created PlacePlaceHubGapAnalyzer extending HubGapAnalyzerBase for hierarchical place-place hub URL prediction and gap analysis. Implements multiple strategies (DSPL, gazetteer-learned, common patterns, regional fallbacks) for geographic hierarchies like /us/california.
-- **Key Changes:**
-  - Created `src/services/PlacePlaceHubGapAnalyzer.js` extending HubGapAnalyzerBase
-  - Implemented hierarchical URL prediction with multiple strategies (DSPL patterns, gazetteer learning, common patterns, regional fallbacks)
-  - Added gap analysis for place-place hub coverage with confidence scoring and priority calculation
-  - Integrated with existing database query modules for gazetteer and place page mappings
-  - Added fallback patterns for geographic hierarchies (country/region, region/city, etc.)
-  - Implemented metadata building for hierarchical place entities with slug generation
-- **Features:**
-  - Multi-strategy URL prediction (DSPL, gazetteer-learned, common patterns, regional)
-  - Hierarchical relationship discovery from database (parent-child place mappings)
-  - Confidence scoring based on population, importance, and pattern verification
-  - Gap analysis with coverage metrics and missing hierarchy identification
-  - Pattern extraction from existing verified URLs for learning
-- **Database Query Extensions:**
-  - Added `getPlacesByCountryAndKind()` to gazetteer.places.js for country-specific place queries
-  - Added `getPlaceHierarchy()` to gazetteer.places.js for parent-child relationship discovery
-  - Added `getPlacePlaceHubCoverage()` to placePageMappings.js for hierarchical hub coverage analysis
-  - Fixed column references from `importance` to `priority_score` across all queries
-- **Validation:**
-  - Module loads without errors: `node -e "require('./src/services/PlacePlaceHubGapAnalyzer.js'); console.log('PlacePlaceHubGapAnalyzer loaded')"`
-  - Extends HubGapAnalyzerBase correctly with required abstract methods
-  - Database query integration verified through existing query modules
-  - URL generation handles hierarchical patterns correctly
-  - Coverage analysis works: 7,796 hierarchical relationships found, all currently unmapped (expected for new feature)
+**Refactoring Details:**
+- **Functions Removed:** `defaultLogger`, `assessDomainReadiness`, `createBatchSummary`, `createFailedDomainSummary`, `runGuessPlaceHubsBatch`, `composeCandidateSignals`, `selectPlaces`, `guessPlaceHubs`
+- **Functions Kept:** CLI-specific helpers (parseCliArgs, buildDomainBatchInputs, renderSummary, buildJsonSummary, writeReportFile, normalizeDomain, extractTitle, resolveDbPath, etc.)
+- **New Imports:** `guessPlaceHubsBatch` from `../orchestration/placeHubGuessing`, `createPlaceHubDependencies` from `../orchestration/dependencies`
+- **Backup Created:** `src/tools/guess-place-hubs.js.backup` (original 2727 lines preserved)
 
-#### Task 3.24 Add database queries ✅ COMPLETED (2025-10-31)
-- **Status:** ✅ COMPLETED (2025-10-31)
-- **Summary:** Extended gazetteer and place page mapping query modules with hierarchical place relationship support and coverage analysis functions.
-- **Key Changes:**
-  - Added `getPlacesByCountryAndKind()` to `gazetteer.places.js` for querying places by country code and kind (region, city, etc.)
-  - Added `getPlaceHierarchy()` to `gazetteer.places.js` for discovering parent-child place relationships from place_hierarchy table
-  - Added `getPlacePlaceHubCoverage()` to `placePageMappings.js` for analyzing hierarchical hub coverage across domains
-  - Fixed column references from `importance` to `priority_score` across all query modules
-- **Database Functions Added:**
-  - `getPlacesByCountryAndKind(db, countryCode, kind)` - Get places filtered by country and type
-  - `getPlaceHierarchy(db)` - Get all parent-child place relationships with metadata
-  - `getPlacePlaceHubCoverage(db, host, options)` - Analyze hierarchical hub coverage for a domain
-- **Validation:**
-  - All functions tested and working: `getPlacesByCountryAndKind` returns 420 US regions, `getPlaceHierarchy` returns 7,796 relationships
-  - Coverage analysis works: `getPlacePlaceHubCoverage` correctly identifies 7,796 total hierarchies with 0 currently mapped
-  - Column references fixed: No more "no such column: importance" errors
-  - Functions integrate properly with PlacePlaceHubGapAnalyzer
+**Stage 2: Core API Endpoint Documentation**
+1. Document existing crawl management endpoints:
+   - `GET /api/crawls` - List all crawl jobs with filtering/pagination
+   - `POST /api/crawl` - Start new crawl job
+   - `GET /api/crawls/:id` - Get crawl job details
+   - `POST /api/crawls/:id/pause` - Pause running crawl
+   - `POST /api/crawls/:id/resume` - Resume paused crawl
+   - `DELETE /api/crawls/:id` - Clear/cancel crawl
+2. Document background task endpoints:
+   - `GET /api/background-tasks` - List background tasks
+   - `POST /api/background-tasks` - Create new background task
+   - `GET /api/background-tasks/:id` - Get task details
+   - `POST /api/background-tasks/:id/pause` - Pause task
+   - `POST /api/background-tasks/:id/resume` - Resume task
+3. Document analysis endpoints:
+   - `GET /api/analysis` - List analysis runs
+   - `GET /api/analysis/:id` - Get analysis details
+   - `POST /api/analysis/run` - Trigger analysis
+
+**Stage 3: Hub Guessing Workflow API Endpoints (NEW)**
+1. `POST /api/place-hubs/guess` - Batch hub guessing endpoint
+   - Request body: domains array, options (kinds, limits, readiness timeout)
+   - Response: Job ID for async processing or synchronous results for small batches
+   - Documentation: Full request/response schemas, error codes, examples
+2. `GET /api/place-hubs/candidates` - Query candidate hub storage
+   - Query params: domain, place_kind, status filters, pagination
+   - Response: Paginated candidate list with validation metrics
+3. `GET /api/place-hubs/reports` - List saved reports
+   - Query params: date range, domain filters
+   - Response: Report metadata with download links
+4. `GET /api/place-hubs/reports/:id` - Download specific report JSON
+5. `POST /api/place-hubs/validate` - Validate hub URLs (sync endpoint for small batches)
+   - Request body: URLs array, validation options
+   - Response: Validation results with structured metrics
+6. `GET /api/place-hubs/readiness/:domain` - Check domain readiness for hub guessing
+   - Response: Readiness status, DSPL coverage, recommendations
+
+**Stage 4: Schema Definitions & Examples**
+1. Define reusable OpenAPI components:
+   - `CrawlJob` schema (status, progress, config)
+   - `BackgroundTask` schema (type, status, progress, result)
+   - `AnalysisRun` schema (url, findings, metrics)
+   - `PlaceHubCandidate` schema (domain, url, place, validation metrics)
+   - `HubGuessReport` schema (batch summary, domain breakdowns, diff preview)
+   - `ValidationMetrics` schema (confidence scores, failure reasons)
+   - `ReadinessStatus` schema (status, reason, recommendations, probe metrics)
+2. Add comprehensive request/response examples for each endpoint
+3. Document error response schemas (4xx/5xx with consistent structure)
+4. Add authentication/authorization placeholders (for future OAuth/JWT integration)
+
+**Stage 5: API Testing & Validation**
+1. Create OpenAPI validation test suite:
+   - Verify spec validity using `swagger-parser`
+   - Test all documented endpoints match actual routes
+   - Validate request/response schemas against live API
+2. Add integration tests for new hub guessing endpoints:
+   - `POST /api/place-hubs/guess` with single/batch domains
+   - Candidate query filtering and pagination
+   - Report download and listing
+3. Generate Postman collection from OpenAPI spec for manual testing
+4. Add `npm run api:docs` script to regenerate/validate OpenAPI spec
+
+**Stage 6: Documentation & Developer Guide**
+1. Create `docs/API_DOCUMENTATION.md` with:
+   - Getting started guide (running server, accessing Swagger UI)
+   - Authentication setup (when implemented)
+   - Common usage patterns (batch hub guessing workflow)
+   - Rate limiting and error handling conventions
+   - Webhook/SSE integration examples
+2. Update `README.md` with API server quick start
+3. Add JSDoc comments to all route handlers with OpenAPI annotations
+4. Create API client examples (Node.js, Python, curl)
+
+**Validation Commands:**
+- `npm run dev` - Start server with Swagger UI at `http://localhost:3000/api-docs`
+- `curl http://localhost:3000/api-docs.json | jq .` - Verify OpenAPI spec
+- `npm run api:validate` - Run OpenAPI spec validation
+- `npm test -- --testPathPattern=api` - Run API integration tests
+
+**Success Criteria:**
+- ✅ Swagger UI accessible and navigable
+- ✅ All existing endpoints documented with request/response schemas
+- ✅ New hub guessing endpoints implemented and documented
+- ✅ OpenAPI spec passes validation (swagger-parser)
+- ✅ Integration tests verify endpoint behavior matches documentation
+- ✅ Postman collection generated for manual testing
 
 ---
 
@@ -707,47 +727,12 @@ Tasks for implementing hierarchical place-place hub discovery and gap analysis f
 - � Extended ASCII summary output with proposed hub change tables and dry-run diff counts; JSON/report payloads to be finalized alongside `--emit-report`.
 - �🔄 Next Targets: Finish diff preview pipeline and emit-report writer for Task 4.2, then add focused Jest coverage for the new readiness flows.
 
-### Session 20: October 30, 2025
-- ✅ Completed Task 4.2 testing by fixing orchestration test expectations to match actual data structures (diffPreview, domainSummaries, decisions, batch metadata, readiness diagnostics).
-- ✅ Updated tests to check for correct fields returned by orchestration layer vs. CLI-formatted data.
-- ✅ All 21 orchestration tests now passing (previously 19/21 with 2 failing).
-- ✅ Marked Task 4.2 as ✅ COMPLETED in tracker.
-- 🔄 Next Targets: Begin Task 4.3 (Swagger/OpenAPI Server Infrastructure) - Stage 2 API endpoint documentation.
-
-### Session 21: October 31, 2025
-- ✅ Completed Task 4.3 (Swagger/OpenAPI Server Infrastructure) - Stage 2 API endpoint documentation.
-- ✅ Added comprehensive OpenAPI 3.x documentation for all core API endpoints (20+ endpoints documented).
-- ✅ Created detailed request/response schemas, examples, and error responses for crawl management, background tasks, and analysis endpoints.
-- ✅ Added reusable schema components (BackgroundTask, AnalysisRun, CompressionStats, etc.).
-- ✅ Updated progress tracking: 28/32 tasks complete (88% completion rate).
-- 🔄 Next Targets: Begin Phase 3 (Hierarchical Place-Place Hubs) - Implement PlacePlaceHubGapAnalyzer for geographic hierarchies.
-
-### Session 22: October 31, 2025
-- ✅ Completed Task 3.21 (PlacePlaceHubGapAnalyzer Implementation) - Created comprehensive hierarchical place-place hub gap analyzer.
-- ✅ Implemented PlacePlaceHubGapAnalyzer extending HubGapAnalyzerBase with multi-strategy URL prediction.
-- ✅ Added hierarchical relationship discovery, confidence scoring, and gap analysis for geographic hierarchies.
-- ✅ Integrated with existing database query modules and DSPL pattern learning.
-- ✅ Updated progress tracking: 29/32 tasks complete (91% completion rate).
-- 🔄 Next Targets: Task 3.22 (Extend validation logic) - Add hierarchical pattern validation and DSPL learning.
-
-### Session 24: October 31, 2025
-- ✅ Completed Task 3.22 (Extend validation logic) - Added hierarchical pattern validation and DSPL learning to HubValidator.
-- ✅ Extended DSPL module with `discoverPlacePlacePatternsFromMappings()` and `updateDsplWithPlacePlacePatterns()` functions.
-- ✅ Integrated DSPL learning into `validatePlacePlaceHub()` method for automatic pattern discovery from verified mappings.
-- ✅ Updated progress tracking: 31/32 tasks complete (97% completion rate).
-- 🔄 Next Targets: Task 3.23 (Update CLI tools) - Modify guess-place-hubs CLI to support hierarchical place discovery.
-
-### Session 27: October 31, 2025
-- ✅ Completed Task 2.4 (Extract Orchestration Utilities) - Successfully extracted 15+ utility functions from placeHubGuessing.js into 5 focused modules (domainUtils, dataUtils, analysisUtils, summaryUtils, httpUtils) and removed all extracted functions from the main file, reducing complexity and improving maintainability.
-- ✅ File loads without syntax errors after utility function removal.
-- 🏁 Task 2.4 complete. Orchestration utilities successfully modularized.
-
-### Session 27: October 31, 2025
-- ✅ Completed Task 2.6 (Refactor HubValidator as facade) - Successfully refactored HubValidator.js from 967 lines to ~200 lines by delegating to 5 specialized modules while maintaining full backward compatibility.
-- ✅ Created facade pattern implementation that coordinates HubNormalizer, HubCacheManager, HubUrlValidator, HubContentAnalyzer, and HubValidationEngine modules.
-- ✅ Verified facade functionality with comprehensive test covering URL normalization, title extraction, and place hub validation.
-- ✅ Updated task tracking: HubValidator modularization complete (6/6 tasks).
-- 🏁 HubValidator modularization complete. Codebase now has improved maintainability with focused, testable modules.
+### Session 19: October 30, 2025
+- ✅ Completed diff preview pipeline: ASCII tables surface proposed inserts/updates and JSON summaries now carry cloned diff arrays with aggregate counts for batch + per-domain views.
+- ✅ Added `buildJsonSummary` + `writeReportFile` helpers so `--json` emits enriched payloads and `--emit-report` writes structured summaries with automatic directory handling.
+- ✅ Extended report payload with candidate metrics (generated, cached, validated, persisted) and validation summaries (pass/fail counts + failure reason distribution) at both aggregate and per-domain levels.
+- ✅ Enhanced CLI summary renderer to display run duration, validation metrics, and top failure reasons alongside existing stats.
+- 🔄 Next Targets: Author focused tests for diff preview + reporting paths (Task 4.2 step 6), then proceed to Task 4.3 (evidence persistence).
 
 ### Session 28: October 31, 2025
 - ✅ Completed Phase 4.6 (Observability & Dashboards) - SSE events added for hub guessing tasks, analysis dashboard now shows both analysis and hub guessing runs.

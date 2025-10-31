@@ -893,6 +893,29 @@ function initPlaceHubsTables(db, { verbose, logger }) {
 
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_unknown_terms_host ON place_hub_unknown_terms(host)'); } catch (_) {}
   try { db.exec('CREATE INDEX IF NOT EXISTS idx_unknown_terms_slug ON place_hub_unknown_terms(term_slug)'); } catch (_) {}
+
+  // Add place_hub_audit table for evidence persistence (Task 4.4)
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS place_hub_audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain TEXT NOT NULL,
+        url TEXT NOT NULL,
+        place_kind TEXT,
+        place_name TEXT,
+        decision TEXT NOT NULL, -- 'accepted', 'rejected', 'pending'
+        validation_metrics_json TEXT, -- JSON blob of HubValidator metrics
+        attempt_id TEXT,
+        run_id TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+    `);
+  } catch (_) {}
+
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_audit_domain ON place_hub_audit(domain)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_audit_attempt ON place_hub_audit(attempt_id)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_audit_run ON place_hub_audit(run_id)'); } catch (_) {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS idx_place_hub_audit_decision ON place_hub_audit(decision)'); } catch (_) {}
 }
 
 function initCompressionTables(db, { verbose, logger }) {

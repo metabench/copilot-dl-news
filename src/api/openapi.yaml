@@ -71,20 +71,227 @@ paths:
                 timestamp: "2025-10-31T12:00:00.000Z"
                 uptime: 3600
 
-  /api/crawls:
+  /api/crawls/{id}:
     get:
       tags:
         - Crawls
-      summary: List all crawl jobs
-      description: Retrieve paginated list of crawl jobs with optional filtering
-      operationId: listCrawls
+      summary: Get crawl job details
+      description: Retrieve detailed information about a specific crawl job
+      operationId: getCrawlJob
       parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique crawl job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Crawl job details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlJobDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Crawl job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "NOT_FOUND"
+                message: "Job not found"
+                timestamp: "2025-10-31T12:00:00.000Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Crawls
+      summary: Clear/cancel crawl job
+      description: Stop and remove a crawl job from the system
+      operationId: deleteCrawlJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique crawl job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Crawl job cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Crawl job cleared"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Crawl job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/crawls/{id}/pause:
+    post:
+      tags:
+        - Crawls
+      summary: Pause crawl job
+      description: Pause a running crawl job
+      operationId: pauseCrawlJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique crawl job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Crawl job paused successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  paused:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Crawl job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/crawls/{id}/resume:
+    post:
+      tags:
+        - Crawls
+      summary: Resume crawl job
+      description: Resume a paused crawl job
+      operationId: resumeCrawlJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique crawl job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Crawl job resumed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  paused:
+                    type: boolean
+                    example: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Crawl job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/crawls/{id}/stop:
+    post:
+      tags:
+        - Crawls
+      summary: Stop crawl job
+      description: Stop a running crawl job
+      operationId: stopCrawlJob
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique crawl job identifier
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Crawl job stop requested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stopped:
+                    type: boolean
+                    example: true
+                  escalatesInMs:
+                    type: integer
+                    example: 800
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Crawl job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks:
+    get:
+      tags:
+        - Background Tasks
+      summary: List background tasks
+      description: Retrieve paginated list of background tasks with optional filtering
+      operationId: listBackgroundTasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status
+          schema:
+            type: string
+            enum: [pending, running, paused, completed, failed, cancelled]
+        - name: taskType
+          in: query
+          description: Filter by task type
+          schema:
+            type: string
         - name: limit
           in: query
           description: Maximum number of results to return
           schema:
             type: integer
-            default: 50
+            default: 100
             minimum: 1
             maximum: 500
         - name: offset
@@ -94,31 +301,578 @@ paths:
             type: integer
             default: 0
             minimum: 0
-        - name: status
-          in: query
-          description: Filter by job status
-          schema:
-            type: string
-            enum: [pending, running, paused, completed, failed, cancelled]
       responses:
         '200':
-          description: Successfully retrieved crawl list
+          description: Successfully retrieved background tasks
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  jobs:
+                  success:
+                    type: boolean
+                    example: true
+                  tasks:
                     type: array
                     items:
-                      $ref: '#/components/schemas/CrawlJob'
-                  total:
-                    type: integer
-                    description: Total number of jobs matching filters
+                      $ref: '#/components/schemas/BackgroundTask'
+                  filters:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      taskType:
+                        type: string
                   limit:
                     type: integer
                   offset:
                     type: integer
+
+    post:
+      tags:
+        - Background Tasks
+      summary: Create new background task
+      description: Create and optionally start a new background task
+      operationId: createBackgroundTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBackgroundTaskRequest'
+            example:
+              taskType: "article-compression"
+              parameters:
+                compressionLevel: 6
+                batchSize: 100
+              autoStart: true
+      responses:
+        '201':
+          description: Background task created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  task:
+                    $ref: '#/components/schemas/BackgroundTask'
+                  message:
+                    type: string
+                    example: "Task created and started"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/{id}:
+    get:
+      tags:
+        - Background Tasks
+      summary: Get background task details
+      description: Retrieve detailed information about a specific background task
+      operationId: getBackgroundTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Background task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Background task details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  task:
+                    $ref: '#/components/schemas/BackgroundTask'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Background task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "NOT_FOUND"
+                message: "Task not found"
+                timestamp: "2025-10-31T12:00:00.000Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Background Tasks
+      summary: Delete background task
+      description: Delete a completed, failed, or cancelled background task
+      operationId: deleteBackgroundTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Background task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Background task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Task deleted"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Background task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/{id}/pause:
+    post:
+      tags:
+        - Background Tasks
+      summary: Pause background task
+      description: Pause a running background task
+      operationId: pauseBackgroundTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Background task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Background task paused successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  task:
+                    $ref: '#/components/schemas/BackgroundTask'
+                  message:
+                    type: string
+                    example: "Task paused"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Background task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/{id}/resume:
+    post:
+      tags:
+        - Background Tasks
+      summary: Resume background task
+      description: Resume a paused background task
+      operationId: resumeBackgroundTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Background task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Background task resumed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  task:
+                    $ref: '#/components/schemas/BackgroundTask'
+                  message:
+                    type: string
+                    example: "Task resumed"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Background task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/{id}/start:
+    post:
+      tags:
+        - Background Tasks
+      summary: Start background task
+      description: Start a pending background task
+      operationId: startBackgroundTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Background task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Background task started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  task:
+                    $ref: '#/components/schemas/BackgroundTask'
+                  message:
+                    type: string
+                    example: "Task started"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Background task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      statusCode:
+                        type: integer
+                        example: 429
+                      retryAfter:
+                        type: integer
+                      context:
+                        type: object
+                  proposedActions:
+                    type: array
+                    items:
+                      type: object
+                  retryAfter:
+                    type: integer
+                  context:
+                    type: object
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/{id}/stop:
+    post:
+      tags:
+        - Background Tasks
+      summary: Stop background task
+      description: Stop/cancel a running background task
+      operationId: stopBackgroundTask
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Background task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Background task stopped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  task:
+                    $ref: '#/components/schemas/BackgroundTask'
+                  message:
+                    type: string
+                    example: "Task stopped"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Background task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/types:
+    get:
+      tags:
+        - Background Tasks
+      summary: Get available task types
+      description: Retrieve list of available background task types with summaries
+      operationId: getBackgroundTaskTypes
+      responses:
+        '200':
+          description: Task types retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  taskTypes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BackgroundTaskType'
+
+  /api/background-tasks/types/{taskType}:
+    get:
+      tags:
+        - Background Tasks
+      summary: Get task type definition
+      description: Retrieve complete definition and schema for a specific task type
+      operationId: getBackgroundTaskTypeDefinition
+      parameters:
+        - name: taskType
+          in: path
+          required: true
+          description: Task type identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task type definition retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  definition:
+                    $ref: '#/components/schemas/BackgroundTaskDefinition'
+        '404':
+          description: Task type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "NOT_FOUND"
+                message: "Unknown task type: invalid-type"
+                timestamp: "2025-10-31T12:00:00.000Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/background-tasks/stats/compression:
+    get:
+      tags:
+        - Background Tasks
+      summary: Get compression statistics
+      description: Retrieve compression statistics for articles and content
+      operationId: getCompressionStats
+      responses:
+        '200':
+          description: Compression statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  stats:
+                    $ref: '#/components/schemas/CompressionStats'
+        '503':
+          description: Database not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "SERVICE_UNAVAILABLE"
+                message: "Database not available"
+                timestamp: "2025-10-31T12:00:00.000Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analysis:
+    get:
+      tags:
+        - Analysis
+      summary: List analysis runs
+      description: Retrieve paginated list of article analysis runs
+      operationId: listAnalysisRuns
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          description: Number of results to skip (for pagination)
+          schema:
+            type: integer
+            default: 0
+        - name: includeDetails
+          in: query
+          description: Whether to include detailed analysis data
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Analysis runs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: Total number of analysis runs
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalysisRun'
+
+  /api/analysis/{id}:
+    get:
+      tags:
+        - Analysis
+      summary: Get analysis run details
+      description: Retrieve detailed information about a specific analysis run
+      operationId: getAnalysisRun
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Analysis run identifier
+          schema:
+            type: string
+        - name: eventsLimit
+          in: query
+          description: Maximum number of events to include
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Analysis run details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisRunDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Analysis run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "NOT_FOUND"
+                message: "Analysis run not found"
+                timestamp: "2025-10-31T12:00:00.000Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/analysis/status:
+    get:
+      tags:
+        - Analysis
+      summary: Get analysis status counts
+      description: Retrieve counts of articles by analysis status
+      operationId: getAnalysisStatus
+      responses:
+        '200':
+          description: Analysis status counts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: Total number of articles
+                  analyzed:
+                    type: integer
+                    description: Number of analyzed articles
+                  pending:
+                    type: integer
+                    description: Number of articles pending analysis
+
+  /api/analysis/count:
+    get:
+      tags:
+        - Analysis
+      summary: Count articles needing analysis
+      description: Count articles that need analysis for a specific version
+      operationId: countArticlesNeedingAnalysis
+      parameters:
+        - name: version
+          in: query
+          description: Analysis version to check
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Article count retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Number of articles needing analysis
+                  analysisVersion:
+                    type: integer
+                    description: Analysis version checked
 
   /api/crawl:
     post:
@@ -174,6 +928,9 @@ paths:
                 limit: 10
                 patternsPerPlace: 3
                 readinessTimeoutSeconds: 10
+                enableTopicDiscovery: true
+                enableCombinationDiscovery: false
+                topics: ["sport", "politics"]
                 apply: false
       responses:
         '200':
@@ -387,6 +1144,20 @@ components:
               minimum: 0
               default: 10
               description: Timeout for readiness probes (0 = unlimited)
+            enableTopicDiscovery:
+              type: boolean
+              default: false
+              description: Enable discovery of topic hubs (sport, politics, etc.)
+            enableCombinationDiscovery:
+              type: boolean
+              default: false
+              description: Enable discovery of place-topic combination hubs (e.g., /world/france/politics)
+            topics:
+              type: array
+              items:
+                type: string
+              description: Specific topic slugs to process (empty = auto-discover top topics)
+              example: ["sport", "politics", "technology"]
             apply:
               type: boolean
               default: false
@@ -633,24 +1404,325 @@ components:
             elapsedMs:
               type: integer
 
-    ErrorResponse:
+    CrawlJobDetail:
       type: object
       required:
-        - error
-        - message
+        - id
+        - status
       properties:
-        error:
+        id:
           type: string
-          description: Error code or type
-        message:
+          format: uuid
+          description: Unique job identifier
+        pid:
+          type: integer
+          description: Process ID of the crawl process
+        args:
+          type: array
+          items:
+            type: string
+          description: Command line arguments used to start the crawl
+        startUrl:
           type: string
-          description: Human-readable error message
-        details:
-          type: object
-          description: Additional error context
-        timestamp:
+          format: uri
+          description: Initial URL for the crawl
+        startedAt:
           type: string
           format: date-time
+          description: When the crawl was started
+        endedAt:
+          type: string
+          format: date-time
+          description: When the crawl ended (if completed)
+        status:
+          type: string
+          enum: [pending, running, paused, completed, failed, cancelled]
+          description: Current job status
+        stage:
+          type: string
+          description: Current processing stage
+        stageChangedAt:
+          type: string
+          format: date-time
+          description: When the current stage was entered
+        paused:
+          type: boolean
+          description: Whether the job is currently paused
+        lastActivityAt:
+          type: string
+          format: date-time
+          description: Last time the job showed activity
+        metrics:
+          type: object
+          description: Performance and progress metrics
+          properties:
+            visited:
+              type: integer
+              description: Number of URLs visited
+            downloaded:
+              type: integer
+              description: Number of successful downloads
+            found:
+              type: integer
+              description: Number of URLs discovered
+            saved:
+              type: integer
+              description: Number of items saved to database
+            errors:
+              type: integer
+              description: Number of errors encountered
+            queueSize:
+              type: integer
+              description: Current queue size
+            requestsPerSec:
+              type: number
+              description: Request rate per second
+            downloadsPerSec:
+              type: number
+              description: Download rate per second
+            errorRatePerMin:
+              type: number
+              description: Error rate per minute
+            bytesPerSec:
+              type: number
+              description: Data transfer rate per second
+        lastProgress:
+          type: object
+          description: Last progress update snapshot
+
+    BackgroundTask:
+      type: object
+      required:
+        - id
+        - task_type
+        - status
+        - created_at
+      properties:
+        id:
+          type: integer
+          description: Unique task identifier
+        task_type:
+          type: string
+          description: Type of background task
+        status:
+          type: string
+          enum: [pending, running, paused, completed, failed, cancelled]
+          description: Current task status
+        parameters:
+          type: object
+          description: Task-specific parameters
+        progress:
+          type: object
+          description: Progress information
+          properties:
+            current:
+              type: integer
+              description: Current progress value
+            total:
+              type: integer
+              description: Total progress value
+            message:
+              type: string
+              description: Progress message
+        result:
+          type: object
+          description: Task result (when completed)
+        error_message:
+          type: string
+          description: Error message (when failed)
+        created_at:
+          type: string
+          format: date-time
+          description: When the task was created
+        started_at:
+          type: string
+          format: date-time
+          description: When the task was started
+        completed_at:
+          type: string
+          format: date-time
+          description: When the task was completed
+        updated_at:
+          type: string
+          format: date-time
+          description: When the task was last updated
+
+    CreateBackgroundTaskRequest:
+      type: object
+      required:
+        - taskType
+      properties:
+        taskType:
+          type: string
+          description: Type of background task to create
+          example: "article-compression"
+        parameters:
+          type: object
+          description: Task-specific parameters
+          example:
+            compressionLevel: 6
+            batchSize: 100
+        autoStart:
+          type: boolean
+          default: false
+          description: Whether to automatically start the task
+
+    BackgroundTaskType:
+      type: object
+      required:
+        - type
+        - name
+        - description
+      properties:
+        type:
+          type: string
+          description: Task type identifier
+        name:
+          type: string
+          description: Human-readable task name
+        description:
+          type: string
+          description: Task description
+        category:
+          type: string
+          description: Task category
+
+    BackgroundTaskDefinition:
+      type: object
+      required:
+        - type
+        - name
+        - description
+        - parameters
+      properties:
+        type:
+          type: string
+          description: Task type identifier
+        name:
+          type: string
+          description: Human-readable task name
+        description:
+          type: string
+          description: Detailed task description
+        category:
+          type: string
+          description: Task category
+        parameters:
+          type: object
+          description: Parameter schema definition
+          additionalProperties:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [string, number, boolean, object, array]
+              required:
+                type: boolean
+              default:
+                description: Default value
+              description:
+                type: string
+              enum:
+                type: array
+                items:
+                  type: string
+              minimum:
+                type: number
+              maximum:
+                type: number
+
+    CompressionStats:
+      type: object
+      properties:
+        totalArticles:
+          type: integer
+          description: Total number of articles
+        individuallyCompressed:
+          type: integer
+          description: Number of individually compressed articles
+        bucketCompressed:
+          type: integer
+          description: Number of bucket-compressed articles
+        uncompressed:
+          type: integer
+          description: Number of uncompressed articles
+        totalCompressedSize:
+          type: integer
+          description: Total size of compressed content (bytes)
+        totalOriginalSize:
+          type: integer
+          description: Total size of original content (bytes)
+        averageCompressionRatio:
+          type: number
+          description: Average compression ratio
+
+    AnalysisRun:
+      type: object
+      required:
+        - id
+        - url
+        - created_at
+      properties:
+        id:
+          type: string
+          description: Analysis run identifier
+        url:
+          type: string
+          format: uri
+          description: URL that was analyzed
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+          description: Analysis status
+        findings:
+          type: object
+          description: Analysis findings
+        created_at:
+          type: string
+          format: date-time
+          description: When the analysis was created
+        completed_at:
+          type: string
+          format: date-time
+          description: When the analysis was completed
+
+    AnalysisRunDetail:
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+          description: Analysis run identifier
+        url:
+          type: string
+          format: uri
+          description: URL that was analyzed
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+          description: Analysis status
+        findings:
+          type: object
+          description: Detailed analysis findings
+        events:
+          type: array
+          items:
+            type: object
+            description: Analysis events/timeline
+        created_at:
+          type: string
+          format: date-time
+          description: When the analysis was created
+        started_at:
+          type: string
+          format: date-time
+          description: When the analysis was started
+        completed_at:
+          type: string
+          format: date-time
+          description: When the analysis was completed
 
   responses:
     BadRequest:

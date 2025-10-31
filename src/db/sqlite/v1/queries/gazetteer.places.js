@@ -275,6 +275,138 @@ function getPlaceCountByKind(db, kind) {
   }
 }
 
+/**
+ * Get places by country code and kind
+ * @param {import('better-sqlite3').Database} db
+ * @param {string} countryCode - ISO country code
+ * @param {string} kind - Place kind (region, city, etc.)
+ * @returns {Array} Array of place objects
+ */
+function getPlacesByCountryAndKind(db, countryCode, kind) {
+  try {
+    const places = db.prepare(`
+      SELECT
+        p.id,
+        p.kind,
+        p.country_code,
+        p.adm1_code,
+        COALESCE(p.population, 0) AS population,
+        COALESCE(p.priority_score, p.population, 0) AS importance,
+        COALESCE(
+          (SELECT name FROM place_names WHERE id = p.canonical_name_id),
+          (SELECT name FROM place_names
+             WHERE place_id = p.id
+             ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
+             LIMIT 1)
+        ) AS name
+      FROM places p
+      WHERE p.country_code = ?
+        AND p.kind = ?
+        AND COALESCE(p.status, 'current') = 'current'
+        AND name IS NOT NULL
+      ORDER BY population DESC, name ASC
+    `).all(countryCode, kind);
+
+    return places;
+  } catch (err) {
+    console.error('[gazetteer.places] Error fetching places by country and kind:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Get hierarchical place relationships (parent-child)
+ * @param {import('better-sqlite3').Database} db
+ * @returns {Array} Array of hierarchy objects with parent and child data
+ */
+function getPlaceHierarchy(db) {
+  try {
+    const hierarchies = db.prepare(`
+      WITH direct_parent AS (
+        SELECT child_id, MIN(parent_id) AS parent_id
+          FROM place_hierarchy
+         WHERE depth IS NULL OR depth = 1
+         GROUP BY child_id
+      ),
+      parent_places AS (
+        SELECT
+          p.id,
+          p.kind,
+          p.country_code,
+        COALESCE(p.population, 0) AS population,
+        COALESCE(p.priority_score, p.population, 0) AS importance,
+          COALESCE(
+            (SELECT name FROM place_names WHERE id = p.canonical_name_id),
+            (SELECT name FROM place_names
+               WHERE place_id = p.id
+               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
+               LIMIT 1)
+          ) AS name
+        FROM places p
+        WHERE COALESCE(p.status, 'current') = 'current'
+      ),
+      child_places AS (
+        SELECT
+          p.id,
+          p.kind,
+          p.country_code,
+          COALESCE(p.population, 0) AS population,
+          COALESCE(p.priority_score, p.population, 0) AS importance,
+          COALESCE(
+            (SELECT name FROM place_names WHERE id = p.canonical_name_id),
+            (SELECT name FROM place_names
+               WHERE place_id = p.id
+               ORDER BY is_preferred DESC, (lang = 'en') DESC, id ASC
+               LIMIT 1)
+          ) AS name
+        FROM places p
+        WHERE COALESCE(p.status, 'current') = 'current'
+      )
+      SELECT
+        pp.id AS parent_id,
+        pp.name AS parent_name,
+        pp.kind AS parent_kind,
+        pp.country_code AS parent_country_code,
+        pp.population AS parent_population,
+        pp.importance AS parent_importance,
+        cp.id AS child_id,
+        cp.name AS child_name,
+        cp.kind AS child_kind,
+        cp.country_code AS child_country_code,
+        cp.population AS child_population,
+        cp.importance AS child_importance
+      FROM direct_parent dp
+      JOIN parent_places pp ON pp.id = dp.parent_id
+      JOIN child_places cp ON cp.id = dp.child_id
+      WHERE pp.name IS NOT NULL AND cp.name IS NOT NULL
+      ORDER BY (pp.population + cp.population) DESC
+    `).all();
+
+    // Transform into hierarchy objects
+    return hierarchies.map(row => ({
+      parent: {
+        id: row.parent_id,
+        name: row.parent_name,
+        kind: row.parent_kind,
+        country_code: row.parent_country_code,
+        population: row.parent_population,
+        importance: row.parent_importance
+      },
+      child: {
+        id: row.child_id,
+        name: row.child_name,
+        kind: row.child_kind,
+        country_code: row.child_country_code,
+        population: row.child_population,
+        importance: row.child_importance
+      }
+    }));
+  } catch (err) {
+    console.error('[gazetteer.places] Error fetching place hierarchy:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   getAllCountries,
   getTopCountries,
@@ -282,5 +414,7 @@ module.exports = {
   getTopCities,
   getCountryByName,
   getCountryByCode,
-  getPlaceCountByKind
+  getPlaceCountByKind,
+  getPlacesByCountryAndKind,
+  getPlaceHierarchy
 };

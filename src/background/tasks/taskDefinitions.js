@@ -307,66 +307,114 @@ const TASK_DEFINITIONS = {
     ]
   },
 
-  'crawl-site': {
-    taskType: 'crawl-site',
-    title: 'Crawl News Site',
-    description: 'Crawl a news website using the standard crawler configuration',
-    icon: '🕷️',
+  'guess-place-hubs': {
+    taskType: 'guess-place-hubs',
+    title: 'Guess Place Hubs',
+    description: 'Discover and validate hub URLs for news websites using pattern analysis and gazetteer data',
+    icon: '🎯',
     fields: [
       {
-        name: 'startUrl',
-        label: 'Start URL',
-        type: FieldType.STRING,
-        required: true,
-        placeholder: 'https://example.com',
-        description: 'URL to begin crawling from'
+        name: 'domains',
+        label: 'Domains',
+        type: FieldType.MULTISELECT,
+        default: [],
+        options: [], // Dynamic - would be populated from known domains
+        description: 'Domains to analyze for hub discovery'
       },
       {
-        name: 'maxPages',
-        label: 'Max Pages',
-        type: FieldType.NUMBER,
-        default: 100,
-        min: 1,
-        max: 10000,
-        required: true,
-        description: 'Maximum number of pages to crawl'
+        name: 'domainBatch',
+        label: 'Domain Batch File',
+        type: FieldType.PATH,
+        placeholder: './data/domain-batch.csv',
+        description: 'CSV file with domains to process (domain,kinds,limit format)'
       },
       {
-        name: 'maxConcurrency',
-        label: 'Concurrency',
+        name: 'kinds',
+        label: 'Hub Types',
+        type: FieldType.MULTISELECT,
+        default: ['country'],
+        options: [
+          { value: 'country', label: 'Country Hubs' },
+          { value: 'region', label: 'Region Hubs' },
+          { value: 'city', label: 'City Hubs' },
+          { value: 'topic', label: 'Topic Hubs' }
+        ],
+        required: true,
+        description: 'Types of hubs to discover'
+      },
+      {
+        name: 'limit',
+        label: 'Limit Per Domain',
         type: FieldType.NUMBER,
         default: 5,
         min: 1,
-        max: 20,
+        max: 100,
         required: true,
-        description: 'Number of parallel requests'
+        description: 'Maximum hub URLs to generate per domain'
       },
       {
-        name: 'rateLimitMs',
-        label: 'Rate Limit (ms)',
-        type: FieldType.NUMBER,
-        default: 0,
-        min: 0,
-        max: 5000,
-        description: 'Delay between requests in milliseconds'
-      },
-      {
-        name: 'respectRobotsTxt',
-        label: 'Respect robots.txt',
+        name: 'apply',
+        label: 'Apply Changes',
         type: FieldType.BOOLEAN,
-        default: true,
-        description: 'Honor robots.txt exclusion rules'
+        default: false,
+        description: 'Persist discovered hubs to database'
       },
       {
-        name: 'userAgent',
-        label: 'User Agent',
-        type: FieldType.STRING,
-        default: 'NewsBot/1.0',
-        placeholder: 'NewsBot/1.0',
-        description: 'HTTP User-Agent header'
+        name: 'emitReport',
+        label: 'Emit JSON Report',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Generate detailed JSON report of the discovery process'
+      },
+      {
+        name: 'reportPath',
+        label: 'Report Path',
+        type: FieldType.PATH,
+        placeholder: './data/reports/hub-guessing-report.json',
+        description: 'Path for JSON report output'
+      },
+      {
+        name: 'readinessTimeoutSeconds',
+        label: 'Readiness Timeout',
+        type: FieldType.NUMBER,
+        default: 10,
+        min: 1,
+        max: 60,
+        required: true,
+        description: 'Seconds to wait for domain readiness before giving up'
+      },
+      {
+        name: 'enableTopicDiscovery',
+        label: 'Enable Topic Discovery',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Discover topic-based hubs in addition to place hubs'
+      },
+      {
+        name: 'topics',
+        label: 'Specific Topics',
+        type: FieldType.MULTISELECT,
+        default: [],
+        options: [
+          { value: 'politics', label: 'Politics' },
+          { value: 'sports', label: 'Sports' },
+          { value: 'business', label: 'Business' },
+          { value: 'technology', label: 'Technology' },
+          { value: 'health', label: 'Health' },
+          { value: 'science', label: 'Science' },
+          { value: 'entertainment', label: 'Entertainment' }
+        ],
+        description: 'Specific topics to discover (leave empty for auto-discovery)'
+      },
+      {
+        name: 'verbose',
+        label: 'Verbose Logging',
+        type: FieldType.BOOLEAN,
+        default: false,
+        description: 'Enable detailed progress logging'
       }
     ]
-  }
+  },
 };
 
 /**

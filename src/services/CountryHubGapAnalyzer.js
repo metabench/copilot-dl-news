@@ -14,6 +14,8 @@ const { getCountryHubCoverage } = require('../db/sqlite/v1/queries/placePageMapp
 const { HubGapAnalyzerBase } = require('./HubGapAnalyzerBase');
 const { getDsplForDomain } = require('./shared/dspl');
 const { slugify } = require('../tools/slugify');
+const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
+const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
 
 class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   constructor({ 
@@ -30,6 +32,37 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
     this.lastAnalysis = null;
     this.lastAnalysisTime = 0;
     this.analysisCacheMs = 5000;
+
+    // Initialize prediction strategy manager
+    this.predictionManager = new PredictionStrategyManager({
+      db: this.db,
+      dspls: this.dspls,
+      entityType: 'country',
+      buildMetadata: this.buildEntityMetadata.bind(this),
+      logger: this.logger
+    });
+
+    // Override the _getExistingMappings method for country-specific logic
+    this.predictionManager._getExistingMappings = (domain) => {
+      try {
+        return this.db.prepare(`
+          SELECT url FROM place_page_mappings
+          WHERE host = ? AND page_kind = 'country-hub' AND status = 'verified'
+          LIMIT 10
+        `).all(domain) || [];
+      } catch (err) {
+        // Handle missing table gracefully (for tests or incomplete databases)
+        if (err.message.includes('no such table')) {
+          return [];
+        }
+        throw err;
+      }
+    };
+
+    // Override the _extractPatternsFromUrls method for country-specific pattern extraction
+    this.predictionManager._extractPatternsFromUrls = (urls, domain, metadata) => {
+      return this.extractPatternsFromUrls(urls, domain);
+    };
   }
 
   /**
@@ -97,229 +130,39 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
    * @returns {Array<Object>} Predicted URL objects with confidence scores
    */
   predictCountryHubUrls(domain, countryName, countryCode) {
+    const entity = { name: countryName, code: countryCode };
     const predictions = [];
 
     // Strategy 1: DSPL patterns (highest priority)
-    const dsplPredictions = this.predictFromDspl(countryName, countryCode, domain);
+    const dsplPredictions = this.predictionManager.predictFromDspl(entity, domain);
     predictions.push(...dsplPredictions);
 
     // Strategy 2: Gazetteer-based patterns
-    const gazetteerPredictions = this.predictFromGazetteer(countryName, countryCode, domain);
+    const gazetteerPredictions = this.predictionManager.predictFromGazetteer(entity, domain);
     predictions.push(...gazetteerPredictions);
 
-    // Strategy 3: Common hub patterns as fallback
-    const commonPredictions = this.predictFromCommonPatterns(countryName, countryCode, domain);
-    predictions.push(...commonPredictions);
+    // Strategy 3: Common hub patterns as fallback (only if no DSPL patterns exist)
+    if (dsplPredictions.length === 0) {
+      const commonPatterns = [
+        { pattern: `/world/${slugify(countryName)}`, confidence: 0.6 },
+        { pattern: `/news/world/${slugify(countryName)}`, confidence: 0.5 },
+        { pattern: `/news/${countryCode.toLowerCase()}`, confidence: 0.4 },
+        { pattern: `/${slugify(countryName)}`, confidence: 0.4 },
+        { pattern: `/international/${slugify(countryName)}`, confidence: 0.3 },
+        { pattern: `/news/world-${this._getRegion(countryCode)}-${slugify(countryName)}`, confidence: 0.3 }
+      ];
+      const commonPredictions = this.predictionManager.predictFromCommonPatterns(entity, domain, commonPatterns);
+      predictions.push(...commonPredictions);
+    }
 
     // Strategy 4: Regional patterns for countries without direct coverage
-    const regionalPredictions = this.predictFromRegionalPatterns(countryName, countryCode, domain);
+    const regionalPredictions = this.predictionManager.predictFromRegionalPatterns(entity, domain);
     predictions.push(...regionalPredictions);
 
     // Remove duplicates and score predictions
     const uniquePredictions = this.deduplicateAndScore(predictions);
 
-    return uniquePredictions.slice(0, 5); // Limit to top 5 predictions per country
-  }
-
-  /**
-   * Predict URLs using DSPL patterns
-   */
-  predictFromDspl(countryName, countryCode, domain) {
-    const predictions = [];
-    const dspl = getDsplForDomain(this.dspls, domain);
-
-    if (!dspl?.countryHubPatterns) {
-      return predictions;
-    }
-
-    // Generate predictions from verified patterns
-    for (const pattern of dspl.countryHubPatterns) {
-      if (!pattern.verified) continue;
-
-      const url = this.generateUrlFromPattern(pattern.pattern, countryName, countryCode, domain);
-      if (url) {
-        predictions.push({
-          url,
-          confidence: pattern.confidence,
-          strategy: 'dspl',
-          pattern: pattern.pattern,
-          countryName,
-          countryCode
-        });
-      }
-    }
-
-    return predictions;
-  }
-
-  /**
-   * Predict URLs using gazetteer data patterns
-   */
-  predictFromGazetteer(countryName, countryCode, domain) {
-    const predictions = [];
-    const baseUrl = `https://${domain}`;
-    const countrySlug = slugify(countryName);
-    const countryCodeLower = countryCode.toLowerCase();
-
-    // Look for existing mappings to learn patterns
-    const existingMappings = this.db.prepare(`
-      SELECT url FROM place_page_mappings
-      WHERE host = ? AND page_kind = 'country-hub' AND status = 'verified'
-      LIMIT 10
-    `).all(domain) || [];
-
-    // Extract patterns from existing verified URLs
-    const patterns = this.extractPatternsFromUrls(existingMappings.map(m => m.url), domain);
-
-    for (const pattern of patterns) {
-      const url = pattern
-        .replace('{slug}', countrySlug)
-        .replace('{code}', countryCodeLower);
-
-      try {
-        const fullUrl = new URL(url, baseUrl).href;
-        predictions.push({
-          url: fullUrl,
-          confidence: 0.7, // Lower than DSPL but higher than generic
-          strategy: 'gazetteer-learned',
-          pattern,
-          countryName,
-          countryCode
-        });
-      } catch (err) {
-        // Skip invalid URLs
-      }
-    }
-
-    return predictions;
-  }
-
-  /**
-   * Predict URLs using common hub patterns
-   */
-  predictFromCommonPatterns(countryName, countryCode, domain) {
-    const predictions = [];
-    const baseUrl = `https://${domain}`;
-    const countrySlug = slugify(countryName);
-    const countryCodeLower = countryCode.toLowerCase();
-    const region = this._getRegion(countryCode);
-
-    const patterns = [
-      { pattern: `/world/${countrySlug}`, confidence: 0.6 },
-      { pattern: `/news/world/${countrySlug}`, confidence: 0.5 },
-      { pattern: `/world/${countryCodeLower}`, confidence: 0.5 },
-      { pattern: `/news/${countryCodeLower}`, confidence: 0.4 },
-      { pattern: `/${countrySlug}`, confidence: 0.4 },
-      { pattern: `/international/${countrySlug}`, confidence: 0.3 },
-      { pattern: `/news/world-${region}-${countrySlug}`, confidence: 0.3 }
-    ];
-
-    for (const { pattern, confidence } of patterns) {
-      try {
-        const url = new URL(pattern, baseUrl).href;
-        predictions.push({
-          url,
-          confidence,
-          strategy: 'common-patterns',
-          pattern,
-          countryName,
-          countryCode
-        });
-      } catch (err) {
-        // Skip invalid URLs
-      }
-    }
-
-    return predictions;
-  }
-
-  /**
-   * Predict URLs using regional patterns for uncovered countries
-   */
-  predictFromRegionalPatterns(countryName, countryCode, domain) {
-    const predictions = [];
-    const baseUrl = `https://${domain}`;
-    const region = this._getRegion(countryCode);
-
-    // Check if region has coverage
-    const regionCoverage = this.db.prepare(`
-      SELECT COUNT(*) as count FROM place_page_mappings
-      WHERE host = ? AND page_kind = 'country-hub' AND status = 'verified'
-      AND place_id IN (
-        SELECT id FROM places WHERE country_code = ?
-      )
-    `).get(domain, countryCode);
-
-    if (regionCoverage.count === 0) {
-      // Try regional hub patterns
-      const regionalPatterns = [
-        `/world/${region}`,
-        `/news/world/${region}`,
-        `/international/${region}`
-      ];
-
-      for (const pattern of regionalPatterns) {
-        try {
-          const url = new URL(pattern, baseUrl).href;
-          predictions.push({
-            url,
-            confidence: 0.2, // Low confidence for regional fallbacks
-            strategy: 'regional-fallback',
-            pattern,
-            countryName,
-            countryCode
-          });
-        } catch (err) {
-          // Skip invalid URLs
-        }
-      }
-    }
-
-    return predictions;
-  }
-
-  /**
-   * Generate URL from pattern template
-   */
-  generateUrlFromPattern(pattern, countryName, countryCode, domain) {
-    const baseUrl = `https://${domain}`;
-    const countrySlug = slugify(countryName);
-    const countryCodeLower = countryCode.toLowerCase();
-
-    const url = pattern
-      .replace('{slug}', countrySlug)
-      .replace('{code}', countryCodeLower);
-
-    try {
-      return new URL(url, baseUrl).href;
-    } catch (err) {
-      return null;
-    }
-  }
-
-  /**
-   * Extract patterns from existing verified URLs
-   */
-  extractPatternsFromUrls(urls, domain) {
-    const patterns = new Set();
-
-    for (const url of urls) {
-      try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname !== domain) continue;
-
-        const path = urlObj.pathname;
-        // Look for country-specific patterns
-        const countryPattern = path.replace(/\/[a-z-]+(?=\/|$)/, '/{slug}');
-        if (countryPattern !== path) {
-          patterns.add(countryPattern);
-        }
-      } catch (err) {
-        // Skip invalid URLs
-      }
-    }
-
-    return Array.from(patterns);
+    return uniquePredictions.slice(0, 5).map(p => p.url); // Return just URLs for compatibility
   }
 
   /**

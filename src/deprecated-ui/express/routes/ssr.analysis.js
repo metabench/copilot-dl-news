@@ -5,6 +5,11 @@ const {
   getAnalysisRun
 } = require('../services/analysisRuns');
 const {
+  ensurePlaceHubGuessRunsSchema,
+  listPlaceHubGuessRuns,
+  getPlaceHubGuessRun
+} = require('../services/placeHubGuessRuns');
+const {
   renderAnalysisListPage
 } = require('../views/analysisListPage');
 const {
@@ -41,11 +46,28 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
 
     try {
       ensureAnalysisRunSchema(db);
+      ensurePlaceHubGuessRunsSchema(db);
       const limit = Math.max(1, Math.min(200, parseInt(req.query.limit || '50', 10) || 50));
-      const { items, total } = listAnalysisRuns(db, { limit });
+
+      // Fetch both analysis runs and hub guessing runs
+      const analysisRuns = listAnalysisRuns(db, { limit: Math.ceil(limit / 2) });
+      const hubGuessRuns = listPlaceHubGuessRuns(db, { limit: Math.ceil(limit / 2) });
+
+      // Combine and sort by started time (most recent first)
+      const combinedItems = [
+        ...analysisRuns.items,
+        ...hubGuessRuns.items
+      ].sort((a, b) => {
+        const aTime = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+        const bTime = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+        return bTime - aTime;
+      }).slice(0, limit);
+
+      const totalCombined = analysisRuns.total + hubGuessRuns.total;
+
       const html = renderAnalysisListPage({
-        items,
-        total,
+        items: combinedItems,
+        total: totalCombined,
         limit,
         renderNav: context.renderNav
       });
@@ -77,7 +99,8 @@ function createAnalysisSsrRouter({ getDbRW, renderNav } = {}) {
 
     try {
       ensureAnalysisRunSchema(db);
-      const detail = getAnalysisRun(db, runId);
+      ensurePlaceHubGuessRunsSchema(db);
+      const detail = getAnalysisRun(db, runId) || getPlaceHubGuessRun(db, runId);
       if (!detail) {
         res.status(404).type('html').send(errorPage({ status: 404, message: 'Analysis run not found.' }, context));
         return;

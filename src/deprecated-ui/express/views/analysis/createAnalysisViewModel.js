@@ -12,6 +12,19 @@ const FAILED_STATUSES = new Set(['failed', 'errored', 'error', 'cancelled']);
 
 function formatConfig(run) {
   if (!run || typeof run !== 'object') return '';
+
+  // Handle hub guessing runs
+  if (run.runType === 'hub-guessing') {
+    const parts = [];
+    if (is_defined(run.domainCount)) parts.push(`domains: ${run.domainCount}`);
+    if (is_defined(run.limitPerDomain)) parts.push(`limit: ${run.limitPerDomain}`);
+    if (run.kinds && Array.isArray(run.kinds)) parts.push(`kinds: ${run.kinds.join(',')}`);
+    if (run.applyChanges) parts.push('apply');
+    if (run.enableTopicDiscovery) parts.push('topics');
+    return parts.join(', ');
+  }
+
+  // Handle analysis runs
   const parts = [];
   if (is_defined(run.pageLimit)) parts.push(`pages: ${run.pageLimit}`);
   if (is_defined(run.domainLimit)) parts.push(`domains: ${run.domainLimit}`);

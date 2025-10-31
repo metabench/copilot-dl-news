@@ -1,2 +1,4 @@
-{"id":1,"place_id":1,"name":"Test Place 1","normalized":"test place 1","lang":null,"script":null,"name_kind":null,"is_preferred":1,"is_official":null,"source":null}
-{"id":2,"place_id":1,"name":"Test Place 2","normalized":"test place 2","lang":null,"script":null,"name_kind":null,"is_preferred":1,"is_official":null,"source":null}
+{"id":1,"place_id":999999,"name":"Earth","normalized":null,"lang":"en","script":null,"name_kind":"common","is_preferred":null,"is_official":null,"source":null}
+{"id":2,"place_id":999999,"name":"World","normalized":null,"lang":"en","script":null,"name_kind":"alias","is_preferred":null,"is_official":null,"source":null}
+{"id":3,"place_id":1000000,"name":"Test Place 1","normalized":"test place 1","lang":null,"script":null,"name_kind":null,"is_preferred":1,"is_official":null,"source":null}
+{"id":4,"place_id":1000000,"name":"Test Place 2","normalized":"test place 2","lang":null,"script":null,"name_kind":null,"is_preferred":1,"is_official":null,"source":null}
