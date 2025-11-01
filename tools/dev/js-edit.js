@@ -3,15 +3,79 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
-const { parseModule, collectFunctions, extractCode, replaceSpan } = require('./lib/swcAst');
+const {
+  parseModule,
+  collectFunctions,
+  collectVariables,
+  extractCode,
+  replaceSpan,
+  createDigest,
+  HASH_PRIMARY_ENCODING,
+  HASH_FALLBACK_ENCODING,
+  HASH_LENGTH_BY_ENCODING
+} = require('./lib/swcAst');
 
 const fmt = new CliFormatter();
+const DEFAULT_CONTEXT_PADDING = 512;
+const CONTEXT_ENCLOSING_MODES = new Set(['exact', 'class', 'function']);
+const FUNCTION_CONTEXT_KINDS = new Set(['function-declaration', 'function-expression', 'arrow-function', 'class-method']);
+function isFunctionContextKind(kind) {
+  if (!kind) return false;
+  if (FUNCTION_CONTEXT_KINDS.has(kind)) return true;
+  if (typeof kind === 'string') {
+    return kind.includes('function') || kind.includes('method');
+  }
+  return false;
+}
 
-function computeHash(snippet) {
-  return crypto.createHash('sha256').update(snippet).digest('hex');
+function getEnclosingContexts(record) {
+  return Array.isArray(record?.enclosingContexts) ? record.enclosingContexts : [];
+}
+
+function findEnclosingContext(record, predicate) {
+  const contexts = getEnclosingContexts(record);
+  return contexts.find(predicate) || null;
+}
+
+function cloneEnclosingContexts(record) {
+  return getEnclosingContexts(record).map((ctx) => ({
+    kind: ctx.kind || null,
+    name: ctx.name || null,
+    span: ctx.span
+  }));
+}
+
+const HASH_CHARSETS = Object.freeze({
+  base64: /^[A-Za-z0-9+/]+$/,
+  hex: /^[0-9a-f]+$/i
+});
+
+function getConfiguredHashEncodings() {
+  const encodings = new Set([HASH_PRIMARY_ENCODING, HASH_FALLBACK_ENCODING]);
+  return Array.from(encodings).filter((encoding) => HASH_LENGTH_BY_ENCODING[encoding]);
+}
+
+function formatHashDescriptor(encodings) {
+  return encodings
+    .map((encoding) => {
+      const length = HASH_LENGTH_BY_ENCODING[encoding];
+      if (!length) return null;
+      const label = encoding === 'hex' ? 'base16' : encoding;
+      return `${label} (${length} chars)`;
+    })
+    .filter(Boolean)
+    .join(' or ');
+}
+
+function isValidExpectedHash(value, encodings) {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  return encodings.some((encoding) => {
+    const length = HASH_LENGTH_BY_ENCODING[encoding];
+    const pattern = HASH_CHARSETS[encoding];
+    return typeof length === 'number' && length > 0 && pattern?.test(value) && value.length === length;
+  });
 }
 
 function applyRenameToSnippet(snippet, record, newName) {
@@ -108,6 +172,54 @@ function buildFunctionRecords(functions) {
   }));
 }
 
+function buildVariableSelectorSet(variable) {
+  const selectors = new Set();
+  const add = (value) => {
+    if (value && typeof value === 'string') {
+      selectors.add(value);
+    }
+  };
+
+  add(variable.name);
+  if (variable.hash) {
+    add(variable.hash);
+    add(`hash:${variable.hash}`);
+  }
+  if (variable.pathSignature) {
+    add(variable.pathSignature);
+    add(`path:${variable.pathSignature}`);
+  }
+
+  if (Array.isArray(variable.scopeChain) && variable.scopeChain.length > 0) {
+    const scopeLabel = variable.scopeChain.join(' > ');
+    add(scopeLabel);
+    add(`${scopeLabel} > ${variable.name}`);
+    const owner = variable.scopeChain[0];
+    if (owner) {
+      add(`${owner}.${variable.name}`);
+      add(`${owner}#${variable.name}`);
+      add(`${owner} > ${variable.name}`);
+    }
+  }
+
+  return selectors;
+}
+
+function buildVariableRecords(variables) {
+  return variables.map((variable, index) => {
+    const scopeLabel = Array.isArray(variable.scopeChain) && variable.scopeChain.length > 0
+      ? variable.scopeChain.join(' > ')
+      : null;
+    const canonicalName = scopeLabel ? `${scopeLabel} > ${variable.name}` : variable.name;
+    return {
+      ...variable,
+      index,
+      canonicalName,
+      selectors: buildVariableSelectorSet(variable)
+    };
+  });
+}
+
 function findMatchesForSelector(functionRecords, rawSelector) {
   const selector = rawSelector.trim();
   const candidates = [selector];
@@ -156,7 +268,7 @@ function resolveMatches(functionRecords, selector, options, { operation }) {
     resolved = [resolved[idx]];
   }
 
-  const requireUnique = operation === 'locate' ? !options.allowMultiple : true;
+  const requireUnique = (operation === 'locate' || operation === 'context') ? !options.allowMultiple : true;
 
   if (requireUnique && resolved.length !== 1) {
     const details = resolved
@@ -168,17 +280,288 @@ function resolveMatches(functionRecords, selector, options, { operation }) {
   return requireUnique ? resolved.slice(0, 1) : resolved;
 }
 
+function resolveVariableMatches(variableRecords, selector, options, { operation }) {
+  if (!selector || !selector.trim()) {
+    throw new Error('Provide a non-empty selector.');
+  }
+
+  const matches = findMatchesForSelector(variableRecords, selector.trim());
+  if (matches.length === 0) {
+    throw new Error(`No variables matched selector "${selector}".`);
+  }
+
+  let resolved = matches;
+
+  if (options.selectPath) {
+    resolved = resolved.filter((record) => record.pathSignature === options.selectPath);
+    if (resolved.length === 0) {
+      throw new Error(`No variables matched selector "${selector}" with path "${options.selectPath}".`);
+    }
+  }
+
+  resolved = resolved.slice().sort((a, b) => a.index - b.index);
+
+  if (typeof options.selectIndex === 'number') {
+    const idx = options.selectIndex - 1;
+    if (idx < 0 || idx >= resolved.length) {
+      throw new Error(`Selection index ${options.selectIndex} is out of range (matched ${resolved.length}).`);
+    }
+    resolved = [resolved[idx]];
+  }
+
+  const requireUnique = operation === 'context-variable' ? !options.allowMultiple : true;
+
+  if (requireUnique && resolved.length !== 1) {
+    const details = resolved
+      .map((record) => `${record.canonicalName} (${record.kind}) @ ${record.line}:${record.column}`)
+      .join('\n  - ');
+    throw new Error(`Selector "${selector}" matched ${resolved.length} variables. Use --select or --select-path to disambiguate, or pass --allow-multiple.\n  - ${details}`);
+  }
+
+  return requireUnique ? resolved.slice(0, 1) : resolved;
+}
+
+function selectContextSpan(record, enclosingMode) {
+  if (enclosingMode === 'class') {
+    const match = findEnclosingContext(record, (ctx) => ctx.kind === 'class');
+    if (match && match.span) {
+      return { span: match.span, context: match };
+    }
+    if (record.enclosingKind === 'class' && record.enclosingSpan) {
+      return {
+        span: record.enclosingSpan,
+        context: {
+          kind: 'class',
+          name: record.enclosingName || null,
+          span: record.enclosingSpan
+        }
+      };
+    }
+  } else if (enclosingMode === 'function') {
+    const match = findEnclosingContext(record, (ctx) => isFunctionContextKind(ctx.kind));
+    if (match && match.span) {
+      return { span: match.span, context: match };
+    }
+    if (record.enclosingKind && isFunctionContextKind(record.enclosingKind) && record.enclosingSpan) {
+      return {
+        span: record.enclosingSpan,
+        context: {
+          kind: record.enclosingKind,
+          name: record.enclosingName || null,
+          span: record.enclosingSpan
+        }
+      };
+    }
+  }
+
+  return {
+    span: record.span,
+    context: null
+  };
+}
+
+function computeContextRange(span, before, after, sourceLength) {
+  const safeBefore = Math.max(0, before);
+  const safeAfter = Math.max(0, after);
+  const start = Math.max(0, span.start - safeBefore);
+  const end = Math.min(sourceLength, span.end + safeAfter);
+  return {
+    start,
+    end,
+    appliedBefore: span.start - start,
+    appliedAfter: end - span.end
+  };
+}
+
+function createContextEntry(record, source, before, after, enclosingMode) {
+  const { span: effectiveSpan, context: selectedContext } = selectContextSpan(record, enclosingMode);
+  const contextSpan = effectiveSpan || record.span;
+  const contextRange = computeContextRange(contextSpan, before, after, source.length);
+  const contextSnippet = source.slice(contextRange.start, contextRange.end);
+  const baseSnippet = extractCode(source, record.span);
+  const relativeBaseStart = Math.max(0, record.span.start - contextRange.start);
+  const relativeBaseEnd = Math.max(relativeBaseStart, relativeBaseStart + Math.max(0, record.span.end - record.span.start));
+  return {
+    record,
+    contextRange,
+    contextSnippet,
+    baseSnippet,
+    appliedBefore: contextRange.appliedBefore,
+    appliedAfter: contextRange.appliedAfter,
+    relativeBaseStart,
+    relativeBaseEnd,
+    contextHash: createDigest(contextSnippet),
+    effectiveSpan: contextSpan,
+    selectedEnclosingContext: selectedContext
+      ? {
+          kind: selectedContext.kind || null,
+          name: selectedContext.name || null,
+          span: selectedContext.span
+        }
+      : null
+  };
+}
+
+function buildContextEntries(records, source, options) {
+  const before = Number.isFinite(options.contextBefore) && options.contextBefore >= 0
+    ? Math.floor(options.contextBefore)
+    : DEFAULT_CONTEXT_PADDING;
+  const after = Number.isFinite(options.contextAfter) && options.contextAfter >= 0
+    ? Math.floor(options.contextAfter)
+    : DEFAULT_CONTEXT_PADDING;
+  const enclosingMode = options.contextEnclosing;
+
+  const entries = records.map((record) => createContextEntry(record, source, before, after, enclosingMode));
+
+  return {
+    before,
+    after,
+    entries
+  };
+}
+
+function buildContextPayload(type, selector, options, contextResult) {
+  const requestedBefore = Number.isFinite(options.contextBefore) && options.contextBefore >= 0
+    ? Math.floor(options.contextBefore)
+    : DEFAULT_CONTEXT_PADDING;
+  const requestedAfter = Number.isFinite(options.contextAfter) && options.contextAfter >= 0
+    ? Math.floor(options.contextAfter)
+    : DEFAULT_CONTEXT_PADDING;
+
+  const contexts = contextResult.entries.map((entry) => {
+    const { record } = entry;
+    return {
+      name: record.canonicalName || record.name,
+      displayName: record.canonicalName || record.name,
+      kind: record.kind,
+      exportKind: record.exportKind || null,
+      initializerType: record.initializerType || null,
+      line: record.line,
+      column: record.column,
+      span: record.span,
+      enclosing: record.enclosingKind
+        ? {
+            kind: record.enclosingKind,
+            name: record.enclosingName || null,
+            span: record.enclosingSpan
+          }
+        : null,
+      pathSignature: record.pathSignature,
+      scopeChain: record.scopeChain,
+      hash: record.hash,
+      contextRange: entry.contextRange,
+      appliedPadding: {
+        before: entry.appliedBefore,
+        after: entry.appliedAfter
+      },
+      offsets: {
+        baseStart: entry.relativeBaseStart,
+        baseEnd: entry.relativeBaseEnd
+      },
+      effectiveSpan: entry.effectiveSpan,
+      selectedEnclosingContext: entry.selectedEnclosingContext,
+      enclosingContexts: cloneEnclosingContexts(record),
+      snippets: {
+        context: entry.contextSnippet,
+        base: entry.baseSnippet
+      },
+      hashes: {
+        context: entry.contextHash,
+        base: record.hash
+      }
+    };
+  });
+
+  return {
+    file: options.filePath,
+    selector,
+    entity: type,
+    padding: {
+      requestedBefore,
+      requestedAfter,
+      appliedBefore: contextResult.before,
+      appliedAfter: contextResult.after
+    },
+    enclosingMode: options.contextEnclosing,
+    contexts
+  };
+}
+
+function renderContextResults(type, selector, options, contextResult) {
+  const payload = buildContextPayload(type, selector, options, contextResult);
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) {
+    return;
+  }
+
+  const headerLabel = type === 'function' ? 'Function Context' : 'Variable Context';
+  fmt.header(headerLabel);
+  fmt.section(`Selector: ${selector}`);
+  fmt.stat('Requested padding', `${payload.padding.requestedBefore} before / ${payload.padding.requestedAfter} after`);
+  fmt.stat('Applied padding', `${contextResult.before} before / ${contextResult.after} after`);
+  fmt.stat('Enclosing mode', options.contextEnclosing);
+
+  contextResult.entries.forEach((entry, index) => {
+    const { record } = entry;
+    const title = `${type === 'function' ? 'Function' : 'Variable'} ${index + 1}: ${record.canonicalName || record.name}`;
+    fmt.section(title);
+    fmt.stat('Kind', record.kind);
+    fmt.stat('Location', `${record.line}:${record.column}`);
+    if (record.exportKind) fmt.stat('Export', record.exportKind);
+    if (type === 'variable' && record.initializerType) {
+      fmt.stat('Initializer', record.initializerType);
+    }
+    fmt.stat('Path', record.pathSignature);
+    if (record.scopeChain && record.scopeChain.length > 0) {
+      fmt.stat('Scope', record.scopeChain.join(' > '));
+    }
+    const availableContexts = getEnclosingContexts(record);
+    if (availableContexts.length > 0) {
+      const contextSummary = availableContexts
+        .map((ctx) => {
+          const contextName = ctx.name ? ` ${ctx.name}` : '';
+          return `${ctx.kind || 'unknown'}${contextName}`;
+        })
+        .join(' | ');
+      fmt.stat('Enclosing contexts', contextSummary);
+    } else if (record.enclosingKind === 'class') {
+      fmt.stat('Enclosing class', record.enclosingName || '(anonymous class)');
+    }
+    if (entry.selectedEnclosingContext) {
+      const selected = entry.selectedEnclosingContext;
+      const selectedName = selected.name ? ` ${selected.name}` : '';
+      fmt.stat('Expanded to', `${selected.kind || 'unknown'}${selectedName}`);
+    }
+    fmt.stat('Applied padding', `${entry.appliedBefore} leading / ${entry.appliedAfter} trailing`);
+    fmt.section('Context Snippet');
+    process.stdout.write(`${entry.contextSnippet}\n`);
+    fmt.section('Base Snippet');
+    process.stdout.write(`${entry.baseSnippet}\n`);
+  });
+
+  fmt.stat('Matches', contextResult.entries.length, 'number');
+  fmt.footer();
+}
+
 function renderGuardrailSummary(guard, options) {
   if (options.json || options.quiet) {
     return;
   }
 
   fmt.section('Guardrails');
+  const spanDetails = guard.span.expectedStart !== null && guard.span.expectedEnd !== null
+    ? `${guard.span.start}-${guard.span.end} (expected ${guard.span.expectedStart}-${guard.span.expectedEnd})`
+    : `${guard.span.start}-${guard.span.end}`;
   fmt.table([
     {
       check: 'Span',
       status: guard.span.status.toUpperCase(),
-      details: `${guard.span.start}-${guard.span.end}`
+      details: spanDetails
     },
     {
       check: 'Hash',
@@ -209,7 +592,7 @@ function renderGuardrailSummary(guard, options) {
   });
 }
 
-function buildPlanPayload(operation, options, selector, records, expectedHashes = []) {
+function buildPlanPayload(operation, options, selector, records, expectedHashes = [], expectedSpans = []) {
   return {
     version: 1,
     generatedAt: new Date().toISOString(),
@@ -236,17 +619,18 @@ function buildPlanPayload(operation, options, selector, records, expectedHashes 
       line: record.line,
       column: record.column,
       hash: record.hash,
-      expectedHash: expectedHashes[index] || record.hash
+      expectedHash: expectedHashes[index] || record.hash,
+      expectedSpan: expectedSpans[index] || null
     }))
   };
 }
 
-function maybeEmitPlan(operation, options, selector, records, expectedHashes = []) {
+function maybeEmitPlan(operation, options, selector, records, expectedHashes = [], expectedSpans = []) {
   if (!options.emitPlanPath || !records || records.length === 0) {
     return null;
   }
 
-  const plan = buildPlanPayload(operation, options, selector, records, expectedHashes);
+  const plan = buildPlanPayload(operation, options, selector, records, expectedHashes, expectedSpans);
   writeOutputFile(options.emitPlanPath, `${JSON.stringify(plan, null, 2)}\n`);
   return plan;
 }
@@ -257,27 +641,36 @@ function parseCliArgs(argv) {
     'Inspect and edit JavaScript functions using SWC AST tooling.'
   );
 
+  const hashDescriptor = formatHashDescriptor(getConfiguredHashEncodings()) || 'base64 (8 chars)';
+
   parser
     .add('--file <path>', 'JavaScript file to inspect or modify')
-    .add('--list-functions', 'List detected functions', false, 'boolean')
-    .add('--extract <selector>', 'Extract the function matching the selector')
-    .add('--replace <selector>', 'Replace the function matching the selector')
-    .add('--locate <selector>', 'Locate functions matching the provided selector')
-    .add('--with <path>', 'Replacement source snippet for --replace')
+    .add('--list-functions', 'List detected functions with scope, hash, and byte-length metadata', false, 'boolean')
+    .add('--list-variables', 'List variable bindings with scope, initializer, and hash metadata', false, 'boolean')
+    .add('--context-function <selector>', 'Show surrounding source for the function matching the selector (±512 chars by default)')
+    .add('--context-variable <selector>', 'Show surrounding source for the variable binding matching the selector (±512 chars by default)')
+    .add('--context-before <chars>', 'Override leading context character count (default 512)', undefined, 'number')
+    .add('--context-after <chars>', 'Override trailing context character count (default 512)', undefined, 'number')
+    .add('--context-enclosing <mode>', 'Expand context to enclosing structures (modes: exact, class, function). Default: exact.', 'exact')
+    .add('--extract <selector>', 'Extract the function matching the selector (safe, read-only)')
+    .add('--replace <selector>', 'Replace the function matching the selector (requires --with or --rename)')
+    .add('--locate <selector>', 'Show guardrail metadata for functions matching the selector')
+    .add('--with <path>', 'Replacement source snippet used by --replace')
     .add('--replace-range <start:end>', 'Replace only the relative character range within the located function (0-based, end-exclusive)')
-    .add('--rename <identifier>', 'Rename the targeted function identifier instead of supplying a replacement snippet')
+    .add('--rename <identifier>', 'Rename the targeted function identifier when the declaration exposes a name')
     .add('--output <path>', 'Write extracted function to this file instead of stdout')
-    .add('--emit-plan <path>', 'Write resolved guard metadata to a JSON plan file')
-    .add('--emit-diff', 'Show before/after snippets for replacements', false, 'boolean')
+    .add('--emit-plan <path>', 'Write resolved guard metadata (span, hash, path) to a JSON plan file')
+    .add('--emit-diff', 'Show before/after snippets for replacements (dry-run friendly)', false, 'boolean')
     .add('--fix', 'Apply changes to the target file (default is dry-run)', false, 'boolean')
-    .add('--expect-hash <sha256>', 'Require the target to match the provided hash before replacing')
-    .add('--force', 'Bypass guardrail validation (hash/path checks)', false, 'boolean')
-    .add('--json', 'Emit JSON output instead of formatted text', false, 'boolean')
+    .add('--expect-hash <hash>', `Require the target to match the configured guard hash before replacing (${hashDescriptor}).`)
+    .add('--expect-span <start:end>', 'Require the located span offsets to match before replacing (0-based, end-exclusive)')
+    .add('--force', 'Bypass guardrail validation (hash/path checks). Use sparingly.', false, 'boolean')
+    .add('--json', 'Emit structured JSON output instead of formatted text', false, 'boolean')
     .add('--quiet', 'Suppress formatted output (implies --json)', false, 'boolean')
-    .add('--benchmark', 'Measure parse time for the input file', false, 'boolean')
-    .add('--select <index>', 'Select the nth match when a selector resolves to multiple results')
-    .add('--select-path <signature>', 'Force selection to the function with the given path signature')
-    .add('--allow-multiple', 'Allow selectors to resolve to multiple matches (skip uniqueness guard)', false, 'boolean');
+    .add('--benchmark', 'Measure parse time for the input file (diagnostic)', false, 'boolean')
+    .add('--select <index>', 'Select the nth match when a selector resolves to multiple results (1-based)')
+    .add('--select-path <signature>', 'Force selection to the node with the given path signature')
+    .add('--allow-multiple', 'Allow selectors to resolve to multiple matches (locate/context/extract)', false, 'boolean');
 
   return parser.parse(argv);
 }
@@ -294,15 +687,18 @@ function normalizeOptions(raw) {
 
   const operations = [
     Boolean(resolved.listFunctions),
+    Boolean(resolved.listVariables),
+    Boolean(resolved.contextFunction),
+    Boolean(resolved.contextVariable),
     Boolean(resolved.extract),
     Boolean(resolved.replace),
     Boolean(resolved.locate)
   ].filter(Boolean);
   if (operations.length === 0) {
-    throw new Error('Provide one of --list-functions, --extract <selector>, --replace <selector>, or --locate <selector>.');
+    throw new Error('Provide one of --list-functions, --list-variables, --context-function <selector>, --context-variable <selector>, --extract <selector>, --replace <selector>, or --locate <selector>.');
   }
   if (operations.length > 1) {
-    throw new Error('Only one operation may be specified at a time. Choose one of --list-functions, --extract, --replace, or --locate.');
+    throw new Error('Only one operation may be specified at a time. Choose one of --list-functions, --list-variables, --context-function, --context-variable, --extract, --replace, or --locate.');
   }
 
   const json = Boolean(resolved.json || resolved.quiet);
@@ -313,8 +709,28 @@ function normalizeOptions(raw) {
   const force = Boolean(resolved.force);
   const allowMultiple = Boolean(resolved.allowMultiple);
   const expectHash = resolved.expectHash ? String(resolved.expectHash).trim() : null;
-  if (expectHash && !/^[0-9a-f]{64}$/i.test(expectHash)) {
-    throw new Error('--expect-hash must be a 64-character hex string (sha256).');
+  const allowedHashEncodings = getConfiguredHashEncodings();
+  if (expectHash && !isValidExpectedHash(expectHash, allowedHashEncodings)) {
+    const descriptor = formatHashDescriptor(allowedHashEncodings);
+    throw new Error(`--expect-hash must match the configured guard hash (${descriptor}).`);
+  }
+
+  let expectSpan = null;
+  if (resolved.expectSpan !== undefined && resolved.expectSpan !== null) {
+    const spanValue = String(resolved.expectSpan).trim();
+    if (!spanValue) {
+      throw new Error('--expect-span requires a non-empty value in the form start:end.');
+    }
+    const parts = spanValue.split(':');
+    if (parts.length !== 2) {
+      throw new Error('--expect-span must be supplied as start:end (for example, 120:264).');
+    }
+    const start = Number(parts[0]);
+    const end = Number(parts[1]);
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) {
+      throw new Error('--expect-span values must be non-negative integers where start < end.');
+    }
+    expectSpan = { start, end };
   }
 
   let selectIndex = null;
@@ -327,6 +743,45 @@ function normalizeOptions(raw) {
   }
 
   const selectPath = resolved.selectPath ? String(resolved.selectPath).trim() : null;
+
+  let contextFunctionSelector = null;
+  if (resolved.contextFunction !== undefined && resolved.contextFunction !== null) {
+    contextFunctionSelector = String(resolved.contextFunction).trim();
+    if (!contextFunctionSelector) {
+      throw new Error('Provide a non-empty selector for --context-function.');
+    }
+  }
+
+  let contextVariableSelector = null;
+  if (resolved.contextVariable !== undefined && resolved.contextVariable !== null) {
+    contextVariableSelector = String(resolved.contextVariable).trim();
+    if (!contextVariableSelector) {
+      throw new Error('Provide a non-empty selector for --context-variable.');
+    }
+  }
+
+  let contextBefore = null;
+  if (resolved.contextBefore !== undefined && resolved.contextBefore !== null) {
+    contextBefore = Number(resolved.contextBefore);
+    if (!Number.isFinite(contextBefore) || contextBefore < 0) {
+      throw new Error('--context-before must be a non-negative integer.');
+    }
+  }
+
+  let contextAfter = null;
+  if (resolved.contextAfter !== undefined && resolved.contextAfter !== null) {
+    contextAfter = Number(resolved.contextAfter);
+    if (!Number.isFinite(contextAfter) || contextAfter < 0) {
+      throw new Error('--context-after must be a non-negative integer.');
+    }
+  }
+
+  const contextEnclosingRaw = resolved.contextEnclosing
+    ? String(resolved.contextEnclosing).trim().toLowerCase()
+    : 'exact';
+  if (!CONTEXT_ENCLOSING_MODES.has(contextEnclosingRaw)) {
+    throw new Error('--context-enclosing must be one of: exact, class, function.');
+  }
 
   let extractSelector = null;
   if (resolved.extract) {
@@ -387,6 +842,9 @@ function normalizeOptions(raw) {
         : path.resolve(process.cwd(), resolved.with);
     }
   }
+  if (expectSpan && !replaceSelector) {
+    throw new Error('--expect-span can only be used alongside --replace.');
+  }
 
   let locateSelector = null;
   if (resolved.locate) {
@@ -417,6 +875,9 @@ function normalizeOptions(raw) {
   return {
     filePath,
     list: Boolean(resolved.listFunctions),
+    listVariables: Boolean(resolved.listVariables),
+    contextFunctionSelector,
+    contextVariableSelector,
     extractSelector,
     replaceSelector,
     locateSelector,
@@ -430,11 +891,15 @@ function normalizeOptions(raw) {
     fix,
     force,
     expectHash,
+    expectSpan,
     selectIndex,
     selectPath,
     allowMultiple,
     replaceRange,
-    renameTo
+    renameTo,
+    contextBefore,
+    contextAfter,
+    contextEnclosing: contextEnclosingRaw
   };
 }
 
@@ -467,18 +932,22 @@ function listFunctions({ filePath, json, quiet }, source, functions) {
   const payload = {
     file: filePath,
     totalFunctions: functions.length,
-    functions: functions.map((fn) => ({
-      name: fn.name,
-      canonicalName: fn.canonicalName,
-      kind: fn.kind,
-      exportKind: fn.exportKind,
-      replaceable: fn.replaceable,
-      line: fn.line,
-      column: fn.column,
-      scopeChain: fn.scopeChain,
-      pathSignature: fn.pathSignature,
-      hash: fn.hash
-    }))
+    functions: functions.map((fn) => {
+      const byteLength = Math.max(0, (fn.span?.end ?? 0) - (fn.span?.start ?? 0));
+      return {
+        name: fn.name,
+        canonicalName: fn.canonicalName,
+        kind: fn.kind,
+        exportKind: fn.exportKind,
+        replaceable: fn.replaceable,
+        line: fn.line,
+        column: fn.column,
+        scopeChain: fn.scopeChain,
+        pathSignature: fn.pathSignature,
+        hash: fn.hash,
+        byteLength
+      };
+    })
   };
 
   if (json) {
@@ -500,11 +969,62 @@ function listFunctions({ filePath, json, quiet }, source, functions) {
       export: fn.exportKind || '-',
       line: fn.line,
       column: fn.column,
+      bytes: Math.max(0, (fn.span?.end ?? 0) - (fn.span?.start ?? 0)),
       replaceable: fn.replaceable ? 'yes' : 'no'
     })), {
-      columns: ['name', 'kind', 'export', 'line', 'column', 'replaceable']
+      columns: ['name', 'kind', 'export', 'line', 'column', 'bytes', 'replaceable']
     });
     fmt.stat('Total functions', functions.length, 'number');
+    fmt.footer();
+  }
+}
+
+function listVariables({ filePath, json, quiet }, source, variables) {
+  const payload = {
+    file: filePath,
+    totalVariables: variables.length,
+    variables: variables.map((variable) => ({
+      name: variable.name,
+      kind: variable.kind,
+      exportKind: variable.exportKind,
+      line: variable.line,
+      column: variable.column,
+      scopeChain: variable.scopeChain,
+      pathSignature: variable.pathSignature,
+      initializerType: variable.initializerType,
+      hash: variable.hash,
+      byteLength: variable.byteLength
+    }))
+  };
+
+  if (json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (!quiet) {
+    fmt.header('Variable Inventory');
+    if (variables.length === 0) {
+      fmt.warn('No variables detected in the supplied file.');
+      return;
+    }
+
+    fmt.section('Detected Variables');
+    fmt.table(variables.map((variable) => ({
+      name: variable.name,
+      kind: variable.kind,
+      export: variable.exportKind || '-',
+      line: variable.line,
+      column: variable.column,
+      scope: toReadableScope(variable.scopeChain),
+      init: variable.initializerType || '-',
+      bytes: typeof variable.byteLength === 'number'
+        ? variable.byteLength
+        : Math.max(0, (variable.span?.end ?? 0) - (variable.span?.start ?? 0))
+    })), {
+      columns: ['name', 'kind', 'export', 'line', 'column', 'scope', 'init', 'bytes']
+    });
+    fmt.stat('Total variables', variables.length, 'number');
     fmt.footer();
   }
 }
@@ -613,21 +1133,51 @@ function extractFunction(options, source, record, selector) {
   }
 }
 
+function showFunctionContext(options, source, functionRecords, selector) {
+  const resolved = resolveMatches(functionRecords, selector, options, { operation: 'context' });
+  const contextResult = buildContextEntries(resolved, source, options);
+  renderContextResults('function', selector, options, contextResult);
+}
+
+function showVariableContext(options, source, variableRecords, selector) {
+  const resolved = resolveVariableMatches(variableRecords, selector, options, { operation: 'context-variable' });
+  const contextResult = buildContextEntries(resolved, source, options);
+  renderContextResults('variable', selector, options, contextResult);
+}
+
 function replaceFunction(options, source, record, replacementPath, selector) {
   if (!record.replaceable) {
     throw new Error(`Function "${record.canonicalName || record.name}" is not currently replaceable (only standard function declarations and default exports are supported).`);
   }
 
   const snippetBefore = extractCode(source, record.span);
-  const beforeHash = computeHash(snippetBefore);
+  const beforeHash = createDigest(snippetBefore);
   const expectedHash = options.expectHash || record.hash;
   const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
 
+  const expectedSpan = options.expectSpan;
+  const actualStart = record.span.start;
+  const actualEnd = record.span.end;
+  let spanStatus = 'ok';
+  if (expectedSpan) {
+    const matches = expectedSpan.start === actualStart && expectedSpan.end === actualEnd;
+    if (!matches) {
+      if (options.force) {
+        spanStatus = 'bypass';
+      } else {
+        spanStatus = 'mismatch';
+        throw new Error(`Span mismatch for "${record.canonicalName || record.name}". Expected ${expectedSpan.start}:${expectedSpan.end} but file contains ${actualStart}:${actualEnd}. Re-run --locate and retry or pass --force to override.`);
+      }
+    }
+  }
+
   const guard = {
     span: {
-      status: 'ok',
-      start: record.span.start,
-      end: record.span.end
+      status: spanStatus,
+      start: actualStart,
+      end: actualEnd,
+      expectedStart: expectedSpan ? expectedSpan.start : null,
+      expectedEnd: expectedSpan ? expectedSpan.end : null
     },
     hash: {
       status: hashStatus,
@@ -696,14 +1246,14 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   }
 
   const snippetAfter = postRecord ? extractCode(newSource, postRecord.span) : workingSnippet;
-  const afterHash = postRecord ? postRecord.hash : computeHash(snippetAfter);
+  const afterHash = postRecord ? postRecord.hash : createDigest(snippetAfter);
   guard.result = {
     status: afterHash === beforeHash ? 'unchanged' : 'changed',
     before: beforeHash,
     after: afterHash
   };
 
-  const plan = maybeEmitPlan('replace', options, selector, [record], [expectedHash]);
+  const plan = maybeEmitPlan('replace', options, selector, [record], [expectedHash], [expectedSpan || null]);
 
   const payload = {
     file: options.filePath,
@@ -786,7 +1336,9 @@ function main(argv) {
       : { ast: parseModule(source, options.filePath), durationMs: null };
 
     const { functions } = collectFunctions(ast, source);
+    const { variables } = collectVariables(ast, source);
     const functionRecords = buildFunctionRecords(functions);
+    const variableRecords = buildVariableRecords(variables);
 
     if (options.benchmark && !options.json && !options.quiet) {
       fmt.info(`Parse time: ${durationMs.toFixed(2)} ms`);
@@ -794,6 +1346,12 @@ function main(argv) {
 
     if (options.list) {
       listFunctions(options, source, functions);
+    } else if (options.listVariables) {
+      listVariables(options, source, variables);
+    } else if (options.contextFunctionSelector) {
+      showFunctionContext(options, source, functionRecords, options.contextFunctionSelector);
+    } else if (options.contextVariableSelector) {
+      showVariableContext(options, source, variableRecords, options.contextVariableSelector);
     } else if (options.locateSelector) {
       locateFunctions(options, functionRecords, options.locateSelector);
     } else if (options.extractSelector) {

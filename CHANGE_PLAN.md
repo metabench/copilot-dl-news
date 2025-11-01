@@ -17,6 +17,7 @@
 5. **Validation Harness** — Add focused tests/fixtures under `tests/tools/__tests__/` to verify extraction/replacement on representative large-file samples and ensure dry-run leaves files unchanged.
 6. **Performance Benchmarks** — Measure SWC parse + transform time on a large file (>1k LOC) using CLI `--benchmark` flag; record results in docs for future comparison.
 7. **Operator UX & Safety** — Provide diff preview (`--emit-diff`) support and clear messaging about dry-run vs. `--fix`; document fallback guidance if SWC compilation fails on a machine.
+8. **Context Retrieval Workflow** — Introduce commands that surface surrounding source for functions/variables with configurable padding so agents can inspect targets without leaving the CLI.
 
 ---
 
@@ -54,6 +55,37 @@
 3. **Selection Flags**
 	- Add `--select <index>` to pick nth match when duplicates remain (index order defined by source span).
 	- Offer `--allow-multiple` (default off) to opt out of the uniqueness guard when intentionally targeting multiple matches.
+4. **Expose Function Metrics**
+	- Extend `--list-functions` payloads to include byte lengths (span width) and surface path signatures where helpful for rapid inspection workflows.
+5. **Variable Inventory Mode**
+	- Add `--list-variables` CLI option and supporting metadata collectors so operators can enumerate bindings (kind, scope, initializer) with byte lengths and path signatures for auditing large files.
+6. **Context Retrieval Mode** *(Day 3.5)*
+	- Implement CLI commands that retrieve surrounding source for functions or variables (default ±512 characters) leveraging existing selector resolution.
+	- Allow overrides for leading/trailing context (e.g., `--context-before`, `--context-after`) so agents can widen focus when needed.
+	- Emit JSON payloads that include span metadata, path signatures, and guard hashes to keep downstream validations intact.
+	- Provide options to expand to enclosing structures (class bodies, parent functions) for higher-level inspection.
+	- Harden substring math against multi-byte characters (emoji, astral code points) to avoid drift between SWC spans and JavaScript slicing.
+	- Update `--help` output so the new context commands are discoverable, including defaults, selector guidance, and safety notes.
+
+#### Active Implementation Tasks — Context Retrieval & Help Refresh
+1. **Selector Infrastructure**
+	- Extend function selectors (reused from locate) to context operations and build a parallel selector set for variables (name, scope chain, `path:`, `hash:` aliases).
+2. **CLI Option Surface**
+	- Add mutually exclusive options: `--context-function <selector>` and `--context-variable <selector>` plus optional `--context-before`, `--context-after`, and `--context-enclosing <mode>` (e.g., `exact`, `function`, `class`).
+3. **Span-Safe Extraction**
+	- Implement helpers that derive padded spans using code-unit math and guard against bounds; reuse `extractCode` for core span while slicing surrounding context without corrupting surrogate pairs.
+4. **Context Rendering**
+	- Provide formatted output (sections, code fences) and JSON payloads enumerating the base span, requested padding, and resulting hash so agents can re-validate.
+5. **Enclosing Structure Expansion**
+	- When `--context-enclosing class` or `--context-enclosing function` is requested, widen the span to include the corresponding parent structure; ensure metadata reflects the enlarged range.
+6. **Help & Docs Refresh**
+	- Update `parseCliArgs` descriptions so `--help` explicitly documents context commands, defaults (±512), and selector hints; sync documentation bullets under “Docs Impact.”
+7. **Fixture & Test Coverage**
+	- Enhance `tests/fixtures/tools/js-edit-sample.js` with emoji-containing declarations and nested classes.
+	- Add Jest specs covering context retrieval for functions/variables, padding overrides, multi-match disambiguation, and multi-byte safety.
+8. **CommonJS Compatibility**
+	- Ensure collectors and selectors recognize `module.exports` / `exports.*` assignment patterns alongside ESM declarations so CLI commands work across mixed module styles (require/exports).
+	- Verify canonical names and selector aliases include dot-form (`module.exports.handler`, `exports.helper`) and add focused tests/fixtures for CommonJS forms.
 
 ### Phase 4 — Guardrails & Verification (Day 4)
 1. **Dual Verification**
@@ -128,14 +160,40 @@
 - Add a new HOWTO section (likely in `docs/tools/` or an existing CLI reference) describing usage, safety flags, and known limitations.
 - If guidelines change, adjust `.github/instructions/GitHub Copilot.instructions.md` accordingly.
 - Detailed execution steps now tracked in `docs/JS_EDIT_ENHANCEMENTS_PLAN.md`; keep both documents in sync as phases progress.
+- Document context retrieval usage (function vs. variable selectors, padding overrides, full-structure expansion) so agents can adopt the workflow without guesswork.
 
 ## Focused Test Plan
 - Unit tests hitting representative JS fixtures (default exports, named exports, nested functions) verifying extraction/replacement accuracy and dry-run behavior.
 - Smoke test that a no-op run leaves files untouched.
 - CLI integration tests covering error cases (missing function, parse failure, write without `--fix`).
 - Optional benchmark script comparing parse times across parser choices (document results, not necessarily automated).
+- Add a CLI test ensuring `--list-functions --json` returns byte length metadata for each record.
+- Add a CLI test for `--list-variables --json` confirming bindings include scope, binding kind, and byte length metadata.
+- Add CLI tests for the new context commands, covering default ±512 padding, custom overrides, multi-byte fixtures, and class-level expansion cases.
 - ✅ Ran `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1` to cover plan emission, range replacements, and rename flows.
 
 ## Rollback Plan
 - Tool is additive; reverting entails removing the new CLI, dependencies, and docs.
 - Ensure package-lock.json updates can be undone via `git restore` if parser selection proves problematic.
+- Session Notes — 2025-11-01
+	- Added context retrieval commands (function & variable) with configurable padding, class/function expansion, and JSON payloads.
+	- Refreshed CLI help text to document new operations, selector guidance, and guardrail options.
+	- Expanded fixtures with emoji/class samples and added Jest coverage for context workflows.
+	- Extended SWC traversal to capture full enclosing context stacks (export, class, function) and wired `--context-enclosing function` to the nearest callable parent.
+	- Context JSON now reports `enclosingContexts` plus `selectedEnclosingContext`; CLI output surfaces both the stack and the expanded target.
+	- Added integration coverage for function-mode expansion (`countdown`) and variable context expansion (`sequence`) alongside existing emoji/class expectations.
+	- Tests: `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
+	- Follow-ups: explore batch context exports if operators request them.
+	- Next: Extend collectors/selectors to cover CommonJS (`module.exports`, `exports.*`) so require-style modules get parity with ESM features.
+	- Session Notes — 2025-11-02
+		- Performing CommonJS support pass for collectors/selectors: add assignment capture, canonical naming, and scope handling for `module.exports` / `exports.*` chains.
+		- Plan to expose new selector aliases (e.g., `module.exports.handler`, `exports.helper`) and ensure CLI lookup accepts them.
+		- Add fixtures with `require`-style exports plus focused Jest coverage for locate/context flows.
+		- Update docs (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`) once parity verified.
+		- Tests to run: targeted Jest suite (`npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`).
+		- ✅ Scope chains now capture `module.exports`/`exports.*` assignments; CLI selectors resolve new canonical names and context flows cover CommonJS fixtures.
+		- ✅ Added CommonJS blocks to sample fixture, expanded Jest integration coverage, and refreshed docs with selector guidance.
+		- ✅ Variable collector + selectors now surface `module.exports = {...}` and `exports.value = 42` style assignments in `--list-variables`, backed by fixtures, tests, and doc updates.
+		- ✅ Guard hashes now use const-driven Base64 (8 char) digests with a hex fallback switch; tests/docs updated so shorter tokens remain compatible with path guardrails.
+		- ✅ Added span guard input (`--expect-span start:end`) so replacements can assert exact offsets alongside hashes; guard summaries and plan payloads now record the expected span and Jest coverage exercises OK/mismatch/bypass flows.
+		- 🔄 Next: extend plan emission tests for `--allow-multiple` workflows and evaluate whether guard summaries should highlight multi-target spans when batching is enabled.

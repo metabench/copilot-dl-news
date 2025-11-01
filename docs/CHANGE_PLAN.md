@@ -8,6 +8,12 @@
 
 ## 🔄 Active Initiative (Oct 31, 2025): URL Normalization Cleanup — `article_places`
 
+### Branch Update — 2025-11-02 (`chore/commonjs-context-support`)
+- Extended `js-edit` SWC collectors to recognize CommonJS assignments (`module.exports`, `exports.*`) with canonical selectors and context metadata.
+- Added CommonJS cases to `tests/fixtures/tools/js-edit-sample.js`, expanded integration tests for locate/context flows, and refreshed selector documentation.
+- Tests: `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
+- ✅ Variable collector now reports CommonJS assignments (`module.exports`, `exports.value`) in `--list-variables`; fixtures, docs, and Jest coverage updated accordingly.
+
 ### Goal / Non-Goals
 - **Goal:** Permanently remove the legacy `article_places.article_url` TEXT column, rebuild supporting indexes on `article_url_id`, and ensure all tooling/tests operate solely on normalized URL references.
 - **Non-Goals:** Broader rewrite of deprecated gazetteer UI, migration of unrelated tables, or decommissioning legacy normalization scripts beyond what this column removal requires.
@@ -604,6 +610,15 @@ for (const [type, items] of Object.entries(byType)) {
 - **docs/refactored/cli-refactoring-stages.md** - Complete case study of successful large-scale refactoring
 - **AGENTS.md** - Project documentation with development patterns
 - **tools/** - Directory for custom analysis tools
+
+---
+
+## Session Summary — 2025-11-01
+
+- Documented the `--expect-span` guard option in `tools/dev/README.md` and refreshed the `docs/CLI_REFACTORING_QUICK_START.md` workflow so hash/span replays are first-class.
+- Marked span guard tasks complete in `CHANGE_PLAN.md`/`docs/JS_EDIT_ENHANCEMENTS_PLAN.md` and recorded follow-up to extend plan emission coverage when batching edits.
+- Tests: `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
+- Follow-ups: Broaden guard plan coverage for `--allow-multiple` scenarios and highlight multi-target span reporting where useful.
 - **docs/** - Architecture and process documentation
 
 ## Goal / Non-Goals

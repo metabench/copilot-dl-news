@@ -246,8 +246,11 @@ fmt.table([
 `js-edit` (see `tools/dev/js-edit.js`) demonstrates how to combine rich argument parsing with defensive output. The CLI:
 
 - Accepts selectors (`alpha`, `Class#method`, `path:…`, `hash:…`) normalized through `CliArgumentParser` options.
+- Resolves both ES module exports and CommonJS assignments (`module.exports`, `module.exports.handler`, `exports.worker`) using the same selector syntax, so mixed modules require no extra flags.
+- Variable inventory mode lists CommonJS bindings as well (`module.exports = …`, `exports.value = …`) with hashes and scope metadata, making the exported surface inspectable without hand-parsing assignments.
 - Emits locate tables and JSON payloads via `CliFormatter`, making automation straightforward.
-- Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block.
+- Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block, and optional `--expect-hash`/`--expect-span` inputs let you replay the exact metadata captured during a prior locate run.
+- Hashes shown in locate/context/plan payloads are base64 digests trimmed to eight characters by default so agents get concise guard tokens; switch the constants in `tools/dev/lib/swcAst.js` to fall back to a longer base16 form if a workflow needs it.
 
 ### Selector + Guardrail Flow
 
@@ -255,18 +258,25 @@ fmt.table([
 # 1. Capture selectors + hashes (optionally persist a guard plan)
 node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render" --json --emit-plan tmp/render.plan.json > locate.json
 
-# 2. Dry-run replacement with diff preview, guard hash, and plan emission
-node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-step-1> --emit-diff --emit-plan tmp/render.plan.json --json
+# 2. Dry-run replacement with diff preview, guard hash/span, and plan emission
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-step-1> --expect-span <start:end-from-step-1> --emit-diff --emit-plan tmp/render.plan.json --json
 
 # 3. Apply once guard summary reports all checks OK (reuse the plan for auditing)
-node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-step-1> --emit-diff --emit-plan tmp/render.plan.json --fix
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-step-1> --expect-span <start:end-from-step-1> --emit-diff --emit-plan tmp/render.plan.json --fix
 ```
 
-If a hash or path mismatch occurs, the CLI exits non-zero with actionable messaging (e.g., “Hash mismatch… Re-run --locate and retry”). `--force` is available for intentional bypasses, but pair it with `--expect-hash` so the guard summary clearly records that the expected hash was intentionally skipped.
+If a hash or path mismatch occurs, the CLI exits non-zero with actionable messaging (e.g., “Hash mismatch… Re-run --locate and retry”). `--force` is available for intentional bypasses, but pair it with `--expect-hash`/`--expect-span` so the guard summary clearly records which expectations were intentionally skipped.
 
-Guard plans mirror the JSON payload’s `plan` block and include the selector, expected hash, span offsets, and path signature. They provide a hand-off artifact for other operators or future automation runs to verify the same guardrails before mutating a file.
+Guard plans mirror the JSON payload’s `plan` block and include the selector, expected hash, expected span offsets, and path signature. They provide a hand-off artifact for other operators or future automation runs to verify the same guardrails before mutating a file.
 
 **Targeted edits:** Add `--replace-range start:end` (0-based, end-exclusive, relative to the located function) when you only need to swap a specific slice of the function body using `--with <file>`. For identifier-only tweaks, use `--rename <identifier>` with `--replace <selector>`—no snippet required, and the helper updates just the declaration name while guardrails ensure the rest of the function remains untouched.
+
+### Context Inspection
+
+- `--context-function <selector>` / `--context-variable <selector>` emit padded snippets (default ±512 characters) with hashes and path signatures so you can review targets without opening an editor.
+- `--context-before <n>` / `--context-after <n>` override padding while preserving multi-byte characters; zero padding keeps the output tight when you only care about enclosing structures.
+- `--context-enclosing <mode>` widens the window: `exact` sticks to the node span, `class` wraps the nearest class, and **`function` wraps the closest enclosing function or class method**, making nested helpers easy to audit. JSON payloads expose both the entire enclosing stack and the specific context used (`selectedEnclosingContext`).
+- Combine context inspection with guard plans to capture review windows, hashes, and spans before attempting replacements.
 
 ---
 

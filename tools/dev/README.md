@@ -26,7 +26,25 @@ Selectors accept optional disambiguation flags:
 - `--select-path <signature>` — require an exact path signature.
 - `--allow-multiple` — skip uniqueness enforcement for `--locate` when inspecting batches.
 
+### Selector Coverage
+
+- Canonical names cover both ESM (`export function alpha`) and CommonJS layouts such as `module.exports = function legacyEntry()` or `exports.worker = () => {}`.
+- The CLI accepts selectors like `module.exports`, `module.exports.handler`, and `exports.utility`, and it resolves aliases (`hash:` / `path:`) for each record.
+- CommonJS assignments populate scope chains so mixed modules (ESM + require) expose consistent selectors and context retrieval works without additional flags.
+- `--list-variables` inventories CommonJS bindings as well, so exports like `module.exports = { ... }` or `exports.value = 42` appear alongside local declarations with hashes, scope chains, and initializer types.
+
+### Context Retrieval
+
+- `--context-function <selector>` and `--context-variable <selector>` return padded source excerpts with hash metadata so you can review surrounding code before editing.
+- `--context-before <n>` and `--context-after <n>` override the default ±512 character padding; values are clamped at file boundaries and handle multi-byte characters safely.
+- `--context-enclosing <mode>` widens the snippet to structural parents: `exact` (default) limits to the record span, `class` wraps the nearest class, and the new `function` mode wraps the closest containing function or class method. When expanded, JSON output includes `selectedEnclosingContext` plus the full `enclosingContexts` stack for downstream tooling.
+- Context JSON payloads surface both the base snippet hash and expanded context hash, enabling guardrails to confirm the review window matches expectations before applying changes.
+
 ### Guardrail Workflow
+
+- `--expect-hash <hash>` replays the content digest captured during `--locate`/`--emit-plan`; the CLI refuses to proceed if the live source hash differs (unless `--force` is set, in which case the guard marks the hash check as bypassed).
+- `--expect-span start:end` optionally replays the byte offsets (0-based, end-exclusive) recorded earlier. When present, the guard verifies the located span still matches those offsets and records the expectation in both the summary table and JSON payloads.
+- Guard summaries (ASCII + JSON) include span/hash/path/syntax/result checks so downstream automation can confirm each guard outcome before invoking `--fix`.
 
 ### Fine-Grained & Identifier-Only Edits
 
@@ -35,22 +53,24 @@ Selectors accept optional disambiguation flags:
 - `--replace-range` and `--rename` are mutually exclusive in a single invocation to keep guardrail math straightforward. If both body edits and renames are needed, perform them in separate passes.
 
 1. **Locate** the target with `--locate <selector> --json` (optionally `--emit-plan plan.json`) to capture canonical path, span, and hash metadata.
-2. **Dry-run replace** using `--replace … --expect-hash <hash-from-locate> --json` so the guard confirms the file has not drifted. Add `--emit-diff` for before/after snippets and `--emit-plan` if you want the guard metadata persisted alongside the CLI output.
+2. **Dry-run replace** using `--replace … --expect-hash <hash-from-locate> [--expect-span start:end] --json` so the guard confirms the file has not drifted and the span still matches. Add `--emit-diff` for before/after snippets and `--emit-plan` if you want the guard metadata persisted alongside the CLI output.
 
 During replacement the tool:
 
 - Compares the stored content hash to the live source before modifications.
+- Confirms the located span matches the expected offsets when `--expect-span` is provided.
 - Re-parses the candidate output and aborts on syntax errors.
 - Verifies the path signature still resolves to the same node post-edit.
 - Computes the resulting hash so downstream automation can confirm the change.
 
-Use `--force` sparingly to bypass hash/path checks when intentional drift is acceptable; combine it with `--expect-hash` so the guard summary records exactly which expectation was skipped.
+Use `--force` sparingly to bypass hash/path checks when intentional drift is acceptable; combine it with `--expect-hash`/`--expect-span` so the guard summary records exactly which expectation was skipped.
 
 ### Guard Plans for Replayable Edits
 
-- Pass `--emit-plan <file>` to any `--locate`, `--extract`, or `--replace` command to write a JSON payload containing the selector you resolved plus guard metadata (`expectedHash`, `pathSignature`, `span`, `file`).
+- Pass `--emit-plan <file>` to any `--locate`, `--extract`, or `--replace` command to write a JSON payload containing the selector you resolved plus guard metadata (`expectedHash`, `expectedSpan`, `pathSignature`, `span`, `file`).
 - The same data appears inside the CLI’s `--json` output under `plan`, enabling automation to either capture stdout or use the written file.
 - Plan files make it easy to hand guardrails to other agents or future runs: rerun the locate step later and compare the stored hash/path to detect drift before attempting mutations.
+- Hashes in the CLI output are base64 digests truncated to eight characters by default. Toggle the encoding/length constants in `tools/dev/lib/swcAst.js` if a hex (base16) fallback is needed for downstream workflows.
 
 ### Example Session
 
@@ -61,11 +81,11 @@ node tools/dev/js-edit.js --file src/example.js --list-functions --json
 # Locate a class method with rich selectors
 node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render"
 
-# Dry-run a replacement with guard hash and inspect guardrails + diff
-node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --emit-diff --json
+# Dry-run a replacement with guard hash/span and inspect guardrails + diff
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --expect-span <start:end-from-locate> --emit-diff --json
 
 # Apply after reviewing guard summary
-node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --emit-diff --fix
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --expect-span <start:end-from-locate> --emit-diff --fix
 ```
 
 Additional examples and guardrail details live in `docs/CLI_REFACTORING_QUICK_START.md`.

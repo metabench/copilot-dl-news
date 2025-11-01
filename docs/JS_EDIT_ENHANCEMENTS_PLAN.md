@@ -137,7 +137,8 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Replacement flow now enforces guardrails: hash verification uses `--expect-hash` inputs before mutation, path signatures are revalidated post-edit, and syntax reparse failures abort immediately.
 - Introduced `--force` override for intentional guard bypass; guard summaries mark bypassed checks explicitly and preserve the expected hash for auditing.
 - ASCII output renders a guardrail table, and JSON payloads embed detailed guard status and hashes for automation. Documentation highlights the guard workflow in both `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md`.
-- Remaining work: capture multi-edit plan exports (Phase 5) and evaluate additional guard inputs (e.g., span assertions).
+- Added optional span expectation guard (`--expect-span start:end`) so replayed plans confirm offsets alongside hashes; guard summaries and plan payloads now capture the expected span, and Jest integration verifies OK/mismatch/bypass flows.
+- Next: expand plan emission coverage for `--allow-multiple` scenarios and consider surfacing aggregated span info when batching edits.
 
 ---
 
