@@ -276,7 +276,22 @@ Guard plans mirror the JSON payload’s `plan` block and include the selector, e
 - `--context-function <selector>` / `--context-variable <selector>` emit padded snippets (default ±512 characters) with hashes and path signatures so you can review targets without opening an editor.
 - `--context-before <n>` / `--context-after <n>` override padding while preserving multi-byte characters; zero padding keeps the output tight when you only care about enclosing structures.
 - `--context-enclosing <mode>` widens the window: `exact` sticks to the node span, `class` wraps the nearest class, and **`function` wraps the closest enclosing function or class method**, making nested helpers easy to audit. JSON payloads expose both the entire enclosing stack and the specific context used (`selectedEnclosingContext`).
-- Combine context inspection with guard plans to capture review windows, hashes, and spans before attempting replacements.
+- **Context operations support plan emission**: Add `--emit-plan <file>` to `--context-function` or `--context-variable` commands to capture guard metadata with enhanced summary information (`matchCount`, `allowMultiple`, `spanRange`) plus context-specific details (`entity`, `padding`, `enclosingMode`).
+- Combine context inspection with guard plans to capture review windows, hashes, and spans before attempting replacements, especially useful for batch editing workflows with `--allow-multiple`.
+
+### Context Plan Example
+
+```powershell
+# Get context with plan emission for batch preparation
+node tools/dev/js-edit.js --file src/example.js --context-function "Widget" --allow-multiple --emit-plan tmp/context-plan.json --json
+
+# Plan payload includes enhanced summary for multi-match scenarios:
+# - summary.matchCount: number of functions matched
+# - summary.spanRange: aggregate span data (start/end/totalLength)  
+# - entity: "function" or "variable"
+# - padding: requested vs applied context padding
+# - enclosingMode: context expansion setting
+```
 
 ---
 

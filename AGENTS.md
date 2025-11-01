@@ -548,6 +548,15 @@ node tools/debug/child-process-monitor.js
 node tools/count-testlogs.js
 ```
 
+#### Code Analysis & Refactoring
+```bash
+# JavaScript function inspection and modification
+node tools/dev/js-edit.js --file <path> --list-functions
+node tools/dev/js-edit.js --file <path> --locate <selector> --emit-plan <plan.json>
+node tools/dev/js-edit.js --file <path> --context-function <selector> --emit-plan <plan.json>
+node tools/dev/js-edit.js --file <path> --replace <selector> --with <snippet> --expect-hash <hash>
+```
+
 ### Agentic CLI Workflows
 
 **Multi-step automation patterns for complex operations.** These workflows combine multiple CLI tools with decision logic for autonomous execution.
@@ -589,6 +598,7 @@ node tools/count-testlogs.js
 | **Performance** | `benchmarks/`, `compression-benchmark.cjs` | Performance testing, optimization |
 | **Debug** | `debug/`, `manual-tests/` | Debugging, validation, testing |
 | **Maintenance** | `vacuum-db.js`, `cleanup-test-logs.js` | Database maintenance, cleanup |
+| **Code Refactoring** | `tools/dev/js-edit.js` | JavaScript function inspection, context analysis, guarded replacements with plan emission |
 
 ### Safety Patterns
 

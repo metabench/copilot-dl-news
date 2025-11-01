@@ -39,6 +39,7 @@ Selectors accept optional disambiguation flags:
 - `--context-before <n>` and `--context-after <n>` override the default ±512 character padding; values are clamped at file boundaries and handle multi-byte characters safely.
 - `--context-enclosing <mode>` widens the snippet to structural parents: `exact` (default) limits to the record span, `class` wraps the nearest class, and the new `function` mode wraps the closest containing function or class method. When expanded, JSON output includes `selectedEnclosingContext` plus the full `enclosingContexts` stack for downstream tooling.
 - Context JSON payloads surface both the base snippet hash and expanded context hash, enabling guardrails to confirm the review window matches expectations before applying changes.
+- **Context operations support plan emission**: Use `--emit-plan <file>` with `--context-function` or `--context-variable` to capture guard metadata alongside context data. Plans include enhanced summary metadata (`matchCount`, `allowMultiple`, `spanRange`) plus context-specific details (`entity`, `padding`, `enclosingMode`) for batch editing workflows.
 
 ### Guardrail Workflow
 
@@ -67,8 +68,9 @@ Use `--force` sparingly to bypass hash/path checks when intentional drift is acc
 
 ### Guard Plans for Replayable Edits
 
-- Pass `--emit-plan <file>` to any `--locate`, `--extract`, or `--replace` command to write a JSON payload containing the selector you resolved plus guard metadata (`expectedHash`, `expectedSpan`, `pathSignature`, `span`, `file`).
-- The same data appears inside the CLI’s `--json` output under `plan`, enabling automation to either capture stdout or use the written file.
+- Pass `--emit-plan <file>` to any `--locate`, `--extract`, `--replace`, `--context-function`, or `--context-variable` command to write a JSON payload containing the selector you resolved plus guard metadata (`expectedHash`, `expectedSpan`, `pathSignature`, `span`, `file`).
+- Context operations produce enhanced plan payloads with summary metadata (`matchCount`, `allowMultiple`, `spanRange`) and context-specific details (`entity`, `padding`, `enclosingMode`) to support batch editing workflows.
+- The same data appears inside the CLI's `--json` output under `plan`, enabling automation to either capture stdout or use the written file.
 - Plan files make it easy to hand guardrails to other agents or future runs: rerun the locate step later and compare the stored hash/path to detect drift before attempting mutations.
 - Hashes in the CLI output are base64 digests truncated to eight characters by default. Toggle the encoding/length constants in `tools/dev/lib/swcAst.js` if a hex (base16) fallback is needed for downstream workflows.
 
@@ -78,8 +80,15 @@ Use `--force` sparingly to bypass hash/path checks when intentional drift is acc
 # Inspect functions with metadata
 node tools/dev/js-edit.js --file src/example.js --list-functions --json
 
-# Locate a class method with rich selectors
-node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render"
+# Locate a class method with rich selectors and emit guard plan
+node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render" --emit-plan tmp/locate-plan.json
+
+# Get context with plan emission for batch editing workflows
+node tools/dev/js-edit.js --file src/example.js --context-function "exports.Widget > #render" --allow-multiple --emit-plan tmp/context-plan.json --json
+
+# Review context plan structure for multi-match scenarios
+# Plan includes: summary.matchCount, summary.spanRange, entity, padding, enclosingMode
+node tools/dev/js-edit.js --file src/example.js --context-function "*Widget*" --allow-multiple --emit-plan tmp/batch-plan.json
 
 # Dry-run a replacement with guard hash/span and inspect guardrails + diff
 node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --expect-span <start:end-from-locate> --emit-diff --json
