@@ -87,6 +87,7 @@ const taskCategories = {
 | Improve testing tools | `docs/POTENTIAL_TESTING_IMPROVEMENTS.md` ⭐ | Implement max 1 simple change per session |
 | Debug child processes | `DEBUGGING_CHILD_PROCESSES.md` | Check SSE logs, add MILESTONE events |
 | Build UI component | `CLIENT_MODULARIZATION_PLAN.md` | `HTML_COMPOSITION_ARCHITECTURE.md` |
+| Refactor JavaScript code safely | `tools/dev/README.md` ⭐ | `docs/CLI_REFACTORING_QUICK_START.md` |
 | Use CLI tools for automation | AGENTS.md "CLI Tools & Commands" ⭐ | `tools/README.md` |
 | Build agentic workflows | AGENTS.md "Agentic CLI Workflows" ⭐ | Tool-specific documentation |
 | Run operations tasks | `RUNBOOK.md` | Server CLI reference in AGENTS.md |

@@ -86,6 +86,13 @@
 - Context operations produce the same rich plan metadata as locate/extract/replace operations.
 - No breaking changes to existing CLI behavior or plan schema — new fields are additive.
 - Test coverage expanded to verify new functionality without affecting existing guardrails.
+- **Comprehensive documentation** added across `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, and `AGENTS.md` for agent discovery and usage.
+
+**Docs Impact** *(Completed)*
+- ✅ Updated `tools/dev/README.md` with context operation plan emission details and enhanced summary metadata.
+- ✅ Extended `docs/CLI_REFACTORING_QUICK_START.md` with context plan examples and batch editing workflows.
+- ✅ Added js-edit to `AGENTS.md` core CLI tools section and categories table with plan emission capabilities.
+- ✅ Added "Refactor JavaScript code safely" entry to AGENTS.md Topic Index for agent discovery.
 
 **Rollback Plan** *(Ready if needed)*
 - Revert commit `1f8caca` containing the js-edit plan emission enhancements.
