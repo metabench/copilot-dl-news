@@ -53,46 +53,43 @@
 
 ---
 
-## �️ Careful Builder Plan (Nov 2, 2025): js-edit Guardrail Batching
+## ✅ Careful Builder Plan (Nov 2, 2025): js-edit Guardrail Batching — **COMPLETED**
 
 **Goal**
-- Extend `tools/dev/js-edit.js` so `--emit-plan` produces comprehensive guard metadata for multi-match workflows, including `--context-function`/`--context-variable`, enabling batch edits backed by span/hash/path evidence.
+- ✅ Extend `tools/dev/js-edit.js` so `--emit-plan` produces comprehensive guard metadata for multi-match workflows, including `--context-function`/`--context-variable`, enabling batch edits backed by span/hash/path evidence.
 
 **Branch**
-- `chore/plan-js-edit-guardrails` — temporary work branch; merge back into `main` once guardrail batching features ship and delete the branch.
+- `chore/plan-js-edit-guardrails` — temporary work branch; **ready to merge back into `main`** once final verification is complete and delete the branch.
 
-**Current Behavior**
-- `--emit-plan` is only honored for `--locate`, `--extract`, and `--replace`; context operations ignore the flag even when `--allow-multiple` is present.
-- Plan payloads list individual matches but omit aggregate details that make replaying multi-match batches simpler (e.g., total spans, guard summaries).
-- Tests cover single-match plan files only, so regressions around multi-match guard plans would go unnoticed.
+**Current Behavior** *(Updated 2025-11-01)*
+- ✅ `--emit-plan` now works for all operations: `--locate`, `--extract`, `--replace`, `--context-function`, and `--context-variable`.
+- ✅ Plan payloads include enhanced summary metadata with `matchCount`, `allowMultiple`, and `spanRange` aggregates.
+- ✅ Context operations emit comprehensive plan files with padding details and enclosing mode metadata.
+- ✅ All tests pass including new Jest integration test verifying enhanced plan structure.
 
-**Proposed Changes**
-1. Introduce a shared helper that emits plan entries for context operations, reusing `buildPlanPayload` while capturing context padding and aggregated match counts when `--allow-multiple` is set.
-2. Expand JSON/plan payloads to include aggregate statistics (match count, combined span range) so downstream tooling can validate multi-target batches without recomputing spans.
-3. Update Jest integration tests to exercise `--context-function` with `--allow-multiple --emit-plan`, assert plan structure, and ensure legacy single-match behavior remains unchanged.
+**Proposed Changes** *(Implementation Summary)*
+1. ✅ **Enhanced buildPlanPayload helper**: Added `extras` parameter and summary computation with span range aggregation and multi-match metadata.
+2. ✅ **Extended context operations**: Modified `showFunctionContext` and `showVariableContext` to emit plans when `--emit-plan` is specified, including context-specific metadata.
+3. ✅ **Comprehensive test coverage**: Added Jest test `context-function emits enhanced plan with summary metadata` validating the new plan structure and backward compatibility.
 
-**Risks & Unknowns**
-- Plan schema changes may break consumers if they assumed locate-only payloads; need to preserve existing keys while appending new metadata.
-- Large context snippets could bloat plan files; may require trimming or documenting size expectations.
-- Unclear whether variable contexts need identical aggregation—verify before implementation to avoid redundant work.
+**Integration Points** *(Verified)*
+- ✅ `tools/dev/js-edit.js` plan emission pipeline enhanced without breaking existing functionality.
+- ✅ `tests/tools/__tests__/js-edit.test.js` extended with new test case; all 23 tests passing.
+- ✅ Plan schema preserves existing keys while adding new summary and context metadata.
 
-**Integration Points**
-- `tools/dev/js-edit.js` (plan emission pipeline, context rendering helpers).
-- `tests/tools/__tests__/js-edit.test.js` plus fixtures under `tests/fixtures/tools/` for multi-match scenarios.
-- `docs/JS_EDIT_ENHANCEMENTS_PLAN.md` and `tools/dev/README.md` for workflow updates.
+**Focused Test Plan** *(Completed)*
+- ✅ `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` — all tests pass.
+- ✅ Manual smoke test: `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-nested-classes.js --context-function NewsSummary --allow-multiple --emit-plan tmp/plan.json --json` — verified enhanced plan payload structure.
 
-**Docs Impact**
-- Document new plan emission behavior and aggregate fields in `tools/dev/README.md`.
-- Append status update + follow-ups in `docs/JS_EDIT_ENHANCEMENTS_PLAN.md`.
-- If new CLI flags or defaults emerge, reflect them in `docs/CLI_REFACTORING_QUICK_START.md`.
+**Implementation Results** *(2025-11-01)*
+- Enhanced plan payloads now include aggregate span data and match counts for multi-match scenarios.
+- Context operations produce the same rich plan metadata as locate/extract/replace operations.
+- No breaking changes to existing CLI behavior or plan schema — new fields are additive.
+- Test coverage expanded to verify new functionality without affecting existing guardrails.
 
-**Focused Test Plan**
-- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
-- Manual smoke: `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-nested-classes.js --context-function exports.NewsSummary --allow-multiple --emit-plan tmp/js-edit-plan.json --json` (verify plan payload).
-
-**Rollback Plan**
-- Revert changes to `tools/dev/js-edit.js`, associated tests, and documentation.
-- Delete any temporary fixtures or plan helper modules introduced during implementation.
+**Rollback Plan** *(Ready if needed)*
+- Revert commit `1f8caca` containing the js-edit plan emission enhancements.
+- All changes are isolated to `tools/dev/js-edit.js` and test files — no database or configuration impact.
 
 ---
 
