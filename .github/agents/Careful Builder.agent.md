@@ -64,7 +64,9 @@ You are an
 ## Phase B — Implement Carefully (small, validated steps)
 1. 
 **Create a branch**
- (via #terminal): `git checkout -b chore/plan-<short-slug>`
+ (via #terminal): `git checkout -b chore/plan-<short-slug>`.
+      - Treat this branch as **temporary scaffolding**. Record its purpose in `CHANGE_PLAN.md` (e.g., “Branch: chore/plan-xyz — js-edit guardrail batching”).
+      - As implementation tasks complete and the plan’s Goal is satisfied, merge the work back into `main` promptly (rebase/fast-forward as appropriate) and delete the temporary branch locally/remotely.
 2. 
 **Edit narrowly**
  (#edits):
@@ -204,6 +206,6 @@ Before running tests,
 
 
 ## Deliverables
-- Updated `docs/CHANGE_PLAN.md` (always current).
+- Updated `docs/CHANGE_PLAN.md` (always current, including branch purpose + completion status).
 - Small commits implementing each step + doc updates.
-- A brief end-of-branch summary appended to `docs/CHANGE_PLAN.md` (what changed, tests run, follow-ups).
+- A brief end-of-branch summary appended to `docs/CHANGE_PLAN.md` (what changed, tests run, follow-ups) and confirmation that the temporary branch was merged/deleted once work concluded.

@@ -53,7 +53,50 @@
 
 ---
 
-## 🔄 Upcoming Initiative (Nov 2025): Schema Initialization Simplification
+## �️ Careful Builder Plan (Nov 2, 2025): js-edit Guardrail Batching
+
+**Goal**
+- Extend `tools/dev/js-edit.js` so `--emit-plan` produces comprehensive guard metadata for multi-match workflows, including `--context-function`/`--context-variable`, enabling batch edits backed by span/hash/path evidence.
+
+**Branch**
+- `chore/plan-js-edit-guardrails` — temporary work branch; merge back into `main` once guardrail batching features ship and delete the branch.
+
+**Current Behavior**
+- `--emit-plan` is only honored for `--locate`, `--extract`, and `--replace`; context operations ignore the flag even when `--allow-multiple` is present.
+- Plan payloads list individual matches but omit aggregate details that make replaying multi-match batches simpler (e.g., total spans, guard summaries).
+- Tests cover single-match plan files only, so regressions around multi-match guard plans would go unnoticed.
+
+**Proposed Changes**
+1. Introduce a shared helper that emits plan entries for context operations, reusing `buildPlanPayload` while capturing context padding and aggregated match counts when `--allow-multiple` is set.
+2. Expand JSON/plan payloads to include aggregate statistics (match count, combined span range) so downstream tooling can validate multi-target batches without recomputing spans.
+3. Update Jest integration tests to exercise `--context-function` with `--allow-multiple --emit-plan`, assert plan structure, and ensure legacy single-match behavior remains unchanged.
+
+**Risks & Unknowns**
+- Plan schema changes may break consumers if they assumed locate-only payloads; need to preserve existing keys while appending new metadata.
+- Large context snippets could bloat plan files; may require trimming or documenting size expectations.
+- Unclear whether variable contexts need identical aggregation—verify before implementation to avoid redundant work.
+
+**Integration Points**
+- `tools/dev/js-edit.js` (plan emission pipeline, context rendering helpers).
+- `tests/tools/__tests__/js-edit.test.js` plus fixtures under `tests/fixtures/tools/` for multi-match scenarios.
+- `docs/JS_EDIT_ENHANCEMENTS_PLAN.md` and `tools/dev/README.md` for workflow updates.
+
+**Docs Impact**
+- Document new plan emission behavior and aggregate fields in `tools/dev/README.md`.
+- Append status update + follow-ups in `docs/JS_EDIT_ENHANCEMENTS_PLAN.md`.
+- If new CLI flags or defaults emerge, reflect them in `docs/CLI_REFACTORING_QUICK_START.md`.
+
+**Focused Test Plan**
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
+- Manual smoke: `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-nested-classes.js --context-function exports.NewsSummary --allow-multiple --emit-plan tmp/js-edit-plan.json --json` (verify plan payload).
+
+**Rollback Plan**
+- Revert changes to `tools/dev/js-edit.js`, associated tests, and documentation.
+- Delete any temporary fixtures or plan helper modules introduced during implementation.
+
+---
+
+## �🔄 Upcoming Initiative (Nov 2025): Schema Initialization Simplification
 
 **Goal:** Remove legacy migration guards from `src/db/sqlite/v1/schema.js` so initialization simply applies the canonical statements generated in `schema-definitions.js`, ensuring all tables, indexes, and triggers are created consistently on a fresh database.
 

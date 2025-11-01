@@ -592,45 +592,89 @@ function renderGuardrailSummary(guard, options) {
   });
 }
 
-function buildPlanPayload(operation, options, selector, records, expectedHashes = [], expectedSpans = []) {
+function buildPlanPayload(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
+  const matches = records.map((record, index) => ({
+    canonicalName: record.canonicalName,
+    kind: record.kind,
+    exportKind: record.exportKind,
+    replaceable: record.replaceable,
+    scopeChain: record.scopeChain,
+    pathSignature: record.pathSignature,
+    span: {
+      start: record.span.start,
+      end: record.span.end
+    },
+    identifierSpan: record.identifierSpan
+      ? {
+          start: record.identifierSpan.start,
+          end: record.identifierSpan.end
+        }
+      : null,
+    line: record.line,
+    column: record.column,
+    hash: record.hash,
+    expectedHash: expectedHashes[index] || record.hash,
+    expectedSpan: expectedSpans[index] || null
+  }));
+
+  let spanRange = null;
+  if (matches.length > 0) {
+    let minStart = null;
+    let maxEnd = null;
+    let totalLength = 0;
+
+    matches.forEach((match) => {
+      if (match.span && typeof match.span.start === 'number' && typeof match.span.end === 'number') {
+        const { start, end } = match.span;
+        if (minStart === null || start < minStart) {
+          minStart = start;
+        }
+        if (maxEnd === null || end > maxEnd) {
+          maxEnd = end;
+        }
+        totalLength += Math.max(0, end - start);
+      }
+    });
+
+    if (minStart !== null && maxEnd !== null) {
+      spanRange = {
+        start: minStart,
+        end: maxEnd,
+        totalLength
+      };
+    }
+  }
+
+  const expectedHashList = expectedHashes.filter((value) => typeof value === 'string' && value.length > 0);
+
+  const summary = {
+    matchCount: matches.length,
+    allowMultiple: Boolean(options.allowMultiple),
+    spanRange
+  };
+
+  if (expectedHashList.length > 0) {
+    summary.expectedHashes = expectedHashList;
+  }
+
   return {
     version: 1,
     generatedAt: new Date().toISOString(),
     operation,
     file: options.filePath,
     selector: selector || null,
-    matches: records.map((record, index) => ({
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      exportKind: record.exportKind,
-      replaceable: record.replaceable,
-      scopeChain: record.scopeChain,
-      pathSignature: record.pathSignature,
-      span: {
-        start: record.span.start,
-        end: record.span.end
-      },
-      identifierSpan: record.identifierSpan
-        ? {
-            start: record.identifierSpan.start,
-            end: record.identifierSpan.end
-          }
-        : null,
-      line: record.line,
-      column: record.column,
-      hash: record.hash,
-      expectedHash: expectedHashes[index] || record.hash,
-      expectedSpan: expectedSpans[index] || null
-    }))
+    summary,
+    matches,
+    ...extras
   };
 }
 
-function maybeEmitPlan(operation, options, selector, records, expectedHashes = [], expectedSpans = []) {
+function maybeEmitPlan(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
   if (!options.emitPlanPath || !records || records.length === 0) {
     return null;
   }
 
-  const plan = buildPlanPayload(operation, options, selector, records, expectedHashes, expectedSpans);
+  const plan = buildPlanPayload(operation, options, selector, records, expectedHashes, expectedSpans, extras);
   writeOutputFile(options.emitPlanPath, `${JSON.stringify(plan, null, 2)}\n`);
   return plan;
 }
@@ -1136,12 +1180,40 @@ function extractFunction(options, source, record, selector) {
 function showFunctionContext(options, source, functionRecords, selector) {
   const resolved = resolveMatches(functionRecords, selector, options, { operation: 'context' });
   const contextResult = buildContextEntries(resolved, source, options);
+  const plan = maybeEmitPlan('context-function', options, selector, resolved, [], [], {
+    entity: 'function',
+    padding: {
+      requestedBefore: Number.isFinite(options.contextBefore) && options.contextBefore >= 0
+        ? Math.floor(options.contextBefore)
+        : DEFAULT_CONTEXT_PADDING,
+      requestedAfter: Number.isFinite(options.contextAfter) && options.contextAfter >= 0
+        ? Math.floor(options.contextAfter)
+        : DEFAULT_CONTEXT_PADDING,
+      appliedBefore: contextResult.before,
+      appliedAfter: contextResult.after
+    },
+    enclosingMode: options.contextEnclosing
+  });
   renderContextResults('function', selector, options, contextResult);
 }
 
 function showVariableContext(options, source, variableRecords, selector) {
   const resolved = resolveVariableMatches(variableRecords, selector, options, { operation: 'context-variable' });
   const contextResult = buildContextEntries(resolved, source, options);
+  const plan = maybeEmitPlan('context-variable', options, selector, resolved, [], [], {
+    entity: 'variable',
+    padding: {
+      requestedBefore: Number.isFinite(options.contextBefore) && options.contextBefore >= 0
+        ? Math.floor(options.contextBefore)
+        : DEFAULT_CONTEXT_PADDING,
+      requestedAfter: Number.isFinite(options.contextAfter) && options.contextAfter >= 0
+        ? Math.floor(options.contextAfter)
+        : DEFAULT_CONTEXT_PADDING,
+      appliedBefore: contextResult.before,
+      appliedAfter: contextResult.after
+    },
+    enclosingMode: options.contextEnclosing
+  });
   renderContextResults('variable', selector, options, contextResult);
 }
 

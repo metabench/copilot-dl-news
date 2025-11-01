@@ -481,6 +481,52 @@ describe('swcAst helpers', () => {
       });
     });
 
+    test('context-function emits enhanced plan with summary metadata', () => {
+      const planPath = path.join(tempDir, 'context-plan.json');
+      const result = runJsEdit([
+        '--file',
+        nestedFixturePath,
+        '--context-function',
+        'NewsSummary',
+        '--allow-multiple',
+        '--emit-plan',
+        planPath,
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      expect(fs.existsSync(planPath)).toBe(true);
+      const planFile = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+      
+      // Verify plan structure
+      expect(planFile.operation).toBe('context-function');
+      expect(planFile.selector).toBe('NewsSummary');
+      expect(planFile.version).toBe(1);
+      expect(planFile.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      
+      // Verify enhanced summary metadata
+      expect(planFile.summary).toBeDefined();
+      expect(planFile.summary.matchCount).toBe(1);
+      expect(planFile.summary.allowMultiple).toBe(true);
+      expect(planFile.summary.spanRange).toBeDefined();
+      expect(planFile.summary.spanRange.start).toBeGreaterThanOrEqual(0);
+      expect(planFile.summary.spanRange.end).toBeGreaterThan(planFile.summary.spanRange.start);
+      expect(planFile.summary.spanRange.totalLength).toBeGreaterThan(0);
+      
+      // Verify context-specific extras
+      expect(planFile.entity).toBe('function');
+      expect(planFile.padding).toBeDefined();
+      expect(planFile.padding.requestedBefore).toBe(512);
+      expect(planFile.padding.requestedAfter).toBe(512);
+      expect(planFile.enclosingMode).toBe('exact');
+      
+      // Verify matches array
+      expect(planFile.matches).toHaveLength(1);
+      expect(planFile.matches[0].canonicalName).toBe('exports.NewsSummary');
+      expect(planFile.matches[0].kind).toBe('class');
+      expect(planFile.matches[0].hash).toHaveLength(8);
+    });
+
     test('replacement aborts on structural drift unless forced', () => {
       const locate = runJsEdit([
         '--file',
