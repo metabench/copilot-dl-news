@@ -6,4 +6,5 @@ module.exports = {
     '**/?(*.)+(spec|test).@(js|cjs|mjs|ts|cts|mts|jsx|tsx)'
   ],
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/(e2e|acceptance)/'],
+  maxWorkers: 1,
 }

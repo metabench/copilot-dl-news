@@ -46,6 +46,7 @@
   "license": "ISC",
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
+    "@swc/core": "^1.14.0",
     "better-sqlite3": "^12.4.1",
     "chalk": "^5.6.2",
     "cheerio": "^1.1.2",

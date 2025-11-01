@@ -1,5 +1,6 @@
 // Limit noisy console output during tests by capping lines per test and truncating long lines.
 (() => {
+  console.log('[jest-setup] loaded');
   // Suppress ALL console output during E2E tests to keep output clean
   if (process.env.GEOGRAPHY_FULL_E2E === '1') {
     console.log = () => {};
@@ -60,6 +61,17 @@
   const origLog = console.log.bind(console);
   const origWarn = console.warn.bind(console);
   const origError = console.error.bind(console);
+  const shouldWarnOnSuppress = process.env.JEST_TRUNCATE_WARNINGS === '1';
+  const emitSuppressionNotice = (message) => {
+    if (!shouldWarnOnSuppress) {
+      return;
+    }
+    try {
+      origWarn(message);
+    } catch (_) {
+      // ignore errors raising suppression notices
+    }
+  };
 
   let lineCount = 0;
   let charCount = 0;
@@ -85,13 +97,13 @@
           if (suppressed) return;
           if (charCount >= MAX_TOTAL_CHARS) {
             suppressed = true;
-            origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
+            emitSuppressionNotice(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
             return;
           }
           if (lineCount >= MAX_LINES) {
             if (!suppressed) {
               suppressed = true;
-              origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_LINES} lines`);
+              emitSuppressionNotice(`[jest-truncate] further ${level} output suppressed after ${MAX_LINES} lines`);
             }
             return;
           }
@@ -102,7 +114,7 @@
             const remaining = MAX_TOTAL_CHARS - charCount;
             if (remaining <= truncatedSuffix.length) {
               suppressed = true;
-              origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
+              emitSuppressionNotice(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
               return;
             }
             const allowed = remaining - truncatedSuffix.length;
@@ -111,7 +123,7 @@
             suppressed = true;
             lineCount++;
             fn(out);
-            origWarn(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
+            emitSuppressionNotice(`[jest-truncate] further ${level} output suppressed after ${MAX_TOTAL_CHARS} chars`);
             return;
           }
           lineCount++;
@@ -166,3 +178,55 @@ global.fastTestTimeout = (testFn, timeout = 1000) => {
     }
   };
 };
+
+function logActiveResources(label) {
+  const handles = process._getActiveHandles()
+    .filter((handle) => handle !== process.stdout && handle !== process.stderr && handle !== process.stdin);
+  const requests = process._getActiveRequests ? process._getActiveRequests() : [];
+  const serializeHandle = (handle) => {
+    if (!handle) {
+      return { type: typeof handle };
+    }
+    const type = (handle && handle.constructor) ? handle.constructor.name : typeof handle;
+    const info = { type };
+    if (typeof handle.fd === 'number') {
+      info.fd = handle.fd;
+    }
+    if (typeof handle.destroyed === 'boolean') {
+      info.destroyed = handle.destroyed;
+    }
+    if (typeof handle.pending === 'number') {
+      info.pending = handle.pending;
+    }
+    if (typeof handle.readyState === 'string') {
+      info.readyState = handle.readyState;
+    }
+    if (typeof handle.shell === 'object' && handle.shell) {
+      info.shell = handle.shell;
+    }
+    if (typeof handle._handle === 'object' && handle._handle) {
+      info.innerType = handle._handle.constructor ? handle._handle.constructor.name : typeof handle._handle;
+    }
+    return info;
+  };
+  const handleSummary = handles.map((h) => (h && h.constructor) ? h.constructor.name : typeof h);
+  const handleDetails = handles.map(serializeHandle);
+  const requestSummary = (requests || []).map((r) => (r && r.constructor) ? r.constructor.name : typeof r);
+  const state = typeof expect !== 'undefined' && expect.getState ? expect.getState() : null;
+  const context = state && state.testPath ? state.testPath : 'unknown-test-file';
+  const payload = {
+    label,
+    file: context,
+    handles: handleSummary,
+    handleDetails,
+    handleCount: handleSummary.length,
+    requests: requestSummary,
+    requestCount: requestSummary.length,
+  };
+  console.log('[jest-handles]', JSON.stringify(payload));
+}
+
+if (process.env.JEST_LOG_HANDLES === '1') {
+  afterAll(() => logActiveResources('afterAll'));
+  process.on('beforeExit', () => logActiveResources('beforeExit'));
+}

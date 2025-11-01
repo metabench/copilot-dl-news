@@ -59,13 +59,39 @@
 |---|------|-------|--------|----------|-------|
 | 8.1 | Blueprint metadata inventory | Generate name/target metadata for every statement in `schema-definitions.js` so helper functions can filter subsets deterministically (core vs gazetteer vs compression) | ✅ COMPLETED | HIGH | 2025-11-01: Generator now enriches each statement with name/target metadata feeding deterministic filters |
 | 8.2 | Extend schema definitions exports | Update `schema-definitions.js` to expose structured definitions (tables/indexes/triggers) and ensure missing triggers such as `trg_latest_fetch_upsert` are represented | ✅ COMPLETED | HIGH | 2025-11-01: Regenerated blueprint exposes `TABLE_DEFINITIONS`/`INDEX_DEFINITIONS`/`TRIGGER_DEFINITIONS` with ensured triggers |
-| 8.3 | Refactor schema initializers | Replace the bespoke migration code in `schema.js` with execution helpers that replay the blueprint, while keeping seeding logic for compression types | ✅ COMPLETED | HIGH | 2025-11-02: Initializer now replays blueprint statements for tables/indexes/triggers, accepts custom loggers for verbose runs, and preserves compatibility via a no-op `initViews` shim while seeding compression types |
-| 8.4 | Validation & documentation | Run focused schema tests (v1 adapters, gazetteer ingest) and refresh `DATABASE_INITIALIZATION_ARCHITECTURE_ANALYSIS.md` to document the simplified flow | not-started | MEDIUM | Confirm triggers/indices exist in fresh DBs |
+| 8.3 | Refactor schema initializers | Replace the bespoke migration code in `schema.js` with execution helpers that replay the blueprint, while keeping seeding logic for compression types | ✅ COMPLETED | HIGH | 2025-11-02: Blueprint replay helpers in place; shim removed after regeneration; CLI verification logged |
+| 8.4 | Validation & documentation | Run focused schema tests (v1 adapters, gazetteer ingest) and refresh `DATABASE_INITIALIZATION_ARCHITECTURE_ANALYSIS.md` to document the simplified flow | ✅ COMPLETED | MEDIUM | 2025-11-02: Focused Jest suites + CLI verification logged; documentation refreshed with residual risks |
+| 8.5 | Resolve schema-dependent Jest worker exit warning | Investigate and eliminate forced-exit warning when running compression/query telemetry suites in parallel workers | 🚧 IN_PROGRESS | MEDIUM | Warning observed during Task 8.4 validation; likely open handle leakage in compression bucket retrieval |
 
 - **Active phase:** Phase 8 — Schema Blueprint Alignment
-- **Current sub-phase:** γ — Implementation & validation (entered 2025-11-01)
-- **Docs consulted this session:** `AGENTS.md` (Topic Index), `.github/instructions/GitHub Copilot.instructions.md`, `docs/DATABASE_INITIALIZATION_ARCHITECTURE_ANALYSIS.md`
-- **Notes:** Blueprint metadata and structured exports now power the new initializer; remaining work focuses on validation/documentation updates before closing the phase.
+- **Current sub-phase:** γ — Implementation & validation (re-entered 2025-11-02 after discovery refresh)
+- **Docs consulted (α):** `AGENTS.md` (Topic Index), `.github/instructions/GitHub Copilot.instructions.md`, `docs/DATABASE_INITIALIZATION_ARCHITECTURE_ANALYSIS.md`, `docs/CLI_REFACTORING_TASKS.md` (historical patterns)
+- **Code reconnaissance:** `src/db/sqlite/v1/schema.js`, `src/db/sqlite/v1/schema-definitions.js`, `src/db/sqlite/schema.js`
+- **Tooling inventory:** Node one-off script to list blueprint targets (`TABLE_DEFINITIONS`, `INDEX_DEFINITIONS`, `TRIGGER_DEFINITIONS`), existing better-sqlite3 initializer wrapper
+- **Gaps noted:** Blueprint now ships `place_hub_audit` tables/indexes after regeneration (2025-11-02); legacy initializer still issues view-drop + column-migration logic slated for removal
+- **Task ledger for 8.3 (γ implementation plan):**
+  1. ✅ Capture discovery outputs and update plan (this section)
+  2. ✅ Build `applySchemaSubset` helpers that replay blueprint statements with verbose logging + transaction boundaries (2025-11-02)
+  3. ✅ Define target group sets (core/gazetteer/place hubs/compression/background) derived from blueprint metadata (2025-11-02)
+  4. ✅ Rewrite `init*Tables` to rely on subset helpers; preserve compression seeding and legacy view-drop guard (2025-11-02)
+   5. ✅ Add compatibility shim for `place_hub_audit` until blueprint regeneration lands (document in plan + tracker) (2025-11-02)
+     - 2025-11-02 PM: Regenerated blueprint now includes audit artifacts; shim removed from `schema.js`.
+   6. ✅ Update exports/tests as needed and run focused schema smoke verification (`node tools/db-schema.js tables` against fresh DB)
+     - Exports adjusted to re-export new helpers, in-memory `initializeSchema` smoke test executed via `node -e`, and CLI verification run (`node tools/db-schema.js tables`) confirming `place_hub_audit` presence (2025-11-02).
+   7. ✅ Document residual risks + follow-up (blueprint generator refresh) before moving to Task 8.4
+     - Blueprint regeneration workflow captured; residual risk limited to rerunning initializer against populated DBs producing duplicate index warnings (expected and logged).
+
+  ### Task ledger for 8.4 (δ validation & documentation plan):
+  1. ✅ Run focused schema-dependent Jest suites to confirm initializer parity (`npx jest --runTestsByPath src/db/sqlite/v1/__tests__/placePageMappings.test.js src/db/__tests__/queryTelemetry.test.js src/utils/__tests__/compression.test.js src/utils/__tests__/compressionBuckets.test.js --bail=1 --maxWorkers=50% --config=jest.careful.config.js`). Execution complete 2025-11-02; all suites passed, with the usual forced-exit warning noted for follow-up.
+  2. ✅ Update `docs/DATABASE_INITIALIZATION_ARCHITECTURE_ANALYSIS.md` to describe the blueprint-driven initializer, subset targets, and removal of the audit shim; record duplicate index warning behavior and CLI verification steps (completed 2025-11-02).
+  3. ✅ Capture residual risks (duplicate index warnings on populated DBs, jest worker exit message) and list next validation artifacts needed for Phase 8 close-out before starting Task 8.4 documentation updates (documented 2025-11-02).
+
+  ### Task ledger for 8.5 (γ investigation & remediation):
+  1. ✅ Reproduce worker exit warning on focused suites and capture diagnostics (`npx jest --runTestsByPath ... --maxWorkers=50% --config=jest.careful.config.js`) plus variants with `--detectOpenHandles`/`--runInBand` to scope to compression-related tests (2025-11-02).
+  2. ✅ Audit `compressionBuckets.retrieveFromBucket` tar-stream usage for missing `next()`/destroy semantics that could keep extract streams alive and prevent worker shutdown (2025-11-02). Confirmed we short-circuit early and added notes to pursue deterministic finish events.
+  3. ✅ Patch compression bucket retrieval logic so the tar extractor drains fully before resolving (remove mid-flight `destroy()` and resolve on `finish`). Re-ran focused suites; warning persists, implying additional source beyond tar-stream cleanup (2025-11-02).
+  4. ✅ Harden query telemetry writer scheduling (timer clear/unref, new `dispose()` hook) and ensure Jest tests dispose the writer after each case. Focused reruns still emit the forced-exit warning, suggesting remaining leakage elsewhere (2025-11-02).
+  5. ⏳ Capture detailed handle snapshots at worker shutdown (enhanced instrumentation or bespoke harness) to isolate lingering resources before considering Jest config changes or serializing the suites.
 
 ---
 

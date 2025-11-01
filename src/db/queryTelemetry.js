@@ -133,6 +133,15 @@ function createTelemetryWriter(db, initialLogger) {
   let flushPromise = null;
   let resolveFlush = null;
 
+  let pendingTimer = null;
+
+  function clearPendingTimer() {
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+  }
+
   function scheduleFlush(delayMs = 0) {
     if (isScheduled) {
       return;
@@ -142,11 +151,18 @@ function createTelemetryWriter(db, initialLogger) {
       // For tests, run synchronously to avoid race conditions
       flushQueue();
     } else {
-      setTimeout(flushQueue, delayMs);
+      pendingTimer = setTimeout(() => {
+        pendingTimer = null;
+        flushQueue();
+      }, delayMs);
+      if (pendingTimer && typeof pendingTimer.unref === 'function') {
+        pendingTimer.unref();
+      }
     }
   }
 
   function flushQueue() {
+    clearPendingTimer();
     isScheduled = false;
     if (!queue.length) {
       retryCount = 0;
@@ -217,8 +233,21 @@ function createTelemetryWriter(db, initialLogger) {
           resolveFlush = resolve;
         });
       }
+      const pending = flushPromise;
       flushQueue();
-      return flushPromise;
+      return pending;
+    },
+    dispose() {
+      clearPendingTimer();
+      queue = [];
+      isScheduled = false;
+      retryCount = 0;
+      if (resolveFlush) {
+        resolveFlush();
+        flushPromise = null;
+        resolveFlush = null;
+      }
+      writersByDb.delete(db);
     },
   };
 }

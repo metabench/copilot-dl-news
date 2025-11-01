@@ -2,13 +2,20 @@
 
 **When to Read**: Read this document to understand the critical architectural flaws in the database initialization code as of October 2025. It details the "4 layers of indirection," a missing import bug, and proposes a simplified 2-layer architecture. This is essential for anyone working on database-related code or debugging initialization failures.
 
-**Date**: 2025-10-06  
-**Status**: Critical architectural issue identified  
+**Date**: 2025-10-06 (updated 2025-11-02)  
+**Status**: Simplification underway — blueprint-driven initializer shipped, architectural debt review ongoing  
 **Impact**: High - affects all components using database access
 
 ## Executive Summary
 
 The database initialization code has become "the flakiest part of the system" due to **excessive layers of indirection** (4+ layers), **mixed concerns** (schema init + handle acquisition + instrumentation), and **missing imports** that somehow still work. This document analyzes the root causes and proposes a simplified architecture.
+
+### 2025-11-02 Update — Blueprint-driven initializer now live
+
+- `src/db/sqlite/v1/schema.js` now replays the canonical blueprint emitted by `schema-definitions.js`, applying deterministic subsets for core, gazetteer, place hub, compression, and background-task targets while preserving compression seeding and legacy view cleanup.
+- `schema-definitions.js` was regenerated after running the initializer against `data/news.db`, so `place_hub_audit` tables/indexes are part of the blueprint and no longer require a manual shim.
+- Running the initializer on an already-populated database surfaces duplicate-index warnings (expected when objects already exist) but completes successfully; `node tools/db-schema.js tables` reports 77 tables including `place_hub_audit` as of 2025-11-02.
+- Focused Jest suites (`npx jest --runTestsByPath src/db/sqlite/v1/__tests__/placePageMappings.test.js src/db/__tests__/queryTelemetry.test.js src/utils/__tests__/compression.test.js src/utils/__tests__/compressionBuckets.test.js --bail=1 --maxWorkers=50% --config=jest.careful.config.js`) pass with the known worker force-exit warning captured for follow-up.
 
 ### Key Finding: `createInstrumentedDb` is used but never imported in server.js (line 422)
 
@@ -312,6 +319,8 @@ try {
 ---
 
 ## Proposed Simplified Architecture
+
+> **Update 2025-11-02:** The blueprint-driven initializer described here is now in production under `src/db/sqlite/v1/schema.js`, with helper subsets and compression seeding mirroring the plan below.
 
 ### Goal: 2 Layers Instead of 4
 

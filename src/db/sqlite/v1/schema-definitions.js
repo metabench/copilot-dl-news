@@ -1,6 +1,6 @@
 /**
  * AUTO-GENERATED FROM tmp/generate-schema-blueprint.js
- * Generated at 2025-10-31T23:31:52.122Z
+ * Generated at 2025-11-01T00:13:46.666Z
  *
  * Statements reflect the current schema of data/news.db.
  * Do not edit manually; regenerate when schema changes.
@@ -648,6 +648,20 @@ const TABLE_STATEMENTS = [
       PRIMARY KEY (parent_id, child_id),
       FOREIGN KEY (parent_id) REFERENCES places(id) ON DELETE CASCADE,
       FOREIGN KEY (child_id) REFERENCES places(id) ON DELETE CASCADE
+    );`,
+
+  // place_hub_audit
+  `CREATE table IF NOT EXISTS place_hub_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      domain TEXT NOT NULL,
+      url TEXT NOT NULL,
+      place_kind TEXT,
+      place_name TEXT,
+      decision TEXT NOT NULL,
+      validation_metrics_json TEXT,
+      attempt_id TEXT,
+      run_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );`,
 
   // place_hub_candidates
@@ -1301,6 +1315,18 @@ const INDEX_STATEMENTS = [
 
   // idx_place_hierarchy_relation
   `CREATE index IF NOT EXISTS idx_place_hierarchy_relation ON place_hierarchy(relation);`,
+
+  // idx_place_hub_audit_attempt
+  `CREATE index IF NOT EXISTS idx_place_hub_audit_attempt ON place_hub_audit(attempt_id);`,
+
+  // idx_place_hub_audit_decision
+  `CREATE index IF NOT EXISTS idx_place_hub_audit_decision ON place_hub_audit(decision);`,
+
+  // idx_place_hub_audit_domain
+  `CREATE index IF NOT EXISTS idx_place_hub_audit_domain ON place_hub_audit(domain);`,
+
+  // idx_place_hub_audit_run
+  `CREATE index IF NOT EXISTS idx_place_hub_audit_run ON place_hub_audit(run_id);`,
 
   // idx_place_hub_candidates_attempt
   `CREATE index IF NOT EXISTS idx_place_hub_candidates_attempt ON place_hub_candidates(attempt_id);`,
@@ -2291,6 +2317,18 @@ const TABLE_DEFINITIONS = [
       FOREIGN KEY (parent_id) REFERENCES places(id) ON DELETE CASCADE,
       FOREIGN KEY (child_id) REFERENCES places(id) ON DELETE CASCADE
     );`, target: "place_hierarchy" },
+  { name: "place_hub_audit", sql: `CREATE table IF NOT EXISTS place_hub_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      domain TEXT NOT NULL,
+      url TEXT NOT NULL,
+      place_kind TEXT,
+      place_name TEXT,
+      decision TEXT NOT NULL,
+      validation_metrics_json TEXT,
+      attempt_id TEXT,
+      run_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );`, target: "place_hub_audit" },
   { name: "place_hub_candidates", sql: `CREATE table IF NOT EXISTS "place_hub_candidates" (id INTEGER PRIMARY KEY, domain TEXT NOT NULL, place_kind TEXT, place_name TEXT, place_code TEXT, place_id INTEGER, analyzer TEXT, strategy TEXT, score REAL, confidence REAL, pattern TEXT, signals_json TEXT, attempt_id TEXT, attempt_started_at TEXT, status TEXT DEFAULT 'pending', validation_status TEXT, source TEXT DEFAULT 'guess-place-hubs', last_seen_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), candidate_url_id INTEGER, normalized_url_id INTEGER);`, target: "place_hub_candidates" },
   { name: "place_hub_determinations", sql: `CREATE table IF NOT EXISTS place_hub_determinations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2664,6 +2702,10 @@ const INDEX_DEFINITIONS = [
   { name: "idx_place_hierarchy_child", sql: `CREATE index IF NOT EXISTS idx_place_hierarchy_child ON place_hierarchy(child_id);`, target: "place_hierarchy" },
   { name: "idx_place_hierarchy_parent", sql: `CREATE index IF NOT EXISTS idx_place_hierarchy_parent ON place_hierarchy(parent_id);`, target: "place_hierarchy" },
   { name: "idx_place_hierarchy_relation", sql: `CREATE index IF NOT EXISTS idx_place_hierarchy_relation ON place_hierarchy(relation);`, target: "place_hierarchy" },
+  { name: "idx_place_hub_audit_attempt", sql: `CREATE index IF NOT EXISTS idx_place_hub_audit_attempt ON place_hub_audit(attempt_id);`, target: "place_hub_audit" },
+  { name: "idx_place_hub_audit_decision", sql: `CREATE index IF NOT EXISTS idx_place_hub_audit_decision ON place_hub_audit(decision);`, target: "place_hub_audit" },
+  { name: "idx_place_hub_audit_domain", sql: `CREATE index IF NOT EXISTS idx_place_hub_audit_domain ON place_hub_audit(domain);`, target: "place_hub_audit" },
+  { name: "idx_place_hub_audit_run", sql: `CREATE index IF NOT EXISTS idx_place_hub_audit_run ON place_hub_audit(run_id);`, target: "place_hub_audit" },
   { name: "idx_place_hub_candidates_attempt", sql: `CREATE index IF NOT EXISTS idx_place_hub_candidates_attempt ON place_hub_candidates(attempt_id);`, target: "place_hub_candidates" },
   { name: "idx_place_hub_candidates_candidate_url", sql: `CREATE index IF NOT EXISTS idx_place_hub_candidates_candidate_url ON place_hub_candidates(candidate_url_id);`, target: "place_hub_candidates" },
   { name: "idx_place_hub_candidates_domain", sql: `CREATE index IF NOT EXISTS idx_place_hub_candidates_domain ON place_hub_candidates(domain);`, target: "place_hub_candidates" },

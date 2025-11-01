@@ -80,10 +80,21 @@ function createBucket(db, options) {
     
     // Finalize tar
     pack.finalize();
-    
+
+    const closePack = () => {
+      pack.removeAllListeners();
+      if (typeof pack.destroy === 'function') {
+        try {
+          pack.destroy();
+        } catch (_) {
+          // Ignore errors; stream may already be closed
+        }
+      }
+    };
+
     // Collect tar stream into buffer
     pack.on('data', chunk => chunks.push(chunk));
-    
+
     pack.on('end', () => {
       try {
         const tarBuffer = Buffer.concat(chunks);
@@ -130,11 +141,17 @@ function createBucket(db, options) {
         });
       } catch (error) {
         reject(error);
+      } finally {
+        closePack();
+        chunks.length = 0;
       }
     });
     
-    pack.on('error', reject);
-    
+    pack.on('error', (err) => {
+      closePack();
+      reject(err);
+    });
+
     } catch (error) {
       reject(error);
     }
@@ -183,37 +200,69 @@ async function retrieveFromBucket(db, bucketId, entryKey, cachedTarBuffer = null
   // Extract specific file from tar
   return new Promise((resolve, reject) => {
     const extract = tar.extract();
-    let found = false;
-    
+    let matchedContent = null;
+    let encounteredError = false;
+
+    const closeExtract = () => {
+      extract.removeAllListeners();
+      if (typeof extract.destroy === 'function') {
+        try {
+          extract.destroy();
+        } catch (_) {
+          // Stream already closed
+        }
+      }
+    };
+
     extract.on('entry', (header, stream, next) => {
-      if (header.name === entry.filename) {
-        found = true;
-        const chunks = [];
-        
-        stream.on('data', chunk => chunks.push(chunk));
-        stream.on('end', () => {
-          resolve({
-            content: Buffer.concat(chunks),
-            metadata: entry.metadata
-          });
-        });
-        stream.on('error', reject);
-        
-        stream.resume();
-      } else {
-        stream.resume();
+      const chunks = [];
+      const isMatch = header.name === entry.filename;
+
+      stream.on('data', (chunk) => {
+        if (isMatch) {
+          chunks.push(chunk);
+        }
+      });
+
+      stream.on('end', () => {
+        if (isMatch) {
+          matchedContent = Buffer.concat(chunks);
+        }
         next();
-      }
+      });
+
+      stream.on('error', (error) => {
+        encounteredError = true;
+        closeExtract();
+        reject(error);
+      });
+
+      stream.resume();
     });
-    
+
     extract.on('finish', () => {
-      if (!found) {
-        reject(new Error(`Entry file not found in tar: ${entry.filename}`));
+      if (encounteredError) {
+        closeExtract();
+        return;
       }
+      if (!matchedContent) {
+        closeExtract();
+        reject(new Error(`Entry file not found in tar: ${entry.filename}`));
+        return;
+      }
+      closeExtract();
+      resolve({
+        content: matchedContent,
+        metadata: entry.metadata
+      });
     });
-    
-    extract.on('error', reject);
-    
+
+    extract.on('error', (error) => {
+      encounteredError = true;
+      closeExtract();
+      reject(error);
+    });
+
     // Write tar buffer to extract stream
     extract.end(tarBuffer);
   });
