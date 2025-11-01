@@ -53,11 +53,12 @@
 	- Implement argument normalization so `--extract`/`--replace` reuse the same resolution logic.
 3. **Selection Flags**
 	- Add `--select <index>` to pick nth match when duplicates remain (index order defined by source span).
-	- Offer `--require-unique` (default true) to enforce uniqueness guard; allow override when the agent intentionally targets one occurrence.
+	- Offer `--allow-multiple` (default off) to opt out of the uniqueness guard when intentionally targeting multiple matches.
 
 ### Phase 4 — Guardrails & Verification (Day 4)
 1. **Dual Verification**
 	- During replacement, require both span match AND hash match (unless `--force` supplied).
+	- Surface a CLI flag (e.g., `--expect-hash`) that agents can populate from a prior `--locate` run so drifted files fail fast.
 	- After splicing, re-parse (already implemented) and ensure newly generated hash differs; log diff preview if unchanged.
 2. **Selector Confirmation**
 	- If `--path` provided, recompute path signature on fresh AST post-parse and confirm the targeted node still resolves there.
@@ -68,12 +69,11 @@
 
 ### Phase 5 — Token-Level Edits (Day 5)
 1. **Sub-span Targeting**
-	- Introduce optional `--replace-range start:end` for fine-grained edits (variable rename within function) using stored offsets.
-	- Validate that requested range is contained within located node.
+	- ✅ Introduced `--replace-range start:end` for targeted edits (offsets relative to the located function) with bounds validation.
 2. **Inline Mutation Helpers**
-	- Add `--rename <newName>` convenience for renaming function identifiers (leveraging SWC transform to update both definition and references within node scope when safe).
+	- ✅ Added `--rename <newName>` convenience for renaming function identifiers when the declaration exposes a named identifier; limited to declaration renames for safety.
 3. **JSON Patch Export**
-	- Allow `--emit-plan` to output the resolved metadata (path, hash, span) so other agents can apply the same guardrails later.
+  	- ✅ Implemented — `--emit-plan` now writes guard metadata (path signature, offsets, hash) for locate/extract/replace flows alongside CLI JSON payloads. Covered by integration tests.
 
 ### Phase 6 — Documentation & Examples (Day 6)
 1. **Update `tools/dev/README.md`**
@@ -134,6 +134,7 @@
 - Smoke test that a no-op run leaves files untouched.
 - CLI integration tests covering error cases (missing function, parse failure, write without `--fix`).
 - Optional benchmark script comparing parse times across parser choices (document results, not necessarily automated).
+- ✅ Ran `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1` to cover plan emission, range replacements, and rename flows.
 
 ## Rollback Plan
 - Tool is additive; reverting entails removing the new CLI, dependencies, and docs.

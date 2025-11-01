@@ -70,6 +70,12 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Jest unit tests covering scenarios with nested classes and duplicate function names.
 - Manual CLI run `--list-functions` to confirm new metadata appears in JSON output.
 
+#### Status — 2025-11-01
+- `collectFunctions` now enriches each entry with `canonicalName`, `scopeChain`, `pathSignature`, and SHA-256 content hashes while preserving span ordering.
+- Added traversal support for exported classes and class methods (instance/static/getter) with scoped naming such as `exports.NewsSummary > #render`.
+- New fixture `tests/fixtures/tools/js-edit-nested-classes.js` exercises nested class scenarios; updated Jest spec asserts metadata for exports, class methods, and nested helpers.
+- CLI `--list-functions` JSON output now surfaces the new metadata fields to unblock later locator work.
+
 ---
 
 ## Phase 3 — CLI Surface Expansion (Day 3)
@@ -96,6 +102,12 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Integration tests invoking CLI with different selectors (top-level function, class method, duplicate names).
 - Manual spot-check to ensure `--locate` respects `--json`/`--quiet` options.
 
+#### Status — 2025-11-01
+- Implemented guard plan export (`--emit-plan <file>`) so locate/extract/replace emit replayable metadata via stdout and optional plan files.
+- Added `--replace-range start:end` for sub-span updates and `--rename <identifier>` for identifier-only edits. Range offsets are validated against the function span and remain mutually exclusive with rename for predictable guardrails.
+- Extended Jest integration coverage to exercise plan emission, range replacements, and rename flows (`tests/tools/__tests__/js-edit.test.js`).
+- Guardrail integration and CLI documentation updates remain outstanding and are tracked for Phase 4/6 respectively.
+
 ---
 
 ## Phase 4 — Guardrails & Verification (Day 4)
@@ -121,6 +133,12 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Jest tests mocking drifted files to ensure guardrails stop the operation.
 - Manual dry-run verifying guardrail summary appears and matches expectations.
 
+#### Status — 2025-11-02
+- Replacement flow now enforces guardrails: hash verification uses `--expect-hash` inputs before mutation, path signatures are revalidated post-edit, and syntax reparse failures abort immediately.
+- Introduced `--force` override for intentional guard bypass; guard summaries mark bypassed checks explicitly and preserve the expected hash for auditing.
+- ASCII output renders a guardrail table, and JSON payloads embed detailed guard status and hashes for automation. Documentation highlights the guard workflow in both `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md`.
+- Remaining work: capture multi-edit plan exports (Phase 5) and evaluate additional guard inputs (e.g., span assertions).
+
 ---
 
 ## Phase 5 — Token-Level Mutation Helpers (Day 5)
@@ -144,6 +162,11 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Unit tests for rename and sub-span logic (success and failure cases).
 - CLI integration test producing a plan file and reusing it in a subsequent run.
 
+#### Status — 2025-11-01
+- Implemented the initial guard plan exporter: `--emit-plan <file>` now serializes selector, hash, span, and path metadata for locate, extract, and replace flows. JSON CLI output mirrors the emitted file so downstream automation can consume either channel.
+- Added integration coverage (`tests/tools/__tests__/js-edit.test.js`) asserting locate/replace commands persist plan files with the expected hash and path signature.
+- Sub-span replacement and rename helpers remain in the backlog pending dedicated fixtures.
+
 ---
 
 ## Phase 6 — Documentation & Examples (Day 6)
@@ -162,6 +185,10 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 
 ### Validation
 - Internal review to ensure examples run as written.
+
+#### Status — 2025-11-02
+- Added developer-facing documentation: `tools/dev/README.md` now outlines selectors, guardrails, and end-to-end usage; `docs/CLI_REFACTORING_QUICK_START.md` includes a dedicated `js-edit` workflow case study.
+- Remaining docs work: publish a workflow recipe covering multi-file batches once batch mode lands (future phase).
 
 ---
 
@@ -183,6 +210,10 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 
 ### Validation
 - `npx jest --runTestsByPath …` focused runs plus `npm run test:file "js-edit"` style command for quick iteration.
+
+#### Status — 2025-11-02
+- Added CLI integration coverage in `tests/tools/__tests__/js-edit.test.js`, exercising path mismatch handling, hash guard enforcement via `--expect-hash`, syntax failure handling, and `--force` overrides.
+- Future coverage: add scenarios for batch edits once additional fixtures exist.
 
 ---
 

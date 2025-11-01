@@ -241,6 +241,35 @@ fmt.table([
 
 ---
 
+## Case Study: `js-edit` Guardrail Workflow
+
+`js-edit` (see `tools/dev/js-edit.js`) demonstrates how to combine rich argument parsing with defensive output. The CLI:
+
+- Accepts selectors (`alpha`, `Class#method`, `path:…`, `hash:…`) normalized through `CliArgumentParser` options.
+- Emits locate tables and JSON payloads via `CliFormatter`, making automation straightforward.
+- Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block.
+
+### Selector + Guardrail Flow
+
+```powershell
+# 1. Capture selectors + hashes (optionally persist a guard plan)
+node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render" --json --emit-plan tmp/render.plan.json > locate.json
+
+# 2. Dry-run replacement with diff preview, guard hash, and plan emission
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-step-1> --emit-diff --emit-plan tmp/render.plan.json --json
+
+# 3. Apply once guard summary reports all checks OK (reuse the plan for auditing)
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-step-1> --emit-diff --emit-plan tmp/render.plan.json --fix
+```
+
+If a hash or path mismatch occurs, the CLI exits non-zero with actionable messaging (e.g., “Hash mismatch… Re-run --locate and retry”). `--force` is available for intentional bypasses, but pair it with `--expect-hash` so the guard summary clearly records that the expected hash was intentionally skipped.
+
+Guard plans mirror the JSON payload’s `plan` block and include the selector, expected hash, span offsets, and path signature. They provide a hand-off artifact for other operators or future automation runs to verify the same guardrails before mutating a file.
+
+**Targeted edits:** Add `--replace-range start:end` (0-based, end-exclusive, relative to the located function) when you only need to swap a specific slice of the function body using `--with <file>`. For identifier-only tweaks, use `--rename <identifier>` with `--replace <selector>`—no snippet required, and the helper updates just the declaration name while guardrails ensure the rest of the function remains untouched.
+
+---
+
 ## Reference
 
 **Full API:** See `src/utils/CliFormatter.js` for all 15+ methods with JSDoc  
