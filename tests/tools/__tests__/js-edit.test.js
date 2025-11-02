@@ -20,6 +20,8 @@ describe('swcAst helpers', () => {
   const callbackAst = parseModule(callbackSource, callbackFixturePath);
   const { functions: callbackFunctions } = collectFunctions(callbackAst, callbackSource);
 
+  const unicodeFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-unicode.js');
+
   const jsEditPath = path.join(__dirname, '../../../tools/dev/js-edit.js');
 
   const runJsEdit = (args, options = {}) => {
@@ -269,6 +271,73 @@ describe('swcAst helpers', () => {
     const expectedLength = expectedAlpha.span.end - expectedAlpha.span.start;
     expect(alphaPayload.byteLength).toBe(expectedLength);
     expect(alphaPayload.byteLength).toBeGreaterThan(0);
+    expect(alphaPayload.hash).toBe(expectedAlpha.hash);
+    expect(alphaPayload.hash).toHaveLength(8);
+  });
+
+  test('extract-hashes returns multi-byte snippets and guard metadata', () => {
+    const inventoryResult = runJsEdit([
+      '--file',
+      unicodeFixturePath,
+      '--list-functions',
+      '--json'
+    ]);
+
+    if (inventoryResult.status !== 0) {
+      throw new Error(`list-functions for unicode fixture failed: ${inventoryResult.stderr || inventoryResult.stdout}`);
+    }
+
+    const inventoryPayload = JSON.parse(inventoryResult.stdout);
+    const inventoryStatic = inventoryPayload.functions.find((fn) => fn.canonicalName === 'exports.UnicodeDemo > static > banner');
+    const inventoryHeadline = inventoryPayload.functions.find((fn) => fn.canonicalName === 'exports.headline');
+    expect(inventoryStatic).toBeDefined();
+    expect(inventoryHeadline).toBeDefined();
+    expect(inventoryStatic.kind).toBe('class-method');
+    expect(inventoryHeadline.kind).toBe('function-declaration');
+    expect(inventoryStatic.hash).toHaveLength(8);
+    expect(inventoryHeadline.hash).toHaveLength(8);
+    expect(inventoryStatic.byteLength).toBeGreaterThan(0);
+    expect(inventoryHeadline.byteLength).toBeGreaterThan(0);
+
+    const staticHash = inventoryStatic.hash;
+    const headlineHash = inventoryHeadline.hash;
+
+    const result = runJsEdit([
+      '--file',
+      unicodeFixturePath,
+      '--extract-hashes',
+      `${staticHash},${headlineHash}`,
+      '--json'
+    ]);
+
+    if (result.status !== 0) {
+      throw new Error(`extract-hashes failed: ${result.stderr || result.stdout}`);
+    }
+
+    const payload = JSON.parse(result.stdout);
+    expect(payload.matchCount).toBe(2);
+    const renderPayload = payload.results.find((entry) => entry.hash === staticHash);
+    expect(renderPayload).toBeDefined();
+    expect(renderPayload.function.canonicalName).toBe(inventoryStatic.canonicalName);
+    expect(renderPayload.code).toContain('準備完了🚀');
+
+    const headlinePayload = payload.results.find((entry) => entry.hash === headlineHash);
+    expect(headlinePayload).toBeDefined();
+    expect(headlinePayload.function.canonicalName).toBe(inventoryHeadline.canonicalName);
+    expect(headlinePayload.code).toContain('📡 Launch');
+  });
+
+  test('extract-hashes reports missing hash failures', () => {
+    const invalid = runJsEdit([
+      '--file',
+      unicodeFixturePath,
+      '--extract-hashes',
+      'deadbeef'
+    ]);
+
+    expect(invalid.status).not.toBe(0);
+    const output = `${invalid.stderr}${invalid.stdout}`;
+    expect(output).toContain('No functions found for hash');
   });
 
   test('list-variables json surfaces binding metadata', () => {
@@ -859,23 +928,39 @@ describe('swcAst helpers', () => {
     expect(normalizedVariableContext).toContain('const sequence =');
   });
 
+  test('js-edit --help surfaces grouped guidance', () => {
+    const result = runJsEdit(['--help']);
+    expect(result.status).toBe(0);
+    const helpOutput = `${result.stdout}${result.stderr}`;
+    expect(helpOutput).toContain('Examples:');
+    expect(helpOutput).toContain('Discovery commands:');
+    expect(helpOutput).toContain('Guardrails and plans:');
+    expect(helpOutput).toContain('Selector hints:');
+    expect(helpOutput).toContain('Output controls:');
+  });
+
   describe('js-edit CLI guardrails', () => {
     let tempDir;
     let targetFile;
+    let nestedTargetFile;
     let replacementFunctionPath;
     let replacementConstPath;
     let replacementInvalidPath;
     let replacementRangePath;
+    let replacementClassMethodPath;
 
     beforeEach(() => {
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-cli-'));
       targetFile = path.join(tempDir, 'sample.js');
+      nestedTargetFile = path.join(tempDir, 'nested.js');
       replacementFunctionPath = path.join(tempDir, 'replacement-function.js');
       replacementConstPath = path.join(tempDir, 'replacement-const.js');
       replacementInvalidPath = path.join(tempDir, 'replacement-invalid.js');
       replacementRangePath = path.join(tempDir, 'replacement-range.js');
+      replacementClassMethodPath = path.join(tempDir, 'replacement-class-method.js');
 
       fs.copyFileSync(fixturePath, targetFile);
+      fs.copyFileSync(nestedFixturePath, nestedTargetFile);
       fs.writeFileSync(
         replacementFunctionPath,
         " function alpha() {\n  return 'updated';\n}\n"
@@ -889,6 +974,10 @@ describe('swcAst helpers', () => {
         " function alpha( {\n  return 'broken'\n"
       );
       fs.writeFileSync(replacementRangePath, "'alpha-updated'");
+      fs.writeFileSync(
+        replacementClassMethodPath,
+        "  static initialize(config) {\n    return { flag: 'updated' };\n  }\n"
+      );
     });
 
     afterEach(() => {
@@ -1151,6 +1240,46 @@ describe('swcAst helpers', () => {
       expect(forcedPayload.guard.span.expectedEnd).toBe(alphaRecord.span.end + 1);
     });
 
+    test('allows class method replacement when guard passes', () => {
+      const methodSelector = 'exports.NewsSummary > static > initialize';
+      const locate = runJsEdit([
+        '--file',
+        nestedTargetFile,
+        '--locate',
+        methodSelector,
+        '--json'
+      ]);
+
+      expect(locate.status).toBe(0);
+      const locatePayload = JSON.parse(locate.stdout);
+      expect(locatePayload.matches).toHaveLength(1);
+      const expectedHash = locatePayload.matches[0].hash;
+      expect(expectedHash).toHaveLength(8);
+
+      const replaceResult = runJsEdit([
+        '--file',
+        nestedTargetFile,
+        '--replace',
+        methodSelector,
+        '--expect-hash',
+        expectedHash,
+        '--with',
+        replacementClassMethodPath,
+        '--fix',
+        '--json'
+      ]);
+
+      expect(replaceResult.status).toBe(0);
+      const replacePayload = JSON.parse(replaceResult.stdout);
+      expect(replacePayload.guard.hash.status).toBe('ok');
+      expect(replacePayload.guard.path.status).toBe('ok');
+      expect(replacePayload.guard.result.after).toHaveLength(8);
+
+      const updatedSource = fs.readFileSync(nestedTargetFile, 'utf8');
+      expect(updatedSource).toContain("return { flag: 'updated' };");
+      expect(updatedSource).not.toContain('return config ?? {};');
+    });
+
     test('replacement emits guard plan containing expected hash', () => {
       const locate = runJsEdit([
         '--file',
@@ -1328,4 +1457,5 @@ describe('swcAst helpers', () => {
       expect(output).toContain('Replacement produced invalid JavaScript');
     });
   });
-});
+})
+;

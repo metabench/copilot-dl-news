@@ -255,6 +255,8 @@ fmt.table([
 - Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block, and optional `--expect-hash`/`--expect-span` inputs let you replay the exact metadata captured during a prior locate run.
 - Hashes shown in locate/context/plan payloads are base64 digests trimmed to eight characters by default so agents get concise guard tokens; switch the constants in `tools/dev/lib/swcAst.js` to fall back to a longer base16 form if a workflow needs it.
 
+**Lightweight discovery helpers.** `--preview <selector>` / `--preview-variable <selector>` emit short snippets (default 240 chars) alongside the same hash/path/span metadata reported by `--locate`, making it easy to confirm a match before running a heavier context or locate command. `--search-text <substring>` performs a plain-text scan that highlights each hit, surfaces enclosing function/variable guard hashes, and respects `--search-limit` / `--search-context` knobs so automation can pivot from a literal search directly into guarded edits.
+
 ### Selector + Guardrail Flow
 
 ```powershell

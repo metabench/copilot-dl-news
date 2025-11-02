@@ -1696,21 +1696,21 @@ function collectVariables(ast, source, mapper = null) {
   return { variables, lineIndex, mapper: sourceMapper };
 }
 
-function extractCode(source, span) {
+function extractCode(source, span, mappingContext = null) {
   if (typeof source !== 'string') {
     return '';
   }
-  const byteIndex = buildByteIndex(source);
-  const { start, end } = normalizeSpan(span, byteIndex);
+  const context = mappingContext || buildByteIndex(source);
+  const { start, end } = normalizeSpan(span, context);
   return source.slice(start, end);
 }
 
-function replaceSpan(source, span, replacement) {
+function replaceSpan(source, span, replacement, mappingContext = null) {
   if (typeof source !== 'string') {
     return replacement;
   }
-  const byteIndex = buildByteIndex(source);
-  const { start, end } = normalizeSpan(span, byteIndex);
+  const context = mappingContext || buildByteIndex(source);
+  const { start, end } = normalizeSpan(span, context);
   return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
 }
 

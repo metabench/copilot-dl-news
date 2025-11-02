@@ -1,5 +1,55 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — js-edit Lightweight Discovery Helpers (Initiated 2025-11-09)
+
+### Goal
+- Deliver the “lighter alternatives” discussed with the operator by adding fast discovery helpers to `js-edit`: filtered listings, selector previews, and plain-text search that reports guard hashes, all without expanding the guardrail footprint.
+
+### Current Behavior
+- `--list-functions` / `--list-variables` always emit the full inventory, forcing operators to sift through large tables manually.
+- Previewing a candidate requires running `--context-*` which defaults to ±512 characters and can feel heavyweight when only a quick glance is needed.
+- There is no CLI entry point for text-based search; operators must open the file in an editor to locate literal strings before returning to `js-edit` for guarded operations.
+
+### Proposed Changes
+1. Extend `--list-functions` and `--list-variables` with an optional `--filter-text <substring>` flag (case-insensitive) so listings can be narrowed before applying selectors.
+2. Add a lightweight `--preview <selector>` command that reuses existing locate logic but prints a concise snippet (first matching lines + guard metadata) without invoking the broader context machinery.
+3. Introduce `--search-text <substring>` to scan file contents (UTF-8 safe) and report each match with line/column, a short preview excerpt, and the guard hash/path of the enclosing function or variable when available.
+4. Update CLI help, README references, and quick-start guidance to surface the new discovery options and their guardrail relationship.
+5. Extend the focused Jest integration suite with fixtures covering filtering, preview output, and text-search result formatting (ASCII + JSON).
+
+### Risks & Unknowns
+- Need to confirm selector resolution latency stays acceptable when `--search-text` maps matches back to enclosing records (may require cached inventories).
+- Must ensure new flags remain mutually exclusive with existing operations to avoid multi-command conflicts (e.g., `--list-functions` already enforces single-operation semantics).
+- Text search should respect multi-byte characters; guard against index drift when slicing previews around matches.
+- Large files could yield many matches; may need sensible default limits or summaries to avoid overwhelming output.
+
+### Integration Points
+- `tools/dev/js-edit.js` argument parser, operation dispatch, formatter helpers, and JSON emitters.
+- `tools/dev/lib/swcAst.js` for any shared utilities needed to map raw offsets back to function/variable records.
+- `tests/tools/__tests__/js-edit.test.js` plus associated fixtures for integration coverage.
+
+### Docs Impact
+- Update `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` so operators know how to use `--filter-text`, `--preview`, and `--search-text` alongside existing guardrail workflows.
+- If behaviour expectations for agents change, add a brief note to `.github/instructions/GitHub Copilot.instructions.md`.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` after wiring each major feature.
+- Ad-hoc CLI smoke checks (`node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-sample.js --search-text callback`) to validate ASCII + JSON output.
+
+### Rollback Plan
+- Revert `tools/dev/js-edit.js`, any new helper utilities, updated fixtures, and documentation changes; remove associated tests to restore prior CLI surface.
+- Since features are additive, rolling back the specific commits on the feature branch will return the CLI to its previous behaviour.
+
+### Branch & Notes
+- Working branch: `chore/js-edit-light-discovery` (created 2025-11-09 from `main`).
+- Knowledge gaps: need to decide whether `--search-text` should cap match counts or expose a `--limit` flag; confirm formatter helpers already support truncated snippets.
+- Tool friction: parser currently enforces “single operation” rule—must ensure new options either comply or extend the validation layer cleanly.
+- 2025-11-09: `--filter-text` now narrows both `--list-functions` and `--list-variables`, with CLI summaries reporting total vs. matched counts.
+- 2025-11-10: Preview helpers (`previewFunction`/`previewVariable`) now emit concise snippets and reuse shared search utilities; next step is wiring `--search-text` through main dispatch with formatter/JSON variants.
+- 2025-11-10 (later): Wired `--preview`, `--preview-variable`, and `--search-text` through CLI dispatch and added focused Jest coverage for the new discovery helpers.
+- 2025-11-11: Operator requested expanded `--help` output; scope includes grouping discovery flags (`--filter-text`, `--preview*`, `--search-text`) with detailed usage notes and cross-linking guardrail options.
+- 2025-11-11 (later): Injected grouped help sections into `parseCliArgs` and added Jest coverage ensuring `--help` surfaces examples, discovery commands, guardrails, selector hints, and output controls.
+
 ## Active Plan — js-edit Byte Mapping Reliability (Initiated 2025-11-02)
 
 ### Goal
@@ -59,6 +109,7 @@
 - **2025-11-08 (late night):** Updated `replace-variable` integration spec expectations for newline guard payloads; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` passing after relaxed assertions matching converted CRLF metadata.
 - **2025-11-09:** Extended function replacement guard-plan coverage so newline metadata is asserted for both immediate guard payloads and emitted plan files; rerun focused Jest after remaining updates.
 - **2025-11-02 (evening):** Confirmed CRLF regression test now covers `replaceVariable` fallback, scoped upcoming span/byte summarisation work to `renderGuardrailSummary`, `formatSpanDetails`, `buildPlanPayload`, and locate/context table renderers prior to implementation.
+- **2025-11-10:** Prep next pass: share cached `ByteMapper` with context/extract/replace flows (both functions and variables), reuse normalized spans across CLI helpers, and extend regression fixtures to cover multi-byte + CRLF mixes once wiring lands.
 
 ### Next Implementation Steps
 1. ✅ Validate the new `replaceVariable` fallback workflow across CRLF fixtures so guard hashes/path checks stay stable when post-replacement spans collapse to zero length. (2025-11-08 via updated replace-variable Jest spec.)
@@ -180,6 +231,8 @@
 - **Branch:** `chore/js-edit-class-methods` (created 2025-11-02 from `feat/url-normalization`).
 - **Knowledge Gaps:** Need to confirm SWC node coverage for `ClassPrivateMethod` spans and computed keys before enabling replacement guardrails.
 - **Tooling Friction:** `js-edit` replacement guard currently rejects class-method records even with `--force`; collector changes must elevate `replaceable` flag and CLI must accept the new kind.
+- **2025-11-10:** Begin guardrail follow-up: adjust `replaceFunction` messaging + validation to acknowledge class methods, then add focused CLI replacement test cases for static/private/accessor methods using CRLF fixture variants.
+- **2025-11-10 (late):** Added CLI regression covering `exports.NewsSummary > static > initialize` replacement to confirm guard hashes/path checks succeed against class methods copied to temp targets.
 
 ---
 
@@ -229,6 +282,7 @@
 - **Branch:** `chore/js-edit-hash-workflows` (created 2025-11-02 from `main`).
 - **Open Questions:** Confirm whether hash selectors should also support variables; if scope expands, clone tasks into follow-up plan.
 - **Tooling Friction:** Existing console formatter may need refactor to reuse separators across commands without duplicating ASCII art logic.
+- **2025-11-10:** Implementation kickoff: surface guard hashes in `--list-functions`, wire `--extract-hashes` dispatch (collision handling + concise ASCII separator output), and script Jest coverage for multi-hash extraction + JSON payloads.
 
 ---
 

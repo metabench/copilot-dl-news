@@ -23,6 +23,12 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 Locate/context tables and JSON payloads report both UTF-16 code-unit offsets and raw byte offsets. Each entry includes `charSpanRange` and `byteSpanRange` summaries so agents can reason about guardrails even when newline normalization or multi-byte glyphs change the byte footprint.
 
+### Lightweight Discovery Helpers
+
+- `--preview <selector>` / `--preview-variable <selector>` return concise snippets (default 240 chars) for functions or variables along with the same guard metadata you would capture from `--locate`. Adjust the window with `--preview-chars <n>` when you need a little more context without invoking the full context machinery.
+- `--search-text <substring>` scans the file for plain-text matches, reporting each hit with line/column, a highlighted context window (default ±60 chars), and the guard hashes/path signatures of any enclosing function or variable. Use `--search-limit <n>` and `--search-context <n>` to tune result volume and surrounding context.
+- All discovery commands honour `--json`, `--emit-plan`, and existing guardrail conventions so a quick preview or search can feed directly into downstream automation without a second locate pass.
+
 Selectors accept optional disambiguation flags:
 
 - `--select <index>` — choose the nth match in source order (1-based).

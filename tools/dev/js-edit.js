@@ -19,6 +19,10 @@ const {
 
 const fmt = new CliFormatter();
 const DEFAULT_CONTEXT_PADDING = 512;
+const DEFAULT_PREVIEW_CHARS = 240;
+const DEFAULT_SEARCH_LIMIT = 20;
+const DEFAULT_SEARCH_CONTEXT = 60;
+
 const CONTEXT_ENCLOSING_MODES = new Set(['exact', 'class', 'function']);
 const FUNCTION_CONTEXT_KINDS = new Set(['function-declaration', 'function-expression', 'arrow-function', 'class-method']);
 const VARIABLE_TARGET_MODES = new Set(['binding', 'declarator', 'declaration']);
@@ -108,6 +112,110 @@ function computeNewlineStats(content) {
     mixed: uniqueStyles > 1,
     uniqueStyles
   };
+}
+
+function extractFunctionsByHashes(options, source, functionRecords) {
+  const hashes = Array.isArray(options.extractHashes) ? options.extractHashes : [];
+  if (hashes.length === 0) {
+    throw new Error('--extract-hashes requires at least one hash value.');
+  }
+
+  if (options.outputPath) {
+    throw new Error('--output is not supported with --extract-hashes. Run --extract <selector> for single-target output.');
+  }
+
+  const hashIndex = new Map();
+  functionRecords.forEach((record) => {
+    if (!record.hash) {
+      return;
+    }
+    if (!hashIndex.has(record.hash)) {
+      hashIndex.set(record.hash, []);
+    }
+    hashIndex.get(record.hash).push(record);
+  });
+
+  const results = hashes.map((hash) => {
+    const candidates = hashIndex.get(hash) || [];
+    if (candidates.length === 0) {
+      throw new Error(`No functions found for hash "${hash}". Run --list-functions --json to inspect available hashes.`);
+    }
+    if (candidates.length > 1) {
+      const names = candidates.map((candidate) => candidate.canonicalName || candidate.name || '(anonymous)');
+      throw new Error(`Hash "${hash}" matched multiple functions: ${names.join(', ')}. Use --locate with --select-path to disambiguate.`);
+    }
+
+    const record = candidates[0];
+    const code = extractCode(source, record.span, options.sourceMapper);
+    return { hash, record, code };
+  });
+
+  const selectorLabel = hashes.join(',');
+  const plan = maybeEmitPlan(
+    'extract-hashes',
+    options,
+    selectorLabel,
+    results.map((entry) => entry.record),
+    results.map((entry) => entry.hash),
+    results.map((entry) => entry.record.span)
+  );
+
+  const payload = {
+    file: options.filePath,
+    hashes,
+    matchCount: results.length,
+    results: results.map((entry) => ({
+      hash: entry.hash,
+      function: {
+        name: entry.record.name,
+        canonicalName: entry.record.canonicalName,
+        kind: entry.record.kind,
+        line: entry.record.line,
+        column: entry.record.column,
+        exportKind: entry.record.exportKind,
+        replaceable: entry.record.replaceable,
+        pathSignature: entry.record.pathSignature,
+        hash: entry.record.hash
+      },
+      code: entry.code
+    }))
+  };
+
+  if (plan) {
+    payload.plan = plan;
+  }
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) {
+    return;
+  }
+
+  fmt.header('Hash Extraction');
+  fmt.stat('Requested hashes', hashes.length, 'number');
+  fmt.stat('Matches', results.length, 'number');
+
+  results.forEach((entry, index) => {
+    const fn = entry.record;
+    const title = `Match ${index + 1}: ${fn.canonicalName || fn.name} [${entry.hash}]`;
+    fmt.section(title);
+    fmt.stat('Kind', fn.kind);
+    if (fn.exportKind) fmt.stat('Export', fn.exportKind);
+    fmt.stat('Location', `${fn.line}:${fn.column}`);
+    if (fn.pathSignature) fmt.stat('Path', fn.pathSignature);
+    fmt.stat('Replaceable', fn.replaceable ? 'yes' : 'no');
+    fmt.section('Source');
+    process.stdout.write(`${entry.code}\n`);
+  });
+
+  if (options.emitPlanPath) {
+    fmt.info(`Plan written to ${options.emitPlanPath}`);
+  }
+
+  fmt.footer();
 }
 
 function resolveTargetNewlineStyle(style) {
@@ -574,6 +682,168 @@ function toReadableScope(scopeChain) {
   return scopeChain.join(' > ');
 }
 
+function createPreviewSnippet(snippet, requestedLimit) {
+  const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.floor(requestedLimit)
+    : DEFAULT_PREVIEW_CHARS;
+
+  if (typeof snippet !== 'string' || snippet.length === 0) {
+    return {
+      text: '',
+      truncated: false,
+      totalChars: 0,
+      limit
+    };
+  }
+
+  if (snippet.length <= limit) {
+    return {
+      text: snippet,
+      truncated: false,
+      totalChars: snippet.length,
+      limit
+    };
+  }
+
+  let preview = snippet.slice(0, limit);
+  if (!preview.endsWith('\n')) {
+    preview = `${preview}\n`;
+  }
+  preview = `${preview}...`;
+
+  return {
+    text: preview,
+    truncated: true,
+    totalChars: snippet.length,
+    limit
+  };
+}
+
+function buildLineIndex(source) {
+  const offsets = [0];
+  if (typeof source !== 'string' || source.length === 0) {
+    return offsets;
+  }
+
+  for (let index = 0; index < source.length; index += 1) {
+    const code = source.charCodeAt(index);
+    if (code === 10) {
+      offsets.push(index + 1);
+    } else if (code === 13) {
+      if (source.charCodeAt(index + 1) === 10) {
+        offsets.push(index + 2);
+        index += 1;
+      } else {
+        offsets.push(index + 1);
+      }
+    }
+  }
+
+  return offsets;
+}
+
+function positionFromIndex(index, lineOffsets) {
+  if (!Array.isArray(lineOffsets) || lineOffsets.length === 0) {
+    return { line: 1, column: index + 1 };
+  }
+
+  let low = 0;
+  let high = lineOffsets.length - 1;
+  let result = 0;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const offset = lineOffsets[mid];
+    if (offset <= index) {
+      result = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  const lineStart = lineOffsets[result] || 0;
+  return {
+    line: result + 1,
+    column: index - lineStart + 1
+  };
+}
+
+function spanContains(span, index) {
+  return span
+    && typeof span.start === 'number'
+    && typeof span.end === 'number'
+    && index >= span.start
+    && index < span.end;
+}
+
+function buildSearchSnippet(source, start, end, contextChars) {
+  const limit = Number.isFinite(contextChars) && contextChars >= 0
+    ? Math.floor(contextChars)
+    : DEFAULT_SEARCH_CONTEXT;
+
+  const safeStart = Math.max(0, start);
+  const safeEnd = Math.max(safeStart, end);
+  const beforeStart = Math.max(0, safeStart - limit);
+  const afterEnd = Math.min(source.length, safeEnd + limit);
+
+  const before = source.slice(beforeStart, safeStart);
+  const match = source.slice(safeStart, safeEnd);
+  const after = source.slice(safeEnd, afterEnd);
+
+  const truncatedBefore = beforeStart > 0;
+  const truncatedAfter = afterEnd < source.length;
+  const highlightPrefix = '<<<';
+  const highlightSuffix = '>>>';
+  const highlighted = `${truncatedBefore ? '...' : ''}${before}${highlightPrefix}${match}${highlightSuffix}${after}${truncatedAfter ? '...' : ''}`;
+
+  return {
+    before,
+    match,
+    after,
+    truncatedBefore,
+    truncatedAfter,
+    highlighted,
+    range: {
+      start: beforeStart,
+      end: afterEnd
+    }
+  };
+}
+
+function findFunctionOwner(functionRecords, index) {
+  if (!Array.isArray(functionRecords)) {
+    return null;
+  }
+
+  for (const record of functionRecords) {
+    if (spanContains(record.span, index)) {
+      return record;
+    }
+  }
+
+  return null;
+}
+
+function findVariableOwner(variableRecords, index) {
+  if (!Array.isArray(variableRecords)) {
+    return null;
+  }
+
+  for (const record of variableRecords) {
+    if (
+      spanContains(record.declarationSpan, index)
+      || spanContains(record.declaratorSpan, index)
+      || spanContains(record.span, index)
+    ) {
+      return record;
+    }
+  }
+
+  return null;
+}
+
+
 function buildSelectorSet(fn) {
   const selectors = new Set();
   const add = (value) => {
@@ -869,12 +1139,12 @@ function computeContextRange(span, before, after, sourceLength) {
   };
 }
 
-function createContextEntry(record, source, before, after, enclosingMode) {
+function createContextEntry(record, source, before, after, enclosingMode, mapper) {
   const { span: effectiveSpan, context: selectedContext } = selectContextSpan(record, enclosingMode);
   const contextSpan = effectiveSpan || record.span;
   const contextRange = computeContextRange(contextSpan, before, after, source.length);
   const contextSnippet = source.slice(contextRange.start, contextRange.end);
-  const baseSnippet = extractCode(source, record.span);
+  const baseSnippet = extractCode(source, record.span, mapper);
   const relativeBaseStart = Math.max(0, record.span.start - contextRange.start);
   const relativeBaseEnd = Math.max(relativeBaseStart, relativeBaseStart + Math.max(0, record.span.end - record.span.start));
   return {
@@ -907,7 +1177,7 @@ function buildContextEntries(records, source, options) {
     : DEFAULT_CONTEXT_PADDING;
   const enclosingMode = options.contextEnclosing;
 
-  const entries = records.map((record) => createContextEntry(record, source, before, after, enclosingMode));
+  const entries = records.map((record) => createContextEntry(record, source, before, after, enclosingMode, options.sourceMapper));
 
   return {
     before,
@@ -1317,6 +1587,7 @@ function parseCliArgs(argv) {
   parser
     .add('--file <path>', 'JavaScript file to inspect or modify')
     .add('--list-functions', 'List detected functions with scope, hash, and byte-length metadata', false, 'boolean')
+    .add('--filter-text <substring>', 'Filter list output by a case-insensitive substring before rendering')
     .add('--include-paths', 'Include path signatures when listing functions', false, 'boolean')
     .add('--function-summary', 'Print aggregate metrics for detected functions', false, 'boolean')
     .add('--list-variables', 'List variable bindings with scope, initializer, and hash metadata', false, 'boolean')
@@ -1325,6 +1596,12 @@ function parseCliArgs(argv) {
     .add('--context-before <chars>', 'Override leading context character count (default 512)', undefined, 'number')
     .add('--context-after <chars>', 'Override trailing context character count (default 512)', undefined, 'number')
     .add('--context-enclosing <mode>', 'Expand context to enclosing structures (modes: exact, class, function). Default: exact.', 'exact')
+    .add('--preview <selector>', 'Show a short preview snippet for the function matching the selector')
+    .add('--preview-variable <selector>', 'Show a short preview snippet for the variable matching the selector')
+    .add('--preview-chars <chars>', 'Override the preview character length (default 240)', undefined, 'number')
+    .add('--search-text <substring>', 'Find plain-text matches and surface guard metadata around each match')
+    .add('--search-limit <count>', 'Limit the number of reported text matches (default 20)', undefined, 'number')
+    .add('--search-context <chars>', 'Override the context characters shown around each text match (default 60)', undefined, 'number')
     .add('--extract <selector>', 'Extract the function matching the selector (safe, read-only)')
     .add('--extract-hashes <hashes>', 'Extract functions matching the provided guard hashes (comma or space separated)')
     .add('--replace <selector>', 'Replace the function matching the selector (requires --with or --rename)')
@@ -1350,8 +1627,16 @@ function parseCliArgs(argv) {
     .add('--allow-multiple', 'Allow selectors to resolve to multiple matches (locate/context/extract)', false, 'boolean')
     .add('--variable-target <mode>', 'Variable target span: binding, declarator, or declaration (default: declarator)', 'declarator');
 
+  const program = parser.getProgram();
+  program.addHelpText(
+    'after',
+    `\nExamples:\n  js-edit --file app.js --list-functions --filter-text controller\n  js-edit --file app.js --locate exports.alpha --json\n  js-edit --file app.js --replace exports.alpha --with patch.js --expect-hash HASH --fix\n\nDiscovery commands:\n  --list-functions          Inventory functions; combine with --filter-text, --include-paths, or --function-summary.\n  --list-variables          Inventory bindings and destructuring targets.\n  --preview <selector>      Render a short snippet; use --preview-variable for bindings.\n  --search-text <text>      Locate literal matches and show guard metadata.\n\nEditing commands:\n  --extract <selector>      Print guarded source (use --output to write to a file).\n  --replace <selector>      Apply snippets or --rename; requires --fix to write.\n  --replace-variable <sel>  Replace bindings; pair with --variable-target binding|declarator|declaration.\n  --replace-range start:end Limit replacements to a slice within the located span.\n\nGuardrails and plans:\n  --expect-hash / --expect-span   Require stable targets before writing.\n  --emit-plan <path>              Emit JSON metadata for downstream automation.\n  --force                         Bypass guardrails only after manual review.\n\nSelector hints:\n  exports.name\n  module.exports.handler\n  ClassName > static > method\n  call:describe:mission > callback\n  hash:CAFED00D (from --list-functions --json)\n\nOutput controls:\n  --json / --quiet emit machine-readable payloads.\n  --emit-diff previews replacements during dry-runs.\n`
+  );
+
   return parser.parse(argv);
 }
+
+
 
 
 function normalizeOptions(raw) {
@@ -1368,6 +1653,20 @@ function normalizeOptions(raw) {
 
   const includePaths = Boolean(resolved.includePaths);
   const functionSummary = Boolean(resolved.functionSummary);
+
+  const filterText = resolved.filterText !== undefined && resolved.filterText !== null
+    ? String(resolved.filterText).trim()
+    : null;
+  if (filterText !== null && filterText.length === 0) {
+    throw new Error('--filter-text requires a non-empty value.');
+  }
+
+  const searchText = resolved.searchText !== undefined && resolved.searchText !== null
+    ? String(resolved.searchText).trim()
+    : null;
+  if (searchText !== null && searchText.length === 0) {
+    throw new Error('--search-text requires a non-empty value.');
+  }
 
   let extractHashes = [];
   if (resolved.extractHashes !== undefined && resolved.extractHashes !== null) {
@@ -1409,6 +1708,9 @@ function normalizeOptions(raw) {
     ['--list-variables', Boolean(resolved.listVariables)],
     ['--context-function', resolved.contextFunction !== undefined && resolved.contextFunction !== null],
     ['--context-variable', resolved.contextVariable !== undefined && resolved.contextVariable !== null],
+    ['--preview', resolved.preview !== undefined && resolved.preview !== null],
+    ['--preview-variable', resolved.previewVariable !== undefined && resolved.previewVariable !== null],
+    ['--search-text', Boolean(searchText)],
     ['--extract', resolved.extract !== undefined && resolved.extract !== null],
     ['--replace', resolved.replace !== undefined && resolved.replace !== null],
     ['--locate', resolved.locate !== undefined && resolved.locate !== null],
@@ -1419,11 +1721,15 @@ function normalizeOptions(raw) {
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
   if (enabledOperations.length === 0) {
-    throw new Error('Provide one of --list-functions, --function-summary, --extract-hashes <hashes>, --list-variables, --context-function <selector>, --context-variable <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
+    throw new Error('Provide one of --list-functions, --function-summary, --extract-hashes <hashes>, --list-variables, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --search-text <substring>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
   }
   if (enabledOperations.length > 1) {
     const flags = enabledOperations.map(([flag]) => flag).join(', ');
     throw new Error(`Only one operation may be specified at a time. Found: ${flags}.`);
+  }
+
+  if (filterText !== null && !resolved.listFunctions && !resolved.listVariables) {
+    throw new Error('--filter-text can only be used with --list-functions or --list-variables.');
   }
 
   const emitDiff = Boolean(resolved.emitDiff);
@@ -1497,6 +1803,8 @@ function normalizeOptions(raw) {
   const locateVariableSelector = parseSelector(resolved.locateVariable, '--locate-variable');
   const extractVariableSelector = parseSelector(resolved.extractVariable, '--extract-variable');
   const replaceVariableSelector = parseSelector(resolved.replaceVariable, '--replace-variable');
+  const previewSelector = parseSelector(resolved.preview, '--preview');
+  const previewVariableSelector = parseSelector(resolved.previewVariable, '--preview-variable');
 
   let contextBefore = null;
   if (resolved.contextBefore !== undefined && resolved.contextBefore !== null) {
@@ -1514,6 +1822,42 @@ function normalizeOptions(raw) {
       throw new Error('--context-after must be a non-negative integer.');
     }
     contextAfter = parsed;
+  }
+
+  let previewChars = null;
+  if (resolved.previewChars !== undefined && resolved.previewChars !== null) {
+    const parsed = Number(resolved.previewChars);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      throw new Error('--preview-chars must be a positive integer.');
+    }
+    previewChars = Math.floor(parsed);
+  }
+  if (previewChars !== null && !previewSelector && !previewVariableSelector) {
+    throw new Error('--preview-chars can only be used with --preview or --preview-variable.');
+  }
+
+  let searchLimit = null;
+  if (resolved.searchLimit !== undefined && resolved.searchLimit !== null) {
+    const parsed = Number(resolved.searchLimit);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new Error('--search-limit must be a positive integer.');
+    }
+    searchLimit = parsed;
+  }
+  if (searchLimit !== null && !searchText) {
+    throw new Error('--search-limit can only be used with --search-text.');
+  }
+
+  let searchContext = null;
+  if (resolved.searchContext !== undefined && resolved.searchContext !== null) {
+    const parsed = Number(resolved.searchContext);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error('--search-context must be a non-negative integer.');
+    }
+    searchContext = Math.floor(parsed);
+  }
+  if (searchContext !== null && !searchText) {
+    throw new Error('--search-context can only be used with --search-text.');
   }
 
   const contextEnclosingRaw = resolved.contextEnclosing
@@ -1635,12 +1979,18 @@ function normalizeOptions(raw) {
     filePath,
     list: Boolean(resolved.listFunctions),
     listVariables: Boolean(resolved.listVariables),
+    filterText,
     contextFunctionSelector,
     contextVariableSelector,
+    previewSelector,
+    previewVariableSelector,
     extractSelector,
     replaceSelector,
     locateSelector,
     locateVariableSelector,
+    searchText,
+    searchLimit,
+    searchContext,
     replacementPath,
     outputPath,
     emitPlanPath,
@@ -1659,6 +2009,7 @@ function normalizeOptions(raw) {
     renameTo,
     extractVariableSelector,
     replaceVariableSelector,
+    previewChars,
     variableTarget,
     contextBefore,
     contextAfter,
@@ -1668,6 +2019,7 @@ function normalizeOptions(raw) {
     functionSummary
   };
 }
+
 
 
 
@@ -1697,26 +2049,52 @@ function outputJson(payload) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
-function listFunctions({ filePath, json, quiet }, source, functions) {
+function listFunctions(options, source, functions) {
+  const { filePath, json, quiet, filterText, includePaths } = options;
+  const normalizedFilter = filterText ? filterText.toLowerCase() : null;
+
+  const matchesFilter = (fn) => {
+    if (!normalizedFilter) {
+      return true;
+    }
+    const haystacks = [
+      fn.name,
+      fn.canonicalName,
+      fn.kind,
+      fn.exportKind,
+      fn.pathSignature,
+      fn.hash,
+      Array.isArray(fn.scopeChain) ? fn.scopeChain.join(' > ') : null
+    ];
+    return haystacks.some((value) => typeof value === 'string' && value.toLowerCase().includes(normalizedFilter));
+  };
+
+  const mapRecord = (fn) => {
+    const byteLength = Math.max(0, (fn.span?.end ?? 0) - (fn.span?.start ?? 0));
+    return {
+      name: fn.name,
+      canonicalName: fn.canonicalName,
+      kind: fn.kind,
+      exportKind: fn.exportKind,
+      replaceable: fn.replaceable,
+      line: fn.line,
+      column: fn.column,
+      scopeChain: fn.scopeChain,
+      pathSignature: fn.pathSignature,
+      hash: fn.hash,
+      byteLength
+    };
+  };
+
+  const filtered = normalizedFilter ? functions.filter(matchesFilter) : functions.slice();
+  const filteredRecords = filtered.map(mapRecord);
+
   const payload = {
     file: filePath,
+    filterText: filterText || null,
     totalFunctions: functions.length,
-    functions: functions.map((fn) => {
-      const byteLength = Math.max(0, (fn.span?.end ?? 0) - (fn.span?.start ?? 0));
-      return {
-        name: fn.name,
-        canonicalName: fn.canonicalName,
-        kind: fn.kind,
-        exportKind: fn.exportKind,
-        replaceable: fn.replaceable,
-        line: fn.line,
-        column: fn.column,
-        scopeChain: fn.scopeChain,
-        pathSignature: fn.pathSignature,
-        hash: fn.hash,
-        byteLength
-      };
-    })
+    matchedFunctions: filtered.length,
+    functions: filteredRecords
   };
 
   if (json) {
@@ -1731,38 +2109,93 @@ function listFunctions({ filePath, json, quiet }, source, functions) {
       return;
     }
 
+    if (filterText) {
+      fmt.info(`Filter "${filterText}" matched ${filtered.length} of ${functions.length} functions.`);
+    }
+
     fmt.section('Detected Functions');
-    fmt.table(functions.map((fn) => ({
-      name: fn.name,
-      kind: fn.kind,
-      export: fn.exportKind || '-',
-      line: fn.line,
-      column: fn.column,
-      bytes: Math.max(0, (fn.span?.end ?? 0) - (fn.span?.start ?? 0)),
-      replaceable: fn.replaceable ? 'yes' : 'no'
-    })), {
-      columns: ['name', 'kind', 'export', 'line', 'column', 'bytes', 'replaceable']
-    });
+    if (filtered.length === 0) {
+      fmt.warn('No functions matched the current filter.');
+    } else {
+      const tableRows = filteredRecords.map((record, index) => {
+        const original = filtered[index] || null;
+        const span = original && original.span ? original.span : null;
+        const charLength = span && typeof span.start === 'number' && typeof span.end === 'number'
+          ? Math.max(0, span.end - span.start)
+          : null;
+        const row = {
+          index: index + 1,
+          name: record.name,
+          hash: record.hash || '-',
+          kind: record.kind,
+          export: record.exportKind || '-',
+          line: record.line,
+          column: record.column,
+          bytes: Number.isFinite(record.byteLength) ? record.byteLength : charLength ?? 0,
+          replaceable: record.replaceable ? 'yes' : 'no'
+        };
+        if (includePaths) {
+          row.path = record.pathSignature || '-';
+        }
+        return row;
+      });
+
+      const columns = ['index', 'name', 'hash', 'kind', 'export', 'line', 'column', 'bytes', 'replaceable'];
+      if (includePaths) {
+        columns.push('path');
+      }
+
+      fmt.table(tableRows, { columns });
+    }
     fmt.stat('Total functions', functions.length, 'number');
+    if (filterText) {
+      fmt.stat('Matched functions', filtered.length, 'number');
+    }
     fmt.footer();
   }
 }
 
-function listVariables({ filePath, json, quiet }, source, variables) {
-  const payload = {
-    file: filePath,
-    totalVariables: variables.length,
-    variables: variables.map((variable) => ({
+
+function listVariables(options, source, variables) {
+  const { filePath, json, quiet, filterText } = options;
+  const normalizedFilter = filterText ? filterText.toLowerCase() : null;
+
+  const matchesFilter = (variable) => {
+    if (!normalizedFilter) {
+      return true;
+    }
+
+    const haystacks = [
+      variable.name,
+      variable.kind,
+      variable.exportKind,
+      variable.initializerType,
+      variable.pathSignature,
+      variable.hash,
+      variable.declarationHash,
+      variable.declaratorHash,
+      Array.isArray(variable.scopeChain) ? variable.scopeChain.join(' > ') : null
+    ];
+
+    return haystacks.some((value) => typeof value === 'string' && value.toLowerCase().includes(normalizedFilter));
+  };
+
+  const mapRecord = (variable) => {
+    const byteLength = typeof variable.byteLength === 'number'
+      ? variable.byteLength
+      : Math.max(0, (variable.span?.end ?? 0) - (variable.span?.start ?? 0));
+
+    return {
       name: variable.name,
       kind: variable.kind,
       exportKind: variable.exportKind,
+      initializerType: variable.initializerType,
       line: variable.line,
       column: variable.column,
       scopeChain: variable.scopeChain,
       pathSignature: variable.pathSignature,
-      initializerType: variable.initializerType,
       hash: variable.hash,
-      byteLength: variable.byteLength,
+      byteLength,
       declaratorSpan: variable.declaratorSpan,
       declaratorHash: variable.declaratorHash,
       declaratorByteLength: variable.declaratorByteLength,
@@ -1771,7 +2204,17 @@ function listVariables({ filePath, json, quiet }, source, variables) {
       declarationHash: variable.declarationHash,
       declarationByteLength: variable.declarationByteLength,
       declarationPathSignature: variable.declarationPathSignature
-    }))
+    };
+  };
+
+  const filtered = normalizedFilter ? variables.filter(matchesFilter) : variables.slice();
+
+  const payload = {
+    file: filePath,
+    filterText: filterText || null,
+    totalVariables: variables.length,
+    matchedVariables: filtered.length,
+    variables: filtered.map(mapRecord)
   };
 
   if (json) {
@@ -1786,25 +2229,388 @@ function listVariables({ filePath, json, quiet }, source, variables) {
       return;
     }
 
+    if (filterText) {
+      fmt.info(`Filter "${filterText}" matched ${filtered.length} of ${variables.length} variables.`);
+    }
+
     fmt.section('Detected Variables');
-    fmt.table(variables.map((variable) => ({
-      name: variable.name,
-      kind: variable.kind,
-      export: variable.exportKind || '-',
-      line: variable.line,
-      column: variable.column,
-      scope: toReadableScope(variable.scopeChain),
-      init: variable.initializerType || '-',
-      bytes: typeof variable.byteLength === 'number'
-        ? variable.byteLength
-        : Math.max(0, (variable.span?.end ?? 0) - (variable.span?.start ?? 0))
-    })), {
-      columns: ['name', 'kind', 'export', 'line', 'column', 'scope', 'init', 'bytes']
-    });
+    if (filtered.length === 0) {
+      fmt.warn('No variables matched the current filter.');
+    } else {
+      fmt.table(filtered.map((variable) => ({
+        name: variable.name,
+        kind: variable.kind,
+        export: variable.exportKind || '-',
+        line: variable.line,
+        column: variable.column,
+        scope: toReadableScope(variable.scopeChain),
+        init: variable.initializerType || '-',
+        bytes: typeof variable.byteLength === 'number'
+          ? variable.byteLength
+          : Math.max(0, (variable.span?.end ?? 0) - (variable.span?.start ?? 0))
+      })), {
+        columns: ['name', 'kind', 'export', 'line', 'column', 'scope', 'init', 'bytes']
+      });
+    }
+
     fmt.stat('Total variables', variables.length, 'number');
+    if (filterText) {
+      fmt.stat('Matched variables', filtered.length, 'number');
+    }
     fmt.footer();
   }
 }
+
+function previewFunction(options, source, functionRecords, selector) {
+  const [record] = resolveMatches(functionRecords, selector, options, { operation: 'preview' });
+  const snippet = extractCode(source, record.span, options.sourceMapper);
+  const preview = createPreviewSnippet(snippet, options.previewChars);
+
+  const payload = {
+    file: options.filePath,
+    selector,
+    entity: 'function',
+    function: {
+      name: record.name,
+      canonicalName: record.canonicalName,
+      kind: record.kind,
+      exportKind: record.exportKind || null,
+      line: record.line,
+      column: record.column,
+      scopeChain: record.scopeChain,
+      pathSignature: record.pathSignature,
+      hash: record.hash,
+      span: record.span
+    },
+    preview: {
+      text: preview.text,
+      truncated: preview.truncated,
+      totalChars: preview.totalChars,
+      limit: preview.limit
+    }
+  };
+
+  const plan = maybeEmitPlan('preview', options, selector, [record]);
+  if (plan) {
+    payload.plan = plan;
+  }
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) {
+    return;
+  }
+
+  fmt.header('Function Preview');
+  fmt.section(`Selector: ${selector}`);
+  fmt.stat('Name', record.canonicalName || record.name);
+  fmt.stat('Kind', record.kind);
+  if (record.exportKind) {
+    fmt.stat('Export', record.exportKind);
+  }
+  fmt.stat('Location', `${record.line}:${record.column}`);
+  if (Array.isArray(record.scopeChain) && record.scopeChain.length > 0) {
+    fmt.stat('Scope', record.scopeChain.join(' > '));
+  }
+  fmt.stat('Path', record.pathSignature);
+  fmt.stat('Hash', record.hash);
+  const spanDetails = formatSpanDetails(record.span);
+  if (spanDetails) {
+    fmt.stat('Span', spanDetails);
+  }
+  const displayedChars = Math.min(preview.limit, preview.totalChars);
+  fmt.stat('Preview length', `${displayedChars} of ${preview.totalChars}`);
+  if (preview.truncated) {
+    fmt.warn(`Preview truncated to ${preview.limit} characters. Use --preview-chars to extend.`);
+  }
+  fmt.section('Preview Snippet');
+  fmt.codeBlock(preview.text);
+  if (options.emitPlanPath) {
+    fmt.info(`Plan written to ${options.emitPlanPath}`);
+  }
+  fmt.footer();
+}
+
+function previewVariable(options, source, variableRecords, selector) {
+  const [record] = resolveVariableMatches(variableRecords, selector, options, { operation: 'preview-variable' });
+  const target = resolveVariableTargetInfo(record, options.variableTarget);
+  const snippet = extractCode(source, target.span, options.sourceMapper);
+  const preview = createPreviewSnippet(snippet, options.previewChars);
+
+  const payload = {
+    file: options.filePath,
+    selector,
+    entity: 'variable',
+    variable: {
+      name: record.name,
+      canonicalName: record.canonicalName,
+      kind: record.kind,
+      initializerType: record.initializerType || null,
+      line: record.line,
+      column: record.column,
+      scopeChain: record.scopeChain,
+      targetMode: target.mode,
+      requestedMode: target.requestedMode,
+      pathSignature: target.pathSignature,
+      hash: target.hash,
+      span: target.span,
+      byteLength: target.byteLength
+    },
+    preview: {
+      text: preview.text,
+      truncated: preview.truncated,
+      totalChars: preview.totalChars,
+      limit: preview.limit
+    }
+  };
+
+  const plan = maybeEmitPlan('preview-variable', options, selector, [record], [target.hash], [target.span], {
+    entity: 'variable',
+    targetMode: target.mode
+  });
+  if (plan) {
+    payload.plan = plan;
+  }
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) {
+    return;
+  }
+
+  fmt.header('Variable Preview');
+  fmt.section(`Selector: ${selector}`);
+  fmt.stat('Name', record.canonicalName || record.name);
+  fmt.stat('Kind', record.kind);
+  if (record.initializerType) {
+    fmt.stat('Initializer', record.initializerType);
+  }
+  fmt.stat('Location', `${record.line}:${record.column}`);
+  if (Array.isArray(record.scopeChain) && record.scopeChain.length > 0) {
+    fmt.stat('Scope', record.scopeChain.join(' > '));
+  }
+  fmt.stat('Target Mode', `${target.mode} (requested ${target.requestedMode})`);
+  fmt.stat('Path', target.pathSignature || '(unavailable)');
+  fmt.stat('Hash', target.hash);
+  const spanDetails = formatSpanDetails(target.span);
+  if (spanDetails) {
+    fmt.stat('Span', spanDetails);
+  }
+  const displayedChars = Math.min(preview.limit, preview.totalChars);
+  fmt.stat('Preview length', `${displayedChars} of ${preview.totalChars}`);
+  if (preview.truncated) {
+    fmt.warn(`Preview truncated to ${preview.limit} characters. Use --preview-chars to extend.`);
+  }
+  fmt.section('Preview Snippet');
+  fmt.codeBlock(preview.text);
+  if (options.emitPlanPath) {
+    fmt.info(`Plan written to ${options.emitPlanPath}`);
+  }
+  fmt.footer();
+}
+
+function searchTextMatches(options, source, functionRecords, variableRecords) {
+  const query = options.searchText;
+  const limit = Number.isInteger(options.searchLimit) && options.searchLimit > 0
+    ? options.searchLimit
+    : DEFAULT_SEARCH_LIMIT;
+  const contextChars = Number.isFinite(options.searchContext) && options.searchContext >= 0
+    ? Math.floor(options.searchContext)
+    : DEFAULT_SEARCH_CONTEXT;
+
+  const matches = [];
+  let truncated = false;
+  const lineOffsets = buildLineIndex(source);
+  const step = Math.max(1, query.length);
+  let searchIndex = 0;
+
+  while (searchIndex <= source.length) {
+    const matchIndex = source.indexOf(query, searchIndex);
+    if (matchIndex === -1) {
+      break;
+    }
+
+    const matchEnd = matchIndex + query.length;
+
+    if (matches.length < limit) {
+      const location = positionFromIndex(matchIndex, lineOffsets);
+      const snippet = buildSearchSnippet(source, matchIndex, matchEnd, contextChars);
+      const functionOwner = findFunctionOwner(functionRecords, matchIndex);
+      const variableOwner = findVariableOwner(variableRecords, matchIndex);
+
+      const functionGuard = functionOwner
+        ? {
+            name: functionOwner.name,
+            canonicalName: functionOwner.canonicalName,
+            kind: functionOwner.kind,
+            line: functionOwner.line,
+            column: functionOwner.column,
+            pathSignature: functionOwner.pathSignature,
+            hash: functionOwner.hash
+          }
+        : null;
+
+      let variableGuard = null;
+      if (variableOwner) {
+        let targetInfo = null;
+        try {
+          targetInfo = resolveVariableTargetInfo(variableOwner, options.variableTarget);
+        } catch (error) {
+          targetInfo = null;
+        }
+        variableGuard = {
+          name: variableOwner.name,
+          canonicalName: variableOwner.canonicalName,
+          kind: variableOwner.kind,
+          line: variableOwner.line,
+          column: variableOwner.column,
+          pathSignature: targetInfo?.pathSignature || variableOwner.pathSignature,
+          hash: targetInfo?.hash || variableOwner.hash,
+          targetMode: targetInfo?.mode || options.variableTarget,
+          span: targetInfo?.span || variableOwner.span
+        };
+      }
+
+      matches.push({
+        index: matches.length + 1,
+        charStart: matchIndex,
+        charEnd: matchEnd,
+        line: location.line,
+        column: location.column,
+        snippet,
+        guard: {
+          function: functionGuard,
+          variable: variableGuard
+        }
+      });
+    } else {
+      truncated = true;
+      break;
+    }
+
+    searchIndex = matchIndex + step;
+  }
+
+  const payloadMatches = matches.map((match) => ({
+    index: match.index,
+    charStart: match.charStart,
+    charEnd: match.charEnd,
+    line: match.line,
+    column: match.column,
+    snippet: {
+      before: match.snippet.before,
+      match: match.snippet.match,
+      after: match.snippet.after,
+      truncatedBefore: match.snippet.truncatedBefore,
+      truncatedAfter: match.snippet.truncatedAfter,
+      highlighted: match.snippet.highlighted,
+      range: match.snippet.range
+    },
+    guard: match.guard
+  }));
+
+  const payload = {
+    file: options.filePath,
+    query,
+    limit,
+    contextChars,
+    matches: payloadMatches,
+    matchCount: payloadMatches.length,
+    truncated
+  };
+
+  if (options.json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (options.quiet) {
+    return;
+  }
+
+  fmt.header('Text Search');
+  fmt.section(`Query: "${query}"`);
+  fmt.stat('Matches reported', payload.matchCount, 'number');
+  fmt.stat('Limit', limit, 'number');
+  fmt.stat('Context chars', contextChars, 'number');
+
+  if (payload.matchCount === 0) {
+    fmt.warn('No matches found.');
+    if (options.emitPlanPath) {
+      fmt.info(`Plan written to ${options.emitPlanPath}`);
+    }
+    fmt.footer();
+    return;
+  }
+
+  fmt.section('Match Overview');
+  fmt.table(payloadMatches.map((match) => ({
+    index: match.index,
+    line: match.line,
+    column: match.column,
+    function: match.guard.function
+      ? (match.guard.function.canonicalName || match.guard.function.name || '-')
+      : '-',
+    variable: match.guard.variable
+      ? (match.guard.variable.canonicalName || match.guard.variable.name || '-')
+      : '-'
+  })), {
+    columns: ['index', 'line', 'column', 'function', 'variable']
+  });
+
+  if (truncated) {
+    fmt.warn('Additional matches were omitted. Increase --search-limit to capture more results.');
+  }
+
+  matches.forEach((match) => {
+    fmt.section(`Match ${match.index}`);
+    fmt.stat('Location', `${match.line}:${match.column}`);
+    const spanSummary = formatSpanRange('chars', match.charStart, match.charEnd, match.charEnd - match.charStart);
+    if (spanSummary) {
+      fmt.stat('Span', spanSummary);
+    }
+
+    if (match.guard.function) {
+      const fnGuard = match.guard.function;
+      const hashPreview = fnGuard.hash ? fnGuard.hash.slice(0, 12) : '(unknown)';
+      fmt.stat('Function guard', `${fnGuard.canonicalName || fnGuard.name} (${hashPreview})`);
+      fmt.stat('Function path', fnGuard.pathSignature);
+    }
+
+    if (match.guard.variable) {
+      const varGuard = match.guard.variable;
+      const hashPreview = varGuard.hash ? varGuard.hash.slice(0, 12) : '(unknown)';
+      fmt.stat('Variable guard', `${varGuard.canonicalName || varGuard.name} (${hashPreview})`);
+      fmt.stat('Variable path', varGuard.pathSignature || '(unavailable)');
+      if (varGuard.targetMode) {
+        fmt.stat('Target mode', varGuard.targetMode);
+      }
+    }
+
+    const contextSummary = formatSpanRange('chars', match.snippet.range.start, match.snippet.range.end, match.snippet.range.end - match.snippet.range.start);
+    if (contextSummary) {
+      fmt.stat('Context window', contextSummary);
+    }
+
+    fmt.section('Snippet');
+    fmt.codeBlock(match.snippet.highlighted);
+  });
+
+  if (options.emitPlanPath) {
+    fmt.info(`Plan written to ${options.emitPlanPath}`);
+  }
+
+  fmt.footer();
+}
+
+
+
 
 function locateFunctions(options, functionRecords, selector) {
   const resolved = resolveMatches(functionRecords, selector, options, { operation: 'locate' });
@@ -2002,7 +2808,7 @@ function locateVariables(options, variableRecords, selector) {
 
 function extractFunction(options, source, record, selector) {
   const { filePath, outputPath, json, quiet } = options;
-  const snippet = extractCode(source, record.span);
+  const snippet = extractCode(source, record.span, options.sourceMapper);
 
   const payload = {
     file: filePath,
@@ -2057,7 +2863,7 @@ function extractFunction(options, source, record, selector) {
 function extractVariable(options, source, record, selector) {
   const { filePath, outputPath, json, quiet } = options;
   const target = resolveVariableTargetInfo(record, options.variableTarget);
-  const snippet = extractCode(source, target.span);
+  const snippet = extractCode(source, target.span, options.sourceMapper);
 
   const payload = {
     file: filePath,
@@ -2159,7 +2965,7 @@ function showVariableContext(options, source, variableRecords, selector) {
 
 function replaceVariable(options, source, record, replacementPath, selector) {
   const target = resolveVariableTargetInfo(record, options.variableTarget);
-  const snippetBefore = extractCode(source, target.span);
+  const snippetBefore = extractCode(source, target.span, options.sourceMapper);
   const beforeHash = createDigest(snippetBefore);
   const expectedHash = options.expectHash || target.hash;
   if (process.env.JS_EDIT_DEBUG === '1') {
@@ -2242,7 +3048,7 @@ function replaceVariable(options, source, record, replacementPath, selector) {
     byteLength: replacementBuffer.length
   };
 
-  const newSource = replaceSpan(source, target.span, workingSnippet);
+  const newSource = replaceSpan(source, target.span, workingSnippet, options.sourceMapper);
 
   let parsedAst;
   try {
@@ -2405,11 +3211,11 @@ function replaceVariable(options, source, record, replacementPath, selector) {
 function replaceFunction(options, source, record, replacementPath, selector) {
   if (!record.replaceable) {
     throw new Error(
-      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, default exports, and recognised call-site callbacks (describe/test hooks).`
+      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, default exports, class methods, and recognised call-site callbacks (describe/test hooks).`
     );
   }
 
-  const snippetBefore = extractCode(source, record.span);
+  const snippetBefore = extractCode(source, record.span, options.sourceMapper);
   const beforeHash = createDigest(snippetBefore);
   const expectedHash = options.expectHash || record.hash;
   const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
@@ -2509,7 +3315,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     workingSnippet = applyRenameToSnippet(workingSnippet, record, options.renameTo);
   }
 
-  const newSource = replaceSpan(source, record.span, workingSnippet);
+  const newSource = replaceSpan(source, record.span, workingSnippet, options.sourceMapper);
 
   let parsedAst;
   try {
@@ -2643,18 +3449,28 @@ function main(argv) {
     const functionRecords = buildFunctionRecords(functions);
     const variableRecords = buildVariableRecords(variables);
 
+    options.sourceMapper = mapper;
+
     if (options.benchmark && !options.json && !options.quiet) {
       fmt.info(`Parse time: ${durationMs.toFixed(2)} ms`);
     }
 
     if (options.list) {
       listFunctions(options, source, functions);
+    } else if (options.extractHashes && options.extractHashes.length > 0) {
+      extractFunctionsByHashes(options, source, functionRecords);
     } else if (options.listVariables) {
       listVariables(options, source, variables);
     } else if (options.contextFunctionSelector) {
       showFunctionContext(options, source, functionRecords, options.contextFunctionSelector);
     } else if (options.contextVariableSelector) {
       showVariableContext(options, source, variableRecords, options.contextVariableSelector);
+    } else if (options.previewSelector) {
+      previewFunction(options, source, functionRecords, options.previewSelector);
+    } else if (options.previewVariableSelector) {
+      previewVariable(options, source, variableRecords, options.previewVariableSelector);
+    } else if (options.searchText) {
+      searchTextMatches(options, source, functionRecords, variableRecords);
     } else if (options.locateSelector) {
       locateFunctions(options, functionRecords, options.locateSelector);
     } else if (options.extractSelector) {
@@ -2677,6 +3493,7 @@ function main(argv) {
     process.exitCode = 1;
   }
 }
+
 
 if (require.main === module) {
   main(process.argv);
