@@ -19,6 +19,7 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 - `--replace <selector> --rename <identifier>` — rename the located function without providing an external snippet (identifier must exist on the target).
 - `--replace <selector> --with <file> --replace-range start:end` — swap only the specified character range (0-based, end-exclusive) within the located function using the supplied snippet.
+- `--locate-variable <selector>` / `--extract-variable <selector>` / `--replace-variable <selector> --with <file>` — perform the same guarded locate/extract/replace workflow for variable bindings (including destructured declarators and CommonJS assignments). Combine with `--variable-target <binding|declarator|declaration>` to choose which span/hash/path guardrails to emit. Variable replacements require `--with <file>` and honour `--expect-hash` the same way function replacements do.
 
 Selectors accept optional disambiguation flags:
 
@@ -32,6 +33,15 @@ Selectors accept optional disambiguation flags:
 - The CLI accepts selectors like `module.exports`, `module.exports.handler`, and `exports.utility`, and it resolves aliases (`hash:` / `path:`) for each record.
 - CommonJS assignments populate scope chains so mixed modules (ESM + require) expose consistent selectors and context retrieval works without additional flags.
 - `--list-variables` inventories CommonJS bindings as well, so exports like `module.exports = { ... }` or `exports.value = 42` appear alongside local declarations with hashes, scope chains, and initializer types.
+- Variable selectors accept alias prefixes just like functions: `hash:<digest>` and `path:<signature>` bind directly to guard metadata, and destructured declarators expose canonical selectors for each binding inside the pattern.
+- Recognised call-site callbacks (e.g., `describe`, `it`, `test`, `beforeEach`, `afterAll`) are emitted with canonical `call:*` selectors. These callbacks are now replaceable, so Jest/Mocha-style hooks can be patched safely through the same guardrail workflow as declarations.
+
+### Variable Workflows
+
+- Use `--locate-variable <selector> --json` to capture declarator/declaration metadata (hash/span/path) for bindings, destructured imports, and CommonJS assignments. The output reflects the requested `--variable-target` mode so you can guard the exact span you plan to edit.
+- `--extract-variable <selector>` mirrors the function extractor and honours `--output`, `--emit-plan`, and context padding flags. Default mode (`declarator`) captures the full declarator (e.g., `{ ren, stimpy: renAlias } = cartoon;`), while `binding` limits the span to the specific identifier and `declaration` widens to the surrounding statement.
+- `--replace-variable <selector> --with <file> --expect-hash <hash>` performs guarded substitutions on the chosen span. After applying the snippet (dry-run by default), js-edit re-parses the file, re-resolves the requested target, and verifies the hash/path guardrails just like function replacements. Hash mismatches, missing paths, or syntax errors abort unless `--force` is explicitly supplied.
+- Variable plans created via `--emit-plan` include the resolved target mode, hash, span, and path so downstream automation can replay guardrails without recomputing metadata.
 
 ### Context Retrieval
 
@@ -95,6 +105,10 @@ node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #ren
 
 # Apply after reviewing guard summary
 node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --expect-span <start:end-from-locate> --emit-diff --fix
+
+# Guarded variable replacement using declarator spans
+node tools/dev/js-edit.js --file src/example.js --locate-variable "exports.settings" --variable-target declarator --json
+node tools/dev/js-edit.js --file src/example.js --replace-variable "exports.settings" --with tmp/settings.snippet.js --expect-hash <hash-from-locate> --variable-target declarator --emit-diff --fix
 ```
 
 Additional examples and guardrail details live in `docs/CLI_REFACTORING_QUICK_START.md`.

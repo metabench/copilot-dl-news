@@ -43,6 +43,8 @@ describe('compressionBuckets', () => {
       expect(result).toHaveProperty('uncompressedSize');
       expect(result).toHaveProperty('compressedSize');
       expect(result).toHaveProperty('ratio');
+      expect(result).toHaveProperty('tarArchiveSize');
+      expect(result.tarArchiveSize).toBeGreaterThanOrEqual(result.uncompressedSize);
       expect(result.compressedSize).toBeLessThan(result.uncompressedSize);
     });
     

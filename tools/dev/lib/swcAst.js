@@ -306,6 +306,26 @@ function recordVariable(results, source, meta) {
   const pathSignature = buildPathSignature(meta.pathSegments, meta.nodeType);
   const hash = computeHash(source, normalizedSpan);
   const byteLength = Math.max(0, normalizedSpan.end - normalizedSpan.start);
+
+  const declaratorSpan = meta.declaratorSpan ? normalizeSpan(meta.declaratorSpan) : normalizedSpan;
+  const declarationSpan = meta.declarationSpan ? normalizeSpan(meta.declarationSpan) : declaratorSpan;
+
+  const declaratorHash = (declaratorSpan.start === normalizedSpan.start && declaratorSpan.end === normalizedSpan.end)
+    ? hash
+    : computeHash(source, declaratorSpan);
+  const declarationHash = (declarationSpan.start === declaratorSpan.start && declarationSpan.end === declaratorSpan.end)
+    ? declaratorHash
+    : computeHash(source, declarationSpan);
+
+  const declaratorByteLength = Math.max(0, declaratorSpan.end - declaratorSpan.start);
+  const declarationByteLength = Math.max(0, declarationSpan.end - declarationSpan.start);
+
+  const declaratorPathSignature = Array.isArray(meta.declaratorPathSegments)
+    ? buildPathSignature(meta.declaratorPathSegments, null)
+    : null;
+  const declarationPathSignature = Array.isArray(meta.declarationPathSegments)
+    ? buildPathSignature(meta.declarationPathSegments, null)
+    : null;
   const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts);
   const primaryEnclosing = enclosingContexts[0] || null;
 
@@ -322,6 +342,14 @@ function recordVariable(results, source, meta) {
     initializerType: meta.initializerType || null,
     hash,
     byteLength,
+    declaratorSpan,
+    declaratorHash,
+    declaratorByteLength,
+    declaratorPathSignature,
+    declarationSpan,
+    declarationHash,
+    declarationByteLength,
+    declarationPathSignature,
     enclosingSpan: primaryEnclosing ? primaryEnclosing.span : null,
     enclosingKind: primaryEnclosing ? primaryEnclosing.kind : null,
     enclosingName: primaryEnclosing ? primaryEnclosing.name : null,
@@ -414,7 +442,158 @@ function collectFunctions(ast, source) {
   const lineIndex = buildLineIndex(source);
   const functions = [];
 
-  function visit(node, context = { scopeChain: [], exportKind: null, enclosingContexts: [] }, pathSegments = ['module']) {
+  const REPLACEABLE_CALL_BASE_NAMES = new Set([
+    'describe',
+    'context',
+    'suite',
+    'it',
+    'test',
+    'specify',
+    'beforeeach',
+    'aftereach',
+    'beforeall',
+    'afterall',
+    'before',
+    'after'
+  ]);
+
+  function normalizeCallToken(value) {
+    if (typeof value !== 'string' || value.length === 0) {
+      return '';
+    }
+    return value.toLowerCase();
+  }
+
+  function isRecognizedCallBase(calleeInfo) {
+    if (!calleeInfo) {
+      return false;
+    }
+    const base = normalizeCallToken(calleeInfo.baseName);
+    if (base && REPLACEABLE_CALL_BASE_NAMES.has(base)) {
+      return true;
+    }
+    const chain = Array.isArray(calleeInfo.chain) ? calleeInfo.chain : [];
+    if (chain.length > 0) {
+      const root = normalizeCallToken(chain[0]);
+      if (root && REPLACEABLE_CALL_BASE_NAMES.has(root)) {
+        return true;
+      }
+    }
+    const full = normalizeCallToken(calleeInfo.fullName);
+    if (full) {
+      const head = full.split('.')[0];
+      if (head && REPLACEABLE_CALL_BASE_NAMES.has(head)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function isReplaceableCallCallback(callContext) {
+    if (!callContext) {
+      return false;
+    }
+    if (callContext.argumentLabel !== 'callback') {
+      return false;
+    }
+    if (isRecognizedCallBase(callContext.calleeInfo)) {
+      return true;
+    }
+    return false;
+  }
+
+  function sanitizeCallDescription(value) {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const collapsed = value.replace(/\s+/g, ' ').trim();
+    if (!collapsed) {
+      return null;
+    }
+    if (collapsed.length > 40) {
+      return `${collapsed.slice(0, 37)}…`;
+    }
+    return collapsed;
+  }
+
+  function resolveCallCalleeInfo(callee) {
+    const chain = extractMemberChain(callee);
+    if (chain && chain.length > 0) {
+      return {
+        fullName: chain.join('.'),
+        baseName: chain[0],
+        chain
+      };
+    }
+    if (callee && callee.type === 'Identifier' && callee.value) {
+      return {
+        fullName: callee.value,
+        baseName: callee.value,
+        chain: [callee.value]
+      };
+    }
+    return {
+      fullName: null,
+      baseName: null,
+      chain: []
+    };
+  }
+
+  function getCallbackLabel(baseName, index, total) {
+    if (!baseName) {
+      return `arg${index + 1}`;
+    }
+    const normalized = baseName.toLowerCase();
+    if ((normalized === 'describe' || normalized === 'context') && index === 1) {
+      return 'callback';
+    }
+    if ((normalized === 'test' || normalized === 'it') && index === 1) {
+      return 'callback';
+    }
+    if (
+      normalized === 'beforeeach' ||
+      normalized === 'aftereach' ||
+      normalized === 'beforeall' ||
+      normalized === 'afterall'
+    ) {
+      if (index === 0) {
+        return 'callback';
+      }
+    }
+    if (normalized.endsWith('.each') && index === total - 1) {
+      return 'callback';
+    }
+    return `arg${index + 1}`;
+  }
+
+  function buildCallScopeLabel(info, description) {
+    const base = info.fullName || info.baseName || 'anonymous-call';
+    if (!description) {
+      return `call:${base}`;
+    }
+    const safe = description.replace(/[^a-zA-Z0-9._-]+/g, '_');
+    return `call:${base}:${safe}`;
+  }
+
+  function buildCallDisplayName(info, description) {
+    const base = info.fullName || info.baseName || 'callback';
+    if (description) {
+      return `${base} callback "${description}"`;
+    }
+    return `${base} callback`;
+  }
+
+  function unwrapArgumentExpression(argument) {
+    if (!argument) {
+      return null;
+    }
+    if (typeof argument === 'object' && argument.expression) {
+      return argument.expression;
+    }
+    return argument;
+  }
+
+  function visit(node, context = { scopeChain: [], exportKind: null, enclosingContexts: [], callContext: null }, pathSegments = ['module']) {
     if (!node || typeof node !== 'object') {
       return;
     }
@@ -458,7 +637,7 @@ function collectFunctions(ast, source) {
           const functionEntry = { kind: 'function-declaration', name, span: node.span };
           visit(
             node.body,
-            { ...context, scopeChain: childScope, enclosingContexts: prependContext(baseEnclosing, functionEntry) },
+            { ...context, scopeChain: childScope, callContext: null, enclosingContexts: prependContext(baseEnclosing, functionEntry) },
             currentPath.concat('body')
           );
         }
@@ -476,6 +655,7 @@ function collectFunctions(ast, source) {
               exportKind: 'named',
               scopeChain: exportScope,
               exportSpan: node.span,
+              callContext: null,
               enclosingContexts: prependContext(baseEnclosing, exportEntry)
             },
             currentPath.concat('declaration')
@@ -495,6 +675,7 @@ function collectFunctions(ast, source) {
               exportKind: 'default',
               scopeChain: exportScope,
               exportSpan: node.span,
+              callContext: null,
               enclosingContexts: prependContext(baseEnclosing, exportEntry)
             },
             currentPath.concat('declaration')
@@ -528,6 +709,7 @@ function collectFunctions(ast, source) {
               exportKind: 'default',
               scopeChain: exportScope,
               exportSpan: node.span,
+              callContext: null,
               enclosingContexts: prependContext(baseEnclosing, exportEntry)
             },
             currentPath.concat('expression')
@@ -573,7 +755,12 @@ function collectFunctions(ast, source) {
         }
         break;
       }
-      case 'FunctionExpression': {
+      case 'FunctionExpression':
+      case 'ArrowFunctionExpression': {
+        const identifier = node.identifier ? node.identifier.value : null;
+        const typeLabel = type === 'ArrowFunctionExpression' ? 'arrow-function' : 'function-expression';
+        let recorded = false;
+
         if (context.exportKind && node.identifier) {
           recordFunction(functions, source, {
             name: node.identifier.value,
@@ -588,17 +775,41 @@ function collectFunctions(ast, source) {
             identifierSpan: node.identifier ? node.identifier.span : null,
             enclosingContexts: baseEnclosing
           });
+          recorded = true;
         }
+
+        const callContext = context.callContext || null;
+        if (!recorded && callContext) {
+          const allowCallReplacement = isReplaceableCallCallback(callContext);
+          const callBaseScope = extendScopeChain(currentScope, [callContext.scopeLabel, callContext.argumentLabel]);
+          const scopeChain = identifier ? extendScopeChain(callBaseScope, [identifier]) : callBaseScope;
+          recordFunction(functions, source, {
+            name: callContext.displayName,
+            kind: typeLabel,
+            exportKind: context.exportKind || null,
+            replaceable: allowCallReplacement,
+            span: node.span,
+            lineIndex,
+            scopeChain,
+            pathSegments: currentPath,
+            nodeType: type,
+            identifierSpan: node.identifier ? node.identifier.span : null,
+            enclosingContexts: baseEnclosing
+          });
+          recorded = true;
+        }
+
         if (node.body) {
-          const funcScope = node.identifier ? extendScopeChain(currentScope, [node.identifier.value]) : currentScope;
+          const baseScope = callContext ? extendScopeChain(currentScope, [callContext.scopeLabel, callContext.argumentLabel]) : currentScope;
+          const funcScope = identifier ? extendScopeChain(baseScope, [identifier]) : baseScope;
           const entry = {
-            kind: node.identifier ? 'function-expression' : 'function-expression',
-            name: node.identifier ? node.identifier.value : '(anonymous)',
+            kind: typeLabel,
+            name: identifier || callContext?.displayName || '(anonymous)',
             span: node.span
           };
           visit(
             node.body,
-            { ...context, scopeChain: funcScope, enclosingContexts: prependContext(baseEnclosing, entry) },
+            { ...context, scopeChain: funcScope, callContext: null, enclosingContexts: prependContext(baseEnclosing, entry) },
             currentPath.concat('body')
           );
         }
@@ -607,6 +818,49 @@ function collectFunctions(ast, source) {
       case 'ExpressionStatement': {
         if (node.expression) {
           visit(node.expression, context, currentPath.concat('expression'));
+        }
+        break;
+      }
+      case 'CallExpression': {
+        if (node.callee) {
+          visit(node.callee, context, currentPath.concat('callee'));
+        }
+
+        const args = Array.isArray(node.arguments) ? node.arguments : [];
+        if (args.length > 0) {
+          const calleeInfo = resolveCallCalleeInfo(node.callee);
+          const firstStringArg = args.find((arg) => {
+            const expr = unwrapArgumentExpression(arg);
+            return expr && expr.type === 'StringLiteral' && typeof expr.value === 'string';
+          });
+          const description = firstStringArg ? sanitizeCallDescription(unwrapArgumentExpression(firstStringArg).value) : null;
+          const scopeLabel = buildCallScopeLabel(calleeInfo, description);
+          const baseDisplayName = buildCallDisplayName(calleeInfo, description);
+
+          args.forEach((arg, index) => {
+            const expressionNode = unwrapArgumentExpression(arg);
+            if (!expressionNode) {
+              return;
+            }
+            const argumentLabel = getCallbackLabel(calleeInfo.baseName, index, args.length);
+            const displayName = argumentLabel === 'callback' ? baseDisplayName : `${baseDisplayName} (${argumentLabel})`;
+            const callContext = {
+              scopeLabel,
+              argumentLabel,
+              displayName,
+              calleeInfo,
+              argumentIndex: index
+            };
+            visit(
+              expressionNode,
+              { ...context, callContext, enclosingContexts: baseEnclosing },
+              currentPath.concat(`arguments[${index}]`)
+            );
+          });
+        }
+
+        if (node.typeArguments) {
+          visit(node.typeArguments, context, currentPath.concat('typeArguments'));
         }
         break;
       }
@@ -710,6 +964,7 @@ function collectFunctions(ast, source) {
               className,
               classSpan,
               scopeChain: classScope,
+              callContext: null,
               enclosingContexts: prependContext(baseEnclosing, classEntry)
             },
             currentPath.concat(`body[${index}]`)
@@ -752,7 +1007,7 @@ function collectFunctions(ast, source) {
           };
           visit(
             node.function.body,
-            { ...context, scopeChain, enclosingContexts: prependContext(baseEnclosing, methodEntry) },
+            { ...context, scopeChain, callContext: null, enclosingContexts: prependContext(baseEnclosing, methodEntry) },
             currentPath.concat('function.body')
           );
         }
@@ -774,11 +1029,12 @@ function collectFunctions(ast, source) {
     }
   }
 
-  visit(ast, { scopeChain: [], exportKind: null, enclosingContexts: [] }, ['module']);
+  visit(ast, { scopeChain: [], exportKind: null, enclosingContexts: [], callContext: null }, ['module']);
 
   functions.sort((a, b) => a.span.start - b.span.start);
   return { functions, lineIndex };
 }
+
 
 function collectVariables(ast, source) {
   const lineIndex = buildLineIndex(source);
@@ -982,7 +1238,13 @@ function collectVariables(ast, source) {
       }
       case 'VariableDeclaration': {
         const bindingKind = node.kind || 'var';
-        const declContext = { ...context, bindingKind };
+        const declarationPathSegments = currentPath.slice();
+        const declContext = {
+          ...context,
+          bindingKind,
+          declarationSpan: node.span,
+          declarationPathSegments
+        };
         if (Array.isArray(node.declarations)) {
           node.declarations.forEach((decl, index) => {
             visit(decl, declContext, currentPath.concat(`declarations[${index}]`));
@@ -1010,7 +1272,11 @@ function collectVariables(ast, source) {
             pathSegments: currentPath.concat(`binding[${index}]`),
             nodeType: type,
             initializerType,
-            enclosingContexts: baseEnclosing
+            enclosingContexts: baseEnclosing,
+            declaratorSpan: node.span,
+            declaratorPathSegments: currentPath,
+            declarationSpan: context.declarationSpan || null,
+            declarationPathSegments: context.declarationPathSegments || null
           });
         });
         if (node.init) {
@@ -1050,7 +1316,11 @@ function collectVariables(ast, source) {
             pathSegments: currentPath,
             nodeType: type,
             initializerType: right ? right.type || null : null,
-            enclosingContexts: exportEntry ? prependContext(baseEnclosing, exportEntry) : baseEnclosing
+            enclosingContexts: exportEntry ? prependContext(baseEnclosing, exportEntry) : baseEnclosing,
+            declaratorSpan: node.left && node.left.span ? node.left.span : recordSpan,
+            declaratorPathSegments: currentPath.concat('left'),
+            declarationSpan: node.span,
+            declarationPathSegments: currentPath
           });
         }
 

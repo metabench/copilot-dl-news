@@ -5,6 +5,12 @@
 **Priority:** HIGH  
 **Category:** Service Layer Modularization
 
+> **Focus Update (2025-11-03):** With js-edit work paused, this plan regains top engineering priority. Resume execution at Step 1 (`CompressionFacade`) and drive through the integration/validation tasks outlined below before revisiting deferred js-edit enhancements.
+
+### Progress Log
+- **2025-11-03:** Rebuilt `src/utils/CompressionFacade.js` around the new normalization pipeline and preset helpers. Facade now mirrors the configurations in `src/config/compression.js`, exposes preset lookups, guards algorithm ranges (including Brotli-specific parameters), and surfaces additional helpers (`compressWithPreset`, `getCompressionConfigPreset`, `resolvePresetName`). Downstream modules still reference the legacy interface; Step 2 will convert article and bucket utilities to the new entry points and trim redundant normalization.
+- **2025-11-01:** Completed Step 2/3 integration passes. `articleCompression.js` now routes compression through the facade, reuses preset normalization, and persists stats via `createStatsObject`. `compressionBuckets.js` defaults to facade presets, aligns bucket compression stats with facade helpers, and records tar archive metadata while preserving aggregated content sizing for storage. Follow-up: document js-edit import-edit limitation and monitor DB ratio semantics during verification.
+
 ---
 
 ## Goal / Non-Goals

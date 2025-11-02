@@ -8,7 +8,15 @@
  * algorithm validation, preset definitions, and stats calculation.
  */
 
-const { compress, decompress, getCompressionType, PRESETS } = require('./CompressionFacade');
+const {
+  compress,
+  decompress,
+  getCompressionType,
+  getCompressionConfigPreset,
+  resolvePresetName,
+  createStatsObject,
+  PRESETS
+} = require('./CompressionFacade');
 const { retrieveFromBucket } = require('./compressionBuckets');
 const { getGlobalCache } = require('./bucketCache');
 
@@ -87,32 +95,44 @@ async function decompressArticleHtml(db, articleId, options = {}) {
  * @param {string} [options.preset] - Compression preset name (default: PRESETS.BROTLI_6)
  *                                    Or use legacy format: { compressionType: 'brotli_10' }
  * @returns {Object} Compression result with statistics
- */
-function compressAndStoreArticleHtml(db, articleId, options = {}) {
+ */function compressAndStoreArticleHtml(db, articleId, options = {}) {
   // Support both new preset API and legacy compressionType API
-  const presetName = options.preset || options.compressionType || PRESETS.BROTLI_6;
-  
+  const presetInput = options.preset || options.compressionType || PRESETS.BROTLI_6;
+  const presetName = resolvePresetName(presetInput);
+
+  if (!presetName) {
+    throw new Error(`Unknown compression preset: ${presetInput}`);
+  }
+
   try {
     // Get article HTML
     const article = db.prepare('SELECT html FROM articles WHERE id = ?').get(articleId);
-    
+
     if (!article || !article.html) {
       throw new Error(`Article ${articleId} not found or has no HTML`);
     }
-    
+
     // Get compression type from database
     const compressionType = getCompressionType(db, presetName);
     if (!compressionType) {
       throw new Error(`Compression type not found: ${presetName}`);
     }
-    
+
+    // Align with configuration defaults to keep bucket + article flows consistent
+    const presetConfig = getCompressionConfigPreset(presetName);
+
     // Compress HTML using CompressionFacade
     const result = compress(article.html, {
       preset: presetName,
-      windowBits: compressionType.window_bits,
-      blockBits: compressionType.block_bits
+      windowBits: compressionType.window_bits ?? presetConfig?.windowBits ?? undefined,
+      blockBits: compressionType.block_bits ?? presetConfig?.blockBits ?? undefined
     });
-    
+
+    const stats = createStatsObject({
+      ...result,
+      preset: presetName
+    });
+
     // Store compressed HTML
     db.prepare(`
       UPDATE articles
@@ -125,27 +145,31 @@ function compressAndStoreArticleHtml(db, articleId, options = {}) {
     `).run(
       result.compressed,
       compressionType.id,
-      result.uncompressedSize,
-      result.compressedSize,
-      result.ratio,
+      stats.uncompressedSize,
+      stats.compressedSize,
+      stats.ratio,
       articleId
     );
-    
+
     return {
       articleId,
       compressionType: presetName,
-      originalSize: result.uncompressedSize,
-      compressedSize: result.compressedSize,
-      ratio: result.ratio,
-      spaceSaved: result.uncompressedSize - result.compressedSize,
-      spaceSavedPercent: (1 - result.ratio) * 100
+      algorithm: result.algorithm,
+      preset: stats.preset,
+      originalSize: stats.uncompressedSize,
+      compressedSize: stats.compressedSize,
+      ratio: stats.ratio,
+      spaceSaved: stats.uncompressedSize - stats.compressedSize,
+      spaceSavedPercent: stats.uncompressedSize > 0 ? (1 - stats.ratio) * 100 : 0,
+      sha256: result.sha256,
+      timestamp: stats.timestamp
     };
-    
   } catch (error) {
     console.error(`[articleCompression] Error compressing article ${articleId}:`, error);
     throw error;
   }
 }
+
 
 /**
  * Get compression status for an article

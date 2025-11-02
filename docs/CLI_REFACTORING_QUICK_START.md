@@ -248,6 +248,8 @@ fmt.table([
 - Accepts selectors (`alpha`, `Class#method`, `path:…`, `hash:…`) normalized through `CliArgumentParser` options.
 - Resolves both ES module exports and CommonJS assignments (`module.exports`, `module.exports.handler`, `exports.worker`) using the same selector syntax, so mixed modules require no extra flags.
 - Variable inventory mode lists CommonJS bindings as well (`module.exports = …`, `exports.value = …`) with hashes and scope metadata, making the exported surface inspectable without hand-parsing assignments.
+- Variable bindings now participate in the guarded workflow: `--locate-variable`, `--extract-variable`, and `--replace-variable` share selectors/guards with function operations, and `--variable-target <binding|declarator|declaration>` lets you choose whether to guard just the identifier, the declarator, or the entire statement.
+- Recognised call-site callbacks (`describe`, `it`, `test`, `beforeEach`, `afterAll`, etc.) are emitted with canonical `call:*` selectors. These callbacks participate in the guarded replace workflow, so you can patch Jest/Mocha hooks with the same hash/span guardrails used for declarations.
 - Emits locate tables and JSON payloads via `CliFormatter`, making automation straightforward.
 - Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block, and optional `--expect-hash`/`--expect-span` inputs let you replay the exact metadata captured during a prior locate run.
 - Hashes shown in locate/context/plan payloads are base64 digests trimmed to eight characters by default so agents get concise guard tokens; switch the constants in `tools/dev/lib/swcAst.js` to fall back to a longer base16 form if a workflow needs it.
@@ -270,6 +272,21 @@ If a hash or path mismatch occurs, the CLI exits non-zero with actionable messag
 Guard plans mirror the JSON payload’s `plan` block and include the selector, expected hash, expected span offsets, and path signature. They provide a hand-off artifact for other operators or future automation runs to verify the same guardrails before mutating a file.
 
 **Targeted edits:** Add `--replace-range start:end` (0-based, end-exclusive, relative to the located function) when you only need to swap a specific slice of the function body using `--with <file>`. For identifier-only tweaks, use `--rename <identifier>` with `--replace <selector>`—no snippet required, and the helper updates just the declaration name while guardrails ensure the rest of the function remains untouched.
+
+### Variable Guardrail Flow
+
+```powershell
+# 1. Locate the declarator (captures hash/span/path for the requested target mode)
+node tools/dev/js-edit.js --file src/example.js --locate-variable "exports.settings" --variable-target declarator --json --emit-plan tmp/settings.plan.json > locate-variable.json
+
+# 2. Dry-run the replacement with guard hash/path checks
+node tools/dev/js-edit.js --file src/example.js --replace-variable "exports.settings" --variable-target declarator --with tmp/settings.snippet.js --expect-hash <hash-from-step-1> --emit-diff --json
+
+# 3. Apply after the guard summary reports OK/bypass as expected
+node tools/dev/js-edit.js --file src/example.js --replace-variable "exports.settings" --variable-target declarator --with tmp/settings.snippet.js --expect-hash <hash-from-step-1> --emit-diff --fix
+```
+
+Variable plans honour the resolved mode (`binding`, `declarator`, or `declaration`) and embed the exact hash/span/path metadata for that span so automation can replay the edit safely. Replacement guard summaries mirror the function flow while referencing the chosen target mode.
 
 ### Context Inspection
 

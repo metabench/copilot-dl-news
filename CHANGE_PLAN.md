@@ -10,14 +10,40 @@
 - There is no dependency on Babel/Recast/Tree-sitter today; the toolchain avoids native build requirements beyond better-sqlite3.
 
 ## Proposed Changes (SWC Track)
-1. **Add SWC Dependency** — Introduce `@swc/core` to the workspace (document installation caveats for Windows/PowerShell) and capture any package-lock churn.
-2. **Bootstrap `tools/dev/` Workspace** — Create `tools/dev/` for experimental-yet-safe developer CLIs that still follow the shared parser/formatter conventions; add README stub.
-3. **Design `js-edit` CLI Skeleton** — Draft `tools/dev/js-edit.js` using `CliArgumentParser`/`CliFormatter`, enforcing dry-run by default and supporting basic commands (`--list-functions`, `--extract <name>`, `--replace <name> --with <file>`).
-4. **Implement SWC AST Helpers** — Build a small helper module (e.g., `tools/dev/lib/swcAst.js`) that wraps `@swc/core` parse/print APIs, preserving formatting via SWC’s code generator and ensuring comments survive round-trips.
-5. **Validation Harness** — Add focused tests/fixtures under `tests/tools/__tests__/` to verify extraction/replacement on representative large-file samples and ensure dry-run leaves files unchanged.
-6. **Performance Benchmarks** — Measure SWC parse + transform time on a large file (>1k LOC) using CLI `--benchmark` flag; record results in docs for future comparison.
-7. **Operator UX & Safety** — Provide diff preview (`--emit-diff`) support and clear messaging about dry-run vs. `--fix`; document fallback guidance if SWC compilation fails on a machine.
-8. **Context Retrieval Workflow** — Introduce commands that surface surrounding source for functions/variables with configurable padding so agents can inspect targets without leaving the CLI.
+1. ✅ **Add SWC Dependency** — Introduce `@swc/core` to the workspace (document installation caveats for Windows/PowerShell) and capture any package-lock churn.
+2. ✅ **Bootstrap `tools/dev/` Workspace** — Create `tools/dev/` for experimental-yet-safe developer CLIs that still follow the shared parser/formatter conventions; add README stub.
+3. ✅ **Design `js-edit` CLI Skeleton** — Draft `tools/dev/js-edit.js` using `CliArgumentParser`/`CliFormatter`, enforcing dry-run by default and supporting basic commands (`--list-functions`, `--extract <name>`, `--replace <name> --with <file>`).
+4. ✅ **Implement SWC AST Helpers** — Build a small helper module (e.g., `tools/dev/lib/swcAst.js`) that wraps `@swc/core` parse/print APIs, preserving formatting via SWC’s code generator and ensuring comments survive round-trips.
+5. ✅ **Validation Harness** — Add focused tests/fixtures under `tests/tools/__tests__/` to verify extraction/replacement on representative large-file samples and ensure dry-run leaves files unchanged.
+6. ⏳ **Performance Benchmarks** — Measure SWC parse + transform time on a large file (>1k LOC) using CLI `--benchmark` flag; record results in docs for future comparison.
+7. ✅ **Operator UX & Safety** — Provide diff preview (`--emit-diff`) support and clear messaging about dry-run vs. `--fix`; document fallback guidance if SWC compilation fails on a machine.
+8. ✅ **Context Retrieval Workflow** — Introduce commands that surface surrounding source for functions/variables with configurable padding so agents can inspect targets without leaving the CLI.
+
+### Outstanding Items (as of 2025-11-03)
+- Capture and document benchmark timings for representative small/medium/large files (Proposed Change 6 / Phase 8).
+- Extend guard summaries and plan emission reporting for `--allow-multiple` batch workflows before closing Phase 4/5 follow-ups.
+- Expand variable editing workflows so js-edit can safely replace destructured imports / top-level bindings without falling back to manual edits.
+- Update release artifacts once the above land: CHANGELOG/docs audit, feedback guidance, and backlog capture (Phase 9).
+
+> **Status Update — 2025-11-03:** js-edit enhancement work is **paused** so we can redirect development bandwidth to other backlog items. Outstanding js-edit tasks above remain recorded but are deferred until the compression utilities unification plan progresses.
+
+### Next Focus After Pause
+- Resume `docs/CHANGE_PLAN_COMPRESSION_UTILITIES.md` (Compression Utilities Unification) beginning with Step 1 (`CompressionFacade`) and Step 2 (facade integration in article/bucket utilities).
+
+### Active Session Tracker — Compression Utilities
+- **Branch:** `chore/compression-facade`
+- **2025-11-03:** `CompressionFacade` rewritten with preset normalization, range guards, and helper exports (`compressWithPreset`, `resolvePresetName`, `getCompressionConfigPreset`). Next actions: switch `articleCompression`/`compressionBuckets` to the new facade helpers, prune duplicated option normalization, and add targeted tests before widening rollout.
+- **2025-11-01:** Resuming Compression Utilities plan after js-edit enhancements. Verified facade helpers still align with config presets, confirmed article/bucket modules require cleanup to rely exclusively on facade stats + option normalization. Task list for this session: (1) finish integrating facade helpers into `compressionBuckets.js` (stats, preset defaults, validation), (2) audit `articleCompression.js` for remaining legacy paths, (3) extend targeted tests and rerun focused suites. js-edit will drive JavaScript edits; Markdown updates (this note) performed via standard editing since js-edit targets JS spans. Noted js-edit gap for top-level destructuring edits (imports); used a one-off direct edit while capturing this limitation for future tool improvement.
+
+### Active Session Tracker — js-edit Diagnostics
+- **Branch:** `chore/compression-facade`
+- **2025-11-03:** User surfaced a regression where `node tools/dev/js-edit.js --list-functions` returns zero entries for Jest test files (e.g., `src/utils/__tests__/compressionBuckets.test.js`). Reproduced locally; issue stems from `collectFunctions` ignoring anonymous arrow/function expressions passed as call arguments (common in test suites). Next actions: update js-edit plan (resume Phase 2/3 work), extend `collectFunctions` to index anonymous callbacks with generated canonical identifiers, add regression coverage, and rerun focused Jest suite.
+- **2025-11-04:** Callback indexing landed, but replacements against those synthesized callback records still reject with “not currently replaceable.” New scope: adjust js-edit guardrails so call-derived callbacks (Jest `describe`/`test`/hooks and similar) opt into controlled replacements, expose canonical `call:*` selectors in CLI outputs, and wire dedicated fixtures/tests (`tests/fixtures/tools/js-edit-jest-callbacks.js`) to prove locate/list/replace flows succeed. Deliverables include CLI guard updates, traversal metadata (`replaceable: true` when safe), documentation adjustments, and a focused Jest integration run once edits apply.
+- **2025-11-05:** Operator requested js-edit support for rewriting destructured imports (top-level variable declarators). Plan: design `--replace-variable` flow targeting declarator spans, enrich variable records with declarator/declaration metadata + hashes, add CLI plumbing, extend guardrails/tests, and update docs. Working branch: `chore/plan-js-edit-variable` (spun off existing facade work to keep history contiguous).
+- **2025-11-06:** Refactored CLI option normalization (`normalizeOptions`) to support the new variable selectors/operations, restoring guard validation coverage and slotting `--replace-variable` into the standard workflow. Next actions: wire the selector/operation handlers to use the new metadata, add focused Jest coverage, and update docs.
+- **2025-11-06 (later):** Extend guard summaries for `--allow-multiple` workflows so locate/context commands surface aggregate span metrics in both CLI/table output and emitted plans. Plan emission now prefers expected spans when available, and CLI locate/context commands now report aggregate span/context ranges. Follow-up completed by extending `tests/tools/__tests__/js-edit.test.js` to exercise `--variable-target binding` and `--variable-target declaration`, including summary assertions and end-to-end replacement coverage with temp fixtures.
+- **2025-11-06 (wrap-up):** All scoped js-edit enhancements on `chore/plan-js-edit-variable` are ready for merge. Aggregated span summaries now appear in emitted plans and CLI locate/context tables, and declaration/binding replacement flows have passing integration coverage. Focused validation command: `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
+- Audit remaining change plans for incomplete tasks (compression analytics consolidation, background-task telemetry) and queue them once the compression facade landings are stable.
 
 ---
 
@@ -172,6 +198,11 @@
 - Add CLI tests for the new context commands, covering default ±512 padding, custom overrides, multi-byte fixtures, and class-level expansion cases.
 - ✅ Ran `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1` to cover plan emission, range replacements, and rename flows.
 
+### Branch Closure Summary — `chore/plan-js-edit-variable` (2025-11-06)
+- **Implemented:** Aggregate span summaries in locate/context CLI output and plan payloads, expanded variable replacement workflow with binding/declaration coverage, updated fixtures/docs (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, `docs/JS_EDIT_ENHANCEMENTS_PLAN.md`), and refreshed compression facade/unit tests alongside js-edit enhancements.
+- **Tests:** `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`.
+- **Follow-ups:** Performance benchmarks (Phase 8), multi-target guard summary polish, compression facade integration cleanups, and benchmarking/documentation tasks already tracked above.
+
 ## Rollback Plan
 - Tool is additive; reverting entails removing the new CLI, dependencies, and docs.
 - Ensure package-lock.json updates can be undone via `git restore` if parser selection proves problematic.
@@ -197,3 +228,11 @@
 		- ✅ Guard hashes now use const-driven Base64 (8 char) digests with a hex fallback switch; tests/docs updated so shorter tokens remain compatible with path guardrails.
 		- ✅ Added span guard input (`--expect-span start:end`) so replacements can assert exact offsets alongside hashes; guard summaries and plan payloads now record the expected span and Jest coverage exercises OK/mismatch/bypass flows.
 		- 🔄 Next: extend plan emission tests for `--allow-multiple` workflows and evaluate whether guard summaries should highlight multi-target spans when batching is enabled.
+	- Session Notes — 2025-11-03
+		- Draft dedicated operations agent (“Careful js-edit Builder”) that bakes in js-edit workflows, stuck-state reporting, and improvement proposals queued behind operator approval.
+		- Ensure agent instructions cover building/testing js-edit, safe usage patterns, and escalation path when guardrails block progress.
+		- Pending confirmation: once agent baseline lands, evaluate backlog of potential js-edit enhancements surfaced by the workflow.
+		- ⏳ Capture benchmark timings across representative file sizes so the performance review (Phase 8) can be marked complete.
+		- ⏳ Extend guard summaries and plan emission reporting for `--allow-multiple` batch workflows before enabling multi-edit sessions.
+		- ⏳ Prep rollout collateral (CHANGELOG/docs audit, feedback loop, backlog entry) after the remaining engineering tasks close.
+		- ➖ Paused js-edit implementation work to pivot toward the Compression Utilities Unification effort; outstanding items stay logged above for future resumption.

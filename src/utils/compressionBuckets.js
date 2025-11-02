@@ -9,7 +9,15 @@
  */
 
 const tar = require('tar-stream');
-const { compress, decompress, getCompressionType } = require('./CompressionFacade');
+const {
+  compress,
+  decompress,
+  getCompressionType,
+  getCompressionConfigPreset,
+  resolvePresetName,
+  createStatsObject,
+  PRESETS
+} = require('./CompressionFacade');
 
 /**
  * Create a compression bucket from multiple items
@@ -18,145 +26,150 @@ const { compress, decompress, getCompressionType } = require('./CompressionFacad
  * @param {Object} options - Bucket creation options
  * @param {string} options.bucketType - Type of bucket ('article_content', 'http_body', 'analysis_results', etc.)
  * @param {string} [options.domainPattern] - Optional domain pattern for grouping
- * @param {string} options.compressionType - Compression type name (e.g., 'brotli_11')
+ * @param {string} [options.compressionType=PRESETS.BROTLI_11] - Compression type name
  * @param {Array<Object>} options.items - Items to add to bucket
  * @param {string} options.items[].key - Unique key for this item (e.g., SHA256 or article ID)
  * @param {Buffer|string} options.items[].content - Content to store
  * @param {Object} [options.items[].metadata] - Optional metadata (stored in index)
- * @returns {Object} { bucketId, compressionType, itemCount, uncompressedSize, compressedSize, ratio }
+ * @returns {Object} { bucketId, compressionType, algorithm, itemCount, uncompressedSize, compressedSize, ratio, tarArchiveSize }
  */
 function createBucket(db, options) {
   return new Promise((resolve, reject) => {
     try {
-      const { bucketType, domainPattern, compressionType, items } = options;
-      
+      const { bucketType, domainPattern, compressionType = PRESETS.BROTLI_11, items } = options;
+
       if (!items || items.length === 0) {
         return reject(new Error('Cannot create empty bucket'));
       }
-      
-      // Get compression type
-      const type = getCompressionType(db, compressionType);
-      
-      // Create tar archive
+
+      const presetName = resolvePresetName(compressionType);
+      if (!presetName) {
+        return reject(new Error(`Unknown compression preset: ${compressionType}`));
+      }
+
+      const type = getCompressionType(db, presetName);
+      if (!type) {
+        return reject(new Error(`Compression type not found: ${presetName}`));
+      }
+
       const pack = tar.pack();
       const chunks = [];
-      
-      // Track statistics
-      let totalUncompressedSize = 0;
+
+      let aggregatedContentSize = 0;
       const index = {};
-      
-      // Add each item to tar
+
       for (const item of items) {
         const { key, content, metadata } = item;
-        
+
         if (!key) {
           return reject(new Error('Each item must have a key'));
         }
-        
-        // Check for duplicate keys
+
         if (index[key]) {
           return reject(new Error(`Duplicate key found: ${key}`));
         }
-      
-        // Convert content to buffer
-        const buffer = Buffer.isBuffer(content) 
-          ? content 
+
+        const buffer = Buffer.isBuffer(content)
+          ? content
           : Buffer.from(content, 'utf8');
-      
-      totalUncompressedSize += buffer.length;
-      
-      // Add to tar archive with sanitized filename
-      const filename = sanitizeFilename(key);
-      pack.entry({ name: filename, size: buffer.length }, buffer);
-      
-      // Store in index
-      index[key] = {
-        filename,
-        size: buffer.length,
-        offset: null,  // Tar doesn't provide random access offsets
-        metadata: metadata || null
-      };
-    }
-    
-    // Finalize tar
-    pack.finalize();
 
-    const closePack = () => {
-      pack.removeAllListeners();
-      if (typeof pack.destroy === 'function') {
-        try {
-          pack.destroy();
-        } catch (_) {
-          // Ignore errors; stream may already be closed
+        aggregatedContentSize += buffer.length;
+
+        const filename = sanitizeFilename(key);
+        pack.entry({ name: filename, size: buffer.length }, buffer);
+
+        index[key] = {
+          filename,
+          size: buffer.length,
+          offset: null,
+          metadata: metadata || null
+        };
+      }
+
+      pack.finalize();
+
+      const closePack = () => {
+        pack.removeAllListeners();
+        if (typeof pack.destroy === 'function') {
+          try {
+            pack.destroy();
+          } catch (_) {
+            // Ignore errors; stream may already be closed
+          }
         }
-      }
-    };
+      };
 
-    // Collect tar stream into buffer
-    pack.on('data', chunk => chunks.push(chunk));
+      pack.on('data', (chunk) => chunks.push(chunk));
 
-    pack.on('end', () => {
-      try {
-        const tarBuffer = Buffer.concat(chunks);
-        
-        // Compress the entire tar archive using CompressionFacade
-        const result = compress(tarBuffer, {
-          preset: compressionType
-        });
-        
-        // Insert into database
-        const insertResult = db.prepare(`
-          INSERT INTO compression_buckets (
-            bucket_type,
-            domain_pattern,
-            compression_type_id,
-            bucket_blob,
-            content_count,
-            uncompressed_size,
-            compressed_size,
-            compression_ratio,
-            index_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          RETURNING id
-        `).get(
-          bucketType,
-          domainPattern || null,
-          type.id,
-          result.compressed,
-          items.length,
-          totalUncompressedSize,
-          result.compressedSize,
-          result.ratio,
-          JSON.stringify(index)
-        );
-        
-        resolve({
-          bucketId: insertResult.id,
-          compressionType: compressionType,
-          algorithm: result.algorithm,
-          itemCount: items.length,
-          uncompressedSize: totalUncompressedSize,
-          compressedSize: result.compressedSize,
-          ratio: result.ratio
-        });
-      } catch (error) {
-        reject(error);
-      } finally {
+      pack.on('end', () => {
+        try {
+          const tarBuffer = Buffer.concat(chunks);
+          const presetConfig = getCompressionConfigPreset(presetName);
+          const result = compress(tarBuffer, {
+            preset: presetName,
+            windowBits: type.window_bits ?? presetConfig?.windowBits ?? undefined,
+            blockBits: type.block_bits ?? presetConfig?.blockBits ?? undefined
+          });
+
+          const stats = createStatsObject({
+            ...result,
+            preset: presetName,
+            uncompressedSize: aggregatedContentSize
+          });
+
+          const insertResult = db.prepare(`
+            INSERT INTO compression_buckets (
+              bucket_type,
+              domain_pattern,
+              compression_type_id,
+              bucket_blob,
+              content_count,
+              uncompressed_size,
+              compressed_size,
+              compression_ratio,
+              index_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
+          `).get(
+            bucketType,
+            domainPattern || null,
+            type.id,
+            result.compressed,
+            items.length,
+            stats.uncompressedSize,
+            stats.compressedSize,
+            stats.ratio,
+            JSON.stringify(index)
+          );
+
+          resolve({
+            bucketId: insertResult.id,
+            compressionType: presetName,
+            algorithm: result.algorithm,
+            itemCount: items.length,
+            uncompressedSize: stats.uncompressedSize,
+            compressedSize: stats.compressedSize,
+            ratio: stats.ratio,
+            tarArchiveSize: result.uncompressedSize
+          });
+        } catch (error) {
+          reject(error);
+        } finally {
+          closePack();
+          chunks.length = 0;
+        }
+      });
+
+      pack.on('error', (err) => {
         closePack();
-        chunks.length = 0;
-      }
-    });
-    
-    pack.on('error', (err) => {
-      closePack();
-      reject(err);
-    });
-
+        reject(err);
+      });
     } catch (error) {
       reject(error);
     }
   });
 }
+
 
 /**
  * Retrieve an item from a compression bucket

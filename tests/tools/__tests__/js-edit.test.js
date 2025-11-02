@@ -15,6 +15,11 @@ describe('swcAst helpers', () => {
   const nestedAst = parseModule(nestedSource, nestedFixturePath);
   const { functions: nestedFunctions } = collectFunctions(nestedAst, nestedSource);
 
+  const callbackFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-jest-callbacks.js');
+  const callbackSource = fs.readFileSync(callbackFixturePath, 'utf8');
+  const callbackAst = parseModule(callbackSource, callbackFixturePath);
+  const { functions: callbackFunctions } = collectFunctions(callbackAst, callbackSource);
+
   const jsEditPath = path.join(__dirname, '../../../tools/dev/js-edit.js');
 
   const runJsEdit = (args, options = {}) => {
@@ -113,6 +118,127 @@ describe('swcAst helpers', () => {
     const helper = nestedFunctions.find((fn) => fn.canonicalName === 'exports.NewsSummary > #render > helper');
     expect(helper.scopeChain).toEqual(['exports', 'NewsSummary', '#render', 'helper']);
   });
+
+  test('collectFunctions captures jest-style callbacks', () => {
+    const suiteCallback = callbackFunctions.find((fn) => fn.canonicalName === 'call:describe:mission_timers > callback');
+    expect(suiteCallback).toBeDefined();
+    expect(suiteCallback.kind).toBe('arrow-function');
+    expect(suiteCallback.replaceable).toBe(true);
+    expect(suiteCallback.scopeChain).toEqual(['call:describe:mission_timers', 'callback']);
+
+    const beforeEachCallback = callbackFunctions.find(
+      (fn) => fn.canonicalName === 'call:describe:mission_timers > callback > call:beforeEach > callback'
+    );
+    expect(beforeEachCallback).toBeDefined();
+    expect(beforeEachCallback.kind).toBe('arrow-function');
+    expect(beforeEachCallback.replaceable).toBe(true);
+
+    const namedTestCallback = callbackFunctions.find(
+      (fn) =>
+        fn.canonicalName === 'call:describe:mission_timers > callback > call:test:captures_function_expressions > callback > callbackFn'
+    );
+    expect(namedTestCallback).toBeDefined();
+    expect(namedTestCallback.kind).toBe('function-expression');
+    expect(namedTestCallback.replaceable).toBe(true);
+    expect(namedTestCallback.scopeChain).toEqual([
+      'call:describe:mission_timers',
+      'callback',
+      'call:test:captures_function_expressions',
+      'callback',
+      'callbackFn'
+    ]);
+
+    const teardownCallback = callbackFunctions.find(
+      (fn) =>
+        fn.canonicalName === 'call:describe:mission_timers > callback > call:afterAll > callback > teardownSuite'
+    );
+    expect(teardownCallback).toBeDefined();
+    expect(teardownCallback.kind).toBe('function-expression');
+    expect(teardownCallback.replaceable).toBe(true);
+
+    const nestedSuiteCallback = callbackFunctions.find(
+      (fn) => fn.canonicalName === 'call:describe:mission_timers > callback > call:describe:nested_block > callback'
+    );
+    expect(nestedSuiteCallback).toBeDefined();
+    expect(nestedSuiteCallback.kind).toBe('arrow-function');
+    expect(nestedSuiteCallback.replaceable).toBe(true);
+  });
+
+  test('js-edit replaces describe callback via canonical selector', () => {
+    const suiteCallback = callbackFunctions.find((fn) => fn.canonicalName === 'call:describe:mission_timers > callback');
+    expect(suiteCallback).toBeDefined();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-callback-'));
+    let targetFile;
+    try {
+      targetFile = path.join(tempDir, 'callbacks.js');
+      const replacementPath = path.join(tempDir, 'describe-replacement.js');
+      fs.copyFileSync(callbackFixturePath, targetFile);
+
+      const extractResult = runJsEdit([
+        '--file',
+        callbackFixturePath,
+        '--extract',
+        suiteCallback.canonicalName,
+        '--json'
+      ]);
+      if (extractResult.status !== 0) {
+        throw new Error(`callback extract failed: ${extractResult.stderr || extractResult.stdout}`);
+      }
+      const extractPayload = JSON.parse(extractResult.stdout);
+      const originalSnippet = extractPayload.code;
+      const expectedHash = extractPayload.function && extractPayload.function.hash ? extractPayload.function.hash : suiteCallback.hash;
+      const newline = originalSnippet.includes('\r\n') ? '\r\n' : '\n';
+      const marker = 'setupSandbox();';
+      expect(originalSnippet.includes(marker)).toBe(true);
+      const insertionPoint = originalSnippet.indexOf(marker) + marker.length;
+      const replacementSnippet =
+        originalSnippet.slice(0, insertionPoint) +
+        newline +
+        "    console.log('describe callback patched');" +
+        newline +
+        originalSnippet.slice(insertionPoint);
+      expect(replacementSnippet).not.toBe(originalSnippet);
+      fs.writeFileSync(replacementPath, replacementSnippet);
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        suiteCallback.canonicalName,
+        '--expect-hash',
+        expectedHash,
+        '--with',
+        replacementPath,
+        '--json',
+        '--fix'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`callback replace failed: ${result.stderr || result.stdout}`);
+      }
+
+      const payload = JSON.parse(result.stdout);
+      expect(payload.guard.hash.status).toBe('ok');
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain("console.log('describe callback patched');");
+    } finally {
+      if (tempDir && fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+  })
+
+
+
+
+
+
+
+
+
+
+
+;
 
   test('list-functions json includes byte length metadata', () => {
     const result = runJsEdit([
@@ -221,6 +347,279 @@ describe('swcAst helpers', () => {
     expect(versionEntry.scopeChain).toEqual(['exports']);
     expect(versionEntry.initializerType).toBe('NumericLiteral');
   });
+
+  test('locate-variable reports declarator metadata', () => {
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--locate-variable',
+      'ren',
+      '--json'
+    ]);
+
+    if (result.status !== 0) {
+      throw new Error(`locate-variable failed: ${result.stderr || result.stdout}`);
+    }
+
+    const payload = JSON.parse(result.stdout);
+    expect(payload.selector).toBe('ren');
+    expect(payload.targetMode).toBe('declarator');
+    expect(Array.isArray(payload.matches)).toBe(true);
+    expect(payload.matches).toHaveLength(1);
+    expect(payload.summary).toEqual(expect.objectContaining({ matchCount: 1 }));
+    expect(payload.summary.spanRange.start).toBeLessThan(payload.summary.spanRange.end);
+    const [match] = payload.matches;
+    expect(match.name).toBe('ren');
+    expect(match.targetMode).toBe('declarator');
+    expect(match.hash).toHaveLength(8);
+    expect(match.span.start).toBeLessThan(match.span.end);
+    expect(typeof match.pathSignature === 'string').toBe(true);
+  })
+;
+
+  test('extract-variable emits declarator snippet and metadata', () => {
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--extract-variable',
+      'ren',
+      '--json'
+    ]);
+
+    if (result.status !== 0) {
+      throw new Error(`extract-variable failed: ${result.stderr || result.stdout}`);
+    }
+
+    const payload = JSON.parse(result.stdout);
+    expect(payload.variable).toBeDefined();
+    expect(payload.variable.targetMode).toBe('declarator');
+    expect(payload.variable.hash).toHaveLength(8);
+    expect(payload.variable.span.start).toBeLessThan(payload.variable.span.end);
+    expect(payload.code).toContain('ren, stimpy: renAlias');
+    expect(payload.code.trim().endsWith('= cartoon;')).toBe(true);
+  });
+
+  test('replace-variable swaps declarator snippet with guard validation', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-variable-'));
+    const targetFile = path.join(tempDir, 'sample.js');
+    const replacementPath = path.join(tempDir, 'replacement.js');
+
+    try {
+      fs.copyFileSync(fixturePath, targetFile);
+
+      const locateResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate-variable',
+        'ren',
+        '--json'
+      ]);
+      if (locateResult.status !== 0) {
+        throw new Error(`locate-variable (pre-replace) failed: ${locateResult.stderr || locateResult.stdout}`);
+      }
+      const locatePayload = JSON.parse(locateResult.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const extractResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--extract-variable',
+        'ren',
+        '--json'
+      ]);
+      if (extractResult.status !== 0) {
+        throw new Error(`extract-variable (pre-replace) failed: ${extractResult.stderr || extractResult.stdout}`);
+      }
+      const extractPayload = JSON.parse(extractResult.stdout);
+      const originalSnippet = extractPayload.code;
+      const replacementSnippet = originalSnippet.replace('renAlias', 'stimpyAlias');
+      if (replacementSnippet === originalSnippet) {
+        throw new Error('Did not modify extracted declarator snippet as expected.');
+      }
+      const normalizedSnippet = replacementSnippet.endsWith('\n') ? replacementSnippet : `${replacementSnippet}\n`;
+      fs.writeFileSync(replacementPath, normalizedSnippet);
+
+      const replaceResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--expect-hash',
+        expectedHash,
+        '--with',
+        replacementPath,
+        '--json',
+        '--fix'
+      ]);
+
+      if (replaceResult.status !== 0) {
+        throw new Error(`replace-variable failed: ${replaceResult.stderr || replaceResult.stdout}`);
+      }
+
+      const payload = JSON.parse(replaceResult.stdout);
+      expect(payload.guard.hash.status).toBe('ok');
+      expect(payload.guard.result.status).toBe('changed');
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain('stimpyAlias');
+    } finally {
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
+
+      const bindingTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-variable-binding-'));
+      const bindingTargetFile = path.join(bindingTempDir, 'sample.js');
+      const bindingReplacementPath = path.join(bindingTempDir, 'binding-replacement.js');
+
+      try {
+        fs.copyFileSync(fixturePath, bindingTargetFile);
+
+        const bindingLocateResult = runJsEdit([
+          '--file',
+          bindingTargetFile,
+          '--locate-variable',
+          'ren',
+          '--variable-target',
+          'binding',
+          '--json'
+        ]);
+        if (bindingLocateResult.status !== 0) {
+          throw new Error(`locate-variable binding failed: ${bindingLocateResult.stderr || bindingLocateResult.stdout}`);
+        }
+        const bindingLocatePayload = JSON.parse(bindingLocateResult.stdout);
+        expect(bindingLocatePayload.summary.matchCount).toBe(1);
+        const bindingHash = bindingLocatePayload.matches[0].hash;
+
+        const bindingExtractResult = runJsEdit([
+          '--file',
+          bindingTargetFile,
+          '--extract-variable',
+          'ren',
+          '--variable-target',
+          'binding',
+          '--json'
+        ]);
+        if (bindingExtractResult.status !== 0) {
+          throw new Error(`extract-variable binding failed: ${bindingExtractResult.stderr || bindingExtractResult.stdout}`);
+        }
+        const bindingExtractPayload = JSON.parse(bindingExtractResult.stdout);
+        const bindingSnippet = bindingExtractPayload.code;
+        const bindingReplacementSnippet = bindingSnippet.replace('ren', 'hero');
+        if (bindingReplacementSnippet === bindingSnippet) {
+          throw new Error('Did not modify binding snippet as expected.');
+        }
+        fs.writeFileSync(bindingReplacementPath, bindingReplacementSnippet);
+
+        const bindingReplaceResult = runJsEdit([
+          '--file',
+          bindingTargetFile,
+          '--replace-variable',
+          'ren',
+          '--variable-target',
+          'binding',
+          '--expect-hash',
+          bindingHash,
+          '--with',
+          bindingReplacementPath,
+          '--json',
+          '--fix'
+        ]);
+
+        if (bindingReplaceResult.status !== 0) {
+          throw new Error(`replace-variable binding failed: ${bindingReplaceResult.stderr || bindingReplaceResult.stdout}`);
+        }
+
+        const bindingPayload = JSON.parse(bindingReplaceResult.stdout);
+        expect(bindingPayload.variable.target.resolvedMode).toBe('binding');
+        expect(bindingPayload.guard.hash.status).toBe('ok');
+        expect(bindingPayload.guard.result.status).toBe('changed');
+        const bindingUpdated = fs.readFileSync(bindingTargetFile, 'utf8');
+        expect(bindingUpdated).toContain('const { hero,');
+        expect(bindingUpdated).not.toContain('const { ren,');
+      } finally {
+        if (fs.existsSync(bindingTempDir)) {
+          fs.rmSync(bindingTempDir, { recursive: true, force: true });
+        }
+      }
+
+      const declarationTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-variable-declaration-'));
+      const declarationTargetFile = path.join(declarationTempDir, 'sample.js');
+      const declarationReplacementPath = path.join(declarationTempDir, 'declaration-replacement.js');
+
+      try {
+        fs.copyFileSync(fixturePath, declarationTargetFile);
+
+        const declarationLocateResult = runJsEdit([
+          '--file',
+          declarationTargetFile,
+          '--locate-variable',
+          'ren',
+          '--variable-target',
+          'declaration',
+          '--json'
+        ]);
+        if (declarationLocateResult.status !== 0) {
+          throw new Error(`locate-variable declaration failed: ${declarationLocateResult.stderr || declarationLocateResult.stdout}`);
+        }
+        const declarationLocatePayload = JSON.parse(declarationLocateResult.stdout);
+        expect(declarationLocatePayload.summary.matchCount).toBe(1);
+        const declarationHash = declarationLocatePayload.matches[0].hash;
+
+        const declarationExtractResult = runJsEdit([
+          '--file',
+          declarationTargetFile,
+          '--extract-variable',
+          'ren',
+          '--variable-target',
+          'declaration',
+          '--json'
+        ]);
+        if (declarationExtractResult.status !== 0) {
+          throw new Error(`extract-variable declaration failed: ${declarationExtractResult.stderr || declarationExtractResult.stdout}`);
+        }
+        const declarationExtractPayload = JSON.parse(declarationExtractResult.stdout);
+        const declarationSnippet = declarationExtractPayload.code;
+        const declarationReplacementSnippet = declarationSnippet.replace('= cartoon;', '= cartoonArchive;');
+        if (declarationReplacementSnippet === declarationSnippet) {
+          throw new Error('Did not modify declaration snippet as expected.');
+        }
+        const normalizedDeclarationSnippet = declarationReplacementSnippet.endsWith('\n')
+          ? declarationReplacementSnippet
+          : `${declarationReplacementSnippet}\n`;
+        fs.writeFileSync(declarationReplacementPath, normalizedDeclarationSnippet);
+
+        const declarationReplaceResult = runJsEdit([
+          '--file',
+          declarationTargetFile,
+          '--replace-variable',
+          'ren',
+          '--variable-target',
+          'declaration',
+          '--expect-hash',
+          declarationHash,
+          '--with',
+          declarationReplacementPath,
+          '--json',
+          '--fix'
+        ]);
+
+        if (declarationReplaceResult.status !== 0) {
+          throw new Error(`replace-variable declaration failed: ${declarationReplaceResult.stderr || declarationReplaceResult.stdout}`);
+        }
+
+        const declarationPayload = JSON.parse(declarationReplaceResult.stdout);
+        expect(declarationPayload.variable.target.resolvedMode).toBe('declaration');
+        expect(declarationPayload.guard.hash.status).toBe('ok');
+        expect(declarationPayload.guard.result.status).toBe('changed');
+        const declarationUpdated = fs.readFileSync(declarationTargetFile, 'utf8');
+        expect(declarationUpdated).toContain('= cartoonArchive;');
+      } finally {
+        if (fs.existsSync(declarationTempDir)) {
+          fs.rmSync(declarationTempDir, { recursive: true, force: true });
+        }
+      }
+  })
+;
 
   test('context-function json returns padded excerpts with metadata', () => {
     const result = runJsEdit([

@@ -3,6 +3,8 @@
 ## Purpose
 This document captures the detailed execution plan for expanding `tools/dev/js-edit.js` beyond simple function extraction and replacement. The goal is to deliver precise function location, structural guardrails, and safe mutation helpers without relying on cached AST state. Each phase below lists goals, concrete tasks, outputs, validation steps, and ownership notes so agents can execute autonomously while maintaining traceability.
 
+> **Status — Re-activated (2025-11-03):** js-edit work has resumed to address a regression where anonymous Jest callbacks are missing from `--list-functions` output. Focus first on restoring callback detection, then continue with the outstanding enhancements captured below.
+
 ## Guiding Principles
 - **Fresh Parse Per Operation:** All tooling will parse the target file on demand; no persistent AST cache will be introduced.
 - **Deterministic Identification:** Every locate or edit action must rely on reproducible metadata (scope chains, path signatures, start/end offsets, hashes).
@@ -75,6 +77,8 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Added traversal support for exported classes and class methods (instance/static/getter) with scoped naming such as `exports.NewsSummary > #render`.
 - New fixture `tests/fixtures/tools/js-edit-nested-classes.js` exercises nested class scenarios; updated Jest spec asserts metadata for exports, class methods, and nested helpers.
 - CLI `--list-functions` JSON output now surfaces the new metadata fields to unblock later locator work.
+- **2025-11-03 Follow-up:** Detected gap for anonymous callbacks (e.g., Jest `test` blocks) which never hit `recordFunction`. Need to augment traversal to assign stable identifiers (via call-site context + path signature) so callback spans appear in listings and can be guarded like named functions.
+- **2025-11-04 Follow-up:** Callback records now surface in listings, but replacement attempts still fail because call-context entries are flagged `replaceable: false`. Next increment: introduce a guarded whitelist so recognised call-site callbacks (Jest `describe`/`it`/`test`/hook patterns and similar) are emitted as replaceable, adjust CLI validation to honour the whitelist, and ensure plan emission includes the canonical `call:*` scope chain for replay.
 
 ---
 
@@ -102,11 +106,12 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Integration tests invoking CLI with different selectors (top-level function, class method, duplicate names).
 - Manual spot-check to ensure `--locate` respects `--json`/`--quiet` options.
 
-#### Status — 2025-11-01
-- Implemented guard plan export (`--emit-plan <file>`) so locate/extract/replace emit replayable metadata via stdout and optional plan files.
+#### Status — 2025-11-03
+- Implemented guard plan export (`--emit-plan <file>`) so locate/extract/replace and the context commands emit replayable metadata via stdout and optional plan files.
 - Added `--replace-range start:end` for sub-span updates and `--rename <identifier>` for identifier-only edits. Range offsets are validated against the function span and remain mutually exclusive with rename for predictable guardrails.
-- Extended Jest integration coverage to exercise plan emission, range replacements, and rename flows (`tests/tools/__tests__/js-edit.test.js`).
-- Guardrail integration and CLI documentation updates remain outstanding and are tracked for Phase 4/6 respectively.
+- Extended Jest integration coverage to exercise plan emission, range replacements, rename flows, and context-plan metadata (`tests/tools/__tests__/js-edit.test.js`).
+- Guardrail enforcement shipped during Phase 4 and the documentation refresh landed in Phase 6, so Phase 3 deliverables are complete.
+- **2025-11-06:** Expanded the CLI surface for variable bindings. New commands (`--locate-variable`, `--extract-variable`, `--replace-variable`, `--variable-target`) mirror the function workflow, emit guard plans keyed to binding/declarator/declaration spans, and ship with integration coverage plus README/quick-start documentation updates. This unlocks guarded edits for destructured imports, CommonJS assignments, and other declarator-style changes without falling back to manual edits.
 
 ---
 
@@ -138,7 +143,8 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Introduced `--force` override for intentional guard bypass; guard summaries mark bypassed checks explicitly and preserve the expected hash for auditing.
 - ASCII output renders a guardrail table, and JSON payloads embed detailed guard status and hashes for automation. Documentation highlights the guard workflow in both `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md`.
 - Added optional span expectation guard (`--expect-span start:end`) so replayed plans confirm offsets alongside hashes; guard summaries and plan payloads now capture the expected span, and Jest integration verifies OK/mismatch/bypass flows.
-- Next: expand plan emission coverage for `--allow-multiple` scenarios and consider surfacing aggregated span info when batching edits.
+- Next: expand guard summaries for `--allow-multiple` scenarios so batch locate/context operations surface combined span information before edits proceed.
+- **2025-11-06:** Variable replacements now ride the same guard stack—hash/path validation occurs against the requested `--variable-target` span, syntax checks re-parse the updated file, and guard summaries output the resolved mode so automation can reason about binding/declarator/declaration edits. Integration tests (`tests/tools/__tests__/js-edit.test.js`) cover locate/extract/replace flows and validate guard behaviour end-to-end.
 
 ---
 
@@ -163,10 +169,10 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 - Unit tests for rename and sub-span logic (success and failure cases).
 - CLI integration test producing a plan file and reusing it in a subsequent run.
 
-#### Status — 2025-11-01
-- Implemented the initial guard plan exporter: `--emit-plan <file>` now serializes selector, hash, span, and path metadata for locate, extract, and replace flows. JSON CLI output mirrors the emitted file so downstream automation can consume either channel.
-- Added integration coverage (`tests/tools/__tests__/js-edit.test.js`) asserting locate/replace commands persist plan files with the expected hash and path signature.
-- Sub-span replacement and rename helpers remain in the backlog pending dedicated fixtures.
+#### Status — 2025-11-03
+- Sub-span replacement (`--replace-range`) and identifier renaming (`--rename`) are live and covered by integration tests against the expanded fixtures.
+- Plan emission now spans locate/extract/replace plus both context commands, producing replayable metadata consumed in tests.
+- Follow-up: add aggregated guard summaries when `--allow-multiple` batches edits so operators can review combined spans before applying changes (tracked alongside the guard-summary work in Phase 4).
 
 ---
 
@@ -235,6 +241,10 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 ### Validation
 - Manual runs verifying CLI remains responsive.
 
+#### Status — 2025-11-03
+- `--benchmark` exists on the CLI, but comparative measurements across the planned file-size tiers have not been recorded yet. Pending action: capture timings for small/medium/large fixtures and document results here and in CHANGE_PLAN notes.
+- No optimisation or memoisation work has started because baseline measurements are still outstanding.
+
 ---
 
 ## Phase 9 — Rollout & Monitoring (Day 9)
@@ -256,6 +266,10 @@ This document captures the detailed execution plan for expanding `tools/dev/js-e
 ### Validation
 - Final regression test pass and smoke tests on sample repositories.
 
+#### Status — 2025-11-03
+- Rollout tasks remain pending: CHANGELOG/docs audit, feedback-channel guidance, and backlog capture will follow once performance data and guard-summary enhancements land.
+- Ensure the outstanding `--allow-multiple` guard-summary improvement is documented before closing this phase.
+
 ---
 
 ## Success Metrics
@@ -274,3 +288,8 @@ If the enhancements introduce instability:
 - Should we expand beyond functions to cover property assignments or export lists? (Out of scope initially.)
 - Do we need cross-file refactoring support? (Future investigation.)
 - Is there value in supporting scripted batches (plan replay) more fully? (See backlog in Phase 9.)
+
+---
+
+### Pause Note
+The js-edit enhancement roadmap above remains the source of truth for outstanding work. Implementation is paused as of 2025-11-03; revisit Phase 8 benchmarks and Phase 9 rollout tasks once compression utility priorities are addressed.
