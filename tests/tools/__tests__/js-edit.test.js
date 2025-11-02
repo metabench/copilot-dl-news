@@ -219,6 +219,14 @@ describe('swcAst helpers', () => {
 
       const payload = JSON.parse(result.stdout);
       expect(payload.guard.hash.status).toBe('ok');
+      expect(payload.guard.newline).toEqual(expect.objectContaining({
+        status: expect.stringMatching(/^(ok|converted|none)$/),
+        byteDelta: expect.any(Number)
+      }));
+      expect(payload.guard.newline.replacement).toEqual(expect.objectContaining({
+        targetStyle: expect.any(String),
+        normalizedStyle: expect.any(String)
+      }));
       const updated = fs.readFileSync(targetFile, 'utf8');
       expect(updated).toContain("console.log('describe callback patched');");
     } finally {
@@ -227,6 +235,7 @@ describe('swcAst helpers', () => {
       }
     }
   })
+
 
 
 
@@ -368,13 +377,18 @@ describe('swcAst helpers', () => {
     expect(payload.matches).toHaveLength(1);
     expect(payload.summary).toEqual(expect.objectContaining({ matchCount: 1 }));
     expect(payload.summary.spanRange.start).toBeLessThan(payload.summary.spanRange.end);
+    expect(payload.summary.spanRange.byteStart).toBeLessThan(payload.summary.spanRange.byteEnd);
+    expect(payload.summary.spanRange.totalByteLength).toBeGreaterThan(0);
     const [match] = payload.matches;
     expect(match.name).toBe('ren');
     expect(match.targetMode).toBe('declarator');
     expect(match.hash).toHaveLength(8);
     expect(match.span.start).toBeLessThan(match.span.end);
+    expect(match.span.byteStart).toBeLessThan(match.span.byteEnd);
+    expect(match.span.byteLength).toBeGreaterThan(0);
     expect(typeof match.pathSignature === 'string').toBe(true);
   })
+
 ;
 
   test('extract-variable emits declarator snippet and metadata', () => {
@@ -406,6 +420,9 @@ describe('swcAst helpers', () => {
 
     try {
       fs.copyFileSync(fixturePath, targetFile);
+      const originalContent = fs.readFileSync(targetFile, 'utf8');
+      const crlfContent = originalContent.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+      fs.writeFileSync(targetFile, crlfContent);
 
       const locateResult = runJsEdit([
         '--file',
@@ -459,6 +476,15 @@ describe('swcAst helpers', () => {
       const payload = JSON.parse(replaceResult.stdout);
       expect(payload.guard.hash.status).toBe('ok');
       expect(payload.guard.result.status).toBe('changed');
+      expect(payload.guard.newline.status).toBe('converted');
+      expect(payload.guard.newline.file?.style).toBe('crlf');
+      expect(payload.guard.newline.result?.style).toBe('crlf');
+      expect(payload.guard.newline.replacement).toEqual(expect.objectContaining({
+        targetStyle: 'crlf',
+        converted: true,
+        normalizedStyle: 'crlf'
+      }));
+      expect(payload.guard.newline.byteDelta).toBeGreaterThan(0);
       const updated = fs.readFileSync(targetFile, 'utf8');
       expect(updated).toContain('stimpyAlias');
     } finally {
@@ -526,13 +552,22 @@ describe('swcAst helpers', () => {
         ]);
 
         if (bindingReplaceResult.status !== 0) {
-          throw new Error(`replace-variable binding failed: ${bindingReplaceResult.stderr || bindingReplaceResult.stdout}`);
+          throw new Error(`replace-variable binding failed: ${bindingReplaceResult.stderr || bindingLocateResult.stdout}`);
         }
 
         const bindingPayload = JSON.parse(bindingReplaceResult.stdout);
         expect(bindingPayload.variable.target.resolvedMode).toBe('binding');
         expect(bindingPayload.guard.hash.status).toBe('ok');
         expect(bindingPayload.guard.result.status).toBe('changed');
+        expect(bindingPayload.guard.newline.status).toBe('converted');
+        expect(bindingPayload.guard.newline.file?.style).toBe('crlf');
+        expect(bindingPayload.guard.newline.result?.style).toBe('crlf');
+        expect(bindingPayload.guard.newline.replacement).toEqual(expect.objectContaining({
+          targetStyle: 'crlf',
+          converted: true,
+          normalizedStyle: 'crlf'
+        }));
+        expect(bindingPayload.guard.newline.byteDelta).toBeGreaterThanOrEqual(0);
         const bindingUpdated = fs.readFileSync(bindingTargetFile, 'utf8');
         expect(bindingUpdated).toContain('const { hero,');
         expect(bindingUpdated).not.toContain('const { ren,');
@@ -604,13 +639,22 @@ describe('swcAst helpers', () => {
         ]);
 
         if (declarationReplaceResult.status !== 0) {
-          throw new Error(`replace-variable declaration failed: ${declarationReplaceResult.stderr || declarationReplaceResult.stdout}`);
+          throw new Error(`replace-variable declaration failed: ${declarationReplaceResult.stderr || declarationLocateResult.stdout}`);
         }
 
         const declarationPayload = JSON.parse(declarationReplaceResult.stdout);
         expect(declarationPayload.variable.target.resolvedMode).toBe('declaration');
         expect(declarationPayload.guard.hash.status).toBe('ok');
         expect(declarationPayload.guard.result.status).toBe('changed');
+        expect(declarationPayload.guard.newline.status).toBe('converted');
+        expect(declarationPayload.guard.newline.file?.style).toBe('crlf');
+        expect(declarationPayload.guard.newline.result?.style).toBe('crlf');
+        expect(declarationPayload.guard.newline.replacement).toEqual(expect.objectContaining({
+          targetStyle: 'crlf',
+          converted: true,
+          normalizedStyle: 'crlf'
+        }));
+        expect(declarationPayload.guard.newline.byteDelta).toBeGreaterThanOrEqual(0);
         const declarationUpdated = fs.readFileSync(declarationTargetFile, 'utf8');
         expect(declarationUpdated).toContain('= cartoonArchive;');
       } finally {
@@ -619,6 +663,9 @@ describe('swcAst helpers', () => {
         }
       }
   })
+
+
+
 ;
 
   test('context-function json returns padded excerpts with metadata', () => {
@@ -874,11 +921,24 @@ describe('swcAst helpers', () => {
       expect(planFile.selector).toBe('exports.alpha');
       expect(planFile.matches[0].expectedHash).toHaveLength(8);
       const alphaRecord = functions.find((fn) => fn.canonicalName === 'exports.alpha');
-      expect(planFile.matches[0].identifierSpan).toEqual({
+      expect(planFile.matches[0].identifierSpan).toMatchObject({
         start: alphaRecord.identifierSpan.start,
-        end: alphaRecord.identifierSpan.end
+        end: alphaRecord.identifierSpan.end,
+        length: alphaRecord.identifierSpan.end - alphaRecord.identifierSpan.start,
+        byteStart: alphaRecord.identifierSpan.byteStart,
+        byteEnd: alphaRecord.identifierSpan.byteEnd,
+        byteLength: alphaRecord.identifierSpan.byteEnd - alphaRecord.identifierSpan.byteStart
       });
-    });
+      expect(planFile.matches[0].span).toMatchObject({
+        start: alphaRecord.span.start,
+        end: alphaRecord.span.end,
+        length: alphaRecord.span.end - alphaRecord.span.start,
+        byteStart: alphaRecord.span.byteStart,
+        byteEnd: alphaRecord.span.byteEnd,
+        byteLength: alphaRecord.span.byteEnd - alphaRecord.span.byteStart
+      });
+    })
+;
 
     test('context-function emits enhanced plan with summary metadata', () => {
       const planPath = path.join(tempDir, 'context-plan.json');
@@ -911,6 +971,9 @@ describe('swcAst helpers', () => {
       expect(planFile.summary.spanRange.start).toBeGreaterThanOrEqual(0);
       expect(planFile.summary.spanRange.end).toBeGreaterThan(planFile.summary.spanRange.start);
       expect(planFile.summary.spanRange.totalLength).toBeGreaterThan(0);
+      expect(planFile.summary.spanRange.byteStart).toBeGreaterThanOrEqual(0);
+      expect(planFile.summary.spanRange.byteEnd).toBeGreaterThan(planFile.summary.spanRange.byteStart);
+      expect(planFile.summary.spanRange.totalByteLength).toBeGreaterThan(0);
       
       // Verify context-specific extras
       expect(planFile.entity).toBe('function');
@@ -924,7 +987,8 @@ describe('swcAst helpers', () => {
       expect(planFile.matches[0].canonicalName).toBe('exports.NewsSummary');
       expect(planFile.matches[0].kind).toBe('class');
       expect(planFile.matches[0].hash).toHaveLength(8);
-    });
+    })
+;
 
     test('replacement aborts on structural drift unless forced', () => {
       const locate = runJsEdit([
@@ -1126,24 +1190,71 @@ describe('swcAst helpers', () => {
       expect(payload.plan.matches[0].expectedHash).toBe(expectedHash);
       expect(payload.plan.matches[0].expectedSpan).toEqual({
         start: alphaRecord.span.start,
-        end: alphaRecord.span.end
+        end: alphaRecord.span.end,
+        length: alphaRecord.span.end - alphaRecord.span.start,
+        byteStart: alphaRecord.span.byteStart,
+        byteEnd: alphaRecord.span.byteEnd,
+        byteLength: alphaRecord.span.byteEnd - alphaRecord.span.byteStart
       });
       expect(payload.guard.span.status).toBe('ok');
       expect(payload.guard.span.expectedStart).toBe(alphaRecord.span.start);
       expect(payload.guard.span.expectedEnd).toBe(alphaRecord.span.end);
+      expect(payload.guard.newline.status).toBe('converted');
+      expect(payload.guard.newline.file?.style).toBe('crlf');
+      expect(payload.guard.newline.result?.style).toBe('none');
+      expect(payload.guard.newline.replacement).toEqual(
+        expect.objectContaining({
+          targetStyle: 'crlf',
+          normalizedStyle: 'crlf',
+          converted: true
+        })
+      );
+      expect(payload.guard.newline.byteDelta).toBeLessThan(0);
+      expect(payload.plan.newline).toEqual(
+        expect.objectContaining({
+          status: 'converted',
+          file: expect.objectContaining({ style: 'crlf' })
+        })
+      );
+      expect(payload.plan.newline.result?.style).toBe('none');
       expect(fs.existsSync(planPath)).toBe(true);
       const planFile = JSON.parse(fs.readFileSync(planPath, 'utf8'));
       expect(planFile.matches[0].expectedHash).toBe(expectedHash);
       expect(planFile.matches[0].pathSignature).toBe('module.body[0].ExportDeclaration.declaration.FunctionDeclaration.FunctionDeclaration');
-      expect(planFile.matches[0].identifierSpan).toEqual({
+      expect(planFile.matches[0].identifierSpan).toMatchObject({
         start: alphaRecord.identifierSpan.start,
-        end: alphaRecord.identifierSpan.end
+        end: alphaRecord.identifierSpan.end,
+        length: alphaRecord.identifierSpan.end - alphaRecord.identifierSpan.start,
+        byteStart: alphaRecord.identifierSpan.byteStart,
+        byteEnd: alphaRecord.identifierSpan.byteEnd,
+        byteLength: alphaRecord.identifierSpan.byteEnd - alphaRecord.identifierSpan.byteStart
       });
-      expect(planFile.matches[0].expectedSpan).toEqual({
+      expect(planFile.matches[0].expectedSpan).toMatchObject({
         start: alphaRecord.span.start,
-        end: alphaRecord.span.end
+        end: alphaRecord.span.end,
+        length: alphaRecord.span.end - alphaRecord.span.start,
+        byteStart: alphaRecord.span.byteStart,
+        byteEnd: alphaRecord.span.byteEnd,
+        byteLength: alphaRecord.span.byteEnd - alphaRecord.span.byteStart
       });
-    });
+      expect(planFile.newline).toEqual(
+        expect.objectContaining({
+          status: 'converted',
+          file: expect.objectContaining({ style: 'crlf' })
+        })
+      );
+      expect(planFile.newline.result?.style).toBe('none');
+      expect(planFile.newline.replacement).toEqual(
+        expect.objectContaining({
+          targetStyle: 'crlf',
+          normalizedStyle: 'crlf',
+          converted: true
+        })
+      );
+      expect(planFile.newline.byteDelta).toBeLessThan(0);
+    })
+
+;
 
     test('replace-range updates a slice within the function body', () => {
       const alphaRecord = functions.find((fn) => fn.canonicalName === 'exports.alpha');

@@ -53,6 +53,237 @@ const HASH_CHARSETS = Object.freeze({
   hex: /^[0-9a-f]+$/i
 });
 
+function computeNewlineStats(content) {
+  if (typeof content !== 'string' || content.length === 0) {
+    return {
+      style: 'none',
+      total: 0,
+      counts: { lf: 0, crlf: 0, cr: 0 },
+      mixed: false,
+      uniqueStyles: 0
+    };
+  }
+
+  let lf = 0;
+  let crlf = 0;
+  let cr = 0;
+  for (let index = 0; index < content.length; index += 1) {
+    const code = content.charCodeAt(index);
+    if (code === 13) {
+      if (content.charCodeAt(index + 1) === 10) {
+        crlf += 1;
+        index += 1;
+      } else {
+        cr += 1;
+      }
+    } else if (code === 10) {
+      lf += 1;
+    }
+  }
+
+  const counts = { lf, crlf, cr };
+  const total = lf + crlf + cr;
+  if (total === 0) {
+    return {
+      style: 'none',
+      total: 0,
+      counts,
+      mixed: false,
+      uniqueStyles: 0
+    };
+  }
+
+  const uniqueStyles = Number(lf > 0) + Number(crlf > 0) + Number(cr > 0);
+  let style = 'lf';
+  if (crlf >= lf && crlf >= cr && crlf > 0) {
+    style = 'crlf';
+  } else if (cr > lf && cr > crlf) {
+    style = 'cr';
+  }
+
+  return {
+    style,
+    total,
+    counts,
+    mixed: uniqueStyles > 1,
+    uniqueStyles
+  };
+}
+
+function resolveTargetNewlineStyle(style) {
+  if (style === 'crlf' || style === 'lf' || style === 'cr') {
+    return style;
+  }
+  return 'lf';
+}
+
+function newlineTokenForStyle(style) {
+  switch (style) {
+    case 'crlf':
+      return "\r\n";
+    case 'cr':
+      return '\r';
+    default:
+      return '\n';
+  }
+}
+
+function prepareNormalizedSnippet(snippet, targetStyle, options = {}) {
+  const ensureTrailingNewline = options.ensureTrailingNewline === true;
+  const resolvedTarget = resolveTargetNewlineStyle(targetStyle);
+  const originalStats = computeNewlineStats(snippet);
+  const originalBytes = Buffer.byteLength(snippet, 'utf8');
+
+  let normalized = snippet;
+  let converted = false;
+
+  if (originalStats.total > 0) {
+    const collapsed = snippet.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (collapsed !== snippet) {
+      converted = true;
+    }
+
+    if (resolvedTarget === 'crlf') {
+      normalized = collapsed.replace(/\n/g, '\r\n');
+    } else if (resolvedTarget === 'cr') {
+      normalized = collapsed.replace(/\n/g, '\r');
+    } else {
+      normalized = collapsed;
+    }
+
+    if (normalized !== snippet) {
+      converted = true;
+    }
+  }
+
+  const newlineToken = newlineTokenForStyle(resolvedTarget);
+  let trailingAdded = false;
+
+  if (ensureTrailingNewline) {
+    if (!normalized.endsWith('\n') && !normalized.endsWith('\r')) {
+      normalized += newlineToken;
+      trailingAdded = true;
+    } else if (!normalized.endsWith(newlineToken)) {
+      const trimmed = normalized.replace(/(?:\r\n|\r|\n)$/, '');
+      normalized = `${trimmed}${newlineToken}`;
+      converted = true;
+    }
+  }
+
+  const resultStats = computeNewlineStats(normalized);
+  const normalizedBytes = Buffer.byteLength(normalized, 'utf8');
+
+  return {
+    text: normalized,
+    original: originalStats,
+    result: resultStats,
+    targetStyle: resolvedTarget,
+    converted: converted || trailingAdded,
+    trailingAdded,
+    originalBytes,
+    normalizedBytes,
+    byteDelta: normalizedBytes - originalBytes
+  };
+}
+
+function summarizeNewlineStats(stats, bytes) {
+  if (!stats) {
+    return null;
+  }
+
+  return {
+    style: stats.style,
+    mixed: Boolean(stats.mixed),
+    total: stats.total,
+    counts: stats.counts || { lf: 0, crlf: 0, cr: 0 },
+    uniqueStyles: stats.uniqueStyles || 0,
+    bytes
+  };
+}
+
+function createNewlineGuard(fileStats, snippetBefore, snippetAfter, replacementMeta) {
+  const resolvedFileStats = fileStats || computeNewlineStats(snippetBefore);
+  const beforeStats = computeNewlineStats(snippetBefore);
+  const afterStats = computeNewlineStats(snippetAfter);
+  const beforeBytes = Buffer.byteLength(snippetBefore, 'utf8');
+  const afterBytes = Buffer.byteLength(snippetAfter, 'utf8');
+  const byteDelta = afterBytes - beforeBytes;
+
+  const conversionApplied = Boolean(
+    replacementMeta && (replacementMeta.converted || replacementMeta.trailingAdded)
+  );
+
+  const status = resolvedFileStats.total === 0 && beforeStats.total === 0 && afterStats.total === 0
+    ? 'none'
+    : conversionApplied
+      ? 'converted'
+      : 'ok';
+
+  return {
+    status,
+    file: summarizeNewlineStats(resolvedFileStats, null),
+    original: summarizeNewlineStats(beforeStats, beforeBytes),
+    result: summarizeNewlineStats(afterStats, afterBytes),
+    byteDelta,
+    replacement: replacementMeta
+      ? {
+          style: replacementMeta.original.style,
+          mixed: replacementMeta.original.mixed,
+          total: replacementMeta.original.total,
+          counts: replacementMeta.original.counts,
+          bytes: replacementMeta.originalBytes,
+          normalizedStyle: replacementMeta.result.style,
+          normalizedMixed: replacementMeta.result.mixed,
+          normalizedTotal: replacementMeta.result.total,
+          normalizedCounts: replacementMeta.result.counts,
+          normalizedBytes: replacementMeta.normalizedBytes,
+          converted: replacementMeta.converted,
+          trailingNewlineAdded: replacementMeta.trailingAdded,
+          byteDelta: replacementMeta.byteDelta,
+          targetStyle: replacementMeta.targetStyle
+        }
+      : null
+  };
+}
+
+function formatNewlineSummary(newlineGuard) {
+  if (!newlineGuard) {
+    return 'No newline analysis available';
+  }
+
+  const segments = [];
+  if (newlineGuard.file?.style) {
+    const suffix = newlineGuard.file.mixed ? ' (mixed)' : '';
+    segments.push(`file ${newlineGuard.file.style.toUpperCase()}${suffix}`);
+  }
+
+  if (newlineGuard.replacement) {
+    const suffix = newlineGuard.replacement.mixed ? ' (mixed)' : '';
+    const target = newlineGuard.replacement.normalizedStyle
+      ? ` -> ${newlineGuard.replacement.normalizedStyle.toUpperCase()}`
+      : '';
+    segments.push(`snippet ${newlineGuard.replacement.style.toUpperCase()}${suffix}${target}`);
+    if (newlineGuard.replacement.trailingNewlineAdded) {
+      segments.push('trailing newline added');
+    }
+  } else if (newlineGuard.original?.style) {
+    const suffix = newlineGuard.original.mixed ? ' (mixed)' : '';
+    segments.push(`snippet ${newlineGuard.original.style.toUpperCase()}${suffix}`);
+  }
+
+  if (newlineGuard.result?.style) {
+    const suffix = newlineGuard.result.mixed ? ' (mixed)' : '';
+    segments.push(`result ${newlineGuard.result.style.toUpperCase()}${suffix}`);
+  }
+
+  const delta = newlineGuard.byteDelta || 0;
+  segments.push(`byte delta ${delta >= 0 ? '+' : ''}${delta}`);
+
+  return segments.join(' | ');
+}
+
+
+
 function getConfiguredHashEncodings() {
   const encodings = new Set([HASH_PRIMARY_ENCODING, HASH_FALLBACK_ENCODING]);
   return Array.from(encodings).filter((encoding) => HASH_LENGTH_BY_ENCODING[encoding]);
@@ -62,6 +293,26 @@ function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
   const modeValue = typeof requestedMode === 'string' ? requestedMode.trim().toLowerCase() : 'declarator';
   const normalizedMode = VARIABLE_TARGET_MODES.has(modeValue) ? modeValue : 'declarator';
 
+  const cloneSpan = (span) => {
+    if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
+      return null;
+    }
+    const clone = {
+      start: span.start,
+      end: span.end
+    };
+    if (typeof span.byteStart === 'number') {
+      clone.byteStart = span.byteStart;
+    }
+    if (typeof span.byteEnd === 'number') {
+      clone.byteEnd = span.byteEnd;
+    }
+    if (span.__normalized === true) {
+      clone.__normalized = true;
+    }
+    return clone;
+  };
+
   const candidateOrder = normalizedMode === 'binding'
     ? ['binding', 'declarator', 'declaration']
     : normalizedMode === 'declaration'
@@ -69,34 +320,36 @@ function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
       : ['declarator', 'binding', 'declaration'];
 
   const resolveCandidate = (candidate) => {
+    let sourceSpan = null;
+    let hash = null;
+    let pathSignature = null;
+    let byteLength = null;
+
     switch (candidate) {
       case 'binding':
-        return {
-          span: record.span || null,
-          hash: record.hash || null,
-          pathSignature: record.pathSignature || null,
-          byteLength: typeof record.byteLength === 'number'
-            ? record.byteLength
-            : null
-        };
+        sourceSpan = record.span || null;
+        hash = record.hash || null;
+        pathSignature = record.pathSignature || null;
+        byteLength = typeof record.byteLength === 'number'
+          ? record.byteLength
+          : null;
+        break;
       case 'declarator':
-        return {
-          span: record.declaratorSpan || null,
-          hash: record.declaratorHash || record.hash || null,
-          pathSignature: record.declaratorPathSignature || record.pathSignature || null,
-          byteLength: typeof record.declaratorByteLength === 'number'
-            ? record.declaratorByteLength
-            : null
-        };
+        sourceSpan = record.declaratorSpan || record.span || null;
+        hash = record.declaratorHash || record.hash || null;
+        pathSignature = record.declaratorPathSignature || record.pathSignature || null;
+        byteLength = typeof record.declaratorByteLength === 'number'
+          ? record.declaratorByteLength
+          : null;
+        break;
       case 'declaration':
-        return {
-          span: record.declarationSpan || null,
-          hash: record.declarationHash || record.declaratorHash || record.hash || null,
-          pathSignature: record.declarationPathSignature || record.declaratorPathSignature || record.pathSignature || null,
-          byteLength: typeof record.declarationByteLength === 'number'
-            ? record.declarationByteLength
-            : null
-        };
+        sourceSpan = record.declarationSpan || record.declaratorSpan || record.span || null;
+        hash = record.declarationHash || record.declaratorHash || record.hash || null;
+        pathSignature = record.declarationPathSignature || record.declaratorPathSignature || record.pathSignature || null;
+        byteLength = typeof record.declarationByteLength === 'number'
+          ? record.declarationByteLength
+          : null;
+        break;
       default:
         return {
           span: null,
@@ -105,6 +358,13 @@ function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
           byteLength: null
         };
     }
+
+    return {
+      span: cloneSpan(sourceSpan),
+      hash,
+      pathSignature,
+      byteLength
+    };
   };
 
   for (const candidate of candidateOrder) {
@@ -113,7 +373,7 @@ function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
       continue;
     }
 
-    const normalizedSpan = { start: span.start, end: span.end };
+    const normalizedSpan = span;
     const resolvedHash = hash || record.hash || null;
     if (!resolvedHash) {
       continue;
@@ -122,7 +382,9 @@ function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
     const resolvedPath = pathSignature || record.pathSignature || null;
     const resolvedByteLength = typeof byteLength === 'number'
       ? byteLength
-      : Math.max(0, normalizedSpan.end - normalizedSpan.start);
+      : typeof normalizedSpan.byteStart === 'number' && typeof normalizedSpan.byteEnd === 'number'
+        ? Math.max(0, normalizedSpan.byteEnd - normalizedSpan.byteStart)
+        : Math.max(0, normalizedSpan.end - normalizedSpan.start);
 
     return {
       requestedMode: normalizedMode,
@@ -138,6 +400,7 @@ function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
   throw new Error(`Unable to resolve a ${normalizedMode} span for variable "${label}".`);
 }
 
+
 function computeAggregateSpan(spans) {
   if (!Array.isArray(spans)) {
     return null;
@@ -146,33 +409,118 @@ function computeAggregateSpan(spans) {
   let start = null;
   let end = null;
   let totalLength = 0;
+  let byteStart = null;
+  let byteEnd = null;
+  let totalByteLength = 0;
 
   spans.forEach((span) => {
     if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
       return;
     }
+
     if (start === null || span.start < start) {
       start = span.start;
     }
     if (end === null || span.end > end) {
       end = span.end;
     }
+
     totalLength += Math.max(0, span.end - span.start);
+
+    const hasByteRange = typeof span.byteStart === 'number' && typeof span.byteEnd === 'number' && span.byteEnd > span.byteStart;
+    if (hasByteRange) {
+      if (byteStart === null || span.byteStart < byteStart) {
+        byteStart = span.byteStart;
+      }
+      if (byteEnd === null || span.byteEnd > byteEnd) {
+        byteEnd = span.byteEnd;
+      }
+      totalByteLength += Math.max(0, span.byteEnd - span.byteStart);
+    }
   });
 
   if (start === null || end === null) {
     return null;
   }
 
-  return { start, end, totalLength };
+  return {
+    start,
+    end,
+    totalLength,
+    byteStart,
+    byteEnd,
+    totalByteLength: byteStart !== null && byteEnd !== null ? totalByteLength : null
+  };
 }
+
 
 function formatAggregateSpan(aggregate) {
   if (!aggregate) {
     return null;
   }
-  return `${aggregate.start}:${aggregate.end} (total ${aggregate.totalLength} chars)`;
+
+  const segments = [];
+  const charSegment = formatSpanRange('chars', aggregate.start, aggregate.end, aggregate.totalLength);
+  if (charSegment) {
+    segments.push(charSegment);
+  }
+
+  const byteSegment = formatSpanRange(
+    'bytes',
+    aggregate.byteStart,
+    aggregate.byteEnd,
+    aggregate.totalByteLength
+  );
+  if (byteSegment) {
+    segments.push(byteSegment);
+  }
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  return segments.join('\n');
 }
+
+
+function formatSpanRange(label, start, end, length, expectedStart = null, expectedEnd = null) {
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return null;
+  }
+
+  const normalizedLength = Number.isFinite(length) ? length : Math.max(0, end - start);
+  const parts = [`${label} ${start}-${end}`, `len ${normalizedLength}`];
+  if (Number.isFinite(expectedStart) && Number.isFinite(expectedEnd)) {
+    parts.push(`expected ${expectedStart}-${expectedEnd}`);
+  }
+  return parts.join(' | ');
+}
+
+function formatSpanDetails(span) {
+  if (!span) {
+    return null;
+  }
+
+  const segments = [];
+  const charSegment = formatSpanRange('chars', span.start, span.end, span.length, span.expectedStart, span.expectedEnd);
+  if (charSegment) {
+    segments.push(charSegment);
+  }
+
+  const byteStart = typeof span.byteStart === 'number' ? span.byteStart : null;
+  const byteEnd = typeof span.byteEnd === 'number' ? span.byteEnd : null;
+  const byteSegment = formatSpanRange('bytes', byteStart, byteEnd, span.byteLength, span.expectedByteStart, span.expectedByteEnd);
+  if (byteSegment) {
+    segments.push(byteSegment);
+  }
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  return segments.join('\n');
+}
+
 
 function formatHashDescriptor(encodings) {
   return encodings
@@ -201,25 +549,25 @@ function applyRenameToSnippet(snippet, record, newName) {
   }
 
   const relativeStart = record.identifierSpan.start - record.span.start;
-  const length = record.identifierSpan.end - record.identifierSpan.start;
-  const relativeEnd = relativeStart + length;
+  const relativeEnd = record.identifierSpan.end - record.span.start;
 
   if (relativeStart < 0 || relativeEnd > snippet.length) {
     throw new Error('Unable to map identifier span while renaming. The function structure may have changed.');
   }
 
-  const original = snippet.slice(relativeStart, relativeEnd);
-  const leading = original.match(/^\s+/)?.[0] ?? '';
-  const trailing = original.match(/\s+$/)?.[0] ?? '';
-  const nameStart = relativeStart + leading.length;
-  const nameEnd = relativeEnd - trailing.length;
+  const slice = snippet.slice(relativeStart, relativeEnd);
+  const identifierMatch = /[A-Za-z_$][A-Za-z0-9_$]*/.exec(slice);
 
-  if (nameStart > nameEnd) {
-    throw new Error('Unable to compute identifier bounds while renaming.');
+  if (!identifierMatch) {
+    throw new Error('Unable to locate identifier token while renaming.');
   }
 
-  return `${snippet.slice(0, nameStart)}${newName}${snippet.slice(nameEnd)}`;
+  const tokenStart = relativeStart + identifierMatch.index;
+  const tokenEnd = tokenStart + identifierMatch[0].length;
+
+  return `${snippet.slice(0, tokenStart)}${newName}${snippet.slice(tokenEnd)}`;
 }
+
 
 function toReadableScope(scopeChain) {
   if (!Array.isArray(scopeChain) || scopeChain.length === 0) return '-';
@@ -354,6 +702,19 @@ function buildVariableRecords(variables) {
     };
   });
 }
+
+function variableRecordMatchesPath(record, pathSignature) {
+  if (!pathSignature) {
+    return false;
+  }
+
+  return [
+    record.declaratorPathSignature,
+    record.pathSignature,
+    record.declarationPathSignature
+  ].some((candidate) => typeof candidate === 'string' && candidate === pathSignature);
+}
+
 
 function findMatchesForSelector(functionRecords, rawSelector) {
   const selector = rawSelector.trim();
@@ -591,7 +952,8 @@ function buildContextPayload(type, selector, options, contextResult) {
       },
       offsets: {
         baseStart: entry.relativeBaseStart,
-        baseEnd: entry.relativeBaseEnd
+        baseEnd: entry.relativeBaseEnd,
+        length: entry.relativeBaseEnd - entry.relativeBaseStart
       },
       effectiveSpan: entry.effectiveSpan,
       selectedEnclosingContext: entry.selectedEnclosingContext,
@@ -621,7 +983,8 @@ function buildContextPayload(type, selector, options, contextResult) {
     contexts
   };
 }
-
+
+
 function renderContextResults(type, selector, options, contextResult) {
   const payload = buildContextPayload(type, selector, options, contextResult);
   const spanRange = computeAggregateSpan(contextResult.entries.map((entry) => {
@@ -685,6 +1048,31 @@ function renderContextResults(type, selector, options, contextResult) {
     if (record.scopeChain && record.scopeChain.length > 0) {
       fmt.stat('Scope', record.scopeChain.join(' > '));
     }
+    const baseSpanDetails = formatSpanDetails(record.span);
+    if (baseSpanDetails) {
+      fmt.stat('Span', baseSpanDetails);
+    }
+    const effectiveSpanDetails = formatSpanDetails(entry.effectiveSpan);
+    if (effectiveSpanDetails) {
+      const baseSpan = record.span || null;
+      const effective = entry.effectiveSpan || null;
+      const spansMatch = baseSpan && effective
+        ? baseSpan.start === effective.start
+          && baseSpan.end === effective.end
+          && (typeof baseSpan.byteStart === 'number' ? baseSpan.byteStart : null) === (typeof effective.byteStart === 'number' ? effective.byteStart : null)
+          && (typeof baseSpan.byteEnd === 'number' ? baseSpan.byteEnd : null) === (typeof effective.byteEnd === 'number' ? effective.byteEnd : null)
+        : false;
+      if (!spansMatch) {
+        fmt.stat('Effective span', effectiveSpanDetails);
+      }
+    }
+    const contextRange = entry.contextRange;
+    if (contextRange) {
+      const contextRangeSummary = formatSpanRange('chars', contextRange.start, contextRange.end, contextRange.end - contextRange.start);
+      if (contextRangeSummary) {
+        fmt.stat('Context window', contextRangeSummary);
+      }
+    }
     const availableContexts = getEnclosingContexts(record);
     if (availableContexts.length > 0) {
       const contextSummary = availableContexts
@@ -702,16 +1090,18 @@ function renderContextResults(type, selector, options, contextResult) {
       const selectedName = selected.name ? ` ${selected.name}` : '';
       fmt.stat('Expanded to', `${selected.kind || 'unknown'}${selectedName}`);
     }
-    fmt.stat('Applied padding', `${entry.appliedBefore} leading / ${entry.appliedAfter} trailing`);
     fmt.section('Context Snippet');
-    process.stdout.write(`${entry.contextSnippet}\n`);
+    fmt.codeBlock(entry.contextSnippet);
     fmt.section('Base Snippet');
-    process.stdout.write(`${entry.baseSnippet}\n`);
+    fmt.codeBlock(entry.baseSnippet);
   });
 
-  fmt.stat('Matches', payload.summary.matchCount, 'number');
+  if (options.emitPlanPath) {
+    fmt.info(`Plan written to ${options.emitPlanPath}`);
+  }
   fmt.footer();
 }
+
 
 
 function renderGuardrailSummary(guard, options) {
@@ -720,10 +1110,33 @@ function renderGuardrailSummary(guard, options) {
   }
 
   fmt.section('Guardrails');
-  const spanDetails = guard.span.expectedStart !== null && guard.span.expectedEnd !== null
-    ? `${guard.span.start}-${guard.span.end} (expected ${guard.span.expectedStart}-${guard.span.expectedEnd})`
-    : `${guard.span.start}-${guard.span.end}`;
-  fmt.table([
+  const formattedSpanDetails = formatSpanDetails(guard.span);
+  const fallbackSegments = [];
+  const fallbackChar = formatSpanRange(
+    'chars',
+    guard.span.start,
+    guard.span.end,
+    guard.span.length,
+    guard.span.expectedStart,
+    guard.span.expectedEnd
+  );
+  if (fallbackChar) {
+    fallbackSegments.push(fallbackChar);
+  }
+  const fallbackByte = formatSpanRange(
+    'bytes',
+    guard.span.byteStart,
+    guard.span.byteEnd,
+    guard.span.byteLength,
+    guard.span.expectedByteStart,
+    guard.span.expectedByteEnd
+  );
+  if (fallbackByte) {
+    fallbackSegments.push(fallbackByte);
+  }
+  const fallbackSpanDetails = fallbackSegments.length > 0 ? fallbackSegments.join('\n') : null;
+  const spanDetails = formattedSpanDetails || fallbackSpanDetails;
+  const rows = [
     {
       check: 'Span',
       status: guard.span.status.toUpperCase(),
@@ -753,38 +1166,99 @@ function renderGuardrailSummary(guard, options) {
         ? guard.result.after
         : `${guard.result.after} (unchanged)`
     }
-  ], {
+  ];
+
+  if (guard.newline) {
+    const newlineStatus = String(guard.newline.status || 'unknown').toUpperCase();
+    rows.push({
+      check: 'Newlines',
+      status: newlineStatus,
+      details: formatNewlineSummary(guard.newline)
+    });
+  }
+
+  fmt.table(rows, {
     columns: ['check', 'status', 'details']
   });
 }
 
-function buildPlanPayload(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
-  const matches = records.map((record, index) => ({
-    canonicalName: record.canonicalName,
-    kind: record.kind,
-    exportKind: record.exportKind,
-    replaceable: record.replaceable,
-    scopeChain: record.scopeChain,
-    pathSignature: record.pathSignature,
-    span: {
-      start: record.span.start,
-      end: record.span.end
-    },
-    identifierSpan: record.identifierSpan
-      ? {
-          start: record.identifierSpan.start,
-          end: record.identifierSpan.end
-        }
-      : null,
-    line: record.line,
-    column: record.column,
-    hash: record.hash,
-    expectedHash: expectedHashes[index] || record.hash,
-    expectedSpan: expectedSpans[index] || null
-  }));
 
-  const aggregateSpans = matches.map((match, index) => {
-    const expected = expectedSpans[index];
+
+
+function buildPlanPayload(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
+  const toSpanPayload = (primarySpan, fallbackSpan) => {
+    const hasPrimary = primarySpan && typeof primarySpan === 'object';
+    const hasFallback = fallbackSpan && typeof fallbackSpan === 'object';
+
+    const start = hasPrimary && typeof primarySpan.start === 'number'
+      ? primarySpan.start
+      : hasFallback && typeof fallbackSpan.start === 'number'
+        ? fallbackSpan.start
+        : null;
+
+    const end = hasPrimary && typeof primarySpan.end === 'number'
+      ? primarySpan.end
+      : hasFallback && typeof fallbackSpan.end === 'number'
+        ? fallbackSpan.end
+        : null;
+
+    let length = null;
+    if (typeof start === 'number' && typeof end === 'number') {
+      length = Math.max(0, end - start);
+    } else if (hasFallback && typeof fallbackSpan.start === 'number' && typeof fallbackSpan.end === 'number') {
+      length = Math.max(0, fallbackSpan.end - fallbackSpan.start);
+    }
+
+    const byteSource = hasPrimary && typeof primarySpan.byteStart === 'number' && typeof primarySpan.byteEnd === 'number'
+      ? primarySpan
+      : hasFallback && typeof fallbackSpan.byteStart === 'number' && typeof fallbackSpan.byteEnd === 'number'
+        ? fallbackSpan
+        : null;
+
+    const byteStart = byteSource ? byteSource.byteStart : null;
+    const byteEnd = byteSource ? byteSource.byteEnd : null;
+    const byteLength = byteSource ? Math.max(0, byteEnd - byteStart) : null;
+
+    return {
+      start,
+      end,
+      length,
+      byteStart,
+      byteEnd,
+      byteLength
+    };
+  };
+
+  const matches = records.map((record, index) => {
+    const defaultSpan = record.span || null;
+    const spanPayload = toSpanPayload(defaultSpan, defaultSpan);
+    const identifierSpanPayload = record.identifierSpan
+      ? toSpanPayload(record.identifierSpan, defaultSpan)
+      : null;
+    const expectedSpanRaw = expectedSpans[index] || null;
+    const expectedSpanPayload = expectedSpanRaw
+      ? toSpanPayload(expectedSpanRaw, defaultSpan)
+      : null;
+
+    return {
+      canonicalName: record.canonicalName,
+      kind: record.kind,
+      exportKind: record.exportKind,
+      replaceable: record.replaceable,
+      scopeChain: record.scopeChain,
+      pathSignature: record.pathSignature,
+      span: spanPayload,
+      identifierSpan: identifierSpanPayload,
+      line: record.line,
+      column: record.column,
+      hash: record.hash,
+      expectedHash: expectedHashes[index] || record.hash,
+      expectedSpan: expectedSpanPayload
+    };
+  });
+
+  const aggregateSpans = matches.map((match) => {
+    const expected = match.expectedSpan;
     if (expected && typeof expected.start === 'number' && typeof expected.end === 'number') {
       return expected;
     }
@@ -795,7 +1269,6 @@ function buildPlanPayload(operation, options, selector, records, expectedHashes 
   });
 
   const spanRange = computeAggregateSpan(aggregateSpans);
-
   const expectedHashList = expectedHashes.filter((value) => typeof value === 'string' && value.length > 0);
 
   const summary = {
@@ -820,6 +1293,8 @@ function buildPlanPayload(operation, options, selector, records, expectedHashes 
   };
 }
 
+
+
 function maybeEmitPlan(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
   if (!options.emitPlanPath || !records || records.length === 0) {
     return null;
@@ -829,6 +1304,7 @@ function maybeEmitPlan(operation, options, selector, records, expectedHashes = [
   writeOutputFile(options.emitPlanPath, `${JSON.stringify(plan, null, 2)}\n`);
   return plan;
 }
+
 
 function parseCliArgs(argv) {
   const parser = new CliArgumentParser(
@@ -841,6 +1317,8 @@ function parseCliArgs(argv) {
   parser
     .add('--file <path>', 'JavaScript file to inspect or modify')
     .add('--list-functions', 'List detected functions with scope, hash, and byte-length metadata', false, 'boolean')
+    .add('--include-paths', 'Include path signatures when listing functions', false, 'boolean')
+    .add('--function-summary', 'Print aggregate metrics for detected functions', false, 'boolean')
     .add('--list-variables', 'List variable bindings with scope, initializer, and hash metadata', false, 'boolean')
     .add('--context-function <selector>', 'Show surrounding source for the function matching the selector (±512 chars by default)')
     .add('--context-variable <selector>', 'Show surrounding source for the variable binding matching the selector (±512 chars by default)')
@@ -848,6 +1326,7 @@ function parseCliArgs(argv) {
     .add('--context-after <chars>', 'Override trailing context character count (default 512)', undefined, 'number')
     .add('--context-enclosing <mode>', 'Expand context to enclosing structures (modes: exact, class, function). Default: exact.', 'exact')
     .add('--extract <selector>', 'Extract the function matching the selector (safe, read-only)')
+    .add('--extract-hashes <hashes>', 'Extract functions matching the provided guard hashes (comma or space separated)')
     .add('--replace <selector>', 'Replace the function matching the selector (requires --with or --rename)')
     .add('--locate <selector>', 'Show guardrail metadata for functions matching the selector')
     .add('--locate-variable <selector>', 'Show guardrail metadata for the variable matching the selector')
@@ -874,6 +1353,7 @@ function parseCliArgs(argv) {
   return parser.parse(argv);
 }
 
+
 function normalizeOptions(raw) {
   const resolved = { ...raw };
 
@@ -886,8 +1366,46 @@ function normalizeOptions(raw) {
     ? fileInput
     : path.resolve(process.cwd(), fileInput);
 
+  const includePaths = Boolean(resolved.includePaths);
+  const functionSummary = Boolean(resolved.functionSummary);
+
+  let extractHashes = [];
+  if (resolved.extractHashes !== undefined && resolved.extractHashes !== null) {
+    const rawValues = Array.isArray(resolved.extractHashes)
+      ? resolved.extractHashes
+      : [resolved.extractHashes];
+
+    const tokens = rawValues
+      .map((value) => String(value))
+      .join(' ')
+      .split(/[\s,]+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    const unique = [];
+    const seen = new Set();
+    for (const token of tokens) {
+      const normalizedToken = token.replace(/^hash:/i, '');
+      if (!normalizedToken) {
+        continue;
+      }
+      if (!seen.has(normalizedToken)) {
+        seen.add(normalizedToken);
+        unique.push(normalizedToken);
+      }
+    }
+
+    if (unique.length === 0) {
+      throw new Error('--extract-hashes requires at least one hash value. Provide comma or space separated hashes.');
+    }
+
+    extractHashes = unique;
+  }
+
   const operationMatrix = [
     ['--list-functions', Boolean(resolved.listFunctions)],
+    ['--function-summary', functionSummary],
+    ['--extract-hashes', extractHashes.length > 0],
     ['--list-variables', Boolean(resolved.listVariables)],
     ['--context-function', resolved.contextFunction !== undefined && resolved.contextFunction !== null],
     ['--context-variable', resolved.contextVariable !== undefined && resolved.contextVariable !== null],
@@ -901,7 +1419,7 @@ function normalizeOptions(raw) {
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
   if (enabledOperations.length === 0) {
-    throw new Error('Provide one of --list-functions, --list-variables, --context-function <selector>, --context-variable <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
+    throw new Error('Provide one of --list-functions, --function-summary, --extract-hashes <hashes>, --list-variables, --context-function <selector>, --context-variable <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
   }
   if (enabledOperations.length > 1) {
     const flags = enabledOperations.map(([flag]) => flag).join(', ');
@@ -1144,9 +1662,15 @@ function normalizeOptions(raw) {
     variableTarget,
     contextBefore,
     contextAfter,
-    contextEnclosing: contextEnclosingRaw
+    contextEnclosing: contextEnclosingRaw,
+    includePaths,
+    extractHashes,
+    functionSummary
   };
 }
+
+
+
 
 function readSource(filePath) {
   try {
@@ -1298,17 +1822,32 @@ function locateFunctions(options, functionRecords, selector) {
       matchCount: resolved.length,
       spanRange
     },
-    matches: resolved.map((record) => ({
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      exportKind: record.exportKind,
-      line: record.line,
-      column: record.column,
-      pathSignature: record.pathSignature,
-      hash: record.hash,
-      scopeChain: record.scopeChain
-    }))
+    matches: resolved.map((record) => {
+      const span = record.span || {};
+      const spanPayload = {
+        start: typeof span.start === 'number' ? span.start : null,
+        end: typeof span.end === 'number' ? span.end : null,
+        length: typeof span.start === 'number' && typeof span.end === 'number' ? Math.max(0, span.end - span.start) : null,
+        byteStart: typeof span.byteStart === 'number' ? span.byteStart : null,
+        byteEnd: typeof span.byteEnd === 'number' ? span.byteEnd : null,
+        byteLength: typeof span.byteStart === 'number' && typeof span.byteEnd === 'number'
+          ? Math.max(0, span.byteEnd - span.byteStart)
+          : null
+      };
+
+      return {
+        name: record.name,
+        canonicalName: record.canonicalName,
+        kind: record.kind,
+        exportKind: record.exportKind,
+        line: record.line,
+        column: record.column,
+        pathSignature: record.pathSignature,
+        hash: record.hash,
+        scopeChain: record.scopeChain,
+        span: spanPayload
+      };
+    })
   };
 
   if (plan) {
@@ -1323,16 +1862,23 @@ function locateFunctions(options, functionRecords, selector) {
   if (!options.quiet) {
     fmt.header('Function Locate');
     fmt.section(`Selector: ${selector}`);
-    fmt.table(payload.matches.map((match, index) => ({
-      index: index + 1,
-      name: match.canonicalName || match.name,
-      kind: match.kind,
-      line: match.line,
-      column: match.column,
-      path: match.pathSignature,
-      hash: match.hash.slice(0, 12)
-    })), {
-      columns: ['index', 'name', 'kind', 'line', 'column', 'path', 'hash']
+    fmt.table(payload.matches.map((match, index) => {
+      const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
+      const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
+
+      return {
+        index: index + 1,
+        name: match.canonicalName || match.name,
+        kind: match.kind,
+        line: match.line,
+        column: match.column,
+        chars: charSummary || '-',
+        bytes: byteSummary || '-',
+        path: match.pathSignature,
+        hash: match.hash.slice(0, 12)
+      };
+    }), {
+      columns: ['index', 'name', 'kind', 'line', 'column', 'chars', 'bytes', 'path', 'hash']
     });
     fmt.stat('Matches', payload.summary.matchCount, 'number');
     const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
@@ -1345,6 +1891,8 @@ function locateFunctions(options, functionRecords, selector) {
     fmt.footer();
   }
 }
+
+
 
 
 function locateVariables(options, variableRecords, selector) {
@@ -1366,6 +1914,18 @@ function locateVariables(options, variableRecords, selector) {
 
   const matches = resolved.map((record, index) => {
     const target = targets[index];
+    const span = target.span || {};
+    const spanPayload = {
+      start: typeof span.start === 'number' ? span.start : null,
+      end: typeof span.end === 'number' ? span.end : null,
+      length: typeof span.start === 'number' && typeof span.end === 'number' ? Math.max(0, span.end - span.start) : null,
+      byteStart: typeof span.byteStart === 'number' ? span.byteStart : null,
+      byteEnd: typeof span.byteEnd === 'number' ? span.byteEnd : null,
+      byteLength: typeof span.byteStart === 'number' && typeof span.byteEnd === 'number'
+        ? Math.max(0, span.byteEnd - span.byteStart)
+        : null
+    };
+
     return {
       name: record.canonicalName || record.name,
       canonicalName: record.canonicalName || record.name,
@@ -1376,7 +1936,7 @@ function locateVariables(options, variableRecords, selector) {
       scopeChain: record.scopeChain,
       pathSignature: target.pathSignature,
       hash: target.hash,
-      span: target.span,
+      span: spanPayload,
       targetMode: target.mode,
       requestedMode: target.requestedMode
     };
@@ -1406,18 +1966,24 @@ function locateVariables(options, variableRecords, selector) {
     fmt.header('Variable Locate');
     fmt.section(`Selector: ${selector}`);
     fmt.stat('Target Mode', `${options.variableTarget}`);
-    fmt.table(matches.map((match, index) => ({
-      index: index + 1,
-      name: match.name,
-      kind: match.kind,
-      line: match.line,
-      column: match.column,
-      mode: match.targetMode,
-      span: `${match.span.start}:${match.span.end}`,
-      path: match.pathSignature,
-      hash: match.hash ? match.hash.slice(0, 12) : '-'
-    })), {
-      columns: ['index', 'name', 'kind', 'line', 'column', 'mode', 'span', 'path', 'hash']
+    fmt.table(matches.map((match, index) => {
+      const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
+      const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
+
+      return {
+        index: index + 1,
+        name: match.name,
+        kind: match.kind,
+        line: match.line,
+        column: match.column,
+        mode: match.targetMode,
+        chars: charSummary || '-',
+        bytes: byteSummary || '-',
+        path: match.pathSignature,
+        hash: match.hash ? match.hash.slice(0, 12) : '-'
+      };
+    }), {
+      columns: ['index', 'name', 'kind', 'line', 'column', 'mode', 'chars', 'bytes', 'path', 'hash']
     });
     fmt.stat('Matches', payload.summary.matchCount, 'number');
     const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
@@ -1430,6 +1996,8 @@ function locateVariables(options, variableRecords, selector) {
     fmt.footer();
   }
 }
+
+
 
 
 function extractFunction(options, source, record, selector) {
@@ -1594,15 +2162,34 @@ function replaceVariable(options, source, record, replacementPath, selector) {
   const snippetBefore = extractCode(source, target.span);
   const beforeHash = createDigest(snippetBefore);
   const expectedHash = options.expectHash || target.hash;
+  if (process.env.JS_EDIT_DEBUG === '1') {
+    console.log('[debug] target span', target.span);
+    console.log('[debug] snippet before', JSON.stringify(snippetBefore));
+    console.log('[debug] before hash', beforeHash);
+    console.log('[debug] expected hash', expectedHash);
+  }
   const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
+
+  const charLength = Math.max(0, target.span.end - target.span.start);
+  const byteStart = typeof target.span.byteStart === 'number' ? target.span.byteStart : null;
+  const byteEnd = typeof target.span.byteEnd === 'number' ? target.span.byteEnd : null;
+  const byteLength = byteStart !== null && byteEnd !== null ? Math.max(0, byteEnd - byteStart) : null;
 
   const guard = {
     span: {
       status: 'ok',
       start: target.span.start,
       end: target.span.end,
+      length: charLength,
+      byteStart,
+      byteEnd,
+      byteLength,
       expectedStart: null,
-      expectedEnd: null
+      expectedEnd: null,
+      expectedLength: null,
+      expectedByteStart: null,
+      expectedByteEnd: null,
+      expectedByteLength: null
     },
     hash: {
       status: hashStatus,
@@ -1620,15 +2207,41 @@ function replaceVariable(options, source, record, replacementPath, selector) {
       status: 'pending',
       before: beforeHash,
       after: null
-    }
+    },
+    newline: null
   };
 
   if (guard.hash.status === 'mismatch') {
     throw new Error(`Hash mismatch for variable "${record.canonicalName || record.name}". Expected ${expectedHash} but file contains ${beforeHash}. Re-run --locate-variable and retry or pass --force to override.`);
   }
 
-  const replacement = loadReplacementSource(replacementPath);
-  const workingSnippet = replacement.endsWith('\n') ? replacement : `${replacement}\n`;
+  const fileNewlineStats = options.sourceNewline || computeNewlineStats(source);
+  const replacementSource = loadReplacementSource(replacementPath);
+  const normalizedReplacement = prepareNormalizedSnippet(
+    replacementSource,
+    fileNewlineStats.style,
+    { ensureTrailingNewline: true }
+  );
+  const workingSnippet = normalizedReplacement.text;
+  const replacementBuffer = Buffer.from(workingSnippet, 'utf8');
+  const fallbackSpan = {
+    start: target.span.start,
+    end: target.span.start + workingSnippet.length,
+    __normalized: true
+  };
+  if (typeof target.span.byteStart === 'number') {
+    fallbackSpan.byteStart = target.span.byteStart;
+    fallbackSpan.byteEnd = target.span.byteStart + replacementBuffer.length;
+  }
+  const fallbackTarget = {
+    requestedMode: target.requestedMode,
+    mode: target.mode,
+    span: fallbackSpan,
+    pathSignature: target.pathSignature || null,
+    hash: createDigest(workingSnippet),
+    byteLength: replacementBuffer.length
+  };
+
   const newSource = replaceSpan(source, target.span, workingSnippet);
 
   let parsedAst;
@@ -1641,19 +2254,37 @@ function replaceVariable(options, source, record, replacementPath, selector) {
   }
 
   let postTarget = null;
+  let pathMatchFound = false;
+  let fallbackUsed = false;
+
   if (target.pathSignature) {
     const { variables: postVariables } = collectVariables(parsedAst, newSource);
     const postRecords = buildVariableRecords(postVariables);
+
     for (const candidate of postRecords) {
+      if (!variableRecordMatchesPath(candidate, target.pathSignature)) {
+        continue;
+      }
+
+      pathMatchFound = true;
+
       try {
         const candidateTarget = resolveVariableTargetInfo(candidate, options.variableTarget);
-        if (candidateTarget.pathSignature === target.pathSignature) {
-          postTarget = candidateTarget;
-          break;
-        }
+        postTarget = {
+          ...candidateTarget,
+          pathSignature: candidateTarget.pathSignature || target.pathSignature
+        };
       } catch (error) {
-        // Skip candidates that cannot resolve the requested target mode.
+        fallbackUsed = true;
+        postTarget = { ...fallbackTarget };
       }
+
+      break;
+    }
+
+    if (!postTarget && pathMatchFound) {
+      fallbackUsed = true;
+      postTarget = { ...fallbackTarget };
     }
 
     if (postTarget) {
@@ -1669,17 +2300,33 @@ function replaceVariable(options, source, record, replacementPath, selector) {
     }
   }
 
-  const snippetAfter = postTarget ? extractCode(newSource, postTarget.span) : workingSnippet;
-  const afterHash = postTarget ? postTarget.hash : createDigest(snippetAfter);
+  let snippetAfter;
+  let afterHash;
+
+  if (postTarget) {
+    if (fallbackUsed) {
+      snippetAfter = workingSnippet;
+      afterHash = fallbackTarget.hash;
+    } else {
+      snippetAfter = extractCode(newSource, postTarget.span);
+      afterHash = postTarget.hash || createDigest(snippetAfter);
+    }
+  } else {
+    snippetAfter = workingSnippet;
+    afterHash = createDigest(snippetAfter);
+  }
+
   guard.result = {
     status: afterHash === beforeHash ? 'unchanged' : 'changed',
     before: beforeHash,
     after: afterHash
   };
+  guard.newline = createNewlineGuard(fileNewlineStats, snippetBefore, snippetAfter, normalizedReplacement);
 
   const plan = maybeEmitPlan('replace-variable', options, selector, [record], [target.hash], [target.span], {
     entity: 'variable',
-    targetMode: options.variableTarget
+    targetMode: options.variableTarget,
+    newline: guard.newline
   });
 
   const payload = {
@@ -1752,6 +2399,9 @@ function replaceVariable(options, source, record, replacementPath, selector) {
   }
 }
 
+
+
+
 function replaceFunction(options, source, record, replacementPath, selector) {
   if (!record.replaceable) {
     throw new Error(
@@ -1763,10 +2413,19 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   const beforeHash = createDigest(snippetBefore);
   const expectedHash = options.expectHash || record.hash;
   const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
+  const fileNewlineStats = options.sourceNewline || computeNewlineStats(source);
 
   const expectedSpan = options.expectSpan;
   const actualStart = record.span.start;
   const actualEnd = record.span.end;
+  const actualByteStart = typeof record.span.byteStart === 'number' ? record.span.byteStart : null;
+  const actualByteEnd = typeof record.span.byteEnd === 'number' ? record.span.byteEnd : null;
+  const expectedByteStart = expectedSpan && typeof expectedSpan.byteStart === 'number' ? expectedSpan.byteStart : null;
+  const expectedByteEnd = expectedSpan && typeof expectedSpan.byteEnd === 'number' ? expectedSpan.byteEnd : null;
+  const charLength = Math.max(0, actualEnd - actualStart);
+  const byteLength = actualByteStart !== null && actualByteEnd !== null ? Math.max(0, actualByteEnd - actualByteStart) : null;
+  const expectedLength = expectedSpan ? Math.max(0, expectedSpan.end - expectedSpan.start) : null;
+  const expectedByteLength = expectedByteStart !== null && expectedByteEnd !== null ? Math.max(0, expectedByteEnd - expectedByteStart) : null;
   let spanStatus = 'ok';
   if (expectedSpan) {
     const matches = expectedSpan.start === actualStart && expectedSpan.end === actualEnd;
@@ -1785,8 +2444,16 @@ function replaceFunction(options, source, record, replacementPath, selector) {
       status: spanStatus,
       start: actualStart,
       end: actualEnd,
+      length: charLength,
+      byteStart: actualByteStart,
+      byteEnd: actualByteEnd,
+      byteLength,
       expectedStart: expectedSpan ? expectedSpan.start : null,
-      expectedEnd: expectedSpan ? expectedSpan.end : null
+      expectedEnd: expectedSpan ? expectedSpan.end : null,
+      expectedLength,
+      expectedByteStart,
+      expectedByteEnd,
+      expectedByteLength
     },
     hash: {
       status: hashStatus,
@@ -1804,7 +2471,8 @@ function replaceFunction(options, source, record, replacementPath, selector) {
       status: 'pending',
       before: beforeHash,
       after: null
-    }
+    },
+    newline: null
   };
 
   if (guard.hash.status === 'mismatch') {
@@ -1812,17 +2480,29 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   }
 
   let workingSnippet = snippetBefore;
+  let replacementMeta = null;
 
   if (options.replaceRange) {
     const { start, end } = options.replaceRange;
     if (end > workingSnippet.length) {
       throw new Error(`--replace-range end (${end}) exceeds the length of the target snippet (${workingSnippet.length}).`);
     }
-    const rangeReplacement = loadReplacementSource(replacementPath);
-    workingSnippet = `${workingSnippet.slice(0, start)}${rangeReplacement}${workingSnippet.slice(end)}`;
+    const rangeReplacementSource = loadReplacementSource(replacementPath);
+    const normalizedRangeReplacement = prepareNormalizedSnippet(
+      rangeReplacementSource,
+      fileNewlineStats.style
+    );
+    workingSnippet = `${workingSnippet.slice(0, start)}${normalizedRangeReplacement.text}${workingSnippet.slice(end)}`;
+    replacementMeta = normalizedRangeReplacement;
   } else if (replacementPath) {
-    const replacement = loadReplacementSource(replacementPath);
-    workingSnippet = replacement.endsWith('\n') ? replacement : `${replacement}\n`;
+    const replacementSource = loadReplacementSource(replacementPath);
+    const normalizedReplacement = prepareNormalizedSnippet(
+      replacementSource,
+      fileNewlineStats.style,
+      { ensureTrailingNewline: true }
+    );
+    workingSnippet = normalizedReplacement.text;
+    replacementMeta = normalizedReplacement;
   }
 
   if (options.renameTo) {
@@ -1861,8 +2541,20 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     before: beforeHash,
     after: afterHash
   };
+  guard.newline = createNewlineGuard(fileNewlineStats, snippetBefore, snippetAfter, replacementMeta);
 
-  const plan = maybeEmitPlan('replace', options, selector, [record], [expectedHash], [expectedSpan || null]);
+  const plan = maybeEmitPlan(
+    'replace',
+    options,
+    selector,
+    [record],
+    [expectedHash],
+    [expectedSpan || null],
+    {
+      entity: 'function',
+      newline: guard.newline
+    }
+  );
 
   const payload = {
     file: options.filePath,
@@ -1927,6 +2619,8 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   }
 }
 
+
+
 function measureParse(source, filePath) {
   const start = process.hrtime.bigint();
   const ast = parseModule(source, filePath);
@@ -1944,8 +2638,8 @@ function main(argv) {
       ? measureParse(source, options.filePath)
       : { ast: parseModule(source, options.filePath), durationMs: null };
 
-    const { functions } = collectFunctions(ast, source);
-    const { variables } = collectVariables(ast, source);
+    const { functions, mapper } = collectFunctions(ast, source);
+    const { variables } = collectVariables(ast, source, mapper);
     const functionRecords = buildFunctionRecords(functions);
     const variableRecords = buildVariableRecords(variables);
 

@@ -95,7 +95,8 @@ async function decompressArticleHtml(db, articleId, options = {}) {
  * @param {string} [options.preset] - Compression preset name (default: PRESETS.BROTLI_6)
  *                                    Or use legacy format: { compressionType: 'brotli_10' }
  * @returns {Object} Compression result with statistics
- */function compressAndStoreArticleHtml(db, articleId, options = {}) {
+ */
+function compressAndStoreArticleHtml(db, articleId, options = {}) {
   // Support both new preset API and legacy compressionType API
   const presetInput = options.preset || options.compressionType || PRESETS.BROTLI_6;
   const presetName = resolvePresetName(presetInput);

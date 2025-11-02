@@ -6,6 +6,7 @@
  */
 
 const { ensureDatabase } = require('../v1');
+const { ensureUrlId } = require('../urlHelpers');
 
 class ArticleOperations {
   constructor(db, statements, utilities) {
@@ -209,28 +210,9 @@ class ArticleOperations {
     if (!url) return null;
 
     try {
-      // Try to get existing URL ID
-      let urlRow = this.db.prepare('SELECT id FROM urls WHERE url = ?').get(url);
-      if (urlRow) return urlRow.id;
-
-      // URL doesn't exist, insert it
-      const host = (() => {
-        try {
-          const u = new URL(url);
-          return u.hostname.toLowerCase();
-        } catch (_) {
-          return null;
-        }
-      })();
-
-      const result = this.db.prepare(`
-        INSERT INTO urls (url, host, created_at, last_seen_at)
-        VALUES (?, ?, datetime('now'), datetime('now'))
-      `).run(url, host);
-
-      return result.lastInsertRowid;
-    } catch (err) {
-      console.warn(`[dual-write] Failed to ensure URL ${url}:`, err?.message || err);
+      return ensureUrlId(this.db, url);
+    } catch (error) {
+      console.warn(`[dual-write] Failed to ensure URL ${url}:`, error?.message || error);
       return null;
     }
   }

@@ -250,6 +250,7 @@ fmt.table([
 - Variable inventory mode lists CommonJS bindings as well (`module.exports = …`, `exports.value = …`) with hashes and scope metadata, making the exported surface inspectable without hand-parsing assignments.
 - Variable bindings now participate in the guarded workflow: `--locate-variable`, `--extract-variable`, and `--replace-variable` share selectors/guards with function operations, and `--variable-target <binding|declarator|declaration>` lets you choose whether to guard just the identifier, the declarator, or the entire statement.
 - Recognised call-site callbacks (`describe`, `it`, `test`, `beforeEach`, `afterAll`, etc.) are emitted with canonical `call:*` selectors. These callbacks participate in the guarded replace workflow, so you can patch Jest/Mocha hooks with the same hash/span guardrails used for declarations.
+- Locate/context tables and JSON payloads expose both character-based offsets (UTF-16 code units) and raw byte offsets; summaries include `charSpanRange` and `byteSpanRange` so newline conversions or multi-byte glyphs are visible before edits land.
 - Emits locate tables and JSON payloads via `CliFormatter`, making automation straightforward.
 - Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block, and optional `--expect-hash`/`--expect-span` inputs let you replay the exact metadata captured during a prior locate run.
 - Hashes shown in locate/context/plan payloads are base64 digests trimmed to eight characters by default so agents get concise guard tokens; switch the constants in `tools/dev/lib/swcAst.js` to fall back to a longer base16 form if a workflow needs it.
@@ -270,6 +271,8 @@ node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #ren
 If a hash or path mismatch occurs, the CLI exits non-zero with actionable messaging (e.g., “Hash mismatch… Re-run --locate and retry”). `--force` is available for intentional bypasses, but pair it with `--expect-hash`/`--expect-span` so the guard summary clearly records which expectations were intentionally skipped.
 
 Guard plans mirror the JSON payload’s `plan` block and include the selector, expected hash, expected span offsets, and path signature. They provide a hand-off artifact for other operators or future automation runs to verify the same guardrails before mutating a file.
+
+Guard summaries and plans now report dual span metrics (`charSpanRange` + `byteSpanRange`) alongside individual offsets, ensuring drift caused by newline normalization or multi-byte glyphs is obvious during review.
 
 **Targeted edits:** Add `--replace-range start:end` (0-based, end-exclusive, relative to the located function) when you only need to swap a specific slice of the function body using `--with <file>`. For identifier-only tweaks, use `--rename <identifier>` with `--replace <selector>`—no snippet required, and the helper updates just the declaration name while guardrails ensure the rest of the function remains untouched.
 
@@ -295,6 +298,8 @@ Variable plans honour the resolved mode (`binding`, `declarator`, or `declaratio
 - `--context-enclosing <mode>` widens the window: `exact` sticks to the node span, `class` wraps the nearest class, and **`function` wraps the closest enclosing function or class method**, making nested helpers easy to audit. JSON payloads expose both the entire enclosing stack and the specific context used (`selectedEnclosingContext`).
 - **Context operations support plan emission**: Add `--emit-plan <file>` to `--context-function` or `--context-variable` commands to capture guard metadata with enhanced summary information (`matchCount`, `allowMultiple`, `spanRange`) plus context-specific details (`entity`, `padding`, `enclosingMode`).
 - Combine context inspection with guard plans to capture review windows, hashes, and spans before attempting replacements, especially useful for batch editing workflows with `--allow-multiple`.
+
+Context summaries follow the same dual-span convention, surfacing both character and byte aggregates so downstream consumers can reconcile padding and newline adjustments precisely.
 
 ### Context Plan Example
 

@@ -21,6 +21,8 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 - `--replace <selector> --with <file> --replace-range start:end` — swap only the specified character range (0-based, end-exclusive) within the located function using the supplied snippet.
 - `--locate-variable <selector>` / `--extract-variable <selector>` / `--replace-variable <selector> --with <file>` — perform the same guarded locate/extract/replace workflow for variable bindings (including destructured declarators and CommonJS assignments). Combine with `--variable-target <binding|declarator|declaration>` to choose which span/hash/path guardrails to emit. Variable replacements require `--with <file>` and honour `--expect-hash` the same way function replacements do.
 
+Locate/context tables and JSON payloads report both UTF-16 code-unit offsets and raw byte offsets. Each entry includes `charSpanRange` and `byteSpanRange` summaries so agents can reason about guardrails even when newline normalization or multi-byte glyphs change the byte footprint.
+
 Selectors accept optional disambiguation flags:
 
 - `--select <index>` — choose the nth match in source order (1-based).
@@ -56,6 +58,7 @@ Selectors accept optional disambiguation flags:
 - `--expect-hash <hash>` replays the content digest captured during `--locate`/`--emit-plan`; the CLI refuses to proceed if the live source hash differs (unless `--force` is set, in which case the guard marks the hash check as bypassed).
 - `--expect-span start:end` optionally replays the byte offsets (0-based, end-exclusive) recorded earlier. When present, the guard verifies the located span still matches those offsets and records the expectation in both the summary table and JSON payloads.
 - Guard summaries (ASCII + JSON) include span/hash/path/syntax/result checks so downstream automation can confirm each guard outcome before invoking `--fix`.
+- Guard outputs display dual span metrics: character-based (UTF-16) offsets for selector ergonomics and byte offsets for hash/snippet replay. JSON payloads surface both representations, and plan summaries expose `charSpanRange` alongside `byteSpanRange` so newline conversions are always auditable.
 
 ### Fine-Grained & Identifier-Only Edits
 
@@ -81,7 +84,7 @@ Use `--force` sparingly to bypass hash/path checks when intentional drift is acc
 - Pass `--emit-plan <file>` to any `--locate`, `--extract`, `--replace`, `--context-function`, or `--context-variable` command to write a JSON payload containing the selector you resolved plus guard metadata (`expectedHash`, `expectedSpan`, `pathSignature`, `span`, `file`).
 - Context operations produce enhanced plan payloads with summary metadata (`matchCount`, `allowMultiple`, `spanRange`) and context-specific details (`entity`, `padding`, `enclosingMode`) to support batch editing workflows.
 - The same data appears inside the CLI's `--json` output under `plan`, enabling automation to either capture stdout or use the written file.
-- Plan files make it easy to hand guardrails to other agents or future runs: rerun the locate step later and compare the stored hash/path to detect drift before attempting mutations.
+- Plan files make it easy to hand guardrails to other agents or future runs: rerun the locate step later and compare the stored hash/path to detect drift before attempting mutations. Plans now include both `charSpanRange` and `byteSpanRange` aggregates so downstream tooling can reconcile any byte deltas introduced by newline normalization or multi-byte characters.
 - Hashes in the CLI output are base64 digests truncated to eight characters by default. Toggle the encoding/length constants in `tools/dev/lib/swcAst.js` if a hex (base16) fallback is needed for downstream workflows.
 
 ### Example Session

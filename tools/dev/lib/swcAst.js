@@ -37,22 +37,276 @@ function buildLineIndex(source) {
   return index;
 }
 
-function normalizeSpan(span) {
-  if (!span) return { start: 0, end: 0 };
-  if (typeof span.start === 'number' && typeof span.end === 'number') {
-    return {
-      start: Math.max(0, span.start - 1),
-      end: Math.max(0, span.end)
-    };
+function buildByteIndex(source) {
+  const length = source.length;
+  const index = new Array(length + 1);
+  index[0] = 0;
+
+  let byteOffset = 0;
+  let i = 0;
+
+  while (i < length) {
+    const code = source.charCodeAt(i);
+    let size;
+    let step = 1;
+
+    if (code <= 0x7f) {
+      size = 1;
+    } else if (code <= 0x7ff) {
+      size = 2;
+    } else if (code >= 0xd800 && code <= 0xdbff && i + 1 < length) {
+      const next = source.charCodeAt(i + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        size = 4;
+        step = 2;
+      } else {
+        size = 3;
+      }
+    } else {
+      size = 3;
+    }
+
+    byteOffset += size;
+    index[i + 1] = byteOffset;
+
+    if (step === 2) {
+      index[i + 2] = byteOffset;
+      i += 2;
+    } else {
+      i += 1;
+    }
   }
-  if (typeof span.lo === 'number' && typeof span.hi === 'number') {
-    return {
-      start: Math.max(0, span.lo - 1),
-      end: Math.max(0, span.hi)
-    };
-  }
-  return { start: 0, end: 0 };
+
+  return index;
 }
+
+function byteOffsetToCodeUnit(byteIndex, byteOffset) {
+  if (!Array.isArray(byteIndex) || byteIndex.length === 0) {
+    return Math.max(0, byteOffset);
+  }
+
+  if (byteOffset <= 0) {
+    return 0;
+  }
+
+  let low = 0;
+  let high = byteIndex.length - 1;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const value = byteIndex[mid];
+    if (value <= byteOffset) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  if (high < 0) {
+    return 0;
+  }
+
+  if (high >= byteIndex.length) {
+    return byteIndex.length - 1;
+  }
+
+  return high;
+}
+
+
+
+
+function resolveByteContext(byteIndexCandidate) {
+  if (!byteIndexCandidate) {
+    return null;
+  }
+
+  if (Array.isArray(byteIndexCandidate)) {
+    return {
+      byteIndex: byteIndexCandidate,
+      toCodeUnit(offset) {
+        return byteOffsetToCodeUnit(byteIndexCandidate, offset);
+      }
+    };
+  }
+
+  if (typeof byteIndexCandidate === 'object') {
+    if (Array.isArray(byteIndexCandidate.byteIndex)) {
+      const array = byteIndexCandidate.byteIndex;
+      const toCodeUnitFn = typeof byteIndexCandidate.toCodeUnit === 'function'
+        ? (offset) => byteIndexCandidate.toCodeUnit(offset)
+        : (offset) => byteOffsetToCodeUnit(array, offset);
+      return {
+        byteIndex: array,
+        toCodeUnit: toCodeUnitFn
+      };
+    }
+
+    if (typeof byteIndexCandidate.getByteIndex === 'function') {
+      const array = byteIndexCandidate.getByteIndex();
+      if (Array.isArray(array)) {
+        const toCodeUnitFn = typeof byteIndexCandidate.toCodeUnit === 'function'
+          ? (offset) => byteIndexCandidate.toCodeUnit(offset)
+          : (offset) => byteOffsetToCodeUnit(array, offset);
+        return {
+          byteIndex: array,
+          toCodeUnit: toCodeUnitFn
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeSpan(span, byteIndex = null) {
+  if (!span) {
+    return { start: 0, end: 0, byteStart: 0, byteEnd: 0, __normalized: true };
+  }
+
+  const hasNumbers = typeof span.start === 'number' && typeof span.end === 'number';
+  const hasLegacy = typeof span.lo === 'number' && typeof span.hi === 'number';
+  const isAlreadyNormalized = span.__normalized === true && hasNumbers;
+  const context = resolveByteContext(byteIndex);
+  const toCodeUnit = context ? context.toCodeUnit : null;
+
+  const resolveByteOffsets = (rawStartValue, rawEndValue) => {
+    let rawStart = rawStartValue;
+    let rawEnd = rawEndValue;
+
+    if (!Number.isFinite(rawStart) || rawStart < 0) {
+      rawStart = 0;
+    }
+    if (!Number.isFinite(rawEnd) || rawEnd < rawStart) {
+      rawEnd = rawStart;
+    }
+
+    const byteStart = rawStart > 0 ? rawStart - 1 : 0;
+    let byteEnd = rawEnd > 0 ? rawEnd : rawEnd;
+    if (byteEnd < byteStart) {
+      byteEnd = byteStart;
+    }
+
+    return { byteStart, byteEnd };
+  };
+
+  if (isAlreadyNormalized) {
+    const byteStart = typeof span.byteStart === 'number'
+      ? Math.max(0, span.byteStart)
+      : Math.max(0, span.start);
+    const byteEnd = typeof span.byteEnd === 'number'
+      ? Math.max(byteStart, span.byteEnd)
+      : Math.max(byteStart, span.end);
+
+    if (toCodeUnit) {
+      return {
+        start: toCodeUnit(byteStart),
+        end: toCodeUnit(byteEnd),
+        byteStart,
+        byteEnd,
+        __normalized: true
+      };
+    }
+
+    return {
+      start: Math.max(0, span.start),
+      end: Math.max(0, span.end),
+      byteStart,
+      byteEnd,
+      __normalized: true
+    };
+  }
+
+  if (hasNumbers || hasLegacy) {
+    const rawStart = hasNumbers ? span.start : span.lo;
+    const rawEnd = hasNumbers ? span.end : span.hi;
+    const { byteStart, byteEnd } = resolveByteOffsets(rawStart, rawEnd);
+
+    if (toCodeUnit) {
+      return {
+        start: toCodeUnit(byteStart),
+        end: toCodeUnit(byteEnd),
+        byteStart,
+        byteEnd,
+        __normalized: true
+      };
+    }
+
+    return {
+      start: byteStart,
+      end: byteEnd,
+      byteStart,
+      byteEnd,
+      __normalized: true
+    };
+  }
+
+  return { start: 0, end: 0, byteStart: 0, byteEnd: 0, __normalized: true };
+}
+
+function createByteMapper(source) {
+  if (typeof source !== 'string') {
+    return null;
+  }
+
+  const state = {
+    byteIndex: null,
+    buffer: null
+  };
+
+  const ensureByteIndex = () => {
+    if (!state.byteIndex) {
+      state.byteIndex = buildByteIndex(source);
+    }
+    return state.byteIndex;
+  };
+
+  const ensureBuffer = () => {
+    if (!state.buffer) {
+      state.buffer = Buffer.from(source, 'utf8');
+    }
+    return state.buffer;
+  };
+
+  const mapper = {
+    source,
+    getByteIndex: ensureByteIndex,
+    toCodeUnit(byteOffset) {
+      return byteOffsetToCodeUnit(ensureByteIndex(), byteOffset);
+    },
+    getBuffer: ensureBuffer,
+    sliceString(span) {
+      const normalized = normalizeSpan(span, mapper);
+      return source.slice(normalized.start, normalized.end);
+    },
+    sliceBuffer(span) {
+      const normalized = normalizeSpan(span, mapper);
+      if (normalized.byteEnd <= normalized.byteStart) {
+        return Buffer.alloc(0);
+      }
+      return ensureBuffer().subarray(normalized.byteStart, normalized.byteEnd);
+    },
+    normalize(span) {
+      return normalizeSpan(span, mapper);
+    }
+  };
+
+  return mapper;
+}
+
+function resolveByteMapper(source, candidate) {
+  if (!candidate || typeof candidate !== 'object') {
+    return null;
+  }
+
+  if (candidate.source === source && typeof candidate.getByteIndex === 'function' && typeof candidate.toCodeUnit === 'function') {
+    return candidate;
+  }
+
+  return null;
+}
+
+
 
 function offsetToPosition(lineIndex, offset) {
   if (offset < 0) {
@@ -157,8 +411,17 @@ function createDigest(text, encoding = HASH_PRIMARY_ENCODING) {
 }
 
 function computeHash(source, span, encoding = HASH_PRIMARY_ENCODING) {
-  const { start, end } = normalizeSpan(span);
-  const snippet = source.slice(start, end);
+  if (typeof source !== 'string') {
+    return createDigest('', encoding);
+  }
+
+  const byteIndex = buildByteIndex(source);
+  const normalizedSpan = normalizeSpan(span, byteIndex);
+  const sourceBuffer = Buffer.from(source, 'utf8');
+  const snippet = normalizedSpan.byteEnd > normalizedSpan.byteStart
+    ? sourceBuffer.slice(normalizedSpan.byteStart, normalizedSpan.byteEnd).toString('utf8')
+    : '';
+
   return createDigest(snippet, encoding);
 }
 
@@ -251,30 +514,41 @@ function prependContext(stack, entry) {
   return [entry, ...normalizeContextStack(stack)];
 }
 
-function formatEnclosingContexts(contexts) {
+function formatEnclosingContexts(contexts, byteIndex) {
   return normalizeContextStack(contexts)
     .map((ctx) => {
       if (!ctx || typeof ctx !== 'object' || !ctx.span) return null;
       return {
         kind: ctx.kind || null,
         name: ctx.name || null,
-        span: normalizeSpan(ctx.span)
+        span: normalizeSpan(ctx.span, byteIndex)
       };
     })
     .filter(Boolean);
 }
 
 function recordFunction(results, source, meta) {
-  const normalizedSpan = normalizeSpan(meta.span);
+  const mappingContext = meta.mapper || meta.byteIndex || null;
+  const normalizedSpan = normalizeSpan(meta.span, mappingContext);
   const position = offsetToPosition(meta.lineIndex, normalizedSpan.start);
+
+  const sourceBuffer = meta.sourceBuffer
+    || (meta.mapper && typeof meta.mapper.getBuffer === 'function' ? meta.mapper.getBuffer()
+      : Buffer.from(source, 'utf8'));
+  const byteStart = normalizedSpan.byteStart;
+  const byteEnd = normalizedSpan.byteEnd;
+  const snippetBuffer = byteEnd > byteStart
+    ? sourceBuffer.slice(byteStart, byteEnd)
+    : Buffer.alloc(0);
+  const snippet = snippetBuffer.toString('utf8');
+  const hash = createDigest(snippet);
 
   const scopeChain = Array.isArray(meta.scopeChain) ? meta.scopeChain.slice() : [];
   const canonicalName = buildCanonicalName(meta.name, scopeChain, meta.exportKind);
   const pathSignature = buildPathSignature(meta.pathSegments, meta.nodeType);
-  const hash = computeHash(source, normalizedSpan);
-  const identifierSpan = meta.identifierSpan ? normalizeSpan(meta.identifierSpan) : null;
-  const byteLength = Math.max(0, normalizedSpan.end - normalizedSpan.start);
-  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts);
+  const identifierSpan = meta.identifierSpan ? normalizeSpan(meta.identifierSpan, mappingContext) : null;
+  const byteLength = Math.max(0, byteEnd - byteStart);
+  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext);
   const primaryEnclosing = enclosingContexts[0] || null;
 
   results.push({
@@ -300,25 +574,42 @@ function recordFunction(results, source, meta) {
 }
 
 function recordVariable(results, source, meta) {
-  const normalizedSpan = normalizeSpan(meta.span);
+  const mappingContext = meta.mapper || meta.byteIndex || null;
+  const normalizedSpan = normalizeSpan(meta.span, mappingContext);
   const position = offsetToPosition(meta.lineIndex, normalizedSpan.start);
   const scopeChain = Array.isArray(meta.scopeChain) ? meta.scopeChain.slice() : [];
   const pathSignature = buildPathSignature(meta.pathSegments, meta.nodeType);
-  const hash = computeHash(source, normalizedSpan);
-  const byteLength = Math.max(0, normalizedSpan.end - normalizedSpan.start);
 
-  const declaratorSpan = meta.declaratorSpan ? normalizeSpan(meta.declaratorSpan) : normalizedSpan;
-  const declarationSpan = meta.declarationSpan ? normalizeSpan(meta.declarationSpan) : declaratorSpan;
+  const sourceBuffer = meta.sourceBuffer
+    || (meta.mapper && typeof meta.mapper.getBuffer === 'function' ? meta.mapper.getBuffer()
+      : Buffer.from(source, 'utf8'));
+  const byteStart = normalizedSpan.byteStart;
+  const byteEnd = normalizedSpan.byteEnd;
+  const snippetBuffer = byteEnd > byteStart
+    ? sourceBuffer.slice(byteStart, byteEnd)
+    : Buffer.alloc(0);
+  const hash = createDigest(snippetBuffer.toString('utf8'));
+  const byteLength = Math.max(0, byteEnd - byteStart);
 
-  const declaratorHash = (declaratorSpan.start === normalizedSpan.start && declaratorSpan.end === normalizedSpan.end)
+  const declaratorSpan = meta.declaratorSpan ? normalizeSpan(meta.declaratorSpan, mappingContext) : normalizedSpan;
+  const declarationSpan = meta.declarationSpan ? normalizeSpan(meta.declarationSpan, mappingContext) : declaratorSpan;
+
+  const declaratorSnippet = declaratorSpan.byteEnd > declaratorSpan.byteStart
+    ? sourceBuffer.slice(declaratorSpan.byteStart, declaratorSpan.byteEnd)
+    : Buffer.alloc(0);
+  const declaratorHash = (declaratorSpan.byteStart === byteStart && declaratorSpan.byteEnd === byteEnd)
     ? hash
-    : computeHash(source, declaratorSpan);
-  const declarationHash = (declarationSpan.start === declaratorSpan.start && declarationSpan.end === declaratorSpan.end)
-    ? declaratorHash
-    : computeHash(source, declarationSpan);
+    : createDigest(declaratorSnippet.toString('utf8'));
 
-  const declaratorByteLength = Math.max(0, declaratorSpan.end - declaratorSpan.start);
-  const declarationByteLength = Math.max(0, declarationSpan.end - declarationSpan.start);
+  const declarationSnippet = declarationSpan.byteEnd > declarationSpan.byteStart
+    ? sourceBuffer.slice(declarationSpan.byteStart, declarationSpan.byteEnd)
+    : Buffer.alloc(0);
+  const declarationHash = (declarationSpan.byteStart === declaratorSpan.byteStart && declarationSpan.byteEnd === declaratorSpan.byteEnd)
+    ? declaratorHash
+    : createDigest(declarationSnippet.toString('utf8'));
+
+  const declaratorByteLength = Math.max(0, declaratorSpan.byteEnd - declaratorSpan.byteStart);
+  const declarationByteLength = Math.max(0, declarationSpan.byteEnd - declarationSpan.byteStart);
 
   const declaratorPathSignature = Array.isArray(meta.declaratorPathSegments)
     ? buildPathSignature(meta.declaratorPathSegments, null)
@@ -326,7 +617,7 @@ function recordVariable(results, source, meta) {
   const declarationPathSignature = Array.isArray(meta.declarationPathSegments)
     ? buildPathSignature(meta.declarationPathSegments, null)
     : null;
-  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts);
+  const enclosingContexts = formatEnclosingContexts(meta.enclosingContexts, mappingContext);
   const primaryEnclosing = enclosingContexts[0] || null;
 
   results.push({
@@ -438,8 +729,12 @@ function ensureIdentifierName(key) {
   return '[computed]';
 }
 
-function collectFunctions(ast, source) {
+
+function collectFunctions(ast, source, mapper = null) {
+  const sourceMapper = resolveByteMapper(source, mapper) || createByteMapper(source);
   const lineIndex = buildLineIndex(source);
+  const byteIndex = sourceMapper.getByteIndex();
+  const sourceBuffer = sourceMapper.getBuffer();
   const functions = [];
 
   const REPLACEABLE_CALL_BASE_NAMES = new Set([
@@ -626,6 +921,9 @@ function collectFunctions(ast, source) {
           replaceable: true,
           span: node.span,
           lineIndex,
+          byteIndex,
+          sourceBuffer,
+          mapper: sourceMapper,
           scopeChain,
           pathSegments: currentPath,
           nodeType: type,
@@ -694,6 +992,9 @@ function collectFunctions(ast, source) {
             replaceable: true,
             span: node.expression.span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain: exportScope,
             pathSegments: currentPath,
             nodeType: node.expression.type,
@@ -738,6 +1039,9 @@ function collectFunctions(ast, source) {
             replaceable: false,
             span: init.span || node.span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain,
             pathSegments: currentPath,
             nodeType: init.type,
@@ -769,6 +1073,9 @@ function collectFunctions(ast, source) {
             replaceable: true,
             span: node.span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain: extendScopeChain(currentScope, []),
             pathSegments: currentPath,
             nodeType: type,
@@ -790,6 +1097,9 @@ function collectFunctions(ast, source) {
             replaceable: allowCallReplacement,
             span: node.span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain,
             pathSegments: currentPath,
             nodeType: type,
@@ -894,6 +1204,9 @@ function collectFunctions(ast, source) {
               replaceable: false,
               span: right.span,
               lineIndex,
+              byteIndex,
+              sourceBuffer,
+              mapper: sourceMapper,
               scopeChain,
               pathSegments: currentPath.concat('right'),
               nodeType: right.type,
@@ -909,6 +1222,9 @@ function collectFunctions(ast, source) {
               replaceable: false,
               span: right.span,
               lineIndex,
+              byteIndex,
+              sourceBuffer,
+              mapper: sourceMapper,
               scopeChain,
               pathSegments: currentPath.concat('right'),
               nodeType: right.type,
@@ -941,6 +1257,9 @@ function collectFunctions(ast, source) {
             replaceable: false,
             span: node.span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain: extendScopeChain(currentScope, []),
             pathSegments: currentPath,
             nodeType: type,
@@ -991,9 +1310,12 @@ function collectFunctions(ast, source) {
           name: context.className ? `${context.className}.${cleanName}` : cleanName,
           kind: 'class-method',
           exportKind: context.exportKind || null,
-          replaceable: false,
+          replaceable: true,
           span: node.span,
           lineIndex,
+          byteIndex,
+          sourceBuffer,
+          mapper: sourceMapper,
           scopeChain,
           pathSegments: currentPath,
           nodeType: type,
@@ -1032,12 +1354,16 @@ function collectFunctions(ast, source) {
   visit(ast, { scopeChain: [], exportKind: null, enclosingContexts: [], callContext: null }, ['module']);
 
   functions.sort((a, b) => a.span.start - b.span.start);
-  return { functions, lineIndex };
+  return { functions, lineIndex, mapper: sourceMapper };
 }
 
 
-function collectVariables(ast, source) {
+
+function collectVariables(ast, source, mapper = null) {
+  const sourceMapper = resolveByteMapper(source, mapper) || createByteMapper(source);
   const lineIndex = buildLineIndex(source);
+  const byteIndex = sourceMapper.getByteIndex();
+  const sourceBuffer = sourceMapper.getBuffer();
   const variables = [];
 
   function visit(
@@ -1166,6 +1492,9 @@ function collectVariables(ast, source) {
             name,
             span: key.span || node.span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain: currentScope,
             exportKind: context.exportKind || null,
             bindingKind: 'class-field',
@@ -1266,6 +1595,9 @@ function collectVariables(ast, source) {
             name: binding.name,
             span,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain: currentScope,
             exportKind: context.exportKind || null,
             bindingKind,
@@ -1310,6 +1642,9 @@ function collectVariables(ast, source) {
             name: variableName,
             span: recordSpan,
             lineIndex,
+            byteIndex,
+            sourceBuffer,
+            mapper: sourceMapper,
             scopeChain,
             exportKind,
             bindingKind: 'assignment',
@@ -1358,16 +1693,24 @@ function collectVariables(ast, source) {
   visit(ast, { scopeChain: [], exportKind: null, bindingKind: null, className: null, enclosingContexts: [] }, ['module']);
 
   variables.sort((a, b) => a.span.start - b.span.start);
-  return { variables, lineIndex };
+  return { variables, lineIndex, mapper: sourceMapper };
 }
 
 function extractCode(source, span) {
-  const { start, end } = normalizeSpan(span);
+  if (typeof source !== 'string') {
+    return '';
+  }
+  const byteIndex = buildByteIndex(source);
+  const { start, end } = normalizeSpan(span, byteIndex);
   return source.slice(start, end);
 }
 
 function replaceSpan(source, span, replacement) {
-  const { start, end } = normalizeSpan(span);
+  if (typeof source !== 'string') {
+    return replacement;
+  }
+  const byteIndex = buildByteIndex(source);
+  const { start, end } = normalizeSpan(span, byteIndex);
   return `${source.slice(0, start)}${replacement}${source.slice(end)}`;
 }
 
@@ -1380,6 +1723,8 @@ module.exports = {
   normalizeSpan,
   computeHash,
   createDigest,
+  createByteMapper,
+  resolveByteMapper,
   HASH_PRIMARY_ENCODING,
   HASH_FALLBACK_ENCODING,
   HASH_LENGTH_BY_ENCODING

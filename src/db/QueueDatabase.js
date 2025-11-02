@@ -353,5 +353,6 @@ class QueueDatabase {
     }
   }
 }
+const { ensureUrlId } = require('./sqlite/urlHelpers');
 
 module.exports = { QueueDatabase };

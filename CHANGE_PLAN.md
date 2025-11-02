@@ -1,8 +1,344 @@
-# CHANGE_PLAN.md — AST Editing Tool Investigation
+# CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
+
+## Active Plan — js-edit Byte Mapping Reliability (Initiated 2025-11-02)
+
+### Goal
+- Ensure js-edit’s span and snippet handling stays byte-accurate across string and buffer operations, avoiding whitespace/hash drift while keeping performance tight enough for iterative CLI workflows.
+
+### Current Behavior
+- `buildByteIndex`/`normalizeSpan`/`extractCode` recompute byte indexes independently, causing repeated O(n) scans per operation.
+- Some call sites mix string slicing with byte-aware buffers, leading to subtle whitespace mismatches (e.g., declarator guards writing leading spaces that hashes skip).
+- Guard hashes depend on buffer slices while CLI outputs rely on string slices, so normalization inconsistencies show up as mismatched hashes or truncated snippets after the recent byte-aware refactor.
+
+### Proposed Changes
+1. Inventory all helpers that compute byte/code-unit mappings (`buildByteIndex`, `normalizeSpan`, `extractCode`, `computeHash`, CLI guards) and document their call graph so we know where caching is safe.
+2. Introduce a `ByteMapper` utility that constructs string ↔ buffer offset maps exactly once per source, exposing fast helpers for both byte and code-unit lookups.
+3. Refactor swcAst helpers to accept an optional mapper instance and avoid re-parsing/re-mapping when the caller already has one; fall back gracefully for standalone usage.
+4. Update CLI operations (extract/replace function + variable) to leverage the mapper consistently, guaranteeing the same snippet feeds guard hashes, file writes, and plan payloads.
+5. Extend tests/fixtures with multi-byte and leading whitespace scenarios that previously triggered mismatches, ensuring both string and buffer paths agree.
+6. Benchmark the revised helpers inside the CLI (enable `--benchmark`) to confirm the mapper amortizes cost without noticeable regressions.
+7. Expand js-edit CLI output, help text, and JSON payloads so character offsets and byte offsets are clearly distinguished (including units/labels) and add coverage for mixed newline scenarios (LF/CRLF).
+8. Introduce newline-style detection when applying replacements, normalising snippets to the target file’s convention, surfacing any conversions (with byte delta) in CLI summaries, and add regression coverage for line-ending handling.
+9. Add high-coverage edge-case tests for span/byte alignment, including multi-byte glyphs, leading whitespace, trailing newline variations, and nested destructuring, ensuring guard hashes remain stable.
+10. Document the new span/byte conventions, newline handling workflow, and CLI outputs across `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, and relevant agent instructions.
+
+### Risks & Unknowns
+- Mapper caching must stay memory-light; large files processed repeatedly could hold onto buffers longer than expected.
+- Need to confirm SWC span end indices remain exclusive when mapped via the new helper—regressions here could reintroduce truncation.
+- CLI code paths that only need a quick hash might not benefit from mapper reuse; ensure optional parameters don’t complicate simple use cases.
+- New newline detection flow must avoid mutating untouched files (guard rails need to remain strict) and work for mixed-line endings inside the same file.
+- CLI output must stay concise despite additional metadata; ensure JSON / text formats remain backwards compatible for existing scripts.
+
+### Integration Points
+- `tools/dev/lib/swcAst.js` for the helper refactor, plus any new module housing `ByteMapper`.
+- `tools/dev/js-edit.js` operations that compute guard hashes, emit snippets, or write temp files.
+- Jest integration suite under `tests/tools/__tests__/js-edit.test.js` and fixtures in `tests/fixtures/tools/`.
+- CLI help + documentation: `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, `.github/instructions/GitHub Copilot.instructions.md` if agent expectations change.
+
+### Docs Impact
+- Update `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` if mapper usage alters CLI guidance or performance notes.
+- Capture any new helper API in `docs/JS_EDIT_ENHANCEMENTS_PLAN.md`.
+- Document newline detection workflow, byte vs. char reporting semantics, and CLI messaging updates, ensuring future operators know how to interpret output.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` after each significant refactor.
+- Ad-hoc CLI sanity checks (`node tools/dev/js-edit.js --extract-variable`) using multi-byte fixture cases.
+
+### Rollback Plan
+- Mapper lives in its own module so we can revert to direct helper calls by removing the new utility and restoring prior signatures.
+- If performance tanks, flip callers back to the pre-refactor code path and open a follow-up to revisit caching.
+
+### Branch & Notes
+- **Branch:** `chore/js-edit-hash-workflows` (active; byte-mapping + newline work rides on this branch until guardrail overhaul lands).
+- **Non-JS Edit Rationale:** CHANGE_PLAN.md updated directly to capture the new plan; js-edit targets JavaScript spans only.
+- **2025-11-02 (late-night):** Refreshed `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` with dual span (char + byte) guardrail guidance using direct Markdown edits (js-edit handles JavaScript spans only).
+- **2025-11-07:** Introduced shared byte mapper helpers (`createByteMapper`/`resolveByteMapper`) and threaded them through `collectFunctions`/`collectVariables`; `js-edit` now reuses a cached mapper across function + variable inventories.
+- **2025-11-08:** Scope expanded to (a) surface both UTF-16 code-unit spans and raw byte spans across CLI/JSON output, (b) convert replacements to the target file’s dominant newline convention while reporting conversions + byte deltas, and (c) add regression tests covering LF vs. CRLF fixtures plus multi-byte glyph spans before resuming hash workflow tasks.
+- **2025-11-08 (evening):** Updated `tests/tools/__tests__/js-edit.test.js` replacement guard plan assertions to cover byte-aware identifier and span metadata.
+- **2025-11-08 (late):** Hardened variable replacement guardrails by adding path-aware fallbacks when post-replacement spans collapse due to newline/byte index divergence (still needs CRLF validation).
+- **2025-11-08 (late night):** Updated `replace-variable` integration spec expectations for newline guard payloads; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` passing after relaxed assertions matching converted CRLF metadata.
+- **2025-11-09:** Extended function replacement guard-plan coverage so newline metadata is asserted for both immediate guard payloads and emitted plan files; rerun focused Jest after remaining updates.
+- **2025-11-02 (evening):** Confirmed CRLF regression test now covers `replaceVariable` fallback, scoped upcoming span/byte summarisation work to `renderGuardrailSummary`, `formatSpanDetails`, `buildPlanPayload`, and locate/context table renderers prior to implementation.
+
+### Next Implementation Steps
+1. ✅ Validate the new `replaceVariable` fallback workflow across CRLF fixtures so guard hashes/path checks stay stable when post-replacement spans collapse to zero length. (2025-11-08 via updated replace-variable Jest spec.)
+2. ✅ Extend guard + locate outputs so every span reports both code-unit and byte offsets (text + JSON), updating `renderGuardrailSummary`, plan payloads, locate/context tables, and JSON payload emitters. (2025-11-02)
+3. Teach snippet loaders (`loadReplacementSource`, context builders) to detect the target file’s dominant newline style, normalize replacement snippets to match, and surface a CLI summary detailing any conversions and resulting byte deltas. *(2025-11-08: `--replace-variable` now normalizes replacements, records newline guard metadata, and reports byte deltas; extend the same flow to function replacements and shared helpers.)*
+4. Adjust JSON payloads/plan files to capture newline handling metadata (original vs. applied style, conversions performed) for downstream automation.
+5. Add focused Jest fixtures covering: (a) CRLF-driven files, (b) mixed newline files, (c) multi-byte grapheme spans, ensuring guard hashes remain stable after replacements.
+6. ✅ Update documentation (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`) once behaviour ships so operators understand the new span units + newline reporting. (2025-11-02)
+
+## Goal
+- Replace legacy `url` TEXT columns with `url_id` foreign keys that reference the canonical `urls` table, and provide code-level support for working with both string URLs and IDs during the transition.
+
+## Current Behavior
+- Multiple tables (`crawl_tasks`, `latest_fetch`, `news_websites`, `place_hub_audit`, `place_page_mappings`, `place_sources`, `queue_events_enhanced`) still persist raw URL strings alongside (or instead of) `url_id` columns, leading to duplication and inconsistent joins.
+- Adapters and services frequently accept URL strings and perform ad-hoc lookup/insert work, with no shared helper for ID resolution.
+- Tests and documentation assume direct URL storage, so migrating schema without coordination will break consumers.
+
+## Proposed Changes
+1. **Baseline Snapshot** — Capture schema fingerprint, row counts, and representative samples for each affected table to validate post-migration integrity.
+2. **Migration Authoring** — For each table, add `url_id` columns, backfill values using existing URLs (creating missing `urls` entries as needed), and drop legacy string columns once data coverage is confirmed.
+3. **Schema Regeneration** — Regenerate `src/db/sqlite/v1/schema-definitions.js` and related fingerprints after migrations apply cleanly.
+4. **Shared URL Helper** — Factor a reusable helper (or extend existing utilities) that adapters can call to resolve string URLs to IDs with caching/batching support.
+5. **Adapter Updates** — Update `SQLiteNewsDatabase`, `ArticleOperations`, and allied modules to persist/query by `url_id`, while accepting URL strings at the edge for compatibility.
+6. **Service Layer Pass** — Adjust services/background tasks/API controllers to consume the new adapter methods (`getByUrlId`, etc.) and to avoid writing raw strings.
+7. **Testing** — Add migration regression tests plus adapter/service coverage ensuring URL ID paths function; run targeted Jest suites.
+8. **Documentation & Rollout Notes** — Update database normalization guides, API docs, and migration runbooks; document rollout steps and verification queries.
+9. **Verification Script** — Provide SQL/CLI snippets to confirm no residual `url` TEXT columns remain and all foreign keys enforce integrity.
+10. **Plan Close-Out** — Summarize outcomes, remaining risks, and follow-up tasks, then mark the plan complete once code/docs/tests land.
+
+## Risks & Unknowns
+- `SQLiteNewsDatabase` references `this._ensureUrlId` but the implementation location is unclear; need to verify before refactoring.
+- Long-running background processes may still insert raw URLs; must audit to avoid race conditions during rollout.
+- Large table rewrites could be expensive; migration strategy may require batched copy or temporary tables to avoid locking.
+
+## Integration Points
+- `tools/db-schema.js`, `tools/db-query.js` for schema inspection and validation
+- `src/utils/UrlResolver.js` for potential helper reuse/enhancement
+- Adapters in `src/db/sqlite/v1`, services under `src/services`, and background tasks in `src/background`
+- Documentation: `docs/DATABASE_NORMALIZATION_PLAN.md`, `docs/agents/database-schema-evolution.md`
+
+## Docs Impact
+- Update normalization guides to describe `url_id` usage and helper APIs.
+- Adjust API documentation where responses/requests include URL identifiers.
+- Capture migration procedure and verification steps in rollout docs.
+
+## Focused Test Plan
+- Migration regression test covering each affected table.
+- Adapter/service Jest suites exercising both string and ID entry points.
+- Targeted CLI validation (post-migration `node tools/db-schema.js` checks) documented in this plan.
+
+## Rollback Plan
+- Create pre-migration SQLite backups (per `data/backups/` policy) and record restoration steps.
+- Keep migrations idempotent where possible; if failure occurs, restore from backup and revert feature branch.
+- Maintain feature branch `feat/url-normalization` until changes merge; rollback by resetting branch and restoring backups.
+
+### Working Branch & Session Notes
+- **Branch:** `feat/url-normalization`
+- **Session Date:** 2025-11-04
+- **Knowledge Gaps:** need definitive location of `NewsDatabase._ensureUrlId`; confirm existing URL helper coverage for queue/task flows.
+- **Tooling Friction:** `js-edit --list-functions` output for large files is unwieldy; consider future flag to filter by name prefix or line range. `js-edit` currently reports `replace` as unsupported on class methods like `ArticleOperations#_ensureUrlId`, so fallback editing was required.
+
+### Execution Checklist
+- [ ] Capture baseline metrics (schema fingerprint, per-table row counts, NULL coverage for `url` fields).
+- [ ] Author migrations to introduce `url_id` columns and backfill data for each target table.
+- [ ] Remove legacy `url` text columns (or make them virtual) once backfill verified and add foreign keys/indexes.
+- [ ] Regenerate schema blueprints and fingerprints.
+- [ ] Extract/extend shared URL helper accessible to adapters/services. _(helper module shipped at `src/db/sqlite/urlHelpers.js`; adapters now being migrated to consume it starting with `ArticleOperations`.)_
+- [ ] Migrate `QueueDatabase`, `PlannerDatabase`, and `CoverageDatabase` to use the shared URL helper instead of bespoke `_ensureUrlId` implementations.
+- [ ] Update adapters (`SQLiteNewsDatabase`, `ArticleOperations`, queue/background DB modules) to favour `url_id`.
+- [ ] Patch service/background layers to call the new adapter methods and avoid string persistence.
+- [ ] Add/extend Jest coverage and migration regression tests.
+- [ ] Update documentation (normalization guides, API references, rollout instructions).
+- [ ] Provide verification SQL/CLI snippets and capture rollout guidance in this plan.
+
+---
+
+## Active Plan — js-edit Class Method Replacement Support (Initiated 2025-11-02)
+
+### Goal
+- Enhance `tools/dev/js-edit.js` so class methods (including private/static/getter/setter variants) are treated as replaceable targets, enabling guarded replacements similar to function declarations and recognised callback handlers.
+
+### Current Behavior
+- `collectFunctions` marks class methods with `replaceable: false`; `js-edit` rejects replacement attempts, blocking CLI-driven refactors inside class bodies.
+- CLI messaging advises the feature is unsupported, forcing manual edits or tooling fallback.
+- Associated tests/fixtures lack coverage for class method mutations, so regressions would go unnoticed after enabling the workflow.
+
+### Proposed Changes
+1. **Branch Prep** — Create `chore/js-edit-class-methods` and record branch in this plan. ✅ (branch active)
+2. **Collector Update** — Adjust `collectFunctions` to flag class methods as replaceable (with scope metadata for guardrails) and ensure enclosing context metadata stays intact. ✅ _Completed 2025-11-05_
+3. **Guardrail Extension** — Relax `js-edit` replacement guard that currently whitelists only declarations/callbacks so it permits class-method records; update error messaging accordingly. ⏳
+4. **Fixtures & Tests** — Extend `tests/tools/__tests__/js-edit.test.js` plus fixtures to cover locate/replace flows for standard, static, private (`#`), and accessor methods.
+5. **CLI Help & Docs** — Update `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` to mention class method support and any selector nuances.
+6. **Regression Sweep** — Run `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` and document results.
+
+### Risks & Unknowns
+- Need to confirm SWC spans for computed accessors behave consistently; may require guardfall for computed keys.
+- Replacements on private methods (`#method`) must respect selector naming; verify canonical name generation is stable across parser versions.
+- Existing guardrails might require additional path matching for `ClassPrivateMethod`; ensure they still resolve after replacements.
+
+### Integration Points
+- `tools/dev/lib/swcAst.js` (function collection logic, selector metadata).
+- `tools/dev/js-edit.js` (replacement guard checks).
+- Test fixtures under `tests/fixtures/tools/`.
+- Documentation in `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`.
+
+### Docs Impact
+- Mention class method replacement support in README + quick start guide, including recommended selectors.
+- Add brief note to `.github/instructions/GitHub Copilot.instructions.md` if workflow expectations change for agents.
+
+### Focused Test Plan
+- Extend existing js-edit Jest suite with new cases covering locate + replace for class methods, static methods, and accessors.
+- Confirm guard summaries show `replaceable: true` for class methods via CLI snapshot assertions.
+
+### Rollback Plan
+- If guardrail adjustments introduce regressions, revert collector changes and CLI guard updates, then re-run tests to verify prior behavior restored.
+- Keep feature work isolated on `chore/js-edit-class-methods`; drop branch if blockers arise.
+
+### Working Branch & Notes
+- **Branch:** `chore/js-edit-class-methods` (created 2025-11-02 from `feat/url-normalization`).
+- **Knowledge Gaps:** Need to confirm SWC node coverage for `ClassPrivateMethod` spans and computed keys before enabling replacement guardrails.
+- **Tooling Friction:** `js-edit` replacement guard currently rejects class-method records even with `--force`; collector changes must elevate `replaceable` flag and CLI must accept the new kind.
+
+---
+
+## Active Plan — js-edit Hash Query Enhancements (Initiated 2025-11-02)
+
+### Goal
+- Extend `js-edit` so operators can identify functions via their guard hashes directly from the function inventory output, and then extract the corresponding source snippets (and metadata) by providing one or more hashes to the CLI.
+
+### Current Behavior
+- `--list-functions` CLI output omits the guard hash even though `collectFunctions` already records it.
+- No CLI entry point accepts hashes as selectors; operators must rely on names/path signatures, which is cumbersome for ambiguous callbacks.
+- Extraction utilities focus on selectors or numeric spans, and the console formatter lacks concise, hash-centric tables for rapid triage.
+
+### Proposed Changes
+1. **Branch Prep** — Create `chore/js-edit-hash-workflows` from `main` (record branch info once created).
+2. **Inventory Output** — Update `--list-functions` (table + JSON) to surface guard hashes and align column formatting with existing ASCII table conventions.
+3. **Multi-Hash Extract Command** — Introduce a CLI option (e.g., `--extract-hashes <hash,hash>`), resolve each hash to the corresponding function entry (with collision handling), and emit the source with clear headers showing hash + path signature.
+4. **Output Formatting** — Add reusable separator helpers so extraction output uses ASCII-only horizontal rules and concise annotated headers suitable for humans/bots.
+5. **Augmented Query Modes** — Evaluate additional lightweight summaries (e.g., path signature listing, byte length, enclosing contexts) that can accompany hash-driven extraction to aid pre-edit reconnaissance.
+6. **Help & Docs** — Refresh CLI help, README, and quick-start guidance so hash-driven workflows are discoverable and documented.
+7. **Focused Tests** — Extend existing Jest suite and fixtures to cover the new command, hash collisions, and output formatting expectations.
+
+### Risks & Unknowns
+- Hash collisions are unlikely but must be handled predictably (e.g., guard failure with actionable messaging).
+- Need to ensure hash outputs remain stable despite future digest-length adjustments (currently 8-char base64 with hex fallback).
+- Multi-hash extraction could generate large output; guard against unbounded dumps by enforcing safe defaults and summarising when necessary.
+
+### Integration Points
+- `tools/dev/js-edit.js` (CLI argument parsing, command execution, table formatter).
+- `tools/dev/lib/swcAst.js` (function metadata already contains hashes; may need helper exposure).
+- `tests/tools/__tests__/js-edit.test.js` plus fixtures under `tests/fixtures/tools/` for coverage.
+- Console formatting utilities currently embedded in `js-edit` (review for reuse).
+
+### Docs Impact
+- Update `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` with hash-based workflows, sample commands, and usage notes.
+- Note any new guardrail behaviours in `.github/instructions/GitHub Copilot.instructions.md` if operator expectations change.
+
+### Focused Test Plan
+- Jest integration tests covering `--list-functions` hash output, single/multi-hash extraction, collision handling, and formatted output assertions.
+- Snapshot or string-based assertions validating ASCII separator usage and metadata annotations for extracted source.
+
+### Rollback Plan
+- Revert CLI/help/documentation changes if hash workflows introduce regressions; hashes remain internal metadata so removal is straightforward.
+- Since changes are CLI-only, rolling back involves resetting `tools/dev/js-edit.js`, related tests, and docs on the feature branch before merge.
+
+### Working Branch & Notes
+- **Branch:** `chore/js-edit-hash-workflows` (created 2025-11-02 from `main`).
+- **Open Questions:** Confirm whether hash selectors should also support variables; if scope expands, clone tasks into follow-up plan.
+- **Tooling Friction:** Existing console formatter may need refactor to reuse separators across commands without duplicating ASCII art logic.
+
+---
+
+# Historical Plan — AST Editing Tool Investigation
 
 ## Goal
 - Assess and, if feasible, prototype a repository-friendly code transformation CLI that can safely extract and replace JavaScript functions in very large files without manual `apply_patch` edits.
 - Determine whether adopting a high-performance parser (possibly via a native Node.js add-on) measurably improves turnaround time and correctness for bulk refactors.
+
+## Session Plan — 2025-11-02: Database URL Column Audit
+
+### Goal
+- Produce an authoritative list of database tables that expose a `url` column of type `TEXT`, using existing schema-inspection tooling only.
+
+### Current Behavior
+- Table-to-column mappings are not documented in CHANGE_PLAN.md, and it is unclear which tables currently define a `url` field or what their column affinities are.
+
+### Proposed Changes
+1. Identify the active working branch (expected: `main`) and document it here before taking any actions. **Working branch:** `main` (no feature branch needed for read-only inspection).
+2. Run read-only schema inventory commands (preferred tool: `node tools/db-schema.js`) to enumerate all tables.
+3. For each table, capture column definitions and filter to those with a `url` column whose declared affinity is `TEXT`.
+4. Summarize the findings in the final response; no code or data modifications are planned.
+
+### Risks & Unknowns
+- SQLite may store type information with varying affinity strings (e.g., `TEXT`, `VARCHAR`) which could require interpretation.
+- Tooling output may be large; ensure commands remain read-only and avoid accidental mutation flags (e.g., `--fix`).
+
+### Integration Points
+- Utilize `tools/dev/js-edit.js` only if JavaScript post-processing becomes necessary (not anticipated).
+- Rely on `tools/db-schema.js` for schema inspection to stay aligned with repository tooling expectations.
+
+### Docs Impact
+- None expected; this is an observational task unless discrepancies emerge that warrant documentation updates.
+
+### Focused Test Plan
+- No automated tests required; verification occurs through inspection of CLI output.
+
+### Rollback Plan
+- Not applicable; operations are read-only. If unintended mutations occur, halt immediately and notify maintainers.
+
+## Session Plan — 2025-11-02: URL Foreign Key Normalization Blueprint
+
+### Goal
+- Produce a comprehensive implementation blueprint that migrates every non-`urls` table currently storing raw `url` text into a normalized structure that references `urls.id` instead, while ensuring the application stack can operate on URL IDs for performance-sensitive code paths.
+
+### Background
+- Audit confirmed eight tables (`crawl_tasks`, `latest_fetch`, `news_websites`, `place_hub_audit`, `place_page_mappings`, `place_sources`, `queue_events_enhanced`, `urls`) expose a `url` column defined as `TEXT`.
+- The `urls` table already owns the canonical string representation and should remain unchanged; every other table needs to reference `urls.id` instead of storing text directly.
+- Need to ensure DB adapters and downstream layers can work with both URL strings (for compatibility) and URL IDs (for efficiency).
+
+### Working Branch
+- Pending implementation; remain on `main` while the blueprint is authored. Create a feature branch (e.g., `feat/url-normalization`) before coding.
+
+### Proposed Phases & Tasks
+1. **Discovery & Impact Mapping**
+	- [ ] Inventory modules interacting with affected tables (`crawl_tasks`, `latest_fetch`, `news_websites`, `place_hub_audit`, `place_page_mappings`, `place_sources`, `queue_events_enhanced`).
+	- [ ] Audit existing helpers for URL insertion/lookup (search `src/db/sqlite`, `src/services`, `src/background`).
+	- [ ] Confirm documentation dependencies (`docs/agents/database-schema-evolution.md`, `docs/DATABASE_NORMALIZATION_PLAN.md`).
+
+2. **Branch & Safety Prep**
+	- [x] Create feature branch (target name: `feat/url-normalization`).
+	- [ ] Capture baseline schema snapshot and row counts using `sqlite3 .schema`/existing tooling.
+	- [ ] Record backup guidance in rollout notes.
+
+3. **Schema Design & Migration Implementation**
+	- [ ] Draft SQL migration(s) to add `url_id` columns (nullable) to each impacted table and populate via joins to `urls`.
+	- [ ] Ensure migrations create missing URL entries (`INSERT OR IGNORE INTO urls(url)`), backfill `url_id`, and add foreign keys + indexes.
+	- [ ] Create replacement tables dropping legacy `url` columns and promoting `url_id` to NOT NULL where data coverage allows; otherwise retain fallback with constraints.
+	- [ ] Update schema fingerprint and regenerate blueprint (`src/db/sqlite/v1/schema-definitions.js`).
+
+4. **DB Adapter & Helper Enhancements**
+	- [ ] Introduce shared URL helper module (`src/db/sqlite/urlHelpers.js` or augment existing) providing `ensureUrlId`, `fetchUrlById`, and batch utilities.
+	- [ ] Update adapters for each affected table to read/write via `url_id`, returning both ID and resolved string (lazy fetch) to maintain compatibility.
+	- [ ] Ensure adapters expose ID-based query variants (e.g., `getByUrlId`) to unlock higher-level performance improvements.
+
+5. **Higher-Level Service Updates**
+	- [ ] Refactor services/background tasks to prefer ID-based methods; maintain string-oriented entry points that delegate through helper.
+	- [ ] Update validation/serialization logic (API, background processors) to surface URL IDs where appropriate.
+	- [ ] Adjust telemetry/logging so URL lookup remains meaningful (e.g., include resolved string for logs).
+
+6. **Testing & Verification**
+	- [ ] Add regression tests covering migrations using in-memory/temp DB (ensure old fixtures with string URLs migrate cleanly).
+	- [ ] Extend adapter/service tests to assert ID workflows (`getByUrlId`, `ensureUrlId`).
+	- [ ] Run focused Jest suites and document commands in this plan.
+
+7. **Documentation & Rollout**
+	- [ ] Update relevant docs (`docs/DATABASE_SCHEMA_EVOLUTION.md`, adapter READMEs) to describe new normalization contract and helper APIs.
+	- [ ] Record migration steps, verification queries, and rollback instructions in a new migration doc under `docs/migrations/`.
+	- [ ] Summarize rollout checklist (backup, migration execution, verification, code deploy) before closure.
+
+### Risks & Unknowns
+- Duplicate/malformed URLs could prevent unique constraints from succeeding; may require pre-cleanup.
+- Background tasks or external tooling might still write raw URLs; must audit and update them.
+- Potential downtime if migration rewrites large tables; consider batching or incremental backfill.
+
+### Dependencies & Integration Points
+- `tools/db-schema.js` / `tools/db-query.js` for inspection and validation.
+- Existing normalization guides in `docs/DATABASE_NORMALIZATION_PLAN.md`.
+- DB adapters under `src/db/sqlite` and shared helpers under `src/db/sqlite/v1`.
+- API/service layers in `src/services`, background processors in `src/background`.
+
+### Focused Test Plan (Post-Implementation)
+- Use temporary SQLite fixtures mirroring production schema to run migration scripts end-to-end.
+- Targeted Jest suites for each adapter updated to use `url_id`.
+- Add regression tests ensuring `urls` table remains authoritative (no stray string columns).
+
+### Rollback Plan (Post-Implementation)
+- Maintain pre-migration backup (SQLite file) and feature branch for code rollback.
+- If migration fails mid-way, restore from backup and re-run after addressing issues; scripts should be idempotent when possible.
+
 
 ## Current Behavior
 - Contributors rely on editor tooling or `apply_patch` for code edits; no repo-provided automation exists for syntax-aware transformations.
@@ -24,6 +360,17 @@
 - Extend guard summaries and plan emission reporting for `--allow-multiple` batch workflows before closing Phase 4/5 follow-ups.
 - Expand variable editing workflows so js-edit can safely replace destructured imports / top-level bindings without falling back to manual edits.
 - Update release artifacts once the above land: CHANGELOG/docs audit, feedback guidance, and backlog capture (Phase 9).
+
+-### Bug Fix Addendum — Context/Extract Off-by-One (Logged 2025-11-02, Active 2025-11-02)
+- Detected leading-character truncation when extracting functions (e.g., `function` rendered as `unction`).
+- **Tasks**:
+	1. Introduce regression tests in `tests/tools/__tests__/js-edit.test.js` verifying `--extract` and context payloads preserve leading characters for both functions and variables.
+	2. Audit span normalization in `tools/dev/lib/swcAst.js` and context builders to locate the off-by-one root cause; adjust calculations while keeping guardrails stable.
+	3. Re-run focused Jest suite post-fix and validate CLI extracts on sample fixtures.
+- **2025-11-02 Update**: Identified spans from SWC as 1-based byte offsets; ASCII slicing fails when non-ASCII glyphs appear before the target. Implementing byte-aware extraction (`Buffer.slice`) and byte-to-code-unit conversion helpers before resuming js-edit driven edits.
+- Resume overview implementation once regression tests pass.
+
+	- **2025-11-07 Update**: After introducing byte-aware spans, variable declarator extraction started truncating trailing characters (`cartoon;` → `cartoo`). Plan: (1) revisit `normalizeSpan` end calculations so byte-exclusive slices include the full declarator, (2) rerun focused Jest suite (`npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`), and (3) verify CLI `--extract-variable` / `--replace-variable` flows complete without guard mismatches before resuming hash workflow enhancements.
 
 > **Status Update — 2025-11-03:** js-edit enhancement work is **paused** so we can redirect development bandwidth to other backlog items. Outstanding js-edit tasks above remain recorded but are deferred until the compression utilities unification plan progresses.
 
