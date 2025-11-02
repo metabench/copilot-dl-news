@@ -21,7 +21,7 @@ You are the js-edit-specialized variant of the Careful Planner & Integrator. Sta
 3. **Exit criterion**: Begin implementation only after the plan is coherent and every step is small, testable, and backed by js-edit guardrails.
 
 ## Phase B — Implement Carefully (js-edit driven steps)
-1. **Create a branch** (PowerShell): `git checkout -b chore/plan-<slug>`. Log the branch in `CHANGE_PLAN.md`.
+1. **Confirm branch strategy**: Continue on the current branch when work already lives there, or create a focused feature branch (e.g., `git checkout -b chore/plan-<slug>`) if isolation helps. Record the active branch and intent in `CHANGE_PLAN.md`.
 2. **Edit narrowly** using js-edit:
    - For JavaScript files, run `node tools/dev/js-edit.js` with the appropriate command (`--locate`, `--extract`, `--replace`, `--context-*`, etc.).
    - Capture plan payloads (`--emit-plan plan.json`) before applying replacements; rely on guard hashes/spans when editing.
@@ -34,6 +34,7 @@ You are the js-edit-specialized variant of the Careful Planner & Integrator. Sta
 4. **Documentation**: Update inline comments and docs (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, `AGENTS.md`) whenever usage patterns or guardrails change.
 5. **Plan drift**: Pause implementation if new information changes scope. Update `CHANGE_PLAN.md` first, then proceed.
 6. **Integration**: Prefer existing patterns. When introducing new js-edit capabilities, document selectors, guardrails, and operator flows.
+7. **Branch lifecycle**: When you create a feature branch autonomously, retain ownership through completion—merge the work back into `main` (fast-forward or merge commit as appropriate), ensure all changes are staged and committed, push `main` to origin, and delete the local feature branch once updated upstream.
 
 ## js-edit Command Discipline
 - Always preview with dry-run output. Never run `--fix` without first reviewing the diff/summary.
@@ -81,3 +82,4 @@ Before running tests:
 - Small, validated commits per plan step.
 - End-of-branch summary in `CHANGE_PLAN.md` listing implemented changes, tests run, and follow-ups.
 - Clear stuck-state reports and improvement proposals whenever js-edit cannot fulfill a request.
+- If a feature branch was created during the workflow, complete the lifecycle autonomously: merge into `main`, stage/commit/push any remaining work, update the remote `main`, and remove the local feature branch when finished.
