@@ -724,7 +724,10 @@ function extractBindingNames(pattern, results = []) {
 function ensureIdentifierName(key) {
   if (!key) return '[anonymous]';
   if (key.type === 'Identifier' && key.value) return key.value;
-  if (key.type === 'PrivateName' && key.id && key.id.name) return `#${key.id.name}`;
+  if (key.type === 'PrivateName') {
+    if (key.id && key.id.name) return `#${key.id.name}`;
+    if (typeof key.value === 'string' && key.value) return `#${key.value}`;
+  }
   if (key.type === 'StringLiteral' && key.value) return key.value;
   return '[computed]';
 }
@@ -1292,7 +1295,8 @@ function collectFunctions(ast, source, mapper = null) {
         break;
       }
       case 'ClassMethod':
-      case 'ClassPrivateMethod': {
+      case 'ClassPrivateMethod':
+      case 'PrivateMethod': {
         const methodName = ensureIdentifierName(node.key);
         const cleanName = methodName.replace(/^#/, '');
         const methodSegments = [];
