@@ -16,6 +16,10 @@ const {
   HASH_FALLBACK_ENCODING,
   HASH_LENGTH_BY_ENCODING
 } = require('./lib/swcAst');
+const {
+  unescapeCodeString,
+  validateCodeSyntax
+} = require('./lib/codeEscaper');
 
 const fmt = new CliFormatter();
 const DEFAULT_CONTEXT_PADDING = 512;
@@ -1024,6 +1028,13 @@ function resolveMatches(functionRecords, selector, options, { operation }) {
     }
   }
 
+  if (options.selectHash) {
+    resolved = resolved.filter((record) => record.hash === options.selectHash);
+    if (resolved.length === 0) {
+      throw new Error(`No functions matched selector "${selector}" with hash "${options.selectHash}". Use --list-functions --json to inspect guard hashes.`);
+    }
+  }
+
   resolved = resolved.slice().sort((a, b) => a.index - b.index);
 
   if (typeof options.selectIndex === 'number') {
@@ -1040,11 +1051,12 @@ function resolveMatches(functionRecords, selector, options, { operation }) {
     const details = resolved
       .map((record) => `${record.canonicalName} (${record.kind}) @ ${record.line}:${record.column}`)
       .join('\n  - ');
-    throw new Error(`Selector "${selector}" matched ${resolved.length} functions. Use --select or --select-path to disambiguate.\n  - ${details}`);
+    throw new Error(`Selector "${selector}" matched ${resolved.length} functions. Use --select (index or hash:<value>) or --select-path to disambiguate.\n  - ${details}`);
   }
 
   return requireUnique ? resolved.slice(0, 1) : resolved;
 }
+
 
 function resolveVariableMatches(variableRecords, selector, options, { operation }) {
   if (!selector || !selector.trim()) {
@@ -1065,6 +1077,13 @@ function resolveVariableMatches(variableRecords, selector, options, { operation 
     }
   }
 
+  if (options.selectHash) {
+    resolved = resolved.filter((record) => record.hash === options.selectHash);
+    if (resolved.length === 0) {
+      throw new Error(`No variables matched selector "${selector}" with hash "${options.selectHash}". Use --list-variables --json to inspect guard hashes.`);
+    }
+  }
+
   resolved = resolved.slice().sort((a, b) => a.index - b.index);
 
   if (typeof options.selectIndex === 'number') {
@@ -1081,11 +1100,12 @@ function resolveVariableMatches(variableRecords, selector, options, { operation 
     const details = resolved
       .map((record) => `${record.canonicalName} (${record.kind}) @ ${record.line}:${record.column}`)
       .join('\n  - ');
-    throw new Error(`Selector "${selector}" matched ${resolved.length} variables. Use --select or --select-path to disambiguate, or pass --allow-multiple.\n  - ${details}`);
+    throw new Error(`Selector "${selector}" matched ${resolved.length} variables. Use --select (index or hash:<value>) or --select-path to disambiguate, or pass --allow-multiple.\n  - ${details}`);
   }
 
   return requireUnique ? resolved.slice(0, 1) : resolved;
 }
+
 
 function selectContextSpan(record, enclosingMode) {
   if (enclosingMode === 'class') {
@@ -1608,8 +1628,10 @@ function parseCliArgs(argv) {
     .add('--locate <selector>', 'Show guardrail metadata for functions matching the selector')
     .add('--locate-variable <selector>', 'Show guardrail metadata for the variable matching the selector')
     .add('--extract-variable <selector>', 'Extract the variable binding or declarator matching the selector')
-    .add('--replace-variable <selector>', 'Replace the variable binding or declarator matching the selector (requires --with)')
+    .add('--replace-variable <selector>', 'Replace the variable binding or declarator matching the selector (requires --with or --with-code)')
     .add('--with <path>', 'Replacement source snippet used by --replace')
+    .add('--with-file <path>', 'Replacement snippet path resolved relative to the target file directory')
+    .add('--with-code <code>', 'Inline replacement code (alternative to --with)')
     .add('--replace-range <start:end>', 'Replace only the relative character range within the located function (0-based, end-exclusive)')
     .add('--rename <identifier>', 'Rename the targeted function identifier when the declaration exposes a name')
     .add('--output <path>', 'Write extracted function to this file instead of stdout')
@@ -1622,7 +1644,7 @@ function parseCliArgs(argv) {
     .add('--json', 'Emit structured JSON output instead of formatted text', false, 'boolean')
     .add('--quiet', 'Suppress formatted output (implies --json)', false, 'boolean')
     .add('--benchmark', 'Measure parse time for the input file (diagnostic)', false, 'boolean')
-    .add('--select <index>', 'Select the nth match when a selector resolves to multiple results (1-based)')
+    .add('--select <index|hash:value>', 'Select the nth match when a selector resolves to multiple results (1-based) or supply hash:<value> to pick by guard hash')
     .add('--select-path <signature>', 'Force selection to the node with the given path signature')
     .add('--allow-multiple', 'Allow selectors to resolve to multiple matches (locate/context/extract)', false, 'boolean')
     .add('--variable-target <mode>', 'Variable target span: binding, declarator, or declaration (default: declarator)', 'declarator');
@@ -1630,11 +1652,12 @@ function parseCliArgs(argv) {
   const program = parser.getProgram();
   program.addHelpText(
     'after',
-    `\nExamples:\n  js-edit --file app.js --list-functions --filter-text controller\n  js-edit --file app.js --locate exports.alpha --json\n  js-edit --file app.js --replace exports.alpha --with patch.js --expect-hash HASH --fix\n\nDiscovery commands:\n  --list-functions          Inventory functions; combine with --filter-text, --include-paths, or --function-summary.\n  --list-variables          Inventory bindings and destructuring targets.\n  --preview <selector>      Render a short snippet; use --preview-variable for bindings.\n  --search-text <text>      Locate literal matches and show guard metadata.\n\nEditing commands:\n  --extract <selector>      Print guarded source (use --output to write to a file).\n  --replace <selector>      Apply snippets or --rename; requires --fix to write.\n  --replace-variable <sel>  Replace bindings; pair with --variable-target binding|declarator|declaration.\n  --replace-range start:end Limit replacements to a slice within the located span.\n\nGuardrails and plans:\n  --expect-hash / --expect-span   Require stable targets before writing.\n  --emit-plan <path>              Emit JSON metadata for downstream automation.\n  --force                         Bypass guardrails only after manual review.\n\nSelector hints:\n  exports.name\n  module.exports.handler\n  ClassName > static > method\n  call:describe:mission > callback\n  hash:CAFED00D (from --list-functions --json)\n\nOutput controls:\n  --json / --quiet emit machine-readable payloads.\n  --emit-diff previews replacements during dry-runs.\n`
+    `\nExamples:\n  js-edit --file app.js --list-functions --filter-text controller\n  js-edit --file app.js --locate exports.alpha --json\n  js-edit --file app.js --replace exports.alpha --with patch.js --expect-hash HASH --fix\n\nDiscovery commands:\n  --list-functions          Inventory functions; combine with --filter-text, --include-paths, or --function-summary.\n  --list-variables          Inventory bindings and destructuring targets.\n  --preview <selector>      Render a short snippet; use --preview-variable for bindings.\n  --search-text <text>      Locate literal matches, show guard metadata, and emit ready-to-run commands.\n\nEditing commands:\n  --extract <selector>      Print guarded source (use --output to write to a file).\n  --replace <selector>      Apply snippets or --rename; requires --fix to write.\n  --with-file <path>        Load snippets relative to the target file directory.\n  --replace-variable <sel>  Replace bindings; pair with --variable-target binding|declarator|declaration.\n  --replace-range start:end Limit replacements to a slice within the located span.\n\nGuardrails and plans:\n  --expect-hash / --expect-span   Require stable targets before writing.\n  --emit-plan <path>              Emit JSON metadata for downstream automation.\n  --force                         Bypass guardrails only after manual review.\n\nSelector hints:\n  exports.name\n  module.exports.handler\n  ClassName > static > method\n  call:describe:mission > callback\n  hash:CAFED00D (from --list-functions --json)\n  --select hash:CAFED00D (combine with selectors to lock onto a guard hash)\n\nOutput controls:\n  --json / --quiet emit machine-readable payloads.\n  --emit-diff previews replacements during dry-runs.\n`
   );
 
   return parser.parse(argv);
 }
+
 
 
 
@@ -1768,12 +1791,26 @@ function normalizeOptions(raw) {
   }
 
   let selectIndex = null;
+  let selectHash = null;
   if (resolved.select !== undefined && resolved.select !== null) {
-    const parsed = Number(resolved.select);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new Error('--select must be a positive integer (1-based index).');
+    const rawSelect = String(resolved.select).trim();
+    if (!rawSelect) {
+      throw new Error('--select requires a value (positive integer or hash:<value>).');
     }
-    selectIndex = parsed;
+    const lower = rawSelect.toLowerCase();
+    if (lower.startsWith('hash:')) {
+      const hashValue = rawSelect.slice(rawSelect.indexOf(':') + 1).trim();
+      if (!hashValue) {
+        throw new Error('--select hash:<value> requires a guard hash value.');
+      }
+      selectHash = hashValue;
+    } else {
+      const parsed = Number(rawSelect);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new Error('--select must be a positive integer (1-based) or hash:<value>.');
+      }
+      selectIndex = parsed;
+    }
   }
 
   let selectPath = null;
@@ -1910,6 +1947,8 @@ function normalizeOptions(raw) {
   }
 
   let replacementPath = null;
+  let replacementCode = null;
+
   if (resolved.with !== undefined && resolved.with !== null) {
     const snippetPath = String(resolved.with).trim();
     if (!snippetPath) {
@@ -1920,27 +1959,50 @@ function normalizeOptions(raw) {
       : path.resolve(process.cwd(), snippetPath);
   }
 
+  if (resolved.withFile !== undefined && resolved.withFile !== null) {
+    if (replacementPath) {
+      throw new Error('Cannot supply both --with and --with-file; choose one.');
+    }
+    const relativeSnippet = String(resolved.withFile).trim();
+    if (!relativeSnippet) {
+      throw new Error('--with-file requires a file path.');
+    }
+    const baseDir = path.dirname(filePath);
+    replacementPath = path.resolve(baseDir, relativeSnippet);
+  }
+
+  if (resolved.withCode !== undefined && resolved.withCode !== null) {
+    if (replacementPath) {
+      throw new Error('Cannot supply both --with/--with-file and --with-code; choose one.');
+    }
+    const rawCode = String(resolved.withCode).trim();
+    if (!rawCode) {
+      throw new Error('--with-code requires non-empty code.');
+    }
+    replacementCode = rawCode;
+  }
+
   const hasFunctionReplace = Boolean(replaceSelector);
   const hasVariableReplace = Boolean(replaceVariableSelector);
 
-  if (replacementPath && !hasFunctionReplace && !hasVariableReplace) {
-    throw new Error('--with can only be used with --replace or --replace-variable.');
+  if ((replacementPath || replacementCode) && !hasFunctionReplace && !hasVariableReplace) {
+    throw new Error('--with/--with-file and --with-code can only be used with --replace or --replace-variable.');
   }
 
   if (hasFunctionReplace) {
-    if (!replacementPath && !renameTo && !replaceRange) {
-      throw new Error('Replacing a function requires either --with <path>, --replace-range, or --rename <identifier>.');
+    if (!replacementPath && !replacementCode && !renameTo && !replaceRange) {
+      throw new Error('Replacing a function requires either --with <path>, --with-file <path>, --with-code <code>, --replace-range, or --rename <identifier>.');
     }
-    if (replaceRange && !replacementPath) {
-      throw new Error('--replace-range requires --with <path> containing the replacement snippet.');
+    if (replaceRange && !replacementPath && !replacementCode) {
+      throw new Error('--replace-range requires either --with <path>, --with-file <path>, or --with-code <code> containing the replacement snippet.');
     }
-    if (renameTo && replacementPath) {
-      throw new Error('Provide either --rename or --with/--replace-range in a single command, not both.');
+    if (renameTo && (replacementPath || replacementCode)) {
+      throw new Error('Provide either --rename or --with/--with-file/--with-code/--replace-range in a single command, not both.');
     }
   }
 
-  if (hasVariableReplace && !replacementPath) {
-    throw new Error('--replace-variable requires --with <path> containing the replacement snippet.');
+  if (hasVariableReplace && !replacementPath && !replacementCode) {
+    throw new Error('--replace-variable requires either --with <path>, --with-file <path>, or --with-code <code> containing the replacement snippet.');
   }
   if (hasVariableReplace && renameTo) {
     throw new Error('--rename is not supported with --replace-variable.');
@@ -1992,6 +2054,7 @@ function normalizeOptions(raw) {
     searchLimit,
     searchContext,
     replacementPath,
+    replacementCode,
     outputPath,
     emitPlanPath,
     emitDiff,
@@ -2003,6 +2066,7 @@ function normalizeOptions(raw) {
     expectHash,
     expectSpan,
     selectIndex,
+    selectHash,
     selectPath,
     allowMultiple,
     replaceRange,
@@ -2024,6 +2088,7 @@ function normalizeOptions(raw) {
 
 
 
+
 function readSource(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf8');
@@ -2038,6 +2103,31 @@ function loadReplacementSource(filePath) {
     } catch (error) {
     throw new Error(`Failed to read replacement snippet: ${filePath}\n${error.message}`);
   }
+}
+
+/**
+ * Get replacement code from either file path or inline string.
+ * If inline code is provided, unescapes quotes and backslashes.
+ * Validates syntax before returning.
+ */
+function getReplacementSource(options) {
+  if (options.replacementCode) {
+    let code = unescapeCodeString(options.replacementCode);
+    
+    // Validate syntax
+    const validation = validateCodeSyntax(code, '<inline>');
+    if (!validation.valid) {
+      throw new Error(`Replacement produced invalid JavaScript: ${validation.error}`);
+    }
+    
+    return code;
+  }
+  
+  if (options.replacementPath) {
+    return loadReplacementSource(options.replacementPath);
+  }
+  
+  throw new Error('No replacement source provided.');
 }
 
 function writeOutputFile(filePath, content) {
@@ -2477,6 +2567,15 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
         };
       }
 
+      const suggestionEntry = buildSearchSuggestionsForMatch({
+        matchIndex,
+        query,
+        functionOwner,
+        variableOwner,
+        options,
+        contextChars
+      });
+
       matches.push({
         index: matches.length + 1,
         charStart: matchIndex,
@@ -2487,7 +2586,8 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
         guard: {
           function: functionGuard,
           variable: variableGuard
-        }
+        },
+        suggestions: suggestionEntry
       });
     } else {
       truncated = true;
@@ -2512,7 +2612,8 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
       highlighted: match.snippet.highlighted,
       range: match.snippet.range
     },
-    guard: match.guard
+    guard: match.guard,
+    suggestions: match.suggestions
   }));
 
   const payload = {
@@ -2600,6 +2701,11 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
 
     fmt.section('Snippet');
     fmt.codeBlock(match.snippet.highlighted);
+
+    const suggestionCommands = buildSearchSuggestions(match, options);
+    if (suggestionCommands && suggestionCommands.length > 0) {
+      fmt.list('Follow-up commands', suggestionCommands.map((command) => `js-edit ${command}`));
+    }
   });
 
   if (options.emitPlanPath) {
@@ -2608,6 +2714,47 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
 
   fmt.footer();
 }
+
+function buildSearchSuggestionsForMatch({ query, functionOwner, variableOwner, options, contextChars }) {
+  const commands = [];
+  const baseArgs = [`--file "${options.filePath}"`];
+
+  if (functionOwner && functionOwner.hash) {
+    const selector = functionOwner.canonicalName || functionOwner.name;
+    if (selector) {
+      commands.push(`${baseArgs.join(' ')} --locate "${escapeSuggestionValue(selector)}" --select hash:${functionOwner.hash}`);
+    }
+  }
+
+  if (variableOwner && variableOwner.hash) {
+    const selector = variableOwner.canonicalName || variableOwner.name;
+    if (selector) {
+      commands.push(`${baseArgs.join(' ')} --locate-variable "${escapeSuggestionValue(selector)}" --select hash:${variableOwner.hash}`);
+    }
+  }
+
+  if (commands.length === 0) {
+    const resolvedContext = Number.isFinite(contextChars) && contextChars >= 0 ? contextChars : DEFAULT_SEARCH_CONTEXT;
+    commands.push(`${baseArgs.join(' ')} --search-text "${escapeSuggestionValue(query)}" --search-context ${resolvedContext}`);
+  }
+
+  return commands;
+}
+
+function escapeSuggestionValue(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/"/g, '\\"');
+}
+
+
+
+
+
+
+
+
 
 
 
@@ -3022,7 +3169,7 @@ function replaceVariable(options, source, record, replacementPath, selector) {
   }
 
   const fileNewlineStats = options.sourceNewline || computeNewlineStats(source);
-  const replacementSource = loadReplacementSource(replacementPath);
+  const replacementSource = getReplacementSource(options);
   const normalizedReplacement = prepareNormalizedSnippet(
     replacementSource,
     fileNewlineStats.style,
@@ -3060,11 +3207,13 @@ function replaceVariable(options, source, record, replacementPath, selector) {
   }
 
   let postTarget = null;
+  let postMapper = null;
   let pathMatchFound = false;
   let fallbackUsed = false;
 
   if (target.pathSignature) {
-    const { variables: postVariables } = collectVariables(parsedAst, newSource);
+    const { variables: postVariables, mapper } = collectVariables(parsedAst, newSource);
+    postMapper = mapper;
     const postRecords = buildVariableRecords(postVariables);
 
     for (const candidate of postRecords) {
@@ -3114,7 +3263,7 @@ function replaceVariable(options, source, record, replacementPath, selector) {
       snippetAfter = workingSnippet;
       afterHash = fallbackTarget.hash;
     } else {
-      snippetAfter = extractCode(newSource, postTarget.span);
+      snippetAfter = extractCode(newSource, postTarget.span, postMapper);
       afterHash = postTarget.hash || createDigest(snippetAfter);
     }
   } else {
@@ -3208,6 +3357,7 @@ function replaceVariable(options, source, record, replacementPath, selector) {
 
 
 
+
 function replaceFunction(options, source, record, replacementPath, selector) {
   if (!record.replaceable) {
     throw new Error(
@@ -3293,15 +3443,15 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     if (end > workingSnippet.length) {
       throw new Error(`--replace-range end (${end}) exceeds the length of the target snippet (${workingSnippet.length}).`);
     }
-    const rangeReplacementSource = loadReplacementSource(replacementPath);
+    const rangeReplacementSource = getReplacementSource(options);
     const normalizedRangeReplacement = prepareNormalizedSnippet(
       rangeReplacementSource,
       fileNewlineStats.style
     );
     workingSnippet = `${workingSnippet.slice(0, start)}${normalizedRangeReplacement.text}${workingSnippet.slice(end)}`;
     replacementMeta = normalizedRangeReplacement;
-  } else if (replacementPath) {
-    const replacementSource = loadReplacementSource(replacementPath);
+  } else if (options.replacementPath || options.replacementCode) {
+    const replacementSource = getReplacementSource(options);
     const normalizedReplacement = prepareNormalizedSnippet(
       replacementSource,
       fileNewlineStats.style,
@@ -3326,7 +3476,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     throw new Error(`Replacement produced invalid JavaScript: ${error.message}`);
   }
 
-  const { functions: postFunctions } = collectFunctions(parsedAst, newSource);
+  const { functions: postFunctions, mapper: postMapper } = collectFunctions(parsedAst, newSource);
   const postRecord = postFunctions.find((fn) => fn.pathSignature === record.pathSignature) || null;
   if (postRecord) {
     guard.path = { status: 'ok', signature: record.pathSignature };
@@ -3340,7 +3490,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     }
   }
 
-  const snippetAfter = postRecord ? extractCode(newSource, postRecord.span) : workingSnippet;
+  const snippetAfter = postRecord ? extractCode(newSource, postRecord.span, postMapper) : workingSnippet;
   const afterHash = postRecord ? postRecord.hash : createDigest(snippetAfter);
   guard.result = {
     status: afterHash === beforeHash ? 'unchanged' : 'changed',
@@ -3427,6 +3577,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
 
 
 
+
 function measureParse(source, filePath) {
   const start = process.hrtime.bigint();
   const ast = parseModule(source, filePath);
@@ -3450,6 +3601,7 @@ function main(argv) {
     const variableRecords = buildVariableRecords(variables);
 
     options.sourceMapper = mapper;
+    options.sourceNewline = computeNewlineStats(source);
 
     if (options.benchmark && !options.json && !options.quiet) {
       fmt.info(`Parse time: ${durationMs.toFixed(2)} ms`);
@@ -3493,6 +3645,7 @@ function main(argv) {
     process.exitCode = 1;
   }
 }
+
 
 
 if (require.main === module) {

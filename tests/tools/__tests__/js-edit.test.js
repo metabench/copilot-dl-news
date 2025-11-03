@@ -339,6 +339,41 @@ describe('swcAst helpers', () => {
     const output = `${invalid.stderr}${invalid.stdout}`;
     expect(output).toContain('No functions found for hash');
   });
+  
+  test('locate supports hash-based selectors via --select hash:<value>', () => {
+    const inventoryResult = runJsEdit([
+      '--file',
+      fixturePath,
+      '--list-functions',
+      '--json'
+    ]);
+
+    if (inventoryResult.status !== 0) {
+      throw new Error(`list-functions failed: ${inventoryResult.stderr || inventoryResult.stdout}`);
+    }
+
+    const inventoryPayload = JSON.parse(inventoryResult.stdout);
+    const alphaEntry = inventoryPayload.functions.find((fn) => fn.canonicalName === 'exports.alpha');
+    expect(alphaEntry).toBeDefined();
+    const locateResult = runJsEdit([
+      '--file',
+      fixturePath,
+      '--locate',
+      'exports.alpha',
+      '--select',
+      `hash:${alphaEntry.hash}`,
+      '--json'
+    ]);
+
+    if (locateResult.status !== 0) {
+      throw new Error(`locate with hash selector failed: ${locateResult.stderr || locateResult.stdout}`);
+    }
+
+    const locatePayload = JSON.parse(locateResult.stdout);
+    expect(locatePayload.summary.matchCount).toBe(1);
+    expect(locatePayload.matches[0].hash).toBe(alphaEntry.hash);
+    expect(locatePayload.matches[0].canonicalName).toBe('exports.alpha');
+  });
 
   test('list-variables json surfaces binding metadata', () => {
     const result = runJsEdit([
@@ -424,6 +459,78 @@ describe('swcAst helpers', () => {
     expect(versionEntry.exportKind).toBe('commonjs-named');
     expect(versionEntry.scopeChain).toEqual(['exports']);
     expect(versionEntry.initializerType).toBe('NumericLiteral');
+  });
+  
+  test('--with-file resolves snippet paths relative to the target file directory', () => {
+    const inventoryResult = runJsEdit([
+      '--file',
+      fixturePath,
+      '--list-functions',
+      '--json'
+    ]);
+
+    if (inventoryResult.status !== 0) {
+      throw new Error(`list-functions failed: ${inventoryResult.stderr || inventoryResult.stdout}`);
+    }
+
+    const inventoryPayload = JSON.parse(inventoryResult.stdout);
+    const alphaEntry = inventoryPayload.functions.find((fn) => fn.canonicalName === 'exports.alpha');
+    expect(alphaEntry).toBeDefined();
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-with-file-'));
+    let tempFile;
+    try {
+      tempFile = path.join(tempDir, path.basename(fixturePath));
+      fs.copyFileSync(fixturePath, tempFile);
+
+      const extractResult = runJsEdit([
+        '--file',
+        fixturePath,
+        '--extract',
+        'exports.alpha',
+        '--json'
+      ]);
+
+      if (extractResult.status !== 0) {
+        throw new Error(`extract failed while preparing with-file snippet: ${extractResult.stderr || extractResult.stdout}`);
+      }
+
+      const extractPayload = JSON.parse(extractResult.stdout);
+      const originalSnippet = extractPayload.code;
+      const newline = originalSnippet.includes('\r\n') ? '\r\n' : '\n';
+      const replacementSnippet = originalSnippet.replace("return 'alpha';", `return 'with-file patched';`);
+      expect(replacementSnippet).not.toBe(originalSnippet);
+      const normalizedSnippet = replacementSnippet.endsWith(newline) ? replacementSnippet : `${replacementSnippet}${newline}`;
+      const relativeSnippetName = 'alpha-replacement.js';
+      const snippetPath = path.join(tempDir, relativeSnippetName);
+      fs.writeFileSync(snippetPath, normalizedSnippet);
+
+      const replaceResult = runJsEdit([
+        '--file',
+        tempFile,
+        '--replace',
+        'exports.alpha',
+        '--with-file',
+        relativeSnippetName,
+        '--expect-hash',
+        alphaEntry.hash,
+        '--json',
+        '--fix'
+      ]);
+
+      if (replaceResult.status !== 0) {
+        throw new Error(`replace with --with-file failed: ${replaceResult.stderr || replaceResult.stdout}`);
+      }
+
+      const payload = JSON.parse(replaceResult.stdout);
+      expect(payload.guard.hash.status).toBe('ok');
+      const updated = fs.readFileSync(tempFile, 'utf8');
+      expect(updated).toContain("return 'with-file patched';");
+    } finally {
+      if (tempDir && fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
   });
 
   test('locate-variable reports declarator metadata', () => {
@@ -1457,5 +1564,355 @@ describe('swcAst helpers', () => {
       expect(output).toContain('Replacement produced invalid JavaScript');
     });
   });
-})
+
+  describe('js-edit --with-code inline code', () => {
+    let tempDir;
+    let targetFile;
+
+    beforeEach(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-with-code-'));
+      targetFile = path.join(tempDir, 'sample.js');
+      fs.copyFileSync(fixturePath, targetFile);
+    });
+
+    afterEach(() => {
+      if (tempDir && fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('--with-code replaces with inline string (basic variable)', () => {
+      // Note: code should be VALID REPLACEMENT for the declarator binding part
+      // Original: const { ren, stimpy: renAlias } = cartoon;
+      // Becomes:  const { heroName, sidekick: heroAlias } = sources;
+      const code = '{ heroName, sidekick: heroAlias } = sources';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate-variable',
+        'ren',
+        '--json'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`locate-variable failed: ${result.stderr}`);
+      }
+
+      const locatePayload = JSON.parse(result.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const replaceResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--with-code',
+        code,
+        '--expect-hash',
+        expectedHash,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(replaceResult.status).toBe(0);
+      const replacePayload = JSON.parse(replaceResult.stdout);
+      expect(replacePayload.applied).toBe(true);
+      expect(replacePayload.guard.result.status).toBe('changed');
+
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain('{ heroName, sidekick: heroAlias } = sources');
+    });
+
+    test('--with-code handles escaped double quotes', () => {
+      const code = 'const msg = \\"hello world\\";';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate-variable',
+        'sequence',
+        '--variable-target',
+        'declaration',
+        '--json'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`locate-variable failed: ${result.stderr}`);
+      }
+
+      const locatePayload = JSON.parse(result.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const replaceResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'sequence',
+        '--variable-target',
+        'declaration',
+        '--with-code',
+        code,
+        '--expect-hash',
+        expectedHash,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(replaceResult.status).toBe(0);
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain('const msg = "hello world";');
+      expect(updated).not.toContain('\\"hello world\\"');
+    })
 ;
+
+    test('--with-code handles escaped backslashes (Windows paths)', () => {
+      const code = 'const filePath = \\"C:\\\\Users\\\\file.js\\";';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate-variable',
+        'sequence',
+        '--variable-target',
+        'declaration',
+        '--json'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`locate-variable failed: ${result.stderr}`);
+      }
+
+      const locatePayload = JSON.parse(result.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const replaceResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'sequence',
+        '--variable-target',
+        'declaration',
+        '--with-code',
+        code,
+        '--expect-hash',
+        expectedHash,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(replaceResult.status).toBe(0);
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain('C:\\Users\\file.js');
+      expect(updated).not.toContain('C:\\\\\\\\Users');
+    })
+;
+
+    test('--with-code rejects when both --with and --with-code provided', () => {
+      const code = 'const x = 1;';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--with',
+        'dummy.js',
+        '--with-code',
+        code
+      ]);
+
+      expect(result.status).not.toBe(0);
+      const output = `${result.stderr}${result.stdout}`;
+      expect(output).toContain('Cannot supply both --with/--with-file and --with-code');
+    });
+
+    test('--with-code rejects invalid JavaScript syntax', () => {
+      const code = 'const x = {';  // Incomplete object literal
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--with-code',
+        code,
+        '--json'
+      ]);
+
+      expect(result.status).not.toBe(0);
+      const output = `${result.stderr}${result.stdout}`;
+      expect(output).toContain('Replacement produced invalid JavaScript');
+    });
+
+    test('--with-code ensures trailing newline', () => {
+      const code = 'const x = 1;';  // No trailing newline
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--variable-target',
+        'declaration',
+        '--with-code',
+        code,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(result.status).toBe(0);
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      // Should contain the code with newline preserved/normalized
+      expect(updated).toContain('const x = 1;');
+    })
+;
+
+    test('--with-code supports multi-statement code', () => {
+      const code = 'const a = 1; const b = 2;';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate-variable',
+        'ren',
+        '--variable-target',
+        'declaration',
+        '--json'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`locate-variable failed: ${result.stderr}`);
+      }
+
+      const locatePayload = JSON.parse(result.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const replaceResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--variable-target',
+        'declaration',
+        '--with-code',
+        code,
+        '--expect-hash',
+        expectedHash,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(replaceResult.status).toBe(0);
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain('const a = 1; const b = 2;');
+    })
+;
+
+    test('--with-code works with --replace (functions)', () => {
+      const newFunc = 'function alpha() { return "updated"; }';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate',
+        'exports.alpha',
+        '--json'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`locate failed: ${result.stderr}`);
+      }
+
+      const locatePayload = JSON.parse(result.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const replaceResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'exports.alpha',
+        '--with-code',
+        newFunc,
+        '--expect-hash',
+        expectedHash,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(replaceResult.status).toBe(0);
+      const updated = fs.readFileSync(targetFile, 'utf8');
+      expect(updated).toContain('"updated"');
+      expect(updated).toContain('function alpha()');
+    })
+;
+
+    test('--with-code rejects empty code', () => {
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--with-code',
+        ''
+      ]);
+
+      expect(result.status).not.toBe(0);
+      const output = `${result.stderr}${result.stdout}`;
+      expect(output).toContain('--with-code requires non-empty code');
+    });
+
+    test('--with-code shows diff without --fix (dry-run)', () => {
+      const code = 'const { helper } = require("../new/path");';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--locate-variable',
+        'ren',
+        '--variable-target',
+        'declaration',
+        '--json'
+      ]);
+
+      if (result.status !== 0) {
+        throw new Error(`locate-variable failed: ${result.stderr}`);
+      }
+
+      const locatePayload = JSON.parse(result.stdout);
+      const expectedHash = locatePayload.matches[0].hash;
+
+      const dryRunResult = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace-variable',
+        'ren',
+        '--variable-target',
+        'declaration',
+        '--with-code',
+        code,
+        '--expect-hash',
+        expectedHash,
+        '--emit-diff',
+        '--json'
+      ]);
+
+      expect(dryRunResult.status).toBe(0);
+      const payload = JSON.parse(dryRunResult.stdout);
+      expect(payload.diff).toBeDefined();
+      expect(payload.diff.after).toContain('../new/path');
+      expect(payload.applied).toBe(false);
+
+      // File should not be modified
+      const content = fs.readFileSync(targetFile, 'utf8');
+      expect(content).not.toContain('../new/path');
+    })
+;
+
+    test('--with-code requires --replace or --replace-variable', () => {
+      const code = 'const x = 1;';
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--with-code',
+        code
+      ]);
+
+      expect(result.status).not.toBe(0);
+      const output = `${result.stderr}${result.stdout}`;
+      expect(output).toContain('Provide one of --list-functions');
+    })
+;
+  });
+});

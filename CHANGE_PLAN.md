@@ -54,6 +54,7 @@
 - 2025-11-11 (later): Injected grouped help sections into `parseCliArgs` and added Jest coverage ensuring `--help` surfaces examples, discovery commands, guardrails, selector hints, and output controls.
 - 2025-11-11 (even later): Added hash-directed selectors (`--select hash:<value>`), relative snippet loading via `--with-file`, and text-search follow-up suggestions across CLI output; extended Jest coverage and discovery docs to reflect the new workflows.
 - 2025-11-11 (latest): Expanded `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` with hash-driven workflows, search-text suggestion walkthroughs, and `--with-file` examples; discovery plan docs now in sync with implemented features.
+- 2025-11-11 (current): Local changes promoted onto `main`; final staging/commit/push in progress per operator request.
 
 ## Active Plan — js-edit Inline Code Diagnostics (Initiated 2025-11-02)
 

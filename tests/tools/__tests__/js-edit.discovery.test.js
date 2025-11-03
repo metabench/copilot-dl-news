@@ -89,5 +89,9 @@ describe('js-edit discovery helpers', () => {
     expect(workerMatch.guard.function.hash).toHaveLength(8);
     expect(workerMatch.snippet.highlighted).toContain('<<<');
     expect(workerMatch.snippet.highlighted).toContain('>>>');
+    expect(Array.isArray(workerMatch.suggestions)).toBe(true);
+    expect(workerMatch.suggestions.length).toBeGreaterThan(0);
+    const locateSuggestion = workerMatch.suggestions.find((command) => command.includes('--locate') && command.includes(`hash:${workerMatch.guard.function.hash}`));
+    expect(locateSuggestion).toBeDefined();
   });
 });
