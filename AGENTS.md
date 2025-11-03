@@ -838,6 +838,63 @@ Test-driven development patterns for reliable code changes. Every code change re
 
 ---
 
+## Jest Command Guidelines (CRITICAL)
+
+**Enforce simple command syntax without pipes for consistent agent behavior and fewer approval dialogs.**
+
+### Rule: No Piping in Jest Commands
+
+✅ **CORRECT - Simple, single-purpose commands**:
+```powershell
+npx jest tests/tools/__tests__/js-edit.test.js --forceExit
+npx jest tests/tools/__tests__/js-edit.test.js --bail=1
+npm test
+npm run test:focused
+```
+
+❌ **WRONG - Never use pipes or complex chaining**:
+```powershell
+# DO NOT DO THIS
+npx jest tests/tools/__tests__/js-edit.test.js --forceExit 2>&1 | Select-Object -Last 100
+npx jest tests/tools/__tests__/js-edit.test.js | grep "FAIL"
+npm test | tee test-output.log
+```
+
+### Explanation
+Pipes (`|`) trigger VS Code approval dialogs and cause inconsistent agent behavior. Use one of these approaches instead:
+
+1. **No piping - read full output**: Run Jest directly, let test framework write to screen
+   ```powershell
+   npx jest tests/tools/__tests__/js-edit.test.js --forceExit
+   ```
+
+2. **Write to file, then read**: For output analysis, write to file first
+   ```powershell
+   npx jest tests/tools/__tests__/js-edit.test.js > test-output.txt 2>&1
+   # Then use read_file tool to inspect test-output.txt
+   ```
+
+3. **Use configuration flags**: Jest supports all filtering via CLI flags
+   ```powershell
+   npx jest tests/tools/__tests__/js-edit.test.js --bail=1 --verbose
+   npx jest tests/tools/__tests__/js-edit.test.js --testNamePattern="with-code"
+   ```
+
+4. **Use Jest's reporters**: Let Jest handle output formatting
+   ```powershell
+   npx jest tests/tools/__tests__/js-edit.test.js --reporters=default --forceExit
+   ```
+
+### Impact on Agent Behavior
+- ✅ Commands execute without approval dialogs
+- ✅ Output is deterministic and consistent
+- ✅ Easier for agents to parse and verify results
+- ✅ Terminal remains available for follow-up commands
+- ❌ Avoid: Approval dialogs slow down agent execution
+- ❌ Avoid: Complex piping makes output unpredictable
+
+---
+
 ## Test Console Output
 
 **Keep output minimal** (<100 lines, ideally <50). Add noisy patterns to `tests/jest.setup.js` DROP_PATTERNS. Use `verbose: false` and `silent: true` flags in tests.

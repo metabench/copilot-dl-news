@@ -16,6 +16,9 @@
 3. Introduce `--search-text <substring>` to scan file contents (UTF-8 safe) and report each match with line/column, a short preview excerpt, and the guard hash/path of the enclosing function or variable when available.
 4. Update CLI help, README references, and quick-start guidance to surface the new discovery options and their guardrail relationship.
 5. Extend the focused Jest integration suite with fixtures covering filtering, preview output, and text-search result formatting (ASCII + JSON).
+6. Add `--select hash:<value>` parsing so operators can jump directly from guard hashes to a resolved record without JSON copy/paste.
+7. Introduce `--with-file <relative>` so inline edits can reference snippets relative to the target file without building absolute paths.
+8. Enhance text-search output with a ready-to-run `js-edit` command suggestion (selector + guard hash) for each match.
 
 ### Risks & Unknowns
 - Need to confirm selector resolution latency stays acceptable when `--search-text` maps matches back to enclosing records (may require cached inventories).
@@ -49,6 +52,47 @@
 - 2025-11-10 (later): Wired `--preview`, `--preview-variable`, and `--search-text` through CLI dispatch and added focused Jest coverage for the new discovery helpers.
 - 2025-11-11: Operator requested expanded `--help` output; scope includes grouping discovery flags (`--filter-text`, `--preview*`, `--search-text`) with detailed usage notes and cross-linking guardrail options.
 - 2025-11-11 (later): Injected grouped help sections into `parseCliArgs` and added Jest coverage ensuring `--help` surfaces examples, discovery commands, guardrails, selector hints, and output controls.
+- 2025-11-11 (even later): Added hash-directed selectors (`--select hash:<value>`), relative snippet loading via `--with-file`, and text-search follow-up suggestions across CLI output; extended Jest coverage and discovery docs to reflect the new workflows.
+- 2025-11-11 (latest): Expanded `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` with hash-driven workflows, search-text suggestion walkthroughs, and `--with-file` examples; discovery plan docs now in sync with implemented features.
+
+## Active Plan — js-edit Inline Code Diagnostics (Initiated 2025-11-02)
+
+### Goal
+- Audit the newly added `--with-code` workflow, document why the current inline-code Jest cases fail, and publish a diagnostic review for operators.
+
+### Current Behavior
+- `tools/dev/js-edit.js` now unescapes `--with-code` arguments and validates syntax before applying replacements.
+- Several inline-code Jest tests expect the CLI to succeed, but the most recent run (`npx jest tests/tools/__tests__/js-edit.test.js --forceExit --reporters=default --testNamePattern="with-code"`) fails seven cases.
+- Failure messages show syntax reparse errors (e.g., duplicated `const` tokens) and outdated expectations for CLI error text.
+
+### Proposed Changes
+1. Reproduce the failing CLI invocations against temp copies of `tests/fixtures/tools/js-edit-sample.js` to capture exact error output from js-edit.
+2. Compare the expected snippets in each test with the variable/function spans js-edit replaces to understand why syntax validation rejects them.
+3. Summarize findings (root cause, reproduction steps, recommended fixes) in a formal diagnostic under `docs/review/` for future agents.
+
+### Risks & Unknowns
+- No code edits planned, but reproduction commands must avoid mutating fixtures.
+- Ensure documentation clearly distinguishes declarator vs. declaration replacements so readers don’t repeat the same mistakes.
+
+### Integration Points
+- `tools/dev/js-edit.js` (inline replacement flow, newline normalization, guardrails).
+- `tools/dev/lib/codeEscaper.js` (unescape + syntax validation logic).
+- `tests/tools/__tests__/js-edit.test.js` (failing cases to reference in the diagnostic).
+
+### Docs Impact
+- Create a diagnostic in `docs/review/` capturing the investigation, outputs, and guidance for repairing the tests or adjusting CLI usage.
+
+### Focused Test Plan
+- Observation-only: `npx jest tests/tools/__tests__/js-edit.test.js --forceExit --reporters=default --testNamePattern="with-code"` to capture failures; no additional suites required.
+
+### Rollback Plan
+- Documentation-only effort; if diagnostic causes confusion, revert the new review file and associated plan notes.
+
+### Branch & Notes
+- Working branch: `chore/js-edit-light-discovery` (matches active workspace state; no new branch needed for read-only review).
+- 2025-11-02: Confirmed js-edit rejects inline snippets that duplicate declaration keywords (`const` added twice) and that CLI now exits earlier when no primary operation flag is supplied — both behaviors will be captured in the diagnostic.
+- 2025-11-11: Updated inline-code Jest specs to pass `--variable-target declaration`, corrected hash extraction for function replacements, refreshed the misuse error expectation, and verified with `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --testNamePattern="with-code"` (passing).
+- 2025-11-11 (later): Upcoming work expands the discovery helpers with hash-based `--select`, relative `--with-file`, and search command suggestions; implementation pending.
 
 ## Active Plan — js-edit Byte Mapping Reliability (Initiated 2025-11-02)
 
@@ -110,6 +154,7 @@
 - **2025-11-09:** Extended function replacement guard-plan coverage so newline metadata is asserted for both immediate guard payloads and emitted plan files; rerun focused Jest after remaining updates.
 - **2025-11-02 (evening):** Confirmed CRLF regression test now covers `replaceVariable` fallback, scoped upcoming span/byte summarisation work to `renderGuardrailSummary`, `formatSpanDetails`, `buildPlanPayload`, and locate/context table renderers prior to implementation.
 - **2025-11-10:** Prep next pass: share cached `ByteMapper` with context/extract/replace flows (both functions and variables), reuse normalized spans across CLI helpers, and extend regression fixtures to cover multi-byte + CRLF mixes once wiring lands.
+- **2025-11-11:** Starting ByteMapper follow-up — cache newline stats during main parse, reuse the shared mapper when re-collecting post-replacement records, and script additional multi-byte + mixed newline regression tests to lock in the behaviour.
 
 ### Next Implementation Steps
 1. ✅ Validate the new `replaceVariable` fallback workflow across CRLF fixtures so guard hashes/path checks stay stable when post-replacement spans collapse to zero length. (2025-11-08 via updated replace-variable Jest spec.)
@@ -233,6 +278,7 @@
 - **Tooling Friction:** `js-edit` replacement guard currently rejects class-method records even with `--force`; collector changes must elevate `replaceable` flag and CLI must accept the new kind.
 - **2025-11-10:** Begin guardrail follow-up: adjust `replaceFunction` messaging + validation to acknowledge class methods, then add focused CLI replacement test cases for static/private/accessor methods using CRLF fixture variants.
 - **2025-11-10 (late):** Added CLI regression covering `exports.NewsSummary > static > initialize` replacement to confirm guard hashes/path checks succeed against class methods copied to temp targets.
+- **2025-11-11:** Extend class-method coverage to getters, instance, and private methods while tightening guardrail messaging/path checks so replacements succeed across method kinds without forcing overrides.
 
 ---
 

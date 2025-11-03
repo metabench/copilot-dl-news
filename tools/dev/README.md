@@ -18,7 +18,7 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 ### Core Commands
 
 - `--replace <selector> --rename <identifier>` — rename the located function without providing an external snippet (identifier must exist on the target).
-- `--replace <selector> --with <file> --replace-range start:end` — swap only the specified character range (0-based, end-exclusive) within the located function using the supplied snippet.
+- `--replace <selector> --with <file> --replace-range start:end` — swap only the specified character range (0-based, end-exclusive) within the located function using the supplied snippet. Prefer `--with-file <relativePath>` when the replacement snippet lives alongside the target file; js-edit resolves the path relative to the target file’s directory.
 - `--locate-variable <selector>` / `--extract-variable <selector>` / `--replace-variable <selector> --with <file>` — perform the same guarded locate/extract/replace workflow for variable bindings (including destructured declarators and CommonJS assignments). Combine with `--variable-target <binding|declarator|declaration>` to choose which span/hash/path guardrails to emit. Variable replacements require `--with <file>` and honour `--expect-hash` the same way function replacements do.
 
 Locate/context tables and JSON payloads report both UTF-16 code-unit offsets and raw byte offsets. Each entry includes `charSpanRange` and `byteSpanRange` summaries so agents can reason about guardrails even when newline normalization or multi-byte glyphs change the byte footprint.
@@ -26,12 +26,13 @@ Locate/context tables and JSON payloads report both UTF-16 code-unit offsets and
 ### Lightweight Discovery Helpers
 
 - `--preview <selector>` / `--preview-variable <selector>` return concise snippets (default 240 chars) for functions or variables along with the same guard metadata you would capture from `--locate`. Adjust the window with `--preview-chars <n>` when you need a little more context without invoking the full context machinery.
-- `--search-text <substring>` scans the file for plain-text matches, reporting each hit with line/column, a highlighted context window (default ±60 chars), and the guard hashes/path signatures of any enclosing function or variable. Use `--search-limit <n>` and `--search-context <n>` to tune result volume and surrounding context.
+- `--search-text <substring>` scans the file for plain-text matches, reporting each hit with line/column, a highlighted context window (default ±60 chars), and the guard hashes/path signatures of any enclosing function or variable. Use `--search-limit <n>` and `--search-context <n>` to tune result volume and surrounding context. JSON payloads now include ready-to-run follow-up commands (`--locate`/`--locate-variable` with `--select hash:<value>`) so you can jump straight from a text match into a guarded locate phase.
 - All discovery commands honour `--json`, `--emit-plan`, and existing guardrail conventions so a quick preview or search can feed directly into downstream automation without a second locate pass.
 
 Selectors accept optional disambiguation flags:
 
 - `--select <index>` — choose the nth match in source order (1-based).
+- `--select hash:<value>` — resolve the selector by guard hash (combine with canonical names so ambiguous callbacks/class methods jump straight to a recorded digest).
 - `--select-path <signature>` — require an exact path signature.
 - `--allow-multiple` — skip uniqueness enforcement for `--locate` when inspecting batches.
 
@@ -118,6 +119,27 @@ node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #ren
 # Guarded variable replacement using declarator spans
 node tools/dev/js-edit.js --file src/example.js --locate-variable "exports.settings" --variable-target declarator --json
 node tools/dev/js-edit.js --file src/example.js --replace-variable "exports.settings" --with tmp/settings.snippet.js --expect-hash <hash-from-locate> --variable-target declarator --emit-diff --fix
+```
+
+### Hash-Driven Selection & Relative Snippets
+
+```powershell
+# Capture guard hashes once, re-use them later (table output includes the digest too)
+node tools/dev/js-edit.js --file src/example.js --list-functions --json > tmp/functions.json
+
+# Jump straight to a recorded digest without retyping long selectors
+node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render" --select hash:TsFu9ZSc --json
+
+# Pivot from a text search into guarded commands via the suggestions payload
+node tools/dev/js-edit.js --file src/example.js --search-text "dispatchAction" --json > tmp/search.json
+# Each match contains suggestions[], e.g. "js-edit --file \"src/example.js\" --locate \"exports.Widget > #render\" --select hash:TsFu9ZSc"
+
+# Apply an update using a snippet stored next to the target file
+$tempDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP 'js-edit-demo')
+$tempFile = Copy-Item src/example.js (Join-Path $tempDir.FullName 'example.js') -PassThru
+Set-Content (Join-Path $tempDir.FullName 'render.patch.js') "export function render()\n{\n  return dispatchAction();\n}\n"
+node tools/dev/js-edit.js --file $tempFile.FullName --replace exports.render --with-file render.patch.js --expect-hash TsFu9ZSc --emit-diff --json --fix
+Remove-Item $tempDir.FullName -Recurse -Force
 ```
 
 Additional examples and guardrail details live in `docs/CLI_REFACTORING_QUICK_START.md`.

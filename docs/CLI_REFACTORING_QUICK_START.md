@@ -251,11 +251,13 @@ fmt.table([
 - Variable bindings now participate in the guarded workflow: `--locate-variable`, `--extract-variable`, and `--replace-variable` share selectors/guards with function operations, and `--variable-target <binding|declarator|declaration>` lets you choose whether to guard just the identifier, the declarator, or the entire statement.
 - Recognised call-site callbacks (`describe`, `it`, `test`, `beforeEach`, `afterAll`, etc.) are emitted with canonical `call:*` selectors. These callbacks participate in the guarded replace workflow, so you can patch Jest/Mocha hooks with the same hash/span guardrails used for declarations.
 - Locate/context tables and JSON payloads expose both character-based offsets (UTF-16 code units) and raw byte offsets; summaries include `charSpanRange` and `byteSpanRange` so newline conversions or multi-byte glyphs are visible before edits land.
+- Disambiguate collisions with `--select <index>` (1-based source order) or `--select hash:<value>` when you already captured a guard hash from `--list-functions`/`--locate`; mixing selectors with hash pins is the fastest path back to an exact node after text searches or multi-match queries.
+- `--with-file <relativePath>` resolves replacement snippets relative to the target file’s directory, so temp copies and co-located patches can be applied without guessing the repo root.
 - Emits locate tables and JSON payloads via `CliFormatter`, making automation straightforward.
 - Enforces guardrails (span/hash/path/syntax) before writing; results appear in a dedicated table and JSON block, and optional `--expect-hash`/`--expect-span` inputs let you replay the exact metadata captured during a prior locate run.
 - Hashes shown in locate/context/plan payloads are base64 digests trimmed to eight characters by default so agents get concise guard tokens; switch the constants in `tools/dev/lib/swcAst.js` to fall back to a longer base16 form if a workflow needs it.
 
-**Lightweight discovery helpers.** `--preview <selector>` / `--preview-variable <selector>` emit short snippets (default 240 chars) alongside the same hash/path/span metadata reported by `--locate`, making it easy to confirm a match before running a heavier context or locate command. `--search-text <substring>` performs a plain-text scan that highlights each hit, surfaces enclosing function/variable guard hashes, and respects `--search-limit` / `--search-context` knobs so automation can pivot from a literal search directly into guarded edits.
+**Lightweight discovery helpers.** `--preview <selector>` / `--preview-variable <selector>` emit short snippets (default 240 chars) alongside the same hash/path/span metadata reported by `--locate`, making it easy to confirm a match before running a heavier context or locate command. `--search-text <substring>` performs a plain-text scan that highlights each hit, surfaces enclosing function/variable guard hashes, and respects `--search-limit` / `--search-context` knobs so automation can pivot from a literal search directly into guarded edits. JSON payloads now include suggested follow-up commands (e.g., `--locate … --select hash:<value>`) so you can jump straight from a literal hit into a guarded locate invocation without copying hashes manually.
 
 ### Selector + Guardrail Flow
 
@@ -276,7 +278,24 @@ Guard plans mirror the JSON payload’s `plan` block and include the selector, e
 
 Guard summaries and plans now report dual span metrics (`charSpanRange` + `byteSpanRange`) alongside individual offsets, ensuring drift caused by newline normalization or multi-byte glyphs is obvious during review.
 
-**Targeted edits:** Add `--replace-range start:end` (0-based, end-exclusive, relative to the located function) when you only need to swap a specific slice of the function body using `--with <file>`. For identifier-only tweaks, use `--rename <identifier>` with `--replace <selector>`—no snippet required, and the helper updates just the declaration name while guardrails ensure the rest of the function remains untouched.
+**Targeted edits:** Add `--replace-range start:end` (0-based, end-exclusive, relative to the located function) when you only need to swap a specific slice of the function body using `--with <file>` or `--with-file <relativePath>`. For identifier-only tweaks, use `--rename <identifier>` with `--replace <selector>`—no snippet required, and the helper updates just the declaration name while guardrails ensure the rest of the function remains untouched.
+
+**Search-to-Guarded Edit Workflow.** The `suggestions` array returned by `--search-text --json` bridges literal matches to guarded commands:
+
+1. Run `node tools/dev/js-edit.js --file src/example.js --search-text dispatchAction --json > tmp/search.json`.
+2. Pick a match and copy one of the generated suggestions, e.g. `js-edit --file "src/example.js" --locate "exports.Widget > #render" --select hash:TsFu9ZSc`.
+3. Execute the suggestion to jump directly to the recorded guard hash without retyping the selector or scanning tables.
+4. Follow up with a dry-run replacement (`--replace`, `--expect-hash`, `--emit-diff`) or context inspection as usual.
+
+**Relative snippet replacement.** When you keep patch files next to the target file, `--with-file` resolves the path for you:
+
+```powershell
+$temp = Copy-Item src/example.js (Join-Path $env:TEMP 'example.js') -PassThru
+Set-Content (Join-Path (Split-Path $temp -Parent) 'render.patch.js') "export function render() {\n  return dispatchAction();\n}\n"
+node tools/dev/js-edit.js --file $temp.FullName --replace exports.render --with-file render.patch.js --expect-hash TsFu9ZSc --emit-diff --json --fix
+```
+
+The CLI reports the resolved snippet path in the guard summary, making audits straightforward even when replacements originate from temporary directories.
 
 ### Variable Guardrail Flow
 

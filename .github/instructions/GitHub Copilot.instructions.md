@@ -108,6 +108,7 @@ If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to
 - Use analyzer without grep to see ALL failing tests
 - Prioritization still applies: structural → high-attempt → regressions → hanging
 - Follow Phase 3 systematic fixing workflow (one test at a time)
+- **IMPORTANT**: Run Jest WITHOUT pipes - use simple commands only (see AGENTS.md "Jest Command Guidelines")
 
 #### "Continue fixing simple errors" or "Fix a bunch of them" → AUTONOMOUS BATCH MODE:
 
