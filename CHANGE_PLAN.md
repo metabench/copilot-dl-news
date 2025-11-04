@@ -1,5 +1,97 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — Migration Export Gitignore Hygiene (Initiated 2025-11-04)
+
+### Goal
+- Ensure large exported JSON/NDJSON artifacts produced during migration runs stay out of version control by adding the appropriate ignore patterns.
+
+### Current Behavior
+- Migration export runs drop sizable `.json`/`.ndjson` files under `migration-export/`, `migration-temp/`, and similar directories. Some of these paths are not yet covered by `.gitignore`, so rerunning exports dirties the working tree and risks accidental commits.
+
+### Proposed Changes
+1. Audit existing ignore rules in `.gitignore` to confirm which migration export directories are already covered.
+2. Add targeted ignore patterns for the remaining exported JSON/NDJSON artifacts (e.g., `migration-export/**/*.json`, `migration-export/**/*.ndjson`, and any other export staging locations) while leaving manifests or checked-in fixtures untouched.
+3. Verify the ignore list by checking `git status` to ensure newly created export artifacts do not appear as untracked files.
+
+### Risks & Unknowns
+- Need to avoid over-broad patterns that would hide intentionally committed manifests or fixture data (e.g., small JSON configs that belong in version control).
+- Must confirm the ignore rules stay Windows/PowerShell friendly and do not conflict with existing entries.
+
+### Integration Points
+- Repository root `.gitignore` (text file; editing via `apply_patch` since js-edit targets JavaScript only).
+- Migration tooling directories (`migration-export/`, `migration-temp/`, `data/exports/`) to identify artifact naming conventions.
+
+### Docs Impact
+- None anticipated; `.gitignore` update should be self-explanatory.
+
+### Focused Test Plan
+- Manual: regenerate or touch representative export files (if needed) and confirm `git status` stays clean after updating `.gitignore`.
+
+### Rollback Plan
+- Revert `.gitignore` changes if ignore rules prove too aggressive or hide required files.
+
+### Branch & Notes
+- Working branch: `main` (small hygiene update; no feature branch required).
+- Editing approach: `.gitignore` is not JavaScript, so js-edit is bypassed; documenting rationale here per Careful js-edit Builder protocol.
+- 2025-11-04: Cleared stale `index.lock`, ran `git rm --cached -r migration-export` so existing exports drop out of version control before the new ignore patterns take effect.
+
+## Active Plan — Phase 0 Migration Tooling (Initiated 2025-11-03)
+
+### Goal
+- Deliver the Phase 0 migration toolkit so we can audit the current schema, export/import data sets, and validate results without touching application code.
+
+### Current Behavior
+- Schema checks and exports are manual one-offs (ad-hoc SQL, SQLite CLI, loose scripts) with no shared manifest or version tracking.
+- There is no CLI workflow to capture backups, run orchestrated migrations, or summarize validation status in a consistent way.
+- Existing docs outline the desired modules (`SchemaVersionManager`, exporter/importer, validator, orchestrator) but the repository lacks hardened implementations and tests tying them together.
+
+### Proposed Changes
+1. Implement the core migration modules under `src/db/migration/` (version manager, exporter, importer, validator, orchestrator) with reusable APIs that match the Phase 0 doc.
+2. Wire up a CLI (`tools/migration-cli.js`) that can report status, perform exports/imports, run full migrations, and validate the database, including support for configurable paths.
+3. Add focused tests (better-sqlite3 temp DB fixtures) covering version tracking, export/import round trips, validation rules, and orchestrated flows so we can trust the toolkit before touching production data.
+4. Document the workflow in `src/db/migration/README.md` and cross-link the CLI usage in the docs index so future agents know how to run the tooling.
+
+### Risks & Unknowns
+- Better-sqlite3 based exports/imports may surface platform-specific filesystem quirks (Windows path limits, locked files) that require retries or defensive error handling.
+- Large tables could make naive SELECT * streaming fragile; we need to ensure batch iteration doesn’t exhaust memory or hang under pressure.
+- CLI ergonomics (path parsing, environment overrides) must play nicely with existing command rules to avoid PowerShell approval prompts.
+
+### Integration Points
+- `src/db/sqlite/v1/ensureDb.js` for database handles in tests and CLI workflows.
+- `tools/` command suite for migration CLI integration, plus existing docs under `docs/PHASE_0_IMPLEMENTATION.md`.
+- Jest infrastructure for new migration-focused test suites under `src/db/migration/__tests__/`.
+
+### Docs Impact
+- Update or create `src/db/migration/README.md` and reference the CLI in `docs/PHASE_0_IMPLEMENTATION.md`/`docs/DATABASE_MIGRATION_STRATEGY.md` once tooling is validated.
+- Potentially add a short entry to `AGENTS.md` pointing agents to the new toolkit.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath src/db/migration/__tests__/schema-versions.test.js src/db/migration/__tests__/validator.test.js src/db/migration/__tests__/orchestrator.test.js --bail=1 --maxWorkers=50%` (and extend with new exporter/importer suites once they land).
+- Ad-hoc manual smoke tests via `node tools/migration-cli.js status|export|validate` against a temp database copy.
+
+### Rollback Plan
+- Revert the migration module/CLI additions and remove the new tests/docs; since Phase 0 tooling is isolated from application code, rollback is limited to deleting those files and restoring package.json if dependencies were added.
+
+### Branch & Notes
+- Working branch: `main` (js-edit work already lives here; stay put to avoid juggling dirty state across branches).
+- Current blockers: none; need to allocate time for batch streaming tests to ensure exporter/importer handle multi-thousand row fixtures without locking issues.
+- 2025-11-03: Align CLI import defaults with orchestrator export directory, then rerun migration-focused Jest suite to confirm behaviour.
+- 2025-11-03: Introduce importer table reset (or duplicate-safe inserts) so migrations into freshly provisioned databases avoid primary key collisions; capture approach in docs once validated.
+- 2025-11-03: Investigate validator failure; discovered `seedTestData` inserts into `http_responses` without the NOT NULL `request_started_at`, so rows are skipped and validation reports 5 orphaned URLs — patch seed helper to populate this column before rerunning migration tests.
+- 2025-11-03: Refresh validator tests to build manifests from live row counts, cover content storage FK violations, and assert URL→response integrity; suite now green alongside the orchestrator tests.
+- 2025-11-03 (later): Full migration run against `data/news.db` failed during the import step for `url_aliases` (`SQLiteError: near "exists": syntax error`), leaving downstream tables like `content_storage` empty and validation reporting five errors; need to adjust importer SQL for reserved column names before retrying.
+- 2025-11-11: Post-quoting retry now highlights `content_storage` and `fetches` importing zero rows because BLOB payloads arrive as `{ type: 'Buffer', data: [...] }`; update importer batch insert to coerce these objects to Node `Buffer` instances before rerunning migration.
+- 2025-11-11 (later): Follow-up migration run still flags `fetches` as empty; manual reproduction shows `SQLiteError: no such column: NEW.url` via triggers created by schema init. Need to suppress or rewrite the `fetches` triggers (they reference a legacy `url` column absent from exports) before retrying the migration validation step.
+- 2025-11-11 (latest): Full migration now streams all tables, and `fetches` counts align after trigger rewrite. Validator failures stem from integrity checks expecting zero orphaned `urls`/`content_storage` rows even though the source database reports 199,318 and 8 respectively; plan is to compare target vs. source counts instead of enforcing zero so true regressions still surface. Also observed intermittent export failure for `queue_events.ndjson` (`UNKNOWN: unknown error, open ...`); investigate stale file/locking before final rerun.
+- 2025-11-11 (latest+1): Updated validator to compare integrity metrics against the source database (captures expected vs. actual + delta), refreshed tests to cover the new semantics, and reran the full migration — validation now passes and `queue_events` export succeeds after clearing the stale NDJSON artifact.
+- 2025-11-12: Reviewed `migration-temp/news-migrated.db` post-run; `article_places` still carries the legacy `article_url` TEXT column plus indexes/unique constraint on that field even though every row now has `article_url_id`. Column drop + index/constraint remap remain outstanding migration work.
+- 2025-11-12 (later): Updated schema blueprint to remove `article_url`, switch constraints/indexes to `article_url_id`, taught the importer to ignore exported columns missing from the target schema (with cached PRAGMA lookups + one-time warnings), and tightened the normalization validator so denormalized columns fail validation when populated.
+- 2025-11-03: Ran `node tools/migration-cli.js migrate migration-temp/news-migrated.db --db-path data/news.db --export-dir migration-export` against the refreshed schema (deleting the previous migrated DB first) and confirmed `article_places` now ships without the legacy `article_url` column. The URL normalization validator passes (`node src/tools/normalize-urls/validate-url-normalization.js migration-temp/news-migrated.db`), but the exporter still intermittently fails to emit `queue_events.ndjson`; need a follow-up cleanup of the export directory so the next full run captures that table instead of skipping it.
+- 2025-11-03 (later): Tooling TODOs before declaring victory — (a) update the exporter to remove/overwrite pre-existing NDJSON files safely so Windows doesn't raise `UNKNOWN: unknown error, open ...` during the `queue_events` export, and (b) ensure migration orchestrator closes out streaming statements so the CLI stops exiting with "database connection is busy" after success. Once both land, rerun the full migrate → validate workflow end-to-end.
+- 2025-11-12 (in progress): Begin exporter cleanup pass — add a pre-run removal step for stale NDJSON files and ensure table iterators release their statements even if the stream ends early or throws. Validate changes with a focused export of `queue_events` before running the full migration again.
+- 2025-11-12 (in progress+1): Latest migrate run succeeded overall, but `content_analysis.ndjson` still throws `EBUSY` during the pre-run delete. Add a retry/backoff around the removal step so Windows unlocks the file before export resumes, then re-run migrate to confirm a clean manifest.
+- 2025-11-12 (complete): Added retry/backoff to the exporter’s pre-run delete and reran the full migrate workflow. Manifest now shows every table (including `content_analysis`) exported with row counts, and the CLI finished without "database connection is busy" warnings.
+
 ## Active Plan — js-edit Lightweight Discovery Helpers (Initiated 2025-11-09)
 
 ### Goal
@@ -216,6 +308,7 @@
 - **Session Date:** 2025-11-04
 - **Knowledge Gaps:** need definitive location of `NewsDatabase._ensureUrlId`; confirm existing URL helper coverage for queue/task flows.
 - **Tooling Friction:** `js-edit --list-functions` output for large files is unwieldy; consider future flag to filter by name prefix or line range. `js-edit` currently reports `replace` as unsupported on class methods like `ArticleOperations#_ensureUrlId`, so fallback editing was required.
+- **Tooling Friction:** `js-edit --list-functions` output for large files is unwieldy; consider future flag to filter by name prefix or line range. `js-edit` currently reports `replace` as unsupported on class methods like `ArticleOperations#_ensureUrlId`, so fallback editing was required. Updating `schema-definitions.js` exposed another limitation — `--replace-variable` cannot target a slice of a large array initializer, making it impossible to swap a single CREATE TABLE statement without rewriting the 33k-char payload. Future js-edit work should allow element-level replacement or range-limited edits for variable initializers.
 
 ### Execution Checklist
 - [ ] Capture baseline metrics (schema fingerprint, per-table row counts, NULL coverage for `url` fields).
@@ -229,6 +322,8 @@
 - [ ] Add/extend Jest coverage and migration regression tests.
 - [ ] Update documentation (normalization guides, API references, rollout instructions).
 - [ ] Provide verification SQL/CLI snippets and capture rollout guidance in this plan.
+- [ ] Recreate `article_places` without the legacy `article_url` column (make `article_url_id` NOT NULL, rebuild the UNIQUE constraint + covering index on the ID column, and ensure importer/exporter flows accept the new schema).
+- [ ] Update migration tooling/validator so imports drop ignored columns automatically and the URL normalization validator fails when denormalized columns remain populated.
 
 ---
 

@@ -37,8 +37,23 @@ data/
 # Large NDJSON exports and backups
 *.ndjson
 gazetteer-backup/
+
+# Migration export artifacts (generated during Phase 0 tooling runs)
 migration-export/
+migration-export/**/*.ndjson
+migration-export/**/*.json
+migration-export/**/*.sql
+
+# Migration temp workspace (rewritten on each run)
 migration-temp/
+migration-temp/**/*.ndjson
+migration-temp/**/*.json
+migration-temp/**/*.sql
+
+# Data export staging directories
+data/exports/
+data/exports/**/*.ndjson
+data/exports/**/*.json
 
 # Test logs directory (can grow to thousands of files)
 testlogs/
