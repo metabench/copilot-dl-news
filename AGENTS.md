@@ -52,6 +52,12 @@ const taskCategories = {
 | `tools-correction-scripts` | Safe data manipulation and correction workflows | When creating data manipulation tools | tools, correction, data-manipulation | 2025-10-19 |
 | `test-log-migration` | Safe migration and management of test logs | When repository has many old logs | testing, logs, migration | 2025-10-19 |
 | `database-schema-tools` | Quick database inspection without dialogs | When needing database structure info | database, schema, tools | 2025-10-19 |
+| `database-overview` | Database architecture, connections, and operational SLOs | When understanding database setup and ownership | database, architecture, operations | 2025-11-04 |
+| `database-schema-main` | Detailed SQLite schema with tables, domains, and triggers | When working with specific tables or understanding data flow | database, schema, tables | 2025-11-04 |
+| `database-adapters-news-sqlite` | News SQLite adapter family and v1 implementation | When using or extending the base database adapter | database, adapters, sqlite | 2025-11-04 |
+| `database-adapters-enhanced` | Enhanced adapter with queue/planner/coverage modules | When implementing advanced analytics features | database, adapters, analytics | 2025-11-04 |
+| `database-migrations-policy` | Migration authoring, review, and rollback procedures | When planning or executing schema changes | database, migrations, policy | 2025-11-04 |
+| `database-ops-runbooks` | Operational runbooks for backups, maintenance, partitioning | When performing database operations or troubleshooting | database, operations, maintenance | 2025-11-04 |
 | `tdd-guidelines` | Ensures reliable code changes through testing | When implementing new features | testing, tdd, development | 2025-10-19 |
 | `intelligent-crawl-startup` | Rapid iteration on crawl startup output | When improving startup output | crawls, startup, analysis | 2025-10-19 |
 | `testing-focused-workflow` | Targeted test development patterns | When developing features with comprehensive test coverage | testing, workflow, development | 2025-10-19 |
@@ -103,6 +109,10 @@ const taskCategories = {
 | Analyze false positive test results | `docs/POST_MORTEM_FALSE_POSITIVE_TEST_RESULTS.md` | When investigating unexpected test failures |
 | Plan database migration strategy | `docs/DATABASE_MIGRATION_STRATEGY.md` | When planning large-scale database changes |
 | Review phase 6 test fixing insights | `docs/documentation-review/2025-10-10-phase-6-test-fixing-insights.md` | When learning from recent testing improvements |
+| Understand database schema | `docs/database/schema/main.md` ⭐ | `docs/database/overview.md` |
+| Perform database operations | `docs/database/ops/runbooks/` | `docs/database/overview.md` |
+| Use database adapters | `docs/database/adapters/` | `docs/database/overview.md` |
+| Plan database migrations | `docs/database/migrations/policy.md` ⭐ | `docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md` |
 
 **Analysis run linkage (October 2025)**: `analysis_runs` now includes `background_task_id` and `background_task_status`. New analysis runs started through `BackgroundTaskManager` **must** populate both fields so the `/analysis` list can render the “Task” column and deep-link to `/api/background-tasks/{id}`. Legacy rows may leave them `NULL`.
 

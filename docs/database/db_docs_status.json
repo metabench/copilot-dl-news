@@ -1,0 +1,36 @@
+{
+  "generated_by": "database_docs_auditor",
+  "generated_at": "2025-11-04T12:00:00Z",
+  "environments": ["dev"],
+  "artifacts": {
+    "inventory": "./_artifacts/inventory.json",
+    "adapter_map": "./_artifacts/adapter_map.json",
+    "schema": {
+      "sqlite_dev": "./_artifacts/news_db_schema.sql"
+    },
+    "metadata": [
+      "./_artifacts/news_db_tables.json",
+      "./_artifacts/news_db_stats.json"
+    ],
+    "ops_runbooks": [
+      "./ops/runbooks/backups.md",
+      "./ops/runbooks/restores.md",
+      "./ops/runbooks/vacuum_analyze.md",
+      "./ops/runbooks/reindex.md",
+      "./ops/runbooks/partitioning.md",
+      "./ops/runbooks/archiving_retention.md"
+    ],
+    "drift": "./_artifacts/schema_drift.md"
+  },
+  "sections": {
+    "inventory": "complete",
+    "snapshots": "partial",
+    "drift": "complete",
+    "overview": "complete",
+    "schema_docs": "complete",
+    "adapters": "complete",
+    "migrations": "complete",
+    "ops": "complete",
+    "consistency": "complete"
+  }
+}

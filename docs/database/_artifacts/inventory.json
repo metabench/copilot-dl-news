@@ -1,0 +1,60 @@
+{
+  "migrations": [
+    "src/db/migrations/006-hierarchical-planning.sql",
+    "src/db/migrations/007-content-access-logging.sql",
+    "src/db/migrations/008-article-place-matching.sql",
+    "src/db/migrations/008-article-place-relations.sql",
+    "src/db/migrations/008-fix-article-place-relations.sql",
+    "src/db/migrations/url-normalization-schema.sql",
+    "src/db/sqlite/v1/migrations/add_news_websites_table.sql"
+  ],
+  "raw_sql": [
+    "docs/phase4-create-views.sql",
+    "tools/manual-tests/archive/temp_delete.sql"
+  ],
+  "orms": [],
+  "adapters": [
+    {
+      "family": "news_sqlite",
+      "db": "sqlite",
+      "version": "v1",
+      "paths": [
+        "src/db/sqlite/index.js",
+        "src/db/sqlite/v1/index.js",
+        "src/db/sqlite/v1/SQLiteNewsDatabase.js",
+        "src/db/sqlite/v1/SchemaInitializer.js",
+        "src/db/sqlite/v1/ArticleOperations.js",
+        "src/db/sqlite/v1/schema-definitions.js",
+        "src/db/sqlite/v1/queries"
+      ],
+      "entrypoints": [
+        "src/db/sqlite/v1/index.js"
+      ],
+      "exports": [
+        "createSQLiteDatabase",
+        "SQLiteNewsDatabase",
+        "NewsDatabase",
+        "ensureDatabase",
+        "wrapWithTelemetry",
+        "createInstrumentedDb"
+      ]
+    },
+    {
+      "family": "enhanced_adapter",
+      "db": "sqlite",
+      "version": "v1",
+      "paths": [
+        "src/db/EnhancedDatabaseAdapter.js",
+        "src/db/QueueDatabase.js",
+        "src/db/PlannerDatabase.js",
+        "src/db/CoverageDatabase.js"
+      ],
+      "entrypoints": [
+        "src/db/EnhancedDatabaseAdapter.js"
+      ],
+      "exports": [
+        "EnhancedDatabaseAdapter"
+      ]
+    }
+  ]
+}

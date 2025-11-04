@@ -1,0 +1,56 @@
+{
+  "families": [
+    {
+      "name": "news_sqlite",
+      "db": "sqlite",
+      "versions": [
+        {
+          "version": "v1",
+          "paths": [
+            "src/db/sqlite/index.js",
+            "src/db/sqlite/v1/index.js",
+            "src/db/sqlite/v1/SQLiteNewsDatabase.js",
+            "src/db/sqlite/v1/SchemaInitializer.js",
+            "src/db/sqlite/v1/StatementManager.js",
+            "src/db/sqlite/v1/schema-definitions.js"
+          ],
+          "entrypoints": [
+            "src/db/sqlite/v1/index.js"
+          ],
+          "exports": [
+            "createSQLiteDatabase",
+            "SQLiteNewsDatabase",
+            "NewsDatabase",
+            "ensureDb",
+            "ensureDatabase",
+            "wrapWithTelemetry"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "enhanced_adapter",
+      "db": "sqlite",
+      "versions": [
+        {
+          "version": "v1",
+          "paths": [
+            "src/db/EnhancedDatabaseAdapter.js",
+            "src/db/QueueDatabase.js",
+            "src/db/PlannerDatabase.js",
+            "src/db/CoverageDatabase.js"
+          ],
+          "entrypoints": [
+            "src/db/EnhancedDatabaseAdapter.js"
+          ],
+          "exports": [
+            "EnhancedDatabaseAdapter",
+            "QueueDatabase",
+            "PlannerDatabase",
+            "CoverageDatabase"
+          ]
+        }
+      ]
+    }
+  ]
+}
