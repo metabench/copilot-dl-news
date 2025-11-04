@@ -17,6 +17,8 @@ class DatabaseImporter {
     }
     this.db = db;
     this.transformers = transformers;
+    this._tableColumnCache = new Map();
+    this._columnFilterWarnings = new Set();
   }
 
   /**
@@ -78,21 +80,56 @@ class DatabaseImporter {
    * Insert a batch of rows into a table
    * @private
    */
-  _insertBatch(tableName, rows) {
+        _insertBatch(tableName, rows) {
     if (rows.length === 0) return;
 
-    const columns = Object.keys(rows[0]);
+    const allowedColumns = this._getTableColumnSet(tableName);
+    const inputColumns = Object.keys(rows[0]);
+    const columns = inputColumns.filter((name) => allowedColumns.has(name));
+
+    if (columns.length === 0) {
+      throw new Error(`No matching columns found in target table '${tableName}' for columns: ${inputColumns.join(', ')}`);
+    }
+
+    if (columns.length !== inputColumns.length) {
+      const dropped = inputColumns.filter((name) => !allowedColumns.has(name));
+      if (dropped.length > 0) {
+        const warningKey = `${tableName}:${dropped.join(',')}`;
+        if (!this._columnFilterWarnings.has(warningKey)) {
+          console.warn(`[Importer] Dropping columns [${dropped.join(', ')}] not present in target table '${tableName}'`);
+          this._columnFilterWarnings.add(warningKey);
+        }
+      }
+    }
+
     const placeholders = columns.map(() => '?').join(', ');
+    // Quote identifiers so reserved names (e.g., "exists") stay valid
+    const quoteIdentifier = (identifier) => `"${identifier.replace(/"/g, '""')}"`;
+    const quotedTableName = quoteIdentifier(tableName);
+    const quotedColumns = columns.map(quoteIdentifier);
     const sql = `
-      INSERT INTO ${tableName} (${columns.join(', ')})
+      INSERT INTO ${quotedTableName} (${quotedColumns.join(', ')})
       VALUES (${placeholders})
     `;
+
+    // Convert JSON-serialized buffers back to Node Buffers before insertion.
+    const normalizeValue = (value) => {
+      if (value && typeof value === 'object') {
+        if (Buffer.isBuffer(value)) {
+          return value;
+        }
+        if (value.type === 'Buffer' && Array.isArray(value.data)) {
+          return Buffer.from(value.data);
+        }
+      }
+      return value;
+    };
 
     const stmt = this.db.prepare(sql);
 
     const txn = this.db.transaction((batch) => {
       for (const row of batch) {
-        const values = columns.map(col => row[col]);
+        const values = columns.map((col) => normalizeValue(row[col]));
         stmt.run(...values);
       }
     });
@@ -100,54 +137,42 @@ class DatabaseImporter {
     txn(rows);
   }
 
+  _getTableColumnSet(tableName) {
+    const cache = this._tableColumnCache;
+
+    if (!cache.has(tableName)) {
+      const rows = this.db
+        .prepare('SELECT name FROM pragma_table_info(?)')
+        .all(tableName);
+
+      if (!rows || rows.length === 0) {
+        throw new Error(`Unable to resolve columns for table '${tableName}' during import`);
+      }
+
+      cache.set(tableName, new Set(rows.map((row) => row.name)));
+    }
+
+    return cache.get(tableName);
+  }
+
+
+
+
   /**
    * Import from manifest file
    * @param {string} manifestPath - Path to manifest.json
    * @returns {Promise<Object>} Import results
    */
-  async importFromManifest(manifestPath) {
+  async importFromManifest(manifestPath, options = {}) {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const baseDir = path.dirname(manifestPath);
 
-    console.log(`[Importer] Importing database exported at ${manifest.exported_at}`);
-    console.log(`[Importer] Source schema version: ${manifest.schema_version}`);
-
-    const results = {
-      manifest,
-      tables: {}
-    };
-
-    for (const [tableName, meta] of Object.entries(manifest.tables)) {
-      if (meta.error) {
-        console.warn(`[Importer] Skipping table '${tableName}' due to export error: ${meta.error}`);
-        results.tables[tableName] = { error: meta.error };
-        continue;
-      }
-
-      const inputPath = path.join(baseDir, meta.file);
-
-      try {
-        const imported = await this.importTable(tableName, inputPath);
-
-        results.tables[tableName] = {
-          expected: meta.row_count,
-          imported,
-          success: imported === meta.row_count
-        };
-
-        if (imported !== meta.row_count) {
-          console.warn(`[Importer] Row count mismatch for ${tableName}: expected ${meta.row_count}, got ${imported}`);
-        }
-      } catch (err) {
-        console.error(`[Importer] Failed to import table '${tableName}':`, err);
-        results.tables[tableName] = { error: err.message };
-      }
-    }
-
-    console.log('[Importer] Import complete');
-
-    return results;
+    return this.importFromManifestObject(manifest, {
+      ...options,
+      baseDir
+    });
   }
+
 
   /**
    * Import from manifest object (for in-memory manifests)
@@ -157,6 +182,8 @@ class DatabaseImporter {
    */
   async importFromManifestObject(manifest, options = {}) {
     const baseDir = options.baseDir || process.cwd();
+    const batchSize = options.batchSize || 1000;
+    const resetTables = options.resetTables !== false;
 
     console.log(`[Importer] Importing database exported at ${manifest.exported_at}`);
     console.log(`[Importer] Source schema version: ${manifest.schema_version}`);
@@ -168,53 +195,89 @@ class DatabaseImporter {
       totalRows: 0
     };
 
-    // Handle circular dependencies: places.canonical_name_id -> place_names.id
-    // Import places first with canonical_name_id temporarily NULL, then update after place_names
     const deferredUpdates = [];
-
-    // Sort tables by dependency order to respect foreign keys
-    // Parent tables must be imported before child tables
     const tableOrder = this._getDependencyOrder(Object.keys(manifest.tables));
 
-    for (const tableName of tableOrder) {
-      const meta = manifest.tables[tableName];
-      if (meta.error) {
-        console.warn(`[Importer] Skipping table '${tableName}' due to export error: ${meta.error}`);
-        results.tables[tableName] = { error: meta.error };
-        continue;
+    const resetTargetTable = (tableName) => {
+      if (!resetTables) {
+        return;
       }
 
-      const inputPath = path.join(baseDir, meta.file);
-
       try {
-        let imported;
-
-        // Special handling for places table: temporarily set canonical_name_id to NULL
-        if (tableName === 'places') {
-          imported = await this._importTableWithDeferredUpdates(tableName, inputPath, options.batchSize || 1000, deferredUpdates);
-        } else {
-          imported = await this.importTable(tableName, inputPath, options.batchSize || 1000);
-        }
-
-        results.tables[tableName] = {
-          expected: meta.row_count,
-          imported,
-          success: imported === meta.row_count
-        };
-
-        results.tablesImported++;
-        results.totalRows += imported;
-
-        if (imported !== meta.row_count) {
-          console.warn(`[Importer] Row count mismatch for ${tableName}: expected ${meta.row_count}, got ${imported}`);
+        this.db.prepare(`DELETE FROM ${tableName}`).run();
+        try {
+          this.db.prepare('DELETE FROM sqlite_sequence WHERE name = ?').run(tableName);
+        } catch (err) {
+          if (!err.message.includes('no such table: sqlite_sequence')) {
+            console.warn(`[Importer] Unable to reset autoincrement for table '${tableName}': ${err.message}`);
+          }
         }
       } catch (err) {
-        console.error(`[Importer] Failed to import table '${tableName}':`, err);
-        results.tables[tableName] = { error: err.message };
+        throw new Error(`Failed to reset table '${tableName}': ${err.message}`);
+      }
+    };
+
+    let foreignKeysDisabled = false;
+    if (resetTables) {
+      try {
+        const currentForeignKeys = this.db.pragma('foreign_keys', { simple: true });
+        if (currentForeignKeys !== 0) {
+          this.db.pragma('foreign_keys = OFF');
+          foreignKeysDisabled = true;
+        }
+      } catch (err) {
+        console.warn(`[Importer] Unable to disable foreign key constraints before import: ${err.message}`);
       }
     }
 
-    // Apply deferred updates (e.g., restore canonical_name_id values)
+    try {
+      for (const tableName of tableOrder) {
+        const meta = manifest.tables[tableName];
+        if (meta.error) {
+          console.warn(`[Importer] Skipping table '${tableName}' due to export error: ${meta.error}`);
+          results.tables[tableName] = { error: meta.error };
+          continue;
+        }
+
+        const inputPath = path.join(baseDir, meta.file);
+
+        try {
+          resetTargetTable(tableName);
+
+          let imported;
+          if (tableName === 'places') {
+            imported = await this._importTableWithDeferredUpdates(tableName, inputPath, batchSize, deferredUpdates);
+          } else {
+            imported = await this.importTable(tableName, inputPath, batchSize);
+          }
+
+          results.tables[tableName] = {
+            expected: meta.row_count,
+            imported,
+            success: imported === meta.row_count
+          };
+
+          results.tablesImported += 1;
+          results.totalRows += imported;
+
+          if (imported !== meta.row_count) {
+            console.warn(`[Importer] Row count mismatch for ${tableName}: expected ${meta.row_count}, got ${imported}`);
+          }
+        } catch (err) {
+          console.error(`[Importer] Failed to import table '${tableName}':`, err);
+          results.tables[tableName] = { error: err.message };
+        }
+      }
+    } finally {
+      if (foreignKeysDisabled) {
+        try {
+          this.db.pragma('foreign_keys = ON');
+        } catch (err) {
+          console.warn(`[Importer] Unable to re-enable foreign key constraints after import: ${err.message}`);
+        }
+      }
+    }
+
     if (deferredUpdates.length > 0) {
       console.log(`[Importer] Applying ${deferredUpdates.length} deferred updates...`);
       for (const update of deferredUpdates) {
@@ -230,6 +293,7 @@ class DatabaseImporter {
 
     return results;
   }
+
 
   /**
    * Get tables in dependency order (parent tables before child tables)

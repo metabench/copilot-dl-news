@@ -202,7 +202,7 @@ async function migrateArticlePlaces(db) {
   }
   
   // 3. Create index
-  db.exec(`CREATE INDEX idx_article_places_url ON article_places(article_url_id)`);
+  db.exec(`CREATE INDEX idx_article_places_url_id ON article_places(article_url_id)`);
   
   // 4. Drop old column (after validation)
   // db.exec(`ALTER TABLE article_places DROP COLUMN article_url`);
@@ -352,7 +352,7 @@ async function normalizeArticlePlaces() {
   }
   
   // Create index
-  db.exec(`CREATE INDEX idx_article_places_url ON article_places(article_url_id)`);
+  db.exec(`CREATE INDEX idx_article_places_url_id ON article_places(article_url_id)`);
   
   // Validate
   const nullCount = db.prepare('SELECT COUNT(*) as count FROM article_places WHERE article_url_id IS NULL').get().count;

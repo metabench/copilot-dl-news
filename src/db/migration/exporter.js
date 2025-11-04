@@ -31,6 +31,42 @@ class DatabaseExporter {
   async exportTable(tableName, outputPath, batchSize = 1000) {
     console.log(`[Exporter] Exporting table '${tableName}' to ${outputPath}`);
 
+    const ensureWritable = async () => {
+      const maxAttempts = 5;
+      const baseDelayMs = 200;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          if (!fs.existsSync(outputPath)) {
+            return;
+          }
+
+          fs.rmSync(outputPath, { force: true });
+          return;
+        } catch (err) {
+          if (err.code === 'ENOENT') {
+            return;
+          }
+
+          if (err.code === 'EBUSY' && attempt < maxAttempts) {
+            console.warn(
+              `[Exporter] Existing export file busy for '${outputPath}' (attempt ${attempt}/${maxAttempts}). Retrying...`
+            );
+            const delay = baseDelayMs * attempt;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+
+          console.error(`[Exporter] Could not remove existing export file at ${outputPath}:`, err);
+          throw err;
+        }
+      }
+
+      throw new Error(`Unable to remove export file at ${outputPath} after ${maxAttempts} attempts`);
+    };
+
+    await ensureWritable();
+
     const writeStream = fs.createWriteStream(outputPath);
     const transform = ndjson.stringify();
 
@@ -53,6 +89,7 @@ class DatabaseExporter {
     }
   }
 
+
   /**
    * Create a readable stream of rows from a table
    * @private
@@ -60,29 +97,58 @@ class DatabaseExporter {
   _createTableReadStream(tableName, batchSize) {
     const stmt = this.db.prepare(`SELECT * FROM ${tableName}`);
     const iterator = stmt.iterate();
+    let finished = false;
+
+    const finalizeIterator = () => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+
+      if (typeof iterator.return === 'function') {
+        try {
+          iterator.return();
+        } catch (finalizeErr) {
+          console.warn(`[Exporter] Error while finalizing iterator for '${tableName}':`, finalizeErr);
+        }
+      }
+    };
 
     return new Readable({
       objectMode: true,
       read() {
+        if (finished) {
+          this.push(null);
+          return;
+        }
+
         try {
           for (let i = 0; i < batchSize; i++) {
             const { value, done } = iterator.next();
 
             if (done) {
-              this.push(null); // End of stream
+              finalizeIterator();
+              this.push(null);
               return;
             }
 
             if (!this.push(value)) {
-              return; // Respect backpressure
+              return;
             }
           }
         } catch (err) {
+          finalizeIterator();
           this.destroy(err);
         }
+      },
+      destroy(err, callback) {
+        finalizeIterator();
+        callback(err);
       }
     });
   }
+
 
   /**
    * Get row count for a table

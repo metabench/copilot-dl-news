@@ -200,8 +200,12 @@ async function validateUrlNormalization(dbPath) {
 
           console.log(`   📊 ${urlCol}: ${urlStats.with_url} non-null values, ${urlStats.unique_urls} unique`);
 
-          if (urlStats.with_url > 0 && !table.idColumn) {
-            tableResult.warnings.push(`Still has denormalized ${urlCol} column with ${urlStats.with_url} values`);
+          if (urlStats.with_url > 0) {
+            const message = `Denormalized ${urlCol} column still populated (${urlStats.with_url} rows)`;
+            tableResult.errors.push(message);
+            results.overall.valid = false;
+          } else {
+            tableResult.warnings.push(`Denormalized ${urlCol} column exists but is empty`);
           }
         } else {
           console.log(`   ✅ ${urlCol} column absent (legacy TEXT data removed)`);

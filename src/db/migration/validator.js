@@ -19,7 +19,7 @@ class DataValidator {
    * @param {Database} targetDb - Target database to validate
    * @returns {Promise<Object>} Validation results
    */
-  async validateMigration(sourceManifest, targetDb) {
+    async validateMigration(sourceManifest, targetDb) {
     const errors = [];
 
     // 1. Check row counts
@@ -104,6 +104,31 @@ class DataValidator {
       }
     ];
 
+    const extractCount = (row) => {
+      if (!row) {
+        return 0;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(row, 'orphaned')) {
+        const numeric = Number(row.orphaned);
+        return Number.isFinite(numeric) ? numeric : 0;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(row, 'missing')) {
+        const numeric = Number(row.missing);
+        return Number.isFinite(numeric) ? numeric : 0;
+      }
+
+      for (const value of Object.values(row)) {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) {
+          return numeric;
+        }
+      }
+
+      return 0;
+    };
+
     for (const check of integrityChecks) {
       // Skip checks that require tables not yet created in this schema version
       if (check.requiresTable) {
@@ -115,21 +140,42 @@ class DataValidator {
         }
       }
 
+      let targetCount;
       try {
-        const result = targetDb.prepare(check.sql).get();
-        if (result.orphaned > 0 || result.missing > 0) {
-          errors.push({
-            type: 'data_integrity',
-            check: check.name,
-            description: check.description,
-            count: result.orphaned || result.missing
-          });
-        }
+        const targetRow = targetDb.prepare(check.sql).get();
+        targetCount = extractCount(targetRow);
       } catch (err) {
         errors.push({
           type: 'integrity_check_error',
+          scope: 'target',
           check: check.name,
           error: err.message
+        });
+        continue;
+      }
+
+      let sourceCount;
+      try {
+        const sourceRow = this.db.prepare(check.sql).get();
+        sourceCount = extractCount(sourceRow);
+      } catch (err) {
+        errors.push({
+          type: 'integrity_check_error',
+          scope: 'source',
+          check: check.name,
+          error: err.message
+        });
+        continue;
+      }
+
+      if (targetCount !== sourceCount) {
+        errors.push({
+          type: 'data_integrity',
+          check: check.name,
+          description: check.description,
+          expected: sourceCount,
+          actual: targetCount,
+          delta: targetCount - sourceCount
         });
       }
     }
@@ -145,6 +191,7 @@ class DataValidator {
       }
     };
   }
+
 
   // Debug method to throw validation result as error
   throwValidationResult(sourceManifest, targetDb) {

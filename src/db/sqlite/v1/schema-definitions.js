@@ -57,7 +57,6 @@ const TABLE_STATEMENTS = [
   // article_places
   `CREATE table IF NOT EXISTS article_places (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        article_url TEXT NOT NULL,
         place TEXT NOT NULL,
         place_kind TEXT,      -- country | region | city | other
         method TEXT,          -- gazetteer | heuristic | other
@@ -65,8 +64,9 @@ const TABLE_STATEMENTS = [
         offset_start INTEGER,
         offset_end INTEGER,
         context TEXT,
-        first_seen_at TEXT, article_url_id INTEGER REFERENCES urls(id),
-        UNIQUE(article_url, place, source, offset_start, offset_end)
+      first_seen_at TEXT,
+      article_url_id INTEGER NOT NULL REFERENCES urls(id),
+      UNIQUE(article_url_id, place, source, offset_start, offset_end)
       );`,
 
   // article_xpath_patterns
@@ -985,8 +985,8 @@ const INDEX_STATEMENTS = [
   // idx_article_places_place
   `CREATE index IF NOT EXISTS idx_article_places_place ON article_places(place);`,
 
-  // idx_article_places_url
-  `CREATE index IF NOT EXISTS idx_article_places_url ON article_places(article_url);`,
+  // idx_article_places_url_id
+  `CREATE index IF NOT EXISTS idx_article_places_url_id ON article_places(article_url_id);`,
 
   // idx_article_xpath_patterns_domain
   `CREATE index IF NOT EXISTS idx_article_xpath_patterns_domain ON article_xpath_patterns(domain);`,
@@ -1752,23 +1752,33 @@ const TRIGGER_STATEMENTS = [
   // trg_latest_fetch_upsert
   `CREATE trigger IF NOT EXISTS trg_latest_fetch_upsert
   AFTER INSERT ON fetches
+  WHEN NEW.url_id IS NOT NULL
   BEGIN
     INSERT INTO latest_fetch(url, ts, http_status, classification, word_count)
-    VALUES (NEW.url, COALESCE(NEW.fetched_at, NEW.request_started_at), NEW.http_status, NEW.classification, NEW.word_count)
+    SELECT u.url,
+           COALESCE(NEW.fetched_at, NEW.request_started_at),
+           NEW.http_status,
+           NEW.classification,
+           NEW.word_count
+    FROM urls u
+    WHERE u.id = NEW.url_id
     ON CONFLICT(url) DO UPDATE SET
-      ts = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) > COALESCE(latest_fetch.ts, '') THEN COALESCE(NEW.fetched_at, NEW.request_started_at) ELSE latest_fetch.ts END,
-      http_status = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.http_status ELSE latest_fetch.http_status END,
-      classification = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.classification ELSE latest_fetch.classification END,
-      word_count = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.word_count ELSE latest_fetch.word_count END;
+      ts = CASE WHEN excluded.ts > COALESCE(latest_fetch.ts, '') THEN excluded.ts ELSE latest_fetch.ts END,
+      http_status = CASE WHEN excluded.ts >= COALESCE(latest_fetch.ts, '') THEN excluded.http_status ELSE latest_fetch.http_status END,
+      classification = CASE WHEN excluded.ts >= COALESCE(latest_fetch.ts, '') THEN excluded.classification ELSE latest_fetch.classification END,
+      word_count = CASE WHEN excluded.ts >= COALESCE(latest_fetch.ts, '') THEN excluded.word_count ELSE latest_fetch.word_count END;
   END;`,
 
   // trg_urls_from_fetches_insert
   `CREATE trigger IF NOT EXISTS trg_urls_from_fetches_insert
   AFTER INSERT ON fetches
+  WHEN NEW.url_id IS NOT NULL
   BEGIN
-    INSERT OR IGNORE INTO urls(url, created_at, last_seen_at)
-    VALUES (NEW.url, COALESCE(NEW.fetched_at, datetime('now')), COALESCE(NEW.fetched_at, datetime('now')));
-    UPDATE urls SET last_seen_at = COALESCE(NEW.fetched_at, datetime('now')) WHERE url = NEW.url;
+    UPDATE urls
+    SET
+      created_at = COALESCE(created_at, COALESCE(NEW.request_started_at, NEW.fetched_at, datetime('now'))),
+      last_seen_at = COALESCE(NEW.fetched_at, datetime('now'))
+    WHERE id = NEW.url_id;
   END;`
 ];
 
@@ -1815,7 +1825,6 @@ const TABLE_DEFINITIONS = [
       );`, target: "article_place_relations" },
   { name: "article_places", sql: `CREATE table IF NOT EXISTS article_places (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        article_url TEXT NOT NULL,
         place TEXT NOT NULL,
         place_kind TEXT,      -- country | region | city | other
         method TEXT,          -- gazetteer | heuristic | other
@@ -1823,8 +1832,9 @@ const TABLE_DEFINITIONS = [
         offset_start INTEGER,
         offset_end INTEGER,
         context TEXT,
-        first_seen_at TEXT, article_url_id INTEGER REFERENCES urls(id),
-        UNIQUE(article_url, place, source, offset_start, offset_end)
+      first_seen_at TEXT,
+      article_url_id INTEGER NOT NULL REFERENCES urls(id),
+      UNIQUE(article_url_id, place, source, offset_start, offset_end)
       );`, target: "article_places" },
   { name: "article_xpath_patterns", sql: `CREATE table IF NOT EXISTS article_xpath_patterns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2587,7 +2597,7 @@ const INDEX_DEFINITIONS = [
   { name: "idx_article_place_relations_confidence", sql: `CREATE index IF NOT EXISTS idx_article_place_relations_confidence ON article_place_relations(confidence DESC);`, target: "article_place_relations" },
   { name: "idx_article_place_relations_place", sql: `CREATE index IF NOT EXISTS idx_article_place_relations_place ON article_place_relations(place_id);`, target: "article_place_relations" },
   { name: "idx_article_places_place", sql: `CREATE index IF NOT EXISTS idx_article_places_place ON article_places(place);`, target: "article_places" },
-  { name: "idx_article_places_url", sql: `CREATE index IF NOT EXISTS idx_article_places_url ON article_places(article_url);`, target: "article_places" },
+  { name: "idx_article_places_url_id", sql: `CREATE index IF NOT EXISTS idx_article_places_url_id ON article_places(article_url_id);`, target: "article_places" },
   { name: "idx_article_xpath_patterns_domain", sql: `CREATE index IF NOT EXISTS idx_article_xpath_patterns_domain ON article_xpath_patterns(domain);`, target: "article_xpath_patterns" },
   { name: "idx_article_xpath_patterns_domain_xpath", sql: `CREATE UNIQUE INDEX idx_article_xpath_patterns_domain_xpath ON article_xpath_patterns(domain, xpath);`, target: "article_xpath_patterns" },
   { name: "idx_background_tasks_created", sql: `CREATE index IF NOT EXISTS idx_background_tasks_created ON background_tasks(created_at DESC);`, target: "background_tasks" },
@@ -2916,21 +2926,31 @@ const TRIGGER_DEFINITIONS = [
       BEGIN SELECT RAISE(ABORT, 'places.status invalid'); END;`, target: "places" },
   { name: "trg_latest_fetch_upsert", sql: `CREATE trigger IF NOT EXISTS trg_latest_fetch_upsert
   AFTER INSERT ON fetches
+  WHEN NEW.url_id IS NOT NULL
   BEGIN
     INSERT INTO latest_fetch(url, ts, http_status, classification, word_count)
-    VALUES (NEW.url, COALESCE(NEW.fetched_at, NEW.request_started_at), NEW.http_status, NEW.classification, NEW.word_count)
+    SELECT u.url,
+           COALESCE(NEW.fetched_at, NEW.request_started_at),
+           NEW.http_status,
+           NEW.classification,
+           NEW.word_count
+    FROM urls u
+    WHERE u.id = NEW.url_id
     ON CONFLICT(url) DO UPDATE SET
-      ts = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) > COALESCE(latest_fetch.ts, '') THEN COALESCE(NEW.fetched_at, NEW.request_started_at) ELSE latest_fetch.ts END,
-      http_status = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.http_status ELSE latest_fetch.http_status END,
-      classification = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.classification ELSE latest_fetch.classification END,
-      word_count = CASE WHEN COALESCE(NEW.fetched_at, NEW.request_started_at) >= COALESCE(latest_fetch.ts, '') THEN NEW.word_count ELSE latest_fetch.word_count END;
+      ts = CASE WHEN excluded.ts > COALESCE(latest_fetch.ts, '') THEN excluded.ts ELSE latest_fetch.ts END,
+      http_status = CASE WHEN excluded.ts >= COALESCE(latest_fetch.ts, '') THEN excluded.http_status ELSE latest_fetch.http_status END,
+      classification = CASE WHEN excluded.ts >= COALESCE(latest_fetch.ts, '') THEN excluded.classification ELSE latest_fetch.classification END,
+      word_count = CASE WHEN excluded.ts >= COALESCE(latest_fetch.ts, '') THEN excluded.word_count ELSE latest_fetch.word_count END;
   END;`, target: "fetches" },
   { name: "trg_urls_from_fetches_insert", sql: `CREATE trigger IF NOT EXISTS trg_urls_from_fetches_insert
   AFTER INSERT ON fetches
+  WHEN NEW.url_id IS NOT NULL
   BEGIN
-    INSERT OR IGNORE INTO urls(url, created_at, last_seen_at)
-    VALUES (NEW.url, COALESCE(NEW.fetched_at, datetime('now')), COALESCE(NEW.fetched_at, datetime('now')));
-    UPDATE urls SET last_seen_at = COALESCE(NEW.fetched_at, datetime('now')) WHERE url = NEW.url;
+    UPDATE urls
+    SET
+      created_at = COALESCE(created_at, COALESCE(NEW.request_started_at, NEW.fetched_at, datetime('now'))),
+      last_seen_at = COALESCE(NEW.fetched_at, datetime('now'))
+    WHERE id = NEW.url_id;
   END;`, target: "fetches" }
 ];
 

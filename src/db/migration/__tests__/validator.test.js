@@ -6,23 +6,48 @@ const { DataValidator } = require('../validator');
 const { createTempDb, seedTestData } = require('../../../test-utils/db-helpers');
 
 describe('DataValidator', () => {
-  let db;
+  let sourceDb;
+  let targetDb;
   let validator;
 
+  const BASE_TABLES = ['urls', 'http_responses', 'content_storage', 'places', 'place_names'];
+
+  const countRows = (table) => sourceDb.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
+
+  const buildManifest = (tableOverrides = {}) => {
+    const tables = {};
+
+    for (const table of BASE_TABLES) {
+      tables[table] = { row_count: countRows(table), error: null };
+    }
+
+    return {
+      schema_version: 1,
+      exported_at: new Date().toISOString(),
+      tables: {
+        ...tables,
+        ...tableOverrides
+      }
+    };
+  };
+
   beforeEach(() => {
-    db = createTempDb();
-    seedTestData(db);
-    validator = new DataValidator(db);
+    sourceDb = createTempDb();
+    targetDb = createTempDb();
+    seedTestData(sourceDb);
+    seedTestData(targetDb);
+    validator = new DataValidator(sourceDb);
   });
 
   afterEach(() => {
-    if (db) db.close();
+    if (sourceDb) sourceDb.close();
+    if (targetDb) targetDb.close();
   });
 
   describe('constructor', () => {
     it('should create validator with database', () => {
       expect(validator).toBeDefined();
-      expect(validator.db).toBe(db);
+      expect(validator.db).toBe(sourceDb);
     });
 
     it('should throw if no database provided', () => {
@@ -38,14 +63,12 @@ describe('DataValidator', () => {
     });
 
     it('should detect foreign key violations', () => {
-      // Temporarily disable foreign key constraints to insert invalid data
-      db.prepare('PRAGMA foreign_keys = OFF').run();
-      
-      // Insert invalid data that violates foreign key - place_names.place_id should reference places.id
-      db.prepare('INSERT INTO place_names (place_id, name) VALUES (?, ?)').run(999999, 'Invalid Place');
-      
-      // Re-enable foreign key constraints
-      db.prepare('PRAGMA foreign_keys = ON').run();
+      sourceDb.prepare('PRAGMA foreign_keys = OFF').run();
+      sourceDb.prepare(`
+        INSERT INTO content_storage (http_response_id, storage_type)
+        VALUES (?, 'db_inline')
+      `).run(123456);
+      sourceDb.prepare('PRAGMA foreign_keys = ON').run();
 
       const result = validator.checkIntegrity();
       expect(result.healthy).toBe(false);
@@ -95,55 +118,38 @@ describe('DataValidator', () => {
 
   describe('validateMigration', () => {
     it('should validate successful migration', async () => {
-      const sourceManifest = {
-        schema_version: 1,
-        exported_at: new Date().toISOString(),
-        tables: {
-          urls: { row_count: 5, error: null },
-          articles: { row_count: 3, error: null },
-          places: { row_count: 2, error: null },
-          place_names: { row_count: 2, error: null }
-        }
-      };
-
-      const result = await validator.validateMigration(sourceManifest, db);
+      const result = await validator.validateMigration(buildManifest(), targetDb);
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
-      expect(result.summary.tables_checked).toBe(4);
+      expect(result.summary.tables_checked).toBe(BASE_TABLES.length);
     });
 
     it('should detect row count mismatches', async () => {
-      const sourceManifest = {
-        schema_version: 1,
-        exported_at: new Date().toISOString(),
-        tables: {
-          urls: { row_count: 999, error: null } // Wrong count
-        }
-      };
+      const manifest = buildManifest({
+        urls: { row_count: 999, error: null }
+      });
 
-      const result = await validator.validateMigration(sourceManifest, db);
+      const result = await validator.validateMigration(manifest, targetDb);
       expect(result.valid).toBe(false);
       expect(result.errors.some(error => error.type === 'row_count_mismatch')).toBe(true);
     });
 
     it('should detect data integrity issues', async () => {
-      // Create a scenario with duplicate data that violates unique constraints
-      db.prepare('INSERT INTO urls (url) VALUES (?)').run('http://unique-test.com');
+      const manifest = buildManifest();
+      const responseRow = targetDb.prepare('SELECT id FROM http_responses LIMIT 1').get();
 
-      const sourceManifest = {
-        schema_version: 1,
-        exported_at: new Date().toISOString(),
-        tables: {
-          urls: { row_count: 6, error: null }, // Should be 6 now (5 original + 1 new)
-          articles: { row_count: 3, error: null },
-          places: { row_count: 2, error: null },
-          place_names: { row_count: 2, error: null }
-        }
-      };
+      targetDb.prepare('DELETE FROM content_storage WHERE http_response_id = ?').run(responseRow.id);
+      targetDb.prepare('PRAGMA foreign_keys = OFF').run();
+      targetDb.prepare('DELETE FROM http_responses WHERE id = ?').run(responseRow.id);
+      targetDb.prepare('PRAGMA foreign_keys = ON').run();
 
-      const result = await validator.validateMigration(sourceManifest, db);
-      // Should still be valid since we only check specific integrity rules
-      expect(result.valid).toBe(true);
+      const result = await validator.validateMigration(manifest, targetDb);
+
+      expect(result.valid).toBe(false);
+      const integrityError = result.errors.find(error => error.type === 'data_integrity' && error.check === 'urls_have_http_responses');
+      expect(integrityError).toBeDefined();
+      expect(integrityError.actual).not.toBe(integrityError.expected);
+      expect(integrityError.delta).not.toBe(0);
     });
   });
 });

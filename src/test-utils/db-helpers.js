@@ -46,10 +46,9 @@ function seedTestData(db) {
 
   // Insert HTTP responses for the URLs
   db.prepare(`
-    INSERT OR IGNORE INTO http_responses (url_id, fetched_at, http_status, content_type)
-    SELECT u.id, datetime('now'), 200, 'text/html'
+    INSERT OR IGNORE INTO http_responses (url_id, request_started_at, fetched_at, http_status, content_type)
+    SELECT u.id, datetime('now'), datetime('now'), 200, 'text/html'
     FROM urls u
-    WHERE u.url IN ('http://example.com', 'http://test.com', 'http://news.com')
   `).run();
 
   // Insert content storage for the responses
@@ -108,6 +107,7 @@ function seedTestData(db) {
     WHERE kind = 'city' AND source = 'test' AND canonical_name_id IS NULL
   `).run();
 }
+
 
 module.exports = {
   createTempDbPath,

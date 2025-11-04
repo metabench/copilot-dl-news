@@ -43,22 +43,87 @@ class MigrationCLI {
   }
 
   async run() {
-    await this.init();
+    const rawArgs = process.argv.slice(2);
+    const options = {};
+    const positional = [];
 
-    const args = process.argv.slice(2);
+    for (let i = 0; i < rawArgs.length; i += 1) {
+      const token = rawArgs[i];
+      switch (token) {
+        case '--help':
+        case '-h':
+          options.help = true;
+          break;
+        case '--db-path': {
+          const value = rawArgs[i + 1];
+          if (!value) {
+            console.error('Missing value for --db-path');
+            process.exit(1);
+          }
+          options.dbPath = path.resolve(value);
+          i += 1;
+          break;
+        }
+        case '--export-dir': {
+          const value = rawArgs[i + 1];
+          if (!value) {
+            console.error('Missing value for --export-dir');
+            process.exit(1);
+          }
+          options.exportDir = path.resolve(value);
+          i += 1;
+          break;
+        }
+        case '--batch-size': {
+          const value = rawArgs[i + 1];
+          if (!value) {
+            console.error('Missing value for --batch-size');
+            process.exit(1);
+          }
+          const parsed = Number.parseInt(value, 10);
+          if (!Number.isFinite(parsed) || parsed <= 0) {
+            console.error(`Invalid batch size: ${value}`);
+            process.exit(1);
+          }
+          options.batchSize = parsed;
+          i += 1;
+          break;
+        }
+        default:
+          positional.push(token);
+      }
+    }
 
-    // Check for help flag first
-    if (args.includes('--help') || args.includes('-h')) {
+    if (options.help) {
       this.showHelp();
       return;
     }
 
-    const [command, ...commandArgs] = args;
+    const [command, ...commandArgs] = positional;
 
     if (!command) {
       this.showHelp();
       return;
     }
+
+    if (options.dbPath) {
+      this.dbPath = options.dbPath;
+    }
+
+    await this.init();
+
+    if (options.batchSize) {
+      this.orchestrator.options.batchSize = options.batchSize;
+    }
+
+    if (options.exportDir) {
+      this.orchestrator.options.exportDir = options.exportDir;
+    }
+
+    const orchestratorExportDir = this.orchestrator && this.orchestrator.options
+      ? this.orchestrator.options.exportDir
+      : undefined;
+    const effectiveExportDir = commandArgs[0] || options.exportDir || orchestratorExportDir;
 
     try {
       switch (command) {
@@ -66,10 +131,10 @@ class MigrationCLI {
           await this.showStatus();
           break;
         case 'export':
-          await this.exportDatabase(commandArgs[0]);
+          await this.exportDatabase(effectiveExportDir);
           break;
         case 'import':
-          await this.importDatabase(commandArgs[0]);
+          await this.importDatabase(effectiveExportDir);
           break;
         case 'migrate':
           await this.migrateDatabase(commandArgs[0]);
@@ -98,6 +163,8 @@ class MigrationCLI {
     }
   }
 
+
+
   showHelp() {
     console.log(`
 Database Migration CLI Tool
@@ -106,16 +173,18 @@ Usage:
   node tools/migration-cli.js <command> [options]
 
 Commands:
-  status                    Show current migration status and history
-  export <dir>             Export database to directory (default: data/exports)
-  import <dir>             Import database from directory
+  status                   Show current migration status and history
+  export [dir]             Export database manifest (default: ./migration-export)
+  import <dir>             Import database from directory (default: ./migration-export)
   migrate <target-db>      Migrate to new database file
-  backup <file>            Create database backup file (default: ./backup.json)
+  backup [file]            Create database backup file (default: ./backup.json)
   restore <file>           Restore from backup file
   validate                 Validate current database integrity
 
 Options:
-  --db-path <path>         Database file path (default: data/db.sqlite)
+  --db-path <path>         Database file path (default: data/db.sqlite or DB_PATH)
+  --export-dir <path>      Directory for export/import operations (default: ./migration-export)
+  --batch-size <number>    Rows per import/export batch (default: 1000)
   --help                   Show this help message
 
 Examples:
@@ -125,6 +194,7 @@ Examples:
   node tools/migration-cli.js validate
     `);
   }
+
 
   async showStatus() {
     console.log('Checking migration status...');
@@ -157,8 +227,15 @@ Examples:
   }
 
   async exportDatabase(exportDir) {
-    const dir = exportDir || path.join(__dirname, '..', 'data', 'exports');
-    console.log(`Exporting database to ${dir}...`);
+    const hasExportDir = this.orchestrator && this.orchestrator.options && this.orchestrator.options.exportDir;
+    const defaultExportDir = hasExportDir ? this.orchestrator.options.exportDir : path.join(__dirname, '..', 'data', 'exports');
+    const resolvedDir = exportDir ? path.resolve(exportDir) : path.resolve(defaultExportDir);
+
+    console.log(`Exporting database to ${resolvedDir}...`);
+
+    if (this.orchestrator && this.orchestrator.options) {
+      this.orchestrator.options.exportDir = resolvedDir;
+    }
 
     const result = await this.orchestrator._exportPhase();
 
@@ -173,17 +250,33 @@ Examples:
     }
   }
 
+
   async importDatabase(importDir) {
-    if (!importDir || !fs.existsSync(importDir)) {
-      console.error(`Import directory not found: ${importDir}`);
+    const hasExportDir = this.orchestrator && this.orchestrator.options && this.orchestrator.options.exportDir;
+    const resolvedDir = importDir
+      ? path.resolve(importDir)
+      : hasExportDir
+        ? path.resolve(this.orchestrator.options.exportDir)
+        : null;
+
+    if (!resolvedDir) {
+      console.error('Import directory required (no default export directory configured)');
       process.exit(1);
     }
 
-    console.log(`Importing database from ${importDir}...`);
+    if (!fs.existsSync(resolvedDir)) {
+      console.error(`Import directory not found: ${resolvedDir}`);
+      process.exit(1);
+    }
+
+    console.log(`Importing database from ${resolvedDir}...`);
+
+    if (this.orchestrator && this.orchestrator.options) {
+      this.orchestrator.options.exportDir = resolvedDir;
+    }
 
     try {
-      // Find manifest file
-      const manifestPath = path.join(importDir, 'manifest.json');
+      const manifestPath = path.join(resolvedDir, 'manifest.json');
       if (!fs.existsSync(manifestPath)) {
         throw new Error('Manifest file not found in import directory');
       }
@@ -204,6 +297,8 @@ Examples:
       process.exit(1);
     }
   }
+
+
 
   async migrateDatabase(targetDbPath) {
     if (!targetDbPath) {
