@@ -19,9 +19,10 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 
 ## Operating Workflow
 1. **α — Discovery & Baseline Mapping**
-   - **Find related documentation:** Use `node tools/dev/md-scan.js --dir docs --search "static analysis" "js-edit" "refactoring"` to discover relevant docs and recent analysis patterns. Use `--find-sections "Troubleshooting" "Known Issues"` to identify friction points.
+   - **Find related documentation:** Use `node tools/dev/md-scan.js --dir docs --search "static analysis" "js-edit" "refactoring" --lang zh` to discover relevant docs and recent analysis patterns with bilingual headings; pair with `--view summary` for dense rollups and `--find-sections "Troubleshooting" "Known Issues"` to identify friction points.
    - Audit current js-edit capabilities (`--list-functions`, `--context-function`, `--emit-plan`) and catalogue gaps in `docs/CHANGE_PLAN.md` + the relevant tracker before proposing code changes.
-   - Inspect recent static-analysis requests or failure modes in `docs/CLI_REFACTORING_TASKS.md`, `docs/CRAWL_REFACTORING_TASKS.md`, and tool issue logs using md-edit to view specific task sections.
+   - Use `node tools/dev/js-scan.js --dir <root> --search <terms>` to baseline symbol distribution across the workspace; enable terse bilingual summaries with `--lang zh` (Chinese aliases also trigger the mode) and adjust `--view summary` / `--view terse` plus `--fields` when legacy bundles or dense listings matter. Leverage `--include-deprecated` or `--deprecated-only` when legacy bundles matter. Reference `tools/dev/README.md#js-scan` and `docs/CLI_REFACTORING_QUICK_START.md` for scanner usage patterns that complement new analysis work.
+   - Inspect recent static-analysis requests or failure modes in `docs/CLI_REFACTORING_TASKS.md`, `docs/CRAWL_REFACTORING_TASKS.md`, and tool issue logs using md-edit (add `--lang zh` for terse bilingual stats) to view specific task sections.
    - Capture exemplar targets (e.g., "find all call sites of X with argument shapes") so new features stay grounded in real workflows.
 2. **β — Design & Output Spec**
    - Draft concise syntax and sample outputs. Prefer ASCII tables, bullet lists, or multi-line code excerpts; avoid JSON unless consumers demand it.
@@ -32,7 +33,7 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
    - Ensure new commands accept selectors compatible with existing plan files: hashes, spans, file+symbol combos.
 4. **δ — Validation & Documentation**
    - Add Jest coverage under `tests/tools/__tests__/` with fixtures showing canonical outputs.
-   - Update `tools/dev/README.md` and relevant quick references with syntax, examples, and guidance on interpreting condensed output. Use `md-edit` to locate and update specific documentation sections: `node tools/dev/md-edit.js <doc> --show-section <selector>` then apply guarded replacements.
+   - Update `tools/dev/README.md` and relevant quick references with syntax, examples, and guidance on interpreting condensed output. Use `md-edit` to locate and update specific documentation sections: `node tools/dev/md-edit.js <doc> --show-section <selector> --lang zh` (or rely on Chinese aliases) then apply guarded replacements.
    - Record executed commands and results in the tracker; note any residual gaps for future cycles.
 
 ## Static Analysis Capability Map

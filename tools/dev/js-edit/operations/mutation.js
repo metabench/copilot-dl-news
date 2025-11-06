@@ -1,11 +1,53 @@
 'use strict';
 
 const path = require('path');
+const { resolveLanguageContext } = require('../../i18n/helpers');
 
 let deps = null;
 
 function init(newDeps) {
   deps = { ...newDeps };
+}
+
+function formatPlanOutput(fmt, path, englishFirst) {
+  const planLabel = fmt.translateLabel('plan', 'Plan', { englishFirst });
+  const outputLabel = fmt.translateLabel('output', 'Output', { englishFirst });
+  return `${planLabel} ${outputLabel}: ${path}`;
+}
+
+function formatDigestSnapshot(fmt, stage, path, englishFirst) {
+  const digestLabel = fmt.translateLabel('digest', 'Digest', { englishFirst });
+  const stageLabel = stage === 'before'
+    ? fmt.translateLabel('before', 'Before', { englishFirst })
+    : fmt.translateLabel('after', 'After', { englishFirst });
+  return `${digestLabel} (${stageLabel}): ${path}`;
+}
+
+function formatModeValue(applied, context) {
+  if (applied) {
+    return context.isChinese ? '实写' : 'applied';
+  }
+  return context.isChinese ? '演' : 'dry-run';
+}
+
+function formatTargetMode(targetMode, requestedMode, context) {
+  if (!requestedMode || requestedMode === targetMode) {
+    return targetMode;
+  }
+  if (context.isChinese) {
+    return `${targetMode}（需 ${requestedMode}）`;
+  }
+  return `${targetMode} (requested ${requestedMode})`;
+}
+
+function formatDryRunWarning(context) {
+  return context.isChinese
+    ? '演: 未写入任何更改。使用 --改 应用。'
+    : 'Dry-run: no changes were written. Re-run with --fix to apply.';
+}
+
+function formatSuccessMessage(filePath, context) {
+  return context.isChinese ? `已更新 ${filePath}` : `Updated ${filePath}`;
 }
 
 function sanitizeFileComponent(value, fallback) {
@@ -331,33 +373,65 @@ function locateFunctions(options, functionRecords, selector) {
     return;
   }
 
-  fmt.header('Function Locate');
-  fmt.section(`Selector: ${selector}`);
-  fmt.table(matches.map((match, index) => {
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst })} ${fmt.translateLabel('locate', 'Locate', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const selectorLabel = fmt.translateLabel('selector', 'Selector', { englishFirst: language.englishFirst });
+  fmt.section(`${selectorLabel}: ${selector}`);
+
+  const columnLabels = {
+    index: fmt.translateLabel('index', 'Index', { englishFirst: language.englishFirst }),
+    name: fmt.translateLabel('name', 'Name', { englishFirst: language.englishFirst }),
+    kind: fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }),
+    line: fmt.translateLabel('lines', 'Line', { englishFirst: language.englishFirst }),
+    column: fmt.translateLabel('columns', 'Column', { englishFirst: language.englishFirst }),
+    chars: fmt.translateLabel('chars', 'Chars', { englishFirst: language.englishFirst }),
+    bytes: fmt.translateLabel('byte_length', 'Bytes', { englishFirst: language.englishFirst }),
+    path: fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }),
+    hash: fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst })
+  };
+
+  const tableRows = matches.map((match, index) => {
     const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
     const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
 
     return {
-      index: index + 1,
-      name: match.canonicalName || match.name,
-      kind: match.kind,
-      line: match.line,
-      column: match.column,
-      chars: charSummary || '-',
-      bytes: byteSummary || '-',
-      path: match.pathSignature,
-      hash: match.hash.slice(0, 12)
+      [columnLabels.index]: index + 1,
+      [columnLabels.name]: match.canonicalName || match.name,
+      [columnLabels.kind]: match.kind,
+      [columnLabels.line]: match.line,
+      [columnLabels.column]: match.column,
+      [columnLabels.chars]: charSummary || '-',
+      [columnLabels.bytes]: byteSummary || '-',
+      [columnLabels.path]: match.pathSignature,
+      [columnLabels.hash]: match.hash.slice(0, 12)
     };
-  }), {
-    columns: ['index', 'name', 'kind', 'line', 'column', 'chars', 'bytes', 'path', 'hash']
   });
-  fmt.stat('Matches', payload.summary.matchCount, 'number');
+
+  fmt.table(tableRows, {
+    columns: [
+      columnLabels.index,
+      columnLabels.name,
+      columnLabels.kind,
+      columnLabels.line,
+      columnLabels.column,
+      columnLabels.chars,
+      columnLabels.bytes,
+      columnLabels.path,
+      columnLabels.hash
+    ]
+  });
+
+  fmt.stat(fmt.translateLabel('matches', 'Matches', { englishFirst: language.englishFirst }), payload.summary.matchCount, 'number');
   const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
   if (formattedSpanRange) {
-    fmt.stat('Span range', formattedSpanRange);
+    const spanLabel = fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst });
+    const rangeLabel = fmt.translateLabel('range', 'Range', { englishFirst: language.englishFirst });
+    fmt.stat(`${spanLabel} ${rangeLabel}`, formattedSpanRange);
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
   fmt.footer();
 }
@@ -439,35 +513,71 @@ function locateVariables(options, variableRecords, selector) {
     return;
   }
 
-  fmt.header('Variable Locate');
-  fmt.section(`Selector: ${selector}`);
-  fmt.stat('Target Mode', `${options.variableTarget}`);
-  fmt.table(matches.map((match, index) => {
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('variable', 'Variable', { englishFirst: language.englishFirst })} ${fmt.translateLabel('locate', 'Locate', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const selectorLabel = fmt.translateLabel('selector', 'Selector', { englishFirst: language.englishFirst });
+  fmt.section(`${selectorLabel}: ${selector}`);
+
+  const targetModeLabel = `${fmt.translateLabel('target', 'Target', { englishFirst: language.englishFirst })} ${fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst })}`;
+  fmt.stat(targetModeLabel, `${options.variableTarget}`);
+
+  const columnLabels = {
+    index: fmt.translateLabel('index', 'Index', { englishFirst: language.englishFirst }),
+    name: fmt.translateLabel('name', 'Name', { englishFirst: language.englishFirst }),
+    kind: fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }),
+    line: fmt.translateLabel('lines', 'Line', { englishFirst: language.englishFirst }),
+    column: fmt.translateLabel('columns', 'Column', { englishFirst: language.englishFirst }),
+    mode: fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst }),
+    chars: fmt.translateLabel('chars', 'Chars', { englishFirst: language.englishFirst }),
+    bytes: fmt.translateLabel('byte_length', 'Bytes', { englishFirst: language.englishFirst }),
+    path: fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }),
+    hash: fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst })
+  };
+
+  const tableRows = matches.map((match, index) => {
     const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
     const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
 
     return {
-      index: index + 1,
-      name: match.name,
-      kind: match.kind,
-      line: match.line,
-      column: match.column,
-      mode: match.targetMode,
-      chars: charSummary || '-',
-      bytes: byteSummary || '-',
-      path: match.pathSignature,
-      hash: match.hash ? match.hash.slice(0, 12) : '-'
+      [columnLabels.index]: index + 1,
+      [columnLabels.name]: match.name,
+      [columnLabels.kind]: match.kind,
+      [columnLabels.line]: match.line,
+      [columnLabels.column]: match.column,
+      [columnLabels.mode]: match.targetMode,
+      [columnLabels.chars]: charSummary || '-',
+      [columnLabels.bytes]: byteSummary || '-',
+      [columnLabels.path]: match.pathSignature,
+      [columnLabels.hash]: match.hash ? match.hash.slice(0, 12) : '-'
     };
-  }), {
-    columns: ['index', 'name', 'kind', 'line', 'column', 'mode', 'chars', 'bytes', 'path', 'hash']
   });
-  fmt.stat('Matches', payload.summary.matchCount, 'number');
+
+  fmt.table(tableRows, {
+    columns: [
+      columnLabels.index,
+      columnLabels.name,
+      columnLabels.kind,
+      columnLabels.line,
+      columnLabels.column,
+      columnLabels.mode,
+      columnLabels.chars,
+      columnLabels.bytes,
+      columnLabels.path,
+      columnLabels.hash
+    ]
+  });
+
+  fmt.stat(fmt.translateLabel('matches', 'Matches', { englishFirst: language.englishFirst }), payload.summary.matchCount, 'number');
   const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
   if (formattedSpanRange) {
-    fmt.stat('Span range', formattedSpanRange);
+    const spanLabel = fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst });
+    const rangeLabel = fmt.translateLabel('range', 'Range', { englishFirst: language.englishFirst });
+    fmt.stat(`${spanLabel} ${rangeLabel}`, formattedSpanRange);
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
   fmt.footer();
 }
@@ -518,20 +628,26 @@ function extractFunction(options, source, record, selector) {
     return;
   }
 
-  fmt.header('Function Extract');
-  fmt.section(`Function: ${record.canonicalName || record.name}`);
-  fmt.stat('Kind', record.kind);
-  fmt.stat('Location', `${record.line}:${record.column}`);
-  if (record.exportKind) fmt.stat('Exported As', record.exportKind);
-  fmt.stat('Path', record.pathSignature);
-  fmt.stat('Hash', record.hash);
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst })} ${fmt.translateLabel('extract', 'Extract', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const functionLabel = fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst });
+  fmt.section(`${functionLabel}: ${record.canonicalName || record.name}`);
+  fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }), record.kind);
+  fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst: language.englishFirst }), `${record.line}:${record.column}`);
+  if (record.exportKind) {
+    fmt.stat(fmt.translateLabel('exported_as', 'Exported As', { englishFirst: language.englishFirst }), record.exportKind);
+  }
+  fmt.stat(fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }), record.pathSignature);
+  fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), record.hash);
   if (outputPath) {
-    fmt.stat('Written to', outputPath);
+    fmt.stat(fmt.translateLabel('output', 'Output', { englishFirst: language.englishFirst }), outputPath);
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
-  fmt.section('Source');
+  fmt.section(fmt.translateLabel('source', 'Source', { englishFirst: language.englishFirst }));
   process.stdout.write(`${snippet}\n`);
   fmt.footer();
 }
@@ -590,22 +706,31 @@ function extractVariable(options, source, record, selector) {
     return;
   }
 
-  fmt.header('Variable Extract');
-  fmt.section(`Variable: ${record.canonicalName || record.name}`);
-  fmt.stat('Kind', record.kind);
-  fmt.stat('Location', `${record.line}:${record.column}`);
-  if (record.initializerType) fmt.stat('Initializer', record.initializerType);
-  fmt.stat('Target Mode', `${target.mode} (requested ${target.requestedMode})`);
-  fmt.stat('Path', target.pathSignature);
-  fmt.stat('Hash', target.hash);
-  fmt.stat('Span', `${target.span.start}:${target.span.end}`);
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('variable', 'Variable', { englishFirst: language.englishFirst })} ${fmt.translateLabel('extract', 'Extract', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const variableLabel = fmt.translateLabel('variable', 'Variable', { englishFirst: language.englishFirst });
+  fmt.section(`${variableLabel}: ${record.canonicalName || record.name}`);
+  fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }), record.kind);
+  fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst: language.englishFirst }), `${record.line}:${record.column}`);
+  if (record.initializerType) {
+    fmt.stat(fmt.translateLabel('initializer', 'Initializer', { englishFirst: language.englishFirst }), record.initializerType);
+  }
+  fmt.stat(
+    `${fmt.translateLabel('target', 'Target', { englishFirst: language.englishFirst })} ${fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst })}`,
+    formatTargetMode(target.mode, target.requestedMode, language)
+  );
+  fmt.stat(fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }), target.pathSignature);
+  fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), target.hash);
+  fmt.stat(fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst }), `${target.span.start}:${target.span.end}`);
   if (outputPath) {
-    fmt.stat('Written to', outputPath);
+    fmt.stat(fmt.translateLabel('output', 'Output', { englishFirst: language.englishFirst }), outputPath);
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
-  fmt.section('Source');
+  fmt.section(fmt.translateLabel('source', 'Source', { englishFirst: language.englishFirst }));
   process.stdout.write(`${snippet}\n`);
   fmt.footer();
 }
@@ -875,40 +1000,50 @@ function replaceVariable(options, source, record, replacementPath, selector) {
     return;
   }
 
-  fmt.header('Variable Replacement');
-  fmt.section(`Variable: ${record.canonicalName || record.name}`);
-  fmt.stat('Kind', record.kind);
-  fmt.stat('Location', `${record.line}:${record.column}`);
-  if (record.initializerType) fmt.stat('Initializer', record.initializerType);
-  fmt.stat('Target Mode', `${target.mode} (requested ${target.requestedMode})`);
-  fmt.stat('Path', target.pathSignature || '(unavailable)');
-  fmt.stat('Hash', target.hash);
-  fmt.stat('Mode', options.fix ? 'applied' : 'dry-run');
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('variable', 'Variable', { englishFirst: language.englishFirst })} ${fmt.translateLabel('replace', 'Replacement', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const variableLabel = fmt.translateLabel('variable', 'Variable', { englishFirst: language.englishFirst });
+  fmt.section(`${variableLabel}: ${record.canonicalName || record.name}`);
+  fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }), record.kind);
+  fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst: language.englishFirst }), `${record.line}:${record.column}`);
+  if (record.initializerType) {
+    fmt.stat(fmt.translateLabel('initializer', 'Initializer', { englishFirst: language.englishFirst }), record.initializerType);
+  }
+  fmt.stat(
+    `${fmt.translateLabel('target', 'Target', { englishFirst: language.englishFirst })} ${fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst })}`,
+    formatTargetMode(target.mode, target.requestedMode, language)
+  );
+  fmt.stat(fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }), target.pathSignature || '(unavailable)');
+  fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), target.hash);
+  fmt.stat(fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst }), formatModeValue(Boolean(options.fix), language));
   renderGuardrailSummary(guard, options);
   if (digestInfo) {
-    fmt.info(`Digest snapshot (before): ${digestInfo.beforePath}`);
-    fmt.info(`Digest snapshot (after):  ${digestInfo.afterPath}`);
+    fmt.info(formatDigestSnapshot(fmt, 'before', digestInfo.beforePath, language.englishFirst));
+    fmt.info(formatDigestSnapshot(fmt, 'after', digestInfo.afterPath, language.englishFirst));
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
   if (options.previewEdit && !options.fix) {
-    fmt.section('Preview (Unified Diff)');
+    const previewLabel = fmt.translateLabel('preview', 'Preview', { englishFirst: language.englishFirst });
+    fmt.section(`${previewLabel} (Unified Diff)`);
     const diff = generateUnifiedDiff(snippetBefore, workingSnippet, {
       label: `${record.canonicalName || record.name}`,
       contextLines: 3
     });
     process.stdout.write(`${diff}\n`);
   } else if (options.emitDiff) {
-    fmt.section('Original');
+    fmt.section(fmt.translateLabel('original', 'Original', { englishFirst: language.englishFirst }));
     process.stdout.write(`${snippetBefore}\n`);
-    fmt.section('Replacement');
+    fmt.section(fmt.translateLabel('replace', 'Replacement', { englishFirst: language.englishFirst }));
     process.stdout.write(`${snippetAfter}\n`);
   }
   if (!options.fix) {
-    fmt.warn('Dry-run: no changes were written. Re-run with --fix to apply.');
+    fmt.warn(formatDryRunWarning(language));
   } else {
-    fmt.success(`Updated ${options.filePath}`);
+    fmt.success(formatSuccessMessage(options.filePath, language));
   }
   fmt.footer();
 }
@@ -1164,38 +1299,43 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     return;
   }
 
-  fmt.header('Function Replacement');
-  fmt.section(`Function: ${record.canonicalName || record.name}`);
-  fmt.stat('Kind', record.kind);
-  fmt.stat('Location', `${record.line}:${record.column}`);
-  fmt.stat('Path', record.pathSignature);
-  fmt.stat('Hash', record.hash);
-  fmt.stat('Mode', options.fix ? 'applied' : 'dry-run');
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst })} ${fmt.translateLabel('replace', 'Replacement', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const functionLabel = fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst });
+  fmt.section(`${functionLabel}: ${record.canonicalName || record.name}`);
+  fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }), record.kind);
+  fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst: language.englishFirst }), `${record.line}:${record.column}`);
+  fmt.stat(fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }), record.pathSignature);
+  fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), record.hash);
+  fmt.stat(fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst }), formatModeValue(Boolean(options.fix), language));
   renderGuardrailSummary(guard, options);
   if (digestInfo) {
-    fmt.info(`Digest snapshot (before): ${digestInfo.beforePath}`);
-    fmt.info(`Digest snapshot (after):  ${digestInfo.afterPath}`);
+    fmt.info(formatDigestSnapshot(fmt, 'before', digestInfo.beforePath, language.englishFirst));
+    fmt.info(formatDigestSnapshot(fmt, 'after', digestInfo.afterPath, language.englishFirst));
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
   if (options.previewEdit && !options.fix) {
-    fmt.section('Preview (Unified Diff)');
+    const previewLabel = fmt.translateLabel('preview', 'Preview', { englishFirst: language.englishFirst });
+    fmt.section(`${previewLabel} (Unified Diff)`);
     const diff = generateUnifiedDiff(snippetBefore, workingSnippet, {
       label: `${record.canonicalName || record.name}`,
       contextLines: 3
     });
     process.stdout.write(`${diff}\n`);
   } else if (options.emitDiff) {
-    fmt.section('Original');
+    fmt.section(fmt.translateLabel('original', 'Original', { englishFirst: language.englishFirst }));
     process.stdout.write(`${snippetBefore}\n`);
-    fmt.section('Replacement');
+    fmt.section(fmt.translateLabel('replace', 'Replacement', { englishFirst: language.englishFirst }));
     process.stdout.write(`${snippetAfter}\n`);
   }
   if (!options.fix) {
-    fmt.warn('Dry-run: no changes were written. Re-run with --fix to apply.');
+    fmt.warn(formatDryRunWarning(language));
   } else {
-    fmt.success(`Updated ${options.filePath}`);
+    fmt.success(formatSuccessMessage(options.filePath, language));
   }
   fmt.footer();
 }
@@ -1287,32 +1427,64 @@ function scanVariableTargets(options, variableRecords, selector) {
     return;
   }
 
-  fmt.header('Scan Targets (Variables)');
-  fmt.section(`Selector: ${selector}`);
-  fmt.stat('Target Mode', options.variableTarget);
-  fmt.table(matches.map((match, index) => {
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('scan_targets', 'Scan Targets', { englishFirst: language.englishFirst })} (${fmt.translateLabel('variable', 'Variables', { englishFirst: language.englishFirst })})`;
+  fmt.header(headerTitle);
+
+  const selectorLabel = fmt.translateLabel('selector', 'Selector', { englishFirst: language.englishFirst });
+  fmt.section(`${selectorLabel}: ${selector}`);
+
+  const targetModeLabel = `${fmt.translateLabel('target', 'Target', { englishFirst: language.englishFirst })} ${fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst })}`;
+  fmt.stat(targetModeLabel, options.variableTarget);
+
+  const columnLabels = {
+    index: fmt.translateLabel('index', 'Index', { englishFirst: language.englishFirst }),
+    name: fmt.translateLabel('name', 'Name', { englishFirst: language.englishFirst }),
+    kind: fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }),
+    mode: fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst }),
+    chars: fmt.translateLabel('chars', 'Chars', { englishFirst: language.englishFirst }),
+    bytes: fmt.translateLabel('byte_length', 'Bytes', { englishFirst: language.englishFirst }),
+    targetPath: `${fmt.translateLabel('target', 'Target', { englishFirst: language.englishFirst })} ${fmt.translateLabel('path', 'Path', { englishFirst: language.englishFirst })}`,
+    hash: fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst })
+  };
+
+  const tableRows = matches.map((match, index) => {
     const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
     const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
     return {
-      index: index + 1,
-      name: match.name,
-      kind: match.kind,
-      mode: match.targetMode,
-      chars: charSummary || '-',
-      bytes: byteSummary || '-',
-      targetPath: match.targetPath || '-',
-      hash: match.hash ? match.hash.slice(0, 12) : '-'
+      [columnLabels.index]: index + 1,
+      [columnLabels.name]: match.name,
+      [columnLabels.kind]: match.kind,
+      [columnLabels.mode]: match.targetMode,
+      [columnLabels.chars]: charSummary || '-',
+      [columnLabels.bytes]: byteSummary || '-',
+      [columnLabels.targetPath]: match.targetPath || '-',
+      [columnLabels.hash]: match.hash ? match.hash.slice(0, 12) : '-'
     };
-  }), {
-    columns: ['index', 'name', 'kind', 'mode', 'chars', 'bytes', 'targetPath', 'hash']
   });
-  fmt.stat('Matches', payload.summary.matchCount, 'number');
+
+  fmt.table(tableRows, {
+    columns: [
+      columnLabels.index,
+      columnLabels.name,
+      columnLabels.kind,
+      columnLabels.mode,
+      columnLabels.chars,
+      columnLabels.bytes,
+      columnLabels.targetPath,
+      columnLabels.hash
+    ]
+  });
+
+  fmt.stat(fmt.translateLabel('matches', 'Matches', { englishFirst: language.englishFirst }), payload.summary.matchCount, 'number');
   const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
   if (formattedSpanRange) {
-    fmt.stat('Span range', formattedSpanRange);
+    const spanLabel = fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst });
+    const rangeLabel = fmt.translateLabel('range', 'Range', { englishFirst: language.englishFirst });
+    fmt.stat(`${spanLabel} ${rangeLabel}`, formattedSpanRange);
   }
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
   }
   fmt.footer();
 }

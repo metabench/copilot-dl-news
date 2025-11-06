@@ -1,5 +1,7 @@
 'use strict';
 
+const { resolveLanguageContext, translateLabelWithMode, joinTranslatedLabels } = require('../../i18n/helpers');
+
 const FUNCTION_CONTEXT_KINDS = new Set(['function-declaration', 'function-expression', 'arrow-function', 'class-method']);
 
 let deps = null;
@@ -18,6 +20,208 @@ function requireDeps() {
     throw new Error('js-edit context operations not initialized. Call init() before use.');
   }
   return deps;
+}
+
+function translateContextKindValue(fmt, language, kind) {
+  if (!kind) {
+    return translateLabelWithMode(fmt, language, 'status_unknown', 'unknown');
+  }
+
+  const normalized = String(kind).toLowerCase();
+  switch (normalized) {
+    case 'class':
+      return translateLabelWithMode(fmt, language, 'class', kind);
+    case 'function':
+      return translateLabelWithMode(fmt, language, 'function', kind);
+    case 'module':
+      return translateLabelWithMode(fmt, language, 'module', kind);
+    case 'program':
+      return translateLabelWithMode(fmt, language, 'module', kind);
+    default:
+      return kind;
+  }
+}
+
+const STATUS_LABELS = Object.freeze({
+  ok: { fallback: 'OK', lexKey: 'status_ok' },
+  mismatch: { fallback: 'MISMATCH', lexKey: 'status_mismatch' },
+  bypass: { fallback: 'BYPASS', lexKey: 'status_bypass' },
+  pending: { fallback: 'PENDING', lexKey: 'pending' },
+  skipped: { fallback: 'SKIPPED', lexKey: 'status_skipped' },
+  error: { fallback: 'ERROR', lexKey: 'error' },
+  changed: { fallback: 'CHANGED', lexKey: 'status_changed' },
+  unchanged: { fallback: 'UNCHANGED', lexKey: 'status_unchanged' },
+  converted: { fallback: 'CONVERTED', lexKey: 'status_converted' },
+  normalized: { fallback: 'CONVERTED', lexKey: 'status_converted' },
+  normalised: { fallback: 'CONVERTED', lexKey: 'status_converted' },
+  none: { fallback: 'NONE', lexKey: 'status_none' },
+  unknown: { fallback: 'UNKNOWN', lexKey: 'status_unknown' }
+});
+
+function formatStatusValue(status, fmt, language) {
+  const normalized = typeof status === 'string' ? status.toLowerCase() : '';
+  const mapping = STATUS_LABELS[normalized];
+
+  if (language && language.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+    if (mapping && mapping.lexKey) {
+      return fmt.translateLabel(mapping.lexKey, mapping.fallback, {
+        englishFirst: false,
+        chineseOnly: true
+      });
+    }
+    return normalized;
+  }
+
+  if (mapping) {
+    return mapping.fallback;
+  }
+  return normalized ? normalized.toUpperCase() : '';
+}
+
+function formatRangeDetail({
+  labelKey,
+  fallbackLabel,
+  start,
+  end,
+  length,
+  expectedStart,
+  expectedEnd,
+  fmt,
+  language
+}) {
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return null;
+  }
+
+  const resolvedLength = Number.isFinite(length) ? length : Math.max(0, end - start);
+  const label = language && language.isChinese && fmt
+    ? fmt.translateLabel(labelKey, fallbackLabel, { englishFirst: false, chineseOnly: true })
+    : fallbackLabel;
+  const lengthLabel = language && language.isChinese && fmt
+    ? fmt.translateLabel('byte_length', 'len', { englishFirst: false, chineseOnly: true })
+    : 'len';
+
+  let segment = `${label} ${start}-${end} | ${lengthLabel} ${resolvedLength}`;
+
+  if (Number.isFinite(expectedStart) && Number.isFinite(expectedEnd)) {
+    const expectLabel = language && language.isChinese && fmt
+      ? fmt.translateLabel('expect', 'expected', { englishFirst: false, chineseOnly: true })
+      : 'expected';
+    segment += ` | ${expectLabel} ${expectedStart}-${expectedEnd}`;
+  }
+
+  return segment;
+}
+
+function buildLocalizedSpanDetails(span, fmt, language) {
+  if (!span) {
+    return '';
+  }
+
+  const segments = [];
+
+  const charSegment = formatRangeDetail({
+    labelKey: 'chars',
+    fallbackLabel: 'chars',
+    start: span.start,
+    end: span.end,
+    length: span.length,
+    expectedStart: span.expectedStart,
+    expectedEnd: span.expectedEnd,
+    fmt,
+    language
+  });
+
+  if (charSegment) {
+    segments.push(charSegment);
+  }
+
+  const byteSegment = formatRangeDetail({
+    labelKey: 'bytes',
+    fallbackLabel: 'bytes',
+    start: span.byteStart,
+    end: span.byteEnd,
+    length: span.byteLength,
+    expectedStart: span.expectedByteStart,
+    expectedEnd: span.expectedByteEnd,
+    fmt,
+    language
+  });
+
+  if (byteSegment) {
+    segments.push(byteSegment);
+  }
+
+  return segments.join('\n');
+}
+
+function formatHashDetails(hashGuard, fmt, language) {
+  if (!hashGuard) {
+    return '';
+  }
+
+  if (hashGuard.status === 'ok') {
+    return hashGuard.expected || '';
+  }
+
+  if (language && language.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+    const expectedLabel = fmt.translateLabel('expect', 'expected', { englishFirst: false, chineseOnly: true });
+    const actualLabel = fmt.translateLabel('actual', 'actual', { englishFirst: false, chineseOnly: true });
+    return `${expectedLabel} ${hashGuard.expected} ${actualLabel} ${hashGuard.actual}`.trim();
+  }
+
+  return `expected ${hashGuard.expected} received ${hashGuard.actual}`;
+}
+
+function formatSyntaxDetails(syntaxGuard, fmt, language) {
+  if (!syntaxGuard) {
+    return '';
+  }
+
+  if (syntaxGuard.status === 'ok') {
+    if (language && language.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+      return fmt.translateLabel('success', 'Success', { englishFirst: false, chineseOnly: true });
+    }
+    return 'Re-parse successful';
+  }
+
+  if (syntaxGuard.message) {
+    return syntaxGuard.message;
+  }
+
+  if (language && language.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+    return fmt.translateLabel('error', 'Error', { englishFirst: false, chineseOnly: true });
+  }
+
+  return 'Syntax check failed';
+}
+
+function formatResultDetails(resultGuard, fmt, language) {
+  if (!resultGuard) {
+    return '';
+  }
+
+  if (resultGuard.status === 'changed') {
+    if (language && language.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+      const afterLabel = fmt.translateLabel('after', 'after', { englishFirst: false, chineseOnly: true });
+      return `${afterLabel} ${resultGuard.after}`.trim();
+    }
+    return resultGuard.after || '';
+  }
+
+  if (resultGuard.status === 'unchanged') {
+    if (language && language.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+      const unchangedLabel = fmt.translateLabel('status_unchanged', 'unchanged', { englishFirst: false, chineseOnly: true });
+      return `${resultGuard.after} ${unchangedLabel}`.trim();
+    }
+    return `${resultGuard.after} (unchanged)`;
+  }
+
+  if (resultGuard.after) {
+    return resultGuard.after;
+  }
+
+  return '';
 }
 
 function isFunctionContextKind(kind) {
@@ -338,7 +542,50 @@ function formatSpanDetails(span) {
   return segments.join('\n');
 }
 
-function formatNewlineSummary(newlineGuard) {
+function formatNewlineSummary(newlineGuard, fmt = null, language = null) {
+  const resolvedLanguage = language || (fmt ? resolveLanguageContext(fmt) : { languageMode: 'en', englishFirst: true, isChinese: false });
+
+  if (resolvedLanguage.isChinese && fmt && typeof fmt.translateLabel === 'function') {
+    if (!newlineGuard) {
+      return fmt.translateLabel('newlines', 'Newlines', { englishFirst: false, chineseOnly: true });
+    }
+
+    const translate = (key, fallback) => fmt.translateLabel(key, fallback, { englishFirst: false, chineseOnly: true });
+    const segments = [];
+
+    if (newlineGuard.file?.style) {
+      const mixed = newlineGuard.file.mixed ? '混' : '';
+      segments.push(`${translate('file', 'File')} ${newlineGuard.file.style.toUpperCase()}${mixed}`);
+    }
+
+    if (newlineGuard.replacement) {
+      const mixed = newlineGuard.replacement.mixed ? '混' : '';
+      const target = newlineGuard.replacement.normalizedStyle
+        ? `→${newlineGuard.replacement.normalizedStyle.toUpperCase()}`
+        : '';
+      let snippetSegment = `${translate('snippet', 'Snippet')} ${newlineGuard.replacement.style.toUpperCase()}${mixed}${target}`;
+      if (newlineGuard.replacement.trailingNewlineAdded) {
+        snippetSegment = `${snippetSegment} 补尾`;
+      }
+      segments.push(snippetSegment.trim());
+    } else if (newlineGuard.original?.style || newlineGuard.result?.style) {
+      if (newlineGuard.original?.style) {
+        const mixed = newlineGuard.original.mixed ? '混' : '';
+        segments.push(`${translate('original', 'Original')} ${newlineGuard.original.style.toUpperCase()}${mixed}`);
+      }
+      if (newlineGuard.result?.style) {
+        const mixed = newlineGuard.result.mixed ? '混' : '';
+        segments.push(`${translate('result', 'Result')} ${newlineGuard.result.style.toUpperCase()}${mixed}`);
+      }
+    }
+
+    if (typeof newlineGuard.byteDelta === 'number' && newlineGuard.byteDelta !== 0) {
+      segments.push(`Δ${newlineGuard.byteDelta}`);
+    }
+
+    return segments.join(' | ');
+  }
+
   if (!newlineGuard) {
     return 'No newline analysis available';
   }
@@ -528,40 +775,117 @@ function renderContextResults(type, selector, options, contextResult) {
     return;
   }
 
-  const headerLabel = type === 'function' ? 'Function Context' : 'Variable Context';
+  const language = resolveLanguageContext(fmt);
+  const isChinese = language.isChinese;
+  const hasCodeBlock = typeof fmt.codeBlock === 'function';
+  const translate = (key, fallback, options = {}) => translateLabelWithMode(fmt, language, key, fallback, options);
+  const combine = (parts) => joinTranslatedLabels(fmt, language, parts);
+
+  const entityKey = type === 'function' ? 'function' : 'variable';
+  const entityFallback = type === 'function' ? 'Function' : 'Variable';
+
+  const headerLabel = combine([
+    { key: entityKey, fallback: entityFallback },
+    { key: 'context', fallback: 'Context' }
+  ]);
   fmt.header(headerLabel);
-  fmt.section(`Selector: ${selector}`);
-  fmt.stat('Requested padding', `${payload.padding.requestedBefore} before / ${payload.padding.requestedAfter} after`);
-  fmt.stat('Applied padding', `${contextResult.before} before / ${contextResult.after} after`);
-  fmt.stat('Enclosing mode', options.contextEnclosing);
-  const formattedSpanRange = formatAggregateSpan(spanRange);
-  if (formattedSpanRange) {
-    fmt.stat('Span range', formattedSpanRange);
+
+  const selectorLabel = translate('selector', 'Selector');
+  fmt.section(`${selectorLabel}: ${selector}`);
+
+  const beforeLabel = translate('before', 'before');
+  const afterLabel = translate('after', 'after');
+  const requestedPaddingLabel = combine([
+    { key: 'requested', fallback: 'Requested' },
+    { key: 'padding', fallback: 'padding' }
+  ]);
+  fmt.stat(requestedPaddingLabel, `${payload.padding.requestedBefore} ${beforeLabel} / ${payload.padding.requestedAfter} ${afterLabel}`);
+
+  const appliedPaddingLabel = combine([
+    { key: 'applied', fallback: 'Applied' },
+    { key: 'padding', fallback: 'padding' }
+  ]);
+  fmt.stat(appliedPaddingLabel, `${contextResult.before} ${beforeLabel} / ${contextResult.after} ${afterLabel}`);
+
+  const enclosingModeLabel = combine([
+    { key: 'enclosing', fallback: 'Enclosing' },
+    { key: 'mode', fallback: 'mode' }
+  ]);
+  const enclosingModeValue = options.contextEnclosing
+    ? translateContextKindValue(fmt, language, options.contextEnclosing)
+    : options.contextEnclosing;
+  fmt.stat(enclosingModeLabel, enclosingModeValue);
+
+  let formattedSpanRange = null;
+  if (spanRange) {
+    formattedSpanRange = isChinese
+      ? buildLocalizedSpanDetails({
+        start: spanRange.start,
+        end: spanRange.end,
+        length: spanRange.totalLength,
+        byteStart: spanRange.byteStart,
+        byteEnd: spanRange.byteEnd,
+        byteLength: spanRange.totalByteLength
+      }, fmt, language)
+      : formatAggregateSpan(spanRange);
   }
-  const formattedContextRange = formatAggregateSpan(contextSpanRange);
+  if (formattedSpanRange) {
+    fmt.stat(combine([
+      { key: 'span', fallback: 'Span' },
+      { key: 'range', fallback: 'range' }
+    ]), formattedSpanRange);
+  }
+
+  let formattedContextRange = null;
+  if (contextSpanRange) {
+    formattedContextRange = isChinese
+      ? formatRangeDetail({
+        labelKey: 'context',
+        fallbackLabel: 'Context',
+        start: contextSpanRange.start,
+        end: contextSpanRange.end,
+        length: contextSpanRange.end - contextSpanRange.start,
+        fmt,
+        language
+      })
+      : formatSpanRange('chars', contextSpanRange.start, contextSpanRange.end, contextSpanRange.end - contextSpanRange.start);
+  }
   if (formattedContextRange) {
-    fmt.stat('Context range', formattedContextRange);
+    fmt.stat(combine([
+      { key: 'context', fallback: 'Context' },
+      { key: 'range', fallback: 'range' }
+    ]), formattedContextRange);
   }
 
   contextResult.entries.forEach((entry, index) => {
     const { record } = entry;
-    const title = `${type === 'function' ? 'Function' : 'Variable'} ${index + 1}: ${record.canonicalName || record.name}`;
-    fmt.section(title);
-    fmt.stat('Kind', record.kind);
-    fmt.stat('Location', `${record.line}:${record.column}`);
-    if (record.exportKind) fmt.stat('Export', record.exportKind);
+    const entryLabel = translate(entityKey, entityFallback);
+    const entryTitle = isChinese
+      ? `${entryLabel}${index + 1}: ${record.canonicalName || record.name}`
+      : `${entryLabel} ${index + 1}: ${record.canonicalName || record.name}`;
+    fmt.section(entryTitle);
+
+    fmt.stat(translate('kind', 'Kind'), translateContextKindValue(fmt, language, record.kind));
+    fmt.stat(translate('location', 'Location'), `${record.line}:${record.column}`);
+    if (record.exportKind) {
+      fmt.stat(translate('exports', 'Export'), record.exportKind);
+    }
     if (type === 'variable' && record.initializerType) {
-      fmt.stat('Initializer', record.initializerType);
+      fmt.stat(translate('initializer', 'Initializer'), record.initializerType);
     }
-    fmt.stat('Path', record.pathSignature);
+    fmt.stat(translate('path_signature', 'Path'), record.pathSignature);
     if (record.scopeChain && record.scopeChain.length > 0) {
-      fmt.stat('Scope', record.scopeChain.join(' > '));
+      fmt.stat(translate('scope', 'Scope'), record.scopeChain.join(' > '));
     }
-    const baseSpanDetails = formatSpanDetails(record.span);
+    const baseSpanDetails = isChinese
+      ? buildLocalizedSpanDetails(record.span, fmt, language)
+      : formatSpanDetails(record.span);
     if (baseSpanDetails) {
-      fmt.stat('Span', baseSpanDetails);
+      fmt.stat(translate('span', 'Span'), baseSpanDetails);
     }
-    const effectiveSpanDetails = formatSpanDetails(entry.effectiveSpan);
+    const effectiveSpanDetails = isChinese
+      ? buildLocalizedSpanDetails(entry.effectiveSpan, fmt, language)
+      : formatSpanDetails(entry.effectiveSpan);
     if (effectiveSpanDetails) {
       const baseSpan = record.span || null;
       const effective = entry.effectiveSpan || null;
@@ -572,41 +896,90 @@ function renderContextResults(type, selector, options, contextResult) {
           && (typeof baseSpan.byteEnd === 'number' ? baseSpan.byteEnd : null) === (typeof effective.byteEnd === 'number' ? effective.byteEnd : null)
         : false;
       if (!spansMatch) {
-        fmt.stat('Effective span', effectiveSpanDetails);
+        fmt.stat(combine([
+          { key: 'effective', fallback: 'Effective' },
+          { key: 'span', fallback: 'span' }
+        ]), effectiveSpanDetails);
       }
     }
     const contextRange = entry.contextRange;
     if (contextRange) {
-      const contextRangeSummary = formatSpanRange('chars', contextRange.start, contextRange.end, contextRange.end - contextRange.start);
+      const contextRangeSummary = isChinese
+        ? formatRangeDetail({
+          labelKey: 'context',
+          fallbackLabel: 'Context',
+          start: contextRange.start,
+          end: contextRange.end,
+          length: contextRange.end - contextRange.start,
+          fmt,
+          language
+        })
+        : formatSpanRange('chars', contextRange.start, contextRange.end, contextRange.end - contextRange.start);
       if (contextRangeSummary) {
-        fmt.stat('Context window', contextRangeSummary);
+        fmt.stat(combine([
+          { key: 'context', fallback: 'Context' },
+          { key: 'window', fallback: 'window' }
+        ]), contextRangeSummary);
       }
     }
     const availableContexts = getEnclosingContexts(record);
     if (availableContexts.length > 0) {
       const contextSummary = availableContexts
         .map((ctx) => {
-          const contextName = ctx.name ? ` ${ctx.name}` : '';
-          return `${ctx.kind || 'unknown'}${contextName}`;
+          const contextName = ctx.name ? `${isChinese ? '' : ' '}${ctx.name}` : '';
+          const renderedKind = translateContextKindValue(fmt, language, ctx.kind || null);
+          return `${renderedKind}${contextName}`;
         })
-        .join(' | ');
-      fmt.stat('Enclosing contexts', contextSummary);
+        .join(isChinese ? '｜' : ' | ');
+      fmt.stat(combine([
+        { key: 'enclosing', fallback: 'Enclosing' },
+        { key: 'context', fallback: 'contexts' }
+      ]), contextSummary);
     } else if (record.enclosingKind === 'class') {
-      fmt.stat('Enclosing class', record.enclosingName || '(anonymous class)');
+      const anonymousClass = language.isChinese
+        ? `（${translate('anonymous_class', 'anonymous class')}）`
+        : '(anonymous class)';
+      fmt.stat(combine([
+        { key: 'enclosing', fallback: 'Enclosing' },
+        { key: 'class', fallback: 'class' }
+      ]), record.enclosingName || anonymousClass);
     }
     if (entry.selectedEnclosingContext) {
       const selected = entry.selectedEnclosingContext;
-      const selectedName = selected.name ? ` ${selected.name}` : '';
-      fmt.stat('Expanded to', `${selected.kind || 'unknown'}${selectedName}`);
+      const selectedName = selected.name ? `${isChinese ? '' : ' '}${selected.name}` : '';
+      const renderedKind = translateContextKindValue(fmt, language, selected.kind || null);
+      fmt.stat(translate('expanded_to', 'Expanded to'), `${renderedKind}${selectedName}`);
     }
-    fmt.section('Context Snippet');
-    fmt.codeBlock(entry.contextSnippet);
-    fmt.section('Base Snippet');
-    fmt.codeBlock(entry.baseSnippet);
+    fmt.section(combine([
+      { key: 'context', fallback: 'Context' },
+      { key: 'snippet', fallback: 'Snippet' }
+    ]));
+    if (hasCodeBlock) {
+      fmt.codeBlock(entry.contextSnippet);
+    } else {
+      process.stdout.write(`${entry.contextSnippet}\n`);
+      fmt.blank();
+    }
+    fmt.section(combine([
+      { key: 'base', fallback: 'Base' },
+      { key: 'snippet', fallback: 'Snippet' }
+    ]));
+    if (hasCodeBlock) {
+      fmt.codeBlock(entry.baseSnippet);
+    } else {
+      process.stdout.write(`${entry.baseSnippet}\n`);
+      fmt.blank();
+    }
   });
 
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    if (isChinese) {
+      const planLabel = translate('plan', 'Plan', { englishFirst: false, chineseOnly: true });
+      const outputLabel = translate('output', 'output', { englishFirst: false, chineseOnly: true });
+      fmt.info(`${planLabel} ${outputLabel}: ${options.emitPlanPath}`);
+    } else {
+      fmt.info(`Plan written to ${options.emitPlanPath}`);
+    }
   }
   fmt.footer();
 }
@@ -617,7 +990,11 @@ function renderGuardrailSummary(guard, options) {
   }
 
   const { fmt } = requireDeps();
-  const formattedSpanDetails = formatSpanDetails(guard.span);
+  const language = resolveLanguageContext(fmt);
+  const isChinese = language.isChinese;
+  const translate = (key, fallback, options = {}) => translateLabelWithMode(fmt, language, key, fallback, options);
+  const combine = (parts) => joinTranslatedLabels(fmt, language, parts);
+
   const fallbackSegments = [];
   const fallbackChar = formatSpanRange(
     'chars',
@@ -641,52 +1018,68 @@ function renderGuardrailSummary(guard, options) {
   if (fallbackByte) {
     fallbackSegments.push(fallbackByte);
   }
-  const fallbackSpanDetails = fallbackSegments.length > 0 ? fallbackSegments.join('\n') : null;
-  const spanDetails = formattedSpanDetails || fallbackSpanDetails;
-  const rows = [
-    {
-      check: 'Span',
-      status: guard.span.status.toUpperCase(),
-      details: spanDetails
-    },
-    {
-      check: 'Hash',
-      status: guard.hash.status.toUpperCase(),
-      details: guard.hash.status === 'ok'
-        ? guard.hash.expected
-        : `expected ${guard.hash.expected} received ${guard.hash.actual}`
-    },
-    {
-      check: 'Path',
-      status: guard.path.status.toUpperCase(),
-      details: guard.path.signature
-    },
-    {
-      check: 'Syntax',
-      status: guard.syntax.status.toUpperCase(),
-      details: guard.syntax.status === 'ok' ? 'Re-parse successful' : guard.syntax.message
-    },
-    {
-      check: 'Result Hash',
-      status: guard.result.status.toUpperCase(),
-      details: guard.result.status === 'changed'
-        ? guard.result.after
-        : `${guard.result.after} (unchanged)`
-    }
-  ];
+  const fallbackSpanDetails = fallbackSegments.length > 0 ? fallbackSegments.join('\n') : '';
+
+  const spanDetails = isChinese
+    ? buildLocalizedSpanDetails(guard.span, fmt, language) || fallbackSpanDetails
+    : formatSpanDetails(guard.span) || fallbackSpanDetails;
+
+  const guardrailLabel = translate('guardrail', 'Guardrails');
+
+  const columnLabels = {
+    check: translate('check', 'Check'),
+    status: translate('status', 'Status'),
+    details: translate('details', 'Details')
+  };
+
+  const tableRows = [];
+
+  tableRows.push({
+    [columnLabels.check]: translate('span', 'Span'),
+    [columnLabels.status]: formatStatusValue(guard.span.status, fmt, language),
+    [columnLabels.details]: spanDetails
+  });
+
+  tableRows.push({
+    [columnLabels.check]: translate('hash', 'Hash'),
+    [columnLabels.status]: formatStatusValue(guard.hash.status, fmt, language),
+    [columnLabels.details]: formatHashDetails(guard.hash, fmt, language)
+  });
+
+  tableRows.push({
+    [columnLabels.check]: translate('path_signature', 'Path'),
+    [columnLabels.status]: formatStatusValue(guard.path.status, fmt, language),
+    [columnLabels.details]: guard.path.signature || ''
+  });
+
+  tableRows.push({
+    [columnLabels.check]: translate('syntax', 'Syntax'),
+    [columnLabels.status]: formatStatusValue(guard.syntax.status, fmt, language),
+    [columnLabels.details]: formatSyntaxDetails(guard.syntax, fmt, language)
+  });
+
+  const resultLabel = combine([
+    { key: 'result', fallback: 'Result' },
+    { key: 'hash', fallback: 'Hash' }
+  ]);
+
+  tableRows.push({
+    [columnLabels.check]: resultLabel,
+    [columnLabels.status]: formatStatusValue(guard.result.status, fmt, language),
+    [columnLabels.details]: formatResultDetails(guard.result, fmt, language)
+  });
 
   if (guard.newline) {
-    const newlineStatus = String(guard.newline.status || 'unknown').toUpperCase();
-    rows.push({
-      check: 'Newlines',
-      status: newlineStatus,
-      details: formatNewlineSummary(guard.newline)
+    tableRows.push({
+      [columnLabels.check]: translate('newlines', 'Newlines'),
+      [columnLabels.status]: formatStatusValue(guard.newline.status || 'unknown', fmt, language),
+      [columnLabels.details]: formatNewlineSummary(guard.newline, fmt, language)
     });
   }
 
-  fmt.section('Guardrails');
-  fmt.table(rows, {
-    columns: ['check', 'status', 'details']
+  fmt.section(guardrailLabel);
+  fmt.table(tableRows, {
+    columns: [columnLabels.check, columnLabels.status, columnLabels.details]
   });
 }
 

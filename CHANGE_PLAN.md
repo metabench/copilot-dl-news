@@ -1,5 +1,103 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — js-scan CLI Implementation (Initiated 2025-11-15)
+
+### Goal
+- Deliver the Phase 1 js-scan MVP that provides multi-file JavaScript discovery with hash-compatible search, matching the design in `docs/JS_SCAN_DESIGN_PROPOSAL.md`.
+- Enable agents to locate functions by term, hash, module index, or naming pattern without leaving guarded workflows built around js-edit.
+
+### Current Behavior
+- No workspace-wide JavaScript scanner exists; discovery relies on per-file js-edit commands.
+- Hashes emitted by js-edit cannot be resolved globally, blocking guarded refactor workflows and plan validation.
+- Agents lack structured guidance for narrowing large result sets, often exceeding response limits.
+
+### Proposed Changes
+1. **CLI Skeleton** — Create `tools/dev/js-scan.js` and PowerShell shim wiring `CliArgumentParser`, `CliFormatter`, and stub operations while enforcing encoding fixes.
+2. **Scanner Infrastructure** — Implement shared modules under `tools/dev/js-scan/shared/` for directory traversal, file parsing via `@swc/core`, and normalized records with hashes from `tools/dev/lib/swcAst.js`.
+3. **Operations** — Ship search, hash lookup, module index, and pattern commands with relevance scoring, filters, and guidance payloads per the proposal.
+4. **CLI Wiring & Guidance** — Connect parsed options to operations, enforce output limits (200 lines default), and emit refinement suggestions when results overflow or are empty.
+5. **Docs & Tests** — Add Jest coverage under `tests/tools/__tests__/js-scan.test.js`, smoke the CLI, and document usage in `tools/dev/README.md` plus relevant agent instructions.
+
+### Risks & Unknowns
+- Full `src/` scans may be slow on Windows; may need caching or directory filters to stay under 5 seconds.
+- `@swc/core` may fail on syntax features not enabled in existing parser config; must skip gracefully with warnings.
+- Guidance heuristics might overwhelm output if tuning is off; ensure messaging is concise and actionable.
+
+### Integration Points
+- `tools/dev/lib/swcAst.js` for hash computation, span handling, and context utilities.
+- `src/utils/CliFormatter.js` and `CliArgumentParser` for consistent CLI UX.
+- Existing CLI docs (`tools/dev/README.md`, `.github/agents/Careful js-edit refactor.agent.md`) for workflow updates.
+
+### Docs Impact
+- Document js-scan usage/examples in `tools/dev/README.md` and update agent guidance after MVP stabilizes.
+- Capture workflow additions in the js-edit/js-scan coordination sections of repo instructions if required.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-scan.test.js --bail=1 --maxWorkers=50%` for unit coverage.
+- Manual smoke: `node tools/dev/js-scan.js --dir src --search planner` (ASCII + JSON) to validate guidance and limits.
+
+### Rollback Plan
+- Delete new `tools/dev/js-scan*` modules, tests, docs, and npm script entries; js-edit remains unaffected.
+
+### Branch & Notes
+- Working branch: `feature/js-scan-mvp` (created 2025-11-15 to isolate implementation).
+- 2025-11-15: Follow-up scope added to exclude deprecated/bundled assets by default and introduce `--include-deprecated` / `--deprecated-only` flags for targeted scans.
+- 2025-11-16: CLI now exposes `--include-deprecated` / `--deprecated-only`; parser guards mutual exclusivity and forwards flags into the scanner.
+- 2025-11-16: Added deprecated filtering tests, restored directory recursion in the scanner, and refreshed js-edit agent docs to highlight js-scan usage.
+- 2025-11-16: Spun up a bilingual tooling agent charter to drive Chinese/English support across js-scan, js-edit, md-scan, and md-edit; research notes emphasize using a constrained two-character lexicon to increase output density while keeping the learning curve manageable and measuring productivity effects on higher-Chinese-fluency models.
+- 2025-11-16: Expanded the bilingual lexicon with CLI-centric aliases (status, warning, result, etc.) to support terse Chinese command parsing and dense summaries.
+- 2025-11-16: Published `tools/dev/i18n/lexicon.js` with detection helpers plus Jest coverage (`tests/tools/__tests__/i18n.lexicon.test.js`) to back upcoming bilingual CLI wiring.
+- 2025-11-16: Added `tools/dev/i18n/dialect.js`, upgraded `CliFormatter` with language modes, and taught `js-scan` to auto-detect Chinese aliases/values via `--lang` (default auto) while emitting terse Chinese summaries in search output.
+- 2025-11-16: Delivered ultra-terse Chinese help output (`--help --lang zh`) built from two-character tiles, added `--限` alias coverage, and verified the bilingual suites via `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/i18n.dialect.test.js tests/tools/__tests__/i18n.lexicon.test.js tests/tools/__tests__/js-scan.test.js --bail=1 --maxWorkers=50%`.
+- 2025-11-16: Added `--view <mode>` (detailed/terse/summary) plus `--fields` customization to `js-scan`, enabling ultra-compact search listings and aggregate summaries; refreshed `tools/dev/README.md`, expanded lexicon/dialect coverage, and extended Jest suites (`i18n.dialect`, `i18n.lexicon`, `js-scan`) to validate the new pathways.
+- 2025-11-16: Documented the Chinese-alias-first workflow in `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md`, encouraging operators to skip `--lang zh` and rely on automatic glyph detection for terse bilingual output.
+- 2025-11-16: Added dependency traversal (`--follow-deps` / `--dep-depth`, aliases `--依` / `--层`) so js-scan can chase relative imports safely; updated docs and i18n assets, and expanded fixture coverage to prove the circular dependency guard.
+- 2025-11-16 (evening): Extended the bilingual alias translator to `js-edit`, `md-scan`, and `md-edit`; introduced shared help renderers, `--lang` negotiation, and glyph-aware help grids. Added Jest smoke tests (`js-edit.i18n`, `md-scan.i18n`, `md-edit.i18n`) to ensure Chinese aliases surface in help output. Updated `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` with cross-tool bilingual examples.
+- 2025-11-16 (late night): Re-ran focused Jest suites to validate the new bilingual helpers, using `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.i18n.test.js --runInBand`, `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/md-scan.i18n.test.js --runInBand`, `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/md-edit.i18n.test.js --runInBand`, and `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/i18n.lexicon.test.js tests/tools/__tests__/i18n.dialect.test.js tests/tools/__tests__/js-scan.test.js --bail=1 --maxWorkers=50%`; all suites passed.
+- 2025-11-16 (latest): Localized js-edit guardrail summaries with terse Chinese column headers and status glyphs, refreshed lexicon/test coverage, and verified via `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/i18n.lexicon.test.js tests/tools/__tests__/js-edit.i18n.test.js --bail=1 --maxWorkers=50%`.
+- 2025-11-16 (late night+1): Preparing localization pass for js-edit locate/mutation summaries so guardrail output and plan messaging respect bilingual label formatting; will reuse `fmt.translateLabel` and extend the lexicon if new keys surface.
+- 2025-11-16 (late night+2): Localized js-edit locate/extract/replacement/scan outputs with translated headers, stats, digest messaging, and plan notices; expanded the lexicon plus i18n Jest suites to cover the new labels.
+- 2025-11-17: Localized js-edit context summaries with bilingual headers, stats, and guardrail metadata, extended the lexicon with context-specific aliases, added CLI regression coverage for `--context-function --lang zh`, and re-ran `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/i18n.lexicon.test.js tests/tools/__tests__/js-edit.i18n.test.js --bail=1 --maxWorkers=50%` to confirm updates.
+- 2025-11-17 (evening): Added shared `tools/dev/i18n/helpers.js` for language negotiation and label translation, refactored `js-scan`, `md-scan`, and `md-edit` operations to consume it, expanded fixtures plus Jest suites (`js-scan.i18n`, `md-scan.i18n`, `md-edit.i18n`), and refreshed `tools/dev/README.md` alongside `docs/CLI_REFACTORING_QUICK_START.md` with bilingual summary guidance.
+- 2025-11-17 (evening): Investigated terminal font scaling; Windows PowerShell 5.1 lacks programmatic control, so deferred exposing `--font-scale`. Documented the limitation here and plan to revisit if shell support improves.
+
+## Upcoming Plan — Bilingual CLI Localization (Initiated 2025-11-16)
+
+### Goal
+- Deliver a bilingual (EN/zh) interaction mode for `js-scan`, `js-edit`, `md-scan`, and `md-edit` that boosts information density and supports terse Chinese command aliases without disrupting existing English workflows.
+
+### Current Behavior
+- CLIs emit English-only help, guidance, and search output; verbose summaries can obscure key data for human operators and language models.
+- No mechanism exists to request alternative languages or shorter command syntaxes.
+
+### Proposed Changes
+1. **Lexicon Module** — Publish a shared dictionary (`tools/dev/i18n/lexicon.js`) that maps canonical tokens and CLI verbs to the supplied two-character Chinese aliases, plus utilities for bidirectional lookups, fallbacks, and glyph detection.
+2. **Language Negotiation & Detection** — Add `--lang <code>` flag / `JS_TOOL_LANG` env support and automatically enable terse Chinese mode whenever a recognized Chinese alias or glyph is supplied, falling back to English otherwise.
+3. **Terse Command Mode** — Accept short aliases (e.g., `--搜` for `--search`) and emit ultra-dense Chinese responses (1–2 character headers, compact summaries) while preserving English flags for compatibility. Document collision rules and surface conflicts during validation.
+4. **Formatter Integration** — Update `CliFormatter`/markdown renderers to consume the lexicon, ensuring table headers, guidance bullets, and summaries display compact Chinese terms without sacrificing baseline legibility.
+5. **Documentation & Onboarding** — Refresh `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, and relevant agent playbooks with examples of bilingual usage, alias tables, and guidance for English-primary operators learning the constrained dialect.
+6. **Font Scaling Option (Stretch)** — Investigate exposing `--font-scale <ratio>`; if unsupported by terminals, document the limitation and ensure layout tweaks keep Chinese glyphs readable at default sizes.
+
+### Risks & Unknowns
+- Command alias collisions or confusion if operators mix English and Chinese flags mid-invocation.
+- Potential readability issues for users unfamiliar with the Chinese dialect; need clear onboarding and easy fallback to English.
+- Console rendering differences on Windows PowerShell vs. other shells may impact glyph alignment or font scaling options.
+
+### Integration Points
+- `src/utils/CliFormatter.js`, `src/utils/CliArgumentParser.js`, and CLI entry points for js-scan/js-edit/md-scan/md-edit.
+- Test suites under `tests/tools/__tests__/` for new i18n coverage.
+- Agent documentation and quick-start guides.
+
+### Focused Test Plan
+- Add Jest snapshot suites for bilingual help output and terse-command parsing (e.g., `js-scan.i18n.test.js`, `js-edit.i18n.test.js`).
+- Manual smoke: run each CLI with `--lang zh` and verify alias handling (`node tools/dev/js-edit.js --lang zh --列` etc.).
+
+### Rollback Plan
+- Keep English defaults untouched and gate bilingual mode behind explicit flags so disabling the feature requires removing the flag parsing and formatter hooks while leaving existing behavior intact.
+
+### Resource & Coordination Notes
+- Primary execution agent: `Bilingual js tooling` (new charter). May require assistance from test-focused agents to expand Jest coverage and from documentation agents for bilingual onboarding materials.
+
 ## Active Plan — Crawl Sequence Config Implementation (Initiated 2025-11-04)
 
 ### Goal

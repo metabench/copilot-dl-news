@@ -11,9 +11,31 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 ---
 
+## `js-scan` — Multi-file JavaScript Discovery
+
+`js-scan` complements `js-edit` by scanning entire directories, collecting function metadata with js-edit compatible hashes, and emitting dense search output for reconnaissance.
+
+- `node tools/dev/js-scan.js --dir src --search planner telemetry` — multi-term search with star-ranked results, optional guidance, and JSON output.
+- `node tools/dev/js-scan.js --dir src --search planner --lang zh --view summary` — render bilingual stats (`搜果`, `匹数`, `档总`) while keeping terse English guidance for mixed-language operators.
+- `node tools/dev/js-scan.js --dir src --find-hash 6Z4U7cYZ` — resolve a js-edit hash across the workspace, detecting collisions.
+- `node tools/dev/js-scan.js --dir src --build-index --limit 15` — summarize module stats (exports, functions, entry points) for the top files.
+- `node tools/dev/js-scan.js --dir src --find-pattern "*Adapter" --exported --limit 30 --json` — glob/regex pattern discovery with export filters and machine-readable payloads.
+- `node tools/dev/js-scan.js --dir deprecated-ui-root --deprecated-only --search carousel` — target deprecated bundles explicitly; deprecated directories stay excluded unless `--include-deprecated` or `--deprecated-only` is provided.
+- `node tools/dev/js-scan.js --搜 planner --视 简` — lean on the Chinese aliases directly; the CLI auto-detects glyphs like `--搜`, `--视`, and `简`, switches into compact Chinese mode, and keeps guidance terse without needing `--lang zh`.
+- `node tools/dev/js-scan.js --help --lang zh` — render the ultra-terse Chinese help grid (two-character tiles plus alias hints); combine with `--含径`, `--限`, or other Chinese aliases to surface targeted detail rows.
+- `node tools/dev/js-scan.js --dir src/crawler --follow-deps --view terse --fields location,name,hash --搜 telemetry` — follow relative dependencies (use `--依` for Chinese alias) so helper modules outside the initial directory join the terse bilingual listings.
+- `node tools/dev/js-scan.js --dir src --search planner --view terse --fields location,name,hash` — stream ultra-compact match lines (perfect for agents capturing hashes/paths); tweak `--fields` to control which columns appear in the terse view.
+- `node tools/dev/js-scan.js --dir src --search planner --view summary` — collapse output to headline stats (match counts, limits, exported/async ratios) when you only need directional signal.
+
+Use `--async`, `--generator`, `--kind`, `--include-path`, and `--exclude-path` to refine search results. Text output respects `--max-lines`, `--no-snippets`, and `--hashes-only` for concise listings, while JSON payloads include guidance hints when result sets overflow.
+
 ## `js-edit` — Guarded JavaScript Function Surgery
 
 `js-edit` is the flagship AST-aware utility in this workspace. It uses SWC to parse files on demand (no cached ASTs) and provides selectors, guardrails, and dry-run defaults tailored for refactor automation.
+
+**Bilingual shortcuts**
+- `node tools/dev/js-edit.js --文 src/example.js --函列 --紧凑` — auto-detect Chinese aliases for file and list functions; output switches to terse Chinese headers without an explicit `--lang zh`.
+- `node tools/dev/js-edit.js --助 --语 zh` — render the Chinese help grid (alias table plus examples) and keep alias hints visible even when relying exclusively on glyph-based flags.
 
 ### Internal Architecture
 
@@ -181,5 +203,17 @@ Set-Content (Join-Path $tempDir.FullName 'render.patch.js') "export function ren
 node tools/dev/js-edit.js --file $tempFile.FullName --replace exports.render --with-file render.patch.js --expect-hash TsFu9ZSc --emit-diff --json --fix
 Remove-Item $tempDir.FullName -Recurse -Force
 ```
+
+## `md-scan` — Markdown Discovery
+
+- `node tools/dev/md-scan.js --径 docs --搜 planner telemetry` — Chinese aliases (`--径`, `--搜`) auto-enable succinct Chinese summaries without explicitly setting `--lang zh`.
+- `node tools/dev/md-scan.js --dir docs --search planner --lang zh` — bilingual search headers (`搜果`, `匹数`, `节`) plus compact section listings with Chinese labels.
+- `node tools/dev/md-scan.js --助 --语 zh` — display the bilingual help table (English flags plus two-character aliases) to cross-reference `--链图`, `--优专`, and other terse flags.
+
+## `md-edit` — Markdown Refactoring
+
+- `node tools/dev/md-edit.js docs/AGENTS.md --节列 --紧凑` — use glyph-based flags to list sections with compact bilingual headings; the CLI stays in dry-run mode until `--改` (`--fix`) is supplied.
+- `node tools/dev/md-edit.js docs/AGENTS.md --节列 --lang zh` — section inventories, stats, and search output now translate headings and summaries (`节`, `段`, `匹数`) while preserving JSON structures.
+- `node tools/dev/md-edit.js --助 --语 zh` — render the Chinese alias grid highlighting `--搜题`, `--显节`, and `--替节` so Markdown plan/replacement workflows line up with the js-edit conventions.
 
 Additional examples and guardrail details live in `docs/CLI_REFACTORING_QUICK_START.md`.

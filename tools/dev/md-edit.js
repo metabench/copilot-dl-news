@@ -19,6 +19,9 @@ setupPowerShellEncoding();
 const path = require('path');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const { translateCliArgs } = require('./i18n/dialect');
+const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
+const { getPrimaryAlias } = require('./i18n/lexicon');
 const {
   parseMarkdown,
   collectSections,
@@ -43,14 +46,80 @@ const DEFAULT_SEARCH_LIMIT = 20;
 const DEFAULT_CONTEXT_LINES = 5;
 const DEFAULT_PREVIEW_LINES = 10;
 
+const CHINESE_HELP_ROWS = Object.freeze([
+  { flag: '--list-sections', lexKey: 'list_sections', note: '节列: 标题清单' },
+  { flag: '--stats', lexKey: 'stats', note: '统: 文档统计' },
+  { flag: '--search', lexKey: 'search', note: '搜: 全文检索' },
+  { flag: '--search-headings', lexKey: 'search_headings', note: '搜题: 只搜标题' },
+  { flag: '--show-section', lexKey: 'show_section', note: '显节: 展示片段' },
+  { flag: '--replace-section', lexKey: 'replace_section', note: '替节: 结合 --以/--以档' },
+  { flag: '--lang', lexKey: 'lang', note: '语: en/zh/bi' }
+]);
+
+const CHINESE_HELP_EXAMPLES = Object.freeze([
+  'node tools/dev/md-edit.js docs/AGENTS.md --节列 --紧凑',
+  'node tools/dev/md-edit.js docs/AGENTS.md --替节 "Validation" --以档 replacements/validation.md --改'
+]);
+
+function resolveAliasLabel(lexKey) {
+  const alias = getPrimaryAlias(lexKey);
+  return alias ? `--${alias}` : '';
+}
+
+function printChineseHelp(languageMode) {
+  fmt.header(languageMode === 'bilingual' ? 'md-edit 助理 (英/中)' : 'md-edit 中文速查');
+  fmt.info('核心命令与别名');
+  CHINESE_HELP_ROWS.forEach((row) => {
+    const aliasLabel = resolveAliasLabel(row.lexKey);
+    const flagDisplay = fmt.COLORS.cyan(row.flag.padEnd(22));
+    const aliasDisplay = aliasLabel ? fmt.COLORS.accent(aliasLabel.padEnd(10)) : fmt.COLORS.muted(''.padEnd(10));
+    console.log(`${flagDisplay} ${aliasDisplay} ${row.note}`);
+  });
+  fmt.section('示例');
+  CHINESE_HELP_EXAMPLES.forEach((example) => {
+    console.log(`  ${fmt.COLORS.muted(example)}`);
+  });
+  fmt.blank();
+  console.log(fmt.COLORS.muted('提示: 中文别名自动启用精简模式 (--语 zh 可强制)'));
+}
+
+function printHelpOutput(languageMode, parser) {
+  const program = parser.getProgram();
+  if (languageMode === 'zh') {
+    printChineseHelp(languageMode);
+    return;
+  }
+  if (languageMode === 'bilingual') {
+    if (program && typeof program.helpInformation === 'function') {
+      console.log(program.helpInformation());
+      console.log('');
+    }
+    printChineseHelp(languageMode);
+    return;
+  }
+  if (program && typeof program.helpInformation === 'function') {
+    console.log(program.helpInformation());
+  }
+}
+
 function createCliParser() {
   const parser = new CliArgumentParser(
     'md-edit',
     'Manage and refactor Markdown documentation with precision'
   );
 
+  const program = parser.getProgram();
+  if (program && typeof program.helpOption === 'function') {
+    program.helpOption(false);
+  }
+  if (program && typeof program.addHelpCommand === 'function') {
+    program.addHelpCommand(false);
+  }
+
   // Discovery operations
   parser
+    .add('--help', 'Show this help message', false, 'boolean')
+    .add('--lang <code>', 'Output language (en, zh, bilingual, auto)', 'auto')
     .add('--list-sections', 'List all sections (headings) in the document', false, 'boolean')
     .add('--list-code-blocks', 'List all code blocks with language tags', false, 'boolean')
     .add('--outline', 'Show document outline (headings only)', false, 'boolean')
@@ -139,15 +208,30 @@ function validateOptions(options) {
 
 async function main() {
   const parser = createCliParser();
+  const originalTokens = process.argv.slice(2);
+  const translation = translateCliArgs('md-edit', originalTokens);
+  const langOverride = extractLangOption(translation.argv);
+  const languageHint = deriveLanguageModeHint(langOverride, translation);
+  fmt.setLanguageMode(languageHint);
+
   let options;
 
   try {
-    options = parser.parse(process.argv.slice(2));
+    options = parser.parse(translation.argv);
   } catch (error) {
     fmt.error(error.message || String(error));
     process.exitCode = 1;
     return;
   }
+
+  if (options.help) {
+    printHelpOutput(languageHint, parser);
+    return;
+  }
+
+  options.lang = langOverride || options.lang || 'auto';
+  options.languageMode = fmt.getLanguageMode();
+  options._i18n = translation;
 
   const validationErrors = validateOptions(options);
   if (validationErrors.length > 0) {

@@ -23,6 +23,10 @@ const fs = require('fs');
 const path = require('path');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const { translateCliArgs } = require('./i18n/dialect');
+const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
+const { resolveLanguageContext, translateLabelWithMode, joinTranslatedLabels } = require('./i18n/helpers');
+const { getPrimaryAlias } = require('./i18n/lexicon');
 const {
   parseMarkdown,
   collectSections,
@@ -31,6 +35,62 @@ const {
 } = require('./lib/markdownAst');
 
 const fmt = new CliFormatter();
+
+const CHINESE_HELP_ROWS = Object.freeze([
+  { flag: '--dir', lexKey: 'path', note: '径: 设定目录' },
+  { flag: '--search', lexKey: 'search', note: '搜: 多词检索' },
+  { flag: '--find-sections', lexKey: 'find_sections', note: '搜节: 按标题匹配' },
+  { flag: '--build-index', lexKey: 'index', note: '索: 输出索引' },
+  { flag: '--map-links', lexKey: 'map_links', note: '链图: 引用图谱' },
+  { flag: '--priority-only', lexKey: 'priority_only', note: '优专: 仅⭐文件' },
+  { flag: '--lang', lexKey: 'lang', note: '语: en/zh/bi' }
+]);
+
+const CHINESE_HELP_EXAMPLES = Object.freeze([
+  'node tools/dev/md-scan.js --径 docs --搜 planner roadmap',
+  'node tools/dev/md-scan.js --径 docs --搜 节点 --优专 --紧凑'
+]);
+
+function resolveAliasLabel(lexKey) {
+  const alias = getPrimaryAlias(lexKey);
+  return alias ? `--${alias}` : '';
+}
+
+function printChineseHelp(languageMode) {
+  fmt.header(languageMode === 'bilingual' ? 'md-scan 助理 (英/中)' : 'md-scan 中文速查');
+  fmt.info('核心命令与别名');
+  CHINESE_HELP_ROWS.forEach((row) => {
+    const aliasLabel = resolveAliasLabel(row.lexKey);
+    const flagDisplay = fmt.COLORS.cyan(row.flag.padEnd(18));
+    const aliasDisplay = aliasLabel ? fmt.COLORS.accent(aliasLabel.padEnd(10)) : fmt.COLORS.muted(''.padEnd(10));
+    console.log(`${flagDisplay} ${aliasDisplay} ${row.note}`);
+  });
+  fmt.section('示例');
+  CHINESE_HELP_EXAMPLES.forEach((example) => {
+    console.log(`  ${fmt.COLORS.muted(example)}`);
+  });
+  fmt.blank();
+  console.log(fmt.COLORS.muted('提示: 任意中文别名会启用中文模式 (--语 zh 可强制)'));
+}
+
+function printHelpOutput(languageMode, parser) {
+  const program = parser.getProgram();
+  if (languageMode === 'zh') {
+    printChineseHelp(languageMode);
+    return;
+  }
+  if (languageMode === 'bilingual') {
+    if (program && typeof program.helpInformation === 'function') {
+      console.log(program.helpInformation());
+      console.log('');
+    }
+    printChineseHelp(languageMode);
+    return;
+  }
+  if (program && typeof program.helpInformation === 'function') {
+    console.log(program.helpInformation());
+  }
+}
 
 /**
  * Recursively find all .md files in a directory
@@ -287,46 +347,73 @@ function findSections(documents, patterns, options = {}) {
  * Display search results
  */
 function displaySearchResults(results, terms, options = {}) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
   const totalFiles = results.length;
   const totalMatches = results.reduce((sum, r) => sum + r.totalMatches, 0);
-  
-  fmt.header(`Search Results (${terms.length} terms, ${totalFiles} files, ${totalMatches} matches)`);
-  
+
+  const headerLabel = joinTranslatedLabels(fmt, language, [
+    { key: 'search', fallback: 'Search' },
+    { key: 'result', fallback: 'Results' }
+  ]);
+
+  if (isChinese) {
+    fmt.header(headerLabel);
+    const summaryLine = [
+      `${translateLabelWithMode(fmt, language, 'search_text', 'terms')}:${terms.length}`,
+      `${translateLabelWithMode(fmt, language, 'files_total', 'files')}:${totalFiles}`,
+      `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${totalMatches}`
+    ].join(' ');
+    fmt.info(fmt.COLORS.muted(summaryLine));
+  } else {
+    fmt.header(`Search Results (${terms.length} terms, ${totalFiles} files, ${totalMatches} matches)`);
+  }
+
   if (results.length === 0) {
-    fmt.info('No matches found');
+    fmt.info(isChinese ? '无匹' : 'No matches found');
     fmt.blank();
     return;
   }
-  
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
+
+  results.forEach((result) => {
     const stars = '★'.repeat(Math.min(5, Math.ceil(result.totalMatches / 3)));
-    const priority = result.hasPriority ? ' ⭐' : '';
-    
-    console.log(`\n${fmt.COLORS.cyan(`├─ ${result.relativePath}`)} ${fmt.COLORS.accent(stars)}${priority} ${fmt.COLORS.muted(`(${result.totalMatches} matches)`)}`);
-    
-    // Show matches per term
+    const priorityMark = result.hasPriority ? ' ⭐' : '';
+    const matchSummary = isChinese
+      ? fmt.COLORS.muted(`(${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${result.totalMatches})`)
+      : fmt.COLORS.muted(`(${result.totalMatches} matches)`);
+    console.log(`\n${fmt.COLORS.cyan(`├─ ${result.relativePath}`)} ${fmt.COLORS.accent(stars)}${priorityMark} ${matchSummary}`);
+
     for (const [term, matches] of Object.entries(result.termMatches)) {
-      const lineRefs = matches.slice(0, 5).map(m => `L${m.line}`).join(', ');
-      const more = matches.length > 5 ? `, ... ${matches.length - 5} more` : '';
-      console.log(`${fmt.COLORS.muted('│  ├─')} "${term}" ${fmt.COLORS.muted(`(${matches.length} matches)`)} ${lineRefs}${more}`);
-      
-      // Show first match context if not compact
+      const lineRefs = matches.slice(0, 5).map((m) => `L${m.line}`).join(', ');
+      const more = matches.length > 5
+        ? isChinese
+          ? `, … ${matches.length - 5}`
+          : `, ... ${matches.length - 5} more`
+        : '';
+      const countDisplay = isChinese
+        ? `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${matches.length}`
+        : `(${matches.length} matches)`;
+      console.log(`${fmt.COLORS.muted('│  ├─')} "${term}" ${fmt.COLORS.muted(countDisplay)} ${lineRefs}${more}`.trim());
+
       if (!options.compact && matches.length > 0) {
         const context = matches[0].context.trim();
-        const preview = context.length > 100 ? context.slice(0, 100) + '...' : context;
+        const preview = context.length > 100 ? `${context.slice(0, 100)}...` : context;
         console.log(`${fmt.COLORS.muted('│  │  ')}${preview}`);
       }
     }
-    
-    // Show matched sections
+
     if (result.matchedSections.size > 0) {
-      const sectionList = Array.from(result.matchedSections).slice(0, 3).join(', ');
-      const moreCount = result.matchedSections.size > 3 ? ` + ${result.matchedSections.size - 3} more` : '';
-      console.log(`${fmt.COLORS.muted('│  └─ Sections:')} ${sectionList}${moreCount}`);
+      const sectionList = Array.from(result.matchedSections).slice(0, 3).join(isChinese ? '、' : ', ');
+      const moreCount = result.matchedSections.size > 3
+        ? isChinese
+          ? ` + ${result.matchedSections.size - 3}`
+          : ` + ${result.matchedSections.size - 3} more`
+        : '';
+      const sectionLabel = isChinese ? '节' : 'Sections';
+      console.log(`${fmt.COLORS.muted('│  └─')} ${sectionLabel}: ${sectionList}${moreCount}`.trim());
     }
-  }
-  
+  });
+
   fmt.blank();
 }
 
@@ -334,34 +421,57 @@ function displaySearchResults(results, terms, options = {}) {
  * Display section finder results
  */
 function displaySectionResults(results, patterns, options = {}) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
   const totalFiles = results.length;
   const totalSections = results.reduce((sum, r) => sum + r.sections.length, 0);
-  
-  fmt.header(`Section Search (${patterns.length} patterns, ${totalSections} sections in ${totalFiles} files)`);
-  
+
+  const headerLabel = joinTranslatedLabels(fmt, language, [
+    { key: 'section', fallback: 'Section' },
+    { key: 'search', fallback: 'Search' }
+  ]);
+
+  if (isChinese) {
+    fmt.header(headerLabel);
+    const summaryLine = [
+      `${translateLabelWithMode(fmt, language, 'pattern', 'patterns')}:${patterns.length}`,
+      `${translateLabelWithMode(fmt, language, 'match_count', 'matches')}:${totalSections}`,
+      `${translateLabelWithMode(fmt, language, 'files_total', 'files')}:${totalFiles}`
+    ].join(' ');
+    fmt.info(fmt.COLORS.muted(summaryLine));
+  } else {
+    fmt.header(`Section Search (${patterns.length} patterns, ${totalSections} sections in ${totalFiles} files)`);
+  }
+
   if (results.length === 0) {
-    fmt.info('No matching sections found');
+    fmt.info(isChinese ? '无节匹' : 'No matching sections found');
     fmt.blank();
     return;
   }
-  
-  for (const result of results) {
+
+  results.forEach((result) => {
     const priority = result.hasPriority ? ' ⭐' : '';
-    console.log(`\n${fmt.COLORS.cyan(`├─ ${result.relativePath}`)}${priority} ${fmt.COLORS.muted(`(${result.sections.length} sections)`)}`);
-    
-    for (const section of result.sections) {
+    const sectionCountLabel = isChinese
+      ? `${translateLabelWithMode(fmt, language, 'section', 'sections')}:${result.sections.length}`
+      : `(${result.sections.length} sections)`;
+    console.log(`\n${fmt.COLORS.cyan(`├─ ${result.relativePath}`)}${priority} ${fmt.COLORS.muted(sectionCountLabel)}`);
+
+    result.sections.forEach((section) => {
       const levelPrefix = '  '.repeat(section.level - 1);
-      console.log(`${fmt.COLORS.muted('│  ├─')} ${levelPrefix}${section.heading} ${fmt.COLORS.muted(`L${section.startLine}-${section.endLine}`)}`);
-      
+      const rangeLabel = isChinese
+        ? `${translateLabelWithMode(fmt, language, 'span', 'range')}:${section.startLine}-${section.endLine}`
+        : `L${section.startLine}-${section.endLine}`;
+      console.log(`${fmt.COLORS.muted('│  ├─')} ${levelPrefix}${section.heading} ${fmt.COLORS.muted(rangeLabel)}`);
+
       if (!options.compact) {
         const preview = section.contentPreview.trim();
         if (preview) {
           console.log(`${fmt.COLORS.muted('│  │  ')}${preview}`);
         }
       }
-    }
-  }
-  
+    });
+  });
+
   fmt.blank();
 }
 
@@ -369,40 +479,56 @@ function displaySectionResults(results, patterns, options = {}) {
  * Build and display document index
  */
 function displayIndex(documents, options = {}) {
-  fmt.header(`Documentation Index (${documents.length} files)`);
-  
-  // Group by priority
-  const priorityDocs = documents.filter(d => d.metadata.hasPriorityMarker);
-  const regularDocs = documents.filter(d => !d.metadata.hasPriorityMarker);
-  
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerTitle = isChinese
+    ? `${translateLabelWithMode(fmt, language, 'document', 'Docs')}${translateLabelWithMode(fmt, language, 'index', 'Index')}`
+    : `Documentation Index (${documents.length} files)`;
+  fmt.header(headerTitle);
+
+  const priorityDocs = documents.filter((d) => d.metadata.hasPriorityMarker);
+  const regularDocs = documents.filter((d) => !d.metadata.hasPriorityMarker);
+
   if (priorityDocs.length > 0) {
-    fmt.section('Priority Documents ⭐');
-    for (const doc of priorityDocs) {
+    const priorityLabel = isChinese ? '优档 ⭐' : 'Priority Documents ⭐';
+    fmt.section(priorityLabel);
+    priorityDocs.forEach((doc) => {
       const relPath = path.relative(process.cwd(), doc.filePath);
       const stars = '⭐'.repeat(Math.min(3, doc.metadata.priorityCount));
       const lines = doc.stats && doc.stats.totalLines ? doc.stats.totalLines : '?';
       const sectionCount = doc.sections ? doc.sections.length : 0;
-      console.log(`  ${stars} ${relPath} ${fmt.COLORS.muted(`(${lines} lines, ${sectionCount} sections)`)}`);
-    }
+      const detail = isChinese
+        ? `${translateLabelWithMode(fmt, language, 'lines', 'lines')}:${lines} ${translateLabelWithMode(fmt, language, 'section', 'sections')}:${sectionCount}`
+        : `(${lines} lines, ${sectionCount} sections)`;
+      console.log(`  ${stars} ${relPath} ${fmt.COLORS.muted(detail)}`);
+    });
   }
-  
+
   if (!options.priorityOnly) {
-    fmt.section('All Documents');
-    for (const doc of regularDocs) {
+    const allLabel = isChinese ? '全档' : 'All Documents';
+    fmt.section(allLabel);
+    regularDocs.forEach((doc) => {
       const relPath = path.relative(process.cwd(), doc.filePath);
       const lines = doc.stats && doc.stats.totalLines ? doc.stats.totalLines : '?';
       const sectionCount = doc.sections ? doc.sections.length : 0;
-      console.log(`  ${relPath} ${fmt.COLORS.muted(`(${lines} lines, ${sectionCount} sections)`)}`);
-    }
+      const detail = isChinese
+        ? `${translateLabelWithMode(fmt, language, 'lines', 'lines')}:${lines} ${translateLabelWithMode(fmt, language, 'section', 'sections')}:${sectionCount}`
+        : `(${lines} lines, ${sectionCount} sections)`;
+      console.log(`  ${relPath} ${fmt.COLORS.muted(detail)}`);
+    });
   }
-  
+
   fmt.blank();
-  fmt.summary({
-    'Total files': documents.length,
-    'Priority files': priorityDocs.length,
-    'Total sections': documents.reduce((sum, d) => sum + (d.sections ? d.sections.length : 0), 0),
-    'Total lines': documents.reduce((sum, d) => sum + (d.stats && d.stats.totalLines ? d.stats.totalLines : 0), 0)
-  });
+  const summaryData = {
+    [isChinese ? `${translateLabelWithMode(fmt, language, 'files_total', 'files')}` : 'Total files']: documents.length,
+    [isChinese ? `${translateLabelWithMode(fmt, language, 'priority_files', 'Priority files')}` : 'Priority files']: priorityDocs.length,
+    [isChinese ? `${translateLabelWithMode(fmt, language, 'section', 'sections')}${translateLabelWithMode(fmt, language, 'total', ' total')}` : 'Total sections']:
+      documents.reduce((sum, d) => sum + (d.sections ? d.sections.length : 0), 0),
+    [isChinese ? `${translateLabelWithMode(fmt, language, 'lines', 'lines')}${translateLabelWithMode(fmt, language, 'total', ' total')}` : 'Total lines']:
+      documents.reduce((sum, d) => sum + (d.stats && d.stats.totalLines ? d.stats.totalLines : 0), 0)
+  };
+  fmt.summary(summaryData);
 }
 
 function createCliParser() {
@@ -411,7 +537,17 @@ function createCliParser() {
     'Multi-file Markdown documentation discovery tool'
   );
 
+  const program = parser.getProgram();
+  if (program && typeof program.helpOption === 'function') {
+    program.helpOption(false);
+  }
+  if (program && typeof program.addHelpCommand === 'function') {
+    program.addHelpCommand(false);
+  }
+
   parser
+    .add('--help', 'Show this help message', false, 'boolean')
+    .add('--lang <code>', 'Output language (en, zh, bilingual, auto)', 'auto')
     // Input
     .add('--dir <path>', 'Directory to scan (default: current directory)', process.cwd())
     .add('--exclude <pattern>', 'Exclude paths containing pattern (can use multiple times)', [])
@@ -437,15 +573,30 @@ function createCliParser() {
 
 async function main() {
   const parser = createCliParser();
+  const originalTokens = process.argv.slice(2);
+  const translation = translateCliArgs('md-scan', originalTokens);
+  const langOverride = extractLangOption(translation.argv);
+  const languageHint = deriveLanguageModeHint(langOverride, translation);
+  fmt.setLanguageMode(languageHint);
+
   let options;
 
   try {
-    options = parser.parse(process.argv.slice(2));
+    options = parser.parse(translation.argv);
   } catch (error) {
     fmt.error(error.message || String(error));
     process.exitCode = 1;
     return;
   }
+
+  if (options.help) {
+    printHelpOutput(languageHint, parser);
+    return;
+  }
+
+  options.lang = langOverride || options.lang || 'auto';
+  options.languageMode = fmt.getLanguageMode();
+  options._i18n = translation;
 
   // Normalize exclude patterns to array
   if (typeof options.exclude === 'string') {

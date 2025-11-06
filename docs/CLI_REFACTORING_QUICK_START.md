@@ -26,6 +26,17 @@ fmt.footer();
 
 ---
 
+## Bilingual CLI Shortcuts
+
+- Tools such as `js-scan`, `js-edit`, `md-scan`, and `md-edit` accept the two-character Chinese aliases (`--搜`, `--函列`, `--链图`, `--节列`, etc.) without extra flags. Any glyph token automatically enables the terse Chinese formatter, so day-to-day runs rarely need an explicit `--lang zh`.
+- JavaScript search example: `node tools/dev/js-scan.js --搜 telemetry --视 简 --域 location,name,hash` prints compact match lines with Chinese headers while keeping hash metadata intact for guarded workflows.
+- JavaScript editing example: `node tools/dev/js-edit.js --文 src/example.js --函列 --紧凑` inventories functions using glyph-based flags; swap to English at any time with `--lang en`.
+- Markdown tooling: `node tools/dev/md-scan.js --径 docs --搜 planner` and `node tools/dev/md-edit.js docs/AGENTS.md --节列 --紧凑` lean on the same alias map, plus `--助 --语 zh` renders the bilingual help grids when you need the two-character references.
+- Add `--lang en` (or `--lang bilingual`) only when you must force a locale while mixing English and Chinese options; otherwise the formatter negotiates automatically. Use `--依` (`--follow-deps`) with `js-scan` to chase relative imports without leaving the dense bilingual output mode.
+- When you do supply `--lang zh`, all discovery CLIs surface matching bilingual stats: `js-scan` headlines `搜果`/`匹数`, `md-scan` labels sections with `节`, and `md-edit` mirrors headers for inventories, searches, and stats while keeping JSON payloads unchanged.
+
+---
+
 ## Common Patterns
 
 ### Validation Report

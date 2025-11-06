@@ -8,6 +8,9 @@ setupPowerShellEncoding();
 const path = require('path');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const { translateCliArgs } = require('./i18n/dialect');
+const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
+const { getPrimaryAlias } = require('./i18n/lexicon');
 const {
   parseModule,
   collectFunctions,
@@ -55,6 +58,62 @@ const HASH_CHARSETS = Object.freeze({
   base64: /^[A-Za-z0-9+/]+$/,
   hex: /^[0-9a-f]+$/i
 });
+
+const CHINESE_HELP_ROWS = Object.freeze([
+  { flag: '--list-functions', lexKey: 'list_functions', note: '函列: 函数清单' },
+  { flag: '--list-variables', lexKey: 'list_variables', note: '变列: 变量清单' },
+  { flag: '--search-text', lexKey: 'search_text', note: '文搜: 片段检索' },
+  { flag: '--context-function', lexKey: 'context_function', note: '函邻: 上下文' },
+  { flag: '--replace', lexKey: 'replace', note: '替: 结合 --以档/--以码' },
+  { flag: '--emit-plan', lexKey: 'emit_plan', note: '出计: 审核计划' },
+  { flag: '--lang', lexKey: 'lang', note: '语: en/zh/bi' }
+]);
+
+const CHINESE_HELP_EXAMPLES = Object.freeze([
+  'node tools/dev/js-edit.js --文 src/app.js --函列',
+  'node tools/dev/js-edit.js --文 src/app.js --替 exports.alpha --以档 replacements/alpha.js --改'
+]);
+
+function resolveAliasLabel(lexKey) {
+  const alias = getPrimaryAlias(lexKey);
+  return alias ? `--${alias}` : '';
+}
+
+function printChineseHelp(languageMode) {
+  fmt.header(languageMode === 'bilingual' ? 'js-edit 助理 (英/中)' : 'js-edit 中文速查');
+  fmt.info('核心命令与速记别名');
+  CHINESE_HELP_ROWS.forEach((row) => {
+    const aliasLabel = resolveAliasLabel(row.lexKey);
+    const flagDisplay = fmt.COLORS.cyan(row.flag.padEnd(22));
+    const aliasDisplay = aliasLabel ? fmt.COLORS.accent(aliasLabel.padEnd(10)) : fmt.COLORS.muted(''.padEnd(10));
+    console.log(`${flagDisplay} ${aliasDisplay} ${row.note}`);
+  });
+  fmt.section('示例');
+  CHINESE_HELP_EXAMPLES.forEach((example) => {
+    console.log(`  ${fmt.COLORS.muted(example)}`);
+  });
+  fmt.blank();
+  console.log(fmt.COLORS.muted('提示: 使用任意中文别名会自动启用精简模式 (--语 zh 可强制中文)'));
+}
+
+function printHelpOutput(languageMode, parser) {
+  const program = parser.getProgram();
+  if (languageMode === 'zh') {
+    printChineseHelp(languageMode);
+    return;
+  }
+  if (languageMode === 'bilingual') {
+    if (program && typeof program.helpInformation === 'function') {
+      console.log(program.helpInformation());
+      console.log('');
+    }
+    printChineseHelp(languageMode);
+    return;
+  }
+  if (program && typeof program.helpInformation === 'function') {
+    console.log(program.helpInformation());
+  }
+}
 
 function formatHashDescriptor(encodings) {
   return encodings
@@ -157,25 +216,44 @@ function extractFunctionsByHashes(options, source, functionRecords) {
     return;
   }
 
-  fmt.header('Hash Extraction');
-  fmt.stat('Requested hashes', hashes.length, 'number');
-  fmt.stat('Matches', results.length, 'number');
+  const languageMode = typeof fmt.getLanguageMode === 'function' ? fmt.getLanguageMode() : 'en';
+  const isChinese = languageMode === 'zh';
+  const englishFirst = languageMode !== 'zh';
+
+  const headerTitle = isChinese
+    ? `${fmt.translateLabel('extract', 'Extract', { chineseOnly: true })}${fmt.translateLabel('hash', 'Hash', { chineseOnly: true })}`
+    : fmt.translateLabel('extract_hashes', 'Hash Extraction', { englishFirst });
+  fmt.header(headerTitle);
+  fmt.stat(fmt.translateLabel('extract_hashes', 'Hash requests', { englishFirst }), hashes.length, 'number');
+  fmt.stat(fmt.translateLabel('matches', 'Matches', { englishFirst }), results.length, 'number');
 
   results.forEach((entry, index) => {
     const fn = entry.record;
-    const title = `Match ${index + 1}: ${fn.canonicalName || fn.name} [${entry.hash}]`;
-    fmt.section(title);
-    fmt.stat('Kind', fn.kind);
-    if (fn.exportKind) fmt.stat('Export', fn.exportKind);
-    fmt.stat('Location', `${fn.line}:${fn.column}`);
-    if (fn.pathSignature) fmt.stat('Path', fn.pathSignature);
-    fmt.stat('Replaceable', fn.replaceable ? 'yes' : 'no');
-    fmt.section('Source');
+    const displayName = fn.canonicalName || fn.name || '(anonymous)';
+    const matchLabel = fmt.translateLabel('matches', 'Match', { englishFirst });
+    const sectionTitle = `${matchLabel} ${index + 1}: ${displayName} [${entry.hash}]`;
+    fmt.section(sectionTitle);
+    fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst }), fn.kind || '-');
+    if (fn.exportKind) {
+      fmt.stat(fmt.translateLabel('exports', 'Export', { englishFirst }), fn.exportKind);
+    }
+    fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst }), `${fn.line}:${fn.column}`);
+    if (fn.pathSignature) {
+      fmt.stat(fmt.translateLabel('path_signature', 'Path signature', { englishFirst }), fn.pathSignature);
+    }
+    const replaceableLabel = isChinese ? '可替' : 'Replaceable';
+    const yesLabel = isChinese ? '是' : 'yes';
+    const noLabel = isChinese ? '否' : 'no';
+    fmt.stat(replaceableLabel, fn.replaceable ? yesLabel : noLabel);
+    const sourceLabel = fmt.translateLabel('snippet', 'Snippet', { englishFirst });
+    fmt.section(sourceLabel);
     process.stdout.write(`${entry.code}\n`);
   });
 
   if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
+    const planLabel = fmt.translateLabel('plan', 'Plan', { englishFirst });
+    const writtenLabel = isChinese ? '写入' : 'written to';
+    fmt.info(`${planLabel} ${writtenLabel} ${options.emitPlanPath}`);
   }
 
   fmt.footer();
@@ -1780,8 +1858,17 @@ function parseCliArgs(argv) {
     'Inspect and perform guarded edits on JavaScript files via AST analysis.'
   );
 
+  const program = parser.getProgram();
+  if (program && typeof program.helpOption === 'function') {
+    program.helpOption(false);
+  }
+  if (program && typeof program.addHelpCommand === 'function') {
+    program.addHelpCommand(false);
+  }
+
   parser
     .add('--help', 'Show this help message', false, 'boolean')
+    .add('--lang <code>', 'Output language (en, zh, bilingual, auto)', 'auto')
     .add('--file <path>', 'Path to the JavaScript file to process (required)')
     .add('--list-functions', 'List all functions, methods, and arrow functions', false, 'boolean')
     .add('--list-constructors', 'List all class constructors', false, 'boolean')
@@ -1848,16 +1935,16 @@ function parseCliArgs(argv) {
     '  js-edit --file src/example.js --replace exports.alpha --with replacements/alpha.js --fix',
     '',
     'Discovery commands:',
-    '  --list-functions           Inspect functions with metadata',
-    '  --list-variables           Enumerate variable declarations',
-    '  --context-function         Show padded context around a match',
-    '  --scan-targets             Inspect replaceable spans inside a function',
+    '  --list-functions (函列)    Inspect functions with metadata',
+    '  --list-variables (变列)    Enumerate variable declarations',
+    '  --context-function (函邻)  Show padded context around a match',
+    '  --scan-targets (扫标)      Inspect replaceable spans inside a function',
     '',
     'Guardrails and plans:',
-    '  --emit-plan <file>         Write a guarded plan for review',
-    '  --expect-hash <hash>       Enforce content integrity before replace',
-    '  --expect-span <start:end>  Enforce span alignment during replace',
-    '  --allow-multiple           Opt into multi-target operations',
+    '  --emit-plan (出计)         Write a guarded plan for review',
+    '  --expect-hash (预哈)       Enforce content integrity before replace',
+    '  --expect-span (预段)       Enforce span alignment during replace',
+    '  --allow-multiple (多)      Opt into multi-target operations',
     '',
     'Selector hints:',
     '  name:/canonical            Match by canonical name (case-insensitive)',
@@ -1869,23 +1956,53 @@ function parseCliArgs(argv) {
     '  --json / --quiet           Machine-readable payloads',
     '  --list-output verbose      Expand list tables with full metadata',
     '  JS_EDIT_LIST_OUTPUT=verbose Environment toggle for list layout',
-    '  --with-code                Inline replacement snippet (newline guarded)'
+    '  --with-code                Inline replacement snippet (newline guarded)',
+    '',
+    'Bilingual mode:',
+    '  Use Chinese aliases (如 --函列, --文) for terse output; --lang zh forces Chinese'
   ].join('\n');
 
   parser.getProgram().addHelpText('after', helpSections);
 
   const parsedOptions = parser.parse(argv);
-
-  if (parsedOptions.help) {
-    parser.getProgram().help({ error: false });
-  }
-
-  return parsedOptions;
+  return { options: parsedOptions, parser };
 }
 
 async function main() {
-  const rawOptions = parseCliArgs(process.argv.slice(2));
-  const options = normalizeOptions(rawOptions);
+  const originalTokens = process.argv.slice(2);
+  const translation = translateCliArgs('js-edit', originalTokens);
+  const langOverride = extractLangOption(translation.argv);
+  const languageHint = deriveLanguageModeHint(langOverride, translation);
+  fmt.setLanguageMode(languageHint);
+
+  let parseResult;
+  try {
+    parseResult = parseCliArgs(translation.argv);
+  } catch (error) {
+    fmt.error(error.message || String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  const { options: rawOptions, parser } = parseResult;
+
+  if (rawOptions.help) {
+    printHelpOutput(languageHint, parser);
+    return;
+  }
+
+  let options;
+  try {
+    options = normalizeOptions(rawOptions);
+  } catch (error) {
+    fmt.error(error.message || String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  options.lang = langOverride || rawOptions.lang || 'auto';
+  options.languageMode = fmt.getLanguageMode();
+  options._i18n = translation;
 
   const { source, sourceMapper } = await readSource(options.filePath);
   const { newline, newlineGuard } = computeNewlineStats(source);

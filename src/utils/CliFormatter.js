@@ -84,6 +84,30 @@ const ICONS = {
   cross: '┼',
 };
 
+let lexicon = null;
+try {
+  lexicon = require('../../tools/dev/i18n/lexicon');
+} catch (error) {
+  lexicon = null;
+}
+
+const HAS_LEXICON = Boolean(lexicon);
+const DEFAULT_LANGUAGE_MODE = 'en';
+
+function normalizeLanguageMode(mode) {
+  if (typeof mode !== 'string') {
+    return DEFAULT_LANGUAGE_MODE;
+  }
+  const normalized = mode.trim().toLowerCase();
+  if (normalized === 'zh' || normalized === 'cn' || normalized === 'zh-cn') {
+    return 'zh';
+  }
+  if (normalized === 'bilingual' || normalized === 'en-zh' || normalized === 'zh-en') {
+    return 'bilingual';
+  }
+  return DEFAULT_LANGUAGE_MODE;
+}
+
 /**
  * CliFormatter class - provides beautiful formatted output for CLI tools.
  */
@@ -99,6 +123,7 @@ class CliFormatter {
     this.width = options.width || 80;
     this.useEmojis = options.useEmojis !== false;
     this.indent = options.indent || 0;
+    this.languageMode = normalizeLanguageMode(options.languageMode || DEFAULT_LANGUAGE_MODE);
   }
 
   /**
@@ -116,7 +141,8 @@ class CliFormatter {
    * Internal helper - format a message with icon, label, and content.
    * @private
    */
-  _format(color, icon, label, content) {
+  _format(color, icon, labelKey, fallbackLabel, content, options = {}) {
+    const label = this._resolveLabel(labelKey, fallbackLabel, options);
     const iconStr = this.useEmojis && icon ? `${icon} ` : '';
     const prefix = `${color(`[${iconStr}${label}]`)} `;
     return `${prefix}${content}`;
@@ -131,6 +157,46 @@ class CliFormatter {
     return `${spaces}${text}`;
   }
 
+  _resolveLabel(labelKey, fallbackLabel, options = {}) {
+    const english = options.english || fallbackLabel || labelKey;
+    if (!HAS_LEXICON || !labelKey) {
+      return english;
+    }
+
+    const mode = normalizeLanguageMode(options.languageMode || this.languageMode);
+
+    if (options.chineseOnly || mode === 'zh') {
+      const alias = lexicon.getPrimaryAlias(labelKey);
+      return alias || english;
+    }
+
+    if (mode === 'bilingual') {
+      return lexicon.formatLabel(labelKey, { english, englishFirst: options.englishFirst !== false });
+    }
+
+    if (options.englishFirst === false) {
+      return lexicon.formatLabel(labelKey, { english, englishFirst: false });
+    }
+
+    return english;
+  }
+
+  setLanguageMode(mode) {
+    this.languageMode = normalizeLanguageMode(mode);
+  }
+
+  getLanguageMode() {
+    return this.languageMode;
+  }
+
+  isChineseMode() {
+    return this.languageMode === 'zh';
+  }
+
+  translateLabel(labelKey, fallbackLabel, options = {}) {
+    return this._resolveLabel(labelKey, fallbackLabel, options);
+  }
+
   // ========== SIMPLE MESSAGES ==========
 
   /**
@@ -138,7 +204,7 @@ class CliFormatter {
    * @param {string} message The message to display
    */
   success(message) {
-    console.log(this._format(COLORS.success, ICONS.complete, 'OK', message));
+    console.log(this._format(COLORS.success, ICONS.complete, 'success', 'OK', message));
   }
 
   /**
@@ -146,7 +212,7 @@ class CliFormatter {
    * @param {string} message The message to display
    */
   error(message) {
-    console.log(this._format(COLORS.error, ICONS.error, 'ERROR', message));
+    console.log(this._format(COLORS.error, ICONS.error, 'error', 'ERROR', message));
   }
 
   /**
@@ -154,7 +220,7 @@ class CliFormatter {
    * @param {string} message The message to display
    */
   warn(message) {
-    console.log(this._format(COLORS.warning, ICONS.warning, 'WARN', message));
+    console.log(this._format(COLORS.warning, ICONS.warning, 'warning', 'WARN', message));
   }
 
   /**
@@ -162,7 +228,7 @@ class CliFormatter {
    * @param {string} message The message to display
    */
   info(message) {
-    console.log(this._format(COLORS.info, ICONS.info, 'INFO', message));
+    console.log(this._format(COLORS.info, ICONS.info, 'info', 'INFO', message));
   }
 
   /**
@@ -170,7 +236,7 @@ class CliFormatter {
    * @param {string} message The message to display
    */
   pending(message) {
-    console.log(this._format(COLORS.cyan, ICONS.pending, 'WAIT', message));
+    console.log(this._format(COLORS.cyan, ICONS.pending, 'pending', 'WAIT', message));
   }
 
   /**
@@ -178,7 +244,7 @@ class CliFormatter {
    * @param {string} message The message to display
    */
   settings(message) {
-    console.log(this._format(COLORS.info, ICONS.settings, 'CFG', message));
+    console.log(this._format(COLORS.info, ICONS.settings, 'settings', 'CFG', message));
   }
 
   // ========== STRUCTURAL ELEMENTS ==========

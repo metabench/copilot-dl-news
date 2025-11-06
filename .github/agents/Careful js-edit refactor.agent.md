@@ -24,6 +24,7 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - Sweep `AGENTS.md` (Topic Index), `.github/instructions/GitHub Copilot.instructions.md`, and feature-specific docs identified via md-scan. Log each consulted source in the tracker.
 - Inventory diagnostics: list existing CLI analyzers, schema probes, or js-edit helpers that can illuminate the target area. Decide which to run; record the rationale.
 - Recon the codebase with search/usages and js-edit read operations (`--list-functions`, `--context-function`, `--context-variable`). Emit plan files when doing contextual dives so span/hash metadata is ready for later edits.
+- Use `node tools/dev/js-scan.js --dir <root> --search <terms>` to inventory functions across modules before editing; the scanner omits deprecated/bundled directories by default and supports `--include-deprecated` / `--deprecated-only` for legacy sweeps. Switch to terse bilingual output with `--lang zh` (or any Chinese alias) and combine `--view summary` / `--view terse` plus `--fields` when you need dense listings. See `tools/dev/README.md#js-scan` and `docs/CLI_REFACTORING_QUICK_START.md` for flag details and examples.
 - Exit α only when the tracker captures docs consulted, tools inventoried, identified risks, and a preliminary task list for the phase.
 
 ### Multi-model Collaboration Protocol
@@ -51,7 +52,7 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - **Guarded replaces:** Never run `--fix` without dry-run output. Apply edits with `--expect-hash` and/or `--expect-span` (plus `--allow-multiple` when intentionally touching multiple matches). Document these guards in the plan if they cover critical paths.
 - **CommonJS awareness:** js-edit understands `module.exports`/`exports.*` selectors. Invoke `--list-variables --json` to confirm selectors in mixed module styles before editing.
 - **Batch workflows:** For repeated edits, chain `--locate` → `--emit-plan` → `--replace --plan <file> --fix`. Note the workflow in the tracker so reviewers can replay it if needed.
-- **Markdown files:** Use `node tools/dev/md-edit.js` for reading (`--stats`, `--outline`, `--search`, `--show-section`) and editing (`--remove-section`, `--replace-section`) documentation with hash guards. For multi-file doc discovery, use `node tools/dev/md-scan.js --dir docs --search <terms>` to find relevant sections quickly.
+- **Markdown files:** Use `node tools/dev/md-edit.js` for reading (`--stats`, `--outline`, `--search`, `--show-section`) and editing (`--remove-section`, `--replace-section`) documentation with hash guards; enable bilingual headers with `--lang zh` or by invoking Chinese aliases when terse output helps. For multi-file doc discovery, use `node tools/dev/md-scan.js --dir docs --search <terms>` to find relevant sections quickly and toggle terse bilingual summaries with `--lang zh` / glyph aliases plus `--view summary` when scanning at scale.
 - **Non-JS/MD files:** For JSON, config, or other assets, use repository tools (`replace_string_in_file`, etc.) rather than ad-hoc shell edits.
 
 ### js-edit Stuck Protocol
@@ -63,7 +64,7 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 ### Tool Quick Reference
 
 **js-edit (JavaScript):**
-- `node tools/dev/js-edit.js --help` — confirm flags and new capabilities.
+- `node tools/dev/js-edit.js --help --lang zh` — confirm bilingual flags and verify terse Chinese output; omit `--lang` for English-only help.
 - `--list-functions --json` / `--list-variables --json` — inventory symbols for reconnaissance.
 - `--context-function <selector>` — show surrounding code for safe extraction.
 - `--locate <selector>` — verify matches before editing; pair with `--emit-plan`.
@@ -71,13 +72,13 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - `--context-variable` and `--extract` support additive documentation (emit plan, include `--allow-multiple` when necessary).
 
 **md-scan (Multi-file doc discovery):**
-- `node tools/dev/md-scan.js --dir docs --search <terms>` — find docs with relevance ranking and priority markers (⭐).
+- `node tools/dev/md-scan.js --dir docs --search <terms> --lang zh` — find docs with relevance ranking and priority markers (⭐) using bilingual two-character headings; drop `--lang` for English-only runs.
+- `--view summary` / `--view terse` — collapse search hits into dense rollups when scanning large folders.
 - `--find-sections <patterns>` — locate specific section types (e.g., "Troubleshooting", "When to Read") across all docs.
 - `--build-index --priority-only` — show essential documentation overview.
-- `--compact` — terse output for quick scanning.
 
 **md-edit (Single-file doc viewing/editing):**
-- `node tools/dev/md-edit.js <file> --stats` — document metrics (lines, sections, words).
+- `node tools/dev/md-edit.js <file> --stats --lang zh` — document metrics (lines, sections, words) with bilingual headers when helpful.
 - `--outline` — hierarchical document structure.
 - `--show-section <selector>` — display specific section by heading or hash.
 - `--search <pattern>` — full-text search within document.

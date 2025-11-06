@@ -77,6 +77,56 @@
 - Filtering: Supports --filter-text across class names, hashes, params, heritage; --match/--exclude for pattern-based class filtering; --include-internals to show non-exported classes without heritage
 - Verified with test file containing explicit constructors (Widget, Button) and implicit constructor (Panel)
 
+## 🔄 Active Initiative (Nov 6, 2025): js-scan CLI Implementation
+
+### Goal / Non-Goals
+- **Goal:** Ship the Phase 1 js-scan CLI MVP described in `docs/JS_SCAN_DESIGN_PROPOSAL.md`, delivering multi-file JavaScript discovery with hash-compatible search, compact output, and agent guidance.
+- **Non-Goals:** Skip Phase 2/3 stretch features (dependency maps, refactor plan automation beyond MVP). Do not modify `tools/dev/lib/swcAst.js` hashing logic or existing js-edit behavior. Avoid adopting new parser libraries beyond the established `@swc/core` stack.
+
+### Current Behavior (Baseline)
+- No workspace-wide code scanner exists; agents rely on per-file `js-edit --list-functions` calls or manual search.
+- Hash-based lookups are limited to js-edit’s single-file operations, blocking guarded multi-file workflows and plan verification.
+- Agents lack structured guidance to narrow large result sets, often overwhelming conversation limits.
+
+### Implementation Plan (Reversible Steps)
+1. **Bootstrap CLI Surface** – Create `tools/dev/js-scan.js` with `CliArgumentParser` wiring, shared formatter output (compact text + JSON), and stub operations. Add Windows shim `tools/dev/js-scan.cmd`.
+2. **Scanner Infrastructure** – Build `tools/dev/js-scan/shared/` modules (`scanner`, `fileContext`, `filters`, `ranker`) that traverse directories, parse files via `@swc/core`, and emit `FileRecord`/`FunctionRecord` objects using `computeHash` from `tools/dev/lib/swcAst.js`.
+3. **Operations (Phase 1 scope)** – Implement `operations/search.js`, `hashLookup.js`, `indexing.js`, and `patterns.js` following the design proposal (multi-term search, relevance ranking, hash lookup with collision warnings, module index, pattern filters).
+4. **CLI Wiring & Guidance** – Connect CLI options to operations, enforce defaults (200-line cap, 20 match limit), and emit guidance payloads when results overflow or relevance is low.
+5. **Docs & Agent Integration** – Produce `tools/dev/js-scan-README.md` and update `.github/agents/Careful js-edit refactor.agent.md` after MVP stabilization (tracked as subtask).
+
+### Risks & Unknowns
+- **Performance:** Full `src/` scans may exceed 5 seconds; mitigate with whitelisting, parallelism caps, and skip-on-error fallbacks.
+- **AST Edge Cases:** Non-standard syntax (decorators, optional chaining in legacy swc config) may fail parsing; plan to skip with warning and log for follow-up.
+- **Guidance Noise:** Heuristic suggestions could mislead agents; tune thresholds during validation and document limitations.
+
+### Integration Points
+- `tools/dev/lib/swcAst.js` for hashing/span normalization (read-only reuse).
+- `src/utils/CliFormatter.js` and `CliArgumentParser.js` for consistent CLI ergonomics.
+- Shared fixtures under `tests/fixtures/tools/` for multi-file scanning scenarios.
+
+### Focused Test Plan
+- Jest unit tests (`tests/tools/__tests__/js-scan.test.js`) covering search ranking, hash lookup parity with js-edit, module index aggregation, and pattern filters.
+- CLI smoke tests against `src/` to confirm guidance messaging and performance budgets.
+- Snapshot/fixture verification for compact vs. JSON output via existing CLI test utilities.
+
+### Rollback Plan
+- Work is additive. If regressions appear, delete new `tools/dev/js-scan*` modules, associated tests, docs, and revert npm script entries. Existing tooling remains unaffected.
+
+### Task Ledger
+| Task | Status | Notes |
+|------|--------|-------|
+| 1. CLI skeleton & parser wiring | completed | 2025-11-15: `tools/dev/js-scan.js` wired with CliArgumentParser, guidance-aware text/JSON output. |
+| 2. Shared scanner infrastructure | completed | 2025-11-15: Added `shared/scanner.js` + `lib/fileContext.js` for SWC parsing, metadata normalization, and dependency capture. |
+| 3. Search operation implementation | completed | 2025-11-15: Implemented `operations/search.js` with scoring, filters, and guidance triggers. |
+| 4. Hash lookup implementation | completed | 2025-11-15: Added `operations/hashLookup.js` with collision detection and hash metadata. |
+| 5. Module index implementation | completed | 2025-11-15: Added `operations/indexing.js` summarizing exports/functions/entry points. |
+| 6. Pattern matching implementation | completed | 2025-11-15: Added `operations/patterns.js` supporting glob/regex discovery with filters. |
+| 7. Guidance & output integration | completed | 2025-11-15: Introduced `shared/guidance.js`, text printer, and hash-only output option. |
+| 8. Tests & fixtures | completed | 2025-11-15: Created `tests/tools/__tests__/js-scan.test.js` covering search, hash lookup, patterns, and index. |
+| 9. Documentation updates | completed | 2025-11-15: Documented js-scan usage in `tools/dev/README.md`. |
+| 10. Deprecated filtering & bundled excludes | in-progress | 2025-11-15: Add default skips for deprecated assets plus CLI overrides (`--include-deprecated`, `--deprecated-only`). |
+
 ---
 
 ## 📋 Future js-edit Enhancements

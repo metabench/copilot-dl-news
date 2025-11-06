@@ -2,25 +2,35 @@
 
 const { findSections } = require('../../lib/markdownAst');
 const { writeOutputFile, outputJson } = require('../shared/io');
+const { resolveLanguageContext, translateLabelWithMode, joinTranslatedLabels } = require('../../i18n/helpers');
 
 /**
  * Show a specific section with optional context
  */
 function showSection(source, sections, options, fmt) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
   const selector = options.showSection;
   const matches = findSections(sections, selector);
 
   if (matches.length === 0) {
-    fmt.error(`No section found matching "${selector}"`);
+    const message = isChinese
+      ? `${translateLabelWithMode(fmt, language, 'section', 'Section')} 未匹配 "${selector}"`
+      : `No section found matching "${selector}"`;
+    fmt.error(message);
     process.exitCode = 1;
     return;
   }
 
   if (matches.length > 1 && !options.allowMultiple) {
-    fmt.error(`Multiple sections match "${selector}" (${matches.length} found)`);
-    fmt.info('Use --allow-multiple to show all, or be more specific');
+    const errorMessage = isChinese
+      ? `${translateLabelWithMode(fmt, language, 'section', 'Section')} 多匹 (${matches.length})`
+      : `Multiple sections match "${selector}" (${matches.length} found)`;
+    fmt.error(errorMessage);
+    fmt.info(isChinese ? '用 --许多 展示全部，或缩小范围' : 'Use --allow-multiple to show all, or be more specific');
     matches.forEach(m => {
-      fmt.info(`  - ${m.heading} (L${m.startLine}, hash: ${m.hash})`);
+      const lineLabel = isChinese ? `${translateLabelWithMode(fmt, language, 'lines', 'lines')}:${m.startLine}` : `L${m.startLine}`;
+      fmt.info(`  - ${m.heading} (${lineLabel}, hash: ${m.hash})`);
     });
     process.exitCode = 1;
     return;
@@ -36,15 +46,20 @@ function showSection(source, sections, options, fmt) {
   sectionsToShow.forEach((section, idx) => {
     if (idx > 0) console.log('\n' + '='.repeat(60) + '\n');
 
-    fmt.header(`Section: ${section.heading}`);
-    fmt.info(`Level: H${section.level}, Lines: ${section.startLine}-${section.endLine}, Hash: ${section.hash}`);
+    const headerLabel = joinTranslatedLabels(fmt, language, [
+      { key: 'section', fallback: 'Section' },
+      { key: 'context', fallback: 'Context' }
+    ]);
+    fmt.header(`${headerLabel}: ${section.heading}`);
+    const lineLabel = translateLabelWithMode(fmt, language, 'lines', 'Lines');
+    fmt.info(`Level: H${section.level}, ${lineLabel}: ${section.startLine}-${section.endLine}, Hash: ${section.hash}`);
     console.log();
 
     // Show with neighbors if requested
     if (options.withNeighbors) {
-      showSectionWithNeighbors(source, sections, section, fmt);
+      showSectionWithNeighbors(source, sections, section, fmt, language);
     } else {
-      showSectionContent(source, section, options, fmt);
+      showSectionContent(source, section, options, fmt, language);
     }
   });
 }
@@ -52,7 +67,7 @@ function showSection(source, sections, options, fmt) {
 /**
  * Show section content with optional context lines
  */
-function showSectionContent(source, section, options, fmt) {
+function showSectionContent(source, section, options, fmt, language = resolveLanguageContext(fmt)) {
   const lines = source.split('\n');
   const contextLines = options.contextLines || 0;
 
@@ -72,20 +87,21 @@ function showSectionContent(source, section, options, fmt) {
 /**
  * Show section with previous and next sibling sections
  */
-function showSectionWithNeighbors(source, sections, targetSection, fmt) {
+function showSectionWithNeighbors(source, sections, targetSection, fmt, language = resolveLanguageContext(fmt)) {
+  const { isChinese } = language;
   const idx = sections.findIndex(s => s.hash === targetSection.hash);
   
   const prevSection = idx > 0 ? sections[idx - 1] : null;
   const nextSection = idx < sections.length - 1 ? sections[idx + 1] : null;
 
   if (prevSection) {
-    console.log('┌─ Previous section ─────────────────────');
+    console.log(isChinese ? '┌─ 上节 ─────────────────────' : '┌─ Previous section ─────────────────────');
     console.log(`│  ${prevSection.heading}`);
     console.log('└────────────────────────────────────────');
     console.log();
   }
 
-  console.log('┌─ Target section ───────────────────────');
+  console.log(isChinese ? '┌─ 当前节 ───────────────────────' : '┌─ Target section ───────────────────────');
   console.log(`│  ${targetSection.heading}`);
   console.log('├────────────────────────────────────────');
   const lines = source.split('\n').slice(targetSection.startLine, targetSection.endLine);
@@ -97,7 +113,7 @@ function showSectionWithNeighbors(source, sections, targetSection, fmt) {
   console.log();
 
   if (nextSection) {
-    console.log('┌─ Next section ─────────────────────────');
+    console.log(isChinese ? '┌─ 下节 ─────────────────────────' : '┌─ Next section ─────────────────────────');
     console.log(`│  ${nextSection.heading}`);
     console.log('└────────────────────────────────────────');
   }
@@ -107,6 +123,8 @@ function showSectionWithNeighbors(source, sections, targetSection, fmt) {
  * Emit a plan file with section metadata
  */
 function emitPlan(sections, options, fmt) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
   const planPath = options.emitPlan;
 
   const plan = {
@@ -127,9 +145,10 @@ function emitPlan(sections, options, fmt) {
 
   try {
     writeOutputFile(planPath, JSON.stringify(plan, null, 2));
-    fmt.success(`Plan emitted to ${planPath}`);
+    fmt.success(isChinese ? `已写 ${planPath}` : `Plan emitted to ${planPath}`);
   } catch (error) {
-    fmt.error(`Failed to write plan: ${error.message}`);
+    const message = isChinese ? `写入失败: ${error.message}` : `Failed to write plan: ${error.message}`;
+    fmt.error(message);
     process.exitCode = 1;
   }
 }
