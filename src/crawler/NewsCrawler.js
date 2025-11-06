@@ -76,6 +76,7 @@ const {
   createCliLogger,
   isVerboseMode
 } = require('./cli/progressReporter');
+const Crawler = require('./core/Crawler');
 
 const log = createCliLogger();
 
@@ -245,9 +246,11 @@ const crawlerOptionsSchema = {
   useSequenceRunner: { type: 'boolean', default: true }
 };
 
-class NewsCrawler {
+class NewsCrawler extends Crawler {
   constructor(startUrl, options = {}) {
-    this.startUrl = startUrl;
+    // Call base class constructor first
+    super(startUrl, options);
+    
     this.domain = new URL(startUrl).hostname;
     this.domainNormalized = normalizeHost(this.domain);
     this.baseUrl = `${new URL(startUrl).protocol}//${this.domain}`;
@@ -294,11 +297,8 @@ class NewsCrawler {
       ? new Set(opts.gazetteerStages.map(stage => String(stage).toLowerCase()))
       : null;
 
-    // State containers
-    this.state = new CrawlerState();
-    this.startupTracker = new StartupProgressTracker({
-      emit: (payload, statusText) => this._emitStartupProgress(payload, statusText)
-    });
+    // Note: state and startupTracker are initialized in base Crawler class
+    // Access via this.state and this.startupTracker
     this.urlAnalysisCache = this.state.getUrlAnalysisCache();
     this.urlDecisionCache = this.state.getUrlDecisionCache();
     this.usePriorityQueue = this.concurrency > 1; // enable PQ only when concurrent
@@ -335,16 +335,7 @@ class NewsCrawler {
       dataDir: this.dataDir,
       normalizeUrl: (u) => this.normalizeUrl(u)
     });
-    this.lastRequestTime = 0; // for global spacing
-    // Keep-alive agents for connection reuse
-    this.httpAgent = new http.Agent({
-      keepAlive: true,
-      maxSockets: 50
-    });
-    this.httpsAgent = new https.Agent({
-      keepAlive: true,
-      maxSockets: 50
-    });
+    // Note: lastRequestTime, httpAgent, httpsAgent initialized in base Crawler class
     // Per-domain rate limiting and telemetry
     this._domainWindowMs = 60 * 1000;
     // Networking config

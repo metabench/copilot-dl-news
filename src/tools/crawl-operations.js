@@ -24,6 +24,7 @@ function parseCliArgs(argv) {
     .add('--config-dir <path>', 'Override the sequence configuration directory', null)
     .add('--config-cli <json>', 'JSON object supplying values for the CLI resolver namespace', null)
     .add('--start-url <url>', 'Start URL for the selected operation or sequence')
+    .add('--db-path <path>', 'Database path for playbook integration', null)
     .add('--overrides <json>', 'JSON object of overrides for a single operation run')
     .add('--shared-overrides <json>', 'JSON overrides applied to every step in a sequence')
     .add('--step-overrides <json>', 'JSON object mapping operation names to per-step overrides in a sequence')

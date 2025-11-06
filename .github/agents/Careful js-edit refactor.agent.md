@@ -66,9 +66,14 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - `--context-variable` and `--extract` support additive documentation (emit plan, include `--allow-multiple` when necessary).
 
 ## PowerShell & Command Discipline
-- Use simple Windows-form commands (absolute paths, no complex piping). Avoid shells that trigger approval dialogs.
+- **Avoid PowerShell-specific syntax in examples and commands.** Use cross-platform Node.js commands instead. When PowerShell usage is unavoidable, ensure proper encoding and syntax:
+  - Set UTF-8 encoding: `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` before running tools with Unicode output
+  - Use proper PowerShell pipeline operators and cmdlets, not Unix-style commands
+  - Avoid complex piping that may cause encoding issues; prefer capturing output to variables or files
+- Use simple Windows-form commands with absolute paths when running Node.js tools directly.
 - For long-running processes started via terminal, use `getTerminalOutput`/`terminalLastCommand` to inspect results instead of queuing new commands in the same terminal.
 - Never invoke `python`, `python3`, or inline Python snippets; rely on Node.js, repository tooling, or PowerShell-native commands instead.
+- **Prefer cross-platform examples:** When documenting workflows, use `node <script>` directly rather than PowerShell-specific syntax to ensure examples work on all platforms.
 
 ## Testing Guardrails
 - Inspect Jest configuration (`package.json`, `jest.*`) before running tests.

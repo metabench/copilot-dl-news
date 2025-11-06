@@ -18,9 +18,11 @@
 - **File Paths**: Use absolute paths with `c:\` prefix
 
 ### OS-Specific Command Rules
-- ✅ **Use PowerShell syntax**: `Get-Content`, `Set-Content`, `Select-String`
+- ✅ **Prefer Node.js commands**: Use `node <script>` directly for cross-platform compatibility
+- ✅ **Use PowerShell syntax when needed**: `Get-Content`, `Set-Content`, `Select-String`
 - ❌ **Don't use Unix commands**: No `cat`, `grep`, `sed`, `awk` (they may not exist or behave differently)
-- ✅ **Simple commands only**: Avoid `|` (pipe) and `&&` (conditional execution)
+- ✅ **Simple commands only**: Avoid complex pipes that may cause encoding issues
+- ⚠️ **UTF-8 encoding for Unicode output**: Set `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` before running tools that output Unicode characters
 - ✅ **Windows paths**: Use `c:\path\to\file.js` format
 - ✅ **Test commands first**: Verify they work in PowerShell before using
 
@@ -98,18 +100,29 @@ Get-Content file.js | Select-String "..." # Use grep_search tool instead
 # ✅ Single file checks
 Test-Path "file.js"
 Get-Content "file.log"
-Get-Content "file.log" | Select-Object -Last 20
+
+# ✅ Simple directory listings
 Get-ChildItem "directory"
 
-# ✅ Simple process operations
+# ✅ Simple PowerShell cmdlet usage (when properly configured)
+# Set UTF-8 encoding first for Unicode output:
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Get-Content "file.log" | Select-Object -Last 20
+command | Select-Object -First 10
+
+# ✅ Simple process operations (cross-platform Node.js preferred)
 node server.js --detached --auto-shutdown-seconds 10
 npm test
 npm run build
 node tools/some-script.js
 
-# ✅ Simple output formatting (no complex logic)
+# ✅ Simple text filtering with proper encoding
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 command 2>&1 | Select-String "simple-pattern"
-command | Select-Object -First 10
+
+# ⚠️ IMPORTANT: Avoid piping Node.js Unicode output through PowerShell
+# BAD:  node tools/dev/js-edit.js --help | Select-Object -First 20  # May corrupt Unicode
+# GOOD: node tools/dev/js-edit.js --help  # Let Node.js handle its own output
 ```
 
 ---

@@ -36,7 +36,7 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **Adhere to "no mid-task confirmation" rule**: Proceed without pausing unless critical details missing. Summaries: 1–2 sentences max.
 - ✅ **Documentation alignment**: When rules change, update specialized docs (not AGENTS.md unless navigation-related). Keep AGENTS.md <500 lines.
 - ✅ **No standalone documents**: Always integrate into existing docs, never create new standalone guides
-- ✅ **OS Awareness**: Always maintain awareness that this repository runs on **Windows** with **PowerShell**. Use Windows/PowerShell syntax, avoid Unix commands, keep commands simple without complex piping or chaining.
+- ✅ **OS Awareness**: Always maintain awareness that this repository runs on **Windows** with **PowerShell**. However, prefer cross-platform Node.js commands (`node <script>`) over PowerShell-specific syntax when possible. When PowerShell is required, set UTF-8 encoding (`[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`) before running tools with Unicode output, and avoid Unix-style pipes that may cause encoding issues.
 - ⛔ **No Python invocations**: Do not run `python`, `python3`, or inline Python snippets. Prefer Node.js tooling or PowerShell-native commands when scripts or quick data processing is required.
 
 > **Never stop mid-plan**: When a task list exists, continue executing items back-to-back. Record blockers, then immediately pivot to the next actionable task instead of waiting for new instructions.

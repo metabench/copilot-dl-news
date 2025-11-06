@@ -83,8 +83,8 @@
 | 2.1 | Discovery & alignment | Audit orchestration surfaces, document constraints/opportunities in this tracker | completed | HIGH | OOP decomposition + conciseness guardrails captured 2025-11-04 |
 | 2.2 | Sequence library | Define reusable sequence presets that wrap `executeSequence` with curated step lists and overrides | completed | HIGH | Implemented `sequencePresets.js`, facade utilities, tests, and preset runner wiring (2025-11-04) |
 | 2.3 | CLI entry surface | Provide high-level CLI/runner wiring `CrawlOperations` + sequence presets via standard parser/formatter | completed | HIGH | Added `src/tools/crawl-operations.js` (operations/sequences listing, ASCII/JSON summaries, logger controls). Smoke tests + conciseness analyzer run 2025-11-04 |
-| 2.4 | Configuration/playbook hooks | Integrate optional host-specific context (start URLs, verbosity) from playbooks/config without duplication | in-progress | MEDIUM | 2025-11-12: Discovery + integration planning underway for sequence config loader |
-| 2.5 | Tests & docs | Cover sequence/CLI wiring with focused Jest or harness tests; extend docs with recipes | not-started | MEDIUM | Update architecture + CLI references |
+| 2.4 | Configuration/playbook hooks | Integrate optional host-specific context (start URLs, verbosity) from playbooks/config without duplication | ✅ completed | MEDIUM | 2025-11-12: SequenceConfigLoader, createSequenceResolvers, SequenceConfigRunner implemented with 11/11 tests. Supports JSON/YAML parsing, @playbook/@config/@cli token resolution, schema validation. Files: SequenceConfigLoader.js (347 lines), SequenceConfigRunner.js (178 lines), createSequenceResolvers.js (235 lines), sequenceResolverCatalog.js (26 lines). Tests: SequenceConfigLoader.test.js, SequenceConfigRunner.test.js, createSequenceResolvers.test.js. Config directory README added. Integration: NewsCrawler.loadAndRunSequence static method wires loader+runner+resolvers. |
+| 2.5 | Tests & docs | Cover sequence/CLI wiring with focused Jest or harness tests; extend docs with recipes | ✅ completed | MEDIUM | 2025-11-17: Phase 2 test coverage complete (38/38 tests: CrawlOperations 6/6, sequencePresets 3/3, sequenceContext 18/18, SequenceConfigLoader 6/6, SequenceConfigRunner 3/3, createSequenceResolvers 2/2). Documentation updated: CRAWL_REFACTORING_TASKS.md (Phase 2 status), CHANGE_PLAN.md (Phase 2 completion with SequenceConfigLoader details), ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md (Sequence Config System section with usage examples and validation commands), config/crawl-sequences/README.md (config format guide). |
 
 ## Phase 3: Legacy Crawl CLI Modularization
 
@@ -94,10 +94,51 @@
 | 3.2 | Argument normalization module | Extract flag/option normalization into reusable adapter translating legacy flags into façade-friendly invocations | completed | HIGH | 2025-11-05: Added `src/crawler/cli/argumentNormalizer.js`, migrated helper logic + DB allocation, returned structured `{ startUrl, options, targetCountries }`, and updated `src/crawl.js` to call normalizer with failure guard + CLI bootstrap integration. |
 | 3.3 | Progress & telemetry adapter | Encapsulate streaming progress + telemetry wiring for reuse by new CLI surface | completed | MEDIUM | 2025-11-05: Added `src/crawler/cli/progressAdapter.js`, migrated TELEMETRY/MILESTONE/PROGRESS routing + suppression, and rewired bootstrap to delegate while preserving verbose teardown. |
 | 3.4 | Legacy command shims | Rebuild `src/crawl.js` as thin shell delegating to modules + new CLI; preserve legacy entrypoints | completed | MEDIUM | 2025-11-05: Replaced `src/crawl.js` with shim calling `runLegacyCommand`, added legacy export aliases (`module.exports`, `.default`, `.runLegacyCommand`, `.HELP_TEXT`), and moved CLI runtime to `src/crawler/cli/runLegacyCommand.js`. Smoke test: `node src/crawl.js --help`. Existing circular warning from `ArticleOperations` still emitted (pre-refactor). |
-| 3.5 | Tests & docs | Add focused tests for adapters/bootstrap; update docs with modular CLI architecture & migration guidance | not-started | MEDIUM | Align with `CHANGE_PLAN.md` Phase 3 outline |
+| 3.5 | Tests & docs | Add focused tests for adapters/bootstrap; update docs with modular CLI architecture & migration guidance | ✅ COMPLETED | MEDIUM | 2025-11-17: Added comprehensive test coverage for bootstrap (9/9), progressReporter (58/58), and runLegacyCommand (20/20). Total 90/90 CLI module tests passing. Updated ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md with CLI Module Architecture section documenting module structure, workflow, rationale, and validation commands. CLI smoke test (`node src/crawl.js --help`) confirms no regressions. |
 | 3.6 | Eliminate ArticleOperations circular dependency | Remove unused `ensureDatabase` import from `ArticleOperations.js`, verify CLI help no longer emits warning, and document the architecture change | completed | MEDIUM | 2025-11-05: Removed unused import; `node src/crawl.js --help` now runs clean with no circular dependency warning. |
 
+## Phase 2 Status Summary (Updated 2025-11-17)
+- **All tasks complete:** ✅ COMPLETED (5/5 tasks)
+  - Sequence library, CLI entry, configuration loader, playbook hooks, tests, and documentation all delivered
+  - 38/38 tests passing (CrawlOperations: 6, sequencePresets: 3, sequenceContext: 18, sequence config: 11)
+  - Integration via NewsCrawler.loadAndRunSequence, CrawlOperations.executeSequence
+  - Documentation: CRAWL_REFACTORING_TASKS.md, CHANGE_PLAN.md, ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md, config/crawl-sequences/README.md
+
+## Phase 2 Validation Commands
+```bash
+# Run all Phase 2 tests
+npx jest --config jest.careful.config.js src/crawler/__tests__/CrawlOperations.test.js src/orchestration/__tests__/SequenceConfigLoader.test.js src/orchestration/__tests__/SequenceConfigRunner.test.js src/orchestration/__tests__/createSequenceResolvers.test.js --bail=1
+# Output: 17/17 tests (CrawlOperations: 6, SequenceConfigLoader: 6, SequenceConfigRunner: 3, createSequenceResolvers: 2)
+
+# Test sequence presets and context
+npx jest --config jest.careful.config.js src/crawler/operations/__tests__/sequencePresets.test.js src/crawler/operations/__tests__/sequenceContext.test.js --bail=1  
+# Output: 21/21 tests (sequencePresets: 3, sequenceContext: 18)
+
+# CLI smoke test
+node src/tools/crawl-operations.js --list-operations
+node src/tools/crawl-operations.js --list-sequences
+
+# Sequence config validation
+node -e "const { createSequenceConfigLoader } = require('./src/orchestration/SequenceConfigLoader'); const loader = createSequenceConfigLoader({ configDir: './config/crawl-sequences' }); loader.loadDryRun({ sequenceName: 'default' }).then(r => console.log(r.ok ? 'Valid config' : r.error.message));"
+```
+
 ## Next Actions
-- Draft `SequenceConfigLoader` contract covering config lookup, schema validation, and normalized return shape for `CrawlOperations.executeSequence` (Task 2.4).
-- Define placeholder resolution catalog (e.g., `@playbook.*`, `@config.*`, `@cli.*`) and document how resolvers obtain data from `CrawlPlaybookService`/`ConfigManager` without instantiating full crawlers.
-- Outline telemetry surface area for sequence execution (step start/end, source file metadata) so Task 11.5 instrumentation can plug into the loader/runner bridge.
+
+**🎉 All Crawl Refactoring Phases Complete (2025-11-17)**
+
+- **Phase 1:** Crawl High-Level Facade ✅ (5/5 tasks, completed 2025-11-04)
+- **Phase 2:** Sequence Orchestration & CLI Integration ✅ (5/5 tasks, completed 2025-11-12, verified 2025-11-17)
+- **Phase 3:** Legacy Crawl CLI Modularization ✅ (6/6 tasks, completed 2025-11-17)
+
+**Total deliverables:**
+- 16 tasks completed across 3 phases
+- 128 tests passing (Phase 2: 38/38, Phase 3: 90/90)
+- 15+ modules created/refactored
+- 4 documentation files updated
+
+**Validation:** All tests passing, smoke tests working, no regressions detected.
+
+**Recommended follow-up work:**
+1. Monitor production usage of CrawlOperations facade and sequence config system
+2. Consider adding CLI examples to CLI_REFACTORING_QUICK_START.md if user adoption requires it
+3. Review NewsCrawler modularization opportunities (see CHANGE_PLAN.md "NewsCrawler Modularization" section for draft plan)

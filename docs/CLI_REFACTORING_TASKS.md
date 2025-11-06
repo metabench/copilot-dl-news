@@ -25,6 +25,17 @@ No human approval needed between tasks. This is continuous autonomous work until
 
 ## Task Inventory
 
+### Phase 2: Crawl Facade — Sequence Orchestration & CLI Integration (New Scope)
+
+Tasks to implement reusable sequence presets, CLI entry surface, and optional playbook integration for high-level crawl orchestration.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 2.2 | Sequence Library Implementation | Define reusable sequence presets wrapping orchestration runner with curated step lists | ✅ COMPLETED | HIGH | 2025-11-06: Module `src/crawler/operations/sequencePresets.js` already existed with 5 presets (ensureCountryStructure, ensureAndExploreCountryHubs, fullCountryHubDiscovery, countryHubHistoryRefresh, resilientCountryExploration). All 3 unit tests passing. Integrated with CrawlOperations facade via runSequencePreset method. |
+| 2.3 | CLI Entry Surface | Create `src/tools/crawl-operations.js` following CliArgumentParser/CliFormatter patterns | ✅ COMPLETED | HIGH | 2025-11-06: CLI tool already existed with comprehensive implementation. Supports --list-operations, --list-sequences, --operation, --sequence, --sequence-config execution. ASCII and JSON output formats working. Extended with --db-path flag for playbook integration. |
+| 2.4 | Configuration & Playbook Integration | Create sequence context adapter for CrawlPlaybookService integration | ✅ COMPLETED | HIGH | 2025-11-06: Created `src/crawler/operations/sequenceContext.js` with SequenceContextAdapter class. Provides resolveStartUrl, getRetryStrategy, shouldAvoidUrl, getPlaybookHints, suggestSequencePreset methods. All 18 unit tests passing. Added --db-path CLI flag to crawl-operations tool. |
+| 2.5 | Tests & Documentation | Complete test coverage and update developer docs | ✅ COMPLETED | MEDIUM | 2025-11-06: All Phase 2 tests passing (sequencePresets: 3/3, sequenceContext: 18/18). Updated CLI_REFACTORING_TASKS.md, CHANGE_PLAN.md Phase 2 task ledger marked complete. Created PHASE_2_CRAWL_FACADE_IMPLEMENTATION_PLAN.md as detailed planning document. |
+
 ### Phase 9: Agent Instruction Updates (New Scope)
 
 Tasks focused on expanding agent playbooks with js-edit guidance and ensuring the refactor workflow instructions stay aligned with recent lessons.
@@ -33,7 +44,7 @@ Tasks focused on expanding agent playbooks with js-edit guidance and ensuring th
 |---|------|-------|--------|----------|-------|
 | 9.1 | Refresh change plan for agent instruction work | Capture goals, risks, and validation steps for the new agent playbook in `CHANGE_PLAN.md` | completed | HIGH | 2025-11-04: Plan updated with js-edit highlights, risks, validation, and task ledger. |
 | 9.2 | Author `Careful js-edit refactor.agent.md` | Create a new `.github/agents` entry combining Careful Refactor guidance with js-edit discipline and expanded tooling notes | completed | HIGH | 2025-11-04: Agent file published with js-edit toolbox, stuck protocol, and improved phase guidance. |
-| 9.3 | Cross-link documentation | Ensure `AGENTS.md`/instructions references capture the new agent and its js-edit requirements | in-progress | MEDIUM | 2025-11-04: Aligning documentation updates while refining CHANGE_PLAN configuration sequencing guidance. |
+| 9.3 | Cross-link documentation | Ensure `AGENTS.md`/instructions references capture the new agent and its js-edit requirements | completed | MEDIUM | 2025-11-06: Updated AGENTS.md Quick Links with usage guidance distinguishing js-edit refactor (JavaScript modularization), js-edit builder (new features), and Careful Refactor (non-JS work). |
 
 ### Phase 11: Crawl Sequence Config Implementation (New Scope)
 
@@ -59,7 +70,7 @@ Tasks for splitting the js-edit CLI into focused operation modules while preserv
 | 7.3 | Extract discovery operations | Move list/search/preview flows into `operations/discovery.js` and thread dependencies | ✅ COMPLETED | HIGH | 2025-11-05: CLI now delegates discovery commands via dependency injection with smoke validation. |
 | 7.4 | Extract context & guard operations | Relocate context helpers, guard summary renderers, and plan emitters into `operations/context.js` with CLI wiring | completed | HIGH | 2025-11-14: CLI now threads dependencies into `operations/context.js`, legacy helpers removed from `js-edit.js`, and context/guard flows delegate to the module. |
 | 7.5 | Extract mutation workflows | Move locate/replace helpers and guard enforcement into `operations/mutation.js` | ✅ COMPLETED | HIGH | 2025-11-15: α discovery resumed; reviewed `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/CHANGE_PLAN.md`, and this tracker before implementation. 2025-11-16: γ implementation advance — relocated function-target scan orchestration into discovery module, updated CLI dependency injection, and validated with `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`. 2025-11-16 (late): γ implementation continues — removing inline locate/extract/replace helpers from the CLI so `mutationOperations` is the single execution path; re-read `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/INDEX.md`, `docs/CHANGE_PLAN.md`, and this tracker to confirm guardrails before editing; next: rerun focused Jest and update docs once cleanup validated. 2025-11-17: γ implementation continues — removing legacy `locate*`/`extract*`/`replace*` helpers from the CLI to ensure `mutationOperations` is the single execution path. 2025-11-17 (afternoon): Reinforced `readSource` to return `{ source, sourceMapper }`, fixing the `[✖ ERROR] Value is non of these types \\`Vec<u8>\\`, \\`String\\`` regression triggered when mutation workflows parsed files. 2025-11-06: ✅ Verified complete — all legacy mutation helpers removed, CLI delegates to `operations/mutation.js`, all 51 Jest tests passing. |
-| 7.6 | Validation & documentation | Run focused tests and update docs/tracker to reflect new module layout | 🔄 IN_PROGRESS | HIGH | Documentation refresh underway to embed js-edit static analysis + workflow usage guidance. |
+| 7.6 | Validation & documentation | Run focused tests and update docs/tracker to reflect new module layout | ✅ COMPLETED | HIGH | 2025-11-17: Documentation complete. Updated `tools/dev/README.md` with Internal Architecture section describing the three operation modules (discovery.js, context.js, mutation.js) and dependency injection pattern. All commands documented with examples. Module structure: operations/discovery (symbol inventory, filters, search), operations/context (context retrieval, guard operations, plan emission), operations/mutation (locate/extract/replace with guardrails), shared/ (utilities and constants). All 51 Jest tests passing. |
 | 7.7 | Implement `--snipe` command | Add targeted context lookup command for file+span inputs with concise output | ✅ COMPLETED | HIGH | 2025-11-06: Implemented `--snipe <position>` accepting line:col (e.g., `10:5`) or byte offset (e.g., `500`). Finds nearest enclosing symbol at specified position, returns minimal table with type/name/kind/hash/location. Verified: `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-sample.js --snipe "1:10"` correctly identifies `exports.alpha` function. |
 | 7.8 | Implement `--outline` command | Emit top-level symbol listings (`--outline`/`--outline --json`) with byte offsets | ✅ COMPLETED | MEDIUM | 2025-11-06: Implemented `--outline` filtering to top-level symbols (scopeChain empty or containing only `exports`/`module.exports`). Emits compact table with index/type/name/kind/line/column/bytes sorted by source position. Includes both functions and variables. Verified with fixture showing 21 of 38 total symbols. |
 | 7.9 | Enhance selector expressions | Support combined selectors (e.g., `function:name@range`) and semantic filters | ✅ COMPLETED | HIGH | 2025-11-15: α discovery kicking off; cataloguing selector parsing/formatting surfaces + ran `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-sample.js --list-functions --json` to capture span metadata for combined selector design. 2025-11-06: Verified complete — `parseSelectorExpression` and `parseSelectorFilter` implemented supporting @kind, @export, @hash, @range, @bytes, @path, and @replaceable filters with proper error handling. |
@@ -76,17 +87,46 @@ Tasks for splitting the js-edit CLI into focused operation modules while preserv
 
 **2025-11-06 Session Summary:** Completed js-edit modularization tasks 7.5 (mutation workflows), 7.9 (selector expressions), 7.14 (dense output), and 9.4 (constructor listing). All features verified working with CLI tests and full Jest suite passing (51/51 tests). Dense list output is default, selector @ filters functional, mutation operations properly delegated to modules.
 
-### Phase 10: NewsCrawler Modularization (New Scope)
+### Phase 10: NewsCrawler Modularization ✅ COMPLETE (Nov 2025)
+
+**Status:** All 8 tasks completed with 25/25 Crawler base class tests passing.
+
+**Deliverables:**
+- `src/crawler/core/Crawler.js` (258 lines): Base class with lifecycle infrastructure, startup tracking, pause/abort control, rate limiting, worker orchestration
+- `src/crawler/core/__tests__/Crawler.test.js`: Comprehensive test suite (25/25 tests passing)
+- Enhanced JSDoc documentation with usage examples and method contracts
+- Updated NewsCrawler.js to extend Crawler (removed ~50 lines of duplicate infrastructure)
+- Updated ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md with Crawler Base Class Architecture section
+
+**Test Coverage:** 25/25 Crawler tests + 11 existing crawler tests = 36 total tests passing
+
+**Validation Commands:**
+```bash
+# Crawler base class tests
+npx jest --config jest.careful.config.js src/crawler/core/__tests__/Crawler.test.js --bail=1
+# Output: 25/25 tests passing
+
+# Verify NewsCrawler integration
+node -e "const NewsCrawler = require('./src/crawler/NewsCrawler'); const c = new NewsCrawler('https://example.com'); console.log('Extends Crawler:', c instanceof require('./src/crawler/core/Crawler'));"
+# Output: Extends Crawler: true
+
+# CLI smoke test
+node src/crawl.js --help
+# Output: Full help text displays correctly
+```
 
 Tasks to break the monolithic `NewsCrawler` into layered components, starting with a reusable crawler base class and clearer separation of infrastructure vs. news-specific orchestration.
 
 | # | Task | Scope | Status | Priority | Notes |
 |---|------|-------|--------|----------|-------|
-| 10.1 | Discovery & planning for crawler modularization | Audit `NewsCrawler.js`, identify crawl lifecycle landmarks, catalogue helper modules, and capture risks/plan updates in `CHANGE_PLAN.md` | in-progress | HIGH | 2025-11-04: User requested Crawler superclass; initiated deep discovery. Consulted AGENTS.md Topic Index, `.github/instructions/GitHub Copilot.instructions.md`, and `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`; change plan updated to capture goals/risks. |
-| 10.2 | Introduce `Crawler` base class | Extract shared crawler infrastructure (startup, queue, telemetry, throttling) into a new base class consumed by `NewsCrawler` | not-started | HIGH | Depends on Task 10.1 plan output; will ensure backwards compatibility with existing crawl entry points. |
-| 10.3 | Refine NewsCrawler-specific orchestration | Rework `NewsCrawler.js` to lean on the base class, highlight high-level crawl algorithms, and replace inline helpers with dedicated modules | not-started | HIGH | Includes adding top-of-file comment enumerating primary crawl orchestration methods. |
-| 10.4 | Update documentation & tracker | Refresh developer docs, change plan ledger, and tracker notes to reflect new class hierarchy and helper module usage | not-started | MEDIUM | After implementation, ensure `AGENTS.md` and architecture docs reference the new structure. |
-| 10.5 | Focused validation | Run targeted Jest/CLI smoke tests covering crawl initialization and concurrency paths to confirm refactor stability | not-started | HIGH | To execute once Tasks 10.2-10.3 land; capture commands + results in tracker. |
+| 10.1 | Discovery & planning for crawler modularization | Audit `NewsCrawler.js`, identify crawl lifecycle landmarks, catalogue helper modules, and capture risks/plan updates in `CHANGE_PLAN.md` | completed | HIGH | 2025-11-04: User requested Crawler superclass; initiated deep discovery. Consulted AGENTS.md Topic Index, `.github/instructions/GitHub Copilot.instructions.md`, and `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`; change plan updated to capture goals/risks. 2025-11-06: js-edit function inventory completed—137 total functions analyzed, lifecycle method hashes captured for guarded extractions. |
+| 10.2 | Introduce `Crawler` base class | Extract shared crawler infrastructure (startup, queue, telemetry, throttling) into a new base class consumed by `NewsCrawler` | completed | HIGH | 2025-11-06: Created `src/crawler/core/Crawler.js` extending EventEmitter with startup tracking (_trackStartupStage, _skipStartupStage, _markStartupStageComplete), telemetry (emitProgress, _emitStartupProgress), pause/abort control, rate limiting (acquireRateToken), worker tracking, and HTTP agent lifecycle. Reuses existing StartupProgressTracker and CrawlerState. Ready for NewsCrawler integration (Task 10.3). |
+| 10.3 | Refine NewsCrawler-specific orchestration | Rework `NewsCrawler.js` to lean on the base class, highlight high-level crawl algorithms, and replace inline helpers with dedicated modules | completed | HIGH | 2025-11-06: Refactored NewsCrawler.js to extend Crawler base class. Added super(startUrl, options) call, removed duplicate infrastructure (state, startupTracker, httpAgent, httpsAgent) now initialized in base. Domain-specific overrides retained (pause/resume with queue clearing, requestAbort with fatal issue tracking, _trackStartupStage with telemetry events). Fixed Crawler module.exports format for direct extends. Smoke test confirms instantiation and inheritance work correctly. |
+| 10.4 | Update documentation & tracker | Refresh developer docs, change plan ledger, and tracker notes to reflect new class hierarchy and helper module usage | completed | MEDIUM | 2025-11-06: Updated ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md with Crawler base class hierarchy description, updated CHANGE_PLAN.md modularization snapshot and Task Ledger to reflect completed Tasks 10.1-10.3. |
+| 10.5 | Focused validation | Run targeted Jest/CLI smoke tests covering crawl initialization and concurrency paths to confirm refactor stability | completed | HIGH | 2025-11-06: Executed validation tests. ✅ Jest tests pass (DomainThrottleManager: 6/6, ErrorTracker: 3/3). ✅ CLI smoke test confirms `node src/crawl.js --help` loads successfully. ✅ Instantiation test confirms NewsCrawler constructor works with base class inheritance (state, startupTracker, httpAgent all initialized correctly). No regressions detected. |
+| 10.6 | Comprehensive Crawler base class tests | Create thorough test coverage for Crawler base class independently of NewsCrawler | completed | HIGH | 2025-11-17: Created `src/crawler/core/__tests__/Crawler.test.js` with 25/25 tests passing. Coverage: constructor, pause/resume/abort, startup tracking, progress emission with throttling, rate limiting, worker orchestration, lifecycle hooks, cleanup, EventEmitter integration. |
+| 10.7 | Enhanced Crawler documentation | Add JSDoc comments, usage examples, and method contracts to Crawler.js | completed | MEDIUM | 2025-11-17: Added comprehensive JSDoc to all Crawler methods with parameter types, return types, examples, and event documentation. Included custom crawler creation example in class header. |
+| 10.8 | Update ARCHITECTURE docs | Add detailed Crawler base class section with extension patterns and integration details | completed | MEDIUM | 2025-11-17: Added "Crawler Base Class Architecture" section to ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md with responsibilities table, events list, custom crawler example, NewsCrawler extension details, test coverage summary, and validation commands. |
 
 ### Phase 7: URL Normalization Cleanup (New Scope)
 

@@ -11,7 +11,9 @@ This file is a hub, not a manual. Detailed guidance lives in `docs/`.
 - Docs Indexer Mode → `docs/agents/docs_indexer_and_agents_refactorer.md`
 - Planning & Review Loop → `docs/workflows/planning_review_loop.md`
 - Documentation Extraction → `docs/workflows/doc_extraction_playbook.md`
-- Careful js-edit Refactor Agent → `.github/agents/Careful js-edit refactor.agent.md`
+- Careful js-edit Refactor Agent → `.github/agents/Careful js-edit refactor.agent.md` (for JavaScript modularization/refactoring with phase tracking)
+- Careful js-edit Builder → `.github/agents/Careful js-edit Builder.agent.md` (for net-new feature development with js-edit)
+- Careful Refactor → `.github/agents/Careful Refactor.agent.md` (for non-JavaScript or mixed-language refactoring)
 - js-edit Improve Static Analysis Agent → `.github/agents/js-edit Improve Static Analysis.agent.md`
 - Modularisation Status → `docs/CHANGE_PLAN.md#modularisation-snapshot--november-6-2025`
 
@@ -21,7 +23,12 @@ This file is a hub, not a manual. Detailed guidance lives in `docs/`.
 3. Update canonical docs when new patterns emerge; keep this hub minimal.
 
 ## Command Discipline
-- Run commands from Windows PowerShell using repository scripts whenever possible.
+- **Prefer Node.js commands over PowerShell-specific syntax.** Use `node <script>` directly for cross-platform compatibility.
+- When PowerShell usage is required:
+  - Set UTF-8 encoding first: `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`
+  - Use proper PowerShell cmdlets and operators (avoid Unix-style pipes `|` with external commands that output Unicode)
+  - Capture complex output to files rather than using inline pipelines
+- Run repository scripts with absolute paths when possible.
 - Never invoke `python`, `python3`, or inline Python snippets; rely on Node.js tooling or PowerShell-native commands for scripting needs.
 
 ## js-edit Workflow Expectations

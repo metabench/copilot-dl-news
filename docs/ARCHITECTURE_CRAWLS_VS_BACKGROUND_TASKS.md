@@ -118,9 +118,124 @@ Crawls are **real-time operations** that fetch content from external websites. T
 └──────────────────────────────────────────────────────────────┘
 ```
 
+### Crawler Base Class Architecture (Nov 2025)
+
+**Location:** `src/crawler/core/Crawler.js` (258 lines)
+
+**Purpose:** Provides reusable crawl lifecycle infrastructure that subclasses can extend for domain-specific crawlers.
+
+#### Responsibilities
+
+| Category | Features |
+|----------|----------|
+| **Lifecycle** | Init hook, crawl entry point (abstract), dispose cleanup |
+| **State Management** | CrawlerState integration, pause/resume/abort control |
+| **Startup Tracking** | Stage tracking via StartupProgressTracker, telemetry emission |
+| **Progress** | Throttled progress events with state stats |
+| **Rate Limiting** | Global request spacing (acquireRateToken) |
+| **Worker Orchestration** | Busy worker counting, workers-idle detection |
+| **Networking** | HTTP/HTTPS keep-alive agents |
+
+#### Events Emitted
+
+- `paused` / `resumed` / `abort-requested` - Control flow state changes
+- `startup-stage` - Stage lifecycle: started/completed/skipped/failed
+- `startup-complete` - All startup stages finished
+- `startup-progress` - Startup progress updates
+- `progress` - Crawler progress with stats (throttled to 5s default)
+- `workers-idle` - All concurrent workers finished
+- `disposed` - Cleanup complete
+
+#### Creating Custom Crawlers
+
+```javascript
+const Crawler = require('./core/Crawler');
+
+class MyCrawler extends Crawler {
+  constructor(startUrl, options) {
+    super(startUrl, options);
+    
+    // Initialize domain-specific services
+    this.myQueue = [];
+    this.myService = new MyService();
+  }
+
+  async init() {
+    // Use _trackStartupStage for progress tracking
+    await this._trackStartupStage('db-connect', 'Connect to database', async () => {
+      this.dbAdapter = await openDatabase();
+      return { status: 'completed', message: 'Connected' };
+    });
+    
+    await this._trackStartupStage('load-config', 'Load configuration', async () => {
+      this.config = await loadConfig();
+      return { status: 'completed' };
+    });
+  }
+
+  async crawl() {
+    await this.init();
+    
+    while (!this.isAbortRequested() && this.myQueue.length > 0) {
+      // Pause handling
+      while (this.isPaused() && !this.isAbortRequested()) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Rate limiting
+      await this.acquireRateToken();
+      
+      const item = this.myQueue.shift();
+      await this.processItem(item);
+      
+      // Progress emission (throttled)
+      this.emitProgress({ queueSize: this.myQueue.length });
+    }
+    
+    await this.dispose();
+  }
+}
+```
+
+#### NewsCrawler Extension
+
+`src/crawler/NewsCrawler.js` (2,490 lines) extends `Crawler` with:
+
+- **News-specific initialization:** Robots.txt coordination, sitemap loading, intelligent planner, gazetteer controllers, enhanced features
+- **Orchestration:** Sequential loop, concurrent workers, intelligent plan execution
+- **Overrides:** pause() with queue clearing, requestAbort() with fatal issue tracking, _trackStartupStage() with custom telemetry events
+
+**Integration verified (2025-11-17):** NewsCrawler instantiates correctly, inherits state/startupTracker/httpAgent from base class, all existing tests pass.
+
+#### Testing
+
+**Test file:** `src/crawler/core/__tests__/Crawler.test.js` (25/25 tests passing)
+
+Coverage:
+- Constructor initialization (state, startup tracker, HTTP agents, options)
+- Pause/resume/abort control with event emission
+- Startup stage tracking (success/skip/fail paths)
+- Progress emission with throttling
+- Rate limiting enforcement
+- Worker orchestration and idle detection
+- Lifecycle hooks (init, crawl abstract method)
+- Cleanup (HTTP agent destruction, database closure)
+- EventEmitter integration
+
+**Validation:**
+```bash
+# Run Crawler base class tests
+npx jest --config jest.careful.config.js src/crawler/core/__tests__/Crawler.test.js --bail=1
+# Output: 25/25 tests passing
+
+# Verify NewsCrawler integration
+node -e "const NewsCrawler = require('./src/crawler/NewsCrawler'); const crawler = new NewsCrawler('https://example.com'); console.log('Extends Crawler:', crawler instanceof require('./src/crawler/core/Crawler'));"
+# Output: Extends Crawler: true
+```
+
 ### High-Level Crawl Operations (Nov 2025)
 
-- `src/crawler/CrawlOperations.js` provides a thin façade over the monolithic `NewsCrawler`, exposing pre-configured operations (`ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, `crawlCountryHubsHistory`, `findTopicHubs`, `findPlaceAndTopicHubs`).
+- `src/crawler/CrawlOperations.js` provides a thin façade over `NewsCrawler`, exposing pre-configured operations (`ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, `crawlCountryHubsHistory`, `findTopicHubs`, `findPlaceAndTopicHubs`).
 - Each operation maps to a curated option preset (hub-only structure passes, intelligent planner modes, history refresh) and returns structured status objects with stats and elapsed time.
 - `executeSequence()` accepts an ordered list of operation names (or objects) and orchestrates multi-step crawl algorithms with optional error continuation, enabling concise scripting like:
   ```javascript
@@ -133,6 +248,161 @@ Crawls are **real-time operations** that fetch content from external websites. T
   ], { startUrl: 'https://example.com', continueOnError: false });
   ```
 - Consumers can override defaults or inject custom `crawlerFactory` implementations (useful for tests) while production code lazily loads `NewsCrawler` only when needed.
+
+### CLI Module Architecture (Phase 3 - Nov 2025)
+
+The legacy CLI (`src/crawl.js`) has been modularized into focused, testable components living in `src/crawler/cli/`:
+
+**Module Structure:**
+
+| Module | Purpose | Responsibilities | Test Coverage |
+|--------|---------|------------------|---------------|
+| `bootstrap.js` | Environment setup | Verbose mode, console interception, global flag management, teardown | 9/9 tests |
+| `argumentNormalizer.js` | Flag parsing | 30+ CLI flag normalization, database path resolution, geography parsing, JSON validation | 3/3 tests |
+| `progressReporter.js` | Output formatting | CLI logger factory, geography progress formatting, color/icon constants, verbose mode toggle | 58/58 tests |
+| `progressAdapter.js` | Event routing | TELEMETRY/MILESTONE/PROGRESS interception, suppressed prefix filtering, console restoration | Tested via integration |
+| `runLegacyCommand.js` | Orchestration | Composes bootstrap/normalizer/reporter, handles --help, instantiates NewsCrawler, manages lifecycle | 20/20 tests |
+
+**Entry Points:**
+
+- **`src/crawl.js`** (35 lines): Thin shim delegating to `runLegacyCommand` when `require.main === module`. Exports `NewsCrawler`, `runLegacyCommand`, and `HELP_TEXT` for programmatic reuse.
+- **`src/tools/crawl-operations.js`**: High-level CLI following CliArgumentParser/CliFormatter patterns, surfaces `CrawlOperations` façade with `--list-operations`, `--list-sequences`, ASCII/JSON output, and `--db-path` playbook integration.
+
+**Workflow:**
+
+```javascript
+// src/crawl.js minimal entry
+async function main() {
+  const { exitCode = 0 } = await runLegacyCommand({
+    argv: process.argv.slice(2),
+    stdin: process.stdin,
+    stdout: console.log,
+    stderr: console.error
+  });
+  process.exit(exitCode);
+}
+
+// runLegacyCommand orchestration
+async function runLegacyCommand({ argv, stdin, stdout, stderr }) {
+  const log = createCliLogger({ stdout, stderr });
+  const { verboseModeEnabled, restoreConsole } = setupLegacyCliEnvironment({ args: argv, log });
+  
+  const { startUrl, options, sequenceConfig } = normalizeLegacyArguments(argv, { log });
+  
+  if (sequenceConfig) {
+    return await NewsCrawler.loadAndRunSequence({ ...sequenceConfig, defaults: options, logger: log });
+  }
+  
+  const crawler = new NewsCrawler(startUrl, options);
+  await crawler.crawl();
+  restoreConsole();
+  return { exitCode: 0 };
+}
+```
+
+**Rationale:**
+
+- **Testability**: Each module can be tested in isolation with mocked dependencies (90/90 tests passing).
+- **Reusability**: CLI logger, argument normalization, and progress formatting now available to other entry points (e.g., `crawl-operations.js`).
+- **Maintainability**: Clear separation of concerns—bootstrap handles environment, normalizer handles flags, reporter handles output, orchestrator composes them.
+- **Backward Compatibility**: Existing `node src/crawl.js` usage unchanged; legacy export structure preserved (`module.exports = NewsCrawler`, `.default`, `.runLegacyCommand`, `.HELP_TEXT`).
+
+**Validation:**
+
+```bash
+# Smoke test help
+node src/crawl.js --help
+
+# Run all CLI module tests
+npx jest --config jest.careful.config.js src/crawler/cli/__tests__/ --bail=1 --maxWorkers=50%
+# Output: 90/90 tests passing (argumentNormalizer: 3, bootstrap: 9, progressReporter: 58, runLegacyCommand: 20)
+```
+
+### Sequence Config System
+
+**Purpose:** Load declarative crawl sequences from version-controlled YAML/JSON files, resolve host-specific tokens (`@playbook.*`, `@config.*`, `@cli.*`), and orchestrate multi-step crawl workflows.
+
+| Module | Purpose | Location | Tests |
+|--------|---------|----------|-------|
+| `SequenceConfigLoader` | Locate, parse, validate, resolve tokens in config files | `src/orchestration/` | 6/6 tests |
+| `SequenceConfigRunner` | Execute loaded configs through CrawlOperations.executeSequence | `src/orchestration/` | 3/3 tests |
+| `createSequenceResolvers` | Pluggable resolvers for @playbook/@config tokens | `src/orchestration/` | 2/2 tests |
+| `sequenceResolverCatalog` | Token namespace catalog and documentation | `src/orchestration/` | - |
+
+**Config Location:** `config/crawl-sequences/`
+
+**Supported Formats:** JSON, YAML, YML
+
+**Resolution Order:** `<name>.<host>.json` → `<name>.json` → `default.json`
+
+**Token Namespaces:**
+- `@playbook.*` — Host-specific data from CrawlPlaybookService (e.g., `@playbook.primarySeed`)
+- `@config.*` — Project config from ConfigManager/priority-config.json
+- `@cli.*` — Command-line overrides passed during invocation
+
+**Config Structure:**
+```yaml
+# config/crawl-sequences/example.yaml
+version: "1"
+host: news-example-com  # Optional, enables host-specific selection
+startUrl: "@playbook.primarySeed"  # Resolver token
+sharedOverrides:
+  maxDepth: 2
+  retries: 3
+steps:
+  - operation: EnsureCountryHubsOperation
+    startUrl: "@config.seedUrl"  # Step-specific override
+    overrides:
+      limit: 100
+    continueOnError: true
+  - operation: ExploreCountryHubsOperation
+  - FindTopicHubsOperation  # String shorthand
+```
+
+**Usage:**
+```javascript
+// Via NewsCrawler static method
+const result = await NewsCrawler.loadAndRunSequence({
+  sequenceConfigName: 'example',
+  configHost: 'news-example-com',
+  configDir: 'config/crawl-sequences',
+  defaults: { maxPages: 500 },
+  logger: console
+});
+
+// Via CrawlOperations facade
+const ops = new CrawlOperations();
+const { runSequenceConfig } = require('../orchestration/SequenceConfigRunner');
+const { createSequenceConfigLoader } = require('../orchestration/SequenceConfigLoader');
+const { createSequenceResolverMap } = require('../orchestration/createSequenceResolvers');
+
+const loader = createSequenceConfigLoader({ configDir: './config/crawl-sequences' });
+const { resolvers, cleanup } = createSequenceResolverMap({
+  configHost: 'news-example-com',
+  defaults: { maxPages: 500 }
+});
+
+await runSequenceConfig({
+  facade: ops,
+  loader,
+  sequenceConfigName: 'example',
+  configHost: 'news-example-com',
+  resolvers
+});
+cleanup();
+```
+
+**Validation:**
+```bash
+# Test sequence config modules
+npx jest --config jest.careful.config.js src/orchestration/__tests__/SequenceConfigLoader.test.js src/orchestration/__tests__/SequenceConfigRunner.test.js src/orchestration/__tests__/createSequenceResolvers.test.js
+# Output: 11/11 tests passing
+
+# Load and validate a config (dry-run)
+node -e "const { createSequenceConfigLoader } = require('./src/orchestration/SequenceConfigLoader'); const loader = createSequenceConfigLoader({ configDir: './config/crawl-sequences' }); loader.loadDryRun({ sequenceName: 'example' }).then(r => console.log(r.ok ? 'Valid' : r.error.message));"
+```
+
+**Documentation:** `config/crawl-sequences/README.md` (config format guide)
 
 ### Key Characteristics
 

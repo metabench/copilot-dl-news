@@ -15,6 +15,17 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 `js-edit` is the flagship AST-aware utility in this workspace. It uses SWC to parse files on demand (no cached ASTs) and provides selectors, guardrails, and dry-run defaults tailored for refactor automation.
 
+### Internal Architecture
+
+The js-edit CLI is modularized into three focused operation modules (November 2025):
+
+- **`operations/discovery.js`** — Symbol inventory and pattern matching (`--list-functions`, `--list-variables`, `--list-constructors`, `--search-text`, `--snipe`, `--outline`). Handles `--match`/`--exclude` filtering, position-based lookups, and search result formatting.
+- **`operations/context.js`** — Context retrieval and guard operations (`--context-function`, `--context-variable`, `--preview`). Manages padding, enclosing context modes, plan emission for context workflows, and guard summary rendering.
+- **`operations/mutation.js`** — Locate, extract, and replace workflows with guardrail enforcement (`--locate`, `--extract`, `--replace`, `--replace-variable`). Handles hash/span verification, syntax validation, unified diff generation, and dry-run vs. fix execution.
+- **`shared/`** — Common utilities and formatting constants (hash encoding, selector parsing, output formatting).
+
+All operations use dependency injection initialized via `cli.js`, ensuring consistent access to the SWC parser, formatter utilities, and shared constants. The modular design enables focused testing and maintainability while preserving backward compatibility for all command-line interfaces.
+
 ### Core Commands
 
 - `--replace <selector> --rename <identifier>` — rename the located function without providing an external snippet (identifier must exist on the target).
