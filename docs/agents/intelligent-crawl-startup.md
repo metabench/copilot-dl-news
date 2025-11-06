@@ -9,6 +9,14 @@ supersedes: []
 related: [database-schema-tools]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Reference [../INDEX.md](../INDEX.md) for crawl-related documents before iterating on startup output.
+- Align logging changes with crawl architecture guidance in `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`.
+
 ## Summary
 Rapid iteration workflow for testing startup reporting improvements in intelligent crawls. Use --limit N to display only first N lines, enabling quick testing of changes in seconds rather than minutes. Target output shows database status, gazetteer coverage, missing hubs, DSPL loading, feature flags, and plan preview in first 100 lines.
 

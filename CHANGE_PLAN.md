@@ -1,5 +1,181 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — Crawl Sequence Config Implementation (Initiated 2025-11-04)
+
+### Goal
+- Deliver the first implementation of configuration-driven crawl sequences using simple string command arrays while tightening crawler orchestration boundaries so the system is ready for future AST integration.
+- Reduce coupling inside `NewsCrawler` by delegating execution to a sequence runner that maps commands onto `CrawlOperations`, and surface telemetry/safety guardrails aligned with existing crawl monitoring.
+
+### Current Behavior
+- Crawl behavior is still orchestrated imperatively inside `NewsCrawler`, mixing configuration decisions with execution logic and making it difficult to share or review strategies.
+- No loader exists for JSON/YAML command arrays; attempts to modify crawl ordering require code edits.
+- Telemetry around crawl steps is embedded in ad-hoc logging rather than per-command metrics, limiting observability once sequences become declarative.
+
+### Proposed Changes
+1. **Discovery & Inventory** — Catalogue existing crawl entry points, helper modules, and config usage; document findings and risks in this plan (Task 11.1).
+2. **Sequence Config Loader** — Implement a loader that reads JSON/YAML arrays of command descriptors, validates them using the soon-to-be-defined schema, and exposes normalized command metadata for execution (Task 11.2).
+3. **Sequence Runner & Operations Bridge** — Create a runner that resolves string commands to `CrawlOperations` methods, handles optional args, emits structured telemetry, and surfaces rich error reporting (Task 11.3).
+4. **NewsCrawler Integration** — Refactor crawler startup to load sequences (defaulting to shipped configs), enforce deterministic ordering, and isolate orchestrator responsibilities from implementation details (Task 11.4).
+5. **Telemetry & Safety** — Add per-command timing, success/failure counters, SSE/background-task hooks, and dry-run options to keep production runs safe (Task 11.5).
+6. **Tests & Documentation** — Add focused Jest/unit tests and smoke CLI coverage for loader/runner integration, update documentation, and record validation commands (Task 11.6).
+
+### Task 2.4 Discovery Notes (2025-11-12)
+- **Loader contract draft:** Introduce a `SequenceConfigLoader` module that accepts `{ sequenceName, host, configDir, resolvers }`, locates JSON/YAML files under `config/crawl-sequences/`, validates them against the v1 command-array schema, and returns a normalized payload `{ startUrl, sharedOverrides, steps, metadata }` suitable for `CrawlOperations.executeSequence`.
+- **Resolver architecture:** Support tokenised placeholders (e.g., `@playbook.primarySeed`, `@config.featureFlags`, `@cli.startUrl`) by allowing the loader to call injected resolver functions instead of reaching into `CrawlPlaybookService` or `ConfigManager` directly. Each resolver resolves tokens to concrete values, enabling host-aware defaults without coupling the loader to `NewsCrawler` internals.
+- **Start URL precedence:** Proposed resolution order — explicit CLI override → sequence file `startUrl` literal → resolver tokens (playbook/config) → legacy default from `cli/argumentNormalizer`. Documenting this order keeps legacy behaviour intact while enabling host-specific overrides.
+- **Shared overrides & telemetry:** Loader should bubble up per-sequence metadata (source file path, version, declared host) so `SequenceRunner` can emit `onStepStart/End` telemetry with consistent context before Task 11.5 instrumentation work begins.
+- **Schema assets:** Plan to publish JSON Schema fragments alongside loader implementation (stored under `config/schema/sequence.v1.json`) to keep validation and documentation in sync.
+
+### Task 11.2 Implementation Plan — Sequence Config Loader (2025-11-12)
+1. **Scaffold loader module:** Create `src/orchestration/SequenceConfigLoader.js` exporting a factory (to inject `fs`, `path`, `yaml`, `validator`) that exposes `load({ sequenceName, host, cliOverrides })` and helper utilities for file discovery plus metadata assembly.
+2. **Schema + validator:** Publish `config/schema/sequence.v1.json` covering `startUrl`, `sharedOverrides`, and `steps[]` command descriptors; build a lightweight validator helper in `src/orchestration/schema/validateSequenceConfig.js` that enforces the schema contract without introducing new dependencies.
+3. **File resolution order:** Implement search precedence `sequenceName.host.json|yaml` → `sequenceName.json|yaml` → default, capturing deterministic metadata (`sourcePath`, `format`, size, checksum) for telemetry and caching.
+4. **Token resolution pipeline:** Inject resolver map `{ playbook, config, cli }`; resolve `@` tokens with trace logging, enforce start URL precedence (CLI override → literal → resolver), and raise structured errors when tokens are missing.
+5. **Normalization output:** Emit `{ startUrl, sharedOverrides, steps, metadata }` with steps normalized into `{ id, operation, overrides, continueOnError, startUrl }`, auto-populating command IDs (`<operation>#<index>`) when absent and recording resolved token inventory for Task 11.5 telemetry.
+6. **Error handling & dry-run:** Define `SequenceConfigError` variants (missing file, schema violation, unresolved token) with actionable context. Provide `loadDryRun()` to report discovery/validation status without throwing so future tooling can surface warnings interactively.
+7. **Tests & fixtures:** Add Jest coverage (`src/orchestration/__tests__/SequenceConfigLoader.test.js`) using temp directories covering JSON vs. YAML, host overrides, resolver success/failure, schema validation errors, and dry-run behaviour. Include checksum assertions to guard metadata changes.
+8. **Documentation sync:** Create `config/crawl-sequences/README.md` (if directory new) summarizing file naming, schema link, and resolver catalog. Update this plan + tracker once implementation validated.
+
+### Task 11.2 Progress Update (2025-11-12)
+ - 2025-11-12: Focused CLI coverage passes (`npx jest --config jest.careful.config.js --runTestsByPath src/tools/__tests__/crawl-operations.sequence-config.test.js --bail=1 --maxWorkers=50%`), confirming normalization + metadata propagation and closing Task 11.3 implementation scope.
+
+### Task 11.3 Implementation Plan — Sequence Runner & Operations Bridge (2025-11-12)
+1. **Discovery sweep:** Catalogue callable operations and argument contracts across `src/orchestration/CrawlOperations.js` and related helpers; document any legacy orchestration shortcuts that must be preserved for backwards compatibility.
+2. **Runner scaffolding:** Create `src/orchestration/SequenceRunner.js` exporting a factory that accepts `{ operations, telemetry, logger }` and exposes `run({ sequence, context })`, `runStep`, and helper utilities for continue-on-error handling.
+3. **Command resolution:** Implement a deterministic lookup that maps normalized step `operation` strings onto the injected `CrawlOperations` facade, with descriptive errors when an operation is missing or does not match expected call signatures.
+4. **Execution lifecycle:** Execute each normalized step with structured hooks (`onStepStart`, `onStepSuccess`, `onStepFailure`), pass through resolved `startUrl`/`overrides`, and merge shared overrides without mutating the original sequence payload.
+5. **Error strategy:** Respect `continueOnError` flags, aggregate failures for summary reporting, and provide early exit semantics when the flag is false. Ensure telemetry receives failure context without throwing inside callbacks.
+6. **Telemetry bridge:** Define a minimal telemetry contract (e.g., `telemetry.onStepEvent({ phase, step, metadata })`) that Task 11.5 can enrich later. Provide no-op defaults so downstream callers can opt in gradually.
+7. **Integration harness:** Add a narrow integration helper (e.g., `createSequenceRunnerEnvironment`) that wires loader output into the runner for consumers such as `NewsCrawler` and upcoming CLI tooling.
+8. **Tests:** Author focused Jest coverage (`src/orchestration/__tests__/SequenceRunner.test.js`) using stubbed operations to exercise success paths, `continueOnError`, error propagation, and telemetry hook invocation counts.
+
+**Readiness checklist (complete before coding):**
+- [ ] Confirm discovery notes recorded in this section reflect the latest `CrawlOperations` API surface.
+- [ ] Decide on operation naming normalization (case sensitivity, aliases) and capture decision here to avoid mid-implementation churn.
+- [ ] Identify any operations requiring asynchronous cleanup or special context so the runner can pass dependencies explicitly.
+
+**Validation plan:**
+- `npx jest src/orchestration/__tests__/SequenceRunner.test.js`
+- `npx jest src/orchestration/__tests__/SequenceConfigLoader.test.js` (regression safety)
+- Optional smoke: invoke runner with real `CrawlOperations` in a dry-run harness once Task 11.4 wiring lands.
+
+**Progress log:**
+- 2025-11-05: Begin wiring loader-sourced metadata through the façade/runner bridge and enhancing the `crawl-operations` CLI summaries so preset and loader context show up in both ASCII and JSON output.
+- 2025-11-12: CLI now normalizes `--sequence-config` inputs, drives the loader, forwards config metadata into `CrawlOperations.executeSequence`, and renders the enriched details (including loader warnings and resolver statistics) across ASCII/JSON modes with structured `SequenceConfigError` reporting.
+- 2025-11-12: Added `crawl-operations.sequence-config.test.js` to validate the new CLI option normalization flow, ensuring the parser enforces mutual exclusivity with `--sequence` and propagates loader configuration flags correctly.
+
+### Task 11.4 Implementation Plan — NewsCrawler Integration (2025-11-12)
+1. **Adapter layer:** Introduce an orchestration adapter inside `NewsCrawler` that acquires the sequence loader + runner, applies CLI overrides, and exposes a cohesive `loadAndRunSequence()` helper.
+2. **Configuration merge:** Determine precedence between legacy crawler options and sequence configuration (e.g., CLI flags vs. loader metadata) and document it here; implement merge logic centrally.
+3. **Legacy compatibility:** Preserve the existing imperative path behind a feature flag or fallback so deployments without sequence configs continue to operate until rollout completes.
+4. **Startup refactor:** Replace the inline operation scheduling inside `NewsCrawler.start` with a call to the sequence runner, adapting existing initialization steps into sequence definitions where necessary.
+5. **State propagation:** Ensure shared context (database handles, telemetry emitters, task managers) flows through to operations invoked by the runner without introducing global state.
+6. **Regression harness:** Add integration coverage (Jest/CLI smoke) that boots `NewsCrawler` with a temp database and executes the default sequence in dry-run mode to confirm ordering and error handling.
+
+**Validation plan:**
+- Focused Jest/CLI smoke tests covering default sequence execution and feature-flagged fallback.
+- Manual smoke: `node tools/intelligent-crawl.js --quick-verification` once crawler wiring is in place.
+ 
+ **Progress log:**
+ - 2025-11-12: Initiated integration work; cataloging existing `NewsCrawler` startup flow and entry points to host the sequence loader/runner bridge before refactor.
+ - 2025-11-12 PM: Created shared `SequenceConfigRunner` module consolidating metadata cloning + execution wiring, refactored `crawl-operations` CLI to consume it, and added `NewsCrawler.loadAndRunSequence` helper that composes the loader/runner bridge with optional dependency injection. Added focused Jest coverage (`npx jest --config jest.careful.config.js --runTestsByPath src/orchestration/__tests__/SequenceConfigRunner.test.js --bail=1 --maxWorkers=50%`) validating loader delegation and facade execution.
+ - 2025-11-13: Began legacy CLI plumbing; extending `normalizeLegacyArguments` to surface `--sequence-config` inputs, preserve explicit start URLs, and forward override metadata to the NewsCrawler bridge. Function currently mid-rewrite pending merge logic.
+ - 2025-11-13 (later): Legacy CLI now calls `NewsCrawler.loadAndRunSequence` when `--sequence-config` is present; `normalizeLegacyArguments` rebuilt to parse overrides/JSON safely with new Jest coverage (`node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.careful.config.js --runTestsByPath src/crawler/cli/__tests__/argumentNormalizer.test.js --bail=1 --maxWorkers=50%`). Reporting now derives DB paths from CLI options for sequence runs.
+ - 2025-11-13 (latest): Began NewsCrawler startup audit to map existing imperative boot sequence into declarative steps. Identified required operations (`init`, planner gating, sitemap enqueue, start URL seed, worker bootstrap, queue drain, telemetry summarization). Preparing default sequence definition mirroring this order with hooks for planner/sitemap optionality before refactoring `crawl()` into a thin sequence adapter.
+ - 2025-11-13 (night): Reviewed `config/crawl-sequences/README.md`, `config/schema/sequence.v1.json`, `src/orchestration/SequenceRunner.js`, and `src/crawler/operations` to confirm step metadata expectations. Sketched startup sequence plan (`init` → `planner` → `sitemaps` → `seedStartUrl` → `markStartupComplete` → runtime loop → finalize) and decided to expose these phases through a dedicated `NewsCrawler` sequence runner with per-mode layouts (sequential vs. concurrent vs. gazetteer) while preserving legacy fallback logic.
+ - 2025-11-14: Refactored `NewsCrawler` so `crawl()`/`crawlConcurrent()` delegate to an internal `createSequenceRunner` bridge with mode-aware step lists, centralized `_finalizeRun`, and `_runLegacy*` fallbacks when `useSequenceRunner` is disabled or configs absent. Added schema support for `useSequenceRunner`, injected `_buildStartupSequence`/`_runCrawlSequence` helpers, and kept gazetteer path using the same bridge while preserving legacy telemetry/stat logging.
+
+### Task 11.5 Implementation Plan — Telemetry & Safety Guardrails (2025-11-12)
+1. **Telemetry schema:** Finalize the telemetry payload shape referenced in Task 11.3 (step ID, operation, duration, status, error summary) and document the contract here for future AST consumers.
+2. **Metrics plumbing:** Wire runner callbacks to existing telemetry emitters (SSE, background-task manager, analysis dashboards) while avoiding duplicate events already produced elsewhere.
+3. **Safety hooks:** Add timeout guards or watchdog support per step (leveraging `docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md` patterns) so long-running operations surface progress.
+4. **Dry-run enhancements:** Extend loader/runner dry-run helpers to output telemetry previews, enabling operators to audit sequences without execution.
+5. **Tests:** Expand SequenceRunner tests to assert telemetry hook invocation order and payload shape using snapshot-free assertions.
+
+**Progress log:**
+- 2025-11-14: Reviewed AGENTS.md Topic Index + docs/INDEX.md, mapped telemetry touchpoints inside `SequenceConfigRunner`, `NewsCrawler.loadAndRunSequence`, and resolver catalog; planning playbook/config resolver injection so loader metadata feeds upcoming metrics.
+- 2025-11-14 (afternoon): Wired `NewsCrawler.loadAndRunSequence` to `createSequenceResolverMap`, forwarding resolver map + cleanup into `runSequenceConfig` so loader metadata includes config/playbook tokens ahead of telemetry instrumentation.
+
+### Task 11.6 Implementation Plan — Tests & Documentation (2025-11-12)
+1. **Test matrix:** Enumerate integration and unit suites required post-integration (loader + runner, NewsCrawler sequence execution, telemetry smoke) and capture the command list here.
+2. **Documentation updates:** Plan for updates to `AGENTS.md`, `config/crawl-sequences/README.md`, and any CLI quick references to reflect the new sequence workflow.
+3. **Verification log:** Record validation commands and results within this plan upon completion, ensuring reproducibility for future agents.
+4. **Sign-off checklist:** Define the closure criteria (all tasks implemented, tests passing, docs updated, telemetry verified) prior to marking Phase 11 complete.
+
+### Risks & Unknowns
+- Need to ensure loader/runner changes do not regress existing crawl behavior when no sequence config is provided.
+- Telemetry additions must avoid double-reporting metrics already produced by crawl subsystems.
+- Config validation must strike a balance between strictness and forward compatibility for future AST nodes.
+- Refactoring `NewsCrawler` may interact with the planned modularization/base-class work (Phase 10); coordination is required to avoid churn.
+
+### Integration Points
+- `src/crawler/NewsCrawler.js`, `src/orchestration/CrawlOperations.js`, and any helper modules that currently schedule crawl tasks.
+- Configuration directories under `config/` (new `config/crawl-sequences/` directory anticipated).
+- Telemetry & reporting utilities (SSE emitters, analysis dashboards, background task manager).
+- Existing CLI/automation scripts that start crawls (ensure compatibility with new configuration entry point).
+
+### Docs Impact
+- Update `docs/crawl-sequence-command-ast.md` with references to the v1 implementation specifics when appropriate.
+- Extend `AGENTS.md`/`docs/TESTING_STATUS.md` (if needed) to document new workflow steps for running sequence-configured crawls.
+- Add README or quick-reference docs for the new sequence configuration directory and CLI usage.
+
+### Focused Test Plan
+- Add unit tests for the loader (valid, invalid, missing config) and runner (command resolution, argument passing, telemetry hooks) using Jest with temp fixtures.
+- Execute a CLI smoke test to run a small sequence against a test database (`node tools/crawl-sequence.js --file ... --dry-run`) and capture results here.
+- Run targeted crawler smoke tests to ensure legacy code paths still function without sequence configs.
+
+### Rollback Plan
+- Keep existing imperative crawl orchestration paths intact behind a feature flag so we can toggle back if the sequence runner misbehaves.
+- Maintain backups of any new config files and schema definitions; deleting the loader/runner modules and reverting `NewsCrawler` integration restores prior behavior.
+
+### Branch & Notes
+- Working branch: `main` (initial discovery/documentation only; create feature branch before implementation begins).
+- Tracker alignment: Added Phase 11 tasks to `docs/CLI_REFACTORING_TASKS.md`, marking Task 11.1 in-progress on 2025-11-04. 2025-11-12: Task 2.4 promoted to in-progress as configuration/playbook discovery begins.
+- Tooling note: `node tools/dev/js-edit.js --context-function CrawlPlaybookService#loadPlaybook` currently exits with `fmt.codeBlock is not a function`; fall back to `read_file` for targeted snippets until js-edit supports this selector.
+- Tooling note (2025-11-14): `js-edit` lacks selectors for property-assigned functions like `NewsCrawler.loadAndRunSequence`; applied a guarded text patch instead and noted the limitation for future tooling improvements.
+- Pending actions: Publish resolver token catalog for downstream consumers and define telemetry callback signatures before starting Task 11.3.
+
+## Active Plan — AST Design Enhancements (Initiated 2025-11-04)
+
+### Goal
+- Enhance the Crawl Sequence Command AST design with validation, error handling, metrics, telemetry, safety features, and comprehensive documentation to ensure robust, observable, and safe execution of declarative crawl sequences.
+
+### Current Behavior
+- The AST design document (`docs/crawl-sequence-command-ast.md`) outlines the basic structure for v1 and v2 sequences, but lacks detailed specifications for validation, error handling, metrics integration, safety mechanisms, and practical examples.
+
+### Proposed Changes
+1. **Add Validation and Error Handling Section**: Define JSON schema validation, pre-execution checks, graceful degradation, and runtime safety measures.
+2. **Add Metrics and Telemetry Section**: Specify execution metrics, telemetry integration with existing systems, and observability features like dashboards and audit trails.
+3. **Add Integration Section**: Detail how the AST integrates with CrawlOperations facade, CLI tools, database adapters, and background tasks.
+4. **Add Safety Features Section**: Implement dry-run mode, execution limits, and access control mechanisms.
+5. **Enhance Examples and Documentation**: Provide additional sequence examples, CLI usage patterns, and comprehensive documentation structure.
+
+### Risks & Unknowns
+- Ensuring compatibility with existing telemetry and logging systems.
+- Defining appropriate resource limits without impacting legitimate use cases.
+- Balancing safety features with usability for development and testing.
+
+### Integration Points
+- `docs/crawl-sequence-command-ast.md` (primary design document).
+- Existing telemetry infrastructure (SSE, background task logging).
+- CLI formatting tools (`CliFormatter`, `CliArgumentParser`).
+- CrawlOperations facade and database adapters.
+
+### Docs Impact
+- Update `docs/crawl-sequence-command-ast.md` with new sections and examples.
+- Potentially update AGENTS.md to reference enhanced AST capabilities.
+
+### Focused Test Plan
+- Manual review of updated design document for completeness.
+- Validation that proposed features align with existing system capabilities.
+
+### Rollback Plan
+- Revert changes to `docs/crawl-sequence-command-ast.md` if design enhancements prove misaligned.
+
+### Branch & Notes
+- Working branch: `main` (documentation-only changes).
+- 2025-11-04: Integrated validation, error handling, metrics, telemetry, integration, safety, and enhanced examples into the AST design document.
+
 ## Active Plan — Migration Export Gitignore Hygiene (Initiated 2025-11-04)
 
 ### Goal
@@ -91,6 +267,53 @@
 - 2025-11-12 (in progress): Begin exporter cleanup pass — add a pre-run removal step for stale NDJSON files and ensure table iterators release their statements even if the stream ends early or throws. Validate changes with a focused export of `queue_events` before running the full migration again.
 - 2025-11-12 (in progress+1): Latest migrate run succeeded overall, but `content_analysis.ndjson` still throws `EBUSY` during the pre-run delete. Add a retry/backoff around the removal step so Windows unlocks the file before export resumes, then re-run migrate to confirm a clean manifest.
 - 2025-11-12 (complete): Added retry/backoff to the exporter’s pre-run delete and reran the full migrate workflow. Manifest now shows every table (including `content_analysis`) exported with row counts, and the CLI finished without "database connection is busy" warnings.
+
+## Active Plan — js-edit Modularization (Initiated 2025-11-05)
+
+### Goal
+- Reduce the size and cognitive load of `tools/dev/js-edit.js` by extracting coherent modules without changing existing features or guardrail behavior.
+- Establish a clearer separation between CLI interface, discovery helpers, guard/context utilities, and mutation workflows so future maintenance (and tooling enhancements) becomes simpler.
+
+### Current Behavior
+- `tools/dev/js-edit.js` is a 4k+ line monolith that mixes argument parsing, option normalization, discovery helpers, context/guard builders, and mutation workflows.
+- Shared helpers (newline guards, span utilities, output renderers) are defined inline, making reuse in emerging tooling (e.g., future AST-driven workflows) difficult.
+- Tests and docs refer to the CLI as a single module, so any refactor must preserve public behavior and module exports.
+
+### Proposed Changes
+1. **Discovery & Boundary Plan (Task 7.1)** — Inventory responsibilities, map existing helper clusters, and capture risk areas (guardrail logic, CLI output) before moving code.
+2. **Module Scaffolding (Task 7.2)** — Introduce `tools/dev/js-edit/` subdirectory with entry modules (e.g., `cli.js`, `operations/discovery.js`, `operations/mutation.js`, `formatters/guards.js`) exporting current helpers without wiring changes.
+3. **Extract Discovery Operations (Task 7.3)** — Move `listFunctions`, `listConstructors`, `listVariables`, `preview*`, and `searchTextMatches` into discovery module(s); update main file to delegate while preserving exports/CLI output.
+4. **Extract Context & Guard Utilities (Task 7.4)** — Relocate context-building helpers, guard summarizers, and plan emitters to shared module(s) so both discovery and mutation flows consume them.
+5. **Extract Mutation Workflows (Task 7.5)** — Move extract/replace operations (function + variable) plus guardrail enforcement into dedicated module(s); keep entrypoints identical.
+6. **Validation & Documentation (Task 7.6)** — Run focused Jest suite, adjust docs/README references, and compile a list of future js-edit enhancements observed during modularization (without implementing them yet).
+
+### Risks & Unknowns
+- Large refactor touches almost every helper; risk of regressions in guard hashes, newline summaries, and CLI output formatting.
+- js-edit self-editing requirement means we must rely on guarded replacements; module extraction may require multiple passes to avoid hash drift.
+- Import cycles could emerge if modules depend on each other; need to design boundaries carefully.
+
+### Integration Points
+- `tools/dev/js-edit.js` (entry point) will become a thin orchestrator delegating to new modules.
+- New files under `tools/dev/js-edit/` (structure TBD) containing extracted helpers.
+- Existing Jest suite (`tests/tools/__tests__/js-edit.test.js`) must continue to pass without fixture changes.
+- Documentation (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`) referencing helper layout may need updates.
+
+### Docs Impact
+- Update developer docs to explain new module layout so future contributors know where to add helpers.
+- Record deferred feature ideas discovered during modularization for later implementation.
+
+### Focused Test Plan
+- `npx jest --runTestsByPath tests/tools/__tests__/js-edit.test.js --config jest.careful.config.js --bail=1 --maxWorkers=50%` after each major extraction.
+- Ad-hoc smoke: `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-sample.js --list-functions --json` (plus other representative commands) to confirm CLI parity.
+
+### Rollback Plan
+- If regressions surface, revert to the monolithic `js-edit.js` by rolling back newly created modules and re-inlining helpers.
+- Keep incremental commits aligned with tasks (7.2–7.5) to facilitate targeted rollback if a specific extraction introduces issues.
+
+### Branch & Notes
+- Working branch: `main` (repo already hosting js-edit work; maintain continuity for careful refactor tooling).
+- Discovery (Task 7.1) performed 2025-11-05; module scaffolding not yet started.
+- Future feature ideas observed during discovery will be captured under Task 7.6 rather than implemented immediately (e.g., automated module extraction commands within js-edit).
 
 ## Active Plan — js-edit Lightweight Discovery Helpers (Initiated 2025-11-09)
 

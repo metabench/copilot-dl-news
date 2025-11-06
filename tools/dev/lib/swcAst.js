@@ -244,6 +244,19 @@ function normalizeSpan(span, byteIndex = null) {
   return { start: 0, end: 0, byteStart: 0, byteEnd: 0, __normalized: true };
 }
 
+function createSpanKey(span) {
+  if (!span || typeof span !== 'object') {
+    return null;
+  }
+
+  const normalizedStart = Number.isFinite(span.start) ? span.start : 0;
+  const normalizedEnd = Number.isFinite(span.end) ? span.end : normalizedStart;
+  const normalizedByteStart = Number.isFinite(span.byteStart) ? span.byteStart : normalizedStart;
+  const normalizedByteEnd = Number.isFinite(span.byteEnd) ? span.byteEnd : normalizedEnd;
+
+  return `${normalizedStart}:${normalizedEnd}:${normalizedByteStart}:${normalizedByteEnd}`;
+}
+
 function createByteMapper(source) {
   if (typeof source !== 'string') {
     return null;
@@ -739,6 +752,177 @@ function collectFunctions(ast, source, mapper = null) {
   const byteIndex = sourceMapper.getByteIndex();
   const sourceBuffer = sourceMapper.getBuffer();
   const functions = [];
+  const classMetadataMap = new Map();
+
+  function formatHeritageExpression(expression) {
+    if (!expression || typeof expression !== 'object') {
+      return null;
+    }
+    if (expression.type === 'Identifier' && expression.value) {
+      return expression.value;
+    }
+    const chain = extractMemberChain(expression);
+    if (chain && chain.length > 0) {
+      return chain.join('.');
+    }
+    if (expression.span) {
+      try {
+        const snippet = sourceMapper.sliceString(expression.span);
+        const trimmed = snippet.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      } catch (error) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  function collectImplementsList(nodes) {
+    if (!Array.isArray(nodes) || nodes.length === 0) {
+      return [];
+    }
+    const results = [];
+    nodes.forEach((item) => {
+      if (!item || typeof item !== 'object') {
+        return;
+      }
+      const target = item.expression || item.id || item;
+      const value = formatHeritageExpression(target);
+      if (value) {
+        results.push(value);
+      }
+    });
+    return results;
+  }
+
+  function splitParameterList(raw) {
+    const results = [];
+    if (typeof raw !== 'string') {
+      return results;
+    }
+    let current = '';
+    let depth = 0;
+    let stringQuote = null;
+    let escapeNext = false;
+    for (let index = 0; index < raw.length; index += 1) {
+      const ch = raw[index];
+      if (escapeNext) {
+        current += ch;
+        escapeNext = false;
+        continue;
+      }
+      if (ch === '\\') {
+        current += ch;
+        escapeNext = true;
+        continue;
+      }
+      if (stringQuote) {
+        current += ch;
+        if (ch === stringQuote) {
+          stringQuote = null;
+        }
+        continue;
+      }
+      if (ch === '"' || ch === '\'' || ch === '`') {
+        current += ch;
+        stringQuote = ch;
+        continue;
+      }
+      if (ch === '(' || ch === '{' || ch === '[') {
+        depth += 1;
+        current += ch;
+        continue;
+      }
+      if (ch === ')' || ch === '}' || ch === ']') {
+        if (depth > 0) {
+          depth -= 1;
+        }
+        current += ch;
+        continue;
+      }
+      if (ch === ',' && depth === 0) {
+        if (current.trim().length > 0) {
+          results.push(current.trim().replace(/\s+/g, ' '));
+        }
+        current = '';
+        continue;
+      }
+      current += ch;
+    }
+    if (current.trim().length > 0) {
+      results.push(current.trim().replace(/\s+/g, ' '));
+    }
+    return results;
+  }
+
+  function extractConstructorParamsFromSnippet(snippet, methodNode) {
+    if (typeof snippet !== 'string' || snippet.length === 0) {
+      return [];
+    }
+    if (methodNode && Array.isArray(methodNode.params) && methodNode.params.length > 0) {
+      const params = methodNode.params.map((param) => {
+        if (!param || typeof param !== 'object') {
+          return '';
+        }
+        try {
+          return sourceMapper.sliceString(param.span).trim().replace(/\s+/g, ' ');
+        } catch (error) {
+          return '';
+        }
+      }).filter((value) => value.length > 0);
+      if (params.length > 0) {
+        return params;
+      }
+    }
+    const match = snippet.match(/constructor\s*\(([\s\S]*?)\)/);
+    if (!match) {
+      return [];
+    }
+    const paramsRaw = match[1].trim();
+    if (!paramsRaw) {
+      return [];
+    }
+    return splitParameterList(paramsRaw);
+  }
+
+  function normalizeConstructorParam(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+    let normalized = value.trim().replace(/\s+/g, ' ');
+    while (normalized.endsWith(',') || normalized.endsWith(')')) {
+      normalized = normalized.slice(0, -1).trimEnd();
+    }
+    return normalized;
+  }
+
+  function registerConstructorMetadata(classKey, methodNode) {
+    if (!classKey || !classMetadataMap.has(classKey) || !methodNode) {
+      return;
+    }
+    const entry = classMetadataMap.get(classKey);
+    if (!entry) {
+      return;
+    }
+    const normalizedSpan = sourceMapper.normalize(methodNode.span);
+    const constructorKey = createSpanKey(normalizedSpan);
+    if (!constructorKey) {
+      return;
+    }
+    let snippet = '';
+    try {
+      snippet = sourceMapper.sliceString(methodNode.span);
+    } catch (error) {
+      snippet = '';
+    }
+    const params = extractConstructorParamsFromSnippet(snippet, methodNode)
+      .map((value) => normalizeConstructorParam(value))
+      .filter((value) => value.length > 0);
+    entry.constructors.set(constructorKey, {
+      span: normalizedSpan,
+      params
+    });
+  }
 
   const REPLACEABLE_CALL_BASE_NAMES = new Set([
     'describe',
@@ -1272,7 +1456,19 @@ function collectFunctions(ast, source, mapper = null) {
         const className = node.identifier ? node.identifier.value : '(anonymous class)';
         const classScope = node.identifier ? extendScopeChain(currentScope, [className]) : currentScope;
         const classSpan = context.exportSpan || node.span;
-        const classEntry = { kind: 'class', name: className, span: classSpan };
+        const normalizedClassSpan = sourceMapper.normalize(node.span);
+        const classEntry = { kind: 'class', name: className, span: normalizedClassSpan };
+        const classKey = createSpanKey(normalizedClassSpan);
+        if (classKey) {
+          const existing = classMetadataMap.get(classKey) || {
+            constructors: new Map()
+          };
+          existing.span = normalizedClassSpan;
+          existing.name = node.identifier ? node.identifier.value : context.className || '(anonymous class)';
+          existing.superClass = formatHeritageExpression(node.superClass);
+          existing.implements = collectImplementsList(node.implements);
+          classMetadataMap.set(classKey, existing);
+        }
         const members = Array.isArray(node.body)
           ? node.body
           : Array.isArray(node.body?.body)
@@ -1285,6 +1481,7 @@ function collectFunctions(ast, source, mapper = null) {
               ...context,
               className,
               classSpan,
+              classMetadataKey: classKey,
               scopeChain: classScope,
               callContext: null,
               enclosingContexts: prependContext(baseEnclosing, classEntry)
@@ -1294,11 +1491,53 @@ function collectFunctions(ast, source, mapper = null) {
         });
         break;
       }
+      case 'Constructor': {
+        const methodName = 'constructor';
+        const cleanName = 'constructor';
+        const isConstructor = true;
+        if (isConstructor && context.classMetadataKey) {
+          registerConstructorMetadata(context.classMetadataKey, node);
+        }
+        const methodSegments = [`#${cleanName}`];
+        const scopeChain = extendScopeChain(currentScope, methodSegments);
+        recordFunction(functions, source, {
+          name: context.className ? `${context.className}.${cleanName}` : cleanName,
+          kind: 'class-method',
+          exportKind: context.exportKind || null,
+          replaceable: true,
+          span: node.span,
+          lineIndex,
+          byteIndex,
+          sourceBuffer,
+          mapper: sourceMapper,
+          scopeChain,
+          pathSegments: currentPath,
+          nodeType: type,
+          enclosingContexts: baseEnclosing
+        });
+        if (node.body) {
+          const methodEntry = {
+            kind: 'constructor',
+            name: context.className ? `${context.className}.${cleanName}` : cleanName,
+            span: node.span
+          };
+          visit(
+            node.body,
+            { ...context, scopeChain, callContext: null, enclosingContexts: prependContext(baseEnclosing, methodEntry) },
+            currentPath.concat('body')
+          );
+        }
+        break;
+      }
       case 'ClassMethod':
       case 'ClassPrivateMethod':
       case 'PrivateMethod': {
         const methodName = ensureIdentifierName(node.key);
         const cleanName = methodName.replace(/^#/, '');
+        const isConstructor = cleanName === 'constructor' && methodName === 'constructor' && !node.isStatic && node.kind !== 'getter' && node.kind !== 'setter';
+        if (isConstructor && context.classMetadataKey) {
+          registerConstructorMetadata(context.classMetadataKey, node);
+        }
         const methodSegments = [];
         if (node.kind === 'getter') {
           methodSegments.push('get', cleanName);
@@ -1358,7 +1597,7 @@ function collectFunctions(ast, source, mapper = null) {
   visit(ast, { scopeChain: [], exportKind: null, enclosingContexts: [], callContext: null }, ['module']);
 
   functions.sort((a, b) => a.span.start - b.span.start);
-  return { functions, lineIndex, mapper: sourceMapper };
+  return { functions, classMetadata: classMetadataMap, lineIndex, mapper: sourceMapper };
 }
 
 
@@ -1725,6 +1964,7 @@ module.exports = {
   extractCode,
   replaceSpan,
   normalizeSpan,
+  createSpanKey,
   computeHash,
   createDigest,
   createByteMapper,

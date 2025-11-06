@@ -338,6 +338,58 @@ class CliFormatter {
   }
 
   /**
+   * Render a compact list where each entry fits on a single line.
+   * @param {Array<*>} items Items to render
+   * @param {Object} [options]
+   * @param {function(*, number): string} [options.labelFormatter] Label builder (defaults to index + 1)
+   * @param {function(*, number): (string|string[])} [options.renderSegments] Segment builder per entry
+   * @param {string} [options.joiner=' | '] Separator between segments
+   * @param {number} [options.indent=2] Left indent for each line
+   * @param {string} [options.emptyMessage='(no entries)'] Message when list is empty
+   */
+  denseList(items, options = {}) {
+    const entries = Array.isArray(items) ? items : [];
+    const indent = Number.isFinite(options.indent) ? options.indent : 2;
+    if (entries.length === 0) {
+      const emptyMessage = options.emptyMessage || '(no entries)';
+      console.log(this._indent(emptyMessage, indent));
+      console.log();
+      return;
+    }
+
+    const labelFormatter = typeof options.labelFormatter === 'function'
+      ? options.labelFormatter
+      : ((_, index) => `${index + 1}.`);
+
+    const labels = entries.map((entry, index) => {
+      const raw = labelFormatter(entry, index);
+      return raw === undefined || raw === null ? '' : String(raw);
+    });
+    const labelWidth = labels.reduce((max, label) => Math.max(max, label.length), 0);
+
+    const joiner = typeof options.joiner === 'string' ? options.joiner : ' | ';
+    const renderSegments = typeof options.renderSegments === 'function'
+      ? options.renderSegments
+      : ((entry) => [String(entry)]);
+
+    entries.forEach((entry, index) => {
+      const label = labels[index];
+      const rawSegments = renderSegments(entry, index);
+      const segmentsArray = Array.isArray(rawSegments) ? rawSegments : [rawSegments];
+      const segments = segmentsArray
+        .map((segment) => (segment === undefined || segment === null ? '' : String(segment).trim()))
+        .filter((segment) => segment.length > 0);
+
+      const prefix = labelWidth > 0 && label.length > 0 ? `${label.padEnd(labelWidth)} ` : label;
+      const lineBody = segments.join(joiner);
+      const composed = lineBody ? `${prefix}${lineBody}` : prefix.trimEnd();
+      console.log(this._indent(composed.trimEnd(), indent));
+    });
+
+    console.log();
+  }
+
+  /**
    * Print a progress bar.
    * @param {string} label Progress label
    * @param {number} current Current progress value

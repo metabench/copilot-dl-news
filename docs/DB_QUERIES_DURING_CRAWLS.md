@@ -11,6 +11,8 @@ The crawler uses SQLite with better-sqlite3 for data persistence. Database opera
 - **ArticleOperations.js**: Article-specific operations
 - **NewsWebsiteService.js**: Website management with caching
 
+> ✅ **Update (2025-11-05):** The earlier circular dependency warning between `ArticleOperations.js` and the v1 module index has been removed by dropping the unused `ensureDatabase` import. Legacy CLI entry points load cleanly with no Node circular dependency warnings.
+
 ## Key Database Tables Involved in Crawling
 
 ### Core Crawl Tables

@@ -1,8 +1,354 @@
 # CHANGE_PLAN.md — Future Refactoring Analysis Guide
 
+> **For historical initiatives, see `docs/archives/CHANGE_PLAN_HISTORY.md`.**
+
+> **Multi-model review commitment:** Each active initiative in this plan is expected to receive input from multiple AI models. When a different model proposes updates, annotate the relevant section with their contributions, summarize any new assumptions or risks, and flag outstanding questions for follow-up.
+
 **📌 TEMPLATE FOR FUTURE REFACTORING INITIATIVES**
 
 **Previous Initiative:** CLI Tool Refactoring & Hub Guessing Workflow Modernization (completed October 2025 — see `docs/refactored/cli-refactoring-stages.md` for complete case study).
+
+---
+
+### Modularisation Snapshot — November 6, 2025
+
+- **Crawl High-Level Facade:** Phase 2 sequencing work remains active (Tasks 2.2–2.5). Next steps center on finalising the sequence library, exposing the CLI entry surface, wiring configuration loaders, and extending focused Jest/docs coverage.
+- **NewsCrawler Modularization:** Discovery (Task 10.1) continues; upcoming tasks 10.2–10.3 will introduce the shared crawler core and slim the `NewsCrawler` subclass once service contracts are locked in.
+- **Schema Blueprint Alignment:** Task 8.5 (resolve schema-dependent Jest worker exit warning) is still in progress and blocks closing the blueprint alignment initiative.
+- **js-edit CLI Modularization:** ✅ **COMPLETE** — All core tasks finished (7.1-7.5, 7.7-7.11, 7.12-7.14, 9.4). CLI now fully modularized with `operations/discovery.js`, `operations/context.js`, and `operations/mutation.js`. Dense list output is default, combined selector expressions working, constructor listing functional with hash display. Discovery filters (--match/--exclude), position-based lookup (--snipe), top-level outline (--outline), unified diff preview (--preview-edit), and constructor inventory (--list-constructors) all implemented. All 51 Jest tests passing.
+- **Careful js-edit Refactor Agent:** Documentation cross-linking (Task 9.3) is outstanding to complete the agent roll-out.
+
+## 🔄 Active Initiative (Nov 4, 2025): Careful js-edit Refactor Agent
+
+### Goal / Non-Goals
+- **Goal:** Publish a new `.github/agents/Careful js-edit refactor.agent.md` playbook that fuses the disciplined, phase-driven workflow from *Careful Refactor* with the js-edit guardrail practices refined during the CLI refactor and builder initiatives. The agent must default to `tools/dev/js-edit.js` for JavaScript discovery/editing, explain the command surface in depth, and surface lessons learned (plan emission, guard hashes/spans, CommonJS selectors, stuck protocol).
+- **Non-Goals:** Do not retire existing agents (*Careful Refactor*, *Careful js-edit Builder*); they remain valid for other workflows. Avoid edits to the global instruction set outside of adding cross-links once the new agent ships.
+
+### Current Behavior (Baseline)
+- *Careful Refactor* offers exhaustive modularization guidance but only hints at editing discipline—it lacks first-class js-edit expectations.
+- *Careful js-edit Builder* centers on js-edit but targets net-new feature work instead of long-running refactor phases tied to tracker/plan hygiene.
+- Operators and agents must cross-reference multiple docs (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, session summaries) to reconstruct best practices.
+
+### Refactor & Modularization Plan
+1. **Task 9.1 – Refresh change plan for agent instruction work** *(α → β, in-progress)*
+  - Use this section to capture goals, tests, and risks.
+  - List js-edit highlights to promote (plan emission, guard enforcement, multi-file sequencing) and note supporting documentation.
+2. **Task 9.2 – Author `Careful js-edit refactor.agent.md`** *(γ)*
+  - Clone the structure of the Careful Refactor agent, weave in js-edit defaults, and tighten instructions based on recent experience (explicit stuck protocol, living plan requirements, js-edit command primer).
+  - Include a dedicated js-edit toolbox section covering commands, guardrail flags, plan workflows, and when to emit plan files.
+3. **Task 9.3 – Cross-link documentation** *(δ)*
+  - Update `AGENTS.md`/indices (and `.github/agents/index.json` if required) after the agent lands.
+  - Ensure references explain which workflows should pick the js-edit refactor agent vs. builder/refactor variants.
+
+### Cross-model Collaboration Notes
+- Leave “Pending multi-model review” markers when awaiting feedback from another AI system.
+- Document each external model’s adjustments to the playbook (e.g., new guardrails, updated stuck protocol) and reconcile them with existing workflows before moving forward.
+
+**Grok's Review (November 4, 2025):** The js-edit refactor agent concept is excellent for maintaining disciplined, tool-assisted refactoring workflows. To enhance its effectiveness, consider adding explicit guidance on fallback strategies when js-edit encounters unsupported syntax or complex refactors that exceed its capabilities—perhaps directing users to manual editing with clear documentation requirements. Additionally, recommend integrating automated testing checkpoints after each js-edit operation to catch regressions early, and include more examples of multi-file refactors to demonstrate batch editing workflows. Finally, ensure the agent playbook emphasizes the importance of plan emission for complex changes to enable safe rollbacks and peer review.
+
+**Grok's Expanded Workflow Review (November 4, 2025):** To achieve significant progress in few phases, implement a "batch-first" workflow that consolidates discovery, planning, and initial implementation into a single intensive phase. Start with a comprehensive reconnaissance sweep using js-edit's --list-functions and --context-function to map the entire codebase surface in one pass, emitting plan files for all potential targets. Then, prioritize high-impact extractions (e.g., base class scaffolding) and execute them in sequential batches using --emit-plan and --replace with --allow-multiple for multi-file changes. Integrate automated testing checkpoints after each batch (e.g., run jest.careful.config.js scoped to affected modules) to validate incrementally without full suite runs. This approach reduces phases from 5 to 3: (1) Unified Discovery & Planning, (2) Sequential Implementation Batches, (3) Consolidated Validation & Documentation. Use the living tracker to sequence batches, ensuring each completes before advancing.
+
+### Risks & Mitigations
+- **Instruction drift:** New guidance might diverge from actual workflows. *Mitigation:* Base the document on the existing Careful Refactor agent and insert only validated improvements.
+- **Redundant content:** Copying large text blocks could enlarge maintenance burden. *Mitigation:* Reuse structure but streamline wording, pointing readers to canonical docs instead of duplicating them.
+- **Over-indexing on js-edit:** Some refactors require non-JavaScript edits. *Mitigation:* Document exceptions (configs, Markdown) and require justification in the change plan before bypassing js-edit.
+
+### Focused Validation Plan
+- Proofread rendered Markdown (frontmatter + headings).
+- Cross-check instructions against `node tools/dev/js-edit.js --help` to ensure command coverage is accurate.
+- Verify `.github/agents/index.json` accommodates the new agent name after file creation.
+
+### Rollback Plan
+- Remove `Careful js-edit refactor.agent.md` and any doc references if the playbook proves unnecessary. The change is additive, so reverting the commits fully restores the previous agent catalog.
+
+### Task Ledger (mirrors `docs/CLI_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 9.1 Refresh change plan for agent instruction work | in-progress | This section documents scope, risks, and validation steps (2025-11-04).
+| 9.2 Author `Careful js-edit refactor.agent.md` | completed | 2025-11-04: Agent published with js-edit toolbox, guardrail guidance, and improved phase workflow.
+| 9.3 Cross-link documentation | not-started | Update documentation indices post-publication.
+| 9.4 Add constructor inventory command | completed | 2025-11-06: `--list-constructors` fully implemented with hash display, params, extends/implements heritage, explicit/implicit kind detection, --include-internals flag, and dense/verbose/JSON output formats. Constructor hashes provided for all explicit constructors to enable targeted refactoring.
+
+**Task 9.4 verification (2025-11-06):**
+- Syntax: `js-edit --file <target> --list-constructors [--filter-text <substring>] [--match <pattern>] [--exclude <pattern>] [--include-internals] [--include-paths] [--list-output dense|verbose] [--json]`
+- Hash display: Explicit constructors show 8-character hashes (e.g., `6Z4U7cYZ`); implicit constructors show `(implicit)` for params
+- Output formats: Dense list (default), verbose table with columns (index/class/export/extends/implements/params/hash/kind/line/column/internal), JSON with full metadata
+- Example: `node tools/dev/js-edit.js --file src/example.js --list-constructors --list-output verbose` displays table with all constructor details including hashes
+- Filtering: Supports --filter-text across class names, hashes, params, heritage; --match/--exclude for pattern-based class filtering; --include-internals to show non-exported classes without heritage
+- Verified with test file containing explicit constructors (Widget, Button) and implicit constructor (Panel)
+
+---
+
+## 📋 Future js-edit Enhancements
+
+**Core modularization complete (Nov 6, 2025)**. Discovery filters and new commands implemented. **Documentation and testing complete (Nov 6, 2025)**.
+
+**Completed (Nov 6, 2025):**
+- **Task 7.11**: `--match` / `--exclude` discovery filters — Glob pattern support (*, ?, **) for scoped symbol listing ✅
+- **Task 7.7**: `--snipe <position>` command — Quick symbol lookup at line:col or byte offset ✅
+- **Task 7.8**: `--outline` command — Top-level symbol outline with compact table format ✅
+- **Task 7.10**: `--preview-edit` flag — Unified diff replacement preview with context lines ✅
+- **Task 9.4**: `--list-constructors` command — Constructor inventory with hash display ✅
+- **Documentation**: tools/dev/README.md updated with comprehensive examples for all new commands ✅
+- **Testing**: Added 6 test suites with 20+ tests covering discovery filters, position parsing, outline, unified diff, and constructor listing ✅
+
+See `docs/archives/CHANGE_PLAN_HISTORY.md` for complete js-edit CLI modularization details.
+
+---
+
+## 🔄 Active Initiative (Nov 4, 2025): Crawl High-Level Facade
+
+### Goal / Non-Goals
+- **Goal:** Introduce a small, composable crawl scripting surface (`CrawlOperations`) that wraps the monolithic `NewsCrawler`, enabling high-level operations such as `ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, and hub/topic discovery sequences without duplicating crawl internals.
+- **Non-Goals:** No changes to the internal crawl engine (`NewsCrawler`) beyond wiring through configuration; no new database schema or background task integration; defer intelligent crawl refactors that require planner redesign.
+
+### Current Behavior (Baseline)
+- Crawl orchestration resides entirely in `src/crawl.js`, mixing CLI parsing, option normalization, and crawler construction.
+- High-level workflows (country hub passes, topic hub exploration) are scattered across configuration flags (`countryHubExclusiveMode`, `structureOnly`, intelligent planner toggles) with no shared façade.
+- Scripting a sequence currently requires manual instantiation of `NewsCrawler` and careful option coordination per run.
+
+### Refactor & Modularization Plan
+
+**Phase 1 – CrawlOperations Facade (delivered 2025-11-04)**
+1. **Task 1.1 – Plan Alignment:** Update this document and create `docs/CRAWL_REFACTORING_TASKS.md` (✅ tasks doc created) to track crawl facade work; ensure risks/tests enumerated prior to implementation.
+2. **Task 1.2 – CrawlOperations Facade:** Author `src/crawler/CrawlOperations.js` exporting a class that encapsulates shared defaults, lifecycle hooks (instantiate → crawl → capture stats), and structured result emission.
+3. **Task 1.3 – Operation Registry & Sequencing:** Implement named operations (`ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, `crawlCountryHubsHistory`, `findTopicHubs`, `findPlaceAndTopicHubs`) with documented option mapping plus an `executeSequence` helper for simple algorithms.
+4. **Task 1.4 – Focused Tests:** Add unit tests in `src/crawler/__tests__/CrawlOperations.test.js` covering option translation, sequence execution ordering, and error propagation without invoking real network fetches (use mocks/stubs for `NewsCrawler`).
+5. **Task 1.5 – Documentation:** Record usage examples and sequencing patterns in the developer docs (appendix in `docs/CLI_REFACTORING_QUICK_START.md` or new note under crawler architecture).
+
+**Phase 2 – Sequence Orchestration & CLI Integration (active)**
+1. **Task 2.1 – Discovery & Alignment:** Inventory existing crawl orchestration touchpoints (`src/crawl.js`, `CrawlPlaybookService`, CLI tooling docs) and capture integration constraints in `docs/CRAWL_REFACTORING_TASKS.md` before implementation.
+2. **Task 2.2 – Sequence Library:** Define reusable sequence presets (e.g., ensure → explore → topic discovery) that wrap the orchestration runner (`createSequenceRunner`) with curated step lists and default overrides.
+3. **Task 2.3 – CLI Entry Surface:** Expose a new CLI/runner (likely `src/tools/crawl-operations.js` or refactored `src/crawl.js`) that lets operators invoke single operations or named sequences with minimal arguments, reusing shared CLI formatter/parser patterns.
+  - 2025-11-05 — GitHub Copilot: `CrawlSequenceRunner` now delegates to the orchestration runner; next steps are to surface sequence metadata/telemetry in CLI summaries and accept loader-driven configs without dropping provenance.
+  - 2025-11-05 — GitHub Copilot: Sequence execution results now bubble preset metadata/context (name, description, overrides, source), paving the way for CLI summaries to reflect loader provenance.
+4. **Task 2.4 – Configuration & Playbook Hooks:** Allow sequences to pull host-specific context (start URL derivation, planner verbosity) from existing playbook services or config files without duplicating logic.
+5. **Task 2.5 – Tests & Documentation:** Add focused Jest coverage for the sequence library/CLI orchestration and extend developer docs with usage recipes, sample scripts, and integration guidance for automation workflows.
+
+**Phase 3 – Legacy Crawl CLI Modularization (planned)**
+1. **Task 3.1 – Bootstrap Extraction:** Break the top-level CLI bootstrap in `src/crawl.js` into a dedicated module (`src/crawler/cli/bootstrap.js`) that wires environment setup, logging, and graceful shutdown while delegating crawl execution to `CrawlOperations`.
+2. **Task 3.2 – Argument Normalization Module:** Move the legacy option parsing/normalization logic into a reusable adapter (`src/crawler/cli/argumentNormalizer.js`) that can translate existing flags into façade-friendly operation/preset invocations. Ensure backward compatibility for scripts relying on current flags.
+3. **Task 3.3 – Progress & Telemetry Stream Adapter:** Extract streaming progress reporting and telemetry hooks into `src/crawler/cli/progressReporter.js`, allowing both the legacy CLI and new entry surface to share consistent output without inflating the façade.
+4. **Task 3.4 – Legacy Command Shims:** Rebuild `src/crawl.js` as a thin shim that composes the extracted modules, retains legacy command aliases, and internally routes to the new CLI entry surface. Provide migration helpers so future callers can pivot to `crawl-operations` directly.
+5. **Task 3.5 – Tests & Documentation:** Author focused tests covering argument normalization, bootstrap lifecycle, and telemetry wiring; update docs (architecture + CLI quick start) to describe the modular CLI stack and deprecation path for direct `src/crawl.js` usage.
+6. **Circular dependency cleanup (Task 3.6):**
+  - Break the runtime cycle between `ArticleOperations.js` and the v1 index by removing the unused `ensureDatabase` import (or routing it through `./connection` if future helpers require it).
+  - Verify that no other module reintroduces the circular path; add regression coverage via an isolated require smoke test (CLI help invocation is sufficient).
+  - Update adapter documentation with the resolved architecture and record the removal of the warning in the progress tracker.
+
+#### 4. Risks & Mitigations
+- **Flag parity regressions:** Maintain exhaustive mapping table in normalizer; add Jest snapshot ensuring CLI help enumerates every known flag/alias.
+- **Lifecycle leaks:** Bootstrap must dispose services (playbook cache, enhanced DB adapters). Add `finally` handler in `runLegacyCli` to call `.close()`/`.dispose()` on services from factory module.
+- **Geography crawl coverage:** Some geography/gazetteer flows may remain beyond facade scope. Plan allows normalizer to return “raw” mode telling bootstrap to use existing `NewsCrawler` pipeline without refactor.
+- **Test runtime:** CLI modules should be pure/async without requiring heavy DB connections for unit tests. Provide injection points for mocks to keep tests fast.
+
+#### 5. Focused Test Plan (Phase 3)
+- Parser/normalizer tests via `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/cli/__tests__/argumentNormalizer.test.js`.
+- Progress reporter snapshot tests verifying icon/color output (guarded for non-TTY scenarios).
+- Smoke harness that runs `runLegacyCli` with stubbed services to ensure `CrawlOperations` is invoked for default Guardian crawl.
+- Legacy shim test verifying `require.main === module` still launches bootstrap.
+
+#### 6. Rollback Strategy
+- Because `src/crawl.js` becomes a thin shim, rollback is achieved by re-linking to previous monolithic file (keep copy under `legacy/` during transition).
+- New modules are additive; if issues arise post-refactor, revert commits introducing `src/crawler/cli/*` and restore original `src/crawl.js` from history.
+
+### Detailed Design — Phase 2 (authored 2025-11-04)
+
+#### 1. Current Code Topology (ground-truth from repository)
+- `src/crawler/CrawlOperations.js` (114 non-empty LOC, 5 public methods after 2025-11-04 refactor) now acts purely as an orchestration façade. It instantiates:
+  - A map of `CrawlOperation` subclasses (`operations/index.js`) and registers them via `_registerOperations`, attaching dynamic shortcut methods (e.g., `ensureCountryHubs`) that call the internal `_runOperation` helper.
+  - A js-edit-first orchestration runner now lives in `src/orchestration/SequenceRunner.js` (introduced 2025-11-04). It accepts normalized configs, resolves façade operations, emits telemetry callbacks, and aggregates results with continue-on-error handling.
+  - A lazily constructed crawler factory (`loadNewsCrawler()` inside `src/crawl.js`) to avoid ESM import timing issues observed pre-refactor.
+- `src/crawler/operations/CrawlOperation.js` defines the new base class with option-merging, lifecycle timing, logging, and cleanup semantics. Concrete operation subclasses (six files under `src/crawler/operations/`) only supply `name`, `summary`, and preset defaults.
+- `src/orchestration/SequenceRunner.js` encapsulates the sequence execution loop, merges shared/step overrides, enforces start URL requirements, and surfaces telemetry hooks (`onSequenceStart`, `onStepEvent`, `onSequenceComplete`). Focused tests live in `src/orchestration/__tests__/SequenceRunner.test.js`, covering override merging, abort/continue cases, and invalid configuration handling.
+- `src/crawl.js` remains a 3,400+ line CLI monolith combining argument parsing, progress reporting, crawler instantiation, and intelligent planner wiring. It does not currently consume `CrawlOperations`.
+- `src/crawler/CrawlPlaybookService.js` (1,100+ LOC) manages domain-specific knowledge, retries, and avoidance; future host-aware presets must integrate without duplicating its logic.
+- Test coverage: `src/crawler/__tests__/CrawlOperations.test.js` stubs the crawler factory and exercises option merging and sequencing. No tests exist for individual operation subclasses or the sequence runner in isolation.
+- Conciseness governance: `tools/analyze-crawl-operations.js` leverages `operations/concisenessMetrics.js` to enforce thresholds (≤120 non-empty LOC, ≤8 public methods) on the façade. Iteration log captured in `docs/CRAWL_REFACTORING_TASKS.md` shows two passes to reach compliance.
+
+#### 2. Design Goals for Phase 2
+1. **Modular sequencing:** External callers should be able to request domain-specific crawl algorithms (ensure → explore → topic discovery, history refresh bundles, etc.) with a descriptive identifier rather than manually scripting steps.
+2. **Host-aware defaults:** Sequences must optionally derive parameters (start URLs, planner verbosity, hub limits) from playbooks or configuration without bloating the façade.
+3. **CLI parity:** A lightweight entry surface should expose the new façade so operators and automation can trigger operations/sequences without interacting with `src/crawl.js` directly.
+4. **Telemetry continuity:** Result payloads should remain consistent with current `CrawlOperations` responses to preserve downstream logging and tooling expectations.
+5. **Conciseness preservation:** Future changes must keep `CrawlOperations` within conciseness thresholds by relocating additional behavior to dedicated modules.
+
+#### 3. Proposed Architecture
+1. **Sequence Preset Registry (`src/crawler/operations/sequencePresets.js`):**
+  - Export a catalog of named sequences (`ensureCountryStructure`, `countryExploration`, `historyRefresh`, `topicDiscovery`, etc.) describing ordered steps, default start URL resolution strategy, shared overrides, and whether failures should abort.
+  - Provide a `resolveSequence(name, context)` helper returning the normalized array accepted by `createSequenceRunner`. Context includes `startUrl`, `domain`, `playbook`, and operator-supplied overrides.
+  - Preserve JSON-serializable metadata so the CLI can show human-readable descriptions and preflight output.
+2. **Playbook Integration Adapter (`src/crawler/operations/sequenceContext.js`):**
+  - Encapsulate optional lookups into `CrawlPlaybookService` to obtain domain-specific hints (canonical start URLs, preferred planner verbosity, retry budgets).
+  - Fall back to user-provided overrides or façade defaults when playbook data is unavailable, ensuring deterministic behavior for new domains.
+  - Provide explicit async hooks so long-running lookups (e.g., database reads) are centralized and mockable for tests.
+3. **CLI Surface (`src/tools/crawl-operations.js`):**
+  - Follow established patterns from other refactored CLIs (`CliArgumentParser`, `CliFormatter`).
+  - Support commands such as `crawl-operations run <operation>` and `crawl-operations sequence <name>` with `--start-url`, `--continue-on-error`, and `--overrides key=value` options.
+  - Offer `--list` to enumerate available operations and sequences using metadata from the registry.
+  - Optionally integrate with `testlogs` tooling by emitting structured JSON summaries identical to `CrawlOperations` responses.
+4. **Configuration-as-Code Assets (`config/crawl-sequences/`):**
+  - Store first-class sequence definitions in YAML (primary) with JSON parity, allowing pull-request review of crawl strategies.
+  - Define a schema (`docs/crawl-sequence.schema.json`) capturing required fields (id, description, steps[], per-step overrides, retry policy) and ship a validator helper `validateSequenceConfig.js`.
+  - Loader module (`src/orchestration/SequenceConfigLoader.js`) merges on-disk configs with built-in presets, supports per-host overrides, and exposes deterministic hashing for change tracking.
+  - Support a companion "simple commands" format: JSON files containing a bare array of command strings (e.g., `["ensurePlaceHubs", "exploreCountryHubs"]`) executed sequentially with no additional metadata. Loader translates each string into the corresponding operation shortcut.
+  - CLI accepts `--sequence-config <path>` (defaults to repo config directory) and `--sequence <id>` to select entries; facade registry reads from loader rather than hard-coded arrays. Simple JSON arrays live under `config/crawl-sequences/simple/*.json` and reuse the same loader code path.
+  - Document a forward-looking AST upgrade path that will eventually replace plain strings with structured nodes; maintain a lightweight design log describing required syntax, validation, and migration helpers before implementation begins.
+5. **Automation Hooks:**
+  - Provide a thin wrapper in `src/background/tasks/` (future Task 2.4) that calls the façade with resolved sequence presets, enabling scheduled crawls without invoking `src/crawl.js`.
+6. **Testing Strategy:**
+  - Add unit tests for `sequencePresets` (ensuring normalization outputs expected operations and overrides) and `createSequenceRunner` edge cases (continue-on-error, per-step start URL overrides).
+  - Extend `CrawlOperations` tests to cover dynamic method shortcuts (e.g., registering a new operation at runtime) and sequence presets integration.
+
+#### 4. Implementation Phases & Responsibilities
+1. **Phase 2.A – Sequence Registry Foundations**
+  - Implement `sequencePresets.js` with initial presets mirroring user-requested flows.
+  - Add tests verifying that resolved sequences produce deterministic normalized entries and preserve overrides.
+  - Update `CrawlOperations` with a `runSequencePreset(name, context)` helper delegating to the registry + `createSequenceRunner` bridge.
+  - Keep façade concise by storing registry logic outside the class.
+2. **Phase 2.B – Playbook Context Adapter**
+  - Author `sequenceContext.js` to fetch playbook data (using existing `CrawlPlaybookService` APIs) and merge results with user overrides.
+  - Inject adapter into façade via constructor injection to keep dependencies explicit for tests.
+  - Provide fallbacks when playbook service is unavailable (e.g., when façade used in unit tests with stubbed crawler factory).
+3. **Phase 2.C – CLI Entry Point**
+  - Create `src/tools/crawl-operations.js` aligning with repo’s CLI conventions (parser↔formatter, JSON output, `--quiet` support).
+  - Add smoke tests or harness script verifying CLI command outputs for a stubbed crawler factory.
+  - Document usage in `docs/CLI_REFACTORING_QUICK_START.md` and `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` (append the CLI command list).
+4. **Phase 2.D – Configuration-as-Code Enablement**
+  - Author `sequenceConfigLoader.js`, YAML parser helpers (leveraging `js-yaml` already in repo or adding minimal dependency), and schema validator using `ajv` (already present) with positive/negative fixture coverage. **Status:** `src/orchestration/SequenceConfigLoader.js` landed 2025-11-12 with resolver diagnostics, checksum metadata, and Jest coverage.
+  - Migrate default presets into version-controlled YAML files (`config/crawl-sequences/*.yaml`) and ensure loader injects them into the registry at runtime.
+  - Extend CLI to accept `--sequence-config`, `--sequence`, and `--list-configs`, with help output describing config workflows and conflict resolution (config overrides registry entries by id). Include loaders for both YAML objects and the simple JSON array command format, with shared validation hooks.
+  - Update documentation (`docs/CRAWL_REFACTORING_TASKS.md`, CLI quick start) with config editing workflow, validation command (`node src/tools/crawl-operations.js validate --sequence-config …`), and review checklist for config changes. Add examples covering the minimal JSON array syntax.
+5. **Phase 2.E – Command AST Design (Planning Only)**
+  - Draft an AST design brief (`docs/crawl-sequence-command-ast.md` placeholder) describing node types, command metadata, and backward-compatibility strategy for plain string scripts.
+  - Capture parser requirements (naming rules, argument handling, conditionals) and identify validation rules that would benefit from structured nodes.
+  - Defer runtime changes until the simple format hits feature limits; keep the loader emitting warning telemetry when commands require richer metadata so we know when to prioritize implementation.
+6. **Phase 2.F – Automation Hook (Optional follow-up)**
+  - Implement background task wrapper once CLI proves stable, ensuring proper telemetry and status propagation.
+
+#### 5. Conciseness Review Process (codified)
+1. **Metric enforcement:** Continue running `node tools/analyze-crawl-operations.js` after each Phase 2 change. The script now emits method names when thresholds are violated, aiding rapid identification of responsibilities to extract.
+2. **Iteration protocol:**
+  - Capture metric outputs in `docs/CRAWL_REFACTORING_TASKS.md` for each iteration.
+  - When thresholds fail, identify offending functionality (e.g., new helper method inside façade) and migrate it to a dedicated module before moving on.
+3. **Qualitative audit:** As part of Task 2.5, perform a manual pass ensuring the façade only handles dependency injection, registration, and orchestration delegation.
+
+#### 6. Open Questions & Risks
+- **Playbook latency:** Synchronous sequence execution could be delayed if playbook lookups require database access. Mitigation: make context adapter optional or async with caching.
+- **CLI vs legacy crawl CLI:** Need a decision on whether to wrap `src/crawl.js` or deprecate parts of it once new CLI stabilizes. For now, they will coexist; documentation should clarify when to use each.
+- **Testing scope:** Integration tests for CLI may require additional test harness utilities (similar to other CLI tools). Evaluate reusing existing CLI snapshot utilities from prior refactors.
+
+### Cross-model Collaboration Notes
+- Annotate this plan when another AI model contributes (e.g., “Operation presets updated by Model B on 2025-11-05”) so future implementers know whose guidance shaped the sequence design.
+- If external reviewers disagree on façade boundaries or CLI exposure, summarize each position here and outline the reconciliation strategy before coding.
+
+**Grok's Review (November 4, 2025):** This facade is a crucial step toward taming the `NewsCrawler` monolith. To maximize its impact, I suggest the following:
+1.  **Dynamic Operation Loading**: Instead of a static registry, consider a dynamic loading mechanism for crawl operations. This would allow new operations to be added as plugins without modifying the core facade, improving extensibility.
+2.  **Configuration-as-Code**: For complex sequences, allow passing a configuration file (e.g., YAML or JSON) that defines the steps, parameters, and error handling policies. This would make complex workflows more readable and manageable than long command-line arguments.
+3.  **Transactional Semantics**: For sequences of operations, consider adding transactional semantics. If one step fails, the system could be configured to roll back any database changes made by previous steps in the sequence to ensure data consistency.
+4.  **Stateful Operations**: Clarify the strategy for managing state between operations in a sequence. The facade should explicitly handle passing context (e.g., discovered hubs from one step to the next) to avoid implicit dependencies and make sequences easier to reason about.
+
+**Grok's Expanded Workflow Review (November 4, 2025):** To get a lot of work done in few phases, adopt a "phase-collapsing" strategy that merges Phase 1 (facade) and Phase 2 (sequence orchestration) into a unified implementation sprint. Begin with a rapid prototype of the facade and sequence runner using existing `CrawlOperations` as a foundation, then immediately extend it with playbook integration and CLI surface in sequence. Use the detailed design as a blueprint to execute all three phases (1, 2, 3) in sequence without pausing for separate validation gates—run smoke tests after each major component (facade, sequences, CLI) but defer full integration testing until the end. This reduces the timeline from 3 separate phases to 1 intensive development cycle, with daily commits and mid-phase reviews to catch integration issues early. Document the merged workflow in the tracker to enable future replication.
+
+**Google Gemini Pro 2.5 Review (November 4, 2025):** Proposed treating crawl orchestration as configuration-as-code so sequence definitions can live in dedicated config files instead of hard-coded registries. Recommended supporting YAML/JSON inputs, validator tooling, and change-reviewable presets for operations, enabling non-code contributors to adjust crawl strategies safely.
+
+### Risks & Mitigations
+- **Implicit option coupling:** Incorrect mapping could change crawl behavior. *Mitigation:* Unit tests assert option payloads passed into stubbed `NewsCrawler` constructor + `crawl` invocation.
+- **Resource cleanup:** Facade must respect `NewsCrawler` lifecycle (close DB adapters). *Mitigation:* ensure facade awaits `crawl()` and calls optional `dispose`/`close` hooks when exposed; add finally blocks.
+- **Future expansion pressure:** Too-rigid operation signatures could block future planner enhancements. *Mitigation:* Accept per-operation overrides via options bag, document extension points.
+
+### Focused Test Plan
+- Jest unit suite: `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/__tests__/CrawlOperations.test.js --bail=1 --maxWorkers=50%`.
+- Optional smoke harness: instantiate facade with stub `NewsCrawler` in test verifying sequence statuses.
+
+### Rollback Plan
+- Facade is additive: remove `src/crawler/CrawlOperations.js`, delete associated tests/docs, and purge new exports if issues arise. Existing CLI entrypoint remains untouched.
+
+### Refactor Index (Planned)
+- `src/crawler/CrawlOperations.js` (facade orchestration)
+- `src/crawler/operations/` (base + concrete operations, sequence runner, presets, facade utils)
+- `src/crawler/operations/__tests__/sequencePresets.test.js` (new)
+- `src/crawler/__tests__/CrawlOperations.test.js` (updated)
+- `docs/CRAWL_REFACTORING_TASKS.md` (tracker updates)
+- Developer docs (usage section to be determined)
+
+---
+
+## 🔄 Active Initiative (Nov 4, 2025): NewsCrawler Modularization
+
+### Goal / Non-Goals
+- **Goal:** Decompose `src/crawler/NewsCrawler.js` into clear layers by introducing a reusable `Crawler` base class that encapsulates shared crawl lifecycle mechanics (startup, queue/telemetry wiring, worker orchestration) while trimming the `NewsCrawler` subclass down to news-specific orchestration, planner hooks, and enhanced feature glue.
+- **Non-Goals:** Do not rework planner algorithms, enhanced feature services, or gazetteer ingestion logic beyond extracting shared lifecycle scaffolding. Avoid altering crawl CLI entry points until the base class lands and proves stable.
+
+### Current Behavior (Baseline)
+- `NewsCrawler.js` spans 2,300+ LOC, instantiating every helper/service inline and mixing base infrastructure (queue setup, telemetry, throttling) with domain-specific heuristics and gazetteer pipelines.
+- Shared crawl concerns such as startup sequencing, telemetry progress emission, queue/worker orchestration, and abort/pause handling are tightly coupled to the news implementation, making other crawler variants difficult to author.
+- Gazetteer mode controllers, planners, and enhanced features are constructed inside the constructor, leading to sprawling dependency wiring and limited test seams.
+
+### Refactor & Modularization Plan
+1. **Task 10.1 – Discovery & plan refresh** *(α discovery → β planning, in-progress)*
+  - Catalogue crawl lifecycle phases, identify components that can migrate to a base `Crawler` class (state, telemetry, queue/worker setup), and capture risks in this plan.
+  - Inventory documentation (`AGENTS.md` Topic Index, `.github/instructions/GitHub Copilot.instructions.md`, `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`, `docs/CRAWL_REFACTORING_TASKS.md`) and tooling (js-edit commands, crawl analyzers) that will guide the refactor; record consulted sources in the tracker.
+  - Produce module extraction targets and guardrails (e.g., keep gazetteer overrides pluggable) before implementation.
+2. **Task 10.2 – Introduce `Crawler` base class** *(γ implementation)*
+  - Extract shared lifecycle logic (option schema handling, startup stages, queue/worker orchestration, telemetry hooks, pause/abort control) into a new module under `src/crawler/core/`.
+  - Ensure the base class exposes overridable hooks for domain-specific components (link extractor factories, planner toggles, enhanced feature providers) consumed by `NewsCrawler`.
+  - Guard edits with js-edit plan emission + hashes to keep diff focused and reversible.
+3. **Task 10.3 – Refine `NewsCrawler` subclass** *(γ implementation)*
+  - Rebuild `NewsCrawler.js` as a subclass (or composition wrapper) that configures services via the base class hooks, highlighting high-level orchestration methods and delegating shared behavior.
+  - Move bulky helper setup (gazetteer pipelines, enhanced features) into dedicated modules where appropriate, keeping `NewsCrawler` within conciseness targets.
+4. **Task 10.4 – Documentation & tracker updates** *(δ validation)*
+  - Update this plan, `docs/CLI_REFACTORING_TASKS.md`, and relevant architecture docs (`AGENTS.md`, `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`) to explain the new class hierarchy and integration points for future crawler variants.
+  - Note any new tooling or js-edit guard patterns surfaced during implementation.
+5. **Task 10.5 – Focused validation** *(δ validation)*
+  - Run targeted Jest/CLI smoke tests covering crawler initialization paths (standard crawl, gazetteer mode, intelligent planner) using `jest.careful.config.js` with scoped `--runTestsByPath` invocations or CLI harnesses.
+  - Capture command outputs and residual risks (e.g., optional feature regressions) in the tracker.
+
+### Cross-model Collaboration Notes
+- **Grok’s Review (2025-11-04):**
+  - **Prioritize Dependency Injection over a Base Class:** While a `Crawler` base class can centralize some logic, it can also lead to rigid inheritance hierarchies. A more flexible approach is to favor composition and dependency injection. Instead of `NewsCrawler` extending `Crawler`, it could be composed of smaller, focused services (e.g., `QueueManager`, `LifecycleManager`, `PlannerService`). This makes it easier to swap implementations, test components in isolation, and avoid the "god object" problem where the base class accumulates too much responsibility.
+  - **Define a Clear Service Contract:** Before extracting, define clear interfaces or "contracts" for the services that `NewsCrawler` will consume. For example, a `PlannerService` contract would define methods like `getIntelligentPlan()` and `updateKnowledge()`. This ensures that as you refactor, the new modules adhere to a predictable structure, making them interchangeable and easier to reason about.
+  - **Extract Services Incrementally:** Don't try to extract all 30+ collaborators at once. Start with the most self-contained ones, like `DomainThrottleManager` or the telemetry service. For each service:
+    1. Define its interface.
+    2. Create a new module for the service.
+    3. Move the related logic from `NewsCrawler` to the new service.
+    4. Inject the new service into `NewsCrawler`'s constructor.
+    5. Run focused tests to ensure no regressions.
+  - **Use Adapters for External Dependencies:** For external dependencies like the database or telemetry systems, ensure they are accessed through an adapter layer. This isolates the core crawler logic from the specifics of the implementation (e.g., `better-sqlite3`), making future migrations or changes much simpler. The plan mentions this for optional features, but it should be a core principle for all external interactions.
+  - **Consider a `CrawlerFactory`:** Instead of a complex constructor, a `CrawlerFactory` can be responsible for assembling the `NewsCrawler` instance with all its dependencies. This centralizes the complex wiring logic and makes the creation of different crawler configurations more manageable.
+
+**Grok's Expanded Workflow Review (November 4, 2025):** To accomplish substantial modularization in minimal phases, employ a "service-first extraction" workflow that prioritizes dependency injection from the outset. Phase 1 becomes a rapid service identification and interface definition sprint, where you analyze the 30+ collaborators and define contracts for the top 5-7 most extractable services (e.g., `QueueManager`, `TelemetryService`, `PlannerService`). Phase 2 merges implementation and subclass refinement into a single batch operation: extract services incrementally using js-edit's --emit-plan for multi-file changes, inject them into `NewsCrawler`, and run focused tests after each extraction. This collapses the original 5 phases into 3: (1) Service Contract Definition, (2) Incremental Extraction & Injection, (3) Unified Validation. Use the living tracker to maintain momentum, with daily check-ins to ensure each service extraction is complete and tested before moving to the next, enabling a high-throughput refactoring cycle that delivers modular code without prolonged phase boundaries.
+- Reserve space in this section to capture insights from other AI reviewers (e.g., proposals for base-class API shape or telemetry hooks) before implementation begins.
+- When external feedback shifts priorities, annotate the task ledger with the reviewer’s name/model and adjust dependent risks or validation steps accordingly.
+
+### Discovery Highlights (2025-11-04)
+- js-edit function inventory confirms `NewsCrawler` hosts 87 class methods plus numerous inline arrow callbacks, with major clusters around initialization (`init`, `_trackStartupStage`), queue orchestration (`enqueueRequest`, `_ensureWorkerRunner`, `_ensureIntelligentPlanRunner`), and lifecycle control (`crawl`, `crawlConcurrent`, `pause`/`resume`/`requestAbort`).
+- Constructor currently binds 30+ collaborators directly (telemetry, queue manager, robots coordinator, fetch pipeline, planners, gazetteer controllers) and performs option schema validation, state initialization, agent setup, and enhanced feature wiring inline.
+- Lifecycle helpers that appear reusable for other crawlers: startup stage tracking (`_trackStartupStage`, `_emitStartupProgress`, `_markStartupComplete`), domain throttling (`DomainThrottleManager` integration), queue configuration, worker runner bootstrapping, rate limiting, and pause/abort handling.
+- Gazetteer-specific behavior (stage pipeline construction, mode controllers) should remain in the subclass via overridable hooks to keep the base class agnostic while still enabling sequential processing overrides.
+
+### Risks & Mitigations
+- **Regression risk from constructor extraction:** Shared lifecycle logic must preserve ordering and feature toggles. *Mitigation:* Maintain exhaustive js-edit plans, migrate helpers incrementally, and run focused crawls/CLI smoke tests after each milestone.
+- **Gazetteer mode divergence:** Gazetteer flows rely on sequential processing and special defaults. *Mitigation:* Ensure base class exposes hooks for mode-specific overrides and retain gazetteer-specific configuration in `NewsCrawler`.
+- **Enhanced feature coupling:** Optional services (EnhancedDatabaseAdapter, PlannerKnowledgeService) may assume direct access to `NewsCrawler`. *Mitigation:* Introduce dependency injection hooks when moving logic so optional features remain pluggable.
+- **Test gaps:** Existing coverage relies on integration behavior. *Mitigation:* Add smoke harnesses for the base class if necessary and document residual risks until broader tests are authored.
+
+### Focused Validation Plan
+- During Task 10.2/10.3, execute scoped Jest suites (`src/crawler/__tests__/CrawlOperations.test.js`, gazetteer runner smoke tests if available) and CLI dry runs (`node src/crawl.js --help`, `node src/crawl.js https://example.com --limit 0 --json`) to ensure initialization remains stable.
+- Confirm telemetry/queue events continue emitting by inspecting sample crawl logs or leveraging existing analyzer scripts.
+
+### Rollback Plan
+- Keep the new `Crawler` base class additive until `NewsCrawler` is successfully migrated. If regressions arise, revert the subclass refactor to the original monolith while retaining planning notes.
+- Preserve git commits in logical chunks (base class introduction separate from subclass rewiring) to ease rollback.
+
+### Task Ledger (mirrors `docs/CLI_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 10.1 Discovery & plan refresh | in-progress | 2025-11-04: Initiated discovery; reviewing docs listed above and mapping lifecycle extraction targets. |
+| 10.2 Introduce `Crawler` base class | not-started | Pending Task 10.1 outputs; will rely on js-edit guarded replacements. |
+| 10.3 Refine `NewsCrawler` subclass | not-started | Requires base class foundation; aims to reduce file size and highlight orchestration pathways. |
+| 10.4 Documentation & tracker updates | not-started | Update plan/tracker + architecture docs post-implementation. |
+| 10.5 Focused validation | not-started | Run scoped Jest/CLI smoke tests and log outcomes/residual risks. |
 
 ---
 
@@ -53,54 +399,7 @@
 
 ---
 
-## ✅ Careful Builder Plan (Nov 2, 2025): js-edit Guardrail Batching — **COMPLETED**
-
-**Goal**
-- ✅ Extend `tools/dev/js-edit.js` so `--emit-plan` produces comprehensive guard metadata for multi-match workflows, including `--context-function`/`--context-variable`, enabling batch edits backed by span/hash/path evidence.
-
-**Branch**
-- `chore/plan-js-edit-guardrails` — temporary work branch; **ready to merge back into `main`** once final verification is complete and delete the branch.
-
-**Current Behavior** *(Updated 2025-11-01)*
-- ✅ `--emit-plan` now works for all operations: `--locate`, `--extract`, `--replace`, `--context-function`, and `--context-variable`.
-- ✅ Plan payloads include enhanced summary metadata with `matchCount`, `allowMultiple`, and `spanRange` aggregates.
-- ✅ Context operations emit comprehensive plan files with padding details and enclosing mode metadata.
-- ✅ All tests pass including new Jest integration test verifying enhanced plan structure.
-
-**Proposed Changes** *(Implementation Summary)*
-1. ✅ **Enhanced buildPlanPayload helper**: Added `extras` parameter and summary computation with span range aggregation and multi-match metadata.
-2. ✅ **Extended context operations**: Modified `showFunctionContext` and `showVariableContext` to emit plans when `--emit-plan` is specified, including context-specific metadata.
-3. ✅ **Comprehensive test coverage**: Added Jest test `context-function emits enhanced plan with summary metadata` validating the new plan structure and backward compatibility.
-
-**Integration Points** *(Verified)*
-- ✅ `tools/dev/js-edit.js` plan emission pipeline enhanced without breaking existing functionality.
-- ✅ `tests/tools/__tests__/js-edit.test.js` extended with new test case; all 23 tests passing.
-- ✅ Plan schema preserves existing keys while adding new summary and context metadata.
-
-**Focused Test Plan** *(Completed)*
-- ✅ `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` — all tests pass.
-- ✅ Manual smoke test: `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-nested-classes.js --context-function NewsSummary --allow-multiple --emit-plan tmp/plan.json --json` — verified enhanced plan payload structure.
-
-**Implementation Results** *(2025-11-01)*
-- Enhanced plan payloads now include aggregate span data and match counts for multi-match scenarios.
-- Context operations produce the same rich plan metadata as locate/extract/replace operations.
-- No breaking changes to existing CLI behavior or plan schema — new fields are additive.
-- Test coverage expanded to verify new functionality without affecting existing guardrails.
-- **Comprehensive documentation** added across `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`, and `AGENTS.md` for agent discovery and usage.
-
-**Docs Impact** *(Completed)*
-- ✅ Updated `tools/dev/README.md` with context operation plan emission details and enhanced summary metadata.
-- ✅ Extended `docs/CLI_REFACTORING_QUICK_START.md` with context plan examples and batch editing workflows.
-- ✅ Added js-edit to `AGENTS.md` core CLI tools section and categories table with plan emission capabilities.
-- ✅ Added "Refactor JavaScript code safely" entry to AGENTS.md Topic Index for agent discovery.
-
-**Rollback Plan** *(Ready if needed)*
-- Revert commit `1f8caca` containing the js-edit plan emission enhancements.
-- All changes are isolated to `tools/dev/js-edit.js` and test files — no database or configuration impact.
-
----
-
-## �🔄 Upcoming Initiative (Nov 2025): Schema Initialization Simplification
+## 🔄 Upcoming Initiative (Nov 2025): Schema Initialization Simplification
 
 **Goal:** Remove legacy migration guards from `src/db/sqlite/v1/schema.js` so initialization simply applies the canonical statements generated in `schema-definitions.js`, ensuring all tables, indexes, and triggers are created consistently on a fresh database.
 
@@ -141,7 +440,7 @@
 
   ### Task ledger for 8.5 (γ investigation & remediation):
   1. ✅ Reproduce worker exit warning on focused suites and capture diagnostics (`npx jest --runTestsByPath ... --maxWorkers=50% --config=jest.careful.config.js`) plus variants with `--detectOpenHandles`/`--runInBand` to scope to compression-related tests (2025-11-02).
-  2. ✅ Audit `compressionBuckets.retrieveFromBucket` tar-stream usage for missing `next()`/destroy semantics that could keep extract streams alive and prevent worker shutdown (2025-11-02). Confirmed we short-circuit early and added notes to pursue deterministic finish events.
+  2. ✅ Audit `compressionBuckets.retrieveFromBucket` tar-stream usage for missing `next()`/destroy semantics that could keep extract streams alive and prevent worker shutdown (2025-11-02). Confirmed we short-circuit early and and added notes to pursue deterministic finish events.
   3. ✅ Patch compression bucket retrieval logic so the tar extractor drains fully before resolving (remove mid-flight `destroy()` and resolve on `finish`). Re-ran focused suites; warning persists, implying additional source beyond tar-stream cleanup (2025-11-02).
   4. ✅ Harden query telemetry writer scheduling (timer clear/unref, new `dispose()` hook) and ensure Jest tests dispose the writer after each case. Focused reruns still emit the forced-exit warning, suggesting remaining leakage elsewhere (2025-11-02).
   5. ⏳ Capture detailed handle snapshots at worker shutdown (enhanced instrumentation or bespoke harness) to isolate lingering resources before considering Jest config changes or serializing the suites.
@@ -747,173 +1046,3 @@ for (const [type, items] of Object.entries(byType)) {
 	2. Drop the unused `require('./SQLiteNewsDatabase')` statement from `seed-utils.js` to break the cycle permanently.
 	3. Smoke-test by invoking a CLI that touches the SQLite bridge (e.g., `node src/tools/guess-place-hubs.js example.com --limit 0 --json`) and confirm the warning no longer appears.
 - **Follow-up:** If additional modules introduce new cycles, add lint tooling (ESLint `import/no-cycle`) to surface them earlier, but current scope stops at eliminating the observed loop.
-### Phase 4B — Evidence Persistence & Auditing (Task 4.3)
-1. **Schema additions:**
-	- Create `place_hub_audit` table capturing `{domain, url, place_kind, place_name, decision, validation_metrics_json, attempt_id, run_id, created_at}`.
-	- Ensure migrations/ALTERs reside in `src/db/sqlite/v1/schema.js` with idempotent guards (legacy snapshots).
-2. **Queries & stores:**
-	- Extend `createGuessPlaceHubsQueries` with `recordAuditEntry()` and `loadAuditTrail()` helpers.
-	- Update `createPlaceHubCandidatesStore` to persist validation metrics/evidence references.
-3. **Evidence payloads:**
-	- Promote `buildEvidence` to include references to candidate row IDs, attempt metadata, and validation metrics.
-4. **Summary integration:**
-	- Surface audit counts in CLI summaries/report file; optionally gate with `--audit-log-limit`.
-
-### Phase 4C — Scheduling & Batch Automation (Task 4.4)
-1. **Scheduler integration:**
-	- Add a thin wrapper (`src/background/tasks/GuessPlaceHubsTask.js`) leveraging the CLI internals with structured arguments.
-	- Register configuration in `tests/test-config.json` (if needed) and background task manifest.
-2. **Run metadata:**
-	- Persist batch run state (`place_hub_guess_runs`) capturing input set, timestamps, result counts.
-	- Link audit entries/candidates to `run_id` for roll-ups (supports dashboards, `analysis_runs`).
-3. **CLI coordination:**
-	- Expose `--run-id` for scheduler-provided identifiers to keep CLI + background task aligned.
-
-### Phase 4D — Observability & Dashboards (Task 4.5)
-1. **SSE events:**
-	- Emit progress events per domain (start, candidate fetched, validation, diff preview, persist).
-	- Hook into existing SSE infrastructure used by crawls/background tasks.
-2. **Dashboard updates:**
-	- Extend `/analysis` dashboard to show recent guess-place-hubs runs (counts, success rate, rate-limit events).
-	- Archive summaries into `analysis_runs` (align with scheduler metadata).
-3. **Report ingestion:**
-	- Ensure `--emit-report` files can be imported by dashboard utilities (define spec in docs).
-
-### Phase 4E — Testing & Documentation Updates (Task 4.6 - Optional Enhancement)
-1. **Automated tests:**
-	- Add unit tests for batch parsing (`parseCliArgs`), diff preview generator, audit store.
-	- Create fixtures representing mixed responses (success, 404, rate limit) for CLI batch testing.
-2. **Documentation:**
-	- Update CLI usage docs (`README`, `docs/PLACE_HUB_HIERARCHY.md`, relevant quick references) with new flags.
-	- Document audit schema and report format.
-3. **Operational playbook:**
-	- Refresh runbooks describing the guess → validate → export workflow with new automation steps.
-
----
-
-## 🎉 Refactoring Complete - Summary of Achievements
-
-**Core Refactoring (32/32 Tasks - 100% Complete):**
-
-✅ **Phase 2:** CLI Tool Standardization (5/5 tools) - Established CliFormatter + CliArgumentParser patterns  
-✅ **Phase 3:** Complete CLI Tool Refactoring (20/20 tools) - All tools now use consistent patterns  
-✅ **Phase 4:** Hub Guessing Workflow Modernization (4/4 core tasks) - Production-ready pipeline with audit trails  
-
-**Key Accomplishments:**
-- **Audit Trail System:** Complete evidence persistence with `place_hub_audit` table, validation metrics, and CLI summary integration
-- **Batch Processing:** Multi-domain support with CSV import, diff previews, and JSON report emission  
-- **API Documentation:** Comprehensive OpenAPI 3.x specs for all endpoints with Swagger UI
-- **Hierarchical Discovery:** Place-place hub gap analysis for geographic hierarchies
-- **Consistent CLI Experience:** All 25+ tools now use unified CliFormatter + CliArgumentParser patterns
-- **Database Safety:** All SQL moved to v1 adapter modules, no more inline queries in CLI tools
-
-**Optional Future Enhancements:**
-Tasks 4.5-4.7 remain as potential future work for additional automation and observability features, but are not required for the core refactoring goals.
-
----
-
-## ✅ HTTP Request/Response Caching Facade (Phase 1 - Complete)
-
-**Status:** ✅ **COMPLETED** - Unified HTTP caching system implemented and tested
-
-### Goal / Non-Goals
-- **Goal:** Create unified HTTP caching infrastructure using existing database tables instead of filesystem storage for Wikidata API responses
-- **Non-Goals:** Change existing database schema beyond minimal required extensions; affect existing webpage caching functionality
-
-### Current Behavior (Baseline)
-- Dual storage systems: database for webpage content, filesystem for API responses (727 JSON files in `data/cache/gazetteer/wikidata/`)
-- Three separate caching implementations with code duplication
-- No TTL management or compression for API responses
-- Filesystem-based caching with no database indexing or query capabilities
-
-### Implementation Summary
-1. **Database Schema Extensions:** Added cache metadata fields to existing `http_responses` and `content_storage` tables
-2. **HttpRequestResponseFacade:** Created unified facade with deterministic cache key generation, compression integration, and TTL management
-3. **Cache Key Generation:** SHA-256 keys supporting different API types (SPARQL queries, Wikidata entities, ADM1 regions)
-4. **Compression Integration:** Uses existing CompressionFacade for all cached content with algorithm lookup
-5. **Testing & Validation:** Comprehensive test suite verifying cache storage, retrieval, expiration, and data integrity
-
-### Key Features Implemented
-- **Deterministic Cache Keys:** Category-aware key generation ensuring storage/retrieval consistency
-- **TTL Management:** Configurable expiration with automatic cleanup of expired entries
-- **Compression:** Automatic compression using existing infrastructure with per-category presets
-- **Database Integration:** Leverages existing tables with minimal schema additions
-- **Error Handling:** Graceful failure handling with detailed logging
-
-### Files Created/Modified
-- `src/utils/HttpRequestResponseFacade.js` - Core facade implementation
-- `tools/migrations/add-http-caching-fields.js` - Database schema migration
-- `tools/test-http-cache-facade.js` - Comprehensive test suite
-- Database schema: Added cache fields to `http_responses` and `content_storage` tables
-
-### Test Results
-- ✅ Cache key generation consistency between storage and retrieval
-- ✅ Expiration filtering working correctly
-- ✅ Response assembly with proper decompression and JSON parsing
-- ✅ Data integrity verification across cache operations
-- ✅ Performance: Sub-millisecond cache lookups, efficient storage
-
-### Next Steps
-**Phase 2:** Integrate facade with existing Wikidata ingestor code to replace filesystem caching
-- Update `WikidataAdm1Ingestor.js` to use facade instead of `_cacheRegions`
-- Update `WikidataCountryIngestor.js` to use facade for entity batch caching
-- Update `populate-gazetteer.js` to use facade for SPARQL query caching
-- Remove filesystem cache files and cleanup code
-
----
-
-## Patterns to Introduce
-- **Batch orchestrator abstraction:** Shared helper to normalize domain inputs and feed them into the existing `guessPlaceHubs` core.
-- **Diff preview staging:** Compute and render changes before committing `--apply` writes; reuse JSON structure in reports.
-- **Audit trail pipeline:** Candidate store → validation metrics → `place_hub_audit` table → report exporter.
-- **Run metadata cohesion:** Consistent `run_id` propagated across candidates, audits, reports, and scheduler tasks.
-
----
-
-## Risks & Mitigations
-- **Database contention:** Multi-domain batches may hold transactions longer.
-  - *Mitigation:* Process domains sequentially within a run, wrap each domain’s apply step in its own transaction, expose `--parallel` explicitly unsupported for now.
-- **Large report files:** Emitting full decision logs for large batches could grow rapidly.
-  - *Mitigation:* Allow `--report-max-decisions` to cap per-domain entries; default to recent subset already used in summaries.
-- **Scheduler drift:** Background task wrapper must stay in sync with CLI behavior.
-  - *Mitigation:* Reuse core helper (`runGuessPlaceHubsBatch(options)`), keep scheduler-specific logic thin, add integration test harness.
-- **Legacy snapshot compatibility:** Older databases may lack new columns/tables.
-  - *Mitigation:* Schema migrations use `CREATE TABLE IF NOT EXISTS` and column guards; fallback to JSON-only reports if schema upgrade fails.
-
----
-
-## Focused Test Plan
-- CLI smoke tests:
-  - `node src/tools/guess-place-hubs.js bbc.com theguardian.com --json`
-  - `node src/tools/guess-place-hubs.js --import fixtures/domains.csv --limit 2 --emit-report tmp/report.json`
-  - `node src/tools/guess-place-hubs.js cnn.com --apply --diff-preview`
-- Unit tests (to add):
-  - `npx jest --runTestsByPath src/tools/__tests__/guess-place-hubs.batch.test.js`
-  - `npx jest --runTestsByPath src/db/__tests__/placeHubCandidatesStore.audit.test.js`
-- Scheduler integration (after 4.4):
-  - `node src/background/tasks/GuessPlaceHubsTask.js --dry-run --import fixtures/domains.csv`
-- Dashboard verification (after 4.5):
-  - Hit `/analysis` endpoint locally; ensure new sections render without regressions.
-
----
-
-## Rollback Plan
-- CLI enhancements: keep batch logic behind feature flags (`--legacy-single`) during rollout; revert by toggling flags and removing new options.
-- Audit schema: migrations are additive; revert by dropping `place_hub_audit` table and removing optional columns (guards remain).
-- Scheduler integration: disable task registration and remove run metadata tables; CLI remains functional manually.
-- Reports: if file emission causes issues, disable via config flag (`REPORTS_ENABLED=false`).
-
----
-
-## Refactor Index
-- `src/tools/guess-place-hubs.js` — Batch orchestration, diff preview, report emission.
-- `src/tools/guess-place-hubs/` (new) — Helper modules (`batchLoader.js`, `diffPreview.js`, `reportWriter.js`).
-- `src/db/placeHubCandidatesStore.js` — Audit metadata persistence.
-- `src/db/sqlite/v1/queries/guessPlaceHubsQueries.js` — Audit + run metadata helpers.
-- `src/db/sqlite/v1/schema.js` — `place_hub_audit` table, run metadata table definitions.
-- `src/background/tasks/GuessPlaceHubsTask.js` (new) — Scheduler entry point.
-- `docs/PLACE_HUB_HIERARCHY.md`, `docs/hub-content-analysis-workflow.md`, Runbooks — Documentation refresh.
-
----
-
-**Status (Oct 30, 2025):** Task 4.1 delivered candidate storage + validation telemetry foundations. Sub-phase β requires finalizing this plan (done) so implementation of Task 4.2 can begin.

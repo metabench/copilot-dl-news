@@ -1,4 +1,16 @@
-export class NewsSummary {
+class BaseSummary {
+  constructor() {
+    this.items = [];
+  }
+}
+
+export class NewsSummary extends BaseSummary {
+  constructor(title, url = null) {
+    super();
+    this.title = title;
+    this.url = url;
+  }
+
   render() {
     function helper() {
       return 'helper';
@@ -19,6 +31,10 @@ export class NewsSummary {
 
 export class SecretBox {
   #counter = 0;
+
+  constructor(initial = 0) {
+    this.#counter = initial;
+  }
 
   #increment() {
     this.#counter += 1;

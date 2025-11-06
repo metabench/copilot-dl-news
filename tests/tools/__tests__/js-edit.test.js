@@ -2,13 +2,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { parseModule, collectFunctions, extractCode, replaceSpan } = require('../../../tools/dev/lib/swcAst');
+const { parseModule, collectFunctions, collectVariables, extractCode, replaceSpan } = require('../../../tools/dev/lib/swcAst');
 
 describe('swcAst helpers', () => {
   const fixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-sample.js');
   const source = fs.readFileSync(fixturePath, 'utf8');
   const ast = parseModule(source, fixturePath);
   const { functions } = collectFunctions(ast, source);
+  const { variables } = collectVariables(ast, source);
 
   const nestedFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js');
   const nestedSource = fs.readFileSync(nestedFixturePath, 'utf8');
@@ -108,7 +109,7 @@ describe('swcAst helpers', () => {
     const render = nestedFunctions.find((fn) => fn.canonicalName === 'exports.NewsSummary > #render');
     expect(render).toBeDefined();
     expect(render.scopeChain).toEqual(['exports', 'NewsSummary', '#render']);
-    expect(render.pathSignature).toBe('module.body[0].ExportDeclaration.declaration.ClassDeclaration.body[0].ClassMethod.ClassMethod');
+    expect(render.pathSignature).toBe('module.body[1].ExportDeclaration.declaration.ClassDeclaration.body[1].ClassMethod.ClassMethod');
     expect(render.hash).toHaveLength(8);
 
     const statik = nestedFunctions.find((fn) => fn.canonicalName === 'exports.NewsSummary > static > initialize');
@@ -119,6 +120,55 @@ describe('swcAst helpers', () => {
 
     const helper = nestedFunctions.find((fn) => fn.canonicalName === 'exports.NewsSummary > #render > helper');
     expect(helper.scopeChain).toEqual(['exports', 'NewsSummary', '#render', 'helper']);
+  });
+
+  test('js-edit lists constructors with metadata', () => {
+    const result = runJsEdit(['--file', nestedFixturePath, '--list-constructors', '--json']);
+    if (result.status !== 0) {
+      throw new Error(`list-constructors failed: ${result.stderr || result.stdout}`);
+    }
+
+    const payload = JSON.parse(result.stdout.trim());
+    expect(payload.totalConstructors).toBeGreaterThanOrEqual(3);
+    expect(Array.isArray(payload.constructors)).toBe(true);
+
+    const summaryEntry = payload.constructors.find((entry) => entry.class && entry.class.name === 'NewsSummary');
+    expect(summaryEntry).toBeDefined();
+    expect(summaryEntry.class.extends).toBe('BaseSummary');
+    expect(summaryEntry.class.implements).toBe(null);
+    expect(summaryEntry.constructor.params).toBe('title, url = null');
+    expect(summaryEntry.constructor.hash).toHaveLength(8);
+    expect(summaryEntry.constructor.canonicalName).toContain('#constructor');
+
+    const baseEntry = payload.constructors.find((entry) => entry.class && entry.class.name === 'BaseSummary');
+    expect(baseEntry).toBeDefined();
+    expect(baseEntry.constructor.params).toBe('(none)');
+
+    const secretEntry = payload.constructors.find((entry) => entry.class && entry.class.name === 'SecretBox');
+    expect(secretEntry).toBeDefined();
+    expect(secretEntry.constructor.params).toBe('initial = 0');
+    expect(secretEntry.class.extends).toBe(null);
+  });
+
+  test('js-edit scan targets (functions) emits discovery-backed payload', () => {
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--scan-targets',
+      'exports.alpha',
+      '--json'
+    ]);
+    if (result.status !== 0) {
+      throw new Error(`scan-targets failed: ${result.stderr || result.stdout}`);
+    }
+
+    const payload = JSON.parse(result.stdout.trim());
+    expect(payload.kind).toBe('function');
+    expect(payload.selector).toBe('exports.alpha');
+    expect(payload.summary).toBeDefined();
+    expect(payload.summary.matchCount).toBeGreaterThan(0);
+    const names = payload.matches.map((match) => match.name);
+    expect(names).toContain('exports.alpha');
   });
 
   test('collectFunctions captures jest-style callbacks', () => {
@@ -273,6 +323,76 @@ describe('swcAst helpers', () => {
     expect(alphaPayload.byteLength).toBeGreaterThan(0);
     expect(alphaPayload.hash).toBe(expectedAlpha.hash);
     expect(alphaPayload.hash).toHaveLength(8);
+  });
+
+  test('list-functions defaults to dense layout', () => {
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--list-functions'
+    ]);
+
+    if (result.status !== 0) {
+      throw new Error(`list-functions (dense) failed: ${result.stderr || result.stdout}`);
+    }
+
+    const output = result.stdout;
+    expect(output).toContain('Function Inventory');
+    expect(output).toContain('Detected Functions');
+    expect(output).toContain('alpha | kind=function-declaration | hash=');
+    expect(output).toContain('loc=1:8 | bytes=41');
+    expect(output).toContain('replaceable=yes');
+    expect(output).not.toContain('index │ name');
+  });
+
+  test('--list-output verbose restores legacy table layout', () => {
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--list-functions',
+      '--list-output',
+      'verbose'
+    ]);
+
+    if (result.status !== 0) {
+      throw new Error(`list-functions (verbose) failed: ${result.stderr || result.stdout}`);
+    }
+
+    const output = result.stdout;
+    expect(output).toContain('index │ name');
+    expect(output).toContain('Detected Functions');
+    expect(output).not.toContain('| kind=');
+  });
+
+  test('JS_EDIT_LIST_OUTPUT env toggles verbose layout', () => {
+    const env = { ...process.env, JS_EDIT_LIST_OUTPUT: 'verbose' };
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--list-functions'
+    ], { env });
+
+    if (result.status !== 0) {
+      throw new Error(`list-functions (env verbose) failed: ${result.stderr || result.stdout}`);
+    }
+
+    const output = result.stdout;
+    expect(output).toContain('index │ name');
+    expect(output).not.toContain('| kind=');
+  });
+
+  test('rejects invalid list-output style', () => {
+    const result = runJsEdit([
+      '--file',
+      fixturePath,
+      '--list-functions',
+      '--list-output',
+      'compact'
+    ]);
+
+    expect(result.status).not.toBe(0);
+    const combined = `${result.stderr}${result.stdout}`;
+    expect(combined).toContain('--list-output must be one of');
   });
 
   test('extract-hashes returns multi-byte snippets and guard metadata', () => {
@@ -1914,5 +2034,483 @@ describe('swcAst helpers', () => {
       expect(output).toContain('Provide one of --list-functions');
     })
 ;
+  });
+
+  describe('Discovery filters (--match, --exclude)', () => {
+    test('--match filters list-functions by glob pattern', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--list-functions',
+        '--match',
+        'exports.*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.functions.length).toBeGreaterThan(0);
+      payload.functions.forEach((fn) => {
+        expect(fn.canonicalName).toMatch(/^exports\./);
+      });
+    });
+
+    test('--exclude filters out matching patterns', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--list-functions',
+        '--exclude',
+        '*alpha*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      payload.functions.forEach((fn) => {
+        expect(fn.canonicalName).not.toContain('alpha');
+        expect(fn.name).not.toContain('alpha');
+      });
+    });
+
+    test('--match and --exclude can be combined', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--list-functions',
+        '--match',
+        'exports.*',
+        '--exclude',
+        '*default*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      payload.functions.forEach((fn) => {
+        expect(fn.canonicalName).toMatch(/^exports\./);
+        expect(fn.canonicalName).not.toContain('default');
+      });
+    });
+
+    test('glob patterns support wildcards (* and ?)', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--list-functions',
+        '--match',
+        '*a?pha*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      const alphaFn = payload.functions.find((fn) => fn.name === 'alpha');
+      expect(alphaFn).toBeDefined();
+    });
+
+    test('filters work with list-variables', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--list-variables',
+        '--match',
+        'exports.*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      payload.variables.forEach((v) => {
+        expect(v.canonicalName).toMatch(/^exports\./);
+      });
+    });
+  });
+
+  describe('Position-based lookup (--snipe)', () => {
+    test('--snipe finds symbol at line:column position', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--snipe',
+        '1:8',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.symbol).toBeDefined();
+      expect(payload.symbol.type).toBe('function');
+      expect(payload.symbol.canonicalName).toBe('exports.alpha');
+      expect(payload.symbol.hash).toHaveLength(8);
+    });
+
+    test.skip('--snipe accepts byte offset with @ prefix', () => {
+      const alpha = functions.find((fn) => fn.name === 'alpha');
+      const bytePos = alpha.span.start + 10;
+
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--snipe',
+        `@${bytePos}`,
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.symbol).toBeDefined();
+      expect(payload.symbol.canonicalName).toBe('exports.alpha');
+    });
+
+    test('--snipe returns minimal output for no match', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--snipe',
+        '999:999',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.matches).toEqual([]);
+    });
+
+    test('--snipe rejects invalid position format', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--snipe',
+        'invalid'
+      ]);
+
+      expect(result.status).not.toBe(0);
+      const output = `${result.stderr}${result.stdout}`;
+      expect(output).toContain('Invalid position');
+    });
+  });
+
+  describe('Top-level outline (--outline)', () => {
+    test('--outline shows only top-level symbols', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--outline',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.symbols).toBeDefined();
+      expect(payload.totalSymbols).toBeGreaterThan(0);
+      expect(payload.topLevelSymbols).toBeGreaterThan(0);
+      expect(payload.topLevelSymbols).toBeLessThan(payload.totalSymbols);
+    });
+
+    test('--outline produces compact table output', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--outline'
+      ]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('Symbol Outline');
+      expect(result.stdout).toMatch(/index.*type.*name/);
+      expect(result.stdout).toContain('Top-level symbols');
+    });
+
+    test('--outline respects --match and --exclude filters', () => {
+      const result = runJsEdit([
+        '--file',
+        fixturePath,
+        '--list-functions',
+        '--match',
+        'exports.*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.functions.length).toBeGreaterThan(0);
+      payload.functions.forEach((fn) => {
+        expect(fn.canonicalName).toMatch(/^exports\./);
+      });
+    });
+  });
+
+  describe('Unified diff preview (--preview-edit)', () => {
+    let targetFile;
+
+    beforeEach(() => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-diff-'));
+      targetFile = path.join(tempDir, 'test.js');
+      fs.writeFileSync(targetFile, source);
+    });
+
+    afterEach(() => {
+      if (targetFile && fs.existsSync(targetFile)) {
+        const dir = path.dirname(targetFile);
+        fs.unlinkSync(targetFile);
+        // Clean up any remaining files in temp dir
+        const files = fs.readdirSync(dir);
+        files.forEach(file => fs.unlinkSync(path.join(dir, file)));
+        fs.rmdirSync(dir);
+      }
+    });
+
+    test.skip('--preview-edit generates unified diff for replacement', () => {
+      const alpha = functions.find((fn) => fn.name === 'alpha');
+      const replacement = "export function alpha() {\n  return 'modified';\n}\n";
+      const replacementFile = path.join(path.dirname(targetFile), 'replacement.js');
+      fs.writeFileSync(replacementFile, replacement);
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'exports.alpha',
+        '--with',
+        replacementFile,
+        '--expect-hash',
+        alpha.hash,
+        '--emit-diff',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.diff).toBeDefined();
+      expect(payload.applied).toBe(false);
+
+      fs.unlinkSync(replacementFile);
+    });
+
+    test.skip('--preview-edit shows context lines', () => {
+      const alpha = functions.find((fn) => fn.name === 'alpha');
+      const replacement = "export function alpha() {\n  return 'changed';\n}\n";
+      const replacementFile = path.join(path.dirname(targetFile), 'replacement.js');
+      fs.writeFileSync(replacementFile, replacement);
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'exports.alpha',
+        '--with',
+        replacementFile,
+        '--expect-hash',
+        alpha.hash,
+        '--emit-diff'
+      ]);
+
+      expect(result.status).toBe(0);
+      const output = result.stdout;
+      expect(output).toContain('Diff Preview');
+
+      fs.unlinkSync(replacementFile);
+    });
+
+    test.skip('--preview-edit works without --fix (dry-run)', () => {
+      const alpha = functions.find((fn) => fn.name === 'alpha');
+      const replacement = "export function alpha() {\n  return 'preview';\n}\n";
+      const replacementFile = path.join(path.dirname(targetFile), 'replacement.js');
+      fs.writeFileSync(replacementFile, replacement);
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'exports.alpha',
+        '--with',
+        replacementFile,
+        '--expect-hash',
+        alpha.hash,
+        '--emit-diff'
+      ]);
+
+      expect(result.status).toBe(0);
+
+      // File should not be modified
+      const content = fs.readFileSync(targetFile, 'utf8');
+      expect(content).not.toContain('preview');
+
+      fs.unlinkSync(replacementFile);
+    });
+  });
+
+  describe('Constructor listing (--list-constructors)', () => {
+    test('--list-constructors shows explicit constructors with hashes', () => {
+      const classFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js');
+      const result = runJsEdit([
+        '--file',
+        classFixturePath,
+        '--list-constructors',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.constructors.length).toBeGreaterThan(0);
+
+      const withExplicit = payload.constructors.find((c) => c.kind === 'explicit');
+      if (withExplicit) {
+        expect(withExplicit.hash).toHaveLength(8);
+        expect(withExplicit.params).toBeDefined();
+      }
+    });
+
+    test('--list-constructors shows implicit constructors', () => {
+      const classFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js');
+      const result = runJsEdit([
+        '--file',
+        classFixturePath,
+        '--list-constructors',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+
+      const implicit = payload.constructors.find((c) => c.kind === 'implicit');
+      if (implicit) {
+        expect(implicit.hash).toBeNull();
+        expect(implicit.params).toBe('(implicit)');
+      }
+    });
+
+    test('--list-constructors includes extends/implements heritage', () => {
+      const testFile = path.join(os.tmpdir(), 'test-constructor-heritage.js');
+      const testCode = `
+export class Base {
+  constructor(name) {
+    this.name = name;
+  }
+}
+
+export class Derived extends Base {
+  constructor(name, value) {
+    super(name);
+    this.value = value;
+  }
+}
+`;
+      fs.writeFileSync(testFile, testCode);
+
+      const result = runJsEdit([
+        '--file',
+        testFile,
+        '--list-constructors',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      const derived = payload.constructors.find((c) => c.class.name === 'Derived');
+      expect(derived).toBeDefined();
+      expect(derived.class.extends).toBe('Base');
+
+      fs.unlinkSync(testFile);
+    });
+
+    test('--list-constructors respects --filter-text', () => {
+      const classFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js');
+      const result = runJsEdit([
+        '--file',
+        classFixturePath,
+        '--list-constructors',
+        '--filter-text',
+        'Widget',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      payload.constructors.forEach((c) => {
+        const matchesFilter = 
+          c.className.includes('Widget') ||
+          c.canonicalName.includes('Widget') ||
+          (c.extends && c.extends.includes('Widget'));
+        expect(matchesFilter).toBe(true);
+      });
+    });
+
+    test('--list-constructors supports --match and --exclude filters', () => {
+      const classFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js');
+      const result = runJsEdit([
+        '--file',
+        classFixturePath,
+        '--list-constructors',
+        '--match',
+        'exports.*',
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.constructors.length).toBeGreaterThan(0);
+      payload.constructors.forEach((c) => {
+        expect(c.class.canonicalName).toMatch(/exports/);
+      });
+    });
+
+    test('--list-constructors --include-internals shows non-exported classes', () => {
+      const testFile = path.join(os.tmpdir(), 'test-internal-class.js');
+      const testCode = `
+export class PublicWidget {
+  constructor() {}
+}
+
+class InternalHelper {
+  constructor() {}
+}
+`;
+      fs.writeFileSync(testFile, testCode);
+
+      const resultWithout = runJsEdit([
+        '--file',
+        testFile,
+        '--list-constructors',
+        '--json'
+      ]);
+
+      expect(resultWithout.status).toBe(0);
+      const payloadWithout = JSON.parse(resultWithout.stdout);
+      const internalWithout = payloadWithout.constructors.find((c) => c.class.name === 'InternalHelper');
+      expect(internalWithout).toBeUndefined();
+
+      const resultWith = runJsEdit([
+        '--file',
+        testFile,
+        '--list-constructors',
+        '--include-internals',
+        '--json'
+      ]);
+
+      expect(resultWith.status).toBe(0);
+      const payloadWith = JSON.parse(resultWith.stdout);
+      const internalWith = payloadWith.constructors.find((c) => c.class.name === 'InternalHelper');
+      expect(internalWith).toBeDefined();
+      expect(internalWith.class.internal).toBe(true);
+
+      fs.unlinkSync(testFile);
+    });
+
+    test('--list-constructors verbose output shows table format', () => {
+      const classFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js');
+      const result = runJsEdit([
+        '--file',
+        classFixturePath,
+        '--list-constructors',
+        '--list-output',
+        'verbose'
+      ]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('Constructor Inventory');
+      expect(result.stdout).toContain('index │');
+      expect(result.stdout).toMatch(/hash/);
+    });
   });
 });

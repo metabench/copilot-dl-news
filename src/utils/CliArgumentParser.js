@@ -51,11 +51,14 @@ class CliArgumentParser {
    *   .add('--verbose, -v', 'Verbose output', false, 'boolean');
    */
   add(flags, description, defaultValue, type = 'string') {
-    let parserFn = null;
+    // For variadic arguments, commander.js collects them into an array automatically.
+    // No special handling is needed here; just pass the flags to createOption.
+    const option = this.program.createOption(flags, description);
 
+    let parserFn = null;
     if (typeof type === 'function') {
       parserFn = type;
-    } else {
+    } else if (!flags.includes('...')) {
       const normalizedType = String(type || '').toLowerCase();
       switch (normalizedType) {
         case 'int':
@@ -80,29 +83,30 @@ class CliArgumentParser {
           };
           break;
         case 'boolean':
-          parserFn = (value) => {
-            if (value === undefined) return true;
-            const normalized = String(value).trim().toLowerCase();
-            if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
-            if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
-            throw new Error(`Expected a boolean for ${flags}, received "${value}"`);
-          };
+          if (flags.includes('<') || flags.includes('[')) {
+              parserFn = (value) => {
+                  if (value === undefined) return true;
+                  const normalized = String(value).trim().toLowerCase();
+                  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
+                  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
+                  throw new Error(`Expected a boolean for ${flags}, received "${value}"`);
+              };
+          }
           break;
         default:
           parserFn = null;
       }
     }
 
-    if (parserFn && defaultValue !== undefined) {
-      this.program.option(flags, description, parserFn, defaultValue);
-    } else if (parserFn) {
-      this.program.option(flags, description, parserFn);
-    } else if (defaultValue !== undefined) {
-      this.program.option(flags, description, defaultValue);
-    } else {
-      this.program.option(flags, description);
+    if (parserFn) {
+      option.argParser(parserFn);
     }
 
+    if (defaultValue !== undefined) {
+      option.default(defaultValue);
+    }
+
+    this.program.addOption(option);
     return this;
   }
 

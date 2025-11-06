@@ -23,8 +23,19 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 Locate/context tables and JSON payloads report both UTF-16 code-unit offsets and raw byte offsets. Each entry includes `charSpanRange` and `byteSpanRange` summaries so agents can reason about guardrails even when newline normalization or multi-byte glyphs change the byte footprint.
 
+### Discovery Filters & Pattern Matching
+
+- `--match <pattern>` / `--exclude <pattern>` filter discovery commands (`--list-functions`, `--list-variables`, `--list-constructors`) using glob patterns. Patterns support `*` (any chars), `?` (single char), and `**` (directory separator). Examples:
+  - `--match "exports.*"` — show only exported symbols
+  - `--match "*Widget*"` — match any name containing "Widget"
+  - `--exclude "_*"` — hide names starting with underscore
+  - Combine both: `--match "exports.*" --exclude "*internal*"`
+- `--snipe <position>` quickly locates the nearest symbol at a specific position. Accepts line:column (e.g., `12:5`) or byte offset (e.g., `@450`). Returns minimal output with symbol type, name, kind, location, and guard hash. Useful for editor integrations or jumping to code at cursor position.
+- `--outline` displays only top-level symbols (functions/variables not nested inside classes or other functions). Output shows compact table with type, name, kind, location, and byte size. Perfect for getting a high-level overview of a module's public API surface.
+
 ### Lightweight Discovery Helpers
 
+- `--list-constructors --filter-text <substring>` inventories class constructors with export kind, `extends`/`implements` clauses, parameter summaries, and guard hashes; add `--include-paths` to surface path signatures alongside the table/JSON output. Supports `--match` and `--exclude` filters like other discovery commands, plus `--include-internals` to show non-exported classes without heritage or external references.
 - `--preview <selector>` / `--preview-variable <selector>` return concise snippets (default 240 chars) for functions or variables along with the same guard metadata you would capture from `--locate`. Adjust the window with `--preview-chars <n>` when you need a little more context without invoking the full context machinery.
 - `--search-text <substring>` scans the file for plain-text matches, reporting each hit with line/column, a highlighted context window (default ±60 chars), and the guard hashes/path signatures of any enclosing function or variable. Use `--search-limit <n>` and `--search-context <n>` to tune result volume and surrounding context. JSON payloads now include ready-to-run follow-up commands (`--locate`/`--locate-variable` with `--select hash:<value>`) so you can jump straight from a text match into a guarded locate phase.
 - All discovery commands honour `--json`, `--emit-plan`, and existing guardrail conventions so a quick preview or search can feed directly into downstream automation without a second locate pass.
@@ -64,6 +75,7 @@ Selectors accept optional disambiguation flags:
 
 - `--expect-hash <hash>` replays the content digest captured during `--locate`/`--emit-plan`; the CLI refuses to proceed if the live source hash differs (unless `--force` is set, in which case the guard marks the hash check as bypassed).
 - `--expect-span start:end` optionally replays the byte offsets (0-based, end-exclusive) recorded earlier. When present, the guard verifies the located span still matches those offsets and records the expectation in both the summary table and JSON payloads.
+- `--preview-edit` generates a unified diff preview before applying replacements. Shows before/after changes in standard diff format with context lines (default 3 lines before/after). Helps review changes before running `--fix`. Combine with `--emit-diff` to include the diff in JSON output.
 - Guard summaries (ASCII + JSON) include span/hash/path/syntax/result checks so downstream automation can confirm each guard outcome before invoking `--fix`.
 - Guard outputs display dual span metrics: character-based (UTF-16) offsets for selector ergonomics and byte offsets for hash/snippet replay. JSON payloads surface both representations, and plan summaries expose `charSpanRange` alongside `byteSpanRange` so newline conversions are always auditable.
 
@@ -100,6 +112,20 @@ Use `--force` sparingly to bypass hash/path checks when intentional drift is acc
 # Inspect functions with metadata
 node tools/dev/js-edit.js --file src/example.js --list-functions --json
 
+# Filter discovery with glob patterns
+node tools/dev/js-edit.js --file src/example.js --list-functions --match "exports.*" --exclude "*internal*"
+
+# Get high-level module overview
+node tools/dev/js-edit.js --file src/example.js --outline
+
+# Find symbol at specific position (line:col or byte offset)
+node tools/dev/js-edit.js --file src/example.js --snipe 42:10
+node tools/dev/js-edit.js --file src/example.js --snipe @1250
+
+# List constructors with filtering
+node tools/dev/js-edit.js --file src/example.js --list-constructors --match "*Widget*" --list-output verbose
+node tools/dev/js-edit.js --file src/example.js --list-constructors --include-internals --json
+
 # Locate a class method with rich selectors and emit guard plan
 node tools/dev/js-edit.js --file src/example.js --locate "exports.Widget > #render" --emit-plan tmp/locate-plan.json
 
@@ -110,7 +136,10 @@ node tools/dev/js-edit.js --file src/example.js --context-function "exports.Widg
 # Plan includes: summary.matchCount, summary.spanRange, entity, padding, enclosingMode
 node tools/dev/js-edit.js --file src/example.js --context-function "*Widget*" --allow-multiple --emit-plan tmp/batch-plan.json
 
-# Dry-run a replacement with guard hash/span and inspect guardrails + diff
+# Dry-run a replacement with unified diff preview
+node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --preview-edit --json
+
+# Dry-run with guard hash/span and inspect guardrails + diff
 node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #render" --with tmp/render.js --expect-hash <hash-from-locate> --expect-span <start:end-from-locate> --emit-diff --json
 
 # Apply after reviewing guard summary

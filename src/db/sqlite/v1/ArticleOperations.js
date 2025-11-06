@@ -5,7 +5,6 @@
  * Separated from main NewsDatabase class to reduce complexity.
  */
 
-const { ensureDatabase } = require('../v1');
 const { ensureUrlId } = require('../urlHelpers');
 
 class ArticleOperations {

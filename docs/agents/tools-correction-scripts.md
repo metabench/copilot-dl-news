@@ -9,6 +9,14 @@ supersedes: []
 related: ["docs/GAZETTEER_DEDUPLICATION_IMPLEMENTATION.md", "tools/debug/README.md"]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Reference [../INDEX.md](../INDEX.md) to locate companion tooling docs before authoring scripts.
+- Observe workflow coordination in [../reference/cli_tooling.md](../reference/cli_tooling.md).
+
 ## Summary
 Standardized conventions for correction and data manipulation tools ensuring safety through dry-run defaults and explicit confirmation requirements. Includes implementation patterns, existing tools, and verification workflows for reliable data operations.
 

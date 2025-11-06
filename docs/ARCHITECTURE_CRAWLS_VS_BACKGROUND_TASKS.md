@@ -118,6 +118,22 @@ Crawls are **real-time operations** that fetch content from external websites. T
 └──────────────────────────────────────────────────────────────┘
 ```
 
+### High-Level Crawl Operations (Nov 2025)
+
+- `src/crawler/CrawlOperations.js` provides a thin façade over the monolithic `NewsCrawler`, exposing pre-configured operations (`ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, `crawlCountryHubsHistory`, `findTopicHubs`, `findPlaceAndTopicHubs`).
+- Each operation maps to a curated option preset (hub-only structure passes, intelligent planner modes, history refresh) and returns structured status objects with stats and elapsed time.
+- `executeSequence()` accepts an ordered list of operation names (or objects) and orchestrates multi-step crawl algorithms with optional error continuation, enabling concise scripting like:
+  ```javascript
+  const { CrawlOperations } = require('../crawler/CrawlOperations');
+  const ops = new CrawlOperations();
+  await ops.executeSequence([
+    'ensureCountryHubs',
+    { operation: 'exploreCountryHubs', overrides: { plannerVerbosity: 2 } },
+    'findTopicHubs'
+  ], { startUrl: 'https://example.com', continueOnError: false });
+  ```
+- Consumers can override defaults or inject custom `crawlerFactory` implementations (useful for tests) while production code lazily loads `NewsCrawler` only when needed.
+
 ### Key Characteristics
 
 1. **Child Process Execution**: Each crawl runs in a separate Node.js child process spawned from the main server

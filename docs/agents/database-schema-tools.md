@@ -9,6 +9,14 @@ supersedes: []
 related: [tools-correction-scripts]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Check [../INDEX.md](../INDEX.md) for related database references before running tools.
+- Align usage with [../reference/cli_tooling.md](../reference/cli_tooling.md) to ensure consistent workflows.
+
 ## Summary
 Quick database inspection tools that eliminate PowerShell approval dialogs by using simple Node commands. Includes table structure, indexes, foreign keys, stats, and read-only queries. Tools open database read-only for safety and format output for readability. Eliminates need for complex PowerShell commands that trigger security prompts.
 

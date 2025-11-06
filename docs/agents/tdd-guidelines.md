@@ -9,6 +9,14 @@ supersedes: []
 related: [testing-guidelines]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Consult [../INDEX.md](../INDEX.md) for testing references before starting TDD work.
+- Pair this guide with [../standards/testing_output.md](../standards/testing_output.md) to enforce output hygiene.
+
 ## Summary
 Comprehensive test-driven development patterns for reliable code changes. Every code change requires tests written alongside implementation, not after. Includes test types (unit, integration, API), TDD workflow, and common pitfalls. Critical rules include checking logs before running tests, using single DB connections in WAL mode, verifying exit codes, and fixing schema bugs first.
 

@@ -9,6 +9,14 @@ supersedes: []
 related: [testing-quick-reference, testing-review-guide, test-timeout-guards]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Consult [../INDEX.md](../INDEX.md) for testing references before executing test plans.
+- Apply logging and output rules from [../standards/testing_output.md](../standards/testing_output.md).
+
 ## Summary
 
 This document contains critical testing guidelines, patterns, and workflows that AI agents must follow when working with the codebase. It covers everything from basic test discipline to advanced patterns for preventing hangs, handling async operations, and debugging failures.

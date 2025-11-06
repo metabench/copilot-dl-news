@@ -633,6 +633,32 @@ Tasks for migrating Wikidata filesystem caching to unified database HTTP caching
 
 ---
 
+### Phase 7: js-edit Modularization (New Scope)
+
+Tasks for breaking down the monolithic `tools/dev/js-edit.js` CLI into focused modules while preserving existing functionality and tests.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 7.1 | Discovery & Module Boundary Plan | Inventory existing responsibilities, confirm module grouping, capture risks in change plan | ✅ COMPLETED | HIGH | 2025-11-14: Discovery notes captured; module boundary summary added to tracker + `CHANGE_PLAN.md`. |
+| 7.2 | Module Scaffolding | Create `tools/dev/js-edit/` module directory, stub exports, and shared utilities | ✅ COMPLETED | HIGH | 2025-11-05: Established `tools/dev/js-edit/` directory, shared helpers, and entry re-exports without behaviour changes. |
+| 7.3 | Extract Discovery Operations | Move list/preview/search helpers into dedicated module(s) and update imports | ✅ COMPLETED | HIGH | 2025-11-05: Discovery flows live in `operations/discovery.js` with dependency injection + CLI wiring smoke-tested. |
+| 7.4 | Extract Context & Guard Operations | Relocate context/locate/extract helpers plus guard calculators into module(s) | ✅ COMPLETED | HIGH | 2025-11-15: Context/guard helpers migrated to `operations/context.js`, CLI delegates via dependency injection, docs updated, smoke tests (`--help`, `--list-functions --json`) pass. |
+| 7.5 | Extract Mutation Workflows | Move replace/update flows (function + variable) and supporting utilities into modules | 🔄 IN_PROGRESS | HIGH | 2025-11-15: α-discovery underway; mapping locate/replace dependencies and span/hash helpers ahead of extraction. 2025-11-16: Restored newline normalization + hash encoding helpers after relocating context utilities so mutation module dependencies resolve cleanly; CLI `--help` smoke passes. 2025-11-16 (late): Moved newline normalization/guard helpers into `tools/dev/js-edit/shared/newline.js` and switched CLI/mutation ops to import them, shrinking the entrypoint. 2025-11-16 (pre-dawn): Planning next extraction to relocate replacement source + rename helpers (and related file IO utilities) into `shared/` modules so the entrypoint maintains orchestration-only responsibilities. 2025-11-16 (morning): js-edit discovery commands currently fail with `[✖ ERROR] LIST_OUTPUT_ENV_VAR is not defined`; documented blocker in change plan and falling back to manual patch to restore the constant definitions before resuming js-edit-driven edits. |
+| 7.6 | Validation & Documentation | Run focused Jest suite, update docs/README, note deferred feature ideas | 🔄 IN_PROGRESS | HIGH | 2025-11-15: Refreshing AGENTS/workflow docs with js-edit static analysis guidance + feature backlog capture. |
+| 7.14 | Densify discovery output | Increase information density for CLI list operations (functions/constructors), evaluate option surface for concise mode | 🔄 IN_PROGRESS | MEDIUM | 2025-11-15: α discovery resumed; reviewed `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/CHANGE_PLAN.md`, `tools/dev/js-edit/operations/discovery.js`, `tools/dev/js-edit.js`, and `src/utils/CliFormatter.js` to scope default dense output plus configurable `--list-output` flag. 2025-11-15 (later): Implemented `CliFormatter.denseList`, default dense listings, CLI `--list-output` flag + `JS_EDIT_LIST_OUTPUT` env override, and updated tests covering dense default + verbose override. |
+
+- **Active phase:** Phase 7 — js-edit Modularization
+- **Current sub-phase:** γ — Implementation & validation (restarted 2025-11-15 with dense discovery output changes)
+- **Sub-phase timeline:** α — Discovery & tooling inventory (2025-11-05, resumed 2025-11-15); β — Plan & documentation (completed 2025-11-05, refreshed 2025-11-15 with dense option design); γ — Implementation & validation (active 2025-11-15); δ — Validation & documentation (pending)
+- **Docs consulted during α (2025-11-15):** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/INDEX.md`, `docs/CHANGE_PLAN.md`, `CLI_REFACTORING_TASKS.md`
+- **Validation (2025-11-15):** `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` (pass); CLI smoke for dense default, verbose override, and constructor listings.
+- **Docs consulted during β:** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/INDEX.md`, `docs/CHANGE_PLAN.md`
+- **Tooling inventory:** js-edit CLI entry (`tools/dev/js-edit.js`), extracted discovery module (`operations/discovery.js`), pending context/mutation modules, Jest suite `tests/tools/__tests__/js-edit.test.js`
+- **Risks noted:** Cross-module guard helpers risk regressions if spans/hashes drift; documentation must stay aligned with staged module roll-out; extensive edits require disciplined js-edit usage
+- **Next steps:** Finalize plan updates in `CHANGE_PLAN.md`, outline context extractor surface, and stage js-edit plans for guarded replacements (Task 7.4)
+
+---
+
 ## Progress Tracking
 
 ### Batch Summary
@@ -645,13 +671,14 @@ Tasks for migrating Wikidata filesystem caching to unified database HTTP caching
 | **Phase 3D** | 3.16-3.20 | Tier 4 (REVIEW) | ✅ COMPLETE | 100% |
 | **Phase 4** | 4.1-4.7 | Hub Guessing Workflow + API | ✅ COMPLETE | 100% |
 | **Phase 6** | 6.1-6.4 | HTTP Caching Unification | ✅ COMPLETE | 100% |
+| **Phase 7** | 7.1-7.6 | js-edit Modularization | 🚧 IN_PROGRESS | 17% |
 
 ### Overall Progress
-- **Completed:** 37 tasks (Phase 2 + Tasks 3.1-3.24 + Tasks 4.1-4.6 + HubValidator modularization + Task 5.1 with size column + Phase 6 HTTP Caching Unification)
+- **Completed:** 37 tasks
 - **Substantially Complete:** 0 tasks
-- **Remaining:** 0 tasks
-- **Total:** 37 tasks
-- **Completion Rate:** 100% (37/37)
+- **Remaining:** 6 tasks
+- **Total:** 43 tasks
+- **Completion Rate:** ~86% (37/43)
 
 ---
 
@@ -835,6 +862,20 @@ Tasks for migrating Wikidata filesystem caching to unified database HTTP caching
 
 ### Session 36: October 31, 2025
 - ✅ Hardened `analysis.analysePagesCore` URL normalization lookups so `getPlaceHubByUrl` resolves `url_id` via `UrlResolver` with guarded error capturing, keeping post-migration hub lookups stable after dropping legacy TEXT URL columns.
+
+### Session 37: November 5, 2025
+- ✅ Opened Phase 7 (js-edit Modularization) with discovery sweep and task ledger updates.
+- 📚 Reviewed `AGENTS.md` Topic Index, `.github/instructions/GitHub Copilot.instructions.md`, and `docs/INDEX.md` for applicable guidance.
+- 🧭 Drafted module boundary plan (CLI/interface, discovery operations, guard/context utilities, mutation flows) and recorded Tasks 7.1-7.6.
+- ✅ Updated progress tables to include Phase 7 and marked Task 7.1 as in progress; queued change-plan alignment next.
+
+### Session 38: November 5, 2025
+- 📚 Re-read `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, and `docs/CHANGE_PLAN.md` before resuming Task 9.4 (`--list-constructors`).
+- 🔬 Reviewed latest `node tools/dev/js-edit.js --file tests/fixtures/tools/js-edit-nested-classes.js --list-functions --filter-text constructor --json` output to confirm constructor metadata now includes parameter lists and spans.
+- 📝 Captured outstanding cleanup steps (remove temporary console diagnostics from `tools/dev/lib/swcAst.js`) and validation tasks (rerun targeted Jest suite) in Task 9.4 tracker notes.
+- ⚠️ Attempted to remove the debug logs with `js-edit --replace --replace-range` but the CLI rejected empty snippets; documented the limitation and fell back to a manual patch for this deletion.
+- ✅ Normalized constructor parameter metadata and re-ran `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --testNamePattern="js-edit lists constructors with metadata" --bail=1 --maxWorkers=50%`, which now passes.
+- 🔄 Next Targets: File follow-up to let js-edit accept empty replacement snippets and expand test coverage for constructor listings.
 
 ---
 

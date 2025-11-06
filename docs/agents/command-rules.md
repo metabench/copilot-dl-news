@@ -9,6 +9,14 @@ supersedes: []
 related: [command-execution-guide]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Review the canonical index at [../INDEX.md](../INDEX.md) before issuing terminal commands.
+- Cross-check OS-specific patterns in [../workflows/doc_extraction_playbook.md](../workflows/doc_extraction_playbook.md) when updating guidance.
+
 ## Summary
 
 This document outlines critical rules for executing commands in VS Code terminals to avoid user approval dialogs. AI agents must use safe patterns and tools instead of complex PowerShell commands that trigger security prompts.

@@ -1,0 +1,103 @@
+# Phase 1: Crawl High-Level Facade (Completed 2025-11-04)
+
+## Task Ledger (Phase 1)
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 1.1 | Update `docs/CHANGE_PLAN.md` with crawl facade initiative | Document goals, non-goals, plan, risks, focused tests | completed | HIGH | Completed 2025-11-04 — new section added at top of plan |
+| 1.2 | Introduce `src/crawler/CrawlOperations.js` facade | Wrap `NewsCrawler` with small surface (defaults, option mapping) | completed | HIGH | Facade created with presets + lifecycle/cleanup helpers |
+| 1.3 | Implement sequence orchestration API | Provide `executeSequence` and operation registry (ensure/ explore/ crawl/ find) | completed | HIGH | Sequence runner added with error handling + callbacks |
+| 1.4 | Add focused tests for facade | Unit tests for configuration translation & sequencing | completed | HIGH | Jest coverage added for option merging + sequences |
+| 1.5 | Update developer docs | Document new facade usage (`docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`) | completed | MEDIUM | Added "High-Level Crawl Operations" section with sample sequence |
+
+## Discovery Notes
+- `NewsCrawler` currently exported from `src/crawl.js`; CLI parsing embedded at bottom of file.
+- High-level operations needed by user: `ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, `crawlCountryHubsHistory`, `findTopicHubs`, `findPlaceAndTopicHubs`.
+- Existing features such as `countryHubExclusiveMode`, `structureOnly`, intelligent planner flags can parameterize these operations without modifying core crawler yet.
+- Sequencing support requires lightweight result aggregation (status, stats snapshot, elapsed time).
+- Transitioning to class-based operations will allow each preset to encapsulate its defaults and summary while exposing a small `execute` surface consumed by the façade.
+- Conciseness guardrails: target <120 logical lines inside `CrawlOperations` after modularization, with ≤1 responsibility (orchestration only).
+
+## Conciseness Review Process (Phase 2 design)
+1. **Metric capture:** Create a small analysis helper that reports line counts, public method count, and responsibility notes for `CrawlOperations` (and any subsequent high-level orchestrators). Thresholds: ≤120 LOC, ≤8 public methods, sequence orchestration isolated to dedicated helper.
+2. **Qualitative checklist:** Confirm high-level file contains only (a) wiring to operation registry, (b) sequence normalization, (c) lifecycle orchestration. Any option-building logic should live inside operation subclasses.
+3. **Iteration loop:** After each refactor step run the analysis helper. If thresholds exceeded or checklist fails, identify the largest offending block and extract to dedicated module/class, then rerun analysis. Document each iteration result in this tracker under Task 2.5 notes.
+4. **Exit criteria:** Once metrics fall within thresholds and checklist passes, record final stats + qualitative sign-off in tracker and proceed to documentation.
+
+**Conciseness iteration log (2025-11-04):**
+- Iteration 1 — Metrics: 157 non-empty lines, 21 public methods → exceeded thresholds; extracted base operation classes and moved sequence orchestration out of façade.
+- Iteration 2 — Metrics: 114 non-empty lines, 5 public methods → thresholds satisfied; high-level file now delegates to `CrawlSequenceRunner` with dynamic operation shortcuts.
+- Iteration 3 — Metrics: 144 non-empty lines, 7 public methods → thresholds exceeded after sequence preset integration; extracted defaults/crawler factory helpers to `operations/facadeUtils.js` and reassigned preset getters → returning to 115 lines, 6 public methods.
+
+# Phase 2: Sequence Orchestration & CLI Integration
+
+## Sub-phase Tracker (Phase 2)
+- **Current sub-phase:** β — Plan & documentation (active 2025-11-04)
+- **Docs consulted:** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md` (Topic Index), `docs/CHANGE_PLAN.md` (Design section 2025-11-04), `docs/CLI_REFACTORING_QUICK_START.md`, `docs/CLI_OUTPUT_SAMPLES.md`
+- **Code reconnaissance targets (reviewed 2025-11-04):** `src/crawl.js` (legacy CLI, ~3.4K LOC), `src/crawler/CrawlOperations.js` (post-refactor façade), `src/crawler/operations/*` (base + concrete operations, sequence runner, conciseness metrics), `src/crawler/CrawlPlaybookService.js` (host intelligence), `src/tools` CLI implementations for formatter/parser patterns
+- **Tooling inventory:** Existing crawl CLI (`src/crawl.js`), playbook+planner services, CLI formatter/parser utilities, background task scheduler stubs, conciseness analyzer (`tools/analyze-crawl-operations.js`)
+- **Discovery notes (2025-11-04):**
+	- Façade now only handles dependency injection, operation registration, dynamic shortcuts, and sequence delegation to `CrawlSequenceRunner`.
+	- Operation defaults/presets live in dedicated subclasses (`operations/*.js`), making it straightforward to add/override behaviors per operation.
+	- Sequence normalization logic extracted to `sequenceUtils.js`; further preset logic will build on this without touching the façade.
+	- `CrawlPlaybookService` already exposes rich domain intelligence that sequence context adapters can leverage for host-aware parameters.
+	- No existing CLI surfaces the new façade; future tool must mirror patterns from recently refactored CLIs to avoid regressions.
+	- 2025-11-12: js-edit `--context-function CrawlPlaybookService#loadPlaybook` currently throws `fmt.codeBlock is not a function`; documented here and will fall back to `read_file` for snippet capture until tool is patched.
+	- Enhanced feature wiring: `EnhancedFeaturesManager` only instantiates `CrawlPlaybookService` when `ConfigManager` flags enable `crawlPlaybooks` or `plannerKnowledgeReuse`, passing base news DB + planner/problem services. `NewsCrawler` exposes the service via `enhancedFeatures.getCrawlPlaybookService()`.
+	- Start URL defaults still originate in `cli/argumentNormalizer` (`DEFAULT_START_URL`, `PLACEHOLDER_START_URL`) and sequences rely on explicit `startUrl` or facade caller input; no existing bridge stitches playbook recommendations into `CrawlOperations`.
+	- `SequenceRunner` normalizes per-step overrides but delegates `startUrl` resolution entirely to the caller; future loader must resolve domain/verbosity before invoking the runner.
+	- Draft loader responsibilities (2025-11-12 discovery): introduce `SequenceConfigLoader` that (a) locates host-level configs under `config/crawl-sequences/`, (b) parses JSON or YAML via `js-yaml`, (c) validates against the v1 command-array schema, and (d) returns `{ startUrl, sharedOverrides, steps, metadata }` for `CrawlOperations.executeSequence`.
+	- Context resolver concept: loader should accept pluggable resolvers (e.g., `playbook`, `config`, `cli`) so `startUrl`, planner verbosity, and feature flags can reference tokens such as `@playbook.primarySeed` without hard-coding `CrawlPlaybookService` into the runner.
+	- Telemetry hooks to prototype: expose `onStepStart/End` callbacks and propagate step metadata (resolved host, overrides, source file) so `SequenceRunner` can emit per-command telemetry without needing AST v2.
+- **Sub-phase log:** α started 2025-11-04; detailed design recorded in `docs/CHANGE_PLAN.md` ("Detailed Design — Phase 2" section). β activated 2025-11-04 after expanding the plan to include legacy `src/crawl.js` modularization (Phase 3) and confirming task ledger updates. Task 2.3 completed 2025-11-04 with `src/tools/crawl-operations.js` providing standardized CLI entry (ASCII/JSON summaries, logger controls, listing support).
+
+## Sub-phase Tracker (Phase 3)
+- **Current sub-phase:** γ — Implementation & validation (entered 2025-11-04)
+- **Docs consulted (2025-11-04):** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md` Topic Index, `docs/CHANGE_PLAN.md` (Detailed Design — Phase 3), `docs/CLI_REFACTORING_QUICK_START.md`, `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`, `docs/CLI_REFACTORING_ANALYSIS.md`
+- **Code reconnaissance targets (2025-11-04):** `src/crawl.js` (monolithic CLI), `src/crawler/operations/facadeUtils.js`, `src/tools/crawl-operations.js`, `src/crawler/CrawlOperations.js`, `src/crawler/CrawlPlaybookService.js`, `src/crawler/CrawlerTelemetry.js`
+- **Tooling inventory refresh:** `tools/analyze-crawl-operations.js` (conciseness metrics), `node src/tools/crawl-operations.js --list-operations` (availability probe), legacy CLI help output (`node src/crawl.js --help` — rerun after modularization)
+- **Discovery notes (2025-11-04):**
+	- `crawl.js` currently entangles bootstrap, argument parsing, dependency wiring, and telemetry output, preventing reuse by other entry surfaces.
+	- Standard crawls culminate in `new NewsCrawler(startUrl, options)`; the façade already wraps the same seam, so adapter modules can bridge the gap.
+	- Geography progress formatting and CLI icon tables are self-contained blocks suitable for extraction into a shared reporter module.
+	- Flag handling covers numerous aliases (`--max-pages`/`--max-downloads`, `--crawl-type` variations, geography stage selectors) and requires a compatibility map in the forthcoming argument normalizer.
+	- Service instantiation (playbook, planner knowledge, enhanced DB adapter) lacks lifecycle management; extracting factory helpers will let both legacy and new CLIs share wiring.
+	- Section map (approximate line ranges) recorded for extraction planning: 1–210 CLI styling/log helpers; 210–480 dependency wiring & schema defaults; 500–2680 `NewsCrawler` class (constructor wiring, planner setup, crawl orchestration, progress emitters); 2680–3110 CLI parsing helpers (country/gazetteer selectors, DB path resolution); 3110–3450 legacy CLI runner (argument parsing, feature flag resolution, progress loops, SIGINT handlers). Each block aligns with proposed modules (`progressReporter`, `serviceFactory`, `argumentParser`, `bootstrap`).
+- **Planning checklist (β, 2025-11-04):**
+	1. Draft module scaffolding (`src/crawler/cli` directory layout, export conventions) prior to edits.
+	2. Define interface contracts: parser output shape → normalizer plan → bootstrap executor; document in code comments + plan.
+	3. Identify shared dependencies to inject (logger, stdout/stderr, timers) to keep modules testable.
+	4. Prepare focused Jest targets for parser/normalizer/progress reporter (new `__tests__` under `src/crawler/cli/`).
+	5. Outline phased integration strategy: ship bootstrap + parser/normalizer first while keeping legacy logic as fallback, then wire progress reporter.
+- **Sub-phase log:** α initiated 2025-11-04 — `docs/CHANGE_PLAN.md` updated with Detailed Design — Phase 3 and section map recorded. Transitioned to β on 2025-11-04 to formalize per-module implementation steps and doc updates ahead of Task 3.1 execution.
+	γ update 2025-11-05 — Extracted CLI bootstrap: added `src/crawler/cli/progressReporter.js` + `src/crawler/cli/bootstrap.js`, rewired `src/crawl.js` to consume shared logger/environment setup, removed inline console overrides, and added teardown hook to restore console state.
+	γ update 2025-11-05 — Task 3.2 discovery sweep: catalogued legacy argument parsing helpers (`collectCountrySpecifiers`, `collectGazetteerStages`, DB allocation logic) and defined module boundary for `argumentNormalizer` returning `{ startUrl, options, targetCountries, gazetteerStages }`. Planned to surface explicit error codes for DB allocation failures and reuse shared logger for warnings during normalization.
+	γ update 2025-11-05 — Implemented `src/crawler/cli/argumentNormalizer.js`, moved legacy helpers, emitted structured normalization result, and rewired `src/crawl.js` to consume module with error guard + console teardown on failure. Legacy inline parsing removed.
+	γ update 2025-11-05 — Task 3.3 plan: extract telemetry/progress interception into reusable adapter. Scope includes TELEMETRY/MILESTONE/PROGRESS routing, stage formatting, suppressed prefix filtering, and console restoration helpers. Target module `src/crawler/cli/progressAdapter.js`; bootstrap to become thin wrapper invoking adapter + verbose setup.
+	γ update 2025-11-05 — Implemented `progressAdapter` with reusable console interception; bootstrap now handles verbose flag + global toggle and delegates wiring. Legacy CLI validated via `node src/crawl.js --help`.
+
+## Task Ledger (Phase 2)
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 2.1 | Discovery & alignment | Audit orchestration surfaces, document constraints/opportunities in this tracker | completed | HIGH | OOP decomposition + conciseness guardrails captured 2025-11-04 |
+| 2.2 | Sequence library | Define reusable sequence presets that wrap `executeSequence` with curated step lists and overrides | completed | HIGH | Implemented `sequencePresets.js`, facade utilities, tests, and preset runner wiring (2025-11-04) |
+| 2.3 | CLI entry surface | Provide high-level CLI/runner wiring `CrawlOperations` + sequence presets via standard parser/formatter | completed | HIGH | Added `src/tools/crawl-operations.js` (operations/sequences listing, ASCII/JSON summaries, logger controls). Smoke tests + conciseness analyzer run 2025-11-04 |
+| 2.4 | Configuration/playbook hooks | Integrate optional host-specific context (start URLs, verbosity) from playbooks/config without duplication | in-progress | MEDIUM | 2025-11-12: Discovery + integration planning underway for sequence config loader |
+| 2.5 | Tests & docs | Cover sequence/CLI wiring with focused Jest or harness tests; extend docs with recipes | not-started | MEDIUM | Update architecture + CLI references |
+
+## Phase 3: Legacy Crawl CLI Modularization
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 3.1 | Bootstrap extraction | Move `src/crawl.js` environment/bootstrap logic into dedicated module consumed by both legacy CLI and façade | completed | HIGH | 2025-11-05: Introduced `src/crawler/cli/bootstrap.js` (console wiring + teardown) and `progressReporter.js`, updated `crawl.js` to use shared helpers and restore console before exit. |
+| 3.2 | Argument normalization module | Extract flag/option normalization into reusable adapter translating legacy flags into façade-friendly invocations | completed | HIGH | 2025-11-05: Added `src/crawler/cli/argumentNormalizer.js`, migrated helper logic + DB allocation, returned structured `{ startUrl, options, targetCountries }`, and updated `src/crawl.js` to call normalizer with failure guard + CLI bootstrap integration. |
+| 3.3 | Progress & telemetry adapter | Encapsulate streaming progress + telemetry wiring for reuse by new CLI surface | completed | MEDIUM | 2025-11-05: Added `src/crawler/cli/progressAdapter.js`, migrated TELEMETRY/MILESTONE/PROGRESS routing + suppression, and rewired bootstrap to delegate while preserving verbose teardown. |
+| 3.4 | Legacy command shims | Rebuild `src/crawl.js` as thin shell delegating to modules + new CLI; preserve legacy entrypoints | completed | MEDIUM | 2025-11-05: Replaced `src/crawl.js` with shim calling `runLegacyCommand`, added legacy export aliases (`module.exports`, `.default`, `.runLegacyCommand`, `.HELP_TEXT`), and moved CLI runtime to `src/crawler/cli/runLegacyCommand.js`. Smoke test: `node src/crawl.js --help`. Existing circular warning from `ArticleOperations` still emitted (pre-refactor). |
+| 3.5 | Tests & docs | Add focused tests for adapters/bootstrap; update docs with modular CLI architecture & migration guidance | not-started | MEDIUM | Align with `CHANGE_PLAN.md` Phase 3 outline |
+| 3.6 | Eliminate ArticleOperations circular dependency | Remove unused `ensureDatabase` import from `ArticleOperations.js`, verify CLI help no longer emits warning, and document the architecture change | completed | MEDIUM | 2025-11-05: Removed unused import; `node src/crawl.js --help` now runs clean with no circular dependency warning. |
+
+## Next Actions
+- Draft `SequenceConfigLoader` contract covering config lookup, schema validation, and normalized return shape for `CrawlOperations.executeSequence` (Task 2.4).
+- Define placeholder resolution catalog (e.g., `@playbook.*`, `@config.*`, `@cli.*`) and document how resolvers obtain data from `CrawlPlaybookService`/`ConfigManager` without instantiating full crawlers.
+- Outline telemetry surface area for sequence execution (step start/end, source file metadata) so Task 11.5 instrumentation can plug into the loader/runner bridge.

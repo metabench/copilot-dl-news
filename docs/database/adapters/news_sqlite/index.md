@@ -19,4 +19,7 @@ The **news_sqlite** family wraps the primary SQLite schema that backs the crawle
 - `src/db/sqlite/v1/ArticleOperations.js` – article upsert, fetch insert, and alias utilities.
 - `src/db/sqlite/v1/queries/*` – reusable query builders for UI/API endpoints.
 
+### Recent Changes (2025-11-05)
+- Removed the circular dependency between `ArticleOperations.js` and the v1 module index by dropping the unused `ensureDatabase` import. The legacy crawl CLI (`node src/crawl.js --help`) now runs without Node's circular dependency warning.
+
 See [v1 details](./sqlite/v1.md) for configuration, transaction patterns, and usage examples.

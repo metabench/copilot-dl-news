@@ -9,6 +9,14 @@ supersedes: []
 related: ["docs/DATABASE_NORMALIZATION_PLAN.md", "docs/PHASE_0_IMPLEMENTATION.md", "docs/COMPRESSION_IMPLEMENTATION_FULL.md"]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Review the database references in [../INDEX.md](../INDEX.md) before proposing schema changes.
+- Coordinate with migration workflows documented in `docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md`.
+
 ## Summary
 Comprehensive database normalization and compression infrastructure plan enabling schema evolution without breaking changes. Includes migration-free normalization, dual-write compatibility, and 70-85% size reduction through compression. Ready for incremental implementation with zero downtime.
 

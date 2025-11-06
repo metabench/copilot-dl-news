@@ -9,6 +9,14 @@ supersedes: []
 related: ["docs/agents/testing-guidelines.md", "docs/agents/command-rules.md", "docs/TESTING_REVIEW_AND_IMPROVEMENT_GUIDE.md"]
 ---
 
+> **Research-First Preflight**  
+> 1) Open `docs/INDEX.md`. 2) Navigate to relevant topics. 3) Read the linked docs.  
+> Do **not** rely on prompt snippets. If it’s not in the prompt but is in the docs, the docs win.
+
+## Requirements
+- Consult [../INDEX.md](../INDEX.md) and review applicable workflow docs before starting execution.
+- Coordinate with [../workflows/planning_review_loop.md](../workflows/planning_review_loop.md) for the end-to-end planning cadence.
+
 ## Summary
 Core execution principles for autonomous agent work including research limits, fast-path development, test discipline, and quality validation. Establishes patterns for efficient, reliable code changes with built-in quality gates.
 

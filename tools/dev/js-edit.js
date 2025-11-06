@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
@@ -11,15 +10,33 @@ const {
   collectVariables,
   extractCode,
   replaceSpan,
+  createSpanKey,
   createDigest,
   HASH_PRIMARY_ENCODING,
   HASH_FALLBACK_ENCODING,
   HASH_LENGTH_BY_ENCODING
 } = require('./lib/swcAst');
+const contextOperations = require('./js-edit/operations/context');
+const mutationOperations = require('./js-edit/operations/mutation');
+const discoveryOperations = require('./js-edit/operations/discovery');
 const {
-  unescapeCodeString,
-  validateCodeSyntax
-} = require('./lib/codeEscaper');
+  computeNewlineStats,
+  createNewlineGuard,
+  prepareNormalizedSnippet
+} = require('./js-edit/shared/newline');
+const {
+  readSource,
+  loadReplacementSource,
+  writeOutputFile,
+  outputJson
+} = require('./js-edit/shared/io');
+const { getReplacementSource } = require('./js-edit/shared/replacement');
+const { applyRenameToSnippet } = require('./js-edit/shared/rename');
+const {
+  LIST_OUTPUT_ENV_VAR,
+  LIST_OUTPUT_STYLES,
+  DEFAULT_LIST_OUTPUT_STYLE
+} = require('./js-edit/shared/constants');
 
 const fmt = new CliFormatter();
 const DEFAULT_CONTEXT_PADDING = 512;
@@ -28,94 +45,32 @@ const DEFAULT_SEARCH_LIMIT = 20;
 const DEFAULT_SEARCH_CONTEXT = 60;
 
 const CONTEXT_ENCLOSING_MODES = new Set(['exact', 'class', 'function']);
-const FUNCTION_CONTEXT_KINDS = new Set(['function-declaration', 'function-expression', 'arrow-function', 'class-method']);
 const VARIABLE_TARGET_MODES = new Set(['binding', 'declarator', 'declaration']);
-function isFunctionContextKind(kind) {
-  if (!kind) return false;
-  if (FUNCTION_CONTEXT_KINDS.has(kind)) return true;
-  if (typeof kind === 'string') {
-    return kind.includes('function') || kind.includes('method');
-  }
-  return false;
-}
-
-function getEnclosingContexts(record) {
-  return Array.isArray(record?.enclosingContexts) ? record.enclosingContexts : [];
-}
-
-function findEnclosingContext(record, predicate) {
-  const contexts = getEnclosingContexts(record);
-  return contexts.find(predicate) || null;
-}
-
-function cloneEnclosingContexts(record) {
-  return getEnclosingContexts(record).map((ctx) => ({
-    kind: ctx.kind || null,
-    name: ctx.name || null,
-    span: ctx.span
-  }));
-}
 
 const HASH_CHARSETS = Object.freeze({
   base64: /^[A-Za-z0-9+/]+$/,
   hex: /^[0-9a-f]+$/i
 });
 
-function computeNewlineStats(content) {
-  if (typeof content !== 'string' || content.length === 0) {
-    return {
-      style: 'none',
-      total: 0,
-      counts: { lf: 0, crlf: 0, cr: 0 },
-      mixed: false,
-      uniqueStyles: 0
-    };
-  }
+function formatHashDescriptor(encodings) {
+  return encodings
+    .map((encoding) => {
+      const length = HASH_LENGTH_BY_ENCODING[encoding];
+      if (!length) return null;
+      const label = encoding === 'hex' ? 'base16' : encoding;
+      return `${label} (${length} chars)`;
+    })
+    .filter(Boolean)
+    .join(' or ');
+}
 
-  let lf = 0;
-  let crlf = 0;
-  let cr = 0;
-  for (let index = 0; index < content.length; index += 1) {
-    const code = content.charCodeAt(index);
-    if (code === 13) {
-      if (content.charCodeAt(index + 1) === 10) {
-        crlf += 1;
-        index += 1;
-      } else {
-        cr += 1;
-      }
-    } else if (code === 10) {
-      lf += 1;
-    }
-  }
-
-  const counts = { lf, crlf, cr };
-  const total = lf + crlf + cr;
-  if (total === 0) {
-    return {
-      style: 'none',
-      total: 0,
-      counts,
-      mixed: false,
-      uniqueStyles: 0
-    };
-  }
-
-  const uniqueStyles = Number(lf > 0) + Number(crlf > 0) + Number(cr > 0);
-  let style = 'lf';
-  if (crlf >= lf && crlf >= cr && crlf > 0) {
-    style = 'crlf';
-  } else if (cr > lf && cr > crlf) {
-    style = 'cr';
-  }
-
-  return {
-    style,
-    total,
-    counts,
-    mixed: uniqueStyles > 1,
-    uniqueStyles
-  };
+function isValidExpectedHash(value, encodings) {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  return encodings.some((encoding) => {
+    const length = HASH_LENGTH_BY_ENCODING[encoding];
+    const pattern = HASH_CHARSETS[encoding];
+    return typeof length === 'number' && length > 0 && pattern?.test(value) && value.length === length;
+  });
 }
 
 function extractFunctionsByHashes(options, source, functionRecords) {
@@ -155,7 +110,7 @@ function extractFunctionsByHashes(options, source, functionRecords) {
   });
 
   const selectorLabel = hashes.join(',');
-  const plan = maybeEmitPlan(
+  const plan = contextOperations.maybeEmitPlan(
     'extract-hashes',
     options,
     selectorLabel,
@@ -220,464 +175,6 @@ function extractFunctionsByHashes(options, source, functionRecords) {
   }
 
   fmt.footer();
-}
-
-function resolveTargetNewlineStyle(style) {
-  if (style === 'crlf' || style === 'lf' || style === 'cr') {
-    return style;
-  }
-  return 'lf';
-}
-
-function newlineTokenForStyle(style) {
-  switch (style) {
-    case 'crlf':
-      return "\r\n";
-    case 'cr':
-      return '\r';
-    default:
-      return '\n';
-  }
-}
-
-function prepareNormalizedSnippet(snippet, targetStyle, options = {}) {
-  const ensureTrailingNewline = options.ensureTrailingNewline === true;
-  const resolvedTarget = resolveTargetNewlineStyle(targetStyle);
-  const originalStats = computeNewlineStats(snippet);
-  const originalBytes = Buffer.byteLength(snippet, 'utf8');
-
-  let normalized = snippet;
-  let converted = false;
-
-  if (originalStats.total > 0) {
-    const collapsed = snippet.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    if (collapsed !== snippet) {
-      converted = true;
-    }
-
-    if (resolvedTarget === 'crlf') {
-      normalized = collapsed.replace(/\n/g, '\r\n');
-    } else if (resolvedTarget === 'cr') {
-      normalized = collapsed.replace(/\n/g, '\r');
-    } else {
-      normalized = collapsed;
-    }
-
-    if (normalized !== snippet) {
-      converted = true;
-    }
-  }
-
-  const newlineToken = newlineTokenForStyle(resolvedTarget);
-  let trailingAdded = false;
-
-  if (ensureTrailingNewline) {
-    if (!normalized.endsWith('\n') && !normalized.endsWith('\r')) {
-      normalized += newlineToken;
-      trailingAdded = true;
-    } else if (!normalized.endsWith(newlineToken)) {
-      const trimmed = normalized.replace(/(?:\r\n|\r|\n)$/, '');
-      normalized = `${trimmed}${newlineToken}`;
-      converted = true;
-    }
-  }
-
-  const resultStats = computeNewlineStats(normalized);
-  const normalizedBytes = Buffer.byteLength(normalized, 'utf8');
-
-  return {
-    text: normalized,
-    original: originalStats,
-    result: resultStats,
-    targetStyle: resolvedTarget,
-    converted: converted || trailingAdded,
-    trailingAdded,
-    originalBytes,
-    normalizedBytes,
-    byteDelta: normalizedBytes - originalBytes
-  };
-}
-
-function summarizeNewlineStats(stats, bytes) {
-  if (!stats) {
-    return null;
-  }
-
-  return {
-    style: stats.style,
-    mixed: Boolean(stats.mixed),
-    total: stats.total,
-    counts: stats.counts || { lf: 0, crlf: 0, cr: 0 },
-    uniqueStyles: stats.uniqueStyles || 0,
-    bytes
-  };
-}
-
-function createNewlineGuard(fileStats, snippetBefore, snippetAfter, replacementMeta) {
-  const resolvedFileStats = fileStats || computeNewlineStats(snippetBefore);
-  const beforeStats = computeNewlineStats(snippetBefore);
-  const afterStats = computeNewlineStats(snippetAfter);
-  const beforeBytes = Buffer.byteLength(snippetBefore, 'utf8');
-  const afterBytes = Buffer.byteLength(snippetAfter, 'utf8');
-  const byteDelta = afterBytes - beforeBytes;
-
-  const conversionApplied = Boolean(
-    replacementMeta && (replacementMeta.converted || replacementMeta.trailingAdded)
-  );
-
-  const status = resolvedFileStats.total === 0 && beforeStats.total === 0 && afterStats.total === 0
-    ? 'none'
-    : conversionApplied
-      ? 'converted'
-      : 'ok';
-
-  return {
-    status,
-    file: summarizeNewlineStats(resolvedFileStats, null),
-    original: summarizeNewlineStats(beforeStats, beforeBytes),
-    result: summarizeNewlineStats(afterStats, afterBytes),
-    byteDelta,
-    replacement: replacementMeta
-      ? {
-          style: replacementMeta.original.style,
-          mixed: replacementMeta.original.mixed,
-          total: replacementMeta.original.total,
-          counts: replacementMeta.original.counts,
-          bytes: replacementMeta.originalBytes,
-          normalizedStyle: replacementMeta.result.style,
-          normalizedMixed: replacementMeta.result.mixed,
-          normalizedTotal: replacementMeta.result.total,
-          normalizedCounts: replacementMeta.result.counts,
-          normalizedBytes: replacementMeta.normalizedBytes,
-          converted: replacementMeta.converted,
-          trailingNewlineAdded: replacementMeta.trailingAdded,
-          byteDelta: replacementMeta.byteDelta,
-          targetStyle: replacementMeta.targetStyle
-        }
-      : null
-  };
-}
-
-function formatNewlineSummary(newlineGuard) {
-  if (!newlineGuard) {
-    return 'No newline analysis available';
-  }
-
-  const segments = [];
-  if (newlineGuard.file?.style) {
-    const suffix = newlineGuard.file.mixed ? ' (mixed)' : '';
-    segments.push(`file ${newlineGuard.file.style.toUpperCase()}${suffix}`);
-  }
-
-  if (newlineGuard.replacement) {
-    const suffix = newlineGuard.replacement.mixed ? ' (mixed)' : '';
-    const target = newlineGuard.replacement.normalizedStyle
-      ? ` -> ${newlineGuard.replacement.normalizedStyle.toUpperCase()}`
-      : '';
-    segments.push(`snippet ${newlineGuard.replacement.style.toUpperCase()}${suffix}${target}`);
-    if (newlineGuard.replacement.trailingNewlineAdded) {
-      segments.push('trailing newline added');
-    }
-  } else if (newlineGuard.original?.style) {
-    const suffix = newlineGuard.original.mixed ? ' (mixed)' : '';
-    segments.push(`snippet ${newlineGuard.original.style.toUpperCase()}${suffix}`);
-  }
-
-  if (newlineGuard.result?.style) {
-    const suffix = newlineGuard.result.mixed ? ' (mixed)' : '';
-    segments.push(`result ${newlineGuard.result.style.toUpperCase()}${suffix}`);
-  }
-
-  const delta = newlineGuard.byteDelta || 0;
-  segments.push(`byte delta ${delta >= 0 ? '+' : ''}${delta}`);
-
-  return segments.join(' | ');
-}
-
-
-
-function getConfiguredHashEncodings() {
-  const encodings = new Set([HASH_PRIMARY_ENCODING, HASH_FALLBACK_ENCODING]);
-  return Array.from(encodings).filter((encoding) => HASH_LENGTH_BY_ENCODING[encoding]);
-}
-
-function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
-  const modeValue = typeof requestedMode === 'string' ? requestedMode.trim().toLowerCase() : 'declarator';
-  const normalizedMode = VARIABLE_TARGET_MODES.has(modeValue) ? modeValue : 'declarator';
-
-  const cloneSpan = (span) => {
-    if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
-      return null;
-    }
-    const clone = {
-      start: span.start,
-      end: span.end
-    };
-    if (typeof span.byteStart === 'number') {
-      clone.byteStart = span.byteStart;
-    }
-    if (typeof span.byteEnd === 'number') {
-      clone.byteEnd = span.byteEnd;
-    }
-    if (span.__normalized === true) {
-      clone.__normalized = true;
-    }
-    return clone;
-  };
-
-  const candidateOrder = normalizedMode === 'binding'
-    ? ['binding', 'declarator', 'declaration']
-    : normalizedMode === 'declaration'
-      ? ['declaration', 'declarator', 'binding']
-      : ['declarator', 'binding', 'declaration'];
-
-  const resolveCandidate = (candidate) => {
-    let sourceSpan = null;
-    let hash = null;
-    let pathSignature = null;
-    let byteLength = null;
-
-    switch (candidate) {
-      case 'binding':
-        sourceSpan = record.span || null;
-        hash = record.hash || null;
-        pathSignature = record.pathSignature || null;
-        byteLength = typeof record.byteLength === 'number'
-          ? record.byteLength
-          : null;
-        break;
-      case 'declarator':
-        sourceSpan = record.declaratorSpan || record.span || null;
-        hash = record.declaratorHash || record.hash || null;
-        pathSignature = record.declaratorPathSignature || record.pathSignature || null;
-        byteLength = typeof record.declaratorByteLength === 'number'
-          ? record.declaratorByteLength
-          : null;
-        break;
-      case 'declaration':
-        sourceSpan = record.declarationSpan || record.declaratorSpan || record.span || null;
-        hash = record.declarationHash || record.declaratorHash || record.hash || null;
-        pathSignature = record.declarationPathSignature || record.declaratorPathSignature || record.pathSignature || null;
-        byteLength = typeof record.declarationByteLength === 'number'
-          ? record.declarationByteLength
-          : null;
-        break;
-      default:
-        return {
-          span: null,
-          hash: null,
-          pathSignature: null,
-          byteLength: null
-        };
-    }
-
-    return {
-      span: cloneSpan(sourceSpan),
-      hash,
-      pathSignature,
-      byteLength
-    };
-  };
-
-  for (const candidate of candidateOrder) {
-    const { span, hash, pathSignature, byteLength } = resolveCandidate(candidate);
-    if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
-      continue;
-    }
-
-    const normalizedSpan = span;
-    const resolvedHash = hash || record.hash || null;
-    if (!resolvedHash) {
-      continue;
-    }
-
-    const resolvedPath = pathSignature || record.pathSignature || null;
-    const resolvedByteLength = typeof byteLength === 'number'
-      ? byteLength
-      : typeof normalizedSpan.byteStart === 'number' && typeof normalizedSpan.byteEnd === 'number'
-        ? Math.max(0, normalizedSpan.byteEnd - normalizedSpan.byteStart)
-        : Math.max(0, normalizedSpan.end - normalizedSpan.start);
-
-    return {
-      requestedMode: normalizedMode,
-      mode: candidate,
-      span: normalizedSpan,
-      hash: resolvedHash,
-      pathSignature: resolvedPath,
-      byteLength: resolvedByteLength
-    };
-  }
-
-  const label = record.canonicalName || record.name || '(anonymous variable)';
-  throw new Error(`Unable to resolve a ${normalizedMode} span for variable "${label}".`);
-}
-
-
-function computeAggregateSpan(spans) {
-  if (!Array.isArray(spans)) {
-    return null;
-  }
-
-  let start = null;
-  let end = null;
-  let totalLength = 0;
-  let byteStart = null;
-  let byteEnd = null;
-  let totalByteLength = 0;
-
-  spans.forEach((span) => {
-    if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
-      return;
-    }
-
-    if (start === null || span.start < start) {
-      start = span.start;
-    }
-    if (end === null || span.end > end) {
-      end = span.end;
-    }
-
-    totalLength += Math.max(0, span.end - span.start);
-
-    const hasByteRange = typeof span.byteStart === 'number' && typeof span.byteEnd === 'number' && span.byteEnd > span.byteStart;
-    if (hasByteRange) {
-      if (byteStart === null || span.byteStart < byteStart) {
-        byteStart = span.byteStart;
-      }
-      if (byteEnd === null || span.byteEnd > byteEnd) {
-        byteEnd = span.byteEnd;
-      }
-      totalByteLength += Math.max(0, span.byteEnd - span.byteStart);
-    }
-  });
-
-  if (start === null || end === null) {
-    return null;
-  }
-
-  return {
-    start,
-    end,
-    totalLength,
-    byteStart,
-    byteEnd,
-    totalByteLength: byteStart !== null && byteEnd !== null ? totalByteLength : null
-  };
-}
-
-
-function formatAggregateSpan(aggregate) {
-  if (!aggregate) {
-    return null;
-  }
-
-  const segments = [];
-  const charSegment = formatSpanRange('chars', aggregate.start, aggregate.end, aggregate.totalLength);
-  if (charSegment) {
-    segments.push(charSegment);
-  }
-
-  const byteSegment = formatSpanRange(
-    'bytes',
-    aggregate.byteStart,
-    aggregate.byteEnd,
-    aggregate.totalByteLength
-  );
-  if (byteSegment) {
-    segments.push(byteSegment);
-  }
-
-  if (segments.length === 0) {
-    return null;
-  }
-
-  return segments.join('\n');
-}
-
-
-function formatSpanRange(label, start, end, length, expectedStart = null, expectedEnd = null) {
-  if (!Number.isFinite(start) || !Number.isFinite(end)) {
-    return null;
-  }
-
-  const normalizedLength = Number.isFinite(length) ? length : Math.max(0, end - start);
-  const parts = [`${label} ${start}-${end}`, `len ${normalizedLength}`];
-  if (Number.isFinite(expectedStart) && Number.isFinite(expectedEnd)) {
-    parts.push(`expected ${expectedStart}-${expectedEnd}`);
-  }
-  return parts.join(' | ');
-}
-
-function formatSpanDetails(span) {
-  if (!span) {
-    return null;
-  }
-
-  const segments = [];
-  const charSegment = formatSpanRange('chars', span.start, span.end, span.length, span.expectedStart, span.expectedEnd);
-  if (charSegment) {
-    segments.push(charSegment);
-  }
-
-  const byteStart = typeof span.byteStart === 'number' ? span.byteStart : null;
-  const byteEnd = typeof span.byteEnd === 'number' ? span.byteEnd : null;
-  const byteSegment = formatSpanRange('bytes', byteStart, byteEnd, span.byteLength, span.expectedByteStart, span.expectedByteEnd);
-  if (byteSegment) {
-    segments.push(byteSegment);
-  }
-
-  if (segments.length === 0) {
-    return null;
-  }
-
-  return segments.join('\n');
-}
-
-
-function formatHashDescriptor(encodings) {
-  return encodings
-    .map((encoding) => {
-      const length = HASH_LENGTH_BY_ENCODING[encoding];
-      if (!length) return null;
-      const label = encoding === 'hex' ? 'base16' : encoding;
-      return `${label} (${length} chars)`;
-    })
-    .filter(Boolean)
-    .join(' or ');
-}
-
-function isValidExpectedHash(value, encodings) {
-  if (typeof value !== 'string' || value.length === 0) return false;
-  return encodings.some((encoding) => {
-    const length = HASH_LENGTH_BY_ENCODING[encoding];
-    const pattern = HASH_CHARSETS[encoding];
-    return typeof length === 'number' && length > 0 && pattern?.test(value) && value.length === length;
-  });
-}
-
-function applyRenameToSnippet(snippet, record, newName) {
-  if (!record.identifierSpan) {
-    throw new Error('Renaming requires the target function to have a named identifier.');
-  }
-
-  const relativeStart = record.identifierSpan.start - record.span.start;
-  const relativeEnd = record.identifierSpan.end - record.span.start;
-
-  if (relativeStart < 0 || relativeEnd > snippet.length) {
-    throw new Error('Unable to map identifier span while renaming. The function structure may have changed.');
-  }
-
-  const slice = snippet.slice(relativeStart, relativeEnd);
-  const identifierMatch = /[A-Za-z_$][A-Za-z0-9_$]*/.exec(slice);
-
-  if (!identifierMatch) {
-    throw new Error('Unable to locate identifier token while renaming.');
-  }
-
-  const tokenStart = relativeStart + identifierMatch.index;
-  const tokenEnd = tokenStart + identifierMatch[0].length;
-
-  return `${snippet.slice(0, tokenStart)}${newName}${snippet.slice(tokenEnd)}`;
 }
 
 
@@ -835,11 +332,10 @@ function findVariableOwner(variableRecords, index) {
   }
 
   for (const record of variableRecords) {
-    if (
-      spanContains(record.declarationSpan, index)
-      || spanContains(record.declaratorSpan, index)
-      || spanContains(record.span, index)
-    ) {
+    const targetSpan = record?.resolvedTargets && record.resolvedTargets.length > 0
+      ? record.resolvedTargets[0]?.span
+      : record.span;
+    if (spanContains(targetSpan, index)) {
       return record;
     }
   }
@@ -847,55 +343,73 @@ function findVariableOwner(variableRecords, index) {
   return null;
 }
 
-
-function buildSelectorSet(fn) {
+function buildFunctionSelectorSet(fn) {
   const selectors = new Set();
-  const add = (value) => {
-    if (value && typeof value === 'string') {
-      selectors.add(value);
+  const add = (value, { lower = true } = {}) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    selectors.add(trimmed);
+    if (lower) {
+      selectors.add(trimmed.toLowerCase());
     }
   };
 
   add(fn.name);
   add(fn.canonicalName);
-  add(fn.pathSignature);
-  add(`path:${fn.pathSignature}`);
-  add(fn.hash);
-  add(`hash:${fn.hash}`);
+  if (fn.canonicalName && fn.canonicalName !== fn.name) {
+    add(`name:${fn.canonicalName}`);
+  }
+
+  if (fn.pathSignature) {
+    add(fn.pathSignature);
+    add(`path:${fn.pathSignature}`);
+  }
+
+  if (fn.hash) {
+    add(fn.hash);
+    add(`hash:${fn.hash}`);
+  }
 
   if (Array.isArray(fn.scopeChain) && fn.scopeChain.length > 0) {
-    add(fn.scopeChain.join(' > '));
-    const withoutExports = fn.scopeChain.filter((part) => part !== 'exports');
+    const scopeLabel = fn.scopeChain.join(' > ');
+    add(scopeLabel);
+
+    const withoutExports = fn.scopeChain.filter((segment) => segment !== 'exports');
     if (withoutExports.length > 0) {
       add(withoutExports.join(' > '));
-      const owner = withoutExports[0];
-      const descriptor = withoutExports[1];
-      const remainder = withoutExports.slice(2);
-      if (descriptor) {
-        if (descriptor.startsWith('#')) {
+
+      const [owner, descriptor, ...rest] = withoutExports;
+      if (owner) {
+        if (descriptor && descriptor.startsWith('#')) {
           const method = descriptor.slice(1);
-          add(`${owner}#${method}`);
-          add(`${owner}::${method}`);
-        } else if (descriptor === 'static') {
-          const method = remainder[0];
           if (method) {
-            add(`${owner}.${method}`);
+            add(`${owner}#${method}`);
             add(`${owner}::${method}`);
           }
+        } else if (descriptor === 'static') {
+          const staticTarget = rest[0];
+          if (staticTarget) {
+            add(`${owner}.${staticTarget}`);
+            add(`${owner}::${staticTarget}`);
+          }
         } else if (descriptor === 'get' || descriptor === 'set') {
-          const property = remainder[0];
+          const property = rest[0];
           if (property) {
             add(`${owner}::${property}`);
           }
-        } else {
+        } else if (descriptor) {
           add(`${owner}.${descriptor}`);
           add(`${owner}#${descriptor}`);
         }
-      }
 
-      if (withoutExports.length >= 3) {
-        const nested = withoutExports.slice(1).join(' > ');
-        add(`${owner} > ${nested}`);
+        if (withoutExports.length >= 3) {
+          add(`${owner} > ${withoutExports.slice(1).join(' > ')}`);
+        }
       }
     }
   }
@@ -907,45 +421,58 @@ function buildFunctionRecords(functions) {
   return functions.map((fn, index) => ({
     ...fn,
     index,
-    selectors: buildSelectorSet(fn)
+    selectorType: 'function',
+    selectors: buildFunctionSelectorSet(fn)
   }));
 }
 
 function buildVariableSelectorSet(variable) {
   const selectors = new Set();
-  const add = (value) => {
-    if (value && typeof value === 'string') {
-      selectors.add(value);
+  const add = (value, { lower = true } = {}) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    selectors.add(trimmed);
+    if (lower) {
+      selectors.add(trimmed.toLowerCase());
     }
   };
 
   add(variable.name);
+
   if (variable.hash) {
     add(variable.hash);
     add(`hash:${variable.hash}`);
   }
-  if (variable.pathSignature) {
-    add(variable.pathSignature);
-    add(`path:${variable.pathSignature}`);
-  }
-  if (variable.declaratorPathSignature && variable.declaratorPathSignature !== variable.pathSignature) {
-    add(variable.declaratorPathSignature);
-    add(`path:${variable.declaratorPathSignature}`);
-  }
-  if (variable.declarationPathSignature && variable.declarationPathSignature !== variable.pathSignature) {
-    add(variable.declarationPathSignature);
-    add(`path:${variable.declarationPathSignature}`);
-  }
+
   if (variable.declaratorHash && variable.declaratorHash !== variable.hash) {
     add(variable.declaratorHash);
     add(`hash:${variable.declaratorHash}`);
     add(`declarator-hash:${variable.declaratorHash}`);
   }
-  if (variable.declarationHash && variable.declarationHash !== variable.hash && variable.declarationHash !== variable.declaratorHash) {
+
+  if (variable.declarationHash
+    && variable.declarationHash !== variable.hash
+    && variable.declarationHash !== variable.declaratorHash) {
     add(variable.declarationHash);
     add(`hash:${variable.declarationHash}`);
     add(`declaration-hash:${variable.declarationHash}`);
   }
+
+  const pathCandidates = [
+    variable.pathSignature,
+    variable.declaratorPathSignature,
+    variable.declarationPathSignature
+  ].filter((candidate, index, array) => typeof candidate === 'string' && candidate.length > 0 && array.indexOf(candidate) === index);
+
+  pathCandidates.forEach((candidate) => {
+    add(candidate, { lower: false });
+    add(`path:${candidate}`, { lower: false });
+  });
 
   if (Array.isArray(variable.scopeChain) && variable.scopeChain.length > 0) {
     const scopeLabel = variable.scopeChain.join(' > ');
@@ -971,10 +498,519 @@ function buildVariableRecords(variables) {
     return {
       ...variable,
       index,
+      selectorType: 'variable',
       canonicalName,
       selectors: buildVariableSelectorSet(variable)
     };
   });
+}
+
+const SELECTOR_TYPE_PREFIXES = new Map([
+  ['function', 'function'],
+  ['variable', 'variable']
+]);
+
+const BOOLEAN_TRUE_VALUES = new Set(['true', '1', 'yes', 'y']);
+const BOOLEAN_FALSE_VALUES = new Set(['false', '0', 'no', 'n']);
+
+function parseSelectorExpression(rawSelector) {
+  const original = typeof rawSelector === 'string' ? rawSelector : '';
+  const trimmed = original.trim();
+  if (!trimmed) {
+    return {
+      raw: original,
+      base: '',
+      type: null,
+      filters: []
+    };
+  }
+
+  let remainder = trimmed;
+  let type = null;
+
+  const prefixMatch = remainder.match(/^(function|variable)\s*:/i);
+  if (prefixMatch) {
+    const normalized = prefixMatch[1].toLowerCase();
+    type = SELECTOR_TYPE_PREFIXES.get(normalized) || null;
+    remainder = remainder.slice(prefixMatch[0].length);
+  }
+
+  const parts = remainder.split('@');
+  const base = parts.shift().trim();
+  const filters = parts
+    .map((token) => parseSelectorFilter(token))
+    .filter(Boolean);
+
+  return {
+    raw: original,
+    base,
+    type,
+    filters
+  };
+}
+
+function parseSelectorFilter(token) {
+  const trimmed = typeof token === 'string' ? token.trim() : '';
+  if (!trimmed) {
+    return null;
+  }
+
+  const simpleRange = trimmed.match(/^(\d+)(?:-(\d+))?$/);
+  if (simpleRange) {
+    const range = parseNumericRange('range', simpleRange[1], simpleRange[2]);
+    return {
+      kind: 'charRange',
+      start: range.start,
+      end: range.end
+    };
+  }
+
+  const eqIndex = trimmed.indexOf('=');
+  let key;
+  let value;
+  if (eqIndex === -1) {
+    key = trimmed.toLowerCase();
+    value = null;
+  } else {
+    key = trimmed.slice(0, eqIndex).trim().toLowerCase();
+    value = trimmed.slice(eqIndex + 1).trim();
+  }
+
+  switch (key) {
+    case 'range': {
+      if (!value) {
+        throw new Error('Selector filter "@range" requires a value (e.g., @range=120-150).');
+      }
+      const range = parseNumericRange('range', value);
+      return {
+        kind: 'charRange',
+        start: range.start,
+        end: range.end
+      };
+    }
+    case 'bytes': {
+      if (!value) {
+        throw new Error('Selector filter "@bytes" requires a value (e.g., @bytes=400-440).');
+      }
+      const range = parseNumericRange('bytes', value);
+      return {
+        kind: 'byteRange',
+        start: range.start,
+        end: range.end
+      };
+    }
+    case 'kind': {
+      if (!value) {
+        throw new Error('Selector filter "@kind" requires a value.');
+      }
+      return {
+        kind: 'kind',
+        values: parseListValue(value)
+      };
+    }
+    case 'export': {
+      if (!value) {
+        throw new Error('Selector filter "@export" requires a value.');
+      }
+      return {
+        kind: 'export',
+        values: parseListValue(value)
+      };
+    }
+    case 'hash': {
+      if (!value) {
+        throw new Error('Selector filter "@hash" requires a value.');
+      }
+      return {
+        kind: 'hash',
+        values: parseListValue(value)
+      };
+    }
+    case 'path': {
+      if (!value) {
+        throw new Error('Selector filter "@path" requires a value.');
+      }
+      return {
+        kind: 'path',
+        values: parseListValue(value, false)
+      };
+    }
+    case 'replaceable': {
+      const boolValue = value === null ? true : parseBooleanFilterValue(value, 'replaceable');
+      return {
+        kind: 'replaceable',
+        value: boolValue
+      };
+    }
+    default: {
+      throw new Error(`Unknown selector filter "@${trimmed}".`);
+    }
+  }
+}
+
+function parseNumericRange(label, firstValue, secondValue = null) {
+  let startRaw = firstValue;
+  let endRaw = secondValue;
+
+  if (secondValue === null && typeof firstValue === 'string' && firstValue.includes('-')) {
+    const parts = firstValue.split('-');
+    if (parts.length > 2) {
+      throw new Error(`Invalid ${label} range "${firstValue}". Use start-end or single offset.`);
+    }
+    [startRaw, endRaw] = parts;
+  }
+
+  const start = Number.parseInt(startRaw, 10);
+  const end = endRaw !== undefined && endRaw !== null && endRaw !== ''
+    ? Number.parseInt(endRaw, 10)
+    : null;
+
+  if (!Number.isFinite(start) || start < 0) {
+    throw new Error(`Invalid ${label} range. Start must be a non-negative integer.`);
+  }
+
+  if (end !== null) {
+    if (!Number.isFinite(end) || end < start) {
+      throw new Error(`Invalid ${label} range. End must be a non-negative integer greater than or equal to start.`);
+    }
+  }
+
+  return { start, end };
+}
+
+function parseListValue(raw, normalize = true) {
+  return raw
+    .split(/[|,]/)
+    .map((value) => (normalize ? value.trim().toLowerCase() : value.trim()))
+    .filter((value) => value.length > 0);
+}
+
+function parseBooleanFilterValue(raw, label) {
+  const normalized = raw.trim().toLowerCase();
+  if (BOOLEAN_TRUE_VALUES.has(normalized)) {
+    return true;
+  }
+  if (BOOLEAN_FALSE_VALUES.has(normalized)) {
+    return false;
+  }
+  throw new Error(`Invalid boolean value "${raw}" for selector filter "@${label}".`);
+}
+
+function buildSelectorCandidates(base) {
+  if (typeof base !== 'string') {
+    return [];
+  }
+
+  const trimmed = base.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const candidates = new Set();
+  const add = (value, { lower = true } = {}) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    const candidate = value.trim();
+    if (!candidate) {
+      return;
+    }
+    candidates.add(candidate);
+    if (lower) {
+      candidates.add(candidate.toLowerCase());
+    }
+  };
+
+  add(trimmed);
+
+  if (trimmed.startsWith('hash:')) {
+    add(trimmed.slice(5));
+  } else if (trimmed.startsWith('path:')) {
+    add(trimmed.slice(5), { lower: false });
+  }
+
+  if (trimmed.includes('::')) {
+    add(trimmed.replace(/::/g, '.'), { lower: false });
+    add(trimmed.replace(/::/g, '#'), { lower: false });
+  }
+
+  if (trimmed.includes('#')) {
+    add(trimmed.replace(/#/g, '.'), { lower: false });
+    add(trimmed.replace(/#/g, '::'), { lower: false });
+  }
+
+  if (trimmed.includes('.')) {
+    add(trimmed.replace(/\./g, ' > '), { lower: false });
+  }
+
+  if (trimmed.includes(' > ')) {
+    const collapsed = trimmed.replace(/\s*>\s*/g, '.');
+    add(collapsed, { lower: false });
+    add(trimmed.replace(/\s*>\s*/g, '#'), { lower: false });
+  }
+  return Array.from(candidates);
+}
+
+function matchRecordsByCandidates(records, candidates) {
+  if (!Array.isArray(records) || !Array.isArray(candidates)) {
+    return [];
+  }
+
+  const normalizedCandidates = candidates
+    .map((candidate) => (typeof candidate === 'string' ? candidate.trim() : ''))
+    .filter((candidate) => candidate.length > 0);
+
+  if (normalizedCandidates.length === 0) {
+    return [];
+  }
+
+  const canonicalMatches = new Set();
+  const allMatches = new Set();
+
+  const candidateTargets = (candidate) => {
+    const trimmed = candidate.trim();
+    if (!trimmed) {
+      return [];
+    }
+    if (trimmed.startsWith('function:')) {
+      return [trimmed.slice('function:'.length).trim()];
+    }
+    return [trimmed];
+  };
+
+  for (const record of records) {
+    if (!record || typeof record !== 'object') {
+      continue;
+    }
+    const selectors = record.selectors;
+    if (!selectors || typeof selectors.has !== 'function') {
+      continue;
+    }
+
+    for (const candidate of normalizedCandidates) {
+      if (!selectors.has(candidate) && !selectors.has(candidate.toLowerCase())) {
+        continue;
+      }
+      allMatches.add(record);
+
+      if (!record.canonicalName) {
+        continue;
+      }
+      const targets = candidateTargets(candidate);
+      if (targets.some((target) => target && target === record.canonicalName)) {
+        canonicalMatches.add(record);
+      }
+    }
+  }
+
+  const preferred = canonicalMatches.size > 0 ? canonicalMatches : allMatches;
+  return Array.from(preferred);
+}
+
+function findMatchesForSelector(records, selector, options = {}, context = {}) {
+  if (!Array.isArray(records)) {
+    return [];
+  }
+
+  const expression = parseSelectorExpression(selector || '');
+  const targetType = expression.type;
+  const pool = targetType
+    ? records.filter((record) => record.selectorType === targetType)
+    : records;
+
+  const candidates = buildSelectorCandidates(expression.base);
+  let matches;
+
+  if (candidates.length > 0) {
+    matches = matchRecordsByCandidates(pool, candidates);
+  } else if (expression.filters.length > 0 || context.allowEmptyBase === true) {
+    matches = pool.slice();
+  } else {
+    matches = [];
+  }
+
+  if (expression.filters.length > 0 && matches.length > 0) {
+    matches = matches.filter((record) => recordMatchesFilters(record, expression.filters));
+  }
+
+  return matches;
+}
+
+function filterMatchesByHash(matches, hashValue) {
+  const normalized = typeof hashValue === 'string' ? hashValue.trim().toLowerCase() : '';
+  if (!normalized) {
+    return matches;
+  }
+  return matches.filter((record) => collectHashCandidates(record).includes(normalized));
+}
+
+function filterMatchesByPath(matches, pathValue) {
+  const normalized = typeof pathValue === 'string' ? pathValue.trim() : '';
+  if (!normalized) {
+    return matches;
+  }
+  return matches.filter((record) => {
+    if (record.selectorType === 'variable') {
+      return variableRecordMatchesPath(record, normalized);
+    }
+    return typeof record.pathSignature === 'string' && record.pathSignature === normalized;
+  });
+}
+
+function ensureSingleMatch(matches, selector, options, context) {
+  const allowMultiple = Boolean(options.allowMultiple) || Boolean(context?.allowMultiple);
+  if (allowMultiple || matches.length <= 1) {
+    return matches;
+  }
+
+  const names = matches.slice(0, 5).map((record) => record.canonicalName || record.name || '(anonymous)');
+  throw new Error(
+    `Selector "${selector}" matched ${matches.length} targets (${names.join(', ')}). `
+    + 'Refine the selector or pass --allow-multiple to operate on all matches.'
+  );
+}
+
+function resolveMatches(records, selector, options, context = {}) {
+  const matches = findMatchesForSelector(records, selector, options, context);
+  if (!matches || matches.length === 0) {
+    const label = context.operation ? `${context.operation} selector` : 'selector';
+    throw new Error(`No matches found for ${label} "${selector}".`);
+  }
+
+  let filtered = matches;
+  filtered = filterMatchesByHash(filtered, options.selectHash);
+  filtered = filterMatchesByPath(filtered, options.selectPath);
+
+  if (filtered.length === 0) {
+    throw new Error('Selection guards did not match any targets. Refine the selector or adjust --select arguments.');
+  }
+
+  if (options.selectIndex) {
+    const index = Number(options.selectIndex);
+    if (!Number.isInteger(index) || index <= 0) {
+      throw new Error('--select requires a positive integer index.');
+    }
+    if (index > filtered.length) {
+      throw new Error(`--select ${index} exceeds match count (${filtered.length}).`);
+    }
+    filtered = [filtered[index - 1]];
+  }
+
+  return ensureSingleMatch(filtered, selector, options, context);
+}
+
+function resolveVariableMatches(variableRecords, selector, options, context = {}) {
+  const matches = findMatchesForSelector(variableRecords, selector, options, context);
+  if (!matches || matches.length === 0) {
+    const label = context.operation ? `${context.operation} selector` : 'selector';
+    throw new Error(`No variable matches found for ${label} "${selector}".`);
+  }
+
+  let filtered = matches;
+  filtered = filterMatchesByHash(filtered, options.selectHash);
+  filtered = filterMatchesByPath(filtered, options.selectPath);
+
+  if (filtered.length === 0) {
+    throw new Error('Selection guards did not match any variable targets. Refine the selector or adjust --select arguments.');
+  }
+
+  if (options.selectIndex) {
+    const index = Number(options.selectIndex);
+    if (!Number.isInteger(index) || index <= 0) {
+      throw new Error('--select requires a positive integer index.');
+    }
+    if (index > filtered.length) {
+      throw new Error(`--select ${index} exceeds match count (${filtered.length}).`);
+    }
+    filtered = [filtered[index - 1]];
+  }
+
+  return ensureSingleMatch(filtered, selector, options, context);
+}
+function recordMatchesFilter(record, filter) {
+  switch (filter.kind) {
+    case 'charRange':
+      return recordMatchesRange(record, filter.start, filter.end, 'chars');
+    case 'byteRange':
+      return recordMatchesRange(record, filter.start, filter.end, 'bytes');
+    case 'kind':
+      return filter.values.length === 0 || filter.values.includes(normalizeString(record.kind));
+    case 'export': {
+      const exportValue = record.exportKind ? record.exportKind.toLowerCase() : 'none';
+      return filter.values.includes(exportValue);
+    }
+    case 'hash': {
+      const candidates = collectHashCandidates(record);
+      return filter.values.some((value) => candidates.includes(value.toLowerCase()));
+    }
+    case 'path': {
+      const candidates = collectPathCandidates(record);
+      return filter.values.some((value) => candidates.includes(value));
+    }
+    case 'replaceable':
+      return Boolean(record.replaceable) === filter.value;
+    default:
+      return false;
+  }
+}
+
+function recordMatchesFilters(record, filters) {
+  if (!Array.isArray(filters) || filters.length === 0) {
+    return true;
+  }
+  return filters.every((filter) => recordMatchesFilter(record, filter));
+}
+
+function recordMatchesRange(record, start, end, units) {
+  const span = resolvePrimarySpan(record);
+  if (!span) {
+    return false;
+  }
+
+  const startKey = units === 'bytes' ? 'byteStart' : 'start';
+  const endKey = units === 'bytes' ? 'byteEnd' : 'end';
+
+  const spanStart = typeof span[startKey] === 'number' ? span[startKey] : null;
+  const spanEnd = typeof span[endKey] === 'number' ? span[endKey] : null;
+  if (spanStart === null || spanEnd === null) {
+    return false;
+  }
+
+  const effectiveEnd = end !== null ? end : start;
+  return spanStart <= start && spanEnd >= effectiveEnd;
+}
+
+function resolvePrimarySpan(record) {
+  if (isSpanLike(record.declarationSpan)) {
+    return record.declarationSpan;
+  }
+  if (isSpanLike(record.declaratorSpan)) {
+    return record.declaratorSpan;
+  }
+  if (isSpanLike(record.span)) {
+    return record.span;
+  }
+  return null;
+}
+
+function isSpanLike(span) {
+  return span && typeof span.start === 'number' && typeof span.end === 'number';
+}
+
+function normalizeString(value) {
+  return typeof value === 'string' ? value.toLowerCase() : '';
+}
+
+function collectHashCandidates(record) {
+  const values = [record.hash, record.declaratorHash, record.declarationHash];
+  return values
+    .filter((value) => typeof value === 'string' && value.length > 0)
+    .map((value) => value.toLowerCase());
+}
+
+function collectPathCandidates(record) {
+  const values = [record.pathSignature, record.declaratorPathSignature, record.declarationPathSignature];
+  return values.filter((value) => typeof value === 'string' && value.length > 0);
 }
 
 function variableRecordMatchesPath(record, pathSignature) {
@@ -989,678 +1025,202 @@ function variableRecordMatchesPath(record, pathSignature) {
   ].some((candidate) => typeof candidate === 'string' && candidate === pathSignature);
 }
 
-
-function findMatchesForSelector(functionRecords, rawSelector) {
-  const selector = rawSelector.trim();
-  const candidates = [selector];
-  if (selector.startsWith('path:')) {
-    candidates.push(selector.slice(5));
-  } else if (selector.startsWith('hash:')) {
-    candidates.push(selector.slice(5));
-  }
-
-  return functionRecords.filter((record) => {
-    for (const candidate of candidates) {
-      if (record.selectors.has(candidate)) {
-        return true;
-      }
-    }
-    return false;
-  });
+function getConfiguredHashEncodings() {
+  const encodings = new Set([HASH_PRIMARY_ENCODING, HASH_FALLBACK_ENCODING]);
+  return Array.from(encodings).filter((encoding) => HASH_LENGTH_BY_ENCODING[encoding]);
 }
 
-function resolveMatches(functionRecords, selector, options, { operation }) {
-  if (!selector || !selector.trim()) {
-    throw new Error('Provide a non-empty selector.');
-  }
+function resolveVariableTargetInfo(record, requestedMode = 'declarator') {
+  const modeValue = typeof requestedMode === 'string' ? requestedMode.trim().toLowerCase() : 'declarator';
+  const normalizedMode = VARIABLE_TARGET_MODES.has(modeValue) ? modeValue : 'declarator';
 
-  const matches = findMatchesForSelector(functionRecords, selector);
-  if (matches.length === 0) {
-    throw new Error(`No functions matched selector "${selector}".`);
-  }
-
-  let resolved = matches;
-
-  if (options.selectPath) {
-    resolved = resolved.filter((record) => record.pathSignature === options.selectPath);
-    if (resolved.length === 0) {
-      throw new Error(`No functions matched selector "${selector}" with path "${options.selectPath}".`);
-    }
-  }
-
-  if (options.selectHash) {
-    resolved = resolved.filter((record) => record.hash === options.selectHash);
-    if (resolved.length === 0) {
-      throw new Error(`No functions matched selector "${selector}" with hash "${options.selectHash}". Use --list-functions --json to inspect guard hashes.`);
-    }
-  }
-
-  resolved = resolved.slice().sort((a, b) => a.index - b.index);
-
-  if (typeof options.selectIndex === 'number') {
-    const idx = options.selectIndex - 1;
-    if (idx < 0 || idx >= resolved.length) {
-      throw new Error(`Selection index ${options.selectIndex} is out of range (matched ${resolved.length}).`);
-    }
-    resolved = [resolved[idx]];
-  }
-
-  const requireUnique = (operation === 'locate' || operation === 'context') ? !options.allowMultiple : true;
-
-  if (requireUnique && resolved.length !== 1) {
-    const details = resolved
-      .map((record) => `${record.canonicalName} (${record.kind}) @ ${record.line}:${record.column}`)
-      .join('\n  - ');
-    throw new Error(`Selector "${selector}" matched ${resolved.length} functions. Use --select (index or hash:<value>) or --select-path to disambiguate.\n  - ${details}`);
-  }
-
-  return requireUnique ? resolved.slice(0, 1) : resolved;
-}
-
-
-function resolveVariableMatches(variableRecords, selector, options, { operation }) {
-  if (!selector || !selector.trim()) {
-    throw new Error('Provide a non-empty selector.');
-  }
-
-  const matches = findMatchesForSelector(variableRecords, selector.trim());
-  if (matches.length === 0) {
-    throw new Error(`No variables matched selector "${selector}".`);
-  }
-
-  let resolved = matches;
-
-  if (options.selectPath) {
-    resolved = resolved.filter((record) => record.pathSignature === options.selectPath);
-    if (resolved.length === 0) {
-      throw new Error(`No variables matched selector "${selector}" with path "${options.selectPath}".`);
-    }
-  }
-
-  if (options.selectHash) {
-    resolved = resolved.filter((record) => record.hash === options.selectHash);
-    if (resolved.length === 0) {
-      throw new Error(`No variables matched selector "${selector}" with hash "${options.selectHash}". Use --list-variables --json to inspect guard hashes.`);
-    }
-  }
-
-  resolved = resolved.slice().sort((a, b) => a.index - b.index);
-
-  if (typeof options.selectIndex === 'number') {
-    const idx = options.selectIndex - 1;
-    if (idx < 0 || idx >= resolved.length) {
-      throw new Error(`Selection index ${options.selectIndex} is out of range (matched ${resolved.length}).`);
-    }
-    resolved = [resolved[idx]];
-  }
-
-  const requireUnique = operation === 'context-variable' ? !options.allowMultiple : true;
-
-  if (requireUnique && resolved.length !== 1) {
-    const details = resolved
-      .map((record) => `${record.canonicalName} (${record.kind}) @ ${record.line}:${record.column}`)
-      .join('\n  - ');
-    throw new Error(`Selector "${selector}" matched ${resolved.length} variables. Use --select (index or hash:<value>) or --select-path to disambiguate, or pass --allow-multiple.\n  - ${details}`);
-  }
-
-  return requireUnique ? resolved.slice(0, 1) : resolved;
-}
-
-
-function selectContextSpan(record, enclosingMode) {
-  if (enclosingMode === 'class') {
-    const match = findEnclosingContext(record, (ctx) => ctx.kind === 'class');
-    if (match && match.span) {
-      return { span: match.span, context: match };
-    }
-    if (record.enclosingKind === 'class' && record.enclosingSpan) {
-      return {
-        span: record.enclosingSpan,
-        context: {
-          kind: 'class',
-          name: record.enclosingName || null,
-          span: record.enclosingSpan
-        }
-      };
-    }
-  } else if (enclosingMode === 'function') {
-    const match = findEnclosingContext(record, (ctx) => isFunctionContextKind(ctx.kind));
-    if (match && match.span) {
-      return { span: match.span, context: match };
-    }
-    if (record.enclosingKind && isFunctionContextKind(record.enclosingKind) && record.enclosingSpan) {
-      return {
-        span: record.enclosingSpan,
-        context: {
-          kind: record.enclosingKind,
-          name: record.enclosingName || null,
-          span: record.enclosingSpan
-        }
-      };
-    }
-  }
-
-  return {
-    span: record.span,
-    context: null
-  };
-}
-
-function computeContextRange(span, before, after, sourceLength) {
-  const safeBefore = Math.max(0, before);
-  const safeAfter = Math.max(0, after);
-  const start = Math.max(0, span.start - safeBefore);
-  const end = Math.min(sourceLength, span.end + safeAfter);
-  return {
-    start,
-    end,
-    appliedBefore: span.start - start,
-    appliedAfter: end - span.end
-  };
-}
-
-function createContextEntry(record, source, before, after, enclosingMode, mapper) {
-  const { span: effectiveSpan, context: selectedContext } = selectContextSpan(record, enclosingMode);
-  const contextSpan = effectiveSpan || record.span;
-  const contextRange = computeContextRange(contextSpan, before, after, source.length);
-  const contextSnippet = source.slice(contextRange.start, contextRange.end);
-  const baseSnippet = extractCode(source, record.span, mapper);
-  const relativeBaseStart = Math.max(0, record.span.start - contextRange.start);
-  const relativeBaseEnd = Math.max(relativeBaseStart, relativeBaseStart + Math.max(0, record.span.end - record.span.start));
-  return {
-    record,
-    contextRange,
-    contextSnippet,
-    baseSnippet,
-    appliedBefore: contextRange.appliedBefore,
-    appliedAfter: contextRange.appliedAfter,
-    relativeBaseStart,
-    relativeBaseEnd,
-    contextHash: createDigest(contextSnippet),
-    effectiveSpan: contextSpan,
-    selectedEnclosingContext: selectedContext
-      ? {
-          kind: selectedContext.kind || null,
-          name: selectedContext.name || null,
-          span: selectedContext.span
-        }
-      : null
-  };
-}
-
-function buildContextEntries(records, source, options) {
-  const before = Number.isFinite(options.contextBefore) && options.contextBefore >= 0
-    ? Math.floor(options.contextBefore)
-    : DEFAULT_CONTEXT_PADDING;
-  const after = Number.isFinite(options.contextAfter) && options.contextAfter >= 0
-    ? Math.floor(options.contextAfter)
-    : DEFAULT_CONTEXT_PADDING;
-  const enclosingMode = options.contextEnclosing;
-
-  const entries = records.map((record) => createContextEntry(record, source, before, after, enclosingMode, options.sourceMapper));
-
-  return {
-    before,
-    after,
-    entries
-  };
-}
-
-function buildContextPayload(type, selector, options, contextResult) {
-  const requestedBefore = Number.isFinite(options.contextBefore) && options.contextBefore >= 0
-    ? Math.floor(options.contextBefore)
-    : DEFAULT_CONTEXT_PADDING;
-  const requestedAfter = Number.isFinite(options.contextAfter) && options.contextAfter >= 0
-    ? Math.floor(options.contextAfter)
-    : DEFAULT_CONTEXT_PADDING;
-
-  const contexts = contextResult.entries.map((entry) => {
-    const { record } = entry;
-    return {
-      name: record.canonicalName || record.name,
-      displayName: record.canonicalName || record.name,
-      kind: record.kind,
-      exportKind: record.exportKind || null,
-      initializerType: record.initializerType || null,
-      line: record.line,
-      column: record.column,
-      span: record.span,
-      enclosing: record.enclosingKind
-        ? {
-            kind: record.enclosingKind,
-            name: record.enclosingName || null,
-            span: record.enclosingSpan
-          }
-        : null,
-      pathSignature: record.pathSignature,
-      scopeChain: record.scopeChain,
-      hash: record.hash,
-      contextRange: entry.contextRange,
-      appliedPadding: {
-        before: entry.appliedBefore,
-        after: entry.appliedAfter
-      },
-      offsets: {
-        baseStart: entry.relativeBaseStart,
-        baseEnd: entry.relativeBaseEnd,
-        length: entry.relativeBaseEnd - entry.relativeBaseStart
-      },
-      effectiveSpan: entry.effectiveSpan,
-      selectedEnclosingContext: entry.selectedEnclosingContext,
-      enclosingContexts: cloneEnclosingContexts(record),
-      snippets: {
-        context: entry.contextSnippet,
-        base: entry.baseSnippet
-      },
-      hashes: {
-        context: entry.contextHash,
-        base: record.hash
-      }
-    };
-  });
-
-  return {
-    file: options.filePath,
-    selector,
-    entity: type,
-    padding: {
-      requestedBefore,
-      requestedAfter,
-      appliedBefore: contextResult.before,
-      appliedAfter: contextResult.after
-    },
-    enclosingMode: options.contextEnclosing,
-    contexts
-  };
-}
-
-
-function renderContextResults(type, selector, options, contextResult) {
-  const payload = buildContextPayload(type, selector, options, contextResult);
-  const spanRange = computeAggregateSpan(contextResult.entries.map((entry) => {
-    if (!entry) {
+  const cloneSpan = (span) => {
+    if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
       return null;
     }
-    const candidate = entry.effectiveSpan || entry.record?.span;
-    return candidate || null;
-  }));
-  const contextSpanRange = computeAggregateSpan(contextResult.entries.map((entry) => {
-    if (!entry || !entry.contextRange) {
-      return null;
-    }
-    return {
-      start: entry.contextRange.start,
-      end: entry.contextRange.end
+    const clone = {
+      start: span.start,
+      end: span.end
     };
-  }));
-
-  payload.summary = {
-    matchCount: contextResult.entries.length,
-    spanRange,
-    contextRange: contextSpanRange
+    if (typeof span.byteStart === 'number') {
+      clone.byteStart = span.byteStart;
+    }
+    if (typeof span.byteEnd === 'number') {
+      clone.byteEnd = span.byteEnd;
+    }
+    if (span.__normalized === true) {
+      clone.__normalized = true;
+    }
+    return clone;
   };
 
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
+  const candidateOrder = normalizedMode === 'binding'
+    ? ['binding', 'declarator', 'declaration']
+    : normalizedMode === 'declaration'
+      ? ['declaration', 'declarator', 'binding']
+      : ['declarator', 'binding', 'declaration'];
 
-  if (options.quiet) {
-    return;
-  }
+  const resolveCandidate = (candidate) => {
+    let sourceSpan = null;
+    let hash = null;
+    let pathSignature = null;
+    let byteLength = null;
 
-  const headerLabel = type === 'function' ? 'Function Context' : 'Variable Context';
-  fmt.header(headerLabel);
-  fmt.section(`Selector: ${selector}`);
-  fmt.stat('Requested padding', `${payload.padding.requestedBefore} before / ${payload.padding.requestedAfter} after`);
-  fmt.stat('Applied padding', `${contextResult.before} before / ${contextResult.after} after`);
-  fmt.stat('Enclosing mode', options.contextEnclosing);
-  const formattedSpanRange = formatAggregateSpan(spanRange);
-  if (formattedSpanRange) {
-    fmt.stat('Span range', formattedSpanRange);
-  }
-  const formattedContextRange = formatAggregateSpan(contextSpanRange);
-  if (formattedContextRange) {
-    fmt.stat('Context range', formattedContextRange);
-  }
-
-  contextResult.entries.forEach((entry, index) => {
-    const { record } = entry;
-    const title = `${type === 'function' ? 'Function' : 'Variable'} ${index + 1}: ${record.canonicalName || record.name}`;
-    fmt.section(title);
-    fmt.stat('Kind', record.kind);
-    fmt.stat('Location', `${record.line}:${record.column}`);
-    if (record.exportKind) fmt.stat('Export', record.exportKind);
-    if (type === 'variable' && record.initializerType) {
-      fmt.stat('Initializer', record.initializerType);
+    switch (candidate) {
+      case 'binding':
+        sourceSpan = record.span || null;
+        hash = record.hash || null;
+        pathSignature = record.pathSignature || null;
+        byteLength = typeof record.byteLength === 'number'
+          ? record.byteLength
+          : null;
+        break;
+      case 'declarator':
+        sourceSpan = record.declaratorSpan || record.span || null;
+        hash = record.declaratorHash || record.hash || null;
+        pathSignature = record.declaratorPathSignature || record.pathSignature || null;
+        byteLength = typeof record.declaratorByteLength === 'number'
+          ? record.declaratorByteLength
+          : null;
+        break;
+      case 'declaration':
+        sourceSpan = record.declarationSpan || record.declaratorSpan || record.span || null;
+        hash = record.declarationHash || record.declaratorHash || record.hash || null;
+        pathSignature = record.declarationPathSignature || record.declaratorPathSignature || record.pathSignature || null;
+        byteLength = typeof record.declarationByteLength === 'number'
+          ? record.declarationByteLength
+          : null;
+        break;
+      default:
+        return {
+          span: null,
+          hash: null,
+          pathSignature: null,
+          byteLength: null
+        };
     }
-    fmt.stat('Path', record.pathSignature);
-    if (record.scopeChain && record.scopeChain.length > 0) {
-      fmt.stat('Scope', record.scopeChain.join(' > '));
-    }
-    const baseSpanDetails = formatSpanDetails(record.span);
-    if (baseSpanDetails) {
-      fmt.stat('Span', baseSpanDetails);
-    }
-    const effectiveSpanDetails = formatSpanDetails(entry.effectiveSpan);
-    if (effectiveSpanDetails) {
-      const baseSpan = record.span || null;
-      const effective = entry.effectiveSpan || null;
-      const spansMatch = baseSpan && effective
-        ? baseSpan.start === effective.start
-          && baseSpan.end === effective.end
-          && (typeof baseSpan.byteStart === 'number' ? baseSpan.byteStart : null) === (typeof effective.byteStart === 'number' ? effective.byteStart : null)
-          && (typeof baseSpan.byteEnd === 'number' ? baseSpan.byteEnd : null) === (typeof effective.byteEnd === 'number' ? effective.byteEnd : null)
-        : false;
-      if (!spansMatch) {
-        fmt.stat('Effective span', effectiveSpanDetails);
-      }
-    }
-    const contextRange = entry.contextRange;
-    if (contextRange) {
-      const contextRangeSummary = formatSpanRange('chars', contextRange.start, contextRange.end, contextRange.end - contextRange.start);
-      if (contextRangeSummary) {
-        fmt.stat('Context window', contextRangeSummary);
-      }
-    }
-    const availableContexts = getEnclosingContexts(record);
-    if (availableContexts.length > 0) {
-      const contextSummary = availableContexts
-        .map((ctx) => {
-          const contextName = ctx.name ? ` ${ctx.name}` : '';
-          return `${ctx.kind || 'unknown'}${contextName}`;
-        })
-        .join(' | ');
-      fmt.stat('Enclosing contexts', contextSummary);
-    } else if (record.enclosingKind === 'class') {
-      fmt.stat('Enclosing class', record.enclosingName || '(anonymous class)');
-    }
-    if (entry.selectedEnclosingContext) {
-      const selected = entry.selectedEnclosingContext;
-      const selectedName = selected.name ? ` ${selected.name}` : '';
-      fmt.stat('Expanded to', `${selected.kind || 'unknown'}${selectedName}`);
-    }
-    fmt.section('Context Snippet');
-    fmt.codeBlock(entry.contextSnippet);
-    fmt.section('Base Snippet');
-    fmt.codeBlock(entry.baseSnippet);
-  });
-
-  if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
-  }
-  fmt.footer();
-}
-
-
-
-function renderGuardrailSummary(guard, options) {
-  if (options.json || options.quiet) {
-    return;
-  }
-
-  fmt.section('Guardrails');
-  const formattedSpanDetails = formatSpanDetails(guard.span);
-  const fallbackSegments = [];
-  const fallbackChar = formatSpanRange(
-    'chars',
-    guard.span.start,
-    guard.span.end,
-    guard.span.length,
-    guard.span.expectedStart,
-    guard.span.expectedEnd
-  );
-  if (fallbackChar) {
-    fallbackSegments.push(fallbackChar);
-  }
-  const fallbackByte = formatSpanRange(
-    'bytes',
-    guard.span.byteStart,
-    guard.span.byteEnd,
-    guard.span.byteLength,
-    guard.span.expectedByteStart,
-    guard.span.expectedByteEnd
-  );
-  if (fallbackByte) {
-    fallbackSegments.push(fallbackByte);
-  }
-  const fallbackSpanDetails = fallbackSegments.length > 0 ? fallbackSegments.join('\n') : null;
-  const spanDetails = formattedSpanDetails || fallbackSpanDetails;
-  const rows = [
-    {
-      check: 'Span',
-      status: guard.span.status.toUpperCase(),
-      details: spanDetails
-    },
-    {
-      check: 'Hash',
-      status: guard.hash.status.toUpperCase(),
-      details: guard.hash.status === 'ok'
-        ? guard.hash.expected
-        : `expected ${guard.hash.expected} received ${guard.hash.actual}`
-    },
-    {
-      check: 'Path',
-      status: guard.path.status.toUpperCase(),
-      details: guard.path.signature
-    },
-    {
-      check: 'Syntax',
-      status: guard.syntax.status.toUpperCase(),
-      details: guard.syntax.status === 'ok' ? 'Re-parse successful' : guard.syntax.message
-    },
-    {
-      check: 'Result Hash',
-      status: guard.result.status.toUpperCase(),
-      details: guard.result.status === 'changed'
-        ? guard.result.after
-        : `${guard.result.after} (unchanged)`
-    }
-  ];
-
-  if (guard.newline) {
-    const newlineStatus = String(guard.newline.status || 'unknown').toUpperCase();
-    rows.push({
-      check: 'Newlines',
-      status: newlineStatus,
-      details: formatNewlineSummary(guard.newline)
-    });
-  }
-
-  fmt.table(rows, {
-    columns: ['check', 'status', 'details']
-  });
-}
-
-
-
-
-function buildPlanPayload(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
-  const toSpanPayload = (primarySpan, fallbackSpan) => {
-    const hasPrimary = primarySpan && typeof primarySpan === 'object';
-    const hasFallback = fallbackSpan && typeof fallbackSpan === 'object';
-
-    const start = hasPrimary && typeof primarySpan.start === 'number'
-      ? primarySpan.start
-      : hasFallback && typeof fallbackSpan.start === 'number'
-        ? fallbackSpan.start
-        : null;
-
-    const end = hasPrimary && typeof primarySpan.end === 'number'
-      ? primarySpan.end
-      : hasFallback && typeof fallbackSpan.end === 'number'
-        ? fallbackSpan.end
-        : null;
-
-    let length = null;
-    if (typeof start === 'number' && typeof end === 'number') {
-      length = Math.max(0, end - start);
-    } else if (hasFallback && typeof fallbackSpan.start === 'number' && typeof fallbackSpan.end === 'number') {
-      length = Math.max(0, fallbackSpan.end - fallbackSpan.start);
-    }
-
-    const byteSource = hasPrimary && typeof primarySpan.byteStart === 'number' && typeof primarySpan.byteEnd === 'number'
-      ? primarySpan
-      : hasFallback && typeof fallbackSpan.byteStart === 'number' && typeof fallbackSpan.byteEnd === 'number'
-        ? fallbackSpan
-        : null;
-
-    const byteStart = byteSource ? byteSource.byteStart : null;
-    const byteEnd = byteSource ? byteSource.byteEnd : null;
-    const byteLength = byteSource ? Math.max(0, byteEnd - byteStart) : null;
 
     return {
-      start,
-      end,
-      length,
-      byteStart,
-      byteEnd,
+      span: cloneSpan(sourceSpan),
+      hash,
+      pathSignature,
       byteLength
     };
   };
 
-  const matches = records.map((record, index) => {
-    const defaultSpan = record.span || null;
-    const spanPayload = toSpanPayload(defaultSpan, defaultSpan);
-    const identifierSpanPayload = record.identifierSpan
-      ? toSpanPayload(record.identifierSpan, defaultSpan)
-      : null;
-    const expectedSpanRaw = expectedSpans[index] || null;
-    const expectedSpanPayload = expectedSpanRaw
-      ? toSpanPayload(expectedSpanRaw, defaultSpan)
-      : null;
+  for (const candidate of candidateOrder) {
+    const { span, hash, pathSignature, byteLength } = resolveCandidate(candidate);
+    if (!span || typeof span.start !== 'number' || typeof span.end !== 'number' || span.end <= span.start) {
+      continue;
+    }
+
+    const normalizedSpan = span;
+    const resolvedHash = hash || record.hash || null;
+    if (!resolvedHash) {
+      continue;
+    }
+
+    const resolvedPath = pathSignature || record.pathSignature || null;
+    const resolvedByteLength = typeof byteLength === 'number'
+      ? byteLength
+      : typeof normalizedSpan.byteStart === 'number' && typeof normalizedSpan.byteEnd === 'number'
+        ? Math.max(0, normalizedSpan.byteEnd - normalizedSpan.byteStart)
+        : Math.max(0, normalizedSpan.end - normalizedSpan.start);
 
     return {
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      exportKind: record.exportKind,
-      replaceable: record.replaceable,
-      scopeChain: record.scopeChain,
-      pathSignature: record.pathSignature,
-      span: spanPayload,
-      identifierSpan: identifierSpanPayload,
-      line: record.line,
-      column: record.column,
-      hash: record.hash,
-      expectedHash: expectedHashes[index] || record.hash,
-      expectedSpan: expectedSpanPayload
+      requestedMode: normalizedMode,
+      mode: candidate,
+      span: normalizedSpan,
+      hash: resolvedHash,
+      pathSignature: resolvedPath,
+      byteLength: resolvedByteLength
     };
-  });
-
-  const aggregateSpans = matches.map((match) => {
-    const expected = match.expectedSpan;
-    if (expected && typeof expected.start === 'number' && typeof expected.end === 'number') {
-      return expected;
-    }
-    if (match.span && typeof match.span.start === 'number' && typeof match.span.end === 'number') {
-      return match.span;
-    }
-    return null;
-  });
-
-  const spanRange = computeAggregateSpan(aggregateSpans);
-  const expectedHashList = expectedHashes.filter((value) => typeof value === 'string' && value.length > 0);
-
-  const summary = {
-    matchCount: matches.length,
-    allowMultiple: Boolean(options.allowMultiple),
-    spanRange
-  };
-
-  if (expectedHashList.length > 0) {
-    summary.expectedHashes = expectedHashList;
   }
 
-  return {
-    version: 1,
-    generatedAt: new Date().toISOString(),
-    operation,
-    file: options.filePath,
-    selector: selector || null,
-    summary,
-    matches,
-    ...extras
-  };
+  const label = record.canonicalName || record.name || '(anonymous variable)';
+  throw new Error(`Unable to resolve a ${normalizedMode} span for variable "${label}".`);
 }
 
+function buildSearchSuggestionsForMatch({ matchIndex, query, functionOwner, variableOwner, options }) {
+  const limit = Math.max(1, Math.min(20, options.searchLimit || 20));
+  const contextChars = Math.max(0, options.searchContext || 60);
 
+  const escapeRegex = (text) => {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
 
-function maybeEmitPlan(operation, options, selector, records, expectedHashes = [], expectedSpans = [], extras = {}) {
-  if (!options.emitPlanPath || !records || records.length === 0) {
-    return null;
+  const queryParts = query
+    .split(/\s+/)
+    .filter((part) => part.length > 0)
+    .map((part) => escapeRegex(part));
+
+  const functionName = functionOwner ? functionOwner.name || '' : '';
+  const variableName = variableOwner ? variableOwner.name || '' : '';
+
+  const functionNameMatch = functionName
+    ? queryParts.some((part) => functionName.toLowerCase().includes(part.toLowerCase()))
+    : false;
+  const variableNameMatch = variableName
+    ? queryParts.some((part) => variableName.toLowerCase().includes(part.toLowerCase()))
+    : false;
+
+  const isExactMatch = functionOwner?.canonicalName === query || variableOwner?.canonicalName === query;
+  const isHashMatch = /^hash:[A-Fa-f0-9]+$/.test(query);
+
+  const suggestions = [];
+
+  if (functionOwner && !isExactMatch && !isHashMatch) {
+    suggestions.push({
+      type: 'function',
+      label: functionOwner.canonicalName || functionOwner.name,
+      kind: functionOwner.kind,
+      line: functionOwner.line,
+      column: functionOwner.column,
+      exportKind: functionOwner.exportKind,
+      replaceable: functionOwner.replaceable,
+      pathSignature: functionOwner.pathSignature,
+      hash: functionOwner.hash,
+      matchIndex: matchIndex + 1
+    });
   }
 
-  const plan = buildPlanPayload(operation, options, selector, records, expectedHashes, expectedSpans, extras);
-  writeOutputFile(options.emitPlanPath, `${JSON.stringify(plan, null, 2)}\n`);
-  return plan;
+  if (variableOwner && !isExactMatch && !isHashMatch) {
+    suggestions.push({
+      type: 'variable',
+      label: variableOwner.canonicalName || variableOwner.name,
+      kind: variableOwner.kind,
+      line: variableOwner.line,
+      column: variableOwner.column,
+      exportKind: variableOwner.exportKind,
+      replaceable: variableOwner.replaceable,
+      pathSignature: variableOwner.pathSignature,
+      hash: variableOwner.hash,
+      matchIndex: matchIndex + 1
+    });
+  }
+
+  if (functionNameMatch || variableNameMatch) {
+    const baseType = functionOwner ? 'function' : 'variable';
+    const baseName = functionOwner ? functionOwner.name : variableOwner.name;
+    const baseHash = functionOwner ? functionOwner.hash : variableOwner.hash;
+    const basePath = functionOwner ? functionOwner.pathSignature : variableOwner.pathSignature;
+
+    suggestions.unshift({
+      type: baseType,
+      label: baseName,
+      kind: baseType === 'function' ? functionOwner.kind : variableOwner.kind,
+      line: baseType === 'function' ? functionOwner.line : variableOwner.line,
+      column: baseType === 'function' ? functionOwner.column : variableOwner.column,
+      exportKind: baseType === 'function' ? functionOwner.exportKind : variableOwner.exportKind,
+      replaceable: baseType === 'function' ? functionOwner.replaceable : variableOwner.replaceable,
+      pathSignature: basePath,
+      hash: baseHash,
+      matchIndex: 0
+    });
+  }
+
+  return suggestions;
 }
-
-
-function parseCliArgs(argv) {
-  const parser = new CliArgumentParser(
-    'js-edit',
-    'Inspect and edit JavaScript functions using SWC AST tooling.'
-  );
-
-  const hashDescriptor = formatHashDescriptor(getConfiguredHashEncodings()) || 'base64 (8 chars)';
-
-  parser
-    .add('--file <path>', 'JavaScript file to inspect or modify')
-    .add('--list-functions', 'List detected functions with scope, hash, and byte-length metadata', false, 'boolean')
-    .add('--filter-text <substring>', 'Filter list output by a case-insensitive substring before rendering')
-    .add('--include-paths', 'Include path signatures when listing functions', false, 'boolean')
-    .add('--function-summary', 'Print aggregate metrics for detected functions', false, 'boolean')
-    .add('--list-variables', 'List variable bindings with scope, initializer, and hash metadata', false, 'boolean')
-    .add('--context-function <selector>', 'Show surrounding source for the function matching the selector (±512 chars by default)')
-    .add('--context-variable <selector>', 'Show surrounding source for the variable binding matching the selector (±512 chars by default)')
-    .add('--context-before <chars>', 'Override leading context character count (default 512)', undefined, 'number')
-    .add('--context-after <chars>', 'Override trailing context character count (default 512)', undefined, 'number')
-    .add('--context-enclosing <mode>', 'Expand context to enclosing structures (modes: exact, class, function). Default: exact.', 'exact')
-    .add('--preview <selector>', 'Show a short preview snippet for the function matching the selector')
-    .add('--preview-variable <selector>', 'Show a short preview snippet for the variable matching the selector')
-    .add('--preview-chars <chars>', 'Override the preview character length (default 240)', undefined, 'number')
-    .add('--search-text <substring>', 'Find plain-text matches and surface guard metadata around each match')
-    .add('--search-limit <count>', 'Limit the number of reported text matches (default 20)', undefined, 'number')
-    .add('--search-context <chars>', 'Override the context characters shown around each text match (default 60)', undefined, 'number')
-    .add('--extract <selector>', 'Extract the function matching the selector (safe, read-only)')
-    .add('--extract-hashes <hashes>', 'Extract functions matching the provided guard hashes (comma or space separated)')
-    .add('--replace <selector>', 'Replace the function matching the selector (requires --with or --rename)')
-    .add('--locate <selector>', 'Show guardrail metadata for functions matching the selector')
-    .add('--locate-variable <selector>', 'Show guardrail metadata for the variable matching the selector')
-    .add('--extract-variable <selector>', 'Extract the variable binding or declarator matching the selector')
-    .add('--replace-variable <selector>', 'Replace the variable binding or declarator matching the selector (requires --with or --with-code)')
-    .add('--with <path>', 'Replacement source snippet used by --replace')
-    .add('--with-file <path>', 'Replacement snippet path resolved relative to the target file directory')
-    .add('--with-code <code>', 'Inline replacement code (alternative to --with)')
-    .add('--replace-range <start:end>', 'Replace only the relative character range within the located function (0-based, end-exclusive)')
-    .add('--rename <identifier>', 'Rename the targeted function identifier when the declaration exposes a name')
-    .add('--output <path>', 'Write extracted function to this file instead of stdout')
-    .add('--emit-plan <path>', 'Write resolved guard metadata (span, hash, path) to a JSON plan file')
-    .add('--emit-diff', 'Show before/after snippets for replacements (dry-run friendly)', false, 'boolean')
-    .add('--fix', 'Apply changes to the target file (default is dry-run)', false, 'boolean')
-    .add('--expect-hash <hash>', `Require the target to match the configured guard hash before replacing (${hashDescriptor}).`)
-    .add('--expect-span <start:end>', 'Require the located span offsets to match before replacing (0-based, end-exclusive)')
-    .add('--force', 'Bypass guardrail validation (hash/path checks). Use sparingly.', false, 'boolean')
-    .add('--json', 'Emit structured JSON output instead of formatted text', false, 'boolean')
-    .add('--quiet', 'Suppress formatted output (implies --json)', false, 'boolean')
-    .add('--benchmark', 'Measure parse time for the input file (diagnostic)', false, 'boolean')
-    .add('--select <index|hash:value>', 'Select the nth match when a selector resolves to multiple results (1-based) or supply hash:<value> to pick by guard hash')
-    .add('--select-path <signature>', 'Force selection to the node with the given path signature')
-    .add('--allow-multiple', 'Allow selectors to resolve to multiple matches (locate/context/extract)', false, 'boolean')
-    .add('--variable-target <mode>', 'Variable target span: binding, declarator, or declaration (default: declarator)', 'declarator');
-
-  const program = parser.getProgram();
-  program.addHelpText(
-    'after',
-    `\nExamples:\n  js-edit --file app.js --list-functions --filter-text controller\n  js-edit --file app.js --locate exports.alpha --json\n  js-edit --file app.js --replace exports.alpha --with patch.js --expect-hash HASH --fix\n\nDiscovery commands:\n  --list-functions          Inventory functions; combine with --filter-text, --include-paths, or --function-summary.\n  --list-variables          Inventory bindings and destructuring targets.\n  --preview <selector>      Render a short snippet; use --preview-variable for bindings.\n  --search-text <text>      Locate literal matches, show guard metadata, and emit ready-to-run commands.\n\nEditing commands:\n  --extract <selector>      Print guarded source (use --output to write to a file).\n  --replace <selector>      Apply snippets or --rename; requires --fix to write.\n  --with-file <path>        Load snippets relative to the target file directory.\n  --replace-variable <sel>  Replace bindings; pair with --variable-target binding|declarator|declaration.\n  --replace-range start:end Limit replacements to a slice within the located span.\n\nGuardrails and plans:\n  --expect-hash / --expect-span   Require stable targets before writing.\n  --emit-plan <path>              Emit JSON metadata for downstream automation.\n  --force                         Bypass guardrails only after manual review.\n\nSelector hints:\n  exports.name\n  module.exports.handler\n  ClassName > static > method\n  call:describe:mission > callback\n  hash:CAFED00D (from --list-functions --json)\n  --select hash:CAFED00D (combine with selectors to lock onto a guard hash)\n\nOutput controls:\n  --json / --quiet emit machine-readable payloads.\n  --emit-diff previews replacements during dry-runs.\n`
-  );
-
-  return parser.parse(argv);
-}
-
-
-
-
 
 function normalizeOptions(raw) {
   const resolved = { ...raw };
@@ -1676,12 +1236,49 @@ function normalizeOptions(raw) {
 
   const includePaths = Boolean(resolved.includePaths);
   const functionSummary = Boolean(resolved.functionSummary);
+  const rawListOutput = resolved.listOutput !== undefined && resolved.listOutput !== null
+    ? String(resolved.listOutput).trim()
+    : '';
+  const envListOutput = process.env[LIST_OUTPUT_ENV_VAR]
+    ? String(process.env[LIST_OUTPUT_ENV_VAR]).trim()
+    : '';
+  let listOutputStyle = DEFAULT_LIST_OUTPUT_STYLE;
+  let listOutputProvided = false;
+
+  if (rawListOutput) {
+    listOutputProvided = true;
+    const normalized = rawListOutput.toLowerCase();
+    if (!LIST_OUTPUT_STYLES.has(normalized)) {
+      const allowed = Array.from(LIST_OUTPUT_STYLES).join(', ');
+      throw new Error(`--list-output must be one of: ${allowed}.`);
+    }
+    listOutputStyle = normalized;
+  } else if (envListOutput) {
+    const normalizedEnv = envListOutput.toLowerCase();
+    if (LIST_OUTPUT_STYLES.has(normalizedEnv)) {
+      listOutputStyle = normalizedEnv;
+    }
+  }
 
   const filterText = resolved.filterText !== undefined && resolved.filterText !== null
     ? String(resolved.filterText).trim()
     : null;
   if (filterText !== null && filterText.length === 0) {
     throw new Error('--filter-text requires a non-empty value.');
+  }
+
+  const matchPattern = resolved.match !== undefined && resolved.match !== null
+    ? String(resolved.match).trim()
+    : null;
+  if (matchPattern !== null && matchPattern.length === 0) {
+    throw new Error('--match requires a non-empty value.');
+  }
+
+  const excludePattern = resolved.exclude !== undefined && resolved.exclude !== null
+    ? String(resolved.exclude).trim()
+    : null;
+  if (excludePattern !== null && excludePattern.length === 0) {
+    throw new Error('--exclude requires a non-empty value.');
   }
 
   const searchText = resolved.searchText !== undefined && resolved.searchText !== null
@@ -1698,9 +1295,7 @@ function normalizeOptions(raw) {
       : [resolved.extractHashes];
 
     const tokens = rawValues
-      .map((value) => String(value))
-      .join(' ')
-      .split(/[\s,]+/)
+      .flatMap((value) => String(value).split(','))
       .map((token) => token.trim())
       .filter(Boolean);
 
@@ -1726,14 +1321,18 @@ function normalizeOptions(raw) {
 
   const operationMatrix = [
     ['--list-functions', Boolean(resolved.listFunctions)],
+    ['--list-constructors', Boolean(resolved.listConstructors)],
     ['--function-summary', functionSummary],
     ['--extract-hashes', extractHashes.length > 0],
     ['--list-variables', Boolean(resolved.listVariables)],
+    ['--outline', Boolean(resolved.outline)],
     ['--context-function', resolved.contextFunction !== undefined && resolved.contextFunction !== null],
     ['--context-variable', resolved.contextVariable !== undefined && resolved.contextVariable !== null],
     ['--preview', resolved.preview !== undefined && resolved.preview !== null],
     ['--preview-variable', resolved.previewVariable !== undefined && resolved.previewVariable !== null],
+    ['--snipe', resolved.snipe !== undefined && resolved.snipe !== null],
     ['--search-text', Boolean(searchText)],
+    ['--scan-targets', resolved.scanTargets !== undefined && resolved.scanTargets !== null],
     ['--extract', resolved.extract !== undefined && resolved.extract !== null],
     ['--replace', resolved.replace !== undefined && resolved.replace !== null],
     ['--locate', resolved.locate !== undefined && resolved.locate !== null],
@@ -1744,19 +1343,38 @@ function normalizeOptions(raw) {
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
   if (enabledOperations.length === 0) {
-    throw new Error('Provide one of --list-functions, --function-summary, --extract-hashes <hashes>, --list-variables, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --search-text <substring>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
+    throw new Error('Provide one of --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
   }
   if (enabledOperations.length > 1) {
     const flags = enabledOperations.map(([flag]) => flag).join(', ');
     throw new Error(`Only one operation may be specified at a time. Found: ${flags}.`);
   }
 
-  if (filterText !== null && !resolved.listFunctions && !resolved.listVariables) {
-    throw new Error('--filter-text can only be used with --list-functions or --list-variables.');
+  if (filterText !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
+    throw new Error('--filter-text can only be used with --list-functions, --list-constructors, or --list-variables.');
+  }
+
+  if (matchPattern !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
+    throw new Error('--match can only be used with --list-functions, --list-constructors, or --list-variables.');
+  }
+
+  if (excludePattern !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
+    throw new Error('--exclude can only be used with --list-functions, --list-constructors, or --list-variables.');
+  }
+
+  if (listOutputProvided && !resolved.listFunctions && !resolved.listConstructors && !resolved.listVariables) {
+    throw new Error('--list-output can only be used with --list-functions, --list-constructors, or --list-variables.');
+  }
+
+  const includeInternals = Boolean(resolved.includeInternals);
+  if (includeInternals && !resolved.listConstructors) {
+    throw new Error('--include-internals can only be used with --list-constructors.');
   }
 
   const emitDiff = Boolean(resolved.emitDiff);
   const fix = Boolean(resolved.fix);
+  const previewEdit = Boolean(resolved.previewEdit);
+  const outline = Boolean(resolved.outline);
   const force = Boolean(resolved.force);
   const benchmark = Boolean(resolved.benchmark);
   const quiet = Boolean(resolved.quiet);
@@ -1842,6 +1460,8 @@ function normalizeOptions(raw) {
   const replaceVariableSelector = parseSelector(resolved.replaceVariable, '--replace-variable');
   const previewSelector = parseSelector(resolved.preview, '--preview');
   const previewVariableSelector = parseSelector(resolved.previewVariable, '--preview-variable');
+  const scanTargetsSelector = parseSelector(resolved.scanTargets, '--scan-targets');
+  const snipePosition = parseSelector(resolved.snipe, '--snipe');
 
   let contextBefore = null;
   if (resolved.contextBefore !== undefined && resolved.contextBefore !== null) {
@@ -1895,6 +1515,23 @@ function normalizeOptions(raw) {
   }
   if (searchContext !== null && !searchText) {
     throw new Error('--search-context can only be used with --search-text.');
+  }
+
+  let scanTargetKind = 'function';
+  let scanTargetKindProvided = false;
+  if (resolved.scanTargetKind !== undefined && resolved.scanTargetKind !== null) {
+    const rawKind = String(resolved.scanTargetKind).trim().toLowerCase();
+    if (!rawKind) {
+      throw new Error('--scan-target-kind requires a non-empty value (function or variable).');
+    }
+    if (rawKind !== 'function' && rawKind !== 'variable') {
+      throw new Error('--scan-target-kind must be either function or variable.');
+    }
+    scanTargetKind = rawKind;
+    scanTargetKindProvided = true;
+  }
+  if (scanTargetKindProvided && !scanTargetsSelector) {
+    throw new Error('--scan-target-kind can only be used together with --scan-targets.');
   }
 
   const contextEnclosingRaw = resolved.contextEnclosing
@@ -2011,6 +1648,41 @@ function normalizeOptions(raw) {
     throw new Error('--replace-range is not supported with --replace-variable.');
   }
 
+  const rawEmitDigests = Boolean(resolved.emitDigests);
+  const rawNoDigests = Boolean(resolved.noDigests);
+  let emitDigests = rawEmitDigests;
+  let digestDir = null;
+
+  if (resolved.emitDigestDir !== undefined && resolved.emitDigestDir !== null) {
+    const digestPath = String(resolved.emitDigestDir).trim();
+    if (!digestPath) {
+      throw new Error('--emit-digest-dir requires a directory path.');
+    }
+    digestDir = path.isAbsolute(digestPath)
+      ? digestPath
+      : path.resolve(process.cwd(), digestPath);
+    emitDigests = true;
+  }
+
+  if (rawNoDigests) {
+    emitDigests = false;
+    digestDir = null;
+  }
+
+  const digestIncludeSnippets = Boolean(resolved.digestIncludeSnippets);
+
+  if (digestIncludeSnippets && !emitDigests) {
+    throw new Error('--digest-include-snippets requires --emit-digests or --emit-digest-dir.');
+  }
+
+  if (emitDigests && !hasFunctionReplace && !hasVariableReplace) {
+    throw new Error('--emit-digests/--emit-digest-dir can only be used with --replace or --replace-variable.');
+  }
+
+  if (emitDigests && !digestDir) {
+    digestDir = path.resolve(process.cwd(), 'tmp/js-edit-digests');
+  }
+
   if (expectSpan && !hasFunctionReplace) {
     throw new Error('--expect-span can only be used alongside --replace.');
   }
@@ -2039,13 +1711,20 @@ function normalizeOptions(raw) {
 
   return {
     filePath,
+    listFunctions: Boolean(resolved.listFunctions),
     list: Boolean(resolved.listFunctions),
+    listConstructors: Boolean(resolved.listConstructors),
     listVariables: Boolean(resolved.listVariables),
+    outline,
     filterText,
+    matchPattern,
+    excludePattern,
     contextFunctionSelector,
     contextVariableSelector,
     previewSelector,
     previewVariableSelector,
+    scanTargetsSelector,
+    snipePosition,
     extractSelector,
     replaceSelector,
     locateSelector,
@@ -2058,6 +1737,7 @@ function normalizeOptions(raw) {
     outputPath,
     emitPlanPath,
     emitDiff,
+    previewEdit,
     json,
     quiet,
     benchmark,
@@ -2074,1580 +1754,297 @@ function normalizeOptions(raw) {
     extractVariableSelector,
     replaceVariableSelector,
     previewChars,
+    scanTargetKind,
     variableTarget,
     contextBefore,
     contextAfter,
     contextEnclosing: contextEnclosingRaw,
     includePaths,
     extractHashes,
-    functionSummary
+    functionSummary,
+    emitDigests,
+    digestDir,
+    digestIncludeSnippets,
+    includeInternals,
+    listOutputStyle
   };
 }
 
-
-
-
-
-
-function readSource(filePath) {
-  try {
-    return fs.readFileSync(filePath, 'utf8');
-    } catch (error) {
-    throw new Error(`Failed to read file: ${filePath}\n${error.message}`);
-  }
-}
-
-function loadReplacementSource(filePath) {
-  try {
-    return fs.readFileSync(filePath, 'utf8');
-    } catch (error) {
-    throw new Error(`Failed to read replacement snippet: ${filePath}\n${error.message}`);
-  }
-}
-
-/**
- * Get replacement code from either file path or inline string.
- * If inline code is provided, unescapes quotes and backslashes.
- * Validates syntax before returning.
- */
-function getReplacementSource(options) {
-  if (options.replacementCode) {
-    let code = unescapeCodeString(options.replacementCode);
-    
-    // Validate syntax
-    const validation = validateCodeSyntax(code, '<inline>');
-    if (!validation.valid) {
-      throw new Error(`Replacement produced invalid JavaScript: ${validation.error}`);
-    }
-    
-    return code;
-  }
-  
-  if (options.replacementPath) {
-    return loadReplacementSource(options.replacementPath);
-  }
-  
-  throw new Error('No replacement source provided.');
-}
-
-function writeOutputFile(filePath, content) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content, 'utf8');
-}
-
-function outputJson(payload) {
-  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-}
-
-function listFunctions(options, source, functions) {
-  const { filePath, json, quiet, filterText, includePaths } = options;
-  const normalizedFilter = filterText ? filterText.toLowerCase() : null;
-
-  const matchesFilter = (fn) => {
-    if (!normalizedFilter) {
-      return true;
-    }
-    const haystacks = [
-      fn.name,
-      fn.canonicalName,
-      fn.kind,
-      fn.exportKind,
-      fn.pathSignature,
-      fn.hash,
-      Array.isArray(fn.scopeChain) ? fn.scopeChain.join(' > ') : null
-    ];
-    return haystacks.some((value) => typeof value === 'string' && value.toLowerCase().includes(normalizedFilter));
-  };
-
-  const mapRecord = (fn) => {
-    const byteLength = Math.max(0, (fn.span?.end ?? 0) - (fn.span?.start ?? 0));
-    return {
-      name: fn.name,
-      canonicalName: fn.canonicalName,
-      kind: fn.kind,
-      exportKind: fn.exportKind,
-      replaceable: fn.replaceable,
-      line: fn.line,
-      column: fn.column,
-      scopeChain: fn.scopeChain,
-      pathSignature: fn.pathSignature,
-      hash: fn.hash,
-      byteLength
-    };
-  };
-
-  const filtered = normalizedFilter ? functions.filter(matchesFilter) : functions.slice();
-  const filteredRecords = filtered.map(mapRecord);
-
-  const payload = {
-    file: filePath,
-    filterText: filterText || null,
-    totalFunctions: functions.length,
-    matchedFunctions: filtered.length,
-    functions: filteredRecords
-  };
-
-  if (json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!quiet) {
-    fmt.header('Function Inventory');
-    if (functions.length === 0) {
-      fmt.warn('No functions detected in the supplied file.');
-      return;
-    }
-
-    if (filterText) {
-      fmt.info(`Filter "${filterText}" matched ${filtered.length} of ${functions.length} functions.`);
-    }
-
-    fmt.section('Detected Functions');
-    if (filtered.length === 0) {
-      fmt.warn('No functions matched the current filter.');
-    } else {
-      const tableRows = filteredRecords.map((record, index) => {
-        const original = filtered[index] || null;
-        const span = original && original.span ? original.span : null;
-        const charLength = span && typeof span.start === 'number' && typeof span.end === 'number'
-          ? Math.max(0, span.end - span.start)
-          : null;
-        const row = {
-          index: index + 1,
-          name: record.name,
-          hash: record.hash || '-',
-          kind: record.kind,
-          export: record.exportKind || '-',
-          line: record.line,
-          column: record.column,
-          bytes: Number.isFinite(record.byteLength) ? record.byteLength : charLength ?? 0,
-          replaceable: record.replaceable ? 'yes' : 'no'
-        };
-        if (includePaths) {
-          row.path = record.pathSignature || '-';
-        }
-        return row;
-      });
-
-      const columns = ['index', 'name', 'hash', 'kind', 'export', 'line', 'column', 'bytes', 'replaceable'];
-      if (includePaths) {
-        columns.push('path');
-      }
-
-      fmt.table(tableRows, { columns });
-    }
-    fmt.stat('Total functions', functions.length, 'number');
-    if (filterText) {
-      fmt.stat('Matched functions', filtered.length, 'number');
-    }
-    fmt.footer();
-  }
-}
-
-
-function listVariables(options, source, variables) {
-  const { filePath, json, quiet, filterText } = options;
-  const normalizedFilter = filterText ? filterText.toLowerCase() : null;
-
-  const matchesFilter = (variable) => {
-    if (!normalizedFilter) {
-      return true;
-    }
-
-    const haystacks = [
-      variable.name,
-      variable.kind,
-      variable.exportKind,
-      variable.initializerType,
-      variable.pathSignature,
-      variable.hash,
-      variable.declarationHash,
-      variable.declaratorHash,
-      Array.isArray(variable.scopeChain) ? variable.scopeChain.join(' > ') : null
-    ];
-
-    return haystacks.some((value) => typeof value === 'string' && value.toLowerCase().includes(normalizedFilter));
-  };
-
-  const mapRecord = (variable) => {
-    const byteLength = typeof variable.byteLength === 'number'
-      ? variable.byteLength
-      : Math.max(0, (variable.span?.end ?? 0) - (variable.span?.start ?? 0));
-
-    return {
-      name: variable.name,
-      kind: variable.kind,
-      exportKind: variable.exportKind,
-      initializerType: variable.initializerType,
-      line: variable.line,
-      column: variable.column,
-      scopeChain: variable.scopeChain,
-      pathSignature: variable.pathSignature,
-      hash: variable.hash,
-      byteLength,
-      declaratorSpan: variable.declaratorSpan,
-      declaratorHash: variable.declaratorHash,
-      declaratorByteLength: variable.declaratorByteLength,
-      declaratorPathSignature: variable.declaratorPathSignature,
-      declarationSpan: variable.declarationSpan,
-      declarationHash: variable.declarationHash,
-      declarationByteLength: variable.declarationByteLength,
-      declarationPathSignature: variable.declarationPathSignature
-    };
-  };
-
-  const filtered = normalizedFilter ? variables.filter(matchesFilter) : variables.slice();
-
-  const payload = {
-    file: filePath,
-    filterText: filterText || null,
-    totalVariables: variables.length,
-    matchedVariables: filtered.length,
-    variables: filtered.map(mapRecord)
-  };
-
-  if (json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!quiet) {
-    fmt.header('Variable Inventory');
-    if (variables.length === 0) {
-      fmt.warn('No variables detected in the supplied file.');
-      return;
-    }
-
-    if (filterText) {
-      fmt.info(`Filter "${filterText}" matched ${filtered.length} of ${variables.length} variables.`);
-    }
-
-    fmt.section('Detected Variables');
-    if (filtered.length === 0) {
-      fmt.warn('No variables matched the current filter.');
-    } else {
-      fmt.table(filtered.map((variable) => ({
-        name: variable.name,
-        kind: variable.kind,
-        export: variable.exportKind || '-',
-        line: variable.line,
-        column: variable.column,
-        scope: toReadableScope(variable.scopeChain),
-        init: variable.initializerType || '-',
-        bytes: typeof variable.byteLength === 'number'
-          ? variable.byteLength
-          : Math.max(0, (variable.span?.end ?? 0) - (variable.span?.start ?? 0))
-      })), {
-        columns: ['name', 'kind', 'export', 'line', 'column', 'scope', 'init', 'bytes']
-      });
-    }
-
-    fmt.stat('Total variables', variables.length, 'number');
-    if (filterText) {
-      fmt.stat('Matched variables', filtered.length, 'number');
-    }
-    fmt.footer();
-  }
-}
-
-function previewFunction(options, source, functionRecords, selector) {
-  const [record] = resolveMatches(functionRecords, selector, options, { operation: 'preview' });
-  const snippet = extractCode(source, record.span, options.sourceMapper);
-  const preview = createPreviewSnippet(snippet, options.previewChars);
-
-  const payload = {
-    file: options.filePath,
-    selector,
-    entity: 'function',
-    function: {
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      exportKind: record.exportKind || null,
-      line: record.line,
-      column: record.column,
-      scopeChain: record.scopeChain,
-      pathSignature: record.pathSignature,
-      hash: record.hash,
-      span: record.span
-    },
-    preview: {
-      text: preview.text,
-      truncated: preview.truncated,
-      totalChars: preview.totalChars,
-      limit: preview.limit
-    }
-  };
-
-  const plan = maybeEmitPlan('preview', options, selector, [record]);
-  if (plan) {
-    payload.plan = plan;
-  }
-
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (options.quiet) {
-    return;
-  }
-
-  fmt.header('Function Preview');
-  fmt.section(`Selector: ${selector}`);
-  fmt.stat('Name', record.canonicalName || record.name);
-  fmt.stat('Kind', record.kind);
-  if (record.exportKind) {
-    fmt.stat('Export', record.exportKind);
-  }
-  fmt.stat('Location', `${record.line}:${record.column}`);
-  if (Array.isArray(record.scopeChain) && record.scopeChain.length > 0) {
-    fmt.stat('Scope', record.scopeChain.join(' > '));
-  }
-  fmt.stat('Path', record.pathSignature);
-  fmt.stat('Hash', record.hash);
-  const spanDetails = formatSpanDetails(record.span);
-  if (spanDetails) {
-    fmt.stat('Span', spanDetails);
-  }
-  const displayedChars = Math.min(preview.limit, preview.totalChars);
-  fmt.stat('Preview length', `${displayedChars} of ${preview.totalChars}`);
-  if (preview.truncated) {
-    fmt.warn(`Preview truncated to ${preview.limit} characters. Use --preview-chars to extend.`);
-  }
-  fmt.section('Preview Snippet');
-  fmt.codeBlock(preview.text);
-  if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
-  }
-  fmt.footer();
-}
-
-function previewVariable(options, source, variableRecords, selector) {
-  const [record] = resolveVariableMatches(variableRecords, selector, options, { operation: 'preview-variable' });
-  const target = resolveVariableTargetInfo(record, options.variableTarget);
-  const snippet = extractCode(source, target.span, options.sourceMapper);
-  const preview = createPreviewSnippet(snippet, options.previewChars);
-
-  const payload = {
-    file: options.filePath,
-    selector,
-    entity: 'variable',
-    variable: {
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      initializerType: record.initializerType || null,
-      line: record.line,
-      column: record.column,
-      scopeChain: record.scopeChain,
-      targetMode: target.mode,
-      requestedMode: target.requestedMode,
-      pathSignature: target.pathSignature,
-      hash: target.hash,
-      span: target.span,
-      byteLength: target.byteLength
-    },
-    preview: {
-      text: preview.text,
-      truncated: preview.truncated,
-      totalChars: preview.totalChars,
-      limit: preview.limit
-    }
-  };
-
-  const plan = maybeEmitPlan('preview-variable', options, selector, [record], [target.hash], [target.span], {
-    entity: 'variable',
-    targetMode: target.mode
-  });
-  if (plan) {
-    payload.plan = plan;
-  }
-
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (options.quiet) {
-    return;
-  }
-
-  fmt.header('Variable Preview');
-  fmt.section(`Selector: ${selector}`);
-  fmt.stat('Name', record.canonicalName || record.name);
-  fmt.stat('Kind', record.kind);
-  if (record.initializerType) {
-    fmt.stat('Initializer', record.initializerType);
-  }
-  fmt.stat('Location', `${record.line}:${record.column}`);
-  if (Array.isArray(record.scopeChain) && record.scopeChain.length > 0) {
-    fmt.stat('Scope', record.scopeChain.join(' > '));
-  }
-  fmt.stat('Target Mode', `${target.mode} (requested ${target.requestedMode})`);
-  fmt.stat('Path', target.pathSignature || '(unavailable)');
-  fmt.stat('Hash', target.hash);
-  const spanDetails = formatSpanDetails(target.span);
-  if (spanDetails) {
-    fmt.stat('Span', spanDetails);
-  }
-  const displayedChars = Math.min(preview.limit, preview.totalChars);
-  fmt.stat('Preview length', `${displayedChars} of ${preview.totalChars}`);
-  if (preview.truncated) {
-    fmt.warn(`Preview truncated to ${preview.limit} characters. Use --preview-chars to extend.`);
-  }
-  fmt.section('Preview Snippet');
-  fmt.codeBlock(preview.text);
-  if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
-  }
-  fmt.footer();
-}
-
-function searchTextMatches(options, source, functionRecords, variableRecords) {
-  const query = options.searchText;
-  const limit = Number.isInteger(options.searchLimit) && options.searchLimit > 0
-    ? options.searchLimit
-    : DEFAULT_SEARCH_LIMIT;
-  const contextChars = Number.isFinite(options.searchContext) && options.searchContext >= 0
-    ? Math.floor(options.searchContext)
-    : DEFAULT_SEARCH_CONTEXT;
-
-  const matches = [];
-  let truncated = false;
-  const lineOffsets = buildLineIndex(source);
-  const step = Math.max(1, query.length);
-  let searchIndex = 0;
-
-  while (searchIndex <= source.length) {
-    const matchIndex = source.indexOf(query, searchIndex);
-    if (matchIndex === -1) {
-      break;
-    }
-
-    const matchEnd = matchIndex + query.length;
-
-    if (matches.length < limit) {
-      const location = positionFromIndex(matchIndex, lineOffsets);
-      const snippet = buildSearchSnippet(source, matchIndex, matchEnd, contextChars);
-      const functionOwner = findFunctionOwner(functionRecords, matchIndex);
-      const variableOwner = findVariableOwner(variableRecords, matchIndex);
-
-      const functionGuard = functionOwner
-        ? {
-            name: functionOwner.name,
-            canonicalName: functionOwner.canonicalName,
-            kind: functionOwner.kind,
-            line: functionOwner.line,
-            column: functionOwner.column,
-            pathSignature: functionOwner.pathSignature,
-            hash: functionOwner.hash
-          }
-        : null;
-
-      let variableGuard = null;
-      if (variableOwner) {
-        let targetInfo = null;
-        try {
-          targetInfo = resolveVariableTargetInfo(variableOwner, options.variableTarget);
-        } catch (error) {
-          targetInfo = null;
-        }
-        variableGuard = {
-          name: variableOwner.name,
-          canonicalName: variableOwner.canonicalName,
-          kind: variableOwner.kind,
-          line: variableOwner.line,
-          column: variableOwner.column,
-          pathSignature: targetInfo?.pathSignature || variableOwner.pathSignature,
-          hash: targetInfo?.hash || variableOwner.hash,
-          targetMode: targetInfo?.mode || options.variableTarget,
-          span: targetInfo?.span || variableOwner.span
-        };
-      }
-
-      const suggestionEntry = buildSearchSuggestionsForMatch({
-        matchIndex,
-        query,
-        functionOwner,
-        variableOwner,
-        options,
-        contextChars
-      });
-
-      matches.push({
-        index: matches.length + 1,
-        charStart: matchIndex,
-        charEnd: matchEnd,
-        line: location.line,
-        column: location.column,
-        snippet,
-        guard: {
-          function: functionGuard,
-          variable: variableGuard
-        },
-        suggestions: suggestionEntry
-      });
-    } else {
-      truncated = true;
-      break;
-    }
-
-    searchIndex = matchIndex + step;
-  }
-
-  const payloadMatches = matches.map((match) => ({
-    index: match.index,
-    charStart: match.charStart,
-    charEnd: match.charEnd,
-    line: match.line,
-    column: match.column,
-    snippet: {
-      before: match.snippet.before,
-      match: match.snippet.match,
-      after: match.snippet.after,
-      truncatedBefore: match.snippet.truncatedBefore,
-      truncatedAfter: match.snippet.truncatedAfter,
-      highlighted: match.snippet.highlighted,
-      range: match.snippet.range
-    },
-    guard: match.guard,
-    suggestions: match.suggestions
-  }));
-
-  const payload = {
-    file: options.filePath,
-    query,
-    limit,
-    contextChars,
-    matches: payloadMatches,
-    matchCount: payloadMatches.length,
-    truncated
-  };
-
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (options.quiet) {
-    return;
-  }
-
-  fmt.header('Text Search');
-  fmt.section(`Query: "${query}"`);
-  fmt.stat('Matches reported', payload.matchCount, 'number');
-  fmt.stat('Limit', limit, 'number');
-  fmt.stat('Context chars', contextChars, 'number');
-
-  if (payload.matchCount === 0) {
-    fmt.warn('No matches found.');
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
-    }
-    fmt.footer();
-    return;
-  }
-
-  fmt.section('Match Overview');
-  fmt.table(payloadMatches.map((match) => ({
-    index: match.index,
-    line: match.line,
-    column: match.column,
-    function: match.guard.function
-      ? (match.guard.function.canonicalName || match.guard.function.name || '-')
-      : '-',
-    variable: match.guard.variable
-      ? (match.guard.variable.canonicalName || match.guard.variable.name || '-')
-      : '-'
-  })), {
-    columns: ['index', 'line', 'column', 'function', 'variable']
-  });
-
-  if (truncated) {
-    fmt.warn('Additional matches were omitted. Increase --search-limit to capture more results.');
-  }
-
-  matches.forEach((match) => {
-    fmt.section(`Match ${match.index}`);
-    fmt.stat('Location', `${match.line}:${match.column}`);
-    const spanSummary = formatSpanRange('chars', match.charStart, match.charEnd, match.charEnd - match.charStart);
-    if (spanSummary) {
-      fmt.stat('Span', spanSummary);
-    }
-
-    if (match.guard.function) {
-      const fnGuard = match.guard.function;
-      const hashPreview = fnGuard.hash ? fnGuard.hash.slice(0, 12) : '(unknown)';
-      fmt.stat('Function guard', `${fnGuard.canonicalName || fnGuard.name} (${hashPreview})`);
-      fmt.stat('Function path', fnGuard.pathSignature);
-    }
-
-    if (match.guard.variable) {
-      const varGuard = match.guard.variable;
-      const hashPreview = varGuard.hash ? varGuard.hash.slice(0, 12) : '(unknown)';
-      fmt.stat('Variable guard', `${varGuard.canonicalName || varGuard.name} (${hashPreview})`);
-      fmt.stat('Variable path', varGuard.pathSignature || '(unavailable)');
-      if (varGuard.targetMode) {
-        fmt.stat('Target mode', varGuard.targetMode);
-      }
-    }
-
-    const contextSummary = formatSpanRange('chars', match.snippet.range.start, match.snippet.range.end, match.snippet.range.end - match.snippet.range.start);
-    if (contextSummary) {
-      fmt.stat('Context window', contextSummary);
-    }
-
-    fmt.section('Snippet');
-    fmt.codeBlock(match.snippet.highlighted);
-
-    const suggestionCommands = buildSearchSuggestions(match, options);
-    if (suggestionCommands && suggestionCommands.length > 0) {
-      fmt.list('Follow-up commands', suggestionCommands.map((command) => `js-edit ${command}`));
-    }
-  });
-
-  if (options.emitPlanPath) {
-    fmt.info(`Plan written to ${options.emitPlanPath}`);
-  }
-
-  fmt.footer();
-}
-
-function buildSearchSuggestionsForMatch({ query, functionOwner, variableOwner, options, contextChars }) {
-  const commands = [];
-  const baseArgs = [`--file "${options.filePath}"`];
-
-  if (functionOwner && functionOwner.hash) {
-    const selector = functionOwner.canonicalName || functionOwner.name;
-    if (selector) {
-      commands.push(`${baseArgs.join(' ')} --locate "${escapeSuggestionValue(selector)}" --select hash:${functionOwner.hash}`);
-    }
-  }
-
-  if (variableOwner && variableOwner.hash) {
-    const selector = variableOwner.canonicalName || variableOwner.name;
-    if (selector) {
-      commands.push(`${baseArgs.join(' ')} --locate-variable "${escapeSuggestionValue(selector)}" --select hash:${variableOwner.hash}`);
-    }
-  }
-
-  if (commands.length === 0) {
-    const resolvedContext = Number.isFinite(contextChars) && contextChars >= 0 ? contextChars : DEFAULT_SEARCH_CONTEXT;
-    commands.push(`${baseArgs.join(' ')} --search-text "${escapeSuggestionValue(query)}" --search-context ${resolvedContext}`);
-  }
-
-  return commands;
-}
-
-function escapeSuggestionValue(value) {
-  if (typeof value !== 'string') {
-    return '';
-  }
-  return value.replace(/"/g, '\\"');
-}
-
-
-
-
-
-
-
-
-
-
-
-
-function locateFunctions(options, functionRecords, selector) {
-  const resolved = resolveMatches(functionRecords, selector, options, { operation: 'locate' });
-  const plan = maybeEmitPlan('locate', options, selector, resolved);
-  const spanRange = computeAggregateSpan(resolved.map((record) => {
-    if (!record || !record.span) {
-      return null;
-    }
-    return record.span;
-  }));
-  const payload = {
-    file: options.filePath,
-    selector,
-    summary: {
-      matchCount: resolved.length,
-      spanRange
-    },
-    matches: resolved.map((record) => {
-      const span = record.span || {};
-      const spanPayload = {
-        start: typeof span.start === 'number' ? span.start : null,
-        end: typeof span.end === 'number' ? span.end : null,
-        length: typeof span.start === 'number' && typeof span.end === 'number' ? Math.max(0, span.end - span.start) : null,
-        byteStart: typeof span.byteStart === 'number' ? span.byteStart : null,
-        byteEnd: typeof span.byteEnd === 'number' ? span.byteEnd : null,
-        byteLength: typeof span.byteStart === 'number' && typeof span.byteEnd === 'number'
-          ? Math.max(0, span.byteEnd - span.byteStart)
-          : null
-      };
-
-      return {
-        name: record.name,
-        canonicalName: record.canonicalName,
-        kind: record.kind,
-        exportKind: record.exportKind,
-        line: record.line,
-        column: record.column,
-        pathSignature: record.pathSignature,
-        hash: record.hash,
-        scopeChain: record.scopeChain,
-        span: spanPayload
-      };
-    })
-  };
-
-  if (plan) {
-    payload.plan = plan;
-  }
-
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!options.quiet) {
-    fmt.header('Function Locate');
-    fmt.section(`Selector: ${selector}`);
-    fmt.table(payload.matches.map((match, index) => {
-      const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
-      const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
-
-      return {
-        index: index + 1,
-        name: match.canonicalName || match.name,
-        kind: match.kind,
-        line: match.line,
-        column: match.column,
-        chars: charSummary || '-',
-        bytes: byteSummary || '-',
-        path: match.pathSignature,
-        hash: match.hash.slice(0, 12)
-      };
-    }), {
-      columns: ['index', 'name', 'kind', 'line', 'column', 'chars', 'bytes', 'path', 'hash']
-    });
-    fmt.stat('Matches', payload.summary.matchCount, 'number');
-    const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
-    if (formattedSpanRange) {
-      fmt.stat('Span range', formattedSpanRange);
-    }
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
-    }
-    fmt.footer();
-  }
-}
-
-
-
-
-function locateVariables(options, variableRecords, selector) {
-  const resolved = resolveVariableMatches(variableRecords, selector, options, { operation: 'locate-variable' });
-  const targets = resolved.map((record) => resolveVariableTargetInfo(record, options.variableTarget));
-  const expectedHashes = targets.map((target) => target.hash);
-  const expectedSpans = targets.map((target) => target.span);
-  const plan = maybeEmitPlan('locate-variable', options, selector, resolved, expectedHashes, expectedSpans, {
-    entity: 'variable',
-    targetMode: options.variableTarget
-  });
-
-  const spanRange = computeAggregateSpan(targets.map((target) => {
-    if (!target || !target.span) {
-      return null;
-    }
-    return target.span;
-  }));
-
-  const matches = resolved.map((record, index) => {
-    const target = targets[index];
-    const span = target.span || {};
-    const spanPayload = {
-      start: typeof span.start === 'number' ? span.start : null,
-      end: typeof span.end === 'number' ? span.end : null,
-      length: typeof span.start === 'number' && typeof span.end === 'number' ? Math.max(0, span.end - span.start) : null,
-      byteStart: typeof span.byteStart === 'number' ? span.byteStart : null,
-      byteEnd: typeof span.byteEnd === 'number' ? span.byteEnd : null,
-      byteLength: typeof span.byteStart === 'number' && typeof span.byteEnd === 'number'
-        ? Math.max(0, span.byteEnd - span.byteStart)
-        : null
-    };
-
-    return {
-      name: record.canonicalName || record.name,
-      canonicalName: record.canonicalName || record.name,
-      kind: record.kind,
-      initializerType: record.initializerType || null,
-      line: record.line,
-      column: record.column,
-      scopeChain: record.scopeChain,
-      pathSignature: target.pathSignature,
-      hash: target.hash,
-      span: spanPayload,
-      targetMode: target.mode,
-      requestedMode: target.requestedMode
-    };
-  });
-
-  const payload = {
-    file: options.filePath,
-    selector,
-    targetMode: options.variableTarget,
-    summary: {
-      matchCount: matches.length,
-      spanRange
-    },
-    matches
-  };
-
-  if (plan) {
-    payload.plan = plan;
-  }
-
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!options.quiet) {
-    fmt.header('Variable Locate');
-    fmt.section(`Selector: ${selector}`);
-    fmt.stat('Target Mode', `${options.variableTarget}`);
-    fmt.table(matches.map((match, index) => {
-      const charSummary = formatSpanRange('chars', match.span.start, match.span.end, match.span.length);
-      const byteSummary = formatSpanRange('bytes', match.span.byteStart, match.span.byteEnd, match.span.byteLength);
-
-      return {
-        index: index + 1,
-        name: match.name,
-        kind: match.kind,
-        line: match.line,
-        column: match.column,
-        mode: match.targetMode,
-        chars: charSummary || '-',
-        bytes: byteSummary || '-',
-        path: match.pathSignature,
-        hash: match.hash ? match.hash.slice(0, 12) : '-'
-      };
-    }), {
-      columns: ['index', 'name', 'kind', 'line', 'column', 'mode', 'chars', 'bytes', 'path', 'hash']
-    });
-    fmt.stat('Matches', payload.summary.matchCount, 'number');
-    const formattedSpanRange = formatAggregateSpan(payload.summary.spanRange);
-    if (formattedSpanRange) {
-      fmt.stat('Span range', formattedSpanRange);
-    }
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
-    }
-    fmt.footer();
-  }
-}
-
-
-
-
-function extractFunction(options, source, record, selector) {
-  const { filePath, outputPath, json, quiet } = options;
-  const snippet = extractCode(source, record.span, options.sourceMapper);
-
-  const payload = {
-    file: filePath,
-    function: {
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      line: record.line,
-      column: record.column,
-      exportKind: record.exportKind,
-      replaceable: record.replaceable,
-      pathSignature: record.pathSignature,
-      hash: record.hash
-    },
-    code: snippet
-  };
-
-  const plan = maybeEmitPlan('extract', options, selector, [record]);
-  if (plan) {
-    payload.plan = plan;
-  }
-
-  if (outputPath) {
-    writeOutputFile(outputPath, snippet);
-  }
-
-  if (json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!quiet) {
-    fmt.header('Function Extract');
-    fmt.section(`Function: ${record.canonicalName || record.name}`);
-    fmt.stat('Kind', record.kind);
-    fmt.stat('Location', `${record.line}:${record.column}`);
-    if (record.exportKind) fmt.stat('Exported As', record.exportKind);
-    fmt.stat('Path', record.pathSignature);
-    fmt.stat('Hash', record.hash);
-    if (outputPath) {
-      fmt.stat('Written to', outputPath);
-    }
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
-    }
-    fmt.section('Source');
-    process.stdout.write(`${snippet}\n`);
-    fmt.footer();
-  }
-}
-
-function extractVariable(options, source, record, selector) {
-  const { filePath, outputPath, json, quiet } = options;
-  const target = resolveVariableTargetInfo(record, options.variableTarget);
-  const snippet = extractCode(source, target.span, options.sourceMapper);
-
-  const payload = {
-    file: filePath,
-    variable: {
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      line: record.line,
-      column: record.column,
-      initializerType: record.initializerType || null,
-      scopeChain: record.scopeChain,
-      targetMode: target.mode,
-      requestedMode: target.requestedMode,
-      pathSignature: target.pathSignature,
-      hash: target.hash,
-      span: target.span
-    },
-    code: snippet
-  };
-
-  const plan = maybeEmitPlan('extract-variable', options, selector, [record], [target.hash], [target.span], {
-    entity: 'variable',
-    targetMode: target.mode
-  });
-  if (plan) {
-    payload.plan = plan;
-  }
-
-  if (outputPath) {
-    writeOutputFile(outputPath, snippet);
-  }
-
-  if (json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!quiet) {
-    fmt.header('Variable Extract');
-    fmt.section(`Variable: ${record.canonicalName || record.name}`);
-    fmt.stat('Kind', record.kind);
-    fmt.stat('Location', `${record.line}:${record.column}`);
-    if (record.initializerType) fmt.stat('Initializer', record.initializerType);
-    fmt.stat('Target Mode', `${target.mode} (requested ${target.requestedMode})`);
-    fmt.stat('Path', target.pathSignature);
-    fmt.stat('Hash', target.hash);
-    fmt.stat('Span', `${target.span.start}:${target.span.end}`);
-    if (outputPath) {
-      fmt.stat('Written to', outputPath);
-    }
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
-    }
-    fmt.section('Source');
-    process.stdout.write(`${snippet}\n`);
-    fmt.footer();
-  }
-}
-
-function showFunctionContext(options, source, functionRecords, selector) {
-  const resolved = resolveMatches(functionRecords, selector, options, { operation: 'context' });
-  const contextResult = buildContextEntries(resolved, source, options);
-  const plan = maybeEmitPlan('context-function', options, selector, resolved, [], [], {
-    entity: 'function',
-    padding: {
-      requestedBefore: Number.isFinite(options.contextBefore) && options.contextBefore >= 0
-        ? Math.floor(options.contextBefore)
-        : DEFAULT_CONTEXT_PADDING,
-      requestedAfter: Number.isFinite(options.contextAfter) && options.contextAfter >= 0
-        ? Math.floor(options.contextAfter)
-        : DEFAULT_CONTEXT_PADDING,
-      appliedBefore: contextResult.before,
-      appliedAfter: contextResult.after
-    },
-    enclosingMode: options.contextEnclosing
-  });
-  renderContextResults('function', selector, options, contextResult);
-}
-
-function showVariableContext(options, source, variableRecords, selector) {
-  const resolved = resolveVariableMatches(variableRecords, selector, options, { operation: 'context-variable' });
-  const contextResult = buildContextEntries(resolved, source, options);
-  const plan = maybeEmitPlan('context-variable', options, selector, resolved, [], [], {
-    entity: 'variable',
-    padding: {
-      requestedBefore: Number.isFinite(options.contextBefore) && options.contextBefore >= 0
-        ? Math.floor(options.contextBefore)
-        : DEFAULT_CONTEXT_PADDING,
-      requestedAfter: Number.isFinite(options.contextAfter) && options.contextAfter >= 0
-        ? Math.floor(options.contextAfter)
-        : DEFAULT_CONTEXT_PADDING,
-      appliedBefore: contextResult.before,
-      appliedAfter: contextResult.after
-    },
-    enclosingMode: options.contextEnclosing
-  });
-  renderContextResults('variable', selector, options, contextResult);
-}
-
-function replaceVariable(options, source, record, replacementPath, selector) {
-  const target = resolveVariableTargetInfo(record, options.variableTarget);
-  const snippetBefore = extractCode(source, target.span, options.sourceMapper);
-  const beforeHash = createDigest(snippetBefore);
-  const expectedHash = options.expectHash || target.hash;
-  if (process.env.JS_EDIT_DEBUG === '1') {
-    console.log('[debug] target span', target.span);
-    console.log('[debug] snippet before', JSON.stringify(snippetBefore));
-    console.log('[debug] before hash', beforeHash);
-    console.log('[debug] expected hash', expectedHash);
-  }
-  const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
-
-  const charLength = Math.max(0, target.span.end - target.span.start);
-  const byteStart = typeof target.span.byteStart === 'number' ? target.span.byteStart : null;
-  const byteEnd = typeof target.span.byteEnd === 'number' ? target.span.byteEnd : null;
-  const byteLength = byteStart !== null && byteEnd !== null ? Math.max(0, byteEnd - byteStart) : null;
-
-  const guard = {
-    span: {
-      status: 'ok',
-      start: target.span.start,
-      end: target.span.end,
-      length: charLength,
-      byteStart,
-      byteEnd,
-      byteLength,
-      expectedStart: null,
-      expectedEnd: null,
-      expectedLength: null,
-      expectedByteStart: null,
-      expectedByteEnd: null,
-      expectedByteLength: null
-    },
-    hash: {
-      status: hashStatus,
-      expected: expectedHash,
-      actual: beforeHash
-    },
-    path: {
-      status: target.pathSignature ? 'pending' : 'skipped',
-      signature: target.pathSignature || '(unavailable)'
-    },
-    syntax: {
-      status: 'pending'
-    },
-    result: {
-      status: 'pending',
-      before: beforeHash,
-      after: null
-    },
-    newline: null
-  };
-
-  if (guard.hash.status === 'mismatch') {
-    throw new Error(`Hash mismatch for variable "${record.canonicalName || record.name}". Expected ${expectedHash} but file contains ${beforeHash}. Re-run --locate-variable and retry or pass --force to override.`);
-  }
-
-  const fileNewlineStats = options.sourceNewline || computeNewlineStats(source);
-  const replacementSource = getReplacementSource(options);
-  const normalizedReplacement = prepareNormalizedSnippet(
-    replacementSource,
-    fileNewlineStats.style,
-    { ensureTrailingNewline: true }
+function parseCliArgs(argv) {
+  const parser = new CliArgumentParser(
+    'js-edit',
+    'Inspect and perform guarded edits on JavaScript files via AST analysis.'
   );
-  const workingSnippet = normalizedReplacement.text;
-  const replacementBuffer = Buffer.from(workingSnippet, 'utf8');
-  const fallbackSpan = {
-    start: target.span.start,
-    end: target.span.start + workingSnippet.length,
-    __normalized: true
-  };
-  if (typeof target.span.byteStart === 'number') {
-    fallbackSpan.byteStart = target.span.byteStart;
-    fallbackSpan.byteEnd = target.span.byteStart + replacementBuffer.length;
-  }
-  const fallbackTarget = {
-    requestedMode: target.requestedMode,
-    mode: target.mode,
-    span: fallbackSpan,
-    pathSignature: target.pathSignature || null,
-    hash: createDigest(workingSnippet),
-    byteLength: replacementBuffer.length
-  };
 
-  const newSource = replaceSpan(source, target.span, workingSnippet, options.sourceMapper);
+  parser
+    .add('--help', 'Show this help message', false, 'boolean')
+    .add('--file <path>', 'Path to the JavaScript file to process (required)')
+    .add('--list-functions', 'List all functions, methods, and arrow functions', false, 'boolean')
+    .add('--list-constructors', 'List all class constructors', false, 'boolean')
+    .add('--list-variables', 'List all variable declarations (const, let, var)', false, 'boolean')
+    .add('--outline', 'Quick symbol outline: top-level declarations with positions', false, 'boolean')
+    .add('--function-summary', 'Display a summary table of function types and counts', false, 'boolean')
+    .add('--filter-text <substring>', 'Filter list results by text (case-insensitive)')
+    .add('--match <pattern>', 'Include only symbols matching pattern (glob-style: *, ?, **)')
+    .add('--exclude <pattern>', 'Exclude symbols matching pattern (glob-style: *, ?, **)')
+    .add('--include-paths', 'Include file paths in list output', false, 'boolean')
+    .add('--include-internals', 'Include internal/unnamed constructors in list', false, 'boolean')
+    .add('--list-output <style>', `List output style: dense, verbose (default: ${DEFAULT_LIST_OUTPUT_STYLE})`)
+    .add('--context-function <selector>', 'Show context for a function')
+    .add('--context-variable <selector>', 'Show context for a variable')
+    .add('--context-before <chars>', `Characters of context to show before the match (default: ${DEFAULT_CONTEXT_PADDING})`)
+    .add('--context-after <chars>', `Characters of context to show after the match (default: ${DEFAULT_CONTEXT_PADDING})`)
+    .add('--context-enclosing <mode>', 'Context extraction mode: exact, class, function (default: exact)')
+    .add('--preview <selector>', 'Preview a function without its body')
+    .add('--preview-variable <selector>', 'Preview a variable declaration')
+    .add('--preview-chars <limit>', `Character limit for preview snippets (default: ${DEFAULT_PREVIEW_CHARS})`)
+    .add('--snipe <position>', 'Quick lookup: find symbol at position (line:col or byte offset)')
+    .add('--search-text <substring>', 'Search for a substring in the file content')
+    .add('--search-limit <count>', `Maximum number of search results (default: ${DEFAULT_SEARCH_LIMIT})`)
+    .add('--search-context <chars>', `Characters of context around search matches (default: ${DEFAULT_SEARCH_CONTEXT})`)
+    .add('--scan-targets <selector>', 'Scan for viable edit targets within a function or class')
+    .add('--scan-target-kind <kind>', 'Kind of target to scan for: function, variable (default: function)')
+    .add('--locate <selector>', 'Find and report metadata for a function match')
+    .add('--locate-variable <selector>', 'Find and report metadata for a variable match')
+    .add('--extract <selector>', 'Extract a function and print its source')
+    .add('--extract-variable <selector>', 'Extract a variable declaration and print its source')
+    .add('--extract-hashes <hashes...>', 'Extract functions by one or more hashes (comma or space-separated)')
+    .add('--replace <selector>', 'Replace a function with a new implementation')
+    .add('--replace-variable <selector>', 'Replace a variable declarator with a new snippet')
+    .add('--with <path>', 'Path to the file containing the replacement code snippet (absolute)')
+    .add('--with-file <path>', 'Path to the replacement code snippet (relative to the target file)')
+    .add('--with-code <code>', 'Inline code snippet for replacement')
+    .add('--replace-range <start:end>', 'Replace a specific character range within a function')
+    .add('--rename <identifier>', 'Rename a function declaration')
+    .add('--variable-target <mode>', 'For variable operations, target the binding, declarator, or declaration (default: declarator)')
+    .add('--output <path>', 'Path to write the output file (for --extract)')
+    .add('--fix', 'Apply replacements directly to the file', false, 'boolean')
+    .add('--preview-edit', 'Preview replacement as diff without writing (dry-run enhancement)', false, 'boolean')
+    .add('--json', 'Output results in JSON format', false, 'boolean')
+    .add('--quiet', 'Suppress summary and progress messages (implies --json)', false, 'boolean')
+    .add('--emit-diff', 'Emit a diff of the proposed change (dry-run only)', false, 'boolean')
+    .add('--emit-plan <path>', 'Emit a plan file for guarded edits or context')
+    .add('--emit-digests', 'Emit cryptographic digests of changes for verification', false, 'boolean')
+    .add('--emit-digest-dir <path>', 'Directory to store digest files (implies --emit-digests)')
+    .add('--digest-include-snippets', 'Include code snippets in digest files', false, 'boolean')
+    .add('--no-digests', 'Disable digest emission, even if configured elsewhere', false, 'boolean')
+    .add('--force', 'Force replacement even if guard checks fail', false, 'boolean')
+    .add('--allow-multiple', 'Allow selectors to match and modify multiple targets', false, 'boolean')
+    .add('--expect-hash <hash>', 'Guard replacement by ensuring the target hash matches')
+    .add('--expect-span <start:end>', 'Guard replacement by ensuring the target span matches')
+    .add('--select <index|hash:...>', 'Select a specific match by 1-based index or hash')
+    .add('--select-path <signature>', 'Select a match by its AST path signature')
+    .add('--benchmark', 'Show benchmark timing for parsing', false, 'boolean');
 
-  let parsedAst;
-  try {
-    parsedAst = parseModule(newSource, options.filePath);
-    guard.syntax = { status: 'ok' };
-  } catch (error) {
-    guard.syntax = { status: 'error', message: error.message };
-    throw new Error(`Replacement produced invalid JavaScript: ${error.message}`);
-  }
+  const helpSections = [
+    '',
+    'Examples:',
+    '  js-edit --file src/example.js --list-functions',
+    '  js-edit --file src/example.js --locate exports.alpha --json',
+    '  js-edit --file src/example.js --replace exports.alpha --with replacements/alpha.js --fix',
+    '',
+    'Discovery commands:',
+    '  --list-functions           Inspect functions with metadata',
+    '  --list-variables           Enumerate variable declarations',
+    '  --context-function         Show padded context around a match',
+    '  --scan-targets             Inspect replaceable spans inside a function',
+    '',
+    'Guardrails and plans:',
+    '  --emit-plan <file>         Write a guarded plan for review',
+    '  --expect-hash <hash>       Enforce content integrity before replace',
+    '  --expect-span <start:end>  Enforce span alignment during replace',
+    '  --allow-multiple           Opt into multi-target operations',
+    '',
+    'Selector hints:',
+    '  name:/canonical            Match by canonical name (case-insensitive)',
+    '  path:<signature>           Match by AST path signature',
+    '  hash:<digest>              Match by digest captured in list output',
+    '  index via --select <n>     Disambiguate when multiple matches exist',
+    '',
+    'Output controls:',
+    '  --json / --quiet           Machine-readable payloads',
+    '  --list-output verbose      Expand list tables with full metadata',
+    '  JS_EDIT_LIST_OUTPUT=verbose Environment toggle for list layout',
+    '  --with-code                Inline replacement snippet (newline guarded)'
+  ].join('\n');
 
-  let postTarget = null;
-  let postMapper = null;
-  let pathMatchFound = false;
-  let fallbackUsed = false;
+  parser.getProgram().addHelpText('after', helpSections);
 
-  if (target.pathSignature) {
-    const { variables: postVariables, mapper } = collectVariables(parsedAst, newSource);
-    postMapper = mapper;
-    const postRecords = buildVariableRecords(postVariables);
+  const parsedOptions = parser.parse(argv);
 
-    for (const candidate of postRecords) {
-      if (!variableRecordMatchesPath(candidate, target.pathSignature)) {
-        continue;
-      }
-
-      pathMatchFound = true;
-
-      try {
-        const candidateTarget = resolveVariableTargetInfo(candidate, options.variableTarget);
-        postTarget = {
-          ...candidateTarget,
-          pathSignature: candidateTarget.pathSignature || target.pathSignature
-        };
-      } catch (error) {
-        fallbackUsed = true;
-        postTarget = { ...fallbackTarget };
-      }
-
-      break;
-    }
-
-    if (!postTarget && pathMatchFound) {
-      fallbackUsed = true;
-      postTarget = { ...fallbackTarget };
-    }
-
-    if (postTarget) {
-      guard.path = { status: 'ok', signature: target.pathSignature };
-    } else {
-      guard.path = {
-        status: options.force ? 'bypass' : 'mismatch',
-        signature: target.pathSignature
-      };
-      if (guard.path.status === 'mismatch') {
-        throw new Error(`Path mismatch for variable "${record.canonicalName || record.name}". The target at ${target.pathSignature} no longer resolves after replacement. Use --force to override if intentional.`);
-      }
-    }
-  }
-
-  let snippetAfter;
-  let afterHash;
-
-  if (postTarget) {
-    if (fallbackUsed) {
-      snippetAfter = workingSnippet;
-      afterHash = fallbackTarget.hash;
-    } else {
-      snippetAfter = extractCode(newSource, postTarget.span, postMapper);
-      afterHash = postTarget.hash || createDigest(snippetAfter);
-    }
-  } else {
-    snippetAfter = workingSnippet;
-    afterHash = createDigest(snippetAfter);
-  }
-
-  guard.result = {
-    status: afterHash === beforeHash ? 'unchanged' : 'changed',
-    before: beforeHash,
-    after: afterHash
-  };
-  guard.newline = createNewlineGuard(fileNewlineStats, snippetBefore, snippetAfter, normalizedReplacement);
-
-  const plan = maybeEmitPlan('replace-variable', options, selector, [record], [target.hash], [target.span], {
-    entity: 'variable',
-    targetMode: options.variableTarget,
-    newline: guard.newline
-  });
-
-  const payload = {
-    file: options.filePath,
-    variable: {
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      line: record.line,
-      column: record.column,
-      initializerType: record.initializerType || null,
-      target: {
-        requestedMode: target.requestedMode,
-        resolvedMode: target.mode,
-        span: target.span,
-        pathSignature: target.pathSignature,
-        hash: target.hash
-      }
-    },
-    applied: Boolean(options.fix),
-    guard
-  };
-
-  if (plan) {
-    payload.plan = plan;
+  if (parsedOptions.help) {
+    parser.getProgram().help({ error: false });
   }
 
-  if (options.emitDiff) {
-    payload.diff = {
-      before: snippetBefore,
-      after: snippetAfter
-    };
-  }
-
-  if (options.fix) {
-    writeOutputFile(options.filePath, newSource);
-  }
-
-  if (options.json) {
-    outputJson(payload);
-    return;
-  }
-
-  if (!options.quiet) {
-    fmt.header('Variable Replacement');
-    fmt.section(`Variable: ${record.canonicalName || record.name}`);
-    fmt.stat('Kind', record.kind);
-    fmt.stat('Location', `${record.line}:${record.column}`);
-    if (record.initializerType) fmt.stat('Initializer', record.initializerType);
-    fmt.stat('Target Mode', `${target.mode} (requested ${target.requestedMode})`);
-    fmt.stat('Path', target.pathSignature || '(unavailable)');
-    fmt.stat('Hash', target.hash);
-    fmt.stat('Mode', options.fix ? 'applied' : 'dry-run');
-    renderGuardrailSummary(guard, options);
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
-    }
-    if (options.emitDiff) {
-      fmt.section('Original');
-      process.stdout.write(`${snippetBefore}\n`);
-      fmt.section('Replacement');
-      process.stdout.write(`${snippetAfter}\n`);
-    }
-    if (!options.fix) {
-      fmt.warn('Dry-run: no changes were written. Re-run with --fix to apply.');
-    } else {
-      fmt.success(`Updated ${options.filePath}`);
-    }
-    fmt.footer();
-  }
+  return parsedOptions;
 }
 
+async function main() {
+  const rawOptions = parseCliArgs(process.argv.slice(2));
+  const options = normalizeOptions(rawOptions);
 
+  const { source, sourceMapper } = await readSource(options.filePath);
+  const { newline, newlineGuard } = computeNewlineStats(source);
+  options.sourceMapper = sourceMapper;
+  options.sourceNewline = newline;
 
+  const start = Date.now();
+  const ast = await parseModule(source, options.filePath);
+  const end = Date.now();
 
-
-function replaceFunction(options, source, record, replacementPath, selector) {
-  if (!record.replaceable) {
-    throw new Error(
-      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, default exports, class methods, and recognised call-site callbacks (describe/test hooks).`
-    );
+  if (options.benchmark) {
+    const elapsed = end - start;
+    console.log(`Parsed ${options.filePath} in ${elapsed}ms`);
   }
 
-  const snippetBefore = extractCode(source, record.span, options.sourceMapper);
-  const beforeHash = createDigest(snippetBefore);
-  const expectedHash = options.expectHash || record.hash;
-  const hashStatus = beforeHash === expectedHash ? 'ok' : options.force ? 'bypass' : 'mismatch';
-  const fileNewlineStats = options.sourceNewline || computeNewlineStats(source);
+  const { functions, classMetadata, mapper: functionMapper } = collectFunctions(ast, source, options.sourceMapper);
+  options.sourceMapper = functionMapper || options.sourceMapper;
+  const functionRecords = buildFunctionRecords(functions);
 
-  const expectedSpan = options.expectSpan;
-  const actualStart = record.span.start;
-  const actualEnd = record.span.end;
-  const actualByteStart = typeof record.span.byteStart === 'number' ? record.span.byteStart : null;
-  const actualByteEnd = typeof record.span.byteEnd === 'number' ? record.span.byteEnd : null;
-  const expectedByteStart = expectedSpan && typeof expectedSpan.byteStart === 'number' ? expectedSpan.byteStart : null;
-  const expectedByteEnd = expectedSpan && typeof expectedSpan.byteEnd === 'number' ? expectedSpan.byteEnd : null;
-  const charLength = Math.max(0, actualEnd - actualStart);
-  const byteLength = actualByteStart !== null && actualByteEnd !== null ? Math.max(0, actualByteEnd - actualByteStart) : null;
-  const expectedLength = expectedSpan ? Math.max(0, expectedSpan.end - expectedSpan.start) : null;
-  const expectedByteLength = expectedByteStart !== null && expectedByteEnd !== null ? Math.max(0, expectedByteEnd - expectedByteStart) : null;
-  let spanStatus = 'ok';
-  if (expectedSpan) {
-    const matches = expectedSpan.start === actualStart && expectedSpan.end === actualEnd;
-    if (!matches) {
-      if (options.force) {
-        spanStatus = 'bypass';
-      } else {
-        spanStatus = 'mismatch';
-        throw new Error(`Span mismatch for "${record.canonicalName || record.name}". Expected ${expectedSpan.start}:${expectedSpan.end} but file contains ${actualStart}:${actualEnd}. Re-run --locate and retry or pass --force to override.`);
-      }
-    }
-  }
+  const { variables, mapper: variableMapper } = collectVariables(ast, source, options.sourceMapper);
+  options.sourceMapper = variableMapper || options.sourceMapper;
+  const variableRecords = buildVariableRecords(variables);
 
-  const guard = {
-    span: {
-      status: spanStatus,
-      start: actualStart,
-      end: actualEnd,
-      length: charLength,
-      byteStart: actualByteStart,
-      byteEnd: actualByteEnd,
-      byteLength,
-      expectedStart: expectedSpan ? expectedSpan.start : null,
-      expectedEnd: expectedSpan ? expectedSpan.end : null,
-      expectedLength,
-      expectedByteStart,
-      expectedByteEnd,
-      expectedByteLength
-    },
-    hash: {
-      status: hashStatus,
-      expected: expectedHash,
-      actual: beforeHash
-    },
-    path: {
-      status: 'pending',
-      signature: record.pathSignature
-    },
-    syntax: {
-      status: 'pending'
-    },
-    result: {
-      status: 'pending',
-      before: beforeHash,
-      after: null
-    },
-    newline: null
-  };
-
-  if (guard.hash.status === 'mismatch') {
-    throw new Error(`Hash mismatch for "${record.canonicalName || record.name}". Expected ${expectedHash} but file contains ${beforeHash}. Re-run --locate and retry or pass --force to override.`);
-  }
-
-  let workingSnippet = snippetBefore;
-  let replacementMeta = null;
-
-  if (options.replaceRange) {
-    const { start, end } = options.replaceRange;
-    if (end > workingSnippet.length) {
-      throw new Error(`--replace-range end (${end}) exceeds the length of the target snippet (${workingSnippet.length}).`);
-    }
-    const rangeReplacementSource = getReplacementSource(options);
-    const normalizedRangeReplacement = prepareNormalizedSnippet(
-      rangeReplacementSource,
-      fileNewlineStats.style
-    );
-    workingSnippet = `${workingSnippet.slice(0, start)}${normalizedRangeReplacement.text}${workingSnippet.slice(end)}`;
-    replacementMeta = normalizedRangeReplacement;
-  } else if (options.replacementPath || options.replacementCode) {
-    const replacementSource = getReplacementSource(options);
-    const normalizedReplacement = prepareNormalizedSnippet(
-      replacementSource,
-      fileNewlineStats.style,
-      { ensureTrailingNewline: true }
-    );
-    workingSnippet = normalizedReplacement.text;
-    replacementMeta = normalizedReplacement;
-  }
-
-  if (options.renameTo) {
-    workingSnippet = applyRenameToSnippet(workingSnippet, record, options.renameTo);
-  }
-
-  const newSource = replaceSpan(source, record.span, workingSnippet, options.sourceMapper);
-
-  let parsedAst;
-  try {
-    parsedAst = parseModule(newSource, options.filePath);
-    guard.syntax = { status: 'ok' };
-  } catch (error) {
-    guard.syntax = { status: 'error', message: error.message };
-    throw new Error(`Replacement produced invalid JavaScript: ${error.message}`);
-  }
-
-  const { functions: postFunctions, mapper: postMapper } = collectFunctions(parsedAst, newSource);
-  const postRecord = postFunctions.find((fn) => fn.pathSignature === record.pathSignature) || null;
-  if (postRecord) {
-    guard.path = { status: 'ok', signature: record.pathSignature };
-  } else {
-    guard.path = {
-      status: options.force ? 'bypass' : 'mismatch',
-      signature: record.pathSignature
-    };
-    if (guard.path.status === 'mismatch') {
-      throw new Error(`Path mismatch for "${record.canonicalName || record.name}". The node at ${record.pathSignature} no longer resolves after replacement. Use --force to override if intentional.`);
-    }
-  }
-
-  const snippetAfter = postRecord ? extractCode(newSource, postRecord.span, postMapper) : workingSnippet;
-  const afterHash = postRecord ? postRecord.hash : createDigest(snippetAfter);
-  guard.result = {
-    status: afterHash === beforeHash ? 'unchanged' : 'changed',
-    before: beforeHash,
-    after: afterHash
-  };
-  guard.newline = createNewlineGuard(fileNewlineStats, snippetBefore, snippetAfter, replacementMeta);
-
-  const plan = maybeEmitPlan(
-    'replace',
+  const deps = {
+    source,
+    ast,
+    functions,
+    classMetadata,
+    functionRecords,
+    buildFunctionRecords,
+    variables,
+    variableRecords,
+    buildVariableRecords,
+    fmt,
     options,
-    selector,
-    [record],
-    [expectedHash],
-    [expectedSpan || null],
-    {
-      entity: 'function',
-      newline: guard.newline
-    }
-  );
-
-  const payload = {
-    file: options.filePath,
-    function: {
-      name: record.name,
-      canonicalName: record.canonicalName,
-      kind: record.kind,
-      line: record.line,
-      column: record.column,
-      exportKind: record.exportKind,
-      pathSignature: record.pathSignature,
-      hash: record.hash
-    },
-    applied: Boolean(options.fix),
-    guard
+    newlineGuard,
+    parseModule,
+    collectFunctions,
+    collectVariables,
+    computeNewlineStats,
+    createNewlineGuard,
+    prepareNormalizedSnippet,
+    createDigest,
+    writeOutputFile,
+    outputJson,
+    extractCode,
+    replaceSpan,
+    loadReplacementSource,
+    getReplacementSource,
+    applyRenameToSnippet,
+    spanKey: createSpanKey,
+    findMatchesForSelector,
+    resolveMatches,
+    resolveVariableMatches,
+    resolveVariableTargetInfo,
+    variableRecordMatchesPath,
+    buildSearchSuggestionsForMatch,
+    maybeEmitPlan: contextOperations.maybeEmitPlan,
+    buildPlanPayload: contextOperations.buildPlanPayload,
+    computeAggregateSpan: contextOperations.computeAggregateSpan,
+    formatAggregateSpan: contextOperations.formatAggregateSpan,
+    formatSpanRange: contextOperations.formatSpanRange,
+    formatSpanDetails: contextOperations.formatSpanDetails,
+    renderGuardrailSummary: contextOperations.renderGuardrailSummary,
+    toReadableScope,
+    HASH_PRIMARY_ENCODING,
+    HASH_FALLBACK_ENCODING,
+    HASH_LENGTH_BY_ENCODING,
+    DEFAULT_SEARCH_CONTEXT
   };
 
-  if (plan) {
-    payload.plan = plan;
+  contextOperations.init(deps);
+  mutationOperations.init(deps);
+  discoveryOperations.init(deps);
+
+  if (options.listFunctions) {
+    return discoveryOperations.listFunctions(options, source, functionRecords);
   }
 
-  if (options.emitDiff) {
-    payload.diff = {
-      before: snippetBefore,
-      after: snippetAfter
-    };
+  if (options.listConstructors) {
+    return discoveryOperations.listConstructors(options, functionRecords, classMetadata);
   }
 
-  if (options.fix) {
-    writeOutputFile(options.filePath, newSource);
+  if (options.functionSummary) {
+    return discoveryOperations.summarizeFunctions(options, functionRecords);
   }
 
-  if (options.json) {
-    outputJson(payload);
-    return;
+  if (options.listVariables) {
+    return discoveryOperations.listVariables(options, source, variableRecords);
   }
 
-  if (!options.quiet) {
-    fmt.header('Function Replacement');
-    fmt.section(`Function: ${record.canonicalName || record.name}`);
-    fmt.stat('Kind', record.kind);
-    fmt.stat('Location', `${record.line}:${record.column}`);
-    fmt.stat('Path', record.pathSignature);
-    fmt.stat('Hash', record.hash);
-    fmt.stat('Mode', options.fix ? 'applied' : 'dry-run');
-    renderGuardrailSummary(guard, options);
-    if (options.emitPlanPath) {
-      fmt.info(`Plan written to ${options.emitPlanPath}`);
+  if (options.contextFunctionSelector) {
+    return contextOperations.showFunctionContext(options, source, functionRecords, options.contextFunctionSelector);
+  }
+
+  if (options.contextVariableSelector) {
+    return contextOperations.showVariableContext(options, source, variableRecords, options.contextVariableSelector);
+  }
+
+  if (options.previewSelector) {
+    return discoveryOperations.previewFunction(options, source, functionRecords, options.previewSelector);
+  }
+
+  if (options.previewVariableSelector) {
+    return discoveryOperations.previewVariable(options, source, variableRecords, options.previewVariableSelector);
+  }
+
+  if (options.snipePosition) {
+    return discoveryOperations.snipeSymbol(options, source, functionRecords, variableRecords, options.snipePosition);
+  }
+
+  if (options.outline) {
+    return discoveryOperations.outlineSymbols(options, source, functionRecords, variableRecords);
+  }
+
+  if (options.searchText) {
+    return discoveryOperations.searchTextMatches(options, source, functionRecords, variableRecords);
+  }
+
+  if (options.scanTargetsSelector) {
+    if (options.scanTargetKind === 'variable') {
+      return mutationOperations.scanVariableTargets(options, variableRecords, options.scanTargetsSelector);
     }
-    if (options.emitDiff) {
-      fmt.section('Original');
-      process.stdout.write(`${snippetBefore}\n`);
-      fmt.section('Replacement');
-      process.stdout.write(`${snippetAfter}\n`);
-    }
-    if (!options.fix) {
-      fmt.warn('Dry-run: no changes were written. Re-run with --fix to apply.');
-    } else {
-      fmt.success(`Updated ${options.filePath}`);
-    }
-    fmt.footer();
+    return discoveryOperations.scanFunctionTargets(options, functionRecords, options.scanTargetsSelector);
+  }
+
+  if (options.extractSelector) {
+    const [record] = resolveMatches(functionRecords, options.extractSelector, options, { operation: 'extract' });
+    return mutationOperations.extractFunction(options, source, record, options.extractSelector);
+  }
+
+  if (options.extractHashes.length > 0) {
+    return extractFunctionsByHashes(options, source, functionRecords);
+  }
+
+  if (options.replaceSelector) {
+    const [record] = resolveMatches(functionRecords, options.replaceSelector, options, { operation: 'replace' });
+    return mutationOperations.replaceFunction(options, source, record, options.replacementPath, options.replaceSelector);
+  }
+
+  if (options.locateSelector) {
+    return mutationOperations.locateFunctions(options, functionRecords, options.locateSelector);
+  }
+
+  if (options.locateVariableSelector) {
+    return mutationOperations.locateVariables(options, variableRecords, options.locateVariableSelector);
+  }
+
+  if (options.extractVariableSelector) {
+    const [record] = resolveVariableMatches(variableRecords, options.extractVariableSelector, options, { operation: 'extract-variable' });
+    return mutationOperations.extractVariable(options, source, record, options.extractVariableSelector);
+  }
+
+  if (options.replaceVariableSelector) {
+    const [record] = resolveVariableMatches(variableRecords, options.replaceVariableSelector, options, { operation: 'replace-variable' });
+    return mutationOperations.replaceVariable(options, source, record, options.replacementPath, options.replaceVariableSelector);
   }
 }
 
-
-
-
-function measureParse(source, filePath) {
-  const start = process.hrtime.bigint();
-  const ast = parseModule(source, filePath);
-  const durationNs = Number(process.hrtime.bigint() - start);
-  return { ast, durationMs: durationNs / 1_000_000 };
-}
-
-function main(argv) {
-  try {
-    const rawOptions = parseCliArgs(argv);
-    const options = normalizeOptions(rawOptions);
-    const source = readSource(options.filePath);
-
-    const { ast, durationMs } = options.benchmark
-      ? measureParse(source, options.filePath)
-      : { ast: parseModule(source, options.filePath), durationMs: null };
-
-    const { functions, mapper } = collectFunctions(ast, source);
-    const { variables } = collectVariables(ast, source, mapper);
-    const functionRecords = buildFunctionRecords(functions);
-    const variableRecords = buildVariableRecords(variables);
-
-    options.sourceMapper = mapper;
-    options.sourceNewline = computeNewlineStats(source);
-
-    if (options.benchmark && !options.json && !options.quiet) {
-      fmt.info(`Parse time: ${durationMs.toFixed(2)} ms`);
-    }
-
-    if (options.list) {
-      listFunctions(options, source, functions);
-    } else if (options.extractHashes && options.extractHashes.length > 0) {
-      extractFunctionsByHashes(options, source, functionRecords);
-    } else if (options.listVariables) {
-      listVariables(options, source, variables);
-    } else if (options.contextFunctionSelector) {
-      showFunctionContext(options, source, functionRecords, options.contextFunctionSelector);
-    } else if (options.contextVariableSelector) {
-      showVariableContext(options, source, variableRecords, options.contextVariableSelector);
-    } else if (options.previewSelector) {
-      previewFunction(options, source, functionRecords, options.previewSelector);
-    } else if (options.previewVariableSelector) {
-      previewVariable(options, source, variableRecords, options.previewVariableSelector);
-    } else if (options.searchText) {
-      searchTextMatches(options, source, functionRecords, variableRecords);
-    } else if (options.locateSelector) {
-      locateFunctions(options, functionRecords, options.locateSelector);
-    } else if (options.extractSelector) {
-      const [record] = resolveMatches(functionRecords, options.extractSelector, options, { operation: 'extract' });
-      extractFunction(options, source, record, options.extractSelector);
-    } else if (options.replaceSelector) {
-      const [record] = resolveMatches(functionRecords, options.replaceSelector, options, { operation: 'replace' });
-      replaceFunction(options, source, record, options.replacementPath, options.replaceSelector);
-    } else if (options.locateVariableSelector) {
-      locateVariables(options, variableRecords, options.locateVariableSelector);
-    } else if (options.extractVariableSelector) {
-      const [record] = resolveVariableMatches(variableRecords, options.extractVariableSelector, options, { operation: 'extract-variable' });
-      extractVariable(options, source, record, options.extractVariableSelector);
-    } else if (options.replaceVariableSelector) {
-      const [record] = resolveVariableMatches(variableRecords, options.replaceVariableSelector, options, { operation: 'replace-variable' });
-      replaceVariable(options, source, record, options.replacementPath, options.replaceVariableSelector);
-    }
-  } catch (error) {
-    fmt.error(error.message);
-    process.exitCode = 1;
+main().catch((error) => {
+  fmt.error(error.message);
+  if (process.env.DEBUG) {
+    console.error(error);
   }
-}
-
-
-
-if (require.main === module) {
-  main(process.argv);
-}
+  process.exit(1);
+});
