@@ -19,7 +19,9 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 
 ## Sub-phase Workflow
 ### α — Deep Discovery & Tooling Inventory
-- Sweep `AGENTS.md` (Topic Index), `.github/instructions/GitHub Copilot.instructions.md`, and feature-specific docs. Log each consulted source in the tracker.
+- **Documentation discovery:** Use `node tools/dev/md-scan.js --dir docs --search <terms>` to find relevant docs quickly. Search for task-specific keywords (e.g., "database migration", "testing async") and identify priority docs (⭐). Use `--find-sections` to locate "Troubleshooting" or "When to Read" sections across all docs.
+- **Documentation review:** Use `node tools/dev/md-edit.js <doc> --show-section <selector>` to view specific sections without reading entire files. Use `--outline` to understand document structure before deep reading.
+- Sweep `AGENTS.md` (Topic Index), `.github/instructions/GitHub Copilot.instructions.md`, and feature-specific docs identified via md-scan. Log each consulted source in the tracker.
 - Inventory diagnostics: list existing CLI analyzers, schema probes, or js-edit helpers that can illuminate the target area. Decide which to run; record the rationale.
 - Recon the codebase with search/usages and js-edit read operations (`--list-functions`, `--context-function`, `--context-variable`). Emit plan files when doing contextual dives so span/hash metadata is ready for later edits.
 - Exit α only when the tracker captures docs consulted, tools inventoried, identified risks, and a preliminary task list for the phase.
@@ -49,7 +51,8 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - **Guarded replaces:** Never run `--fix` without dry-run output. Apply edits with `--expect-hash` and/or `--expect-span` (plus `--allow-multiple` when intentionally touching multiple matches). Document these guards in the plan if they cover critical paths.
 - **CommonJS awareness:** js-edit understands `module.exports`/`exports.*` selectors. Invoke `--list-variables --json` to confirm selectors in mixed module styles before editing.
 - **Batch workflows:** For repeated edits, chain `--locate` → `--emit-plan` → `--replace --plan <file> --fix`. Note the workflow in the tracker so reviewers can replay it if needed.
-- **Non-JS files:** Only bypass js-edit for non-JavaScript assets (JSON, Markdown, config). Justify the deviation in the plan and use repository tools (`replace_string_in_file`, etc.) rather than ad-hoc shell edits.
+- **Markdown files:** Use `node tools/dev/md-edit.js` for reading (`--stats`, `--outline`, `--search`, `--show-section`) and editing (`--remove-section`, `--replace-section`) documentation with hash guards. For multi-file doc discovery, use `node tools/dev/md-scan.js --dir docs --search <terms>` to find relevant sections quickly.
+- **Non-JS/MD files:** For JSON, config, or other assets, use repository tools (`replace_string_in_file`, etc.) rather than ad-hoc shell edits.
 
 ### js-edit Stuck Protocol
 1. **Diagnose:** Capture the exact command/output that failed (e.g., unsupported syntax, selector ambiguity).
@@ -57,13 +60,28 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 3. **Propose:** Suggest enhancements (new selectors, guardrails, docs) and await explicit approval before modifying js-edit itself.
 4. **Fallback:** Only after documenting the limitation and receiving approval may you use an alternate editing strategy.
 
-### js-edit Quick Reference
+### Tool Quick Reference
+
+**js-edit (JavaScript):**
 - `node tools/dev/js-edit.js --help` — confirm flags and new capabilities.
 - `--list-functions --json` / `--list-variables --json` — inventory symbols for reconnaissance.
 - `--context-function <selector>` — show surrounding code for safe extraction.
 - `--locate <selector>` — verify matches before editing; pair with `--emit-plan`.
 - `--replace <selector> --with <file|code> --expect-hash <hash> --fix` — guarded mutation; always dry-run first.
 - `--context-variable` and `--extract` support additive documentation (emit plan, include `--allow-multiple` when necessary).
+
+**md-scan (Multi-file doc discovery):**
+- `node tools/dev/md-scan.js --dir docs --search <terms>` — find docs with relevance ranking and priority markers (⭐).
+- `--find-sections <patterns>` — locate specific section types (e.g., "Troubleshooting", "When to Read") across all docs.
+- `--build-index --priority-only` — show essential documentation overview.
+- `--compact` — terse output for quick scanning.
+
+**md-edit (Single-file doc viewing/editing):**
+- `node tools/dev/md-edit.js <file> --stats` — document metrics (lines, sections, words).
+- `--outline` — hierarchical document structure.
+- `--show-section <selector>` — display specific section by heading or hash.
+- `--search <pattern>` — full-text search within document.
+- `--remove-section <selector> --expect-hash <hash> --fix` — guarded section removal (dry-run first).
 
 ## PowerShell & Command Discipline
 - **Avoid PowerShell-specific syntax in examples and commands.** Use cross-platform Node.js commands instead. When PowerShell usage is unavoidable, ensure proper encoding and syntax:

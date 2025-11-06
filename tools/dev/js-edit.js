@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 'use strict';
 
+// Fix PowerShell encoding for Unicode box-drawing characters
+const { setupPowerShellEncoding } = require('./shared/powershellEncoding');
+setupPowerShellEncoding();
+
 const path = require('path');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');

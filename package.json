@@ -34,7 +34,9 @@
     "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
     "export:gazetteer": "node src/tools/export-gazetteer.js",
     "validate:gazetteer": "node src/tools/validate-gazetteer.js",
-    "benchmarks": "node tools/benchmarks/run.js"
+    "benchmarks": "node tools/benchmarks/run.js",
+    "md:edit": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; node tools/dev/md-edit.js\"",
+    "js:edit": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; node tools/dev/js-edit.js\""
   },
   "keywords": [
     "crawler",
@@ -48,7 +50,7 @@
     "@mozilla/readability": "^0.6.0",
     "@swc/core": "^1.14.0",
     "better-sqlite3": "^12.4.1",
-    "chalk": "^5.6.2",
+    "chalk": "^4.1.2",
     "cheerio": "^1.1.2",
     "commander": "^14.0.2",
     "compression": "^1.8.1",
@@ -73,6 +75,7 @@
     "extract-zip": "^2.0.1",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "markdown-it": "^14.1.0",
     "puppeteer": "^24.26.1",
     "sass": "^1.93.2",
     "sharp": "^0.34.4",
