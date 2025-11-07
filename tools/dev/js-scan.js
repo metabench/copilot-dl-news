@@ -15,6 +15,7 @@ const { runSearch } = require('./js-scan/operations/search');
 const { runHashLookup } = require('./js-scan/operations/hashLookup');
 const { buildIndex } = require('./js-scan/operations/indexing');
 const { runPatternSearch } = require('./js-scan/operations/patterns');
+const { runDependencySummary } = require('./js-scan/operations/dependencies');
 
 const fmt = new CliFormatter();
 
@@ -31,7 +32,9 @@ const CHINESE_HELP_ROWS = Object.freeze([
   { lexKey: 'view', alias: '视', summary: '视模', params: '[详 简 概]' },
   { lexKey: 'fields', alias: '域', summary: '简列', params: '[location name hash]'},
   { lexKey: 'follow_deps', alias: '依', summary: '依扫', params: '' },
-  { lexKey: 'dependency_depth', alias: '层', summary: '层限', params: '[数]'}
+    { lexKey: 'dependency_depth', alias: '层', summary: '层限', params: '[数]' },
+    { lexKey: 'deps_of', alias: 'dep', summary: '提要求法', params: '[path|hash]' },
+    { lexKey: 'deps_parse_errors', alias: '错', summary: '依错详', params: '' }
 ]);
 
 const CHINESE_HELP_DETAILS = Object.freeze({
@@ -81,6 +84,14 @@ const CHINESE_HELP_DETAILS = Object.freeze({
   dependency_depth: [
     '层 要: 限制依赖层数 (0=不限)',
     '示: node tools/dev/js-scan.js --依 --层 2'
+  ],
+  deps_of: [
+    '依需: 查看指定文件的导入与被依赖关系',
+    '示: node tools/dev/js-scan.js --deps-of src/app.js'
+  ],
+  deps_parse_errors: [
+    '错详: 依赖摘要后显示解析错误细节',
+    '示: node tools/dev/js-scan.js --deps-of src/app.js --deps-parse-errors'
   ]
 });
 
@@ -156,6 +167,26 @@ const SUPPORTED_TERSE_FIELDS = Object.freeze([
 ]);
 
 const DEFAULT_TERSE_FIELDS = Object.freeze(['location', 'name', 'hash', 'exported']);
+
+function normalizeBooleanOption(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized.length === 0) {
+      return false;
+    }
+    return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'y';
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  return Boolean(value);
+}
 
 function normalizeViewMode(raw) {
   if (raw === undefined || raw === null) {
@@ -563,6 +594,8 @@ function createParser() {
     .add('--no-guidance', 'Suppress agent guidance suggestions', false, 'boolean')
     .add('--hashes-only', 'Only output hash list (text mode)', false, 'boolean')
     .add('--json', 'Emit JSON output', false, 'boolean')
+    .add('--show-parse-errors', 'Display parse error details after results', false, 'boolean')
+    .add('--deps-parse-errors', 'Display parse error details after dependency summaries', false, 'boolean')
     .add('--view <mode>', 'Output view (detailed, terse, summary)', 'detailed')
     .add('--fields <list>', 'Comma-separated fields for terse view', '')
     .add('--follow-deps', 'Follow relative dependencies discovered in scanned files', false, 'boolean')
@@ -570,6 +603,7 @@ function createParser() {
     .add('--search <term...>', 'Search terms (space-separated)')
     .add('--find-hash <hash>', 'Find function by hash value')
     .add('--find-pattern <pattern...>', 'Find functions matching glob/regex patterns')
+    .add('--deps-of <target>', 'Summarize dependencies for a file (imports and dependents)')
     .add('--build-index', 'Build module index', false, 'boolean');
 
   return parser;
@@ -580,6 +614,7 @@ function ensureSingleOperation(options) {
   if (options.search && options.search.length > 0) provided.push('search');
   if (options.findHash) provided.push('find-hash');
   if (options.findPattern && options.findPattern.length > 0) provided.push('find-pattern');
+  if (options.depsOf) provided.push('deps-of');
   if (options.buildIndex) provided.push('build-index');
   if (provided.length > 1) {
     throw new Error(`Only one operation can be specified at a time. Provided: ${provided.join(', ')}`);
@@ -859,6 +894,143 @@ function printPatternResult(result) {
   fmt.footer();
 }
 
+function formatDependencyRows(rows, showVia) {
+  return rows.map((entry, index) => {
+    const display = {
+      '#': String(index + 1),
+      File: entry.exists ? fmt.COLORS.cyan(entry.file) : fmt.COLORS.muted(entry.file),
+      Imports: entry.importCount > 0 ? fmt.COLORS.success(String(entry.importCount)) : '',
+      Requires: entry.requireCount > 0 ? fmt.COLORS.accent(String(entry.requireCount)) : '',
+      Hop: entry.hop > 1 ? fmt.COLORS.muted(String(entry.hop)) : '1'
+    };
+    if (showVia) {
+      display.Via = entry.via ? fmt.COLORS.muted(entry.via) : '';
+    }
+    return display;
+  });
+}
+
+function printDependencySummary(result) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = translateLabelWithMode(fmt, language, 'dependencies', 'Dependencies');
+  fmt.header(headerLabel);
+
+  const targetLabel = translateLabelWithMode(fmt, language, 'target', 'Target');
+  const fileDisplay = result.target.exists
+    ? fmt.COLORS.bold(fmt.COLORS.cyan(result.target.file))
+    : fmt.COLORS.muted(result.target.file);
+  const matchedSuffix = result.target.matchedBy
+    ? fmt.COLORS.muted(` (${result.target.matchedBy})`)
+    : '';
+  console.log(`  ${targetLabel}: ${fileDisplay}${matchedSuffix}`.trimEnd());
+
+  if (result.target.function) {
+    const func = result.target.function;
+    const funcLabel = translateLabelWithMode(fmt, language, 'function', 'Function');
+    const hashDisplay = func.hash ? fmt.COLORS.accent(`#${func.hash}`) : '';
+    console.log(`  ${funcLabel}: ${fmt.COLORS.bold(func.name || '(anonymous)')} ${hashDisplay}`.trim());
+  }
+
+  const fanOutLabel = translateLabelWithMode(fmt, language, 'fan_out', 'Fan-out');
+  const fanInLabel = translateLabelWithMode(fmt, language, 'fan_in', 'Fan-in');
+  fmt.stat(fanOutLabel, result.stats.fanOut, 'number');
+  fmt.stat(fanInLabel, result.stats.fanIn, 'number');
+
+  const depthValue = result.stats.depth === 0
+    ? (isChinese ? '无限' : 'unbounded')
+    : result.stats.depth;
+  const limitValue = result.stats.limit === 0
+    ? (isChinese ? '无限' : 'unlimited')
+    : result.stats.limit;
+  fmt.stat(translateLabelWithMode(fmt, language, 'depth', 'Depth'), depthValue);
+  fmt.stat(translateLabelWithMode(fmt, language, 'limit', 'Limit'), limitValue);
+
+  const showViaOutgoing = result.outgoing.some((entry) => entry.hop > 1 && entry.via);
+  const outgoingColumns = showViaOutgoing
+    ? ['#', 'File', 'Via', 'Imports', 'Requires', 'Hop']
+    : ['#', 'File', 'Imports', 'Requires', 'Hop'];
+
+  const outgoingLabel = translateLabelWithMode(fmt, language, 'imports', 'Imports');
+  fmt.section(`${outgoingLabel} (${result.outgoing.length})`);
+  if (result.outgoing.length === 0) {
+    const noneMessage = isChinese ? '无导入文件。' : 'No imports discovered for this file.';
+    fmt.warn(noneMessage);
+  } else {
+    fmt.table(formatDependencyRows(result.outgoing, showViaOutgoing), { columns: outgoingColumns });
+  }
+
+  const showViaIncoming = result.incoming.some((entry) => entry.hop > 1 && entry.via);
+  const incomingColumns = showViaIncoming
+    ? ['#', 'File', 'Via', 'Imports', 'Requires', 'Hop']
+    : ['#', 'File', 'Imports', 'Requires', 'Hop'];
+
+  const dependentsLabel = translateLabelWithMode(fmt, language, 'dependents', 'Dependents');
+  fmt.section(`${dependentsLabel} (${result.incoming.length})`);
+  if (result.incoming.length === 0) {
+    const noneMessage = isChinese
+      ? '无文件依赖此模块。考虑检查同级目录或入口文件。'
+      : 'No files import this module. Consider reviewing sibling directories or entry points.';
+    fmt.info(noneMessage);
+  } else {
+    fmt.table(formatDependencyRows(result.incoming, showViaIncoming), { columns: incomingColumns });
+  }
+
+  fmt.footer();
+}
+
+function printParseErrorSummary(errors, options = {}) {
+  const entries = Array.isArray(errors) ? errors : [];
+  if (entries.length === 0) {
+    return;
+  }
+
+  const suppressed = Boolean(options.suppressed);
+  const showDetails = Boolean(options.showDetails);
+  if (!suppressed && !showDetails) {
+    return;
+  }
+
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+  const countMessage = isChinese
+    ? `${entries.length} \u4e2a\u6587\u4ef6\u65e0\u6cd5\u89e3\u6790\u3002`
+    : `${entries.length} files could not be parsed.`;
+  const hintFlag = typeof options.hintFlag === 'string' && options.hintFlag.trim().length > 0
+    ? options.hintFlag.trim()
+    : '--show-parse-errors';
+
+  if (showDetails) {
+    fmt.warn(countMessage);
+    const limit = typeof options.limit === 'number' && options.limit > 0 ? options.limit : 5;
+    const samples = entries.slice(0, limit);
+    samples.forEach((entry) => {
+      const filePath = entry && entry.filePath ? entry.filePath : 'unknown';
+      const message = entry && entry.error && entry.error.message
+        ? entry.error.message
+        : String(entry && entry.error ? entry.error : 'Unknown error');
+      fmt.info(`${filePath}: ${message}`);
+    });
+    if (entries.length > samples.length) {
+      const extraMessage = isChinese
+        ? `\u8fd8\u6709 ${entries.length - samples.length} \u4e2a\u9519\u8bef\u5df2\u7701\u7565\u3002`
+        : `Additional ${entries.length - samples.length} errors omitted.`;
+      fmt.info(extraMessage);
+    }
+    return;
+  }
+
+  if (!suppressed) {
+    return;
+  }
+
+  const hint = isChinese
+    ? `${countMessage} \u4f7f\u7528 ${hintFlag} \u67e5\u770b\u8be6\u60c5\u3002`
+    : `${countMessage} Use ${hintFlag} for details.`;
+  fmt.info(hint);
+}
+
 async function main() {
   const parser = createParser();
   let options;
@@ -883,6 +1055,9 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+
+  options.showParseErrors = normalizeBooleanOption(options.showParseErrors);
+  options.depsParseErrors = normalizeBooleanOption(options.depsParseErrors);
 
   const operation = ensureSingleOperation(options);
 
@@ -948,12 +1123,17 @@ async function main() {
     return;
   }
 
-  if (scanResult.errors.length > 0) {
-    fmt.warn(`${scanResult.errors.length} files could not be parsed.`);
-    scanResult.errors.slice(0, 5).forEach((entry) => {
+  const parseErrors = Array.isArray(scanResult.errors) ? scanResult.errors : [];
+  const dependencyOperation = operation === 'deps-of';
+  const dependencyParseDetailRequested = dependencyOperation && (options.depsParseErrors || options.showParseErrors);
+  const suppressDependencyParseDetails = dependencyOperation && !dependencyParseDetailRequested;
+
+  if (parseErrors.length > 0 && !dependencyOperation) {
+    fmt.warn(`${parseErrors.length} files could not be parsed.`);
+    parseErrors.slice(0, 5).forEach((entry) => {
       fmt.info(`${entry.filePath}: ${entry.error.message}`);
     });
-    if (scanResult.errors.length > 5) {
+    if (parseErrors.length > 5) {
       fmt.info('Additional parse errors omitted.');
     }
   }
@@ -991,6 +1171,40 @@ async function main() {
         console.log(JSON.stringify(result, null, 2));
       } else {
         printHashLookup(result, options);
+      }
+      return;
+    }
+
+    if (operation === 'deps-of') {
+      const result = runDependencySummary(scanResult.files, options.depsOf, {
+        rootDir: scanResult.rootDir,
+        depth: options.depDepth,
+        limit: options.limit
+      });
+      if (options.json) {
+        if (parseErrors.length > 0) {
+          result.parseErrors = {
+            count: parseErrors.length
+          };
+          if (dependencyParseDetailRequested) {
+            const samples = parseErrors.slice(0, 5).map((entry) => ({
+              file: entry.filePath,
+              message: entry.error && entry.error.message ? entry.error.message : String(entry.error || 'Unknown error')
+            }));
+            result.parseErrors.samples = samples;
+            if (parseErrors.length > samples.length) {
+              result.parseErrors.omitted = parseErrors.length - samples.length;
+            }
+          }
+        }
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printDependencySummary(result);
+        printParseErrorSummary(parseErrors, {
+          suppressed: suppressDependencyParseDetails,
+          showDetails: dependencyParseDetailRequested,
+          hintFlag: '--deps-parse-errors'
+        });
       }
       return;
     }

@@ -192,6 +192,59 @@ function scanWorkspace(options = {}) {
       continue;
     }
 
+    const resolvedImports = new Set();
+    const resolvedRequires = new Set();
+    const resolvedAbsolutePaths = new Set();
+
+    const collectResolvedTargets = (specifiers, kind) => {
+      if (!Array.isArray(specifiers) || specifiers.length === 0) {
+        return;
+      }
+
+      specifiers.forEach((specifier) => {
+        const resolvedPaths = resolveDependencyCandidates(absolutePath, specifier, {
+          rootDir,
+          extensions,
+          excludes,
+          deprecatedOnly
+        });
+
+        resolvedPaths.forEach((resolvedPath) => {
+          const normalizedPath = path.resolve(resolvedPath);
+
+          const relativePath = rootRelative(normalizedPath);
+          if (shouldExclude(relativePath, excludes)) {
+            return;
+          }
+
+          if (deprecatedOnly && !isDeprecatedPath(relativePath)) {
+            return;
+          }
+
+          if (!isJavaScriptFile(normalizedPath, extensions)) {
+            return;
+          }
+
+          resolvedAbsolutePaths.add(normalizedPath);
+          if (kind === 'imports') {
+            resolvedImports.add(relativePath);
+          } else {
+            resolvedRequires.add(relativePath);
+          }
+        });
+      });
+    };
+
+    if (record.dependencies) {
+      collectResolvedTargets(record.dependencies.imports, 'imports');
+      collectResolvedTargets(record.dependencies.requires, 'requires');
+    }
+
+    record.resolvedDependencies = {
+      imports: Array.from(resolvedImports).sort(),
+      requires: Array.from(resolvedRequires).sort()
+    };
+
     if (!followDependencies) {
       continue;
     }
@@ -200,46 +253,26 @@ function scanWorkspace(options = {}) {
       continue;
     }
 
-    const dependencySpecs = new Set();
-    if (record.dependencies) {
-      if (Array.isArray(record.dependencies.imports)) {
-        record.dependencies.imports.forEach((value) => dependencySpecs.add(value));
+    resolvedAbsolutePaths.forEach((normalizedPath) => {
+      if (visitedPaths.has(normalizedPath) || queuedPaths.has(normalizedPath)) {
+        return;
       }
-      if (Array.isArray(record.dependencies.requires)) {
-        record.dependencies.requires.forEach((value) => dependencySpecs.add(value));
+
+      const relativePath = rootRelative(normalizedPath);
+      if (shouldExclude(relativePath, excludes)) {
+        return;
       }
-    }
 
-    dependencySpecs.forEach((specifier) => {
-      const resolvedPaths = resolveDependencyCandidates(absolutePath, specifier, {
-        rootDir,
-        extensions,
-        excludes,
-        deprecatedOnly
-      });
+      if (deprecatedOnly && !isDeprecatedPath(relativePath)) {
+        return;
+      }
 
-      resolvedPaths.forEach((resolvedPath) => {
-        const normalizedPath = path.resolve(resolvedPath);
-        if (visitedPaths.has(normalizedPath) || queuedPaths.has(normalizedPath)) {
-          return;
-        }
+      if (!isJavaScriptFile(normalizedPath, extensions)) {
+        return;
+      }
 
-        const relativePath = rootRelative(normalizedPath);
-        if (shouldExclude(relativePath, excludes)) {
-          return;
-        }
-
-        if (deprecatedOnly && !isDeprecatedPath(relativePath)) {
-          return;
-        }
-
-        if (!isJavaScriptFile(normalizedPath, extensions)) {
-          return;
-        }
-
-        queuedPaths.add(normalizedPath);
-        pending.push({ filePath: normalizedPath, depth: current.depth + 1 });
-      });
+      queuedPaths.add(normalizedPath);
+      pending.push({ filePath: normalizedPath, depth: current.depth + 1 });
     });
   }
 

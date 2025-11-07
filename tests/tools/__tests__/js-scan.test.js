@@ -1,11 +1,13 @@
 'use strict';
 
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { scanWorkspace } = require('../../../tools/dev/js-scan/shared/scanner');
 const { runSearch } = require('../../../tools/dev/js-scan/operations/search');
 const { runHashLookup } = require('../../../tools/dev/js-scan/operations/hashLookup');
 const { buildIndex } = require('../../../tools/dev/js-scan/operations/indexing');
 const { runPatternSearch } = require('../../../tools/dev/js-scan/operations/patterns');
+const { runDependencySummary } = require('../../../tools/dev/js-scan/operations/dependencies');
 const {
   parseTerseFields,
   formatTerseMatch,
@@ -13,6 +15,14 @@ const {
 } = require('../../../tools/dev/js-scan.js');
 
 const fixtureDir = path.resolve(__dirname, '../../fixtures/tools');
+const repoRoot = path.resolve(__dirname, '../../..');
+const cliScript = path.resolve(repoRoot, 'tools/dev/js-scan.js');
+
+const ANSI_PATTERN = /\[[0-9;]*m/g;
+
+function stripAnsi(value) {
+  return value.replace(ANSI_PATTERN, '');
+}
 
 let defaultScan;
 let includeDeprecatedScan;
@@ -104,6 +114,206 @@ describe('js-scan pattern search', () => {
     expect(result.matchCount).toBeGreaterThan(0);
     const names = result.matches.map((item) => item.function.name);
     expect(names.some((name) => name.includes('handler'))).toBe(true);
+  });
+});
+
+describe('js-scan dependency summaries', () => {
+  test('summarizes outgoing edges for entry file', () => {
+    const summary = runDependencySummary(dependencyScanFollow.files, 'entry.js', {
+      rootDir: dependencyScanFollow.rootDir,
+      depth: 1,
+      limit: 0
+    });
+
+    expect(summary.target.file).toBe('entry.js');
+    const outgoingFiles = summary.outgoing.map((row) => row.file);
+    expect(outgoingFiles).toContain('../dep-linked/helper.js');
+
+    const helperRow = summary.outgoing.find((row) => row.file === '../dep-linked/helper.js');
+    expect(helperRow).toBeDefined();
+    expect(helperRow.requireCount).toBe(1);
+    expect(helperRow.importCount).toBe(0);
+    expect(helperRow.hop).toBe(1);
+  });
+
+  test('depth expansion surfaces indirect dependents', () => {
+    const summary = runDependencySummary(dependencyScanFollow.files, '../dep-circular/a.js', {
+      rootDir: dependencyScanFollow.rootDir,
+      depth: 2,
+      limit: 0
+    });
+
+    const incomingFiles = summary.incoming.map((row) => row.file);
+    expect(incomingFiles).toContain('../dep-linked/helper.js');
+    expect(incomingFiles).toContain('entry.js');
+
+    const entryRow = summary.incoming.find((row) => row.file === 'entry.js');
+    expect(entryRow).toBeDefined();
+    expect(entryRow.hop).toBe(2);
+    expect(entryRow.via).toBe('../dep-linked/helper.js');
+  });
+
+  test('allows resolving by function hash', () => {
+    const entryRecord = dependencyScanFollow.files.find((record) => record.relativePath === 'entry.js');
+    expect(entryRecord).toBeDefined();
+
+    const hashMap = new Map();
+    dependencyScanFollow.files.forEach((record) => {
+      record.functions.forEach((fn) => {
+        if (!fn.hash) {
+          return;
+        }
+        if (!hashMap.has(fn.hash)) {
+          hashMap.set(fn.hash, []);
+        }
+        hashMap.get(fn.hash).push({
+          file: record.relativePath,
+          fn
+        });
+      });
+    });
+
+    const uniqueEntry = Array.from(hashMap.entries()).find(([, list]) => list.length === 1);
+
+    if (uniqueEntry) {
+      const [targetHash, [{ file: targetFile, fn: targetFunction }]] = uniqueEntry;
+
+      const summary = runDependencySummary(dependencyScanFollow.files, targetHash, {
+        rootDir: dependencyScanFollow.rootDir,
+        depth: 1,
+        limit: 0
+      });
+
+      expect(summary.target.matchedBy).toBe('function-hash');
+      expect(summary.target.file).toBe(targetFile);
+      expect(summary.target.function).toBeDefined();
+      expect(summary.target.function.hash).toBe(targetFunction.hash);
+    } else {
+      const [ambiguousHash] = hashMap.keys();
+      expect(() => runDependencySummary(dependencyScanFollow.files, ambiguousHash, {
+        rootDir: dependencyScanFollow.rootDir,
+        depth: 1,
+        limit: 0
+      })).toThrow(/belongs to multiple files/);
+    }
+  });
+});
+
+describe('js-scan CLI parse error handling', () => {
+  test('deps-of text output defers parse error summary', () => {
+    const output = execFileSync(process.execPath, [
+      cliScript,
+      '--deps-of',
+      'tests/fixtures/tools/js-scan/sample.js',
+      '--dep-depth',
+      '1',
+      '--limit',
+      '5'
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    });
+
+    const clean = stripAnsi(output);
+    const depsIndex = clean.indexOf('Dependencies');
+    const summaryIndex = clean.indexOf('files could not be parsed');
+
+    expect(depsIndex).toBeGreaterThan(-1);
+    expect(summaryIndex).toBeGreaterThan(-1);
+    expect(summaryIndex).toBeGreaterThan(depsIndex);
+    expect(clean.includes('Use --deps-parse-errors for details.')).toBe(true);
+  });
+
+  test('deps-of text output with --deps-parse-errors prints details after tables', () => {
+    const output = execFileSync(process.execPath, [
+      cliScript,
+      '--deps-of',
+      'tests/fixtures/tools/js-scan/sample.js',
+      '--dep-depth',
+      '1',
+      '--limit',
+      '5',
+      '--deps-parse-errors'
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    });
+
+    const clean = stripAnsi(output);
+    const depsIndex = clean.indexOf('Dependencies');
+    const detailIndex = clean.indexOf('hub-analysis-workflow.js');
+
+    expect(depsIndex).toBeGreaterThan(-1);
+    expect(detailIndex).toBeGreaterThan(depsIndex);
+    expect(clean.includes('Use --deps-parse-errors for details.')).toBe(false);
+  });
+
+  test('deps-of text output still honors legacy --show-parse-errors', () => {
+    const output = execFileSync(process.execPath, [
+      cliScript,
+      '--deps-of',
+      'tests/fixtures/tools/js-scan/sample.js',
+      '--dep-depth',
+      '1',
+      '--limit',
+      '5',
+      '--show-parse-errors'
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    });
+
+    const clean = stripAnsi(output);
+    const detailIndex = clean.indexOf('hub-analysis-workflow.js');
+
+    expect(detailIndex).toBeGreaterThan(-1);
+    expect(clean.includes('Use --deps-parse-errors for details.')).toBe(false);
+  });
+
+  test('deps-of json output embeds parse error counts', () => {
+    const output = execFileSync(process.execPath, [
+      cliScript,
+      '--deps-of',
+      'tests/fixtures/tools/js-scan/sample.js',
+      '--dep-depth',
+      '1',
+      '--limit',
+      '5',
+      '--json'
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    });
+
+    const parsed = JSON.parse(output);
+    expect(parsed.parseErrors).toBeDefined();
+    expect(parsed.parseErrors.count).toBeGreaterThan(0);
+    expect(parsed.parseErrors.samples).toBeUndefined();
+  });
+
+  test('deps-of json output includes samples when requested', () => {
+    const output = execFileSync(process.execPath, [
+      cliScript,
+      '--deps-of',
+      'tests/fixtures/tools/js-scan/sample.js',
+      '--dep-depth',
+      '1',
+      '--limit',
+      '5',
+      '--json',
+      '--show-parse-errors'
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    });
+
+    const parsed = JSON.parse(output);
+    expect(parsed.parseErrors).toBeDefined();
+    expect(parsed.parseErrors.count).toBeGreaterThan(0);
+    expect(Array.isArray(parsed.parseErrors.samples)).toBe(true);
+    expect(parsed.parseErrors.samples.length).toBeGreaterThan(0);
+    expect(parsed.parseErrors.samples[0]).toHaveProperty('file');
+    expect(parsed.parseErrors.samples[0]).toHaveProperty('message');
   });
 });
 
@@ -212,7 +422,8 @@ describe('js-scan output helpers', () => {
     const segments = formatTerseMatch(
       sampleMatch,
       ['location', 'name', 'hash', 'exported', 'async', 'terms'],
-      { formatter: stubFormatter, isChinese: false }
+      { isChinese: false },
+      stubFormatter
     );
 
     expect(segments).toEqual([
@@ -229,7 +440,8 @@ describe('js-scan output helpers', () => {
     const segments = formatTerseMatch(
       sampleMatch,
       ['exported', 'async'],
-      { formatter: stubFormatter, isChinese: true }
+      { isChinese: true },
+      stubFormatter
     );
     expect(segments).toEqual(['success(出)', 'cyan(异)']);
   });
