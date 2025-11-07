@@ -411,3 +411,148 @@ Our codebase already follows jsgui3's core principles:
   - `src/ui/express/public/js/crawls-enhancer.js` (simple enhancer)
   - `src/ui/express/public/js/queues-enhancer.js` (simple enhancer)
   - `src/ui/express/public/components/AnalysisProgressBar.js` (complex component - could benefit from ControlBase)
+
+---
+
+## Detached Crawl API Service Blueprint (jsgui3 Server)
+
+**Date**: November 7, 2025  
+**Audience**: Backend + platform engineers implementing the crawler as a long-lived API powered by jsgui3-server patterns.
+
+### Goals
+- Expose crawl orchestration through a persistent HTTP API rather than short-lived CLI invocations.
+- Reuse the existing `CrawlOperations` facade and sequence runner infrastructure without duplicating crawl logic.
+- Adopt jsgui3-server conventions (Server, Publisher, lifecycle hooks) so the detached service aligns with the rest of the planned modular platform.
+- Provide real-time progress streaming and durable run history that other services (dashboards, background tasks) can consume.
+
+### Current Constraints
+- `src/tools/crawl-operations.js` coordinates operations synchronously via CLI arguments; every run ends with process exit.
+- Background-task infrastructure already exists (`src/background/`) but assumes tasks are scheduled inside the main Express app.
+- There is no dedicated API surface for starting, inspecting, or cancelling crawler runs; the CLI JSON output is the only machine interface.
+- jsgui3-server patterns in this repository are documented but not yet applied to crawler orchestration.
+
+### Target Architecture Overview
+
+```
+┌──────────────────────────────┐
+│  jsgui3 Server instance      │  Server bootstrap + middleware
+│  (src/server/crawl-api.js)   │
+└──────────────┬───────────────┘
+          │ REST + SSE routes
+┌──────────────▼───────────────┐
+│  Publisher modules           │  map routes to domain actions
+│  (publishers/crawl/*.js)     │
+└──────────────┬───────────────┘
+          │ Queue commands / queries
+┌──────────────▼───────────────┐
+│  Crawl Service orchestration │  wraps CrawlOperations + SequenceRunner
+│  (services/CrawlService.js)  │
+└──────────────┬───────────────┘
+          │ Async jobs & state persistence
+┌──────────────▼───────────────┐
+│  Job store + telemetry       │  SQLite tables + background task bus
+│  (db/crawl_runs, audit logs) │
+└──────────────────────────────┘
+```
+
+### Mapping jsgui3-Server Concepts
+| jsgui3 pattern | Proposed implementation |
+| -------------- | ----------------------- |
+| **Server** (`new Server({ name })`) | `src/server/crawl-api.js` instantiates `Server`, registers middleware (logging, JSON), mounts publishers under `/api/crawl`.
+| **Publisher** (route handler module) | `publishers/crawl/start.js`, `publishers/crawl/status.js`, `publishers/crawl/cancel.js`, `publishers/crawl/runs.js` returning `{ method, path, handler }` objects.
+| **Context** (shared runtime) | `createCrawlApiContext({ db, sequenceRunner, telemetry })` storing logger, job store, config, SSE hub references.
+| **Lifecycle hooks** (`start`, `stop`) | Server `start()` boots the queue consumers and SSE channels; `stop()` drains jobs and closes db connections.
+| **Event streams** (`publishers/sse.js`) | `/api/crawl/events/:runId` endpoint streams JSON events using jsgui3 SSE helper, reusing telemetry bus from background tasks.
+
+### Core API Surface
+
+| Endpoint | Method | Purpose | Handler responsibilities |
+| -------- | ------ | ------- | ------------------------ |
+| `/api/crawl/runs` | `POST` | Create a new crawl run (operation, sequence preset, or sequence config). | Validate payload, enqueue job, return `runId`, accepted parameters, and initial status (`pending`). |
+| `/api/crawl/runs/:id` | `GET` | Retrieve run metadata, configuration, and latest progress snapshot. | Query job store, hydrate run summary, include aggregate stats mirroring CLI JSON output. |
+| `/api/crawl/runs/:id/cancel` | `POST` | Request cancellation of an in-flight crawl. | Mark run as cancelling, signal worker via queue, append audit trail entry. |
+| `/api/crawl/runs/:id/logs` | `GET` | Paginated access to structured log entries captured during the run. | Stream or chunk log rows (DB or file-backed) filtered by run ID. |
+| `/api/crawl/runs/:id/events` | `GET` (SSE) | Push real-time status updates to clients. | Bind to telemetry bus, emit JSON payloads containing step status, metrics, errors. |
+| `/api/crawl/availability` | `GET` | List operations, sequence presets, and sequence configs. | Reuse `buildOperationSummaries`/`buildSequenceSummaries`; acts like CLI `--list`. |
+
+Authentication (API keys / session) plugs into the Server-level middleware; plan to reuse the existing Express auth strategy if co-hosted.
+
+### Orchestration Flow
+1. **Request intake**: Publisher validates payload against JSON schema (operation name, `startUrl`, overrides, `sequenceConfigName`, etc.) and normalises using the same helpers as the CLI (`normalizeOptions`).
+2. **Job enqueue**: Persist a crawl run record in `crawl_runs` (new table) with fields for mode, payload, status, timestamps, requester, and derived metrics. Push a job message to the queue (reuse background task runner, or introduce lightweight BullMQ-like queue if needed).
+3. **Worker execution**: A dedicated worker process (`workers/crawl-runner.js`) pulls jobs, instantiates `CrawlOperations` with injected logger, and executes `runOperation`, `runSequencePreset`, or `runSequenceConfig` depending on the job. Sequence config runs reuse `SequenceConfigRunner` exactly as the CLI.
+4. **Telemetry + logging**: Instrument the worker to emit structured events (step start/finish, summary, warnings) through the telemetry hub. Persist the same metrics into the run record and append structured log rows to `crawl_run_logs`.
+5. **Progress streaming**: SSE endpoint subscribes to telemetry events for a run, relays them to clients, and closes when the run reaches a terminal state (`ok`, `error`, `aborted`).
+6. **Lifecycle management**: Server exposes `/healthz` and `/readyz` to integrate with deployment orchestrators. On shutdown, it waits for current jobs to finish or marks them as interrupted.
+
+### Data Model Additions
+- **`crawl_runs` table**
+  - `id` (UUID or ULID)
+  - `mode` (`operation`, `sequence`, `sequence-config`)
+  - `operation_name`, `sequence_name`, `sequence_config_name`
+  - `start_url`, `config_host`, `config_dir`
+  - `overrides_json`, `shared_overrides_json`, `step_overrides_json`
+  - `status`, `started_at`, `finished_at`, `elapsed_ms`
+  - `summary_json` (stores final CLI-equivalent payload)
+  - `requested_by`, `created_at`, `updated_at`
+
+- **`crawl_run_logs` table**
+  - `id`
+  - `run_id`
+  - `timestamp`
+  - `level` (`info`, `warn`, `error`)
+  - `context` (step name, operation)
+  - `message`
+  - `details_json`
+
+Use existing DB helper factories under `src/db/sqlite/v1/` to expose typed query modules (`crawlRunsStore.js`, `crawlRunLogsStore.js`).
+
+### Reusing Existing Modules
+- **`CrawlOperations`**: Expose a factory `createCrawlRunner({ logger, db, options })` that can be shared by CLI and worker. Workers inject the queue-aware logger and telemetry hooks.
+- **`SequenceConfigRunner`**: Already supports JSON metadata; worker can persist the metadata portion directly into the run summary for API consumers.
+- **`CliFormatter` parity**: For JSON responses, reuse the helper functions currently used to build CLI payloads so behaviour stays consistent across CLI and API.
+- **`createLogger`** (from CLI): adapt to accept `publishEvent(type, payload)` so log levels map to SSE events and log persistence.
+
+### Implementation Phases
+1. **Foundation (Week 1)**
+  - Create new database tables + query adapters.
+  - Add `services/CrawlService.js` that wraps job persistence and orchestration triggers.
+  - Scaffold the jsgui3 `Server` with basic middleware, health endpoint, and `/api/crawl/availability` route for smoke testing.
+
+2. **Job Execution (Week 2)**
+  - Implement worker process that consumes pending runs and executes them using existing facades.
+  - Capture structured telemetry + logs, write them to the DB, and mirror CLI JSON summary.
+  - Add cancellation support (job interruption, status transitions).
+
+3. **API Completion (Week 3)**
+  - Implement POST `/runs`, GET `/runs/:id`, SSE `/runs/:id/events`, logs endpoint.
+  - Add request/response JSON schema validation and convert CLI-normalised payloads to API types.
+  - Integrate authentication + rate limiting (reuse Express middleware if co-hosted, or implement API key guard).
+
+4. **Observability & Docs (Week 4)**
+  - Wire run metrics into existing telemetry dashboards (analysis runtime pages).
+  - Document API in OpenAPI spec (extend the existing swagger plan).
+  - Add automation tests (Jest integration hitting the API server with in-memory DB) and CLI compatibility tests (ensure CLI can poll API results for parity).
+
+### Testing + Validation Strategy
+- **Unit tests** for `CrawlService` (enqueue, cancel, summarise) and DB adapters.
+- **Integration tests** launching the jsgui3 server against an in-memory SQLite database and executing a short mock operation using dependency-injected `CrawlOperations` stub.
+- **Worker smoke tests** using a fixture database and invoking real operations in dry-run mode; assert status transitions and summary payloads match CLI output.
+- **Contract tests** verifying SSE stream semantics (initial heartbeat, step updates, completion event).
+
+### Risks & Mitigations
+- **Long-running operations**: Use job-level heartbeat updates and enforce cancellation checks inside operation steps. Consider chunking sequences that loop indefinitely.
+- **Resource contention**: The worker process should reuse the shared SQLite connection pool; enforce concurrency limits per host or global to avoid overloading target sites.
+- **Security**: All mutating endpoints require authentication; rate-limited by IP/key. Logging should avoid storing secrets in overrides.
+- **Backpressure on SSE**: Buffer events and drop clients that cannot keep up; store complete history in `crawl_run_logs` so clients can resume via pagination.
+
+### Follow-Up Opportunities
+- Expose background-task integration so existing scheduler can enqueue crawl runs via the same API.
+- Add Web UI panel (jsgui3 client) that consumes the API for manual crawl management, reusing `jsgui3-html` inspired interfaces.
+- Extend API to support batch submissions and upload of sequence config files.
+- Investigate running the API server and worker inside the existing Express app vs. separate process; document deployment trade-offs once prototype stabilises.
+
+### References
+- jsgui3-server `Server` and `Publisher` examples in the metabench repositories.
+- Existing CLI implementation `src/tools/crawl-operations.js` (operation listing, JSON summaries).
+- Sequence runner docs: `docs/PHASE_2_CRAWL_FACADE_IMPLEMENTATION_PLAN.md`, `docs/CHANGE_PLAN.md` (Sequence Config entries).

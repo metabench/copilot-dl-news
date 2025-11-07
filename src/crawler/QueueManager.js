@@ -4,6 +4,17 @@ const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
 
 function nowMs() { return Date.now(); }
 
+function getCachedAgeMs(cached) {
+  if (!cached || !cached.crawledAt) {
+    return null;
+  }
+  const timestamp = new Date(cached.crawledAt).getTime();
+  if (!Number.isFinite(timestamp)) {
+    return null;
+  }
+  return Math.max(0, Date.now() - timestamp);
+}
+
 class MinHeap {
   constructor(compare) { this.data = []; this.compare = compare; }
   size() { return this.data.length; }
@@ -263,6 +274,7 @@ class QueueManager {
       decision,
       allowRevisit,
       queueKey,
+      meta: evaluationMeta,
       priorityBias,
       priority: priorityResult.priority,
       priorityMetadata,
@@ -706,29 +718,96 @@ class QueueManager {
     return 'other';
   }
 
-  async _maybeAttachCacheContext(item, context, host = null) {
-    if (!item || (context && context.forceCache)) {
+    async _maybeAttachCacheContext(item, context, host = null) {
+    if (!item) {
       return context;
     }
-    if (!this.cache || typeof this.cache.get !== 'function') {
-      return context;
-    }
-    if (item.allowRevisit) {
-      return context;
-    }
-    try {
-      const cached = await this.cache.get(item.url);
-      if (cached) {
-        return {
-          ...(context || {}),
-          forceCache: true,
-          cachedPage: cached,
-          cachedHost: host || this.safeHostFromUrl(item.url)
-        };
+
+    let nextContext = context || null;
+    const ensureContext = () => {
+      if (!nextContext) {
+        nextContext = {};
       }
-    } catch (_) {}
-    return context;
+      return nextContext;
+    };
+
+    if (nextContext && nextContext.forceCache) {
+      return nextContext;
+    }
+
+    if (!this.cache || typeof this.cache.get !== 'function') {
+      return nextContext;
+    }
+
+    const meta = item.meta && typeof item.meta === 'object' ? item.meta : null;
+    const fetchPolicy = meta && typeof meta.fetchPolicy === 'string' ? meta.fetchPolicy : null;
+    const fallbackToCache = meta && meta.fallbackToCache === false ? false : true;
+    const metaMaxCacheAge = typeof meta?.maxCacheAgeMs === 'number' && Number.isFinite(meta.maxCacheAgeMs) && meta.maxCacheAgeMs >= 0
+      ? meta.maxCacheAgeMs
+      : null;
+
+    let propagatedContext = null;
+    const getContextRef = () => {
+      if (!propagatedContext) {
+        propagatedContext = ensureContext();
+      }
+      return propagatedContext;
+    };
+
+    if (fetchPolicy) {
+      getContextRef().fetchPolicy = fetchPolicy;
+    }
+    if (metaMaxCacheAge != null) {
+      getContextRef().maxCacheAgeMs = metaMaxCacheAge;
+    }
+    if (fetchPolicy || meta?.fallbackToCache === false) {
+      getContextRef().fallbackToCache = fallbackToCache;
+    }
+
+    if (item.allowRevisit) {
+      return nextContext;
+    }
+
+    let cached = null;
+    try {
+      cached = await this.cache.get(item.url);
+    } catch (_) {
+      cached = null;
+    }
+
+    if (!cached) {
+      return nextContext;
+    }
+
+    const ctx = ensureContext();
+    if (!ctx.cachedHost) {
+      ctx.cachedHost = host || this.safeHostFromUrl(item.url);
+    }
+
+    const cachedAgeMs = getCachedAgeMs(cached);
+
+    if (fetchPolicy === 'network-first') {
+      if (metaMaxCacheAge != null && cachedAgeMs != null && cachedAgeMs > metaMaxCacheAge) {
+        if (fallbackToCache) {
+          ctx.cachedFallback = cached;
+          ctx.cachedFallbackMeta = {
+            ageMs: cachedAgeMs,
+            policy: 'network-first',
+            reason: 'stale-for-policy'
+          };
+        }
+        return ctx;
+      }
+
+      ctx.cachedPage = cached;
+      return ctx;
+    }
+
+    ctx.forceCache = true;
+    ctx.cachedPage = cached;
+    return ctx;
   }
+
 }
 
 module.exports = QueueManager;

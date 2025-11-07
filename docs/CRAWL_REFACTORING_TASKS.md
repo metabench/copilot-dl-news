@@ -142,3 +142,66 @@ node -e "const { createSequenceConfigLoader } = require('./src/orchestration/Seq
 1. Monitor production usage of CrawlOperations facade and sequence config system
 2. Consider adding CLI examples to CLI_REFACTORING_QUICK_START.md if user adoption requires it
 3. Review NewsCrawler modularization opportunities (see CHANGE_PLAN.md "NewsCrawler Modularization" section for draft plan)
+
+## Phase 4: Hub Freshness Control (New Scope)
+## Phase 4: Hub Freshness Control (New Scope)
+
+- **Current sub-phase:** γ — Implementation in progress (2025-11-07)
+- **Docs consulted (2025-11-07):** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md` (Topic Index), `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`
+- **Code reconnaissance targets (2025-11-07):** `src/crawler/FetchPipeline.js`, `src/crawler/QueueManager.js`, `src/crawler/cli/runLegacyCommand.js`, `src/crawler/cli/argumentNormalizer.js`, `src/crawl.js`
+- **Discovery notes (2025-11-07):**
+  - `runLegacyCommand` normalizes CLI arguments and constructs `NewsCrawler`, so start URL refresh policy must attach during `_seedInitialRequest` to reach the queue.
+  - Dequeued context flows through `WorkerRunner.run` into `PageExecutionService.processPage` and `FetchPipeline.fetch`, confirming fetch-policy metadata needs to persist through these layers.
+  - Rate-limit cache forcing still depends on `context.forceCache`; new policy fields must co-exist without breaking rate-limit fallbacks.
+- **Discovery notes (2025-11-06):**
+  - Guardian crawl incident highlighted need for per-step cache policy controls; current pipeline forces cache under host rate limit with no override path for hub refresh.
+  - Queue items lack fetch-policy metadata, so operations cannot request network-first fetches when enqueuing hub URLs.
+  - Forced cache behavior currently injected via `context.forceCache`/`context.rateLimitedHost`; the signals originate in `QueueManager.deferForRateLimit` and FetchPipeline’s `_tryCache`.
+  - Hub discovery logic mixes with general acquisition queue; missing hook for "freshness passes" that re-enqueue hubs with bypass flags before each article sweep.
+  - Need dedicated orchestration surface (likely new operation) to run network-first hub refresh and publish telemetry about freshness deltas.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 4.1 | Discovery & planning for hub freshness control | Capture cache/rate-limit interplay, document blockers to forcing network fetches, and sync plan deltas in CHANGE_PLAN.md | completed | HIGH | 2025-11-06: FetchPipeline `_tryCache`, QueueManager rate-limit deferrals, and DomainThrottleManager backoff paths catalogued; CHANGE_PLAN.md updated with new initiative. |
+| 4.2 | Document hub freshness refactor plan | Produce architecture notes detailing required modules/extension points to enable network-first hub refresh passes | completed | HIGH | 2025-11-06: Authored "Hub Freshness Control Refactor Plan" section in ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md covering policy enum, pipeline updates, new operation, telemetry, and roadmap. |
+| 4.3 | Update docs & trackers post-plan | Push finalized documentation to ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md (or related docs) and record tracker status | completed | MEDIUM | 2025-11-06: Tracker updated (Phase 4), CHANGE_PLAN.md initiative logged, architecture doc patched with plan, ready for external review marker when needed. |
+| 4.4 | Configuration consolidation & frequency policy | Define `hubFreshness` configuration block with defaults and ensure ConfigManager accessors surface it | completed | HIGH | 2025-11-06: Documented `hubFreshness` configuration schema; code wiring tracked in task 4.8. |
+| 4.5 | Document configuration schema & validation | Update architecture docs with configuration defaults and validation plan | completed | MEDIUM | 2025-11-06: Architecture section updated with config schema, defaults (10-minute threshold), and validation expectations. |
+| 4.6 | Implement queue/worker fetch-policy propagation | Wire fetch-policy metadata, cache-age thresholds, and fallback flags through `QueueManager` and worker contexts | completed | HIGH | 2025-11-07: QueueManager now forwards policy metadata; WorkerRunner + enqueueRequest propagate fetch policy/fallback context to `processPage`. |
+| 4.7 | Enforce fetch policy in FetchPipeline with cache fallback | Update `_tryCache` and `_performNetworkFetch` to honor policy, respect max-cache-age overrides, and surface fallback telemetry | completed | HIGH | 2025-11-16: `_tryCache` respects `network-first` bypass, `_performNetworkFetch` falls back to cached entries on HTTP/network failures, telemetry includes fallback metadata. |
+| 4.8 | Apply hub freshness config + CLI/documentation updates | Introduce `hubFreshness` defaults via ConfigManager, ensure `_seedInitialRequest` uses them, and clarify CLI behavior in documentation | not-started | MEDIUM | Requires updated config manager accessors and doc sync once FetchPipeline work lands. |
+| 4.9 | Focused tests for policy plumbing | Add targeted Jest coverage for queue context + FetchPipeline decision matrix | in-progress | MEDIUM | 2025-11-16: Added FetchPipeline network-first fallback unit coverage; queue propagation tests and CLI smoke still pending. |
+
+## Phase 5: Crawl Platform Surfaces (New Scope)
+
+- **Current sub-phase:** δ — Validation & documentation complete (2025-11-06)
+- **Docs consulted (2025-11-06):** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md` (Topic Index), `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`, `docs/CHANGE_PLAN.md`
+- **Code reconnaissance targets (2025-11-06):** `src/crawler/CrawlOperations.js`, `src/crawler/core/Crawler.js`, `src/orchestration/SequenceRunner.js`, `src/crawler/operations/`
+- **Discovery notes (2025-11-06):**
+	- Existing façade (CrawlOperations) and base class (Crawler) already centralize lifecycle, but custom operations still juggle planner setup, queue hints, and telemetry manually.
+	- Need a well-defined “crawl platform” layer exposing small, composable APIs (queue adapters, fetch policy, telemetry, state machine hooks) so domain-specific code focuses on describing targets.
+	- SequenceConfig system offers configuration surface; pairing it with a platform SDK could shrink per-operation code by providing declarative helpers (e.g., `platform.hubs.refresh().then(platform.acquireArticles)`).
+	- Platform should expose standard milestones/metrics so new operations auto-wire with CLI progress reporters without bespoke telemetry wiring.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 5.1 | Platform discovery & capability matrix | Map current crawl components to desired platform services, identify gaps preventing small code surfaces | completed | HIGH | 2025-11-06: Catalogued CrawlOperations, SequenceRunner, and Crawler capabilities; identified gaps documented in platform section. |
+| 5.2 | Author crawl platform architecture plan | Document proposed platform layers (core services, SDK helpers, domain plug-ins) and how operations consume them | completed | HIGH | 2025-11-06: Added "Crawl Platform Layer Vision" section detailing platform layers, SDK example, next steps, and considerations. |
+| 5.3 | Update change plan & trackers | Sync CHANGE_PLAN.md with platform initiative and record follow-up validation strategy | completed | MEDIUM | 2025-11-06: CHANGE_PLAN.md updated with new initiative section, tracker marked complete. |
+
+## Phase 6: Hub Refresh Configuration & Frequency Controls (New Scope)
+
+- **Current sub-phase:** δ — Validation & documentation complete (2025-11-06)
+- **Docs consulted (2025-11-06):** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md`, `docs/CHANGE_PLAN.md`, `config/priority-config.json`
+- **Code reconnaissance targets (2025-11-06):** `config/priority-config.json`, `src/config/index.js`, `src/crawler/config/defaults.js`, `src/crawler/FetchPipeline.js`
+- **Discovery notes (2025-11-06):**
+	- Hub freshness needs configurable thresholds (e.g., re-download if older than 10 minutes) with options consolidated in config modules rather than scattered flags.
+	- Priority config already centralizes crawler options; extend with `hubFreshness` block referencing max age, retry windows, and policy defaults.
+	- First-page refresh requirement implies special-case logic at crawl start; should be part of platform SDK to avoid ad-hoc checks in operations.
+	- Documentation must detail configuration keys, defaults, and operational guidance in architecture docs.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 6.1 | Map existing configuration consolidation points | Identify single source-of-truth modules for crawler options and determine where hub freshness settings should reside | completed | HIGH | 2025-11-06: priority-config + ConfigManager identified as canonical home; new `hubFreshness` block planned with typed accessors. |
+| 6.2 | Document hub frequency policy design | Update architecture docs with policy thresholds (10-minute default, first-page refresh rule) and configuration schema | completed | HIGH | 2025-11-06: ARCHITECTURE doc updated with configuration defaults, centralization approach, and platform integration notes. |
+| 6.3 | Update change plan & trackers post-documentation | Reflect configuration strategy and validation steps in CHANGE_PLAN.md | completed | MEDIUM | 2025-11-06: CHANGE_PLAN.md and tracker synchronized with configuration tasks and validation additions. |

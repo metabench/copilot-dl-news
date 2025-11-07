@@ -168,11 +168,21 @@ class FetchPipeline {
     const forcedCache = context.forceCache === true;
     const allowCache = forcedCache || !context.allowRevisit;
     const rateLimitedHost = context && context.rateLimitedHost ? context.rateLimitedHost : null;
+    const fetchPolicy = context.fetchPolicy || null;
+    const contextMaxAge = typeof context.maxCacheAgeMs === 'number' && Number.isFinite(context.maxCacheAgeMs) && context.maxCacheAgeMs >= 0
+      ? context.maxCacheAgeMs
+      : null;
 
     const preferCache = this.preferCache || forcedCache;
-    const effectiveMaxAgeMs = looksArticle && this.maxAgeArticleMs != null
-      ? this.maxAgeArticleMs
-      : (!looksArticle && this.maxAgeHubMs != null ? this.maxAgeHubMs : this.maxAgeMs);
+    const effectiveMaxAgeMs = contextMaxAge != null
+      ? contextMaxAge
+      : (looksArticle && this.maxAgeArticleMs != null
+        ? this.maxAgeArticleMs
+        : (!looksArticle && this.maxAgeHubMs != null ? this.maxAgeHubMs : this.maxAgeMs));
+
+    if (fetchPolicy === 'network-first') {
+      return null;
+    }
 
     if (!allowCache && !preferCache && effectiveMaxAgeMs == null) {
       return null;
@@ -251,6 +261,47 @@ class FetchPipeline {
   async _performNetworkFetch({ originalUrl, normalizedUrl, context, decision, retryCount = 0 }) {
     let parsedUrl = new URL(normalizedUrl);
     const host = parsedUrl.hostname;
+    const fetchPolicy = context.fetchPolicy || null;
+    const fallbackToCache = context.fallbackToCache !== false;
+    const cachedFallback = context.cachedFallback || context.cachedPage || null;
+    const fallbackMeta = context.cachedFallbackMeta || {};
+    const rateLimitedHostFromContext = context.rateLimitedHost || null;
+    const cachedHost = context.cachedHost || null;
+    const shouldFallbackToCache = fetchPolicy === 'network-first' && fallbackToCache && !!cachedFallback;
+    const buildFallbackResult = ({ fallbackReason, httpStatus = null }) => {
+      if (!cachedFallback) {
+        return null;
+      }
+      const ageMs = typeof fallbackMeta.ageMs === 'number' ? fallbackMeta.ageMs : null;
+      const ageSeconds = ageMs != null ? Math.floor(ageMs / 1000) : null;
+      const html = typeof cachedFallback.html === 'string'
+        ? cachedFallback.html
+        : (typeof cachedFallback.body === 'string' ? cachedFallback.body : null);
+      if (!html) {
+        return null;
+      }
+
+      return this._buildResult({
+        status: 'cache',
+        source: 'cache',
+        html,
+        url: normalizedUrl,
+        decision,
+        cacheInfo: {
+          reason: fallbackMeta.reason || 'network-first-fallback',
+          policy: fallbackMeta.policy || fetchPolicy || null,
+          forced: false,
+          rateLimitedHost: rateLimitedHostFromContext || cachedHost || null,
+          crawledAt: cachedFallback.crawledAt || null,
+          source: cachedFallback.source || null,
+          cachedHost: cachedHost || null,
+          ageMs,
+          ageSeconds,
+          fallbackReason,
+          httpStatus
+        }
+      });
+    };
 
     // Validate protocol - log and fix http: URLs for https: domains
     if (parsedUrl.protocol === 'http:' && (host.includes('theguardian.com') || host.includes('bbc.co'))) {
@@ -434,6 +485,14 @@ class FetchPipeline {
         if (status === 429) {
           this.note429(host, retryAfterMs);
         }
+
+        if (shouldFallbackToCache) {
+          const fallbackResult = buildFallbackResult({ fallbackReason: `http-${status}`, httpStatus: status });
+          if (fallbackResult) {
+            this.logger.warn(`Network fetch failed (${status}); returning stale cache for ${normalizedUrl}`);
+            return fallbackResult;
+          }
+        }
         return this._buildResult({
           status: 'error',
           source: 'error',
@@ -536,6 +595,14 @@ class FetchPipeline {
         this.handleConnectionReset(normalizedUrl, error);
       }
       this._recordNetworkError(normalizedUrl, isTimeout ? 'timeout' : 'network', error);
+      if (shouldFallbackToCache) {
+        const fallbackReason = isTimeout ? 'timeout' : 'network-error';
+        const fallbackResult = buildFallbackResult({ fallbackReason });
+        if (fallbackResult) {
+          this.logger.warn(`Network error (${fallbackReason}) for ${normalizedUrl}; returning stale cache`);
+          return fallbackResult;
+        }
+      }
       return this._buildResult({
         status: 'error',
         source: 'error',

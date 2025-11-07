@@ -151,7 +151,7 @@ class ConfigManager {
     }
   }
 
-  _getDefaultConfig() {
+    _getDefaultConfig() {
     return {
       queue: {
         bonuses: {
@@ -190,9 +190,16 @@ class ConfigManager {
         realTimeCoverageAnalytics: true,
         problemClustering: true,
         problemResolution: true
+      },
+      hubFreshness: {
+        refreshOnStartup: true,
+        maxCacheAgeMs: 600000,
+        firstPageMaxAgeMs: 600000,
+        fallbackToCacheOnFailure: true
       }
     };
   }
+
 
   _applyDefaults(rawConfig) {
     const defaults = this._getDefaultConfig();
@@ -203,13 +210,15 @@ class ConfigManager {
     return this._normalizeConfigStructure(merged);
   }
 
-  _normalizeConfigStructure(config) {
+    _normalizeConfigStructure(config) {
     if (!config || tof(config) !== 'object') {
       return config;
     }
 
+    const defaults = this._getDefaultConfig();
+
     if (!config.queue || tof(config.queue) !== 'object') {
-      config.queue = clone(this._getDefaultConfig().queue);
+      config.queue = clone(defaults.queue);
     }
 
     if (!config.queue.bonuses || tof(config.queue.bonuses) !== 'object') {
@@ -268,8 +277,39 @@ class ConfigManager {
       config.features = normalized;
     }
 
+    const defaultHubFreshness = defaults.hubFreshness || {};
+    const rawHubFreshness = (config.hubFreshness && tof(config.hubFreshness) === 'object')
+      ? config.hubFreshness
+      : {};
+
+    const normalizedHubFreshness = {
+      refreshOnStartup: rawHubFreshness.refreshOnStartup !== false,
+      fallbackToCacheOnFailure: rawHubFreshness.fallbackToCacheOnFailure !== false
+    };
+
+    const defaultMaxAge = typeof defaultHubFreshness.maxCacheAgeMs === 'number'
+      && defaultHubFreshness.maxCacheAgeMs >= 0
+      ? defaultHubFreshness.maxCacheAgeMs
+      : 600000;
+    const coercedMaxAge = coerceNumber(rawHubFreshness.maxCacheAgeMs);
+    normalizedHubFreshness.maxCacheAgeMs = typeof coercedMaxAge === 'number' && coercedMaxAge >= 0
+      ? coercedMaxAge
+      : defaultMaxAge;
+
+    const defaultFirstPageAge = typeof defaultHubFreshness.firstPageMaxAgeMs === 'number'
+      && defaultHubFreshness.firstPageMaxAgeMs >= 0
+      ? defaultHubFreshness.firstPageMaxAgeMs
+      : normalizedHubFreshness.maxCacheAgeMs;
+    const coercedFirstPageAge = coerceNumber(rawHubFreshness.firstPageMaxAgeMs);
+    normalizedHubFreshness.firstPageMaxAgeMs = typeof coercedFirstPageAge === 'number' && coercedFirstPageAge >= 0
+      ? coercedFirstPageAge
+      : defaultFirstPageAge;
+
+    config.hubFreshness = normalizedHubFreshness;
+
     return config;
   }
+
 
   _writeConfigToDisk(config) {
     const dir = path.dirname(this.configPath);
@@ -329,7 +369,7 @@ class ConfigManager {
   }
 
   // Public API
-  getConfig() {
+    getConfig() {
     const snapshot = clone(this.config);
     snapshot.queuePriorityBonuses = Object.fromEntries(
       Object.entries(snapshot.queue?.bonuses || {}).map(([key, meta]) => [key, meta.value])
@@ -348,8 +388,10 @@ class ConfigManager {
       }
       snapshot.features = features;
     }
+    snapshot.hubFreshness = clone(snapshot.hubFreshness || {});
     return snapshot;
   }
+
 
   getBonuses() {
     return clone(this.config?.queue?.bonuses || {});
@@ -369,6 +411,10 @@ class ConfigManager {
 
   getFeatureFlags() {
     return clone(this.config?.features || {});
+  }
+
+  getHubFreshnessConfig() {
+    return clone(this.config?.hubFreshness || {});
   }
 
   isFeatureEnabled(featureName) {

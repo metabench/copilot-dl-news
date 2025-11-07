@@ -6,7 +6,11 @@ describe('QueueManager basic', () => {
       evaluate: ({ url }) => ({ status: 'allow', normalized: url, kind: (url.includes('article') ? 'article' : 'hub'), queueKey: url })
     };
 
-    const qm = new QueueManager({ urlEligibilityService, usePriorityQueue: false });
+    const qm = new QueueManager({
+      urlEligibilityService,
+      usePriorityQueue: false,
+      isTotalPrioritisationEnabled: () => false
+    });
 
     qm.enqueue({ url: 'http://example.com/hub', depth: 0, type: 'hub' });
     qm.enqueue({ url: 'http://example.com/article/1', depth: 1, type: 'article' });
@@ -116,7 +120,8 @@ describe('QueueManager basic', () => {
       getHostResumeTime,
       isHostRateLimited,
       safeHostFromUrl: (url) => new URL(url).host,
-      usePriorityQueue: true
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => false
     });
 
     qm.enqueue({ url: 'http://news.example.com/article/1', depth: 1, type: 'article' });
@@ -149,7 +154,8 @@ describe('QueueManager basic', () => {
       getHostResumeTime,
       isHostRateLimited,
       safeHostFromUrl: (url) => new URL(url).host,
-      usePriorityQueue: true
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => false
     });
 
     qm.enqueue({ url: 'http://news.example.com/article/2', depth: 1, type: 'article' });
@@ -178,7 +184,8 @@ describe('QueueManager basic', () => {
       safeHostFromUrl: (url) => new URL(url).host,
       usePriorityQueue: true,
       isHostRateLimited: () => false,
-      getHostResumeTime: () => null
+      getHostResumeTime: () => null,
+      isTotalPrioritisationEnabled: () => false
     });
 
     const targetUrl = 'http://news.example.com/article/cached';
@@ -193,6 +200,48 @@ describe('QueueManager basic', () => {
       cachedHost: 'news.example.com'
     }));
     expect(cacheGet).toHaveBeenCalledWith(targetUrl);
+  });
+
+  test('pullNext attaches network-first policy metadata when present', async () => {
+    const cachedPage = { html: '<html></html>', crawledAt: new Date().toISOString() };
+    const cacheGet = jest.fn().mockResolvedValue(cachedPage);
+
+    const urlEligibilityService = {
+      evaluate: ({ url }) => ({
+        status: 'allow',
+        normalized: url,
+        kind: 'hub',
+        queueKey: url
+      })
+    };
+
+    const qm = new QueueManager({
+      urlEligibilityService,
+      cache: { get: cacheGet },
+      safeHostFromUrl: (url) => new URL(url).host,
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => false
+    });
+
+    const targetUrl = 'https://example.com/hub';
+    const meta = {
+      fetchPolicy: 'network-first',
+      maxCacheAgeMs: 10 * 60 * 1000,
+      fallbackToCache: true
+    };
+
+    qm.enqueue({ url: targetUrl, depth: 0, type: 'hub', meta });
+
+    const result = await qm.pullNext();
+    expect(result).not.toBeNull();
+    expect(result.item.url).toBe(targetUrl);
+    expect(result.context).toEqual(expect.objectContaining({
+      fetchPolicy: 'network-first',
+      maxCacheAgeMs: meta.maxCacheAgeMs,
+      fallbackToCache: true,
+      cachedPage,
+      cachedHost: 'example.com'
+    }));
   });
 
   test('heatmap tracks origin/role/depth buckets and decrements on pull', async () => {
@@ -211,7 +260,8 @@ describe('QueueManager basic', () => {
 
     const qm = new QueueManager({
       urlEligibilityService,
-      usePriorityQueue: false
+      usePriorityQueue: false,
+      isTotalPrioritisationEnabled: () => false
     });
 
     qm.enqueue({ url: 'http://planner.example.com/hub', depth: 0, type: 'hub' });
@@ -254,7 +304,8 @@ describe('QueueManager basic', () => {
       urlEligibilityService,
       maxDepth: 1,
       shouldBypassDepth: ({ meta }) => meta?.mode === 'gazetteer',
-      emitQueueEvent
+      emitQueueEvent,
+      isTotalPrioritisationEnabled: () => false
     });
 
     const accepted = qm.enqueue({ url: 'http://example.com/gazetteer', depth: 5, type: 'hub' });

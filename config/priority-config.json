@@ -102,5 +102,11 @@
     "crossDomainSharing": false,
     "totalPrioritisation": true
   },
+  "hubFreshness": {
+    "refreshOnStartup": true,
+    "maxCacheAgeMs": 600000,
+    "firstPageMaxAgeMs": 600000,
+    "fallbackToCacheOnFailure": true
+  },
   "lastUpdated": "2025-09-28T09:29:04.035Z"
 }

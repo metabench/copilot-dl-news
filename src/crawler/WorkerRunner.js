@@ -137,10 +137,35 @@ class WorkerRunner {
         type: item.type,
         allowRevisit: item.allowRevisit
       };
-      if (extraCtx && extraCtx.forceCache) {
-        processContext.forceCache = true;
-        if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
-        if (extraCtx.rateLimitedHost) processContext.rateLimitedHost = extraCtx.rateLimitedHost;
+
+      if (extraCtx) {
+        if (extraCtx.forceCache) {
+          processContext.forceCache = true;
+        }
+        if (extraCtx.cachedPage) {
+          processContext.cachedPage = extraCtx.cachedPage;
+        }
+        if (extraCtx.rateLimitedHost) {
+          processContext.rateLimitedHost = extraCtx.rateLimitedHost;
+        }
+        if (typeof extraCtx.fetchPolicy === 'string' && extraCtx.fetchPolicy) {
+          processContext.fetchPolicy = extraCtx.fetchPolicy;
+        }
+        if (typeof extraCtx.maxCacheAgeMs === 'number' && Number.isFinite(extraCtx.maxCacheAgeMs) && extraCtx.maxCacheAgeMs >= 0) {
+          processContext.maxCacheAgeMs = extraCtx.maxCacheAgeMs;
+        }
+        if (typeof extraCtx.fallbackToCache === 'boolean') {
+          processContext.fallbackToCache = extraCtx.fallbackToCache;
+        }
+        if (extraCtx.cachedFallback) {
+          processContext.cachedFallback = extraCtx.cachedFallback;
+        }
+        if (extraCtx.cachedFallbackMeta) {
+          processContext.cachedFallbackMeta = extraCtx.cachedFallbackMeta;
+        }
+        if (extraCtx.cachedHost) {
+          processContext.cachedHost = extraCtx.cachedHost;
+        }
       }
 
       const result = await this.processPage(item.url, item.depth, processContext);
@@ -187,6 +212,7 @@ class WorkerRunner {
       }
     }
   }
+
 }
 
 module.exports = {

@@ -105,4 +105,51 @@ describe('FetchPipeline', () => {
     expect(result.meta.retryAfterMs).toBeNull();
     expect(deps.recordError).toHaveBeenCalledWith(expect.objectContaining({ kind: 'http' }));
   });
+
+  it('returns cached fallback when network-first fetch fails', async () => {
+    const deps = baseDeps();
+    deps.fetchFn = jest.fn(async () => ({
+      ok: false,
+      status: 502,
+      headers: { get: () => null },
+      text: async () => 'Bad Gateway'
+    }));
+
+    const cachedFallback = {
+      html: '<html><body>cached hub</body></html>',
+      crawledAt: new Date(Date.now() - 60_000).toISOString(),
+      source: 'db'
+    };
+
+    const pipeline = new FetchPipeline({ ...deps, fetchFn: deps.fetchFn });
+
+    const context = {
+      depth: 0,
+      allowRevisit: true,
+      fetchPolicy: 'network-first',
+      fallbackToCache: true,
+      cachedFallback,
+      cachedFallbackMeta: {
+        ageMs: 60_000,
+        reason: 'stale-for-policy',
+        policy: 'network-first'
+      },
+      cachedHost: 'example.com'
+    };
+
+    const result = await pipeline.fetch({ url: 'https://example.com/hub', context });
+
+    expect(result.source).toBe('cache');
+    expect(result.html).toBe(cachedFallback.html);
+    expect(result.meta.cacheInfo).toEqual(expect.objectContaining({
+      reason: 'stale-for-policy',
+      policy: 'network-first',
+      fallbackReason: 'http-502',
+      httpStatus: 502,
+      ageSeconds: 60,
+      cachedHost: 'example.com'
+    }));
+    expect(deps.recordError).toHaveBeenCalledWith(expect.objectContaining({ kind: 'http' }));
+    expect(deps.noteSuccess).not.toHaveBeenCalled();
+  });
 });

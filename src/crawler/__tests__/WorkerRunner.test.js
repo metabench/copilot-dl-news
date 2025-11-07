@@ -127,6 +127,55 @@ describe('WorkerRunner', () => {
     });
   });
 
+  test('forwards fetch policy context metadata to processPage', async () => {
+    const url = 'https://example.com/hub';
+    const depth = 0;
+    const type = 'hub';
+    const cachedPage = { html: '<html></html>', crawledAt: new Date().toISOString() };
+    const cachedFallback = { html: '<fallback></fallback>' };
+    const cachedFallbackMeta = { ageMs: 600_000, policy: 'network-first', reason: 'stale-for-policy' };
+
+    const processPage = jest.fn(async () => ({ status: 'ok' }));
+    const { runner } = createRunner({
+      processPage,
+      __queueItems: [
+        {
+          item: { url, depth, type, allowRevisit: false },
+          context: {
+            fetchPolicy: 'network-first',
+            maxCacheAgeMs: 600_000,
+            fallbackToCache: false,
+            cachedPage,
+            cachedFallback,
+            cachedFallbackMeta,
+            cachedHost: 'example.com',
+            rateLimitedHost: 'rate-limited.example.com'
+          }
+        },
+        undefined
+      ]
+    });
+
+    await runner.run(0);
+
+    expect(processPage).toHaveBeenCalledWith(
+      url,
+      depth,
+      expect.objectContaining({
+        type,
+        allowRevisit: false,
+        fetchPolicy: 'network-first',
+        maxCacheAgeMs: 600_000,
+        fallbackToCache: false,
+        cachedPage,
+        cachedFallback,
+        cachedFallbackMeta,
+        cachedHost: 'example.com',
+        rateLimitedHost: 'rate-limited.example.com'
+      })
+    );
+  });
+
   test('stops pulling when max downloads reached', async () => {
     const { runner, queue } = createRunner({
       __queueItems: [],

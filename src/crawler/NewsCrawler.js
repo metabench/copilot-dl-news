@@ -1907,7 +1907,9 @@ class NewsCrawler extends Crawler {
   enqueueRequest({
     url,
     depth,
-    type
+  type,
+  meta = null,
+  priority
   }) {
     if (this.structureOnly) {
       const kind = typeof type === 'string'
@@ -1934,9 +1936,12 @@ class NewsCrawler extends Crawler {
     return this.queue.enqueue({
       url,
       depth,
-      type
+      type,
+      meta,
+      priority
     });
   }
+
 
   async acquireRateToken() {
     const now = nowMs();
@@ -2170,9 +2175,40 @@ class NewsCrawler extends Crawler {
       'runGazetteerMode'
     ];
 
+    const telemetryAdapter = {
+      onSequenceStart: (payload) => {
+        if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
+          this.telemetry.milestoneOnce(`sequence:start:${payload.sequence?.sequenceName || 'unknown'}`, {
+            kind: 'sequence-start',
+            message: `Starting sequence ${payload.sequence?.sequenceName || 'unknown'}`,
+            details: payload
+          });
+        }
+      },
+      onSequenceComplete: (payload) => {
+        if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
+          this.telemetry.milestoneOnce(`sequence:complete:${payload.sequence?.sequenceName || 'unknown'}`, {
+            kind: 'sequence-complete',
+            message: `Completed sequence ${payload.sequence?.sequenceName || 'unknown'}`,
+            details: payload
+          });
+        }
+      },
+      onStepEvent: (payload) => {
+        if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
+          this.telemetry.milestoneOnce(`sequence:step:${payload.step?.id || 'unknown'}`, {
+            kind: 'sequence-step',
+            message: `Step ${payload.step?.id || 'unknown'}: ${payload.event}`,
+            details: payload
+          });
+        }
+      }
+    };
+
     this._startupSequenceRunner = createSequenceRunner({
       operations,
-      logger: log
+      logger: log,
+      telemetry: telemetryAdapter
     });
 
     return this._startupSequenceRunner;

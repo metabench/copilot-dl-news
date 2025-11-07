@@ -17,6 +17,8 @@
 - **Schema Blueprint Alignment:** Task 8.5 (resolve schema-dependent Jest worker exit warning) is still in progress and blocks closing the blueprint alignment initiative.
 - **js-edit CLI Modularization:** ✅ **COMPLETE** — All tasks finished (7.1-7.6, 7.7-7.14, 9.4). CLI fully modularized with `operations/discovery.js` (symbol inventory, filters, search), `operations/context.js` (context retrieval, guard operations, plan emission), and `operations/mutation.js` (locate/extract/replace with guardrails). Internal Architecture section added to tools/dev/README.md documenting module structure and dependency injection pattern. Dense list output is default, combined selector expressions working, constructor listing functional with hash display. Discovery filters (--match/--exclude), position-based lookup (--snipe), top-level outline (--outline), unified diff preview (--preview-edit), and constructor inventory (--list-constructors) all implemented. All 51 Jest tests passing.
 - **Careful js-edit Refactor Agent:** ✅ **COMPLETE** (Tasks 9.1–9.4) — Agent published with js-edit toolbox. Documentation cross-linked in AGENTS.md with usage guidance for three agent variants. Constructor inventory command implemented.
+- **Hub Freshness Control:** 🔄 **Discovery active** — Phase 4 tracker created 2025-11-06 to design fetch-policy refactors enabling network-first hub refresh passes. See initiative section below.
+- **Crawl Platform Surfaces:** 🔄 **Discovery active** — Phase 5 tracker launched 2025-11-06 to scope a platform/SDK that shrinks per-operation code surfaces. See initiative section below.
 
 ## 🔄 Active Initiative (Nov 4, 2025): Careful js-edit Refactor Agent
 
@@ -126,6 +128,115 @@
 | 8. Tests & fixtures | completed | 2025-11-15: Created `tests/tools/__tests__/js-scan.test.js` covering search, hash lookup, patterns, and index. |
 | 9. Documentation updates | completed | 2025-11-15: Documented js-scan usage in `tools/dev/README.md`. |
 | 10. Deprecated filtering & bundled excludes | in-progress | 2025-11-15: Add default skips for deprecated assets plus CLI overrides (`--include-deprecated`, `--deprecated-only`). |
+
+## 🔄 Active Initiative (Nov 6, 2025): Hub Freshness Control
+## 🔄 Active Initiative (Nov 6, 2025): Hub Freshness Control
+
+### Goal / Non-Goals
+- **Goal:** Establish a refactoring path that lets crawl operations declare cache vs. network fetch policies so hub pages can be refreshed on demand with current content.
+- **Non-Goals:** Do not modify persistence schemas or DomainThrottleManager behavior yet, and avoid introducing new crawl types until policy hooks prove stable.
+
+### Current Behavior (Baseline)
+- FetchPipeline enforces cache usage when QueueManager flags a host as rate limited; callers cannot override this when they need fresh hub HTML.
+- Queue entries lack fetch-policy metadata, leaving CrawlOperations presets with no mechanism to demand network-first fetches.
+- Hub refresh logic is interwoven with acquisition flows, so operators must script bespoke sequences to guarantee fresh hubs before article sweeps.
+- DomainThrottleManager backoff data does not surface to higher-level orchestration, limiting visibility into freshness decisions.
+
+### Refactor & Modularization Plan
+1. **Task 4.1 – Discovery & planning** *(α discovery — completed 2025-11-06)*
+   - Catalogue cache/rate-limit interactions (`QueueManager.deferForRateLimit`, `FetchPipeline._tryCache`, `DomainThrottleManager.note429`) and document injection points. *(Tracker logged 2025-11-06.)*
+2. **Task 4.2 – Plan authoring** *(β planning — completed 2025-11-06)*
+   - Define a `FetchPolicy` contract (`networkFirst`, `cachePreferred`, `cacheOnly`) stored on queue entries and honored by FetchPipeline.
+   - Outline queue metadata propagation and a dedicated `HubRefreshOperation` (or preset) to run policy-aware hub passes before acquisition.
+   - Specify telemetry for freshness deltas, policy usage, and rate-limit fallbacks.
+3. **Task 4.3 – Documentation sync** *(δ validation — completed 2025-11-06)*
+   - Update architecture docs with finalized plan, outline validation strategy (focused Jest + CLI smoke tests), and mark tracker tasks complete.
+4. **Task 4.4 – Configuration consolidation & frequency policy** *(β planning — completed 2025-11-06)*
+   - Identify centralized configuration modules (priority config, ConfigManager adapters) to host hub freshness settings (e.g., max cache age, first-page refresh toggle, retry windows).
+   - Ensure defaults align with requirement: re-download hub page if older than 10 minutes, with ability to override per environment. *(Code wiring tracked in Task 4.8.)*
+5. **Task 4.5 – Document configuration schema & validation** *(β planning — completed 2025-11-06)*
+   - Document new configuration keys, defaults, and operational guidance in architecture docs and CLI manuals, emphasizing consolidated locations.
+   - Add validation plan (config loader unit tests, CLI help updates) to confirm options remain consistent across surfaces.
+6. **Task 4.6 – Queue & worker policy propagation** *(γ implementation — completed 2025-11-07)*
+   - Embed `fetchPolicy`, `maxCacheAgeMs`, and fallback flags into queue items and worker contexts so FetchPipeline receives complete metadata without breaking rate-limit shortcuts.
+7. **Task 4.7 – FetchPipeline enforcement & fallback** *(γ implementation — completed 2025-11-16)*
+  - Update `_tryCache` and `_performNetworkFetch` to respect policy overrides, enforce max-age thresholds, fall back to cached entries on HTTP failures or network exceptions, and surface telemetry for stale-cache responses alongside new unit coverage.
+8. **Task 4.8 – Config wiring & CLI documentation** *(δ validation — pending)*
+   - Surface the `hubFreshness` block through ConfigManager getters, apply policies in `NewsCrawler._seedInitialRequest`, and document how `crawl.js` honors the configuration when invoked from the CLI.
+9. **Task 4.9 – Focused validation** *(δ validation — pending)*
+   - Add targeted Jest coverage for queue policy propagation and FetchPipeline decisions, plus a CLI smoke test demonstrating hub refresh behavior.
+
+### Cross-model Collaboration Notes
+- Leave "Pending external review" marker in `docs/CRAWL_REFACTORING_TASKS.md` before inviting other agents to critique the plan.
+- Record alternative strategies (e.g., caching layer rewrites) and reconcile in this section prior to implementation.
+
+### Risks & Mitigations
+- **Increased 429 responses:** Forcing network fetches could aggravate host throttling. *Mitigation:* Policies must respect DomainThrottleManager blackout windows and fall back to cached content when hosts are temporarily blocked.
+- **Queue memory overhead:** Adding metadata may inflate queue entries. *Mitigation:* Use compact enums and purge policy data after hub passes complete.
+- **Operational complexity:** Additional operations might confuse operators. *Mitigation:* Bundle refresh + acquisition into guided presets with clear telemetry output.
+- **Configuration drift:** Spreading hub freshness options across modules risks inconsistent behavior. *Mitigation:* Centralize settings in priority config with typed accessors, and document schema changes promptly.
+
+### Focused Validation Plan
+- Unit tests covering queue metadata propagation and FetchPipeline policy enforcement.
+- Integration test for `HubRefreshOperation` verifying hub URLs fetch from network while other content still leverages cache preferences.
+- Configuration loader tests ensuring hub freshness defaults (10-minute threshold, first-page refresh logic) load correctly and can be overridden.
+- CLI smoke test: `node src/tools/crawl-operations.js --operation hubRefresh` with stubbed cache state ensuring policy is respected.
+
+### Rollback Plan
+- If policy hooks destabilize throttling or performance, revert FetchPipeline/QueueManager changes, disable the new operation preset, and retain documentation for iterative redesign.
+
+### Task Ledger (mirrors `docs/CRAWL_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 4.1 Discovery & planning for hub freshness control | completed | 2025-11-06: FetchPipeline `_tryCache`, QueueManager rate-limit deferrals, and DomainThrottleManager backoff logic catalogued; CHANGE_PLAN.md updated with new initiative. |
+| 4.2 Document hub freshness refactor plan | completed | 2025-11-06: Authored architecture notes detailing fetch-policy enum, queue propagation, new operation, and telemetry expectations. |
+| 4.3 Update docs & trackers post-plan | completed | 2025-11-06: Tracker synchronized with plan deliverables, architecture doc updated, external review marker ready when needed. |
+| 4.4 Configuration consolidation & frequency policy | completed | 2025-11-06: `hubFreshness` configuration block captured with defaults (maxCacheAgeMs, firstPageMaxAgeMs, refreshOnStartup) pending implementation wiring. |
+| 4.5 Document configuration schema & validation | completed | 2025-11-06: Architecture documentation expanded with configuration schema, validation expectations, and CLI guidance outline. |
+| 4.6 Implement queue/worker fetch-policy propagation | completed | 2025-11-07: QueueManager now forwards policy metadata; WorkerRunner + enqueueRequest propagate fetch policy/fallback context to processing layer. |
+| 4.7 Enforce fetch policy in FetchPipeline with cache fallback | completed | 2025-11-16: `_tryCache` bypasses cache under `network-first`, `_performNetworkFetch` now returns stale cache on HTTP/network failures, and telemetry includes fallback metadata. |
+| 4.8 Apply hub freshness config + CLI/documentation updates | not-started | Will surface ConfigManager getters, update `_seedInitialRequest`, and document CLI behavior once FetchPipeline enforcement lands. |
+| 4.9 Focused tests for policy plumbing | in-progress | 2025-11-16: Added FetchPipeline network-first fallback unit coverage; queue propagation tests and CLI smoke remain outstanding. |
+
+## 🔄 Active Initiative (Nov 6, 2025): Crawl Platform Surfaces
+
+### Goal / Non-Goals
+- **Goal:** Design a comprehensive crawl platform layer that exposes small, composable code surfaces (SDK helpers, declarative hooks) so domain-specific operations can focus on intent rather than lifecycle wiring.
+- **Non-Goals:** No immediate refactor of existing operations; avoid rewriting planner logic or altering background task contracts during discovery.
+
+### Current Behavior (Baseline)
+- `CrawlOperations` façade centralizes orchestration but individual operation classes still manage queue hints, telemetry, and planner wiring manually.
+- `Crawler` base class standardizes lifecycle control yet lacks a higher-level API for queue manipulation, telemetry events, and fetch policies, leading to duplicated helper code in operations.
+- Sequence config system offers configuration but not a programmable SDK for custom logic; small code surfaces must currently orchestrate services directly.
+
+### Refactor & Modularization Plan
+1. **Task 5.1 – Platform discovery & capability matrix** *(α discovery — in progress)*
+  - Inventory existing reusable services (queue manager, fetch pipeline hooks, telemetry emitters) and document gaps preventing small operation code surfaces.
+2. **Task 5.2 – Architecture plan authoring** *(β planning — pending)*
+  - Define platform layers (Core runtime, Operation SDK, Sequence integration) with responsibilities, extension points, and sample APIs.
+  - Propose how SequenceRunner and config loaders can delegate to the platform, reducing per-operation code.
+3. **Task 5.3 – Plan synchronization** *(δ validation — pending)*
+  - Update trackers and docs with validation strategy (e.g., SDK unit tests, stub operations) before implementation begins.
+
+### Risks & Mitigations
+- **Scope creep:** Platform may balloon into re-implementing crawler. *Mitigation:* Start with narrowly scoped SDK (operations describe targets; platform handles lifecycle) and iterate.
+- **Backwards compatibility:** Existing operations rely on current APIs. *Mitigation:* Provide adapter layer so old operations run unchanged while new ones adopt the SDK.
+- **Performance overhead:** Additional abstraction may incur runtime cost. *Mitigation:* Measure platform helpers with benchmarks; allow direct escape hatches for performance-critical paths.
+
+### Focused Validation Plan
+- Prototype SDK modules with stubbed crawlers and assert operations can be expressed in <50 lines for typical flows.
+- Add documentation examples showing migration of an existing operation onto the platform.
+- Ensure CLI telemetry remains compatible by instrumenting platform events with existing reporter contracts.
+
+### Rollback Plan
+- If the platform design proves too heavy, retain documentation as future reference and continue using existing façade/operation classes without shipping SDK changes.
+
+### Task Ledger (mirrors `docs/CRAWL_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 5.1 Platform discovery & capability matrix | completed | 2025-11-06: Documented existing component capabilities and gaps feeding platform plan. |
+| 5.2 Author crawl platform architecture plan | completed | 2025-11-06: Added Crawl Platform Layer Vision section outlining layers, SDK example, and next steps. |
+| 5.3 Update change plan & trackers | completed | 2025-11-06: Tracker synchronized, validation plan captured in this initiative. |
 
 ---
 

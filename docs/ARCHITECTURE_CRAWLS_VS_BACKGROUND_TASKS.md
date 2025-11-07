@@ -404,6 +404,91 @@ node -e "const { createSequenceConfigLoader } = require('./src/orchestration/Seq
 
 **Documentation:** `config/crawl-sequences/README.md` (config format guide)
 
+### Hub Freshness Control Refactor Plan *(Planning — November 2025)*
+
+**Objective:** Give crawl operations precise control over when to bypass cached HTML so hub pages (front pages, country/topic hubs) can be refreshed with the latest markup before downstream acquisition runs.
+
+#### Current Constraints
+- `FetchPipeline._tryCache` forces cache usage whenever the request context sets `forceCache` or when QueueManager routes a `rateLimitedHost` flag; callers cannot override this for hubs that need fresh HTML.
+- `QueueManager` does not persist fetch-policy metadata alongside queued URLs, so operations cannot request network-first behavior when enqueuing hubs.
+- Hub refresh attempts compete with acquisition URLs in the same priority queues, making it hard to guarantee a freshness pass finishes before article crawling resumes.
+- Telemetry only reports whether a page came from cache, without exposing intent (e.g., “hub forced network”), limiting visibility into stale content incidents.
+
+#### Proposed Architecture
+- **FetchPolicy enum:** Introduce a compact `fetchPolicy` field (values: `cache-preferred`, `network-first`, `cache-only`) that travels with queue entries and per-request contexts.
+- **Queue metadata propagation:** Extend `QueueManager.enqueue()` to accept an optional policy and persist it with the queued item. Dequeue operations should attach the policy to the worker context so FetchPipeline can honor it.
+- **FetchPipeline policy handling:** Update `_tryCache` and network fetch logic to respect the requested policy—`network-first` hits the network unless the host is blacked out, `cache-only` skips network fallbacks, and `cache-preferred` retains current behavior. When DomainThrottleManager reports a blackout, downgrade to cache with a milestone noting the fallback.
+- **Hub refresh orchestration:** Add a dedicated `HubRefreshOperation` (and sequence preset) that re-enqueues hub URLs with `network-first` policy, throttles concurrency, and verifies that newly fetched HTML outranks cached timestamps before releasing acquisition work.
+- **Telemetry & analytics:** Emit structured telemetry (`FETCH_POLICY_DECISION`) capturing requested policy, actual source (cache/network), and whether DomainThrottleManager forced a downgrade. Surface summaries in CrawlOperations results so operators see freshness coverage.
+- **Safeguards:** Preserve DomainThrottleManager authority—if a host is in blackout, the operation must respect backoff and fall back to cache or defer the hub until a retry window opens.
+
+#### Configuration & Defaults
+- **Centralized configuration:** Add a `hubFreshness` block to `priority-config.json` (surfaced via ConfigManager) with keys such as `maxCacheAgeMs`, `firstPageMaxAgeMs`, and `refreshOnStartup`. Provide typed accessor helpers to avoid scattering option lookup logic.
+- **Default thresholds:** Set `maxCacheAgeMs` to 10 minutes (600000 ms) so any hub older than that is re-downloaded before being processed. `firstPageMaxAgeMs` defaults to the same value but can be tuned per environment; if a crawl starts and the primary start URL exceeds the threshold, FetchPipeline must fetch it from the network immediately.
+- **Platform SDK integration:** Expose configuration through the forthcoming crawl platform layer (`platform.hubs.getPolicy()`) so operations request freshness without duplicating config wiring.
+- **Operational overrides:** Support CLI/sequence overrides that map directly to the configuration keys while emitting validation warnings if they diverge from centralized defaults.
+
+#### Implementation Roadmap
+1. **Policy plumbing:** Add policy enum definition, update `QueueManager.enqueue/dequeue`, and thread policy through worker contexts without altering default behavior (`cache-preferred`).
+2. **FetchPipeline updates:** Modify `_tryCache` and `_performNetworkFetch` to read the policy, emit telemetry, and downgrade safely when throttled. Add guardrails to prevent policy misuse (e.g., throwing if `network-first` is requested for off-domain URLs).
+3. **HubRefreshOperation:** Implement a new operation (and preset) that performs a freshness pass before acquisition. Responsibilities include seeding hub URLs, adjusting concurrency, recording freshness metrics, and optionally re-queuing hub URLs when markup changes.
+4. **Sequence integration:** Update sequence presets/config loaders so operators can insert the refresh step (e.g., `ensureCountryHubsFresh`) before article exploration. Support `fetchPolicy` overrides inside config files.
+5. **Telemetry & docs:** Extend CrawlOperations result payloads and CLI formatter to summarize policy usage. Document the workflow here and in CLI guides.
+
+#### Validation & Rollout
+- Unit tests for `QueueManager` policy storage and FetchPipeline decision matrix.
+- Integration tests (Jest) using stubbed HTTP responses to assert `HubRefreshOperation` triggers network fetches and records freshness deltas.
+- CLI smoke test: `node src/tools/crawl-operations.js --operation hubRefresh --start-url <hub>` hitting a mocked stack to verify end-to-end policy flow.
+- Staged rollout: enable policy-aware refresh in configuration-driven sequences first; keep legacy CLI defaulting to cache-preferred until monitoring confirms stability.
+
+#### Open Questions
+- Should freshness passes compare HTTP `Last-Modified`/ETag values or rely solely on crawl timestamps?
+- Do we need a persistence trail for failed freshness attempts (e.g., storing last network fetch result per hub) to inform future retries?
+- How aggressively should `HubRefreshOperation` retry after blackouts—immediate requeue with exponential backoff, or defer to scheduled runs?
+
+### Crawl Platform Layer Vision *(Discovery — November 2025)*
+
+**Intent:** Shrink per-crawl code surfaces by introducing a unified platform that handles lifecycle wiring, queue management, telemetry, and policy enforcement while exposing a concise SDK for domain logic.
+
+#### Platform Layers
+- **Core Runtime:** Builds on `Crawler` base class, publishing stable hooks for startup stages, fetch pipeline interaction, and domain throttling. Provides dependency container (queue adapters, fetch policy manager, telemetry bus) that operations can request without manual wiring.
+- **Operation SDK:** High-level API (`platform.hubs.refresh`, `platform.links.enqueue`, `platform.telemetry.track`) that composes common crawl behaviors. Exposes declarative helpers (e.g., describing hub targets, filters, retry strategy) that compile down to runtime actions.
+- **Sequence Integration:** Enhances `SequenceRunner` and config loader to understand SDK steps, allowing configuration files to reference platform primitives (`run: hubRefresh`, `after: acquireArticles`).
+- **Extensibility Surface:** Plugin interface for domain-specific enrichers (e.g., Guardian-specific parser) with lifecycle hooks (beforeFetch, afterParse) protected by capability flags.
+
+#### Benefits
+- **Smaller code surfaces:** Domain operations describe intent using SDK calls instead of orchestrating queue/fetch logic manually.
+- **Consistency:** Telemetry, milestones, and error handling flow through platform defaults, reducing per-operation variance.
+- **Testability:** SDK functions can be unit-tested with mocked platform runtime, avoiding end-to-end crawler setup for simple operations.
+
+#### Example Flow
+```javascript
+module.exports = async function guardianFrontPage(platform) {
+  await platform.hubs.refresh({
+    startUrl: 'https://www.theguardian.com',
+    fetchPolicy: 'network-first',
+    telemetryTag: 'guardian-front-page'
+  });
+
+  await platform.articles.acquire({
+    seed: 'https://www.theguardian.com/world',
+    maxPages: 200,
+    allowRevisit: false
+  });
+};
+```
+
+#### Next Steps
+1. Draft capability matrix mapping existing services to platform APIs (Task 5.1).
+2. Define SDK contract (methods, events, error semantics) and document migration strategy for existing operation classes.
+3. Prototype a thin adapter that lets `CrawlOperations` invoke platform functions while preserving current tests.
+4. Update CLI and telemetry layers to recognize platform-generated events automatically (no manual wiring).
+
+#### Considerations
+- Maintain escape hatches so advanced operations can access underlying services when necessary.
+- Ensure platform lifecycle honors DomainThrottleManager and FetchPolicy decisions from Hub Freshness initiative.
+- Keep SDK functions composable (promise-based) to align with async sequencing in existing façade.
+
 ### Key Characteristics
 
 1. **Child Process Execution**: Each crawl runs in a separate Node.js child process spawned from the main server
