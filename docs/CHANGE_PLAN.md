@@ -19,6 +19,7 @@
 - **Careful js-edit Refactor Agent:** ✅ **COMPLETE** (Tasks 9.1–9.4) — Agent published with js-edit toolbox. Documentation cross-linked in AGENTS.md with usage guidance for three agent variants. Constructor inventory command implemented.
 - **Hub Freshness Control:** 🔄 **Discovery active** — Phase 4 tracker created 2025-11-06 to design fetch-policy refactors enabling network-first hub refresh passes. See initiative section below.
 - **Crawl Platform Surfaces:** 🔄 **Discovery active** — Phase 5 tracker launched 2025-11-06 to scope a platform/SDK that shrinks per-operation code surfaces. See initiative section below.
+- **Evented Crawler Components:** 🔄 **Discovery active** — Phase 7 tracker opened 2025-11-17 to migrate crawler event infrastructure onto `Evented_Class` via an adapter while preserving existing listener semantics. See initiative section below.
 
 ## 🔄 Active Initiative (Nov 4, 2025): Careful js-edit Refactor Agent
 
@@ -78,6 +79,190 @@
 - Example: `node tools/dev/js-edit.js --file src/example.js --list-constructors --list-output verbose` displays table with all constructor details including hashes
 - Filtering: Supports --filter-text across class names, hashes, params, heritage; --match/--exclude for pattern-based class filtering; --include-internals to show non-exported classes without heritage
 - Verified with test file containing explicit constructors (Widget, Button) and implicit constructor (Panel)
+
+## 🔄 Active Initiative (Nov 17, 2025): Evented Crawler Components
+
+### Goal / Non-Goals
+- **Goal:** Introduce an `Evented_Class`-backed base for crawler components via a compatibility adapter that retains Node-style listener semantics while unlocking richer event orchestration.
+- **Non-Goals:** Do not migrate non-crawler modules yet, avoid renaming existing crawler events, and defer large-scale telemetry changes until the adapter is validated.
+
+### Current Behavior (Baseline)
+- `Crawler` subclasses `EventEmitter`, using `emit`, `once`, and related helpers; downstream modules expect EventEmitter chaining and `error` semantics.
+- `Evented_Class` (lang-tools) provides `on`, `off`, `one`, `raise`, and `trigger`, but lacks direct `emit`/`once` aliases and different chaining guarantees.
+- CLI adapters and telemetry bridges rely on EventEmitter-specific helpers; swapping inheritance without an adapter would break these integrations.
+
+### Refactor & Modularization Plan
+1. **Task 7.1 – Evented_Class integration discovery** *(α discovery — in progress)*
+  - Map event usage in `Crawler.js`, `NewsCrawler.js`, and CLI adapters.
+  - Inspect `Evented_Class` prototype via Node REPL to capture available methods and gaps.
+  - Update tracker and plan with adapter expectations and validation targets.
+2. **Task 7.2 – Evented crawler base adapter** *(β planning → γ implementation)*
+  - Implement `EventedCrawlerBase` (name TBD) extending `Evented_Class` while adding EventEmitter-compatible aliases (`emit`, `once`, `addListener`, `removeListener`, chaining).
+  - Add unit tests verifying alias behaviour and event propagation parity.
+3. **Task 7.3 – Migrate Crawler to adapter** *(γ implementation)*
+  - Replace `EventEmitter` inheritance, adjust helper methods, and rerun `src/crawler/core/__tests__/Crawler.test.js` to confirm lifecycle coverage.
+  - Add targeted assertions for pause/resume and startup events if missing.
+4. **Task 7.4 – Integrate NewsCrawler & CLI surfaces** *(γ implementation → δ validation)*
+  - Ensure CLI progress adapters and NewsCrawler subscriptions continue functioning; run targeted Jest suites and CLI smoke tests (`node src/crawl.js --help`, `node src/tools/crawl-operations.js --list-operations`).
+5. **Task 7.5 – Documentation & tracker sync** *(δ validation)*
+  - Update architecture docs with adapter rationale, note Evented_Class usage guidelines, and record executed commands in trackers.
+
+### Cross-model Collaboration Notes
+- Flag “Pending external review” in `docs/CRAWL_REFACTORING_TASKS.md` before requesting another agent’s input on adapter design.
+- Capture alternate proposals (mixin vs. subclass, direct replacement) and reconcile them here before implementation.
+
+### Risks & Mitigations
+- **API parity gaps:** Missing EventEmitter helpers could break consumers. *Mitigation:* Provide aliases and extend tests to cover listener flows (including `once`).
+- **Error handling differences:** EventEmitter treats `.emit('error')` specially. *Mitigation:* Document behaviour, add compatibility in adapter if required.
+- **Chaining expectations:** Existing code expects `.on()` to return `this`. *Mitigation:* Override adapter methods to maintain chaining behaviour.
+- **Event ordering regressions:** Ensure adapter defers to Evented_Class without altering listener invocation order; add unit coverage if necessary.
+
+### Focused Validation Plan
+- Run `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/core/__tests__/Crawler.test.js --bail=1 --maxWorkers=50%` after migrating the base class.
+- Execute CLI adapter tests (`src/crawler/cli/__tests__/`) once NewsCrawler wiring is updated.
+- Smoke test legacy CLI: `node src/crawl.js --help` and `node src/tools/crawl-operations.js --list-operations` to confirm progress output remains stable.
+
+### Rollback Plan
+- If adapter integration causes regressions, restore `Crawler`’s `EventEmitter` inheritance, remove the adapter, and document findings in tracker before retrying.
+
+### Task Ledger (mirrors `docs/CRAWL_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 7.1 Evented_Class integration discovery | completed | 2025-11-17: Reviewed crawler event usage, inspected `Evented_Class` prototype via Node command, defined adapter requirements, and updated tracker/change plan. |
+| 7.2 Evented crawler base adapter | completed | 2025-11-17: Implemented `src/crawler/core/EventedCrawlerBase.js` with EventEmitter-compatible aliases plus focused Jest coverage (`EventedCrawlerBase.test.js`, `Crawler.test.js`). Command: `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/core/__tests__/EventedCrawlerBase.test.js src/crawler/core/__tests__/Crawler.test.js --bail=1 --maxWorkers=50%`. |
+| 7.3 Migrate Crawler to Evented base | completed | 2025-11-17: `Crawler` now extends `EventedCrawlerBase`; event integration tests updated. Verified with same focused Jest command noted above. |
+| 7.4 Integrate NewsCrawler & CLI surfaces | completed | 2025-11-17: Executed crawler CLI Jest suite (passed, emit open-handle warning) and CLI smoke commands (`node src/crawl.js --help`, `node src/tools/crawl-operations.js --list-operations --json`). |
+| 7.5 Documentation & tracker sync | completed | 2025-11-17: Architecture doc updated with Evented adapter section and validation commands; tracker and change plan synchronized. |
+
+## 🔄 Active Initiative (Nov 18, 2025): Config-driven Crawl Entry
+
+### Goal / Non-Goals
+- **Goal:** Make the legacy crawl entry (`src/crawl.js`) load run parameters from `crawl.js.config.json` when invoked without explicit CLI overrides so a real crawl launches with curated defaults.
+- **Non-Goals:** Do not alter existing flag semantics, argument precedence, or sequence/operations orchestration. Avoid introducing new configuration surfaces outside the dedicated JSON file for this entry point.
+
+### Current Behavior (Baseline)
+- `src/crawl.js` delegates directly to `runLegacyCommand` with `process.argv.slice(2)` and no external configuration discovery.
+- Running `node src/crawl.js` without flags relies on implicit defaults embedded in the argument normalizer; operators cannot persist preferred crawl parameters between runs.
+- There is no cap on downloads beyond CLI flags, so users must manually supply `--max-pages`, `--concurrency`, or other limits each time.
+
+### Refactor & Modularization Plan
+1. **Task 11.1 – Discovery & plan alignment** *(α discovery — in progress)*
+  - Record scope in tracker/change plan, confirm precedence rules (config defaults overridden by CLI args), and identify required fields for the inaugural config template (start URL, depth, concurrency, max pages).
+2. **Task 11.2 – Config loader & CLI adaptation** *(γ implementation — pending)*
+  - Extend `main()` in `src/crawl.js` to locate `crawl.js.config.json`, parse it, and translate entries into argv segments when `process.argv.slice(2)` is empty. Ensure helpful errors for missing/invalid config and preserve existing CLI flows when overrides are present.
+3. **Task 11.3 – Validation & documentation** *(δ validation — pending)*
+  - Add smoke command notes to tracker, update documentation with the config-driven workflow, and capture residual risks (e.g., long-running crawl side effects).
+
+### Risks & Mitigations
+- **Config parse failures:** Invalid JSON should surface a concise error and exit non-zero. *Mitigation:* Validate file existence and wrap parse errors with user-friendly messaging.
+- **Unexpected precedence regressions:** Automatic argv injection must not override explicit CLI flags. *Mitigation:* Apply config defaults only when no CLI args provided; document precedence rules.
+- **Long-running crawl side effects during validation:** Launching a real crawl can be expensive. *Mitigation:* Limit smoke testing to verifying argument translation (e.g., dry-run invocation or immediate abort after startup telemetry) and document skipped end-to-end validation.
+
+### Focused Validation Plan
+- `node src/crawl.js` should load config, print startup progress, and honor max-pages/concurrency limits derived from the file.
+- `node src/crawl.js --help` must continue to display help without reading the config file.
+- Optional: run `node src/crawl.js --depth=1` to confirm CLI overrides bypass config defaults.
+
+### Rollback Plan
+- Remove config loading logic from `src/crawl.js` and delete `crawl.js.config.json` if the behavior proves undesirable. Existing CLI behavior remains intact after revert.
+
+### Task Ledger (mirrors `docs/CRAWL_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 11.1 Discovery & plan alignment for config-driven crawl entry | completed | 2025-11-18: Initiative recorded in change plan; confirmed precedence rules and required config fields prior to implementation. |
+| 11.2 Implement config loader in `src/crawl.js` | completed | 2025-11-18: Added config loader in `src/crawl.js` with numeric validation, optional `additionalArgs`, and Guardian defaults template. |
+| 11.3 Validation & documentation updates | in-progress | 2025-11-18: Tracker updates underway; logging validation commands and residual risks after smoke checks. |
+| 11.4 Refine NewsCrawler orchestration integration | in-progress | 2025-11-14: `NewsCrawler` now routes `--sequence-config` through `loadAndRunSequence`; legacy argument normalization rewrite in progress. |
+| 11.5 Safety, telemetry, and monitoring updates | in-progress | 2025-11-19: Preparing telemetry plumbing for sequence-driven runs; missing place hub URL surfaced here, follow-up captured as Task 11.7. |
+| 11.6 Focused tests & documentation updates | completed | Tests pass, telemetry wiring validated, and docs refreshed with sequence-config workflow coverage. |
+| 11.7 Create `place_hubs_with_urls` view | in-progress | 2025-11-19: Task added after Guardian crawl failure to surface URL text without mutating base schema; 2025-11-19: Authored migration 009, updated `ProblemResolutionService.getKnownHubSeeds` to prefer the view with fallback, and validated via `npx jest --runTestsByPath src/crawler/__tests__/ProblemResolutionService.test.js --config jest.careful.config.js --bail=1 --maxWorkers=50%`; DB docs/tests will be refreshed next. |
+
+## 🔄 Active Initiative (Nov 18, 2025): Network Resilience Enhancements
+### Goal / Non-Goals
+- **Goal:** Strengthen crawl network resilience by improving diagnostics for HTTP/network failures, surfacing retry strategies in console telemetry, and preparing adaptive recovery paths when persistent errors block progress.
+- **Non-Goals:** Do not yet integrate Puppeteer/browser automation; instead, deliver a feasibility plan outlining requirements. Avoid broad architectural rewrites of FetchPipeline or QueueManager beyond focused retry/telemetry improvements.
+
+### Current Behavior (Baseline)
+- Connection resets (`ECONNRESET`) and related network errors abort crawls after a small number of retries with limited console context beyond the generic error message.
+- ErrorTracker categorizes failures but does not consistently surface error codes, retry budgets, or strategy changes to operators.
+- FetchPipeline performs fixed retry sequences without adaptive jitter/backoff tuned per host and lacks visibility into alternative fetch strategies.
+
+### Refactor & Modularization Plan
+1. **Task 14.1 – Discovery & plan alignment** *(α discovery — completed)*
+   - Audit `FetchPipeline`, `ErrorTracker`, `NewsCrawler._handleConnectionReset`, and related telemetry emitters to catalog existing retry loops and logging.
+   - Review console output pathways (progress reporter, telemetry adapters) to determine how retry and strategy metadata can surface without overwhelming operators.
+   - Update this plan and `docs/CLI_REFACTORING_TASKS.md` with scoped goals, risks, and validation intents. *(Docs consulted: `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/CLI_REFACTORING_TASKS.md`, `docs/CHANGE_PLAN.md`.)*
+2. **Task 14.2 – Enhanced error telemetry & console output** *(β planning → γ implementation — completed)*
+   - Extend ErrorTracker and FetchPipeline to emit structured error metadata (error codes, retry counts, backoff strategy) and display concise console summaries during crawls.
+   - Ensure telemetry payloads contain machine-readable details for downstream analysis without duplicating noisy logs.
+3. **Task 14.3 – Adaptive retry/backoff improvements** *(γ implementation — completed)*
+   - Introduced adaptive jittered retries plus host-scoped retry budgets with lockouts, surfaced via telemetry and console warnings.
+   - Document fallback strategies (e.g., cached response usage, alternate fetch modes) so operators understand crawler behavior under sustained failures.
+4. **Task 14.4 – Puppeteer fallback feasibility plan** *(β planning — completed)*
+   - Produce a written plan describing prerequisites, risks, and phased implementation strategy for integrating Puppeteer as a last-resort downloader when HTTP retries fail.
+   - Highlight resource implications (performance, infrastructure) and validation requirements before coding.
+
+### Cross-model Collaboration Notes
+- Invite additional AI reviewer input after Task 14.1 to validate retry strategy proposals and Puppeteer feasibility assumptions. Record reviewer contributions and adjustments in this section and the tracker.
+
+### Risks & Mitigations
+- **Telemetry noise:** Excessive logging could overwhelm operators. *Mitigation:* Provide concise console summaries paired with verbose flags for detailed dumps.
+- **Retry-induced delays:** Adaptive backoff may extend crawl duration. *Mitigation:* Surface retry budgets and elapsed time to help operators decide when to abort; cap retries with operator-visible thresholds.
+- **Fallback complexity:** Puppeteer integration introduces heavy dependencies. *Mitigation:* Deliver a detailed plan before implementation and gate work behind configuration toggles.
+
+### Focused Validation Plan
+- Add Jest coverage for new telemetry helpers and retry policy functions (ErrorTracker, FetchPipeline).
+- Run targeted crawler smoke tests against controlled endpoints that trigger retry paths, capturing console output screenshots/log samples.
+- Document verification commands in tracker and plan once implementation lands.
+
+### Rollback Plan
+- Maintain feature flags/config toggles for enhanced logging and adaptive retries. If regressions occur, disable new behavior via configuration and revert targeted modules while preserving the discovery documentation.
+
+### Task 14.4 – Puppeteer Fallback Feasibility Outline
+**Purpose:** Establish requirements and phased milestones for invoking a headless browser when HTTP retries and cached fallbacks cannot return fresh HTML.
+
+**Prerequisites & Dependencies**
+- Confirm `puppeteer` version in `package.json` aligns with currently supported Chromium and that `npm install` hooks keep the browser binary cached in CI (verify `PUPPETEER_SKIP_DOWNLOAD` usage).
+- Extend configuration surfaces (`networkResilience` or new `browserFallback` block) to carry enable/disable flags, concurrency limits, and targeted domain allowlists.
+- Ensure existing telemetry sink (`crawlerTelemetry`) can emit browser-attempt events without schema breaks; coordinate with analysis consumers before shipping.
+- Harden host retry metadata so Puppeteer only triggers after host budgets exhaust and cache fallback returns null or stale beyond threshold.
+- Inventory infrastructure constraints: sandboxing requirements on production hosts, disk space for Chromium, and CI resources for additional tests.
+
+**Integration Strategy (Phased)**
+1. **Phase A – Browser Fallback Scaffold**
+   - Introduce an abstract `FallbackFetcher` interface consumed by `FetchPipeline._performNetworkFetch` so browser support sits behind a capability toggle.
+   - Implement a stubbed Puppeteer service that negotiates exclusive access to a shared browser (singleton per worker) and returns HTML snapshots; gate all calls behind configuration + feature flag.
+   - Emit telemetry events (`fetch.browser-attempt`, `fetch.browser-success`, `fetch.browser-failed`) with host, attempt, trigger reason, and timing metadata; log concise console summaries.
+2. **Phase B – Reliability & Resource Controls**
+   - Add adaptive backoff and queueing to the Puppeteer service (max concurrent pages, navigation timeout, screenshot toggle) with per-host cooldowns to avoid hammering brittle sites.
+   - Wire Playbook/Config hints to opt-out specific hosts or URL patterns (e.g., login pages) and to opt-in domains known to require JS rendering.
+   - Persist HTML plus critical response metadata (status, redirected URL, timing) into existing cache adapters so downstream processors remain unchanged.
+3. **Phase C – Validation & Rollout**
+   - Create integration tests using lightweight fixtures + mocked Chromium to validate lifecycle (launch, reuse, teardown) and concurrency guards.
+   - Extend existing Puppeteer E2E tests (Geography flows) with scenarios simulating fallback invocation (mock network failure → expect browser fetch).
+   - Stage rollout via config: start in dry-run mode (telemetry only), then enable for canary hosts, finally broaden coverage once stability metrics look good.
+
+**Observability & Tooling**
+- Add metrics to ErrorTracker samples summarizing browser fallback usage (count, duration, success ratio) for offline analysis.
+- Record structured diagnostics when Puppeteer is skipped (e.g., binary missing, feature disabled, host opt-out) to prevent silent failures.
+- Provide CLI flag (`--no-browser-fallback`) for operators to disable the capability quickly during incidents.
+
+**Validation Readiness**
+- Define smoke test commands (`node src/crawl.js --max-pages=1 --network-resilience.browserFallback dry-run`) using stub endpoints that force fallback after host budgets expire.
+- Coordinate with CI to add an optional job running Puppeteer fallback tests (guarded by env var to keep default pipeline lightweight).
+
+**Open Questions**
+- Should browser fallback reuse cached cookies/sessions per host, or always launch clean contexts?
+- Do we need per-operation hooks (e.g., hub refresh vs. article acquisition) to opt-in/out dynamically?
+- How will background tasks and future crawl platform operations surface fallback telemetry to operators?
+
+### Task Ledger (mirrors `docs/CLI_REFACTORING_TASKS.md`)
+| Task | Status | Notes |
+|------|--------|-------|
+| 14.1 Discovery & plan alignment for network resilience | completed | 2025-11-18: Reviewed core instructions, audited FetchPipeline/ErrorTracker, and updated plan + tracker with scoped goals, risks, and validation steps. |
+| 14.2 Enhanced error telemetry & console output | completed | 2025-11-18: FetchPipeline now emits console + telemetry payloads (host, code, attempt/maxAttempts, strategy); ErrorTracker persists metadata and focused Jest suites executed (`npx jest --config jest.careful.config.js --runTestsByPath src/crawler/__tests__/FetchPipeline.test.js src/crawler/__tests__/ErrorTracker.test.js --bail=1 --maxWorkers=50%`). |
+| 14.3 Adaptive retry/backoff improvements | completed | 2025-11-18: Added adaptive jittered retries plus host-scoped retry budgets with telemetry events; validated with `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/__tests__/FetchPipeline.test.js src/crawler/__tests__/ErrorTracker.test.js --bail=1 --maxWorkers=50%`. |
+| 14.4 Puppeteer fallback feasibility plan | completed | 2025-11-18: Feasibility outline recorded below; tracker synced with CLI_REFACTORING_TASKS.md. |
 
 ## 🔄 Active Initiative (Nov 6, 2025): js-scan CLI Implementation
 
@@ -195,7 +380,7 @@
 | 4.5 Document configuration schema & validation | completed | 2025-11-06: Architecture documentation expanded with configuration schema, validation expectations, and CLI guidance outline. |
 | 4.6 Implement queue/worker fetch-policy propagation | completed | 2025-11-07: QueueManager now forwards policy metadata; WorkerRunner + enqueueRequest propagate fetch policy/fallback context to processing layer. |
 | 4.7 Enforce fetch policy in FetchPipeline with cache fallback | completed | 2025-11-16: `_tryCache` bypasses cache under `network-first`, `_performNetworkFetch` now returns stale cache on HTTP/network failures, and telemetry includes fallback metadata. |
-| 4.8 Apply hub freshness config + CLI/documentation updates | not-started | Will surface ConfigManager getters, update `_seedInitialRequest`, and document CLI behavior once FetchPipeline enforcement lands. |
+| 4.8 Apply hub freshness config + CLI/documentation updates | completed | 2025-11-18: NewsCrawler now sources ConfigManager hub freshness config, propagates policy metadata into queue items, and adds crawler queue regression coverage (Jest run blocked by jsdom ESM setup – needs follow-up). |
 | 4.9 Focused tests for policy plumbing | in-progress | 2025-11-16: Added FetchPipeline network-first fallback unit coverage; queue propagation tests and CLI smoke remain outstanding. |
 
 ## 🔄 Active Initiative (Nov 6, 2025): Crawl Platform Surfaces
@@ -581,6 +766,7 @@ npx jest --config jest.careful.config.js src/crawler/cli/__tests__/ --bail=1 --m
 - ~~Deprecated UI queries join on `article_url`~~ **Deprecated UI uses `articles.url`** - no references to `article_places.article_url` remain in codebase.
 
 ### Refactor & Modularization Plan
+### Refactor & Modularization Plan
 1. **Discovery (α):** Audit normalization tooling, docs (`docs/DATABASE_URL_NORMALIZATION_PLAN.md`), and dependent code to catalog remaining references to the TEXT column (✅ in progress; see Task 7.1 tracker notes).
 2. **Planning (β):** Document safe drop workflow — table recreation order, index remapping to `article_url_id`, validation strategy, and rollback steps.
 3. **Implementation (γ):**
@@ -590,6 +776,7 @@ npx jest --config jest.careful.config.js src/crawler/cli/__tests__/ --bail=1 --m
   - *2025-10-31:* Implementation underway — deprecated UI `gazetteerPlace` module queued for adapter-driven refactor and focused tests to eliminate remaining TEXT column dependencies.
   - *2025-10-31 PM:* Deprecated UI data tests now execute against fresh schemas with no `articles`/`article_places` tables, confirming adapter fallbacks return empty results without raising exceptions.
   - *2025-11-01:* Deprecated API suite now hits `/api/gazetteer/articles` end-to-end, exercising the legacy fallback response when the `articles` table is absent and aligning documentation with the structured payload.
+  - *2025-11-18:* Task 7.3 execution kicked off — migration tooling updates scheduled following completion of remaining dependency audits.
 4. **Validation (δ):** Run `node tools/db-schema.js table article_places` + normalization validator to confirm schema and row counts; spot-check deprecated UI query via smoke test or targeted unit harness if feasible.
 5. **Documentation:** Refresh `docs/DATABASE_URL_NORMALIZATION_PLAN.md` and tracker entries to mark completion and outline the new steady state.
 

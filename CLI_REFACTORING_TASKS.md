@@ -657,6 +657,45 @@ Tasks for breaking down the monolithic `tools/dev/js-edit.js` CLI into focused m
 - **Risks noted:** Cross-module guard helpers risk regressions if spans/hashes drift; documentation must stay aligned with staged module roll-out; extensive edits require disciplined js-edit usage
 - **Next steps:** Finalize plan updates in `CHANGE_PLAN.md`, outline context extractor surface, and stage js-edit plans for guarded replacements (Task 7.4)
 
+### Phase 8: Crawl API Service Orchestration (New Scope)
+### Phase 8: Crawl API Service Orchestration (New Scope)
+
+Tasks for extracting the crawl operations orchestration logic into a framework-neutral service so Express and jsgui3 servers can expose the same capabilities currently limited to the CLI.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 8.1 | Extract crawl service core | Create shared service module wrapping `CrawlOperations`, availability helpers, and run execution contracts | ✅ COMPLETED | HIGH | 2025-11-07: Service module landed (`src/server/crawl-api/core/crawlService.js`) with Jest coverage (`npx jest --config jest.careful.config.js --runTestsByPath tests/server/crawl-api/service.test.js --bail=1 --maxWorkers=50%`). |
+| 8.2 | Define availability/run contracts | Move summary builders into the service layer and expose reusable payload helpers for CLI and HTTP callers | ✅ COMPLETED | HIGH | 2025-11-07: Canonical availability payload builders now live in the service and export alongside run helpers; CLI consumes the shared contract to render ASCII/JSON summaries. |
+| 8.3 | Implement Express router | Add v1 Express routes leveraging the service for availability and run triggers | ✅ COMPLETED | HIGH | 2025-11-07: Express availability + run endpoints wired to `createCrawlService` with Jest coverage (`tests/server/crawl-api/express.routes.test.js`). |
+| 8.4 | Refactor CLI to use service | Update `crawl-operations` CLI to delegate to shared service while preserving UX | ✅ COMPLETED | HIGH | 2025-11-07: CLI delegates to `createCrawlService`, retains formatter output, and shares payload helpers; smoke test via `node src/tools/crawl-operations.js --list-operations --summary-format json --quiet`. |
+| 8.5 | Tests & documentation | Add Jest coverage and update README/blueprint docs for the new service layer | ⏳ NOT_STARTED | HIGH | Run focused Jest suite and refresh crawl API blueprint references. |
+
+- **Active phase:** Phase 8 — Crawl API Service Orchestration
+- **Current sub-phase:** γ — Implementation & validation (entered 2025-11-07)
+- **Sub-phase timeline:** α — Discovery & tooling inventory (2025-11-07); β — Plan & documentation (2025-11-07); γ — Implementation & validation (active); δ — Validation & documentation (pending)
+- **Docs consulted during α:** `docs/JSGUI3_PATTERNS_ANALYSIS.md`, `CHANGE_PLAN.md`, `src/tools/crawl-operations.js`
+- **Risks noted:** CLI coupling to formatter output may complicate extraction; Express routes must guard against long-running synchronous calls until background execution is ready; ensure HTTP adapters map the new shared payload without duplicating formatting code.
+- **Validation (2025-11-07):** `node src/tools/crawl-operations.js --list-operations --summary-format json --quiet` (pass)
+- **Next steps:** Document the HTTP contract and broaden validation coverage (Task 8.5) before entering δ validation.
+
+---
+
+### Phase 9: Config-driven Crawl Entry (New Scope)
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 9.1 | Capture config-driven crawl entry scope | Document precedence rules, required config fields, and update change plan/tracker | ✅ COMPLETED | HIGH | 2025-11-18: Initiative documented in `docs/CHANGE_PLAN.md` with precedence assumptions and config field list. |
+| 9.2 | Implement config loader in `src/crawl.js` | Parse `crawl.js.config.json` when no CLI overrides supplied and translate to legacy argv | ✅ COMPLETED | HIGH | 2025-11-18: Updated `src/crawl.js` to load config defaults, added numeric validation, and introduced optional `additionalArgs` support. |
+| 9.3 | Validate & document config workflow | Record smoke command(s) and update docs/tracker with config usage guidance | 🔄 IN_PROGRESS | MEDIUM | 2025-11-18: Tracker/plan updates underway; will capture smoke-test notes and residual risks after validation. |
+
+## Phase 9 Tracker
+- **Current sub-phase:** α — Discovery & tooling inventory (activated 2025-11-18)
+- **Docs consulted:** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md`, `docs/CHANGE_PLAN.md`
+- **Code reconnaissance targets:** `src/crawl.js`, `src/crawler/cli/runLegacyCommand.js`, `src/crawler/cli/argumentNormalizer.js`
+- **Tooling inventory:** Legacy CLI smoke commands (`node src/crawl.js --help`), configuration assets under repo root (no existing JSON template)
+- **Risks noted:** Full crawl execution may be time-consuming; may rely on startup log verification instead of full run during validation.
+- **Next steps:** Finalize config precedence rules and add `crawl.js.config.json` template prior to implementation.
+
 ---
 
 ## Progress Tracking
@@ -891,7 +930,7 @@ Tasks for breaking down the monolithic `tools/dev/js-edit.js` CLI into focused m
 - 🏁 Phase 7 complete — js-edit modularization successful, all functionality preserved with improved maintainability.
 
 ### Session 41: November 7, 2025
-- ✅ Authored the detached crawl API service blueprint leveraging jsgui3-server patterns, capturing full architecture, API surface, telemetry flow, and implementation phases.
+- ✅ Authored the detached crawl API service blueprint leveraging jsgui3-server patterns, capturing full architecture, API surface, telemetry flow, implementation phases, and the requirement for a clean, version-aware directory structure that can host alternate frameworks (e.g., Express).
 - ✅ Updated `docs/JSGUI3_PATTERNS_ANALYSIS.md` with the new "Detached Crawl API Service Blueprint" section so future agents have a canonical reference for the planned service.
 - 🔍 No code changes executed; documentation only. Tests not run (not applicable).
 

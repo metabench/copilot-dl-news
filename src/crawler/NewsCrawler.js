@@ -335,6 +335,10 @@ class NewsCrawler extends Crawler {
       dataDir: this.dataDir,
       normalizeUrl: (u) => this.normalizeUrl(u)
     });
+    this.hubFreshnessConfig = null;
+    this._hubFreshnessManager = null;
+    this._ownedHubFreshnessManager = null;
+    this._hubFreshnessWatcherDispose = null;
     // Note: lastRequestTime, httpAgent, httpsAgent initialized in base Crawler class
     // Per-domain rate limiting and telemetry
     this._domainWindowMs = 60 * 1000;
@@ -589,6 +593,7 @@ class NewsCrawler extends Crawler {
       noteSuccess: (host) => this.noteSuccess(host),
       recordError: (info) => this._recordError(info),
       handleConnectionReset: (normalized, err) => this._handleConnectionReset(normalized, err),
+      telemetry: this.telemetry,
       articleHeaderCache: this.state.getArticleHeaderCache(),
       knownArticlesCache: this.state.getKnownArticlesCache(),
       getDbAdapter: () => this.dbAdapter,
@@ -624,6 +629,8 @@ class NewsCrawler extends Crawler {
         error: (...args) => console.error(...args)
       }
     });
+
+    this._configureHubFreshness();
 
     this.pageExecutionService = new PageExecutionService({
       maxDepth: this.maxDepth,
@@ -1540,6 +1547,9 @@ class NewsCrawler extends Crawler {
       this._skipStartupStage('db-open', 'Opening crawl database', 'Database disabled');
       this._skipStartupStage('enhanced-features', 'Starting enhanced features', 'Database disabled');
     }
+
+    this._configureHubFreshness({ preferEnhanced: true });
+
     try {
       this.startUrlNormalized = this.normalizeUrl(this.startUrl) || this.startUrl;
       if (this.startUrlNormalized) {
@@ -1907,9 +1917,9 @@ class NewsCrawler extends Crawler {
   enqueueRequest({
     url,
     depth,
-  type,
-  meta = null,
-  priority
+    type,
+    meta = null,
+    priority
   }) {
     if (this.structureOnly) {
       const kind = typeof type === 'string'
@@ -1933,13 +1943,195 @@ class NewsCrawler extends Crawler {
         return false;
       }
     }
+
+    const normalizedMeta = this._applyHubFreshnessPolicy({
+      url,
+      depth,
+      type,
+      meta
+    });
+
     return this.queue.enqueue({
       url,
       depth,
       type,
-      meta,
+      meta: normalizedMeta,
       priority
     });
+  }
+
+  _applyHubFreshnessPolicy({ depth, type, meta }) {
+    if (!this.hubFreshnessConfig) {
+      return meta;
+    }
+
+    if (meta != null && typeof meta !== 'object') {
+      return meta;
+    }
+
+    const config = this.hubFreshnessConfig || {};
+    const baseMeta = meta && typeof meta === 'object' ? { ...meta } : {};
+    const isHubLike = this._isHubLikeRequest({ depth, type, meta: baseMeta });
+
+    if (!isHubLike) {
+      return meta;
+    }
+
+    let changed = false;
+    const hasFetchPolicy = typeof baseMeta.fetchPolicy === 'string' && baseMeta.fetchPolicy;
+    const fallbackPrefersCache = config.fallbackToCacheOnFailure !== false;
+    const maxAgeDefault = Number.isFinite(config.maxCacheAgeMs) ? config.maxCacheAgeMs : null;
+    const firstPageMaxAge = Number.isFinite(config.firstPageMaxAgeMs) ? config.firstPageMaxAgeMs : null;
+    const effectiveMaxAge = depth === 0
+      ? (firstPageMaxAge != null ? firstPageMaxAge : maxAgeDefault)
+      : maxAgeDefault;
+
+    if (effectiveMaxAge != null && !(typeof baseMeta.maxCacheAgeMs === 'number' && Number.isFinite(baseMeta.maxCacheAgeMs))) {
+      baseMeta.maxCacheAgeMs = effectiveMaxAge;
+      changed = true;
+    }
+
+    const shouldForceNetwork = depth === 0 && config.refreshOnStartup !== false;
+    if (shouldForceNetwork && !hasFetchPolicy) {
+      baseMeta.fetchPolicy = 'network-first';
+      changed = true;
+    }
+
+    if (!fallbackPrefersCache && baseMeta.fallbackToCache !== false) {
+      baseMeta.fallbackToCache = false;
+      changed = true;
+    }
+
+    if (!changed) {
+      return meta;
+    }
+
+    return baseMeta;
+  }
+
+  _isHubLikeRequest({ depth, type, meta }) {
+    if (depth === 0) {
+      return true;
+    }
+
+    const roleCandidate = typeof meta?.role === 'string' ? meta.role.toLowerCase() : null;
+    const kind = this._resolveRequestKind(type, meta);
+
+    if (kind && (kind.includes('hub') || kind === 'nav' || kind === 'navigation')) {
+      return true;
+    }
+
+    if (roleCandidate && (roleCandidate.includes('hub') || roleCandidate === 'nav' || roleCandidate === 'navigation')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  _resolveRequestKind(type, meta) {
+    const candidates = [
+      typeof meta?.kind === 'string' ? meta.kind : null,
+      typeof meta?.type === 'string' ? meta.type : null,
+      typeof meta?.intent === 'string' ? meta.intent : null,
+      typeof type === 'string' ? type : null
+    ];
+
+    for (const value of candidates) {
+      if (value) {
+        return value.toLowerCase();
+      }
+    }
+
+    return null;
+  }
+
+  _configureHubFreshness({ preferEnhanced = false } = {}) {
+    const previousManager = this._hubFreshnessManager;
+    const manager = this._selectHubFreshnessManager({ preferEnhanced });
+
+    if (manager !== previousManager) {
+      this._disposeHubFreshnessWatcher();
+      if (previousManager && previousManager === this._ownedHubFreshnessManager && previousManager !== manager) {
+        try {
+          previousManager.close();
+        } catch (_) {}
+        this._ownedHubFreshnessManager = null;
+      }
+      this._hubFreshnessManager = manager;
+      this._bindHubFreshnessWatcher(manager);
+    }
+
+    this._applyHubFreshnessFromManager(manager);
+  }
+
+  _selectHubFreshnessManager({ preferEnhanced = false } = {}) {
+    const enhancedManager = this.enhancedFeatures?.configManager || null;
+    if (enhancedManager && (preferEnhanced || !this._ownedHubFreshnessManager)) {
+      return enhancedManager;
+    }
+
+    if (this._ownedHubFreshnessManager) {
+      return this._ownedHubFreshnessManager;
+    }
+
+    try {
+      this._ownedHubFreshnessManager = new ConfigManager(null, {
+        watch: !process.env.JEST_WORKER_ID,
+        inMemory: false
+      });
+    } catch (error) {
+      console.warn('Failed to initialize hub freshness ConfigManager:', error?.message || String(error));
+      this._ownedHubFreshnessManager = null;
+    }
+
+    return this._ownedHubFreshnessManager || enhancedManager || null;
+  }
+
+  _applyHubFreshnessFromManager(manager) {
+    if (!manager || typeof manager.getHubFreshnessConfig !== 'function') {
+      this.hubFreshnessConfig = null;
+      return;
+    }
+
+    try {
+      const snapshot = manager.getHubFreshnessConfig();
+      this.hubFreshnessConfig = snapshot && typeof snapshot === 'object' ? { ...snapshot } : null;
+    } catch (error) {
+      console.warn('Failed to load hub freshness config:', error?.message || String(error));
+      this.hubFreshnessConfig = null;
+    }
+  }
+
+  _bindHubFreshnessWatcher(manager) {
+    if (!manager || typeof manager.addWatcher !== 'function') {
+      this._hubFreshnessWatcherDispose = null;
+      return;
+    }
+
+    this._hubFreshnessWatcherDispose = manager.addWatcher(() => {
+      this._applyHubFreshnessFromManager(manager);
+    });
+  }
+
+  _disposeHubFreshnessWatcher() {
+    if (typeof this._hubFreshnessWatcherDispose === 'function') {
+      try {
+        this._hubFreshnessWatcherDispose();
+      } catch (_) {}
+    }
+    this._hubFreshnessWatcherDispose = null;
+  }
+
+  _cleanupHubFreshnessConfig() {
+    this._disposeHubFreshnessWatcher();
+    if (this._ownedHubFreshnessManager) {
+      try {
+        this._ownedHubFreshnessManager.close();
+      } catch (_) {}
+      this._ownedHubFreshnessManager = null;
+    }
+    this._hubFreshnessManager = null;
+    this.hubFreshnessConfig = null;
   }
 
 
@@ -2652,6 +2844,7 @@ class NewsCrawler extends Crawler {
       resolver.setResolutionObserver(null);
     }
     this.enhancedFeatures?.cleanup();
+    this._cleanupHubFreshnessConfig();
   }
 }
 

@@ -33,10 +33,9 @@
  *   }
  * }
  * 
- * @extends EventEmitter
+ * @extends EventedCrawlerBase
  */
-
-const EventEmitter = require('events');
+const EventedCrawlerBase = require('./EventedCrawlerBase');
 const http = require('http');
 const https = require('https');
 const { CrawlerState } = require('../CrawlerState');
@@ -56,7 +55,7 @@ const { StartupProgressTracker } = require('../StartupProgressTracker');
  * - 'workers-idle': All workers finished
  * - 'disposed': Cleanup complete
  */
-class Crawler extends EventEmitter {
+class Crawler extends EventedCrawlerBase {
   /**
    * Create a Crawler instance.
    * 

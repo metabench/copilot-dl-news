@@ -5,6 +5,20 @@ const fetchImpl = (...args) => import('node-fetch').then(({ default: fetch }) =>
 // Configuration for error response body storage
 const STORE_ERROR_RESPONSE_BODIES = process.env.STORE_ERROR_BODIES === 'true';
 
+const DEFAULT_NETWORK_RETRY_OPTIONS = Object.freeze({
+  maxAttempts: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 8000,
+  jitterRatio: 0.2,
+  retryableErrorCodes: ['ECONNRESET', 'EPIPE', 'ETIMEDOUT', 'EAI_AGAIN', 'ECONNREFUSED', 'ENETUNREACH', 'EHOSTUNREACH', 'ENOTFOUND']
+});
+
+const DEFAULT_HOST_RETRY_BUDGET = Object.freeze({
+  maxErrors: 6,
+  windowMs: 5 * 60 * 1000,
+  lockoutMs: 2 * 60 * 1000
+});
+
 function defaultLogger() {
   return {
     info: (...args) => console.log(...args),
@@ -74,11 +88,54 @@ class FetchPipeline {
     this.noteSuccess = opts.noteSuccess;
     this.recordError = opts.recordError;
     this.handleConnectionReset = opts.handleConnectionReset;
+    this.telemetry = opts.telemetry || null;
     this.articleHeaderCache = opts.articleHeaderCache;
     this.knownArticlesCache = opts.knownArticlesCache;
     this.getDbAdapter = typeof opts.getDbAdapter === 'function'
       ? opts.getDbAdapter
       : () => (opts.dbAdapter || null);
+    const retryOpts = (opts.networkRetryOptions && typeof opts.networkRetryOptions === 'object')
+      ? opts.networkRetryOptions
+      : {};
+    const resolvedMaxAttempts = Number.isFinite(retryOpts.maxAttempts) && retryOpts.maxAttempts > 0
+      ? Math.floor(retryOpts.maxAttempts)
+      : DEFAULT_NETWORK_RETRY_OPTIONS.maxAttempts;
+    const resolvedBaseDelay = Number.isFinite(retryOpts.baseDelayMs) && retryOpts.baseDelayMs >= 0
+      ? retryOpts.baseDelayMs
+      : DEFAULT_NETWORK_RETRY_OPTIONS.baseDelayMs;
+    const resolvedMaxDelay = Number.isFinite(retryOpts.maxDelayMs) && retryOpts.maxDelayMs >= resolvedBaseDelay
+      ? retryOpts.maxDelayMs
+      : DEFAULT_NETWORK_RETRY_OPTIONS.maxDelayMs;
+    const resolvedJitterRatio = Number.isFinite(retryOpts.jitterRatio) && retryOpts.jitterRatio >= 0
+      ? Math.min(1, retryOpts.jitterRatio)
+      : DEFAULT_NETWORK_RETRY_OPTIONS.jitterRatio;
+    const resolvedRetryableCodes = Array.isArray(retryOpts.retryableErrorCodes) && retryOpts.retryableErrorCodes.length > 0
+      ? Array.from(new Set(retryOpts.retryableErrorCodes.filter((code) => typeof code === 'string' && code.trim().length > 0)))
+      : DEFAULT_NETWORK_RETRY_OPTIONS.retryableErrorCodes;
+    this.networkRetryOptions = {
+      maxAttempts: resolvedMaxAttempts,
+      baseDelayMs: resolvedBaseDelay,
+      maxDelayMs: Math.max(resolvedBaseDelay, resolvedMaxDelay),
+      jitterRatio: resolvedJitterRatio,
+      retryableErrorCodes: resolvedRetryableCodes,
+      randomFn: typeof retryOpts.randomFn === 'function' ? retryOpts.randomFn : Math.random
+    };
+    const hostBudgetOpts = (opts.hostRetryBudget && typeof opts.hostRetryBudget === 'object') ? opts.hostRetryBudget : {};
+    const resolvedHostMaxErrors = Number.isFinite(hostBudgetOpts.maxErrors) && hostBudgetOpts.maxErrors > 0
+      ? Math.floor(hostBudgetOpts.maxErrors)
+      : DEFAULT_HOST_RETRY_BUDGET.maxErrors;
+    const resolvedHostWindowMs = Number.isFinite(hostBudgetOpts.windowMs) && hostBudgetOpts.windowMs > 0
+      ? hostBudgetOpts.windowMs
+      : DEFAULT_HOST_RETRY_BUDGET.windowMs;
+    const resolvedHostLockoutMs = Number.isFinite(hostBudgetOpts.lockoutMs) && hostBudgetOpts.lockoutMs > 0
+      ? hostBudgetOpts.lockoutMs
+      : DEFAULT_HOST_RETRY_BUDGET.lockoutMs;
+    this.hostRetryBudget = {
+      maxErrors: resolvedHostMaxErrors,
+      windowMs: resolvedHostWindowMs,
+      lockoutMs: resolvedHostLockoutMs
+    };
+    this._hostRetryState = new Map();
     this.parseRetryAfter = opts.parseRetryAfter;
     this.onCacheServed = typeof opts.onCacheServed === 'function' ? opts.onCacheServed : null;
     this.fetchFn = typeof opts.fetchFn === 'function' ? opts.fetchFn : fetchImpl;
@@ -95,7 +152,11 @@ class FetchPipeline {
     const { url, context = {}, retryCount = 0 } = params || {};
     const depth = context.depth || 0;
     const allowRevisit = !!context.allowRevisit;
-    const decision = this.getUrlDecision(url, { ...context, phase: 'fetch', depth });
+    const decisionContext = { ...context };
+    if (Object.prototype.hasOwnProperty.call(decisionContext, '__networkRetry')) {
+      delete decisionContext.__networkRetry;
+    }
+    const decision = this.getUrlDecision(url, { ...decisionContext, phase: 'fetch', depth });
     const analysis = decision?.analysis || {};
     const normalizedUrl = analysis && !analysis.invalid ? analysis.normalized : null;
 
@@ -268,6 +329,68 @@ class FetchPipeline {
     const rateLimitedHostFromContext = context.rateLimitedHost || null;
     const cachedHost = context.cachedHost || null;
     const shouldFallbackToCache = fetchPolicy === 'network-first' && fallbackToCache && !!cachedFallback;
+    const retryOptions = this.networkRetryOptions || DEFAULT_NETWORK_RETRY_OPTIONS;
+    const totalAttempts = Math.max(1, retryOptions.maxAttempts || DEFAULT_NETWORK_RETRY_OPTIONS.maxAttempts);
+    const attempt = retryCount + 1;
+    const retryMeta = context && typeof context === 'object' && context.__networkRetry ? context.__networkRetry : null;
+    const hostBudgetStatus = this._checkHostRetryBudget(host);
+    if (hostBudgetStatus?.locked) {
+      const retryAfterMs = hostBudgetStatus.retryAfterMs;
+      const lockMessage = `Host retry budget exhausted for ${host}; delaying fetch`;
+      this.logger.warn(`[network] host-budget-exhausted: ${host} locked for ${retryAfterMs}ms (url=${normalizedUrl})`);
+      const budgetError = new Error(lockMessage);
+      this.recordError({
+        kind: 'exception',
+        classification: 'host-budget-exhausted',
+        code: 'HOST_RETRY_EXHAUSTED',
+        message: lockMessage,
+        url: normalizedUrl,
+        attempt: attempt - 1 >= 0 ? attempt - 1 : 0,
+        maxAttempts: this.hostRetryBudget.maxErrors
+      });
+      this._recordNetworkError(normalizedUrl, 'network', budgetError, {
+        code: 'HOST_RETRY_EXHAUSTED',
+        attempt: attempt - 1 >= 0 ? attempt - 1 : 0,
+        attempts: totalAttempts,
+        strategy: 'host-budget-exhausted'
+      });
+      if (hostBudgetStatus.state) {
+        this._emitHostBudgetTelemetry('locked', host, hostBudgetStatus.state, {
+          url: normalizedUrl,
+          retryAfterMs
+        });
+      }
+      return this._buildResult({
+        status: 'error',
+        source: 'error',
+        url: normalizedUrl,
+        error: {
+          kind: 'network',
+          code: 'HOST_RETRY_EXHAUSTED',
+          message: lockMessage,
+          retryAfterMs,
+          hostRetryBudget: {
+            host,
+            failures: hostBudgetStatus.failures,
+            maxFailures: this.hostRetryBudget.maxErrors,
+            windowMs: this.hostRetryBudget.windowMs,
+            lockoutMs: this.hostRetryBudget.lockoutMs,
+            retryAtIso: hostBudgetStatus.retryAt ? new Date(hostBudgetStatus.retryAt).toISOString() : null
+          }
+        },
+        retryAfterMs,
+        decision
+      });
+    }
+    if (retryMeta) {
+      const resumeParts = [
+        `attempt ${attempt}/${totalAttempts}`,
+        retryMeta.strategy ? `strategy=${retryMeta.strategy}` : null,
+        retryMeta.delayMs != null ? `delay=${retryMeta.delayMs}ms` : null,
+        retryMeta.errorCode ? `code=${retryMeta.errorCode}` : null
+      ].filter(Boolean);
+      this.logger.warn(`[network] Resuming ${normalizedUrl}${resumeParts.length ? ` (${resumeParts.join(' | ')})` : ''}`);
+    }
     const buildFallbackResult = ({ fallbackReason, httpStatus = null }) => {
       if (!cachedFallback) {
         return null;
@@ -328,7 +451,8 @@ class FetchPipeline {
     }, this.requestTimeoutMs);
 
     try {
-      this.logger.info(`Fetching: ${normalizedUrl}`);
+      const attemptSuffix = totalAttempts > 1 ? ` (attempt ${attempt}/${totalAttempts})` : '';
+      this.logger.info(`Fetching: ${normalizedUrl}${attemptSuffix}`);
       const headers = {
         'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
       };
@@ -438,6 +562,7 @@ class FetchPipeline {
         });
 
         this._recordConditionalHeaders(normalizedUrl, { etag, lastModified, fetched_at: meta.fetchedAtIso });
+        this._noteHostSuccess(this._safeHost(normalizedUrl, host));
         this.noteSuccess(host);
         return this._buildResult({
           status: 'not-modified',
@@ -485,6 +610,13 @@ class FetchPipeline {
         if (status === 429) {
           this.note429(host, retryAfterMs);
         }
+
+        const failureHost = this._safeHost(finalUrl, host);
+        this._noteHostFailure(failureHost, {
+          type: 'http',
+          status,
+          retryAfterMs
+        });
 
         if (shouldFallbackToCache) {
           const fallbackResult = buildFallbackResult({ fallbackReason: `http-${status}`, httpStatus: status });
@@ -562,6 +694,7 @@ class FetchPipeline {
         last_modified: lastModified,
         fetched_at: fetchMeta.fetchedAtIso
       });
+      this._noteHostSuccess(this._safeHost(finalUrl, host));
       this.noteSuccess(host);
 
       return this._buildResult({
@@ -574,43 +707,94 @@ class FetchPipeline {
       });
     } catch (error) {
       clearTimeout(timeoutHandle);
-      
+
       // Check if this is a retryable network error
-      const isConnectionReset = error && (error.code === 'ECONNRESET' || /ECONNRESET|socket hang up/i.test(String(error?.message || '')));
-      const isTimeout = error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(error?.message || '')));
-      const maxRetries = 1; // Single retry by default
-      
-      // Retry on connection reset or timeout (but not on other errors)
-      if ((isConnectionReset || isTimeout) && retryCount < maxRetries) {
-        this.logger.warn(`Retrying ${normalizedUrl} after ${isTimeout ? 'timeout' : 'connection reset'} (attempt ${retryCount + 1}/${maxRetries + 1})`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
+      const errorMessage = error?.message || String(error);
+      const errorCode = typeof error?.code === 'string' ? error.code : null;
+      const isConnectionReset = error && (error.code === 'ECONNRESET' || /ECONNRESET|socket hang up/i.test(String(errorMessage)));
+      const isTimeout = error && (error.name === 'AbortError' || /aborted|timeout/i.test(String(errorMessage)));
+      const retryableCodes = new Set(retryOptions.retryableErrorCodes || []);
+      const isRetryableCode = errorCode ? retryableCodes.has(errorCode) : false;
+      const transientPattern = /ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ENETUNREACH|EHOSTUNREACH|network/i;
+      const isTransientMessage = transientPattern.test(String(errorMessage));
+      const isRetryableNetworkError = isConnectionReset || isTimeout || isRetryableCode || isTransientMessage;
+      const maxRetries = totalAttempts - 1;
+
+      if (isRetryableNetworkError && retryCount < maxRetries) {
+        const strategy = isTimeout ? 'timeout-backoff' : (isConnectionReset ? 'connection-reset-backoff' : 'network-backoff');
+        const retryIndex = retryCount;
+        const exponentialDelay = retryOptions.baseDelayMs * Math.pow(2, retryIndex);
+        const boundedBase = Math.max(retryOptions.baseDelayMs, Math.min(retryOptions.maxDelayMs, exponentialDelay || retryOptions.baseDelayMs));
+        const jitterAmount = retryOptions.jitterRatio > 0
+          ? Math.round(boundedBase * retryOptions.jitterRatio * (retryOptions.randomFn ? retryOptions.randomFn() : Math.random()))
+          : 0;
+        const delayMs = Math.max(0, Math.min(retryOptions.maxDelayMs, boundedBase + jitterAmount));
+        this.logger.warn(`[network] ${strategy}: retrying ${normalizedUrl} (attempt ${attempt + 1}/${totalAttempts}) in ${delayMs}ms [code=${errorCode || 'unknown'} message="${errorMessage}"]`);
         const retryUrl = originalUrl || normalizedUrl;
-        return this.fetch({ url: retryUrl, context, retryCount: retryCount + 1 });
+        const nextContext = { ...(context || {}), __networkRetry: { attempt, strategy, delayMs, errorCode, errorMessage } };
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return this.fetch({ url: retryUrl, context: nextContext, retryCount: retryCount + 1 });
       }
-      
-      // Log error and record after retries exhausted
-      this.logger.error(`Error fetching ${normalizedUrl}: ${error?.message || String(error)}`);
-      this.recordError({ kind: 'exception', message: error?.message || error?.name || String(error), url: normalizedUrl });
+
+      if (isRetryableNetworkError && retryCount >= maxRetries) {
+        this.logger.warn(`[network] Exhausted retries for ${normalizedUrl} after ${totalAttempts} attempts${errorCode ? ` [code=${errorCode}]` : ''}`);
+      }
+
+      const strategy = isTimeout ? 'timeout' : (isConnectionReset ? 'connection-reset' : (isRetryableCode ? 'network-code' : 'network'));
+      this.logger.error(`[network] Failed ${normalizedUrl} after ${attempt}/${totalAttempts} attempts${errorCode ? ` (code=${errorCode})` : ''}: ${errorMessage}`);
+      this.recordError({
+        kind: 'exception',
+        classification: strategy,
+        code: errorCode || null,
+        message: errorMessage,
+        url: normalizedUrl,
+        attempt,
+        maxAttempts: totalAttempts
+      });
       if (isConnectionReset) {
         this.handleConnectionReset(normalizedUrl, error);
       }
-      this._recordNetworkError(normalizedUrl, isTimeout ? 'timeout' : 'network', error);
+      const lastRetryMeta = context && typeof context === 'object' && context.__networkRetry ? context.__networkRetry : null;
+      this._recordNetworkError(normalizedUrl, isTimeout ? 'timeout' : 'network', error, {
+        code: errorCode || null,
+        attempt,
+        attempts: totalAttempts,
+        strategy,
+        lastRetry: lastRetryMeta
+      });
       if (shouldFallbackToCache) {
         const fallbackReason = isTimeout ? 'timeout' : 'network-error';
         const fallbackResult = buildFallbackResult({ fallbackReason });
         if (fallbackResult) {
           this.logger.warn(`Network error (${fallbackReason}) for ${normalizedUrl}; returning stale cache`);
+          this._noteHostFailure(this._safeHost(normalizedUrl, host), {
+            type: 'network-fallback',
+            strategy,
+            errorCode
+          });
           return fallbackResult;
         }
       }
+      const lastRetryDelayMs = lastRetryMeta && typeof lastRetryMeta.delayMs === 'number' ? lastRetryMeta.delayMs : null;
+      this._noteHostFailure(this._safeHost(normalizedUrl, host), {
+        type: 'network',
+        strategy,
+        errorCode,
+        lastRetryDelayMs
+      });
       return this._buildResult({
         status: 'error',
         source: 'error',
         url: normalizedUrl,
         error: {
           kind: isTimeout ? 'timeout' : 'network',
-          message: error?.message || String(error),
-          networkError: true
+          message: errorMessage,
+          networkError: true,
+          code: errorCode || null,
+          attempt,
+          attempts: totalAttempts,
+          strategy,
+          lastRetryDelayMs
         },
         decision
       });
@@ -658,24 +842,197 @@ class FetchPipeline {
   }
 
   _recordHttpError(url, status) {
+    const message = `HTTP ${status}`;
+    const host = this._safeHost(url);
+    const payload = {
+      url,
+      kind: 'http',
+      code: status,
+      message,
+      host
+    };
     try {
-      this.recordError({ kind: 'http', code: status, message: `HTTP ${status}`, url });
+      this.recordError({ kind: 'http', code: status, message, url });
     } catch (_) {}
     try {
-      this.getDbAdapter()?.insertError?.({ url, kind: 'http', code: status, message: `HTTP ${status}`, details: null });
+      this.getDbAdapter()?.insertError?.({ url, kind: 'http', code: status, message, details: null });
     } catch (_) {}
     try {
-      console.log(`ERROR ${JSON.stringify({ url, kind: 'http', code: status })}`);
+      console.log(`ERROR ${JSON.stringify(payload)}`);
+    } catch (_) {}
+    try {
+      if (this.telemetry && typeof this.telemetry.telemetry === 'function') {
+        this.telemetry.telemetry({
+          severity: status >= 500 ? 'error' : 'warning',
+          event: 'fetch.http-error',
+          message,
+          url,
+          host,
+          httpStatus: status
+        });
+      }
     } catch (_) {}
   }
 
-  _recordNetworkError(url, kind, error) {
+  _recordNetworkError(url, kind, error, meta = {}) {
+    const payload = {
+      url,
+      kind,
+      message: error?.message || String(error)
+    };
+    const host = this._safeHost(url);
+    if (host) payload.host = host;
+    if (meta && typeof meta === 'object') {
+      if (meta.code != null) payload.code = meta.code;
+      if (meta.attempt != null) payload.attempt = meta.attempt;
+      if (meta.attempts != null) payload.maxAttempts = meta.attempts;
+      if (meta.maxAttempts != null && payload.maxAttempts == null) payload.maxAttempts = meta.maxAttempts;
+      const classification = meta.strategy || meta.classification || null;
+      if (classification) {
+        payload.strategy = classification;
+        payload.classification = classification;
+      }
+      if (meta.lastRetry && typeof meta.lastRetry === 'object') {
+        const lastRetry = {};
+        if (meta.lastRetry.strategy) lastRetry.strategy = meta.lastRetry.strategy;
+        if (meta.lastRetry.delayMs != null) lastRetry.delayMs = meta.lastRetry.delayMs;
+        if (meta.lastRetry.errorCode) lastRetry.errorCode = meta.lastRetry.errorCode;
+        if (Object.keys(lastRetry).length) payload.lastRetry = lastRetry;
+      }
+    }
+    if (payload.maxAttempts != null && payload.attempts == null) {
+      payload.attempts = payload.maxAttempts;
+    }
     try {
-      this.getDbAdapter()?.insertError?.({ url, kind, message: error?.message || String(error) });
+      this.getDbAdapter()?.insertError?.({ url, kind, code: payload.code || null, message: payload.message });
     } catch (_) {}
     try {
-      console.log(`ERROR ${JSON.stringify({ url, kind, message: error?.message || String(error) })}`);
+      console.log(`ERROR ${JSON.stringify(payload)}`);
     } catch (_) {}
+    try {
+      if (this.telemetry && typeof this.telemetry.telemetry === 'function') {
+        this.telemetry.telemetry({
+          severity: 'error',
+          event: 'fetch.network-error',
+          message: payload.message,
+          url,
+          host,
+          code: payload.code || null,
+          kind,
+          attempt: payload.attempt ?? null,
+          maxAttempts: payload.maxAttempts ?? null,
+          strategy: payload.classification || payload.strategy || null,
+          lastRetry: payload.lastRetry || null
+        });
+      }
+    } catch (_) {}
+  }
+
+  _checkHostRetryBudget(host) {
+    if (!host || !this.hostRetryBudget) {
+      return { locked: false, failures: 0, state: null };
+    }
+    const state = this._hostRetryState.get(host);
+    if (!state) {
+      return { locked: false, failures: 0, state: null };
+    }
+    const now = Date.now();
+    if (state.lockExpiresAt && state.lockExpiresAt <= now) {
+      this._hostRetryState.delete(host);
+      return { locked: false, failures: 0, state: null };
+    }
+    if (state.firstFailureAt && (now - state.firstFailureAt) > this.hostRetryBudget.windowMs) {
+      this._hostRetryState.delete(host);
+      return { locked: false, failures: 0, state: null };
+    }
+    if (state.lockExpiresAt && state.lockExpiresAt > now) {
+      return {
+        locked: true,
+        retryAfterMs: state.lockExpiresAt - now,
+        retryAt: state.lockExpiresAt,
+        failures: state.failures,
+        state
+      };
+    }
+    return {
+      locked: false,
+      failures: state.failures,
+      state
+    };
+  }
+
+  _noteHostFailure(host, meta = {}) {
+    if (!host || !this.hostRetryBudget) return;
+    const now = Date.now();
+    let state = this._hostRetryState.get(host);
+    if (!state) {
+      state = {
+        failures: 0,
+        firstFailureAt: now,
+        lastFailureAt: now,
+        lockExpiresAt: null,
+        lastMeta: null
+      };
+    } else {
+      if (state.lockExpiresAt && state.lockExpiresAt <= now) {
+        state.failures = 0;
+        state.lockExpiresAt = null;
+        state.firstFailureAt = now;
+      }
+      if (state.firstFailureAt && (now - state.firstFailureAt) > this.hostRetryBudget.windowMs) {
+        state.failures = 0;
+        state.firstFailureAt = now;
+      }
+      state.lastFailureAt = now;
+    }
+    state.failures += 1;
+    if (!state.firstFailureAt) state.firstFailureAt = now;
+    state.lastMeta = meta || null;
+    if (state.failures >= this.hostRetryBudget.maxErrors) {
+      if (!state.lockExpiresAt || state.lockExpiresAt <= now) {
+        state.lockExpiresAt = now + this.hostRetryBudget.lockoutMs;
+        this.logger.warn(`[network] host retry budget exhausted for ${host}; lockout until ${new Date(state.lockExpiresAt).toISOString()}`);
+        this._emitHostBudgetTelemetry('exhausted', host, state, meta);
+      }
+    }
+    this._hostRetryState.set(host, state);
+  }
+
+  _noteHostSuccess(host) {
+    if (!host || !this.hostRetryBudget) return;
+    const state = this._hostRetryState.get(host);
+    if (!state) return;
+    this._hostRetryState.delete(host);
+    this._emitHostBudgetTelemetry('reset', host, state);
+  }
+
+  _emitHostBudgetTelemetry(stage, host, state, extras = {}) {
+    if (!this.telemetry || typeof this.telemetry.telemetry !== 'function') return;
+    try {
+      this.telemetry.telemetry({
+        severity: stage === 'exhausted' ? 'warning' : 'info',
+        event: 'fetch.host-retry-budget',
+        stage,
+        host,
+        failures: state?.failures ?? 0,
+        maxFailures: this.hostRetryBudget?.maxErrors ?? null,
+        windowMs: this.hostRetryBudget?.windowMs ?? null,
+        lockoutMs: this.hostRetryBudget?.lockoutMs ?? null,
+        lockExpiresAtIso: state?.lockExpiresAt ? new Date(state.lockExpiresAt).toISOString() : null,
+        firstFailureAtIso: state?.firstFailureAt ? new Date(state.firstFailureAt).toISOString() : null,
+        lastFailureAtIso: state?.lastFailureAt ? new Date(state.lastFailureAt).toISOString() : null,
+        ...extras
+      });
+    } catch (_) {}
+  }
+
+  _safeHost(url, fallback = null) {
+    if (!url) return fallback;
+    try {
+      return new URL(url).hostname || fallback;
+    } catch (_) {
+      return fallback;
+    }
   }
 
   /**

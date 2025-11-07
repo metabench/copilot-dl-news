@@ -4,6 +4,7 @@ describe('FetchPipeline', () => {
   const baseDeps = () => {
     const articleHeaderCache = new Map();
     const knownArticlesCache = new Map();
+    const telemetry = { telemetry: jest.fn() };
     return {
       getUrlDecision: jest.fn((url) => ({ allow: true, analysis: { normalized: url } })),
       normalizeUrl: jest.fn((url) => url),
@@ -29,6 +30,7 @@ describe('FetchPipeline', () => {
       noteSuccess: jest.fn(),
       recordError: jest.fn(),
       handleConnectionReset: jest.fn(),
+      telemetry,
       articleHeaderCache,
       knownArticlesCache,
       getDbAdapter: () => ({ isEnabled: () => false }),
@@ -151,5 +153,111 @@ describe('FetchPipeline', () => {
     }));
     expect(deps.recordError).toHaveBeenCalledWith(expect.objectContaining({ kind: 'http' }));
     expect(deps.noteSuccess).not.toHaveBeenCalled();
+  });
+
+  it('retries transient network errors and surfaces retry metadata', async () => {
+    const deps = baseDeps();
+    const networkError = new Error('socket hang up');
+    networkError.code = 'ECONNRESET';
+    deps.fetchFn = jest.fn(() => {
+      const err = new Error(networkError.message);
+      err.code = networkError.code;
+      throw err;
+    });
+
+    const pipeline = new FetchPipeline({
+      ...deps,
+      fetchFn: deps.fetchFn,
+      networkRetryOptions: {
+        maxAttempts: 3,
+        baseDelayMs: 0,
+        maxDelayMs: 0,
+        jitterRatio: 0,
+        randomFn: () => 0
+      }
+    });
+
+    const result = await pipeline.fetch({ url: 'https://example.com/reset', context: { depth: 0 } });
+
+    expect(deps.fetchFn).toHaveBeenCalledTimes(3);
+    expect(result.source).toBe('error');
+    expect(result.meta.error).toMatchObject({
+      kind: 'network',
+      code: 'ECONNRESET',
+      attempt: 3,
+      attempts: 3,
+      strategy: 'connection-reset'
+    });
+    expect(deps.recordError).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'ECONNRESET',
+      attempt: 3,
+      maxAttempts: 3
+    }));
+    expect(deps.handleConnectionReset).toHaveBeenCalledTimes(1);
+    expect(deps.telemetry.telemetry).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'fetch.network-error',
+      url: 'https://example.com/reset',
+      code: 'ECONNRESET',
+      attempt: 3,
+      maxAttempts: 3,
+      host: 'example.com'
+    }));
+  });
+
+  it('locks hosts when retry budget is exhausted', async () => {
+    const deps = baseDeps();
+    const error = new Error('connection reset');
+    error.code = 'ECONNRESET';
+    deps.fetchFn = jest.fn(() => {
+      const err = new Error(error.message);
+      err.code = error.code;
+      throw err;
+    });
+
+    const pipeline = new FetchPipeline({
+      ...deps,
+      fetchFn: deps.fetchFn,
+      networkRetryOptions: {
+        maxAttempts: 1,
+        baseDelayMs: 0,
+        maxDelayMs: 0,
+        jitterRatio: 0,
+        randomFn: () => 0
+      },
+      hostRetryBudget: {
+        maxErrors: 1,
+        windowMs: 60_000,
+        lockoutMs: 60_000
+      }
+    });
+
+    const first = await pipeline.fetch({ url: 'https://retry.test/path-1', context: { depth: 0 } });
+    expect(first.source).toBe('error');
+    expect(first.meta.error.code).toBe('ECONNRESET');
+    expect(deps.fetchFn).toHaveBeenCalledTimes(1);
+
+    const second = await pipeline.fetch({ url: 'https://retry.test/path-2', context: { depth: 0 } });
+    expect(deps.fetchFn).toHaveBeenCalledTimes(1);
+    expect(second.source).toBe('error');
+    expect(second.meta.error.code).toBe('HOST_RETRY_EXHAUSTED');
+    expect(second.meta.error.hostRetryBudget).toEqual(expect.objectContaining({
+      host: 'retry.test',
+      maxFailures: 1
+    }));
+    expect(second.meta.error.retryAfterMs).toBeGreaterThan(0);
+    expect(second.meta.error.retryAfterMs).toBeLessThanOrEqual(60_000);
+    expect(second.meta.retryAfterMs).toBeGreaterThan(0);
+    expect(second.meta.retryAfterMs).toBeLessThanOrEqual(60_000);
+
+    expect(deps.telemetry.telemetry).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'fetch.host-retry-budget',
+      stage: 'exhausted',
+      host: 'retry.test'
+    }));
+    expect(deps.telemetry.telemetry).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'fetch.host-retry-budget',
+      stage: 'locked',
+      host: 'retry.test'
+    }));
   });
 });

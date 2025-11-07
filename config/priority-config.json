@@ -100,7 +100,7 @@
     "realTimePlanAdjustment": false,
     "dynamicReplanning": false,
     "crossDomainSharing": false,
-    "totalPrioritisation": true
+    "totalPrioritisation": false
   },
   "hubFreshness": {
     "refreshOnStartup": true,

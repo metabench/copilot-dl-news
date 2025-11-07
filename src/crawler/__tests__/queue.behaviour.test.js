@@ -1,3 +1,36 @@
+jest.mock('jsdom', () => {
+  class MockVirtualConsole {
+    constructor() {
+      this.listeners = new Map();
+    }
+
+    on(event, handler) {
+      if (typeof handler === 'function') {
+        this.listeners.set(event, handler);
+      }
+    }
+  }
+
+  class MockJSDOM {
+    constructor(html = '', options = {}) {
+      this.html = html;
+      this.options = options;
+      this.window = {
+        document: {
+          querySelector: () => null,
+          querySelectorAll: () => [],
+          createElement: () => ({})
+        }
+      };
+    }
+  }
+
+  return {
+    JSDOM: MockJSDOM,
+    VirtualConsole: MockVirtualConsole
+  };
+});
+
 const NewsCrawler = require('../../crawl');
 
 const START_URL = 'https://example.com';
@@ -120,5 +153,72 @@ describe('NewsCrawler queue behaviour (pre-extraction)', () => {
         rateLimitedHost: host
       })
     );
+  });
+
+  it('applies hub freshness policy to startup hub requests', () => {
+    const crawler = createCrawler();
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      refreshOnStartup: true,
+      maxCacheAgeMs: 600000,
+      firstPageMaxAgeMs: 120000,
+      fallbackToCacheOnFailure: false
+    };
+
+    crawler.enqueueRequest({
+      url: START_URL,
+      depth: 0,
+      type: 'nav'
+    });
+
+    const queued = crawler.queue.peek();
+    expect(queued.meta).toEqual(expect.objectContaining({
+      fetchPolicy: 'network-first',
+      maxCacheAgeMs: 120000,
+      fallbackToCache: false
+    }));
+  });
+
+  it('respects refreshOnStartup=false while still applying cache thresholds', () => {
+    const crawler = createCrawler();
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      refreshOnStartup: false,
+      maxCacheAgeMs: 900000,
+      firstPageMaxAgeMs: 450000,
+      fallbackToCacheOnFailure: true
+    };
+
+    crawler.enqueueRequest({
+      url: `${START_URL}/home`,
+      depth: 0,
+      type: 'nav'
+    });
+
+    const queued = crawler.queue.peek();
+    expect(queued.meta?.fetchPolicy).toBeUndefined();
+    expect(queued.meta?.maxCacheAgeMs).toBe(450000);
+  });
+
+  it('applies max cache age to non-root hub navigation', () => {
+    const crawler = createCrawler();
+    crawler._cleanupHubFreshnessConfig();
+    crawler.hubFreshnessConfig = {
+      refreshOnStartup: true,
+      maxCacheAgeMs: 300000,
+      firstPageMaxAgeMs: 120000,
+      fallbackToCacheOnFailure: true
+    };
+
+    const hubUrl = `${START_URL}/world`;
+    crawler.enqueueRequest({
+      url: hubUrl,
+      depth: 2,
+      type: 'nav'
+    });
+
+    const queued = crawler.queue.peek();
+    expect(queued.meta?.maxCacheAgeMs).toBe(300000);
+    expect(queued.meta?.fetchPolicy).toBeUndefined();
   });
 });

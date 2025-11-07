@@ -21,6 +21,32 @@ describe('ErrorTracker', () => {
     expect(state.getErrorSamples()).toHaveLength(1);
   });
 
+  it('emits telemetry when provided while recording errors', () => {
+    const state = new CrawlerState();
+    const telemetry = { telemetry: jest.fn() };
+    const tracker = new ErrorTracker({ state, telemetry });
+
+    tracker.record({
+      kind: 'network',
+      code: 'ETIMEDOUT',
+      message: 'Timed out',
+      url: 'https://example.org/article',
+      attempt: 2,
+      maxAttempts: 3,
+      classification: 'timeout'
+    });
+
+    expect(telemetry.telemetry).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'crawler.error.sample-recorded',
+      code: 'ETIMEDOUT',
+      url: 'https://example.org/article',
+      attempt: 2,
+      maxAttempts: 3,
+      classification: 'timeout',
+      host: 'example.org'
+    }));
+  });
+
   it('emits telemetry and aborts after repeated connection resets', () => {
     const state = new CrawlerState();
     const telemetry = { problem: jest.fn() };

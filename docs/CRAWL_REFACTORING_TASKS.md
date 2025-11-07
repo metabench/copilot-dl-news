@@ -169,7 +169,7 @@ node -e "const { createSequenceConfigLoader } = require('./src/orchestration/Seq
 | 4.5 | Document configuration schema & validation | Update architecture docs with configuration defaults and validation plan | completed | MEDIUM | 2025-11-06: Architecture section updated with config schema, defaults (10-minute threshold), and validation expectations. |
 | 4.6 | Implement queue/worker fetch-policy propagation | Wire fetch-policy metadata, cache-age thresholds, and fallback flags through `QueueManager` and worker contexts | completed | HIGH | 2025-11-07: QueueManager now forwards policy metadata; WorkerRunner + enqueueRequest propagate fetch policy/fallback context to `processPage`. |
 | 4.7 | Enforce fetch policy in FetchPipeline with cache fallback | Update `_tryCache` and `_performNetworkFetch` to honor policy, respect max-cache-age overrides, and surface fallback telemetry | completed | HIGH | 2025-11-16: `_tryCache` respects `network-first` bypass, `_performNetworkFetch` falls back to cached entries on HTTP/network failures, telemetry includes fallback metadata. |
-| 4.8 | Apply hub freshness config + CLI/documentation updates | Introduce `hubFreshness` defaults via ConfigManager, ensure `_seedInitialRequest` uses them, and clarify CLI behavior in documentation | not-started | MEDIUM | Requires updated config manager accessors and doc sync once FetchPipeline work lands. |
+| 4.8 | Apply hub freshness config + CLI/documentation updates | Introduce `hubFreshness` defaults via ConfigManager, ensure `_seedInitialRequest` uses them, and clarify CLI behavior in documentation | completed | MEDIUM | 2025-11-18: NewsCrawler now loads ConfigManager `hubFreshness` settings, applies network-first + cache age caps to hub queue entries, and adds regression coverage; CLI/doc polish queued for follow-up smoke validation. |
 | 4.9 | Focused tests for policy plumbing | Add targeted Jest coverage for queue context + FetchPipeline decision matrix | in-progress | MEDIUM | 2025-11-16: Added FetchPipeline network-first fallback unit coverage; queue propagation tests and CLI smoke still pending. |
 
 ## Phase 5: Crawl Platform Surfaces (New Scope)
@@ -199,6 +199,26 @@ node -e "const { createSequenceConfigLoader } = require('./src/orchestration/Seq
 	- Priority config already centralizes crawler options; extend with `hubFreshness` block referencing max age, retry windows, and policy defaults.
 	- First-page refresh requirement implies special-case logic at crawl start; should be part of platform SDK to avoid ad-hoc checks in operations.
 	- Documentation must detail configuration keys, defaults, and operational guidance in architecture docs.
+
+## Phase 7: Evented Crawler Components (New Scope)
+
+- **Current sub-phase:** α — Discovery & tooling inventory (active 2025-11-17)
+- **Docs consulted (2025-11-17):** `.github/instructions/GitHub Copilot.instructions.md`, `AGENTS.md` (Topic Index), `docs/INDEX.md`, `docs/CHANGE_PLAN.md`, `docs/CLI_REFACTORING_TASKS.md`
+- **Code reconnaissance targets (2025-11-17):** `src/crawler/core/Crawler.js`, `src/crawler/NewsCrawler.js`, `src/crawl.js`, `src/crawler/cli/progressAdapter.js`
+- **Tooling inventory (2025-11-17):** `node -e "const { Evented_Class } = require('lang-tools'); console.log(Object.getOwnPropertyNames(Evented_Class.prototype));"` to inspect Evented_Class API; focused Jest targets pending selection (likely `src/crawler/core/__tests__/Crawler.test.js` and CLI smoke commands).
+- **Discovery notes (2025-11-17):**
+	- `Crawler` currently extends Node's `EventEmitter`, emitting via `emit()`/`once()` while downstream modules subscribe with `on()`.
+	- `Evented_Class` (lang-tools) exposes `on`, `off`, `one`, `raise`, and `trigger` helpers but lacks Node-style `emit`/`once` aliases; an adapter is required for drop-in compatibility.
+	- NewsCrawler and CLI adapters rely on `EventEmitter` semantics (e.g., `crawler.once('startup-complete', ...)`), so migration must preserve listener behaviour and chaining.
+	- Initial scope will introduce a wrapper base (tentatively `EventedCrawlerBase`) that extends `Evented_Class` and restores `emit|once|addListener|removeListener` aliases, minimizing churn while enabling future Evented_Class adoption across components.
+
+| # | Task | Scope | Status | Priority | Notes |
+|---|------|-------|--------|----------|-------|
+| 7.1 | Evented_Class integration discovery | Catalogue existing event usage, confirm Evented_Class API surface, and capture plan deltas in `CHANGE_PLAN.md` | completed | HIGH | 2025-11-17: Reviewed `Crawler.js` event emissions, inspected Evented_Class prototype via Node REPL, documented adapter requirements, and updated change plan/task ledger. |
+| 7.2 | Introduce Evented crawler base adapter | Create `EventedCrawlerBase` wrapping `Evented_Class`, add EventEmitter-compatible aliases, and cover with focused unit tests | completed | HIGH | 2025-11-17: Added `src/crawler/core/EventedCrawlerBase.js` with emit/on/once/removeListener aliases plus new Jest coverage (`EventedCrawlerBase.test.js`). Focused command: `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/core/__tests__/EventedCrawlerBase.test.js src/crawler/core/__tests__/Crawler.test.js --bail=1 --maxWorkers=50%`. |
+| 7.3 | Migrate Crawler to Evented base | Replace `EventEmitter` inheritance, update event helpers, and rerun `src/crawler/core/__tests__/Crawler.test.js` plus regression smoke | completed | HIGH | 2025-11-17: `Crawler` now extends `EventedCrawlerBase`; test suite updated to reference adapter semantics. Covered by combined Jest command in Task 7.2 notes. |
+| 7.4 | Integrate NewsCrawler & CLI surfaces | Ensure `NewsCrawler` and CLI adapters interact with the new base without regressions, executing targeted Jest/CLI smoke commands | completed | MEDIUM | 2025-11-17: Ran crawler CLI Jest suite (`npx jest --config jest.careful.config.js --runTestsByPath src/crawler/cli/__tests__/bootstrap.test.js src/crawler/cli/__tests__/argumentNormalizer.test.js src/crawler/cli/__tests__/progressReporter.test.js src/crawler/cli/__tests__/runLegacyCommand.test.js --bail=1 --maxWorkers=50%`) — suites passed, Jest exited with open-handle warning (tracked). CLI smoke: `node src/crawl.js --help`, `node src/tools/crawl-operations.js --list-operations --json`. |
+| 7.5 | Documentation & tracker sync | Update `CHANGE_PLAN.md`, architecture docs, and record executed validation commands | completed | MEDIUM | 2025-11-17: Patched `docs/ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md` with Evented adapter details, updated validation commands, and synced change plan/tracker. |
 
 | # | Task | Scope | Status | Priority | Notes |
 |---|------|-------|--------|----------|-------|

@@ -3,12 +3,11 @@
 
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
 const { CliFormatter } = require('../utils/CliFormatter');
-const { CrawlOperations } = require('../crawler/CrawlOperations');
 const {
-  createSequenceConfigLoader,
+  createCrawlService,
+  buildAvailabilityPayload,
   SequenceConfigError
-} = require('../orchestration/SequenceConfigLoader');
-const { runSequenceConfig } = require('../orchestration/SequenceConfigRunner');
+} = require('../server/crawl-api');
 
 function parseCliArgs(argv) {
   const parser = new CliArgumentParser(
@@ -37,43 +36,6 @@ function parseCliArgs(argv) {
     .add('--logger-level <level>', 'Logger verbosity: info | warn | error | silent', 'info');
 
   return parser.parse(argv);
-}
-
-function buildOperationSummaries(facade) {
-  return facade.listOperations().map((name) => {
-    const preset = facade.getOperationPreset(name) || {};
-    return {
-      name,
-      summary: preset.summary || null,
-      defaultOptions: preset.options || {}
-    };
-  });
-}
-
-function buildSequenceSummaries(facade) {
-  return facade.listSequencePresets().map((preset) => {
-    const full = facade.getSequencePreset ? facade.getSequencePreset(preset.name) : null;
-    const steps = Array.isArray(full?.steps)
-      ? full.steps.map((step) => {
-          if (typeof step === 'string') {
-            return { operation: step, label: null };
-          }
-          return {
-            operation: step.operation || step.name || null,
-            label: step.label || null
-          };
-        })
-      : [];
-
-    return {
-      name: preset.name,
-      label: preset.label || null,
-      description: preset.description || null,
-      continueOnError: Boolean(preset.continueOnError),
-      stepCount: preset.stepCount,
-      steps
-    };
-  });
 }
 
 function parseJsonObject(value, label) {
@@ -383,21 +345,6 @@ function createLogger(fmt, options) {
   };
 }
 
-function buildAvailabilityPayload(availability, options, includeAll = false) {
-  if (!availability) return undefined;
-  const payload = {};
-  const includeOperations = includeAll || options?.showOperationsList;
-  const includeSequences = includeAll || options?.showSequencesList;
-
-  if (includeOperations) {
-    payload.operations = availability.operations;
-  }
-  if (includeSequences) {
-    payload.sequencePresets = availability.sequences;
-  }
-
-  return Object.keys(payload).length ? payload : undefined;
-}
 
 function renderAvailabilityAscii(fmt, availability, showOperations, showSequences) {
   fmt.header('Crawl Operations Overview');
@@ -537,33 +484,13 @@ function renderSequenceAscii(fmt, result, options) {
 }
 
 
-async function runOperation(facade, options) {
-  return facade[options.operationName](options.startUrl, options.overrides);
-}
-
-
-async function runSequence(facade, options, fmt) {
-  const onStepComplete = (options.summaryFormat === 'ascii' && !options.quiet)
-    ? (stepResult, index) => {
-        fmt.info(`Step ${index + 1}: ${stepResult.operation} → ${stepResult.status}`);
-      }
-    : undefined;
-
-  return facade.runSequencePreset(options.sequenceName, {
-    startUrl: options.startUrl,
-    sharedOverrides: options.sharedOverrides,
-    stepOverrides: options.stepOverrides,
-    continueOnError: options.continueOnError,
-    onStepComplete
-  });
-}
-
 function emitJson(payload, options) {
   console.log(JSON.stringify(payload, null, options.quiet ? undefined : 2));
 }
 
 async function main() {
   const fmt = new CliFormatter();
+  const crawlService = createCrawlService();
 
   let rawArgs;
   try {
@@ -574,11 +501,7 @@ async function main() {
     return;
   }
 
-  const probeFacade = new CrawlOperations();
-  const probeAvailability = {
-    operations: buildOperationSummaries(probeFacade),
-    sequences: buildSequenceSummaries(probeFacade)
-  };
+  const probeAvailability = crawlService.getAvailability();
 
   let options;
   try {
@@ -590,11 +513,7 @@ async function main() {
   }
 
   const logger = createLogger(fmt, options);
-  const facade = new CrawlOperations({ logger });
-  const availability = {
-    operations: buildOperationSummaries(facade),
-    sequences: buildSequenceSummaries(facade)
-  };
+  const availability = crawlService.getAvailability({ logger });
 
   if (options.mode === 'list') {
     if (options.summaryFormat === 'json' || options.quiet) {
@@ -612,7 +531,12 @@ async function main() {
 
   try {
     if (options.mode === 'operation') {
-      const result = await runOperation(facade, options);
+      const result = await crawlService.runOperation({
+        logger,
+        operationName: options.operationName,
+        startUrl: options.startUrl,
+        overrides: options.overrides
+      });
       if (options.summaryFormat === 'json' || options.quiet) {
         const payload = {
           mode: 'operation',
@@ -630,7 +554,21 @@ async function main() {
         process.exitCode = 1;
       }
     } else if (options.mode === 'sequence') {
-      const result = await runSequence(facade, options, fmt);
+      const onStepComplete = (options.summaryFormat === 'ascii' && !options.quiet)
+        ? (stepResult, index) => {
+            fmt.info(`Step ${index + 1}: ${stepResult.operation} → ${stepResult.status}`);
+          }
+        : undefined;
+
+      const result = await crawlService.runSequencePreset({
+        logger,
+        sequenceName: options.sequenceName,
+        startUrl: options.startUrl,
+        sharedOverrides: options.sharedOverrides,
+        stepOverrides: options.stepOverrides,
+        continueOnError: options.continueOnError,
+        onStepComplete
+      });
       if (options.summaryFormat === 'json' || options.quiet) {
         const payload = {
           mode: 'sequence',
@@ -650,9 +588,6 @@ async function main() {
         process.exitCode = 1;
       }
     } else if (options.mode === 'sequence-config') {
-      const loader = createSequenceConfigLoader({
-        configDir: options.configDir || undefined
-      });
       const onStepComplete = (options.summaryFormat === 'ascii' && !options.quiet)
         ? (stepResult, index) => {
             fmt.info(`Step ${index + 1}: ${stepResult.operation} → ${stepResult.status}`);
@@ -664,11 +599,11 @@ async function main() {
         metadata,
         cliOverrides,
         sequenceStartUrl
-      } = await runSequenceConfig({
-        facade,
-        loader,
+      } = await crawlService.runSequenceConfig({
+        logger,
         sequenceConfigName: options.sequenceConfigName,
         configHost: options.configHost,
+        configDir: options.configDir,
         startUrl: options.startUrl,
         sharedOverrides: options.sharedOverrides,
         stepOverrides: options.stepOverrides,
@@ -752,6 +687,5 @@ module.exports = {
   parseCliArgs,
   normalizeOptions,
   formatDuration,
-  buildOperationSummaries,
-  buildSequenceSummaries
+  buildAvailabilityPayload
 };

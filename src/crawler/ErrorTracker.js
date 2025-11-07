@@ -22,14 +22,45 @@ class ErrorTracker {
     if (!sample || typeof sample !== 'object') {
       return;
     }
+    const attempt = Number.isFinite(sample.attempt) ? Number(sample.attempt) : null;
+    let maxAttempts = Number.isFinite(sample.maxAttempts) ? Number(sample.maxAttempts) : null;
+    if (!Number.isFinite(sample.maxAttempts) && Number.isFinite(sample.attempts)) {
+      maxAttempts = Number(sample.attempts);
+    }
+    const classification = sample.classification || sample.strategy || null;
+    let host = null;
+    try {
+      if (sample.url) {
+        host = new URL(sample.url).hostname;
+      }
+    } catch (_) {}
     const normalized = {
       kind: sample.kind || 'unknown',
       code: sample.code != null ? sample.code : null,
       message: sample.message || null,
-      url: sample.url || null
+      url: sample.url || null,
+      classification,
+      attempt,
+      maxAttempts
     };
     this.state.setLastError(normalized);
     this.state.addErrorSample(normalized);
+    try {
+      if (this.telemetry && typeof this.telemetry.telemetry === 'function') {
+        this.telemetry.telemetry({
+          severity: 'error',
+          event: 'crawler.error.sample-recorded',
+          message: normalized.message,
+          kind: normalized.kind,
+          classification,
+          url: normalized.url,
+          host,
+          code: normalized.code,
+          attempt,
+          maxAttempts
+        });
+      }
+    } catch (_) {}
   }
 
   handleConnectionReset(url, error) {

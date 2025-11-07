@@ -120,9 +120,13 @@ Crawls are **real-time operations** that fetch content from external websites. T
 
 ### Crawler Base Class Architecture (Nov 2025)
 
-**Location:** `src/crawler/core/Crawler.js` (258 lines)
+**Location:** `src/crawler/core/Crawler.js` (≈375 lines) plus `src/crawler/core/EventedCrawlerBase.js` (adapter)
 
-**Purpose:** Provides reusable crawl lifecycle infrastructure that subclasses can extend for domain-specific crawlers.
+**Purpose:** Provides reusable crawl lifecycle infrastructure backed by an `Evented_Class` adapter so subclasses retain familiar EventEmitter-style listeners while unlocking richer event tooling.
+
+#### Event Adapter (Nov 2025)
+
+`EventedCrawlerBase` extends `lang-tools`' `Evented_Class`, adding Node-compatible helpers (`emit`, `once`, `addListener`, `removeListener`, `off`) and preserving method chaining. `Crawler` now derives from this adapter, so existing listener code continues to work and new Evented_Class capabilities can be introduced incrementally. The adapter returns `true/false` from `emit` to mirror Node semantics.
 
 #### Responsibilities
 
@@ -209,7 +213,9 @@ class MyCrawler extends Crawler {
 
 #### Testing
 
-**Test file:** `src/crawler/core/__tests__/Crawler.test.js` (25/25 tests passing)
+**Test files:**
+- `src/crawler/core/__tests__/EventedCrawlerBase.test.js`
+- `src/crawler/core/__tests__/Crawler.test.js`
 
 Coverage:
 - Constructor initialization (state, startup tracker, HTTP agents, options)
@@ -220,7 +226,8 @@ Coverage:
 - Worker orchestration and idle detection
 - Lifecycle hooks (init, crawl abstract method)
 - Cleanup (HTTP agent destruction, database closure)
-- EventEmitter integration
+- Evented_Class adapter integration (emit/once/addListener/removeListener aliases)
+- `src/crawler/core/__tests__/Crawler.test.js` (lifecycle + event integration)
 
 **Validation:**
 ```bash
@@ -236,9 +243,15 @@ node -e "const NewsCrawler = require('./src/crawler/NewsCrawler'); const crawler
 ### High-Level Crawl Operations (Nov 2025)
 
 - `src/crawler/CrawlOperations.js` provides a thin façade over `NewsCrawler`, exposing pre-configured operations (`ensureCountryHubs`, `exploreCountryHubs`, `crawlCountryHubHistory`, `crawlCountryHubsHistory`, `findTopicHubs`, `findPlaceAndTopicHubs`).
+npx jest --config jest.careful.config.js --runTestsByPath \
+  src/crawler/core/__tests__/EventedCrawlerBase.test.js \
+  src/crawler/core/__tests__/Crawler.test.js --bail=1 --maxWorkers=50%
 - Each operation maps to a curated option preset (hub-only structure passes, intelligent planner modes, history refresh) and returns structured status objects with stats and elapsed time.
 - `executeSequence()` accepts an ordered list of operation names (or objects) and orchestrates multi-step crawl algorithms with optional error continuation, enabling concise scripting like:
   ```javascript
+# Crawl CLI smoke (validates adapter wiring through legacy surfaces)
+node src/crawl.js --help > tmp/crawl-help.txt
+node src/tools/crawl-operations.js --list-operations --json > tmp/crawl-operations.json
   const { CrawlOperations } = require('../crawler/CrawlOperations');
   const ops = new CrawlOperations();
   await ops.executeSequence([
@@ -431,6 +444,7 @@ node -e "const { createSequenceConfigLoader } = require('./src/orchestration/Seq
 #### Implementation Roadmap
 1. **Policy plumbing:** Add policy enum definition, update `QueueManager.enqueue/dequeue`, and thread policy through worker contexts without altering default behavior (`cache-preferred`).
 2. **FetchPipeline updates:** Modify `_tryCache` and `_performNetworkFetch` to read the policy, emit telemetry, and downgrade safely when throttled. Add guardrails to prevent policy misuse (e.g., throwing if `network-first` is requested for off-domain URLs).
+  - *2025-11-18 update:* NewsCrawler now consumes ConfigManager `hubFreshness` settings to tag hub queue items with `network-first` policy, per-page cache-age ceilings, and fallback preferences.
 3. **HubRefreshOperation:** Implement a new operation (and preset) that performs a freshness pass before acquisition. Responsibilities include seeding hub URLs, adjusting concurrency, recording freshness metrics, and optionally re-queuing hub URLs when markup changes.
 4. **Sequence integration:** Update sequence presets/config loaders so operators can insert the refresh step (e.g., `ensureCountryHubsFresh`) before article exploration. Support `fetchPolicy` overrides inside config files.
 5. **Telemetry & docs:** Extend CrawlOperations result payloads and CLI formatter to summarize policy usage. Document the workflow here and in CLI guides.

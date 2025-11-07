@@ -1,5 +1,100 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — Crawl API Service Bootstrap (Initiated 2025-11-07)
+
+### Goal
+- Establish a clean, version-aware server directory structure for the forthcoming crawl API so multiple framework implementations (jsgui3-server, Express, or others) can be developed and operated side by side.
+- Provide a lightweight server factory that callers can use to instantiate the desired framework/version combination while surfacing sensible defaults (health checks, logger wiring).
+- Lay the groundwork for future API feature work without altering existing CLI behaviour.
+
+### Current Behavior
+- Crawl orchestration is only exposed through CLI entry points (e.g., `src/tools/crawl-operations.js`).
+- There is no dedicated server module for crawl APIs, and no directory layout to host alternative implementations.
+- Attempts to experiment with alternate frameworks require ad-hoc scripts outside the repository structure.
+
+### Proposed Changes
+1. **Directory Layout** — Create `src/server/crawl-api/` with nested `v1/jsgui3/` and `v1/express/` folders to house framework-specific servers. Document the structure with an inline README.
+2. **Server Factory** — Implement `src/server/crawl-api/index.js` exposing `createCrawlApiServer(options)` and an `AVAILABLE_IMPLEMENTATIONS` roster, validating requested `version`/`framework` pairs.
+3. **Express Baseline** — Ship a minimal Express-based server (`v1/express/server.js`) that exposes `/healthz` and clean start/stop helpers so teams can begin wiring routes immediately.
+4. **jsgui3 Stub** — Provide a jsgui3-oriented server placeholder (`v1/jsgui3/server.js`) that adheres to the same start/stop contract, logging a warning until the real implementation lands.
+5. **Tests** — Add focused Jest coverage ensuring the factory selects the expected implementation and rejects unknown combinations.
+6. **Documentation Sync** — Reference the new layout in the crawl API blueprint so future work knows where to land framework-specific code.
+
+### Risks & Unknowns
+- The jsgui3 implementation is a stub until we integrate the real server; consumers must opt into the Express variant for now.
+- Multiple frameworks increase maintenance overhead; documentation must stay current to avoid drift.
+- Tests that spin up HTTP listeners need to clean up promptly to keep the suite stable on Windows.
+
+### Integration Points
+- Future crawl API routes and services will plug into `src/server/crawl-api/v1/**`.
+- CLI tooling can optionally call the factory to reuse shared wiring when running in long-lived mode.
+- Documentation references: `docs/JSGUI3_PATTERNS_ANALYSIS.md`, `docs/API_SERVER_ARCHITECTURE.md`.
+
+### Docs Impact
+- Update the crawler API blueprint (done in the same session) to call out the new directory layout and multi-framework expectation.
+- Add inline README guidance under `src/server/crawl-api/`.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/server/crawl-api/index.test.js --bail=1 --maxWorkers=50%` (new suite covering the factory and Express wiring).
+
+### Rollback Plan
+- Delete the new `src/server/crawl-api/` directory, remove associated tests, and drop documentation additions.
+
+### Branch & Notes
+- Working branch: `main` (scaffolding only; behaviour gated behind the new factory).
+- 2025-11-07: Directory structure and Express baseline scheduled for immediate implementation; jsgui3 integration to follow once the server dependency work begins.
+
+## Active Plan — Crawl API Service Orchestration (Initiated 2025-11-07)
+
+### Goal
+- Expose crawl orchestration capabilities through a framework-agnostic service layer that both Express and jsgui3 implementations can call without depending on CLI-only code.
+- Preserve the existing CLI UX while delegating business logic (availability listing, run execution, sequencing) to the shared service so future HTTP surfaces remain consistent with CLI behaviour.
+- Provide the initial HTTP routing surface (Express v1) that exercises the service layer and demonstrates how background job orchestration will plug in, paving the way for the jsgui3 server to share the same contracts.
+
+### Current Behavior
+- `src/tools/crawl-operations.js` owns option normalisation, availability summaries, run execution, and structured output, making it impossible to reuse the logic from long-running servers without duplicating code.
+- The new server factory under `src/server/crawl-api/` exposes framework selection but lacks a service layer or HTTP routes beyond `/healthz`.
+- Background task orchestration for crawl runs lives inside CLI-oriented modules and cannot be triggered outside process-scoped invocations.
+
+### Proposed Changes
+1. **Service Extraction** — Create a shared crawl service module (e.g., `src/server/crawl-api/core/crawlService.js`) that wraps `CrawlOperations`, `SequenceConfigRunner`, and the availability helpers so all frameworks and the CLI share a single execution path.
+2. **Availability API** — Move `buildOperationSummaries`, `buildSequenceSummaries`, and related payload builders into the service layer, returning structured data that HTTP routes and the CLI can format independently.
+3. **Run Orchestration Contract** — Implement asynchronous `runOperation`, `runSequencePreset`, and `runSequenceConfig` helpers that accept normalised options, surface progress hooks, and return the same summary payloads currently emitted by the CLI.
+4. **Express Adapter** — Add an Express v1 router (e.g., `src/server/crawl-api/v1/express/routes/operations.js`) that exposes availability and run endpoints powered by the service, wiring minimal validation and response mapping while leaving room for jsgui3 publishers to reuse the same service functions.
+5. **CLI Delegation** — Refactor `src/tools/crawl-operations.js` to call the new service layer for availability and run execution so the CLI becomes a thin wrapper around shared logic.
+6. **Testing & Docs** — Add Jest coverage for the service module and Express adapter, update `src/server/crawl-api/README.md`, and record the service contracts in the crawl API blueprint.
+
+### Risks & Unknowns
+- Extracting logic may surface hidden coupling between CLI formatting and run execution; careful adapter design is required to keep formatting concerns separate.
+- Express routes will initially operate synchronously; long-running runs must quickly move to background processing — ensure the API guards against blocking behaviour during the transition.
+- jsgui3 integration will require publisher-style modules; we must keep service contracts neutral enough to support both frameworks.
+
+### Integration Points
+- `src/tools/crawl-operations.js`, `src/crawler/CrawlOperations.js`, `src/orchestration/SequenceConfigRunner.js`, and the new `src/server/crawl-api/` factory structure.
+- Future background task integration (`src/background/`) and telemetry helpers once asynchronous execution lands.
+
+### Docs Impact
+- Update `src/server/crawl-api/README.md` to describe the service layer, Express routes, and usage examples for both CLI and server callers.
+- Expand the detached crawl API blueprint in `docs/JSGUI3_PATTERNS_ANALYSIS.md` with references to the new service module and HTTP endpoints.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/server/crawl-api/index.test.js tests/server/crawl-api/service.test.js tests/server/crawl-api/express.routes.test.js --bail=1 --maxWorkers=50%`
+- Manual smoke: `node src/tools/crawl-operations.js --list-operations --summary-format json` (after refactor) to confirm CLI output parity.
+
+### Rollback Plan
+- Revert the new service and router modules, restore the previous CLI implementation, and delete added tests/documentation.
+- `AVAILABLE_IMPLEMENTATIONS` remains intact, so removing the Express routes returns the server to the health-check baseline without impacting framework selection.
+
+### Branch & Notes
+- Working branch: `main` (service extraction will touch shared modules; keep history linear for careful refactor tracking).
+- α discovery includes `docs/JSGUI3_PATTERNS_ANALYSIS.md`, `CHANGE_PLAN.md`, and `src/tools/crawl-operations.js` (reviewed 2025-11-07); note additional references in the tracker when new docs are consulted.
+- Treat the entire service extraction/refactor as one phase with sub-phase tracking (α discovery → β plan → γ implementation → δ validation). Update this section and the tracker whenever sub-phase status changes or scope adjustments occur.
+- Sub-phase status: γ — Implementation & validation (entered 2025-11-07 after completing plan updates).
+- 2025-11-07: Implemented `src/server/crawl-api/core/crawlService.js`, re-exported helpers via `src/server/crawl-api/index.js`, and added focused tests (`tests/server/crawl-api/service.test.js`).
+- 2025-11-07: Added Express v1 availability/run routes via `registerOperationRoutes`, introduced HTTP adapters backed by the shared crawl service, and created Jest coverage (`tests/server/crawl-api/express.routes.test.js`).
+- 2025-11-07: Migrated availability and run payload builders into the shared service and refactored the CLI to delegate to `createCrawlService`, completing Phase 8 Tasks 8.2 and 8.4.
+- 2025-11-07: CLI smoke `node src/tools/crawl-operations.js --list-operations --summary-format json --quiet` confirmed the shared payload contract (pass).
+
 ## Active Plan — js-scan CLI Implementation (Initiated 2025-11-15)
 
 ### Goal

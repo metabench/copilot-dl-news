@@ -516,6 +516,7 @@ Use existing DB helper factories under `src/db/sqlite/v1/` to expose typed query
 ### Implementation Phases
 1. **Foundation (Week 1)**
   - Create new database tables + query adapters.
+  - Establish a clean, version-aware directory layout under `src/server/crawl-api/` (for example `v1/jsgui3/`, `v1/express/`) so alternative server implementations can coexist without collisions.
   - Add `services/CrawlService.js` that wraps job persistence and orchestration triggers.
   - Scaffold the jsgui3 `Server` with basic middleware, health endpoint, and `/api/crawl/availability` route for smoke testing.
 
@@ -550,6 +551,7 @@ Use existing DB helper factories under `src/db/sqlite/v1/` to expose typed query
 - Expose background-task integration so existing scheduler can enqueue crawl runs via the same API.
 - Add Web UI panel (jsgui3 client) that consumes the API for manual crawl management, reusing `jsgui3-html` inspired interfaces.
 - Extend API to support batch submissions and upload of sequence config files.
+- Maintain parallel `express` or other framework variants beside the jsgui3 implementation within the versioned directory structure, making framework swaps or A/B testing straightforward.
 - Investigate running the API server and worker inside the existing Express app vs. separate process; document deployment trade-offs once prototype stabilises.
 
 ### References

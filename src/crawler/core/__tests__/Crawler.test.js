@@ -368,8 +368,8 @@ describe('Crawler base class', () => {
     });
   });
 
-  describe('EventEmitter integration', () => {
-    it('extends EventEmitter and supports event listeners', (done) => {
+  describe('event system integration', () => {
+    it('supports event listeners via Evented_Class adapter', (done) => {
       const crawler = new Crawler('https://example.com');
       createdCrawlers.push(crawler);
 

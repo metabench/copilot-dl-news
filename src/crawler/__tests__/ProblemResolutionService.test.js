@@ -154,4 +154,40 @@ describe('ProblemResolutionService', () => {
     expect(seeds[0].confidence).toBeGreaterThan(0);
     expect(db.prepare).toHaveBeenCalled();
   });
+
+  test('getKnownHubSeeds prefers view and falls back to base table when missing', () => {
+    const fallbackRows = [
+      {
+        host: 'example.com',
+        url: 'https://example.com/world/',
+        evidence: JSON.stringify({ confidence: 0.42 }),
+        lastSeenAt: '2025-11-19T00:00:00Z'
+      }
+    ];
+    const fallbackStmt = {
+      all: jest.fn((candidateHost, requestedLimit) => {
+        expect(requestedLimit).toBe(50);
+        return candidateHost === 'example.com' ? fallbackRows : [];
+      })
+    };
+    const prepare = jest
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new Error('no such table: place_hubs_with_urls');
+      })
+      .mockReturnValue(fallbackStmt);
+
+    const service = new ProblemResolutionService({ db: { prepare } });
+    const seeds = service.getKnownHubSeeds({ host: 'example.com', limit: 5 });
+
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare.mock.calls[0][0]).toContain('place_hubs_with_urls');
+    expect(prepare.mock.calls[1][0]).toContain('FROM place_hubs');
+    expect(fallbackStmt.all).toHaveBeenCalledTimes(2);
+    expect(fallbackStmt.all.mock.calls[0][0]).toBe('example.com');
+    expect(fallbackStmt.all.mock.calls[1][0]).toBe('www.example.com');
+    expect(seeds).toHaveLength(1);
+    expect(seeds[0].url).toBe('https://example.com/world/');
+    expect(seeds[0].confidence).toBe(0.42);
+  });
 });

@@ -368,17 +368,29 @@ class ProblemResolutionService {
     const handle = this._getDbHandle();
     let stmt = null;
     if (handle) {
-      try {
-        stmt = handle.prepare(`
+      const fallbackSql = `
           SELECT host, url, evidence, last_seen_at AS lastSeenAt
             FROM place_hubs
            WHERE LOWER(host) = ?
            ORDER BY last_seen_at DESC
            LIMIT ?
+        `;
+      try {
+        stmt = handle.prepare(`
+          SELECT host, url, evidence, last_seen_at AS lastSeenAt
+            FROM place_hubs_with_urls
+           WHERE LOWER(host) = ?
+           ORDER BY last_seen_at DESC
+           LIMIT ?
         `);
-      } catch (error) {
-        this._log('warn', 'ProblemResolutionService failed to prepare known hub query', error?.message || error);
-        stmt = null;
+      } catch (viewError) {
+        this._log('debug', 'ProblemResolutionService falling back to place_hubs for known hub query', viewError?.message || viewError);
+        try {
+          stmt = handle.prepare(fallbackSql);
+        } catch (tableError) {
+          this._log('warn', 'ProblemResolutionService failed to prepare known hub query', tableError?.message || tableError);
+          stmt = null;
+        }
       }
     }
 
@@ -429,7 +441,7 @@ class ProblemResolutionService {
       }
     }
 
-  const cache = this._resolvedCache.get(normalizedHost);
+    const cache = this._resolvedCache.get(normalizedHost);
     if (cache) {
       for (const entry of cache.values()) {
         pushEntry(entry.url, entry.candidate);
@@ -441,6 +453,7 @@ class ProblemResolutionService {
 
     return Array.from(entries.values()).slice(0, limit);
   }
+
 }
 
 module.exports = {
