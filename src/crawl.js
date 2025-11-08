@@ -8,8 +8,13 @@ const {
   runLegacyCommand,
   HELP_TEXT
 } = require('./crawler/cli/runLegacyCommand');
+const {
+  resolveCliArguments,
+  DEFAULT_CONFIG_FILENAME
+} = require('./crawler/cli/configArgs');
+const { renderCliError } = require('./crawler/cli/errorRenderer');
 
-const CONFIG_FILENAME = 'crawl.js.config.json';
+const CONFIG_FILENAME = DEFAULT_CONFIG_FILENAME;
 
 module.exports = NewsCrawler;
 module.exports.NewsCrawler = NewsCrawler;
@@ -19,105 +24,48 @@ module.exports.HELP_TEXT = HELP_TEXT;
 
 async function main() {
   const directArgs = process.argv.slice(2);
-  let argv = directArgs;
+  let resolvedArgv;
+  let cliMetadata;
 
-  if (!directArgs.length) {
-    try {
-      argv = await loadConfigArgs();
-    } catch (error) {
-      const message = error?.message || 'Failed to load crawl.js.config.json';
-      console.error(message);
-      if (error?.showStack) {
-        console.error(error.stack);
-      }
-      process.exit(1);
-      return;
+  try {
+    const resolvedArgs = await resolveCliArguments({
+      directArgv: directArgs,
+      fsModule: fs,
+      configPath: path.resolve(__dirname, '..', CONFIG_FILENAME)
+    });
+    resolvedArgv = resolvedArgs.argv;
+    cliMetadata = {
+      origin: resolvedArgs.origin
+    };
+    if (resolvedArgs.configPath) {
+      cliMetadata.configPath = resolvedArgs.configPath;
     }
+  } catch (error) {
+    renderCliError(error, {
+      stderr: console.error,
+      fallbackMessage: `Failed to load ${CONFIG_FILENAME}`
+    });
+    process.exit(1);
+    return;
   }
 
   const { exitCode = 0 } = await runLegacyCommand({
-    argv,
+    argv: resolvedArgv,
     stdin: process.stdin,
     stdout: console.log,
-    stderr: console.error
+    stderr: console.error,
+    cliMetadata
   });
 
   process.exit(exitCode);
 }
 
-function coerceInteger(value, field, { min = 0 } = {}) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    throw new Error(`Invalid ${field} value in ${CONFIG_FILENAME}: expected a number.`);
-  }
-  if (!Number.isInteger(numeric)) {
-    throw new Error(`Invalid ${field} value in ${CONFIG_FILENAME}: expected an integer.`);
-  }
-  if (numeric < min) {
-    throw new Error(`Invalid ${field} value in ${CONFIG_FILENAME}: expected a value >= ${min}.`);
-  }
-  return numeric;
-}
-
-async function loadConfigArgs() {
-  const configPath = path.resolve(__dirname, '..', CONFIG_FILENAME);
-  let raw;
-  try {
-    raw = await fs.readFile(configPath, 'utf8');
-  } catch (error) {
-    if (error && error.code === 'ENOENT') {
-      throw new Error(`Missing ${CONFIG_FILENAME} at ${configPath}.`);
-    }
-    throw new Error(`Unable to read ${CONFIG_FILENAME} at ${configPath}: ${error.message}`);
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    throw new Error(`Invalid JSON in ${CONFIG_FILENAME}: ${error.message}`);
-  }
-
-  const args = [];
-  const startUrl = typeof parsed.startUrl === 'string' ? parsed.startUrl.trim() : '';
-  if (!startUrl) {
-    throw new Error(`${CONFIG_FILENAME} must include a non-empty "startUrl" string.`);
-  }
-  args.push(startUrl);
-
-  if (parsed.depth !== undefined) {
-    const depth = coerceInteger(parsed.depth, 'depth', { min: 0 });
-    args.push(`--depth=${depth}`);
-  }
-
-  if (parsed.concurrency !== undefined) {
-    const concurrency = coerceInteger(parsed.concurrency, 'concurrency', { min: 1 });
-    args.push(`--concurrency=${concurrency}`);
-  }
-
-  if (parsed.maxPages !== undefined) {
-    const maxPages = coerceInteger(parsed.maxPages, 'maxPages', { min: 1 });
-    args.push(`--max-pages=${maxPages}`);
-  }
-
-  if (Array.isArray(parsed.additionalArgs)) {
-    for (const extra of parsed.additionalArgs) {
-      if (typeof extra === 'string' && extra.trim()) {
-        args.push(extra.trim());
-      }
-    }
-  }
-
-  return args;
-}
-
 if (require.main === module) {
   main().catch((error) => {
-    const message = error?.message || 'News crawl CLI failed';
-    console.error(message);
-    if (error?.stack) {
-      console.error(error.stack);
-    }
+    renderCliError(error, {
+      stderr: console.error,
+      showStack: true
+    });
     process.exit(1);
   });
 }

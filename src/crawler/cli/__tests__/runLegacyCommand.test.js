@@ -50,6 +50,18 @@ jest.mock('../progressReporter', () => ({
   }))
 }));
 
+const mockPauseControls = {
+  attach: jest.fn(() => false),
+  teardown: jest.fn(),
+  isAttached: jest.fn(() => false)
+};
+
+jest.mock('../pauseControls', () => {
+  const createPauseResumeControls = jest.fn(() => mockPauseControls);
+  createPauseResumeControls.__mockControls = mockPauseControls;
+  return { createPauseResumeControls };
+});
+
 jest.mock('../bootstrap', () => ({
   setupLegacyCliEnvironment: jest.fn(() => ({
     verboseModeEnabled: false,
@@ -63,15 +75,21 @@ jest.mock('../argumentNormalizer', () => ({
     if (hasHelp) {
       return {
         startUrl: 'https://www.theguardian.com',
-        options: {}
+        options: {},
+        interactiveControls: { enabled: false, explicit: false }
       };
+    }
+    const options = {};
+    if (argv.includes('--verbose')) {
+      options.verbose = true;
     }
     return {
       startUrl: argv.find(a => a.startsWith('http')) || 'https://www.theguardian.com',
       startUrlExplicit: argv.some(a => a.startsWith('http')),
-      options: {},
+      options,
       targetCountries: [],
-      sequenceConfig: argv.includes('--sequence-config') ? { name: 'test-sequence' } : null
+      sequenceConfig: argv.includes('--sequence-config') ? { name: 'test-sequence' } : null,
+      interactiveControls: { enabled: true, explicit: false }
     };
   })
 }));
@@ -79,11 +97,13 @@ jest.mock('../argumentNormalizer', () => ({
 const { runLegacyCommand, HELP_TEXT } = require('../runLegacyCommand');
 const NewsCrawler = require('../../NewsCrawler');
 const { createCliLogger } = require('../progressReporter');
+const { createPauseResumeControls } = require('../pauseControls');
 const { setupLegacyCliEnvironment } = require('../bootstrap');
 const { normalizeLegacyArguments } = require('../argumentNormalizer');
 
 describe('runLegacyCommand.js', () => {
   let mockStdout, mockStderr;
+  let invokeLegacyCommand;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -91,6 +111,20 @@ describe('runLegacyCommand.js', () => {
     mockStderr = jest.fn();
     mockCrawl.mockClear();
     mockLoadAndRunSequence.mockClear();
+    mockPauseControls.attach.mockReset();
+    mockPauseControls.teardown.mockReset();
+    mockPauseControls.isAttached.mockReset();
+    mockPauseControls.attach.mockImplementation(() => true);
+    mockPauseControls.teardown.mockImplementation(() => undefined);
+    mockPauseControls.isAttached.mockImplementation(() => true);
+    createPauseResumeControls.mockClear();
+
+    invokeLegacyCommand = (overrides = {}) => runLegacyCommand({
+      stdin: null,
+      stdout: mockStdout,
+      stderr: mockStderr,
+      ...overrides
+    });
   });
 
   describe('HELP_TEXT', () => {
@@ -144,10 +178,8 @@ describe('runLegacyCommand.js', () => {
     });
 
     it('sets up CLI environment before processing', async () => {
-      await runLegacyCommand({
-        argv: ['https://example.com'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['https://example.com']
       });
 
       expect(setupLegacyCliEnvironment).toHaveBeenCalledWith({
@@ -161,10 +193,8 @@ describe('runLegacyCommand.js', () => {
     });
 
     it('normalizes arguments via argumentNormalizer', async () => {
-      await runLegacyCommand({
-        argv: ['https://example.com', '--max-pages=10'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['https://example.com', '--max-pages=10']
       });
 
       expect(normalizeLegacyArguments).toHaveBeenCalledWith(
@@ -174,16 +204,29 @@ describe('runLegacyCommand.js', () => {
     });
 
     it('creates CLI logger with provided stdout/stderr', async () => {
-      await runLegacyCommand({
-        argv: ['https://example.com'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['https://example.com']
       });
 
       expect(createCliLogger).toHaveBeenCalledWith({
         stdout: mockStdout,
         stderr: mockStderr
       });
+    });
+
+    it('emits debug log when config metadata is provided in verbose mode', async () => {
+      await runLegacyCommand({
+        argv: ['https://example.com', '--verbose'],
+        stdout: mockStdout,
+        stderr: mockStderr,
+        cliMetadata: {
+          origin: 'config',
+          configPath: 'C:/configs/crawl.js.config.json'
+        }
+      });
+
+      const loggerInstance = createCliLogger.mock.results[0].value;
+      expect(loggerInstance.debug).toHaveBeenCalledWith(expect.stringContaining('crawl.js.config.json'));
     });
 
     it('handles normalization errors gracefully', async () => {
@@ -197,10 +240,8 @@ describe('runLegacyCommand.js', () => {
         restoreConsole: mockRestore
       });
 
-      const result = await runLegacyCommand({
-        argv: ['--invalid-flag'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      const result = await invokeLegacyCommand({
+        argv: ['--invalid-flag']
       });
 
       expect(result.exitCode).toBe(1);
@@ -219,10 +260,8 @@ describe('runLegacyCommand.js', () => {
         throw new Error('Test error');
       });
 
-      await runLegacyCommand({
-        argv: ['--bad-flag'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['--bad-flag']
       });
 
       expect(mockRestore).toHaveBeenCalled();
@@ -233,13 +272,12 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://news.example.com',
         options: { maxPages: 50, crawlType: 'intelligent' },
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
-      await runLegacyCommand({
-        argv: ['https://news.example.com', '--max-pages=50'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['https://news.example.com', '--max-pages=50']
       });
 
       // Verify crawl was called (NewsCrawler was instantiated)
@@ -251,15 +289,14 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://example.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
       mockCrawl.mockResolvedValueOnce();
 
-      const result = await runLegacyCommand({
-        argv: ['https://example.com'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      const result = await invokeLegacyCommand({
+        argv: ['https://example.com']
       });
 
       expect(mockCrawl).toHaveBeenCalled();
@@ -278,16 +315,69 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://example.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
-      await runLegacyCommand({
-        argv: ['https://example.com'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['https://example.com']
       });
 
       expect(mockLog.success).toHaveBeenCalledWith('Crawler finished');
+    });
+
+    it('attaches pause controls when interactive controls are enabled', async () => {
+      const fakeStdin = { on: jest.fn(), isTTY: true };
+
+      normalizeLegacyArguments.mockReturnValueOnce({
+        startUrl: 'https://example.com',
+        options: {},
+        targetCountries: [],
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
+      });
+
+      await invokeLegacyCommand({
+        argv: ['https://example.com'],
+        stdin: fakeStdin
+      });
+
+      expect(createPauseResumeControls).toHaveBeenCalledTimes(1);
+      const pauseArgs = createPauseResumeControls.mock.calls[0][0];
+      expect(pauseArgs.stdin).toBe(fakeStdin);
+      expect(pauseArgs.crawler).toBeInstanceOf(NewsCrawler);
+      expect(pauseArgs.logger).toBeTruthy();
+
+      expect(mockPauseControls.attach).toHaveBeenCalledWith({
+        enabled: true,
+        explicit: false
+      });
+      expect(mockPauseControls.teardown).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables pause controls when interactive controls are turned off explicitly', async () => {
+      const fakeStdin = { on: jest.fn(), isTTY: true };
+      mockPauseControls.attach.mockImplementation(() => false);
+
+      normalizeLegacyArguments.mockReturnValueOnce({
+        startUrl: 'https://example.com',
+        options: {},
+        targetCountries: [],
+        sequenceConfig: null,
+        interactiveControls: { enabled: false, explicit: true }
+      });
+
+      await invokeLegacyCommand({
+        argv: ['https://example.com', '--no-interactive-controls'],
+        stdin: fakeStdin
+      });
+
+      expect(createPauseResumeControls).toHaveBeenCalledTimes(1);
+      expect(mockPauseControls.attach).toHaveBeenCalledWith({
+        enabled: false,
+        explicit: true
+      });
+      expect(mockPauseControls.teardown).toHaveBeenCalledTimes(1);
     });
 
     it('handles crawler failure gracefully', async () => {
@@ -308,16 +398,15 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://example.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
       const crawlError = new Error('Network timeout');
       mockCrawl.mockRejectedValueOnce(crawlError);
 
-      const result = await runLegacyCommand({
-        argv: ['https://example.com'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      const result = await invokeLegacyCommand({
+        argv: ['https://example.com']
       });
 
       expect(result.exitCode).toBe(1);
@@ -337,15 +426,14 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://example.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
       mockCrawl.mockRejectedValueOnce(new Error('Test failure'));
 
-      await runLegacyCommand({
-        argv: ['https://example.com'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['https://example.com']
       });
 
       expect(mockRestore).toHaveBeenCalled();
@@ -368,7 +456,8 @@ describe('runLegacyCommand.js', () => {
           name: 'evening-sequence',
           configHost: 'uk',
           sharedOverrides: { slowMode: true }
-        }
+        },
+        interactiveControls: { enabled: true, explicit: false }
       });
 
       mockLoadAndRunSequence.mockResolvedValueOnce({
@@ -377,10 +466,8 @@ describe('runLegacyCommand.js', () => {
         result: {}
       });
 
-      const result = await runLegacyCommand({
-        argv: ['--sequence-config', 'evening-sequence'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      const result = await invokeLegacyCommand({
+        argv: ['--sequence-config', 'evening-sequence']
       });
 
       expect(mockLoadAndRunSequence).toHaveBeenCalled();
@@ -391,6 +478,9 @@ describe('runLegacyCommand.js', () => {
       expect(callArgs.startUrl).toBe('https://example.com');
       expect(callArgs.logger).toBe(mockLog);
       expect(result.exitCode).toBe(0);
+      expect(createPauseResumeControls).not.toHaveBeenCalled();
+      expect(mockPauseControls.attach).not.toHaveBeenCalled();
+      expect(mockPauseControls.teardown).not.toHaveBeenCalled();
     });
 
     it('logs sequence completion success', async () => {
@@ -405,7 +495,8 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://example.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: { name: 'test-sequence' }
+        sequenceConfig: { name: 'test-sequence' },
+        interactiveControls: { enabled: true, explicit: false }
       });
 
       mockLoadAndRunSequence.mockResolvedValueOnce({
@@ -414,13 +505,14 @@ describe('runLegacyCommand.js', () => {
         result: {}
       });
 
-      await runLegacyCommand({
-        argv: ['--sequence-config', 'test-sequence'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      await invokeLegacyCommand({
+        argv: ['--sequence-config', 'test-sequence']
       });
 
       expect(mockLog.success).toHaveBeenCalledWith('Sequence completed');
+      expect(createPauseResumeControls).not.toHaveBeenCalled();
+      expect(mockPauseControls.attach).not.toHaveBeenCalled();
+      expect(mockPauseControls.teardown).not.toHaveBeenCalled();
     });
 
     it('handles sequence execution failure', async () => {
@@ -441,22 +533,24 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://example.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: { name: 'bad-sequence' }
+        sequenceConfig: { name: 'bad-sequence' },
+        interactiveControls: { enabled: true, explicit: false }
       });
 
       const sequenceError = new Error('Sequence step failed');
       mockLoadAndRunSequence.mockRejectedValueOnce(sequenceError);
 
-      const result = await runLegacyCommand({
-        argv: ['--sequence-config', 'bad-sequence'],
-        stdout: mockStdout,
-        stderr: mockStderr
+      const result = await invokeLegacyCommand({
+        argv: ['--sequence-config', 'bad-sequence']
       });
 
       expect(result.exitCode).toBe(1);
       expect(result.error).toBe(sequenceError);
       expect(mockLog.error).toHaveBeenCalledWith('Sequence step failed');
       expect(mockRestore).toHaveBeenCalled();
+      expect(createPauseResumeControls).not.toHaveBeenCalled();
+      expect(mockPauseControls.attach).not.toHaveBeenCalled();
+      expect(mockPauseControls.teardown).not.toHaveBeenCalled();
     });
 
     it('defaults argv to empty array when not provided', async () => {
@@ -464,13 +558,11 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://www.theguardian.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
-      await runLegacyCommand({
-        stdout: mockStdout,
-        stderr: mockStderr
-      });
+      await invokeLegacyCommand();
 
       expect(normalizeLegacyArguments).toHaveBeenCalledWith(
         [],
@@ -483,10 +575,11 @@ describe('runLegacyCommand.js', () => {
         startUrl: 'https://www.theguardian.com',
         options: {},
         targetCountries: [],
-        sequenceConfig: null
+        sequenceConfig: null,
+        interactiveControls: { enabled: true, explicit: false }
       });
 
-      await runLegacyCommand({ argv: ['--help'] });
+      await runLegacyCommand({ argv: ['--help'], stdin: null });
 
       expect(createCliLogger).toHaveBeenCalled();
     });

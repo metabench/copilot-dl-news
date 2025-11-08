@@ -204,6 +204,17 @@ node tools/dev/js-edit.js --file $tempFile.FullName --replace exports.render --w
 Remove-Item $tempDir.FullName -Recurse -Force
 ```
 
+## `tmp-prune` — Scratch Directory Pruning
+
+`tmp-prune` keeps the scratch directory manageable by retaining only the newest entries (default: ten per folder) while respecting sticky sentinels like `.gitkeep`. The CLI defaults to dry-run previews; supply `--fix` when you are ready to delete.
+
+- `node tools/dev/tmp-prune.js` — preview deletions under `./tmp`, summarising which folders would lose older artifacts.
+- `node tools/dev/tmp-prune.js --keep 5 --fix` — remove everything beyond the five most recent entries in every directory.
+- `node tools/dev/tmp-prune.js --root tmp/js-edit --json` — emit a JSON summary for automation without touching the filesystem.
+- `npm run tmp:prune` — run the dry-run preview via the package script for quick housekeeping.
+
+The tool walks each directory breadth-first, skips `.gitkeep`, and reports any Windows locking errors so you can rerun once handles release.
+
 ## `md-scan` — Markdown Discovery
 
 - `node tools/dev/md-scan.js --径 docs --搜 planner telemetry` — Chinese aliases (`--径`, `--搜`) auto-enable succinct Chinese summaries without explicitly setting `--lang zh`.

@@ -97,6 +97,37 @@
 | 3.5 | Tests & docs | Add focused tests for adapters/bootstrap; update docs with modular CLI architecture & migration guidance | ✅ COMPLETED | MEDIUM | 2025-11-17: Added comprehensive test coverage for bootstrap (9/9), progressReporter (58/58), and runLegacyCommand (20/20). Total 90/90 CLI module tests passing. Updated ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md with CLI Module Architecture section documenting module structure, workflow, rationale, and validation commands. CLI smoke test (`node src/crawl.js --help`) confirms no regressions. |
 | 3.6 | Eliminate ArticleOperations circular dependency | Remove unused `ensureDatabase` import from `ArticleOperations.js`, verify CLI help no longer emits warning, and document the architecture change | completed | MEDIUM | 2025-11-05: Removed unused import; `node src/crawl.js --help` now runs clean with no circular dependency warning. |
 
+### Static analysis checkpoint — 2025-11-07
+- Code health: `src/crawl.js` now delegates solely to `resolveCliArguments`, `runLegacyCommand`, and `renderCliError`; manual config parsing and integer coercion removed, reducing surface for divergence between CLI entry points.
+- Tests: `npx jest src/crawler/cli/__tests__/configArgs.test.js src/crawler/cli/__tests__/validators.test.js` passes (10 assertions), confirming config normalization and integer validation guardrails.
+- Config loader: `resolveCliArguments` short-circuits when explicit argv provided and otherwise resolves `crawl.js.config.json` one directory above `src/`, matching pre-refactor behavior. Error messages now surface the resolved path, improving operator feedback for missing/invalid config files.
+- Reliability follow-ups (delivered): `runLegacyCommand` now emits a `--verbose`-gated debug line showing the resolved config path, `renderCliError` prints `ConfigLoadError.configPath` automatically, and config normalization rejects non-http(s) `startUrl` values. Remaining idea backlog: consider surfacing the config origin in non-verbose telemetry once operators request it.
+
+### Test runner guidance — 2025-11-07
+- Root cause: `runLegacyCommand` binds a readline interface to `stdin` for PAUSE/RESUME controls; during Jest runs this left `process.stdin` referenced, keeping the event loop alive and causing the suite to hang.
+- Mitigation implemented: every unit test now invokes `runLegacyCommand` with `stdin: null`, preventing the readline adapter from attaching real handles. Tests use a helper (`invokeLegacyCommand`) so future cases inherit the safe defaults automatically.
+- Runner invocation: prefer the project-local binary to avoid `npx` prompts: `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/crawler/cli/__tests__/configArgs.test.js src/crawler/cli/__tests__/validators.test.js src/crawler/cli/__tests__/runLegacyCommand.test.js src/crawler/cli/__tests__/errorRenderer.test.js`.
+- Optional safeguards: if additional suites still hold open handles, run with `--runInBand --detectOpenHandles` to surface the culprit; adjust individual tests to pass inert streams (no `.on`) to any APIs that would otherwise attach readline/listener state.
+
+### Diagnostic — Legacy CLI Pause/Resume Handle Leak (2025-11-17)
+- **Summary:** Tests hang because `src/crawler/cli/runLegacyCommand.js` always creates a readline interface over `stdin`. The interface never closes, so Node keeps the event loop alive until Jest times out or operators add `--forceExit`. Current test helpers dodge the leak by injecting `stdin: null`, but production-grade suites still flag open handles.
+- **Observed symptom:** Running `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/crawler/cli/__tests__/runLegacyCommand.test.js` without `stdin: null` or `--forceExit` causes Jest to warn about lingering handles before exiting late. Manual crawls remain interactive because readline stays bound, so the leak is invisible outside automated runs.
+- **Root cause:** `bindPauseResumeControls` in `src/crawler/cli/runLegacyCommand.js` constructs `readline.createInterface({ input: stdin })` unconditionally. The function neither checks `stdin.isTTY` nor exposes a teardown, and the created interface is not closed in the success/error paths. Console restoration in `setupLegacyCliEnvironment` only resets logging state, leaving the readline listener active.
+- **Remediation blueprint:**
+	1. Extract a dedicated `createPauseResumeControls` helper that returns `{ install, teardown }`. `install` should attach readline only when `stdin && stdin.isTTY === true` (or an explicit `--interactive` flag is present) and record the interface. `teardown` must call `rl.close()` and remove listeners.
+	2. Teach `runLegacyCommand` to opt into interactive controls only when both the detected environment and CLI flags allow it. Record the teardown function and invoke it in a single `finally` block alongside `restoreConsole()` so success, failure, and sequence exits all clean up.
+	3. Surface a CLI flag pair such as `--interactive-controls` / `--no-interactive-controls` (defaulting to auto-detect). This keeps pause/resume available for manual runs while avoiding accidental attachment during tests or when stdin is piped.
+	4. Update Jest helpers to use a lightweight mock stream (e.g., `new stream.PassThrough({ objectMode: true })`) so they can assert the controls stay detached by default. Add a targeted test that opts into interactive mode and verifies `teardown` closes the interface to eliminate the lingering-handle regression.
+	5. Extend the CLI tracker and help text to document the new flag, the auto-detect behaviour, and the expectation that readline always shuts down before process exit.
+- **Validation strategy:**
+	- Run `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/crawler/cli/__tests__/runLegacyCommand.test.js --bail=1 --maxWorkers=50%` without `--forceExit` and confirm Jest exits cleanly.
+	- Repeat with `--detectOpenHandles` to prove the readline interface is gone. Optionally add `--runInBand` to ensure deterministic handle ordering for CI logs.
+- **Risks & mitigations:**
+	- Manual operators may rely on pause/resume even when stdin is piped (e.g., through tmux). Mitigate by allowing `--interactive-controls` to force-enable.
+	- Windows PowerShell reports `isTTY` differently for redirected input; incorporate a defensive fallback that checks both `process.stdin.isTTY` and `stdin.isTTY`.
+	- Ensure teardown runs even when `normalizeLegacyArguments` throws before the crawler instantiates by invoking it immediately after installation within a try/finally wrapper.
+- **Follow-up opportunities:** Collapse the interactive controls into `progressAdapter` so future CLIs share the same lifecycle logic; add telemetry for pause/resume usage once the upgraded hooks are in place, and document the behaviour in `docs/CLI_REFACTORING_QUICK_START.md` after implementation.
+
 ## Phase 2 Status Summary (Updated 2025-11-17)
 - **All tasks complete:** ✅ COMPLETED (5/5 tasks)
   - Sequence library, CLI entry, configuration loader, playbook hooks, tests, and documentation all delivered

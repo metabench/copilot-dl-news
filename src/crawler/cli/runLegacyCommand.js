@@ -1,6 +1,7 @@
 'use strict';
 
-const readline = require('readline');
+const { createPauseResumeControls } = require('./pauseControls');
+
 const chalk = require('chalk');
 const path = require('path');
 let NewsCrawler;
@@ -68,6 +69,8 @@ Miscellaneous:
   --refetch-article-if-older-than=<age>  Alias for --max-age-article
   --refetch-hub-if-older-than=<age>      Alias for --max-age-hub
   --no-prefer-cache                   Always fetch fresh content (default prefers cached content when possible)
+  --interactive-controls              Force-enable pause/resume commands even when stdin is not a TTY
+  --no-interactive-controls           Disable pause/resume controls entirely
   --sequence-config=<name>            Execute a sequence defined in configuration files
   --config-host=<host>                Host-specific override when selecting sequence configs
   --config-dir=<path>                 Custom directory for sequence configuration files
@@ -223,32 +226,32 @@ function resolveDbPathFromOptions(options = {}) {
   return path.join(baseDir, 'news.db');
 }
 
-function bindPauseResumeControls(crawler, stdin) {
-  if (!stdin || typeof stdin.on !== 'function') {
-    return;
+function bindPauseResumeControls(crawler, stdin, { enabled = true, explicit = false, log } = {}) {
+  const controller = createPauseResumeControls({
+    crawler,
+    stdin,
+    logger: log
+  });
+
+  if (!controller || typeof controller.attach !== 'function') {
+    return controller;
   }
 
-  try {
-    const rl = readline.createInterface({
-      input: stdin,
-      crlfDelay: Infinity
-    });
-    rl.on('line', (line) => {
-      const cmd = String(line || '').trim().toUpperCase();
-      if (cmd === 'PAUSE') {
-        crawler.pause();
-      } else if (cmd === 'RESUME') {
-        crawler.resume();
-      }
-    });
-  } catch (_) {}
+  controller.attach({
+    enabled,
+    explicit
+  });
+
+  return controller;
 }
+
 
 async function runLegacyCommand({
   argv = [],
   stdin = process.stdin,
   stdout = console.log,
-  stderr = console.error
+  stderr = console.error,
+  cliMetadata = {}
 } = {}) {
   const log = createCliLogger({ stdout, stderr });
 
@@ -280,8 +283,20 @@ async function runLegacyCommand({
     startUrlExplicit,
     options: crawlerOptions,
     targetCountries,
-    sequenceConfig
+    sequenceConfig,
+    interactiveControls
   } = normalizedArgs;
+
+  if (
+    cliMetadata &&
+    cliMetadata.origin === 'config' &&
+    cliMetadata.configPath &&
+    crawlerOptions &&
+    crawlerOptions.verbose &&
+    typeof log.debug === 'function'
+  ) {
+    log.debug(`Config arguments loaded from ${cliMetadata.configPath}`);
+  }
 
   if (!NewsCrawler) {
     NewsCrawler = require('../NewsCrawler');
@@ -322,7 +337,6 @@ async function runLegacyCommand({
       }
 
       log.success('Sequence completed');
-      restoreConsole();
       return {
         exitCode: 0,
         result: sequenceResult.result,
@@ -334,37 +348,51 @@ async function runLegacyCommand({
       if (error?.stack) {
         stderr(error.stack);
       }
-      restoreConsole();
       return {
         exitCode: 1,
         error
       };
+    } finally {
+      restoreConsole();
     }
   }
 
   log.info(`Starting: ${chalk.bold(startUrl)}`);
 
+  const interactiveToggle = interactiveControls || { enabled: true, explicit: false };
+
   const crawler = new NewsCrawler(startUrl, crawlerOptions);
-  bindPauseResumeControls(crawler, stdin);
+  let pauseController;
 
   try {
+    pauseController = bindPauseResumeControls(crawler, stdin, {
+      enabled: interactiveToggle.enabled !== false,
+      explicit: Boolean(interactiveToggle.explicit),
+      log
+    });
+
     await crawler.crawl();
     reportCountryCityCounts(crawler.dbPath, targetCountries, log);
     log.success('Crawler finished');
-    restoreConsole();
     return { exitCode: 0 };
   } catch (error) {
-    log.error(`Crawler failed: ${error.message}`);
-    if (error.stack) {
+    const message = error?.message || 'Crawler failed';
+    log.error(`Crawler failed: ${message}`);
+    if (error?.stack) {
       stderr(error.stack);
     }
-    restoreConsole();
     return {
       exitCode: 1,
       error
     };
+  } finally {
+    if (pauseController && typeof pauseController.teardown === 'function') {
+      pauseController.teardown();
+    }
+    restoreConsole();
   }
 }
+
 
 module.exports = {
   HELP_TEXT,

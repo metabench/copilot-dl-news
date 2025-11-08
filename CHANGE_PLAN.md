@@ -1,5 +1,166 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — Careful js-edit Builder Instructions Refresh (Initiated 2025-11-17)
+
+### Goal
+- Document js-scan discovery steps inside Phase A guidance so operators run the scanner before implementation.
+- Capture md-edit and md-scan expectations in Phase A so Markdown workflows stay discoverable.
+
+### Current Behavior
+- Phase A checklist omits explicit js-scan invocation, making discovery inconsistent across sessions.
+- The instructions reference js-edit heavily but leave md-edit/md-scan expectations implicit.
+
+### Proposed Changes
+1. Expand Phase A map-the-codebase bullets to reference js-scan commands, including bilingual flags and summary views.
+2. Add Phase A documentation discovery items that highlight md-scan/md-edit flows alongside the existing CLI references.
+3. Update deliverables or branch notes if needed to acknowledge the markdown tooling reliance.
+
+### Risks & Unknowns
+- Overloading Phase A may make the checklist harder to scan; keep language concise.
+- Ensure new guidance aligns with `docs/CLI_REFACTORING_QUICK_START.md` to avoid contradictions.
+
+### Integration Points
+- `.github/agents/Careful js-edit Builder.agent.md`
+- `docs/CLI_REFACTORING_QUICK_START.md` (read-only alignment)
+
+### Docs Impact
+- Primary updates limited to `.github/agents/Careful js-edit Builder.agent.md`.
+
+### Focused Test Plan
+- Not applicable; documentation-only change.
+
+### Rollback Plan
+- Revert `.github/agents/Careful js-edit Builder.agent.md` to the previous revision.
+
+### Branch & Notes
+- Working branch: `main`.
+- Markdown edits will be performed with `node tools/dev/md-edit.js`; js-edit is not applicable to Markdown.
+- 2025-11-17: Expanded Phase A checklist with js-scan output capture and md-scan/md-edit plan workflows; ensure follow-up doc passes reuse the stored plan metadata.
+
+## Active Plan — Legacy Crawl CLI Test Hang Diagnosis (Initiated 2025-11-17)
+
+### Goal
+- Produce a comprehensive diagnosis of the lingering-handle Jest failures triggered by the legacy crawl CLI.
+- Outline an actionable remediation plan that upgrades the CLI so interactive controls no longer block automated test runners.
+- Package findings, fix strategy, and verification guidance in the docs so future agents can execute the upgrade predictably.
+
+### Current Behavior
+- `runLegacyCommand` always binds a readline interface to `stdin`; Jest and other non-interactive callers inherit the open handle and hang unless they pass `stdin: null`.
+- The current mitigation forces suites to run with `--forceExit`, masking resource leaks and complicating CI pipelines.
+- Interactive pause/resume controls are valuable for operators but were never made optional or auto-cleaned, so tests emulate them poorly.
+
+### Proposed Changes
+1. Map the exact lifecycle of the readline interface, including where it should detach and how console interception interacts with it.
+2. Document the failure mode, reproduction steps, and existing mitigations (stdin stubbing, `--forceExit`) in a dedicated diagnostic write-up.
+3. Design a CLI upgrade that gates interactive bindings behind explicit opt-in (e.g., detect TTY, new flag) and ensures cleanup via teardown hooks.
+4. Recommend test harness adjustments (shared helpers, fake TTY streams) that survive the upgrade without forcing `stdin: null` everywhere.
+5. Capture validation commands (focused Jest suites + manual smoke) that prove the upgraded CLI exits cleanly without `--forceExit`.
+
+### Risks & Unknowns
+- Some operators may rely on pause/resume during manual runs; disabling controls by default must not regress that workflow.
+- Windows PowerShell quirks around TTY detection could leave the readline binding active unless carefully probed.
+- Additional CLI teardown logic might interact with `progressAdapter` or console overrides; need to audit those touchpoints.
+
+### Integration Points
+- `src/crawler/cli/runLegacyCommand.js`, `progressAdapter.js`, and `bootstrap.js` for lifecycle wiring.
+- Jest suites under `src/crawler/cli/__tests__/` plus shared test helpers that construct CLI environments.
+- Documentation hubs already tracking the crawl refactor (`docs/CRAWL_REFACTORING_TASKS.md`, `docs/CHANGE_PLAN.md`).
+
+### Docs Impact
+- Add a detailed diagnostic + remediation guide to the crawl refactoring tracker.
+- Update CLI refactor documentation with the new lifecycle contract and testing guidelines once the upgrade design is committed.
+
+### Focused Test Plan
+- `node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath src/crawler/cli/__tests__/runLegacyCommand.test.js --bail=1 --maxWorkers=50%` without `--forceExit` (post-upgrade).
+- Optional: repeat with `--detectOpenHandles` to verify readline cleanup.
+
+### Rollback Plan
+- If the remediation strategy causes regressions, revert documentation updates and restore the prior CLI behavior while retaining the diagnostic notes for future reference.
+
+### Branch & Notes
+- Working branch: `main` (investigation and documentation only; implementation plan captured for a future coding pass).
+- 2025-11-17: Initial discovery confirmed readline bindings as the lingering-handle source; documenting fix approach before altering code.
+- 2025-11-17 (later): `--detectOpenHandles` run reproduced the lingering `TTYWRAP` handle with stack pointing to the `stdin` default in `runLegacyCommand`, confirming teardown work is required before the suite will exit cleanly.
+
+## Active Plan — tmp Directory Pruner (Initiated 2025-11-17)
+
+### Goal
+- Ship a repo tool that prunes `tmp/` and its subdirectories, retaining only the ten most recently modified entries per directory so scratch output stays manageable.
+
+### Current Behavior
+- `tmp/` accumulates CLI plans, emitted diffs, and ad-hoc artifacts indefinitely.
+- Clean-up is manual (`Remove-Item tmp -Recurse`) and risky when investigations still rely on recent files.
+
+### Proposed Changes
+1. Introduce a Node-based utility (likely `tools/dev/tmp-prune.js`) that walks `tmp/` breadth-first, sorts directory entries by last-modified timestamp, and deletes everything beyond the newest ten per directory.
+2. Wire the tool through `package.json` (e.g., `npm run tmp:prune`) so operators have an easy entry point.
+3. Add focused unit/integration coverage under `tests/tools/__tests__/tmp-prune.test.js` using fixture directories to confirm per-directory retention logic.
+4. Document usage and guardrails in `tools/dev/README.md`, noting that the command should only be run when no needed scratch artifacts remain.
+
+### Risks & Unknowns
+- Deletion logic must skip `.gitkeep` or other sentinel files if present; verify how tests expect fixtures to behave.
+- Windows file locking may block deletion while another process has a handle open; need clear error messaging when this occurs.
+
+### Integration Points
+- `tools/dev/` CLI ecosystem and shared utilities for directory traversal if reusable helpers exist.
+- `package.json` scripts block for discoverability.
+
+### Docs Impact
+- Update `tools/dev/README.md` and, if necessary, add a pointer in `docs/CLI_REFACTORING_QUICK_START.md` so the pruning workflow is discoverable.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/tmp-prune.test.js --bail=1 --maxWorkers=50%`.
+
+### Rollback Plan
+- Remove the new CLI script, tests, and documentation updates; restore `package.json` script entries.
+
+### Branch & Notes
+- Working branch: `main` (utility addition is self-contained).
+- Pending discovery: confirm whether existing tooling shares walker helpers before duplicating traversal code.
+- 2025-11-17: Implemented `tools/dev/tmp-prune.js`, wired package script, added Jest coverage, and documented usage in `tools/dev/README.md`; validation pending.
+
+## Active Plan — crawl.js Guardian Default Run (Initiated 2025-11-17)
+
+### Goal
+- Allow `crawl.js` to launch a Guardian-focused “general news” crawl when operators invoke the script without supplying config-oriented flags.
+- Provide sensible defaults (start URL, concurrency, max downloads) while preserving existing command-based behaviors.
+
+### Current Behavior
+- `crawl.js` exits after printing help when no command is supplied, requiring operators to memorize `run-sequence` arguments for a basic smoke crawl.
+- The script throws errors when `run-sequence` or `run-operation` invocations omit `startUrl` or related overrides, even though common smoke tests use a single default host.
+- No helper exists to parse numeric overrides such as concurrency/max downloads, so ad-hoc handling would be duplicated if every path implemented it separately.
+
+### Proposed Changes
+1. Identify the best built-in sequence preset for a general news crawl (`fullCountryHubDiscovery`) and confirm the overrides that need to be applied for Guardian coverage.
+2. Centralize the Guardian defaults in `config.json` and extend `crawl.js` with a guarded helper that reads optional `--start-url`, `--concurrency`, and `--max-downloads` flags, falling back to those config-driven values when none are provided.
+3. Update the CLI entry point so missing/flag-only invocations run the general-news helper, keep existing commands intact, and refresh the help text to describe the new default behavior.
+
+### Risks & Unknowns
+- “General news” might imply a different sequence than `fullCountryHubDiscovery`; confirm with operators before cementing the preset.
+- Shared overrides may collide with step-specific overrides in future presets; ensure we only set values the sequence expects (concurrency, maxDownloads).
+- Adding implicit behavior must not mask typos in command names—balance between convenience and surfacing mistakes.
+
+### Integration Points
+- `crawl.js` main dispatcher and helper utilities.
+- `src/server/crawl-api/core/crawlService.js` sequence preset contracts (read-only confirmation).
+- Sequence preset definitions under `src/crawler/operations/sequencePresets.js` for preset selection and documentation.
+
+### Docs Impact
+- Refresh `crawl.js` usage notes (inline help) to mention the implicit Guardian crawl and new override flags.
+- Consider adding a quick note to `docs/CLI_REFACTORING_TASKS.md` if operators rely on this entry point for smoke checks.
+
+### Focused Test Plan
+- Manual smoke: `node crawl.js` (no args) to ensure the Guardian crawl launches with defaults and exits cleanly.
+- Manual smoke: `node crawl.js --start-url https://www.example.com --concurrency 3 --max-downloads 1500` to verify overrides are honored.
+
+### Rollback Plan
+- Revert the `crawl.js` changes and any documentation tweaks; restore the previous help output and error-on-missing-args behavior.
+
+### Branch & Notes
+- Working branch: `main` (small CLI behavior tweak, no feature branch required).
+- 2025-11-17: Discovery pass confirmed Guardian defaults should target `fullCountryHubDiscovery` with shared overrides for concurrency/maxDownloads; implementation next.
+- 2025-11-17: Stored Guardian defaults in `config.json` ahead of wiring CLI fallback logic so operators can adjust behavior without touching code.
+
 ## Active Plan — Crawl API Service Bootstrap (Initiated 2025-11-07)
 
 ### Goal

@@ -2,5 +2,13 @@
   "url": "https://www.theguardian.com",
   "intelligentCrawl": {
     "totalPriority": true
+  },
+  "crawlDefaults": {
+    "sequence": "fullCountryHubDiscovery",
+    "startUrl": "https://www.theguardian.com",
+    "sharedOverrides": {
+      "concurrency": 2,
+      "maxDownloads": 2000
+    }
   }
 }

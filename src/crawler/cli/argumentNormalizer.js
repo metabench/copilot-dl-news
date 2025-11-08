@@ -534,6 +534,7 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
   const preferCacheToggle = resolveToggleFlag('--prefer-cache', '--no-prefer-cache', true);
   const useSitemapToggle = resolveToggleFlag('--use-sitemap', '--no-sitemap', true);
   const skipQueryToggle = resolveToggleFlag('--skip-query-urls', '--allow-query-urls', true);
+  const interactiveControlsToggle = resolveToggleFlag('--interactive-controls', '--no-interactive-controls', true);
 
   const sitemapOnly = hasFlag('--sitemap-only');
   const useSitemap = sitemapOnly ? true : useSitemapToggle.value;
@@ -737,7 +738,11 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
     startUrlExplicit,
     options,
     targetCountries: Array.isArray(targetCountries) && targetCountries.length ? targetCountries : null,
-    sequenceConfig
+    sequenceConfig,
+    interactiveControls: {
+      enabled: interactiveControlsToggle.value,
+      explicit: interactiveControlsToggle.explicit
+    }
   };
 }
 

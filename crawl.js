@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const {
   createCrawlService,
   buildAvailabilityPayload
 } = require('./src/server/crawl-api');
 
+
 function printHelp() {
   console.log(`crawl.js — minimal crawl playground\n\n` +
 `Usage:\n` +
+`  node crawl.js [--start-url <url>] [--concurrency <n>] [--max-downloads <n>]\n` +
+`      Run the default Guardian crawl using config.json defaults.\n` +
 `  node crawl.js availability [--all|--operations|--sequences]\n` +
 `  node crawl.js run-operation <operationName> <startUrl> [--overrides <json>]\n` +
 `  node crawl.js run-sequence <sequenceName> <startUrl> [--shared-overrides <json>] [--step-overrides <json>] [--continue-on-error]\n` +
 `  node crawl.js run-sequence-config <configName> [--config-dir <path>] [--config-host <host>] [--start-url <url>] [--shared-overrides <json>] [--step-overrides <json>] [--config-cli-overrides <json>] [--continue-on-error]\n\n` +
 `Flags accept compact JSON objects (for example: --overrides "{\"plannerVerbosity\":2}").\n`);
 }
+
 
 function readFlag(args, flag) {
   const index = args.indexOf(flag);
@@ -43,6 +49,137 @@ function readJsonFlag(args, flag) {
 function hasFlag(args, flag) {
   return args.includes(flag);
 }
+
+const DEFAULT_SEQUENCE_PRESET = 'fullCountryHubDiscovery';
+const DEFAULT_START_URL = 'https://www.theguardian.com';
+const DEFAULT_CONCURRENCY = 2;
+const DEFAULT_MAX_DOWNLOADS = 2000;
+
+function parsePositiveInteger(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const numeric = typeof value === 'number' ? value : Number.parseInt(String(value), 10);
+  if (!Number.isFinite(numeric) || !Number.isInteger(numeric) || numeric <= 0) {
+    return undefined;
+  }
+  return numeric;
+}
+
+
+function readIntegerFlag(args, flag) {
+  const value = readFlag(args, flag);
+  if (value === undefined) {
+    return undefined;
+  }
+  const parsed = parsePositiveInteger(value);
+  if (parsed === undefined) {
+    throw new Error(`Invalid numeric value for ${flag}: ${value}`);
+  }
+  return parsed;
+}
+
+function loadDefaultCrawlConfig() {
+  const configPath = path.resolve(__dirname, 'config.json');
+  const fallback = {
+    sequence: DEFAULT_SEQUENCE_PRESET,
+    startUrl: DEFAULT_START_URL,
+    sharedOverrides: {
+      concurrency: DEFAULT_CONCURRENCY,
+      maxDownloads: DEFAULT_MAX_DOWNLOADS
+    }
+  };
+
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return { config: fallback, sourcePath: null };
+    }
+
+    const crawlDefaults = parsed.crawlDefaults && typeof parsed.crawlDefaults === 'object'
+      ? parsed.crawlDefaults
+      : null;
+
+    const sequence = typeof crawlDefaults?.sequence === 'string' && crawlDefaults.sequence.trim()
+      ? crawlDefaults.sequence.trim()
+      : fallback.sequence;
+
+    const candidateStartUrl = typeof crawlDefaults?.startUrl === 'string' && crawlDefaults.startUrl.trim()
+      ? crawlDefaults.startUrl.trim()
+      : null;
+
+    const fallbackStartUrl = typeof parsed.url === 'string' && parsed.url.trim()
+      ? parsed.url.trim()
+      : fallback.startUrl;
+
+    const sharedOverridesConfig = crawlDefaults?.sharedOverrides && typeof crawlDefaults.sharedOverrides === 'object'
+      ? crawlDefaults.sharedOverrides
+      : {};
+
+    const resolvedConcurrency = parsePositiveInteger(sharedOverridesConfig.concurrency)
+      ?? fallback.sharedOverrides.concurrency;
+    const resolvedMaxDownloads = parsePositiveInteger(sharedOverridesConfig.maxDownloads)
+      ?? fallback.sharedOverrides.maxDownloads;
+
+    const sharedOverrides = {};
+    if (resolvedConcurrency !== undefined) {
+      sharedOverrides.concurrency = resolvedConcurrency;
+    }
+    if (resolvedMaxDownloads !== undefined) {
+      sharedOverrides.maxDownloads = resolvedMaxDownloads;
+    }
+
+    return {
+      config: {
+        sequence,
+        startUrl: candidateStartUrl || fallbackStartUrl,
+        sharedOverrides
+      },
+      sourcePath: crawlDefaults ? configPath : null
+    };
+  } catch (_) {
+    return { config: fallback, sourcePath: null };
+  }
+}
+
+async function runDefaultGuardianCrawl(service, args) {
+  const { config, sourcePath } = loadDefaultCrawlConfig();
+
+  const overrideStartUrl = readFlag(args, '--start-url');
+  const overrideConcurrency = readIntegerFlag(args, '--concurrency');
+  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+
+  const startUrl = (overrideStartUrl && overrideStartUrl.trim()) || config.startUrl;
+  if (!startUrl) {
+    throw new Error('Unable to determine start URL for default crawl. Set crawlDefaults.startUrl in config.json or pass --start-url <url>.');
+  }
+
+  const sharedOverrides = {};
+  const resolvedConcurrency = overrideConcurrency ?? config.sharedOverrides.concurrency;
+  const resolvedMaxDownloads = overrideMaxDownloads ?? config.sharedOverrides.maxDownloads;
+
+  if (resolvedConcurrency !== undefined) {
+    sharedOverrides.concurrency = resolvedConcurrency;
+  }
+  if (resolvedMaxDownloads !== undefined) {
+    sharedOverrides.maxDownloads = resolvedMaxDownloads;
+  }
+
+  const sequenceName = config.sequence || DEFAULT_SEQUENCE_PRESET;
+  const originLabel = sourcePath ? `config.json at ${sourcePath}` : 'built-in defaults';
+
+  console.log(`Using crawl defaults from ${originLabel} (sequence=${sequenceName}, startUrl=${startUrl}, concurrency=${sharedOverrides.concurrency ?? 'default'}, maxDownloads=${sharedOverrides.maxDownloads ?? 'default'})`);
+
+  const sequenceArgs = ['run-sequence', sequenceName, startUrl];
+
+  if (Object.keys(sharedOverrides).length > 0) {
+    sequenceArgs.push('--shared-overrides', JSON.stringify(sharedOverrides));
+  }
+
+  await runSequencePreset(service, sequenceArgs);
+}
+
 
 function printAvailabilitySummary(availability, includeOperations, includeSequences) {
   console.log('Crawl Availability');
@@ -147,12 +284,17 @@ async function main(argv) {
   const args = argv.slice();
   const command = args[0];
 
-  if (!command || command === '--help' || command === '-h') {
+  if (command === '--help' || command === '-h') {
     printHelp();
     return;
   }
 
   const service = createCrawlService();
+
+  if (!command || command.startsWith('--')) {
+    await runDefaultGuardianCrawl(service, args);
+    return;
+  }
 
   if (command === 'availability') {
     const includeAll = hasFlag(args, '--all');
@@ -190,6 +332,7 @@ async function main(argv) {
 
   throw new Error(`Unknown command: ${command}`);
 }
+
 
 if (require.main === module) {
   main(process.argv.slice(2)).catch((error) => {

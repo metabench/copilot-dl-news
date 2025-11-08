@@ -44,6 +44,7 @@ describe('normalizeLegacyArguments', () => {
       ensureCountryHubs: { plannerVerbosity: 3 }
     });
     expect(result.sequenceConfig.configCliOverrides).toEqual({ region: 'gb' });
+    expect(result.interactiveControls).toEqual({ enabled: true, explicit: false });
   });
 
   it('defaults geography start url to placeholder when explicit start is absent', () => {
@@ -53,6 +54,7 @@ describe('normalizeLegacyArguments', () => {
 
     expect(result.startUrl).toBe('https://placeholder.local');
     expect(result.startUrlExplicit).toBe(false);
+    expect(result.interactiveControls).toEqual({ enabled: true, explicit: false });
   });
 
   it('throws on invalid JSON for step overrides', () => {
@@ -60,5 +62,19 @@ describe('normalizeLegacyArguments', () => {
       '--sequence-config', 'demo',
       '--step-overrides', 'not-json'
     ], { log: createMockLogger() })).toThrow(/Invalid JSON/);
+  });
+
+  it('respects interactive control toggles', () => {
+    const disable = normalizeLegacyArguments([
+      '--no-interactive-controls'
+    ], { log: createMockLogger() });
+
+    expect(disable.interactiveControls).toEqual({ enabled: false, explicit: true });
+
+    const enable = normalizeLegacyArguments([
+      '--interactive-controls'
+    ], { log: createMockLogger() });
+
+    expect(enable.interactiveControls).toEqual({ enabled: true, explicit: true });
   });
 });
