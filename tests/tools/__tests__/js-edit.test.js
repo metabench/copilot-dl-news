@@ -1258,6 +1258,56 @@ describe('swcAst helpers', () => {
       expect(updatedSource).not.toContain("return 'gamma';");
     });
 
+    test('replace payload includes identifier span metadata for variable-assigned functions', () => {
+      const gammaRecord = functions.find((fn) => fn.canonicalName === 'gamma');
+      expect(gammaRecord).toBeDefined();
+      expect(gammaRecord.identifierSpan).toBeDefined();
+      const replacementPath = path.join(tempDir, 'replacement-gamma-metadata.js');
+      fs.writeFileSync(
+        replacementPath,
+        "() => {\n  return 'gamma-guard';\n};\n"
+      );
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'gamma',
+        '--expect-hash',
+        gammaRecord.hash,
+        '--with',
+        replacementPath,
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.applied).toBe(false);
+      expect(payload.guard).toBeDefined();
+      expect(payload.guard.hash.status).toBe('ok');
+      expect(payload.guard.path.status).toBe('ok');
+      expect(payload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
+      expect(payload.guard.newline).toEqual(
+        expect.objectContaining({ status: expect.any(String) })
+      );
+
+      const identifierSpan = gammaRecord.identifierSpan;
+      const expectedIdentifierSpan = {
+        start: identifierSpan.start,
+        end: identifierSpan.end,
+        length: Math.max(0, identifierSpan.end - identifierSpan.start),
+        byteStart: typeof identifierSpan.byteStart === 'number' ? identifierSpan.byteStart : null,
+        byteEnd: typeof identifierSpan.byteEnd === 'number' ? identifierSpan.byteEnd : null,
+        byteLength:
+          typeof identifierSpan.byteStart === 'number' && typeof identifierSpan.byteEnd === 'number'
+            ? Math.max(0, identifierSpan.byteEnd - identifierSpan.byteStart)
+            : null
+      };
+
+      expect(payload.function.identifierSpan).toEqual(expectedIdentifierSpan);
+      expect(payload.function.hash).toBe(gammaRecord.hash);
+    });
+
     test('js-edit replaces CommonJS export assignments with guardrails', () => {
       const handlerRecord = functions.find((fn) => fn.canonicalName === 'module.exports.handler');
       expect(handlerRecord).toBeDefined();
@@ -1290,6 +1340,56 @@ describe('swcAst helpers', () => {
       const updatedSource = fs.readFileSync(targetFile, 'utf8');
       expect(updatedSource).toContain("return 'handler-updated';");
       expect(updatedSource).not.toContain('return exports.worker();');
+    });
+
+    test('replace payload includes identifier span metadata for CommonJS exports', () => {
+      const handlerRecord = functions.find((fn) => fn.canonicalName === 'module.exports.handler');
+      expect(handlerRecord).toBeDefined();
+      expect(handlerRecord.identifierSpan).toBeDefined();
+      const replacementPath = path.join(tempDir, 'replacement-module-handler-metadata.js');
+      fs.writeFileSync(
+        replacementPath,
+        "function handler() {\n  return 'handler-guard';\n};\n"
+      );
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'module.exports.handler',
+        '--expect-hash',
+        handlerRecord.hash,
+        '--with',
+        replacementPath,
+        '--json'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.applied).toBe(false);
+      expect(payload.guard).toBeDefined();
+      expect(payload.guard.hash.status).toBe('ok');
+      expect(payload.guard.path.status).toBe('ok');
+      expect(payload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
+      expect(payload.guard.newline).toEqual(
+        expect.objectContaining({ status: expect.any(String) })
+      );
+
+      const identifierSpan = handlerRecord.identifierSpan;
+      const expectedIdentifierSpan = {
+        start: identifierSpan.start,
+        end: identifierSpan.end,
+        length: Math.max(0, identifierSpan.end - identifierSpan.start),
+        byteStart: typeof identifierSpan.byteStart === 'number' ? identifierSpan.byteStart : null,
+        byteEnd: typeof identifierSpan.byteEnd === 'number' ? identifierSpan.byteEnd : null,
+        byteLength:
+          typeof identifierSpan.byteStart === 'number' && typeof identifierSpan.byteEnd === 'number'
+            ? Math.max(0, identifierSpan.byteEnd - identifierSpan.byteStart)
+            : null
+      };
+
+      expect(payload.function.identifierSpan).toEqual(expectedIdentifierSpan);
+      expect(payload.function.hash).toBe(handlerRecord.hash);
     });
 
     test('locate emits a guard plan when requested', () => {
@@ -1763,6 +1863,7 @@ describe('swcAst helpers', () => {
       expect(output).toContain('Replacement produced invalid JavaScript');
     });
   })
+
 ;
 
   describe('js-edit --with-code inline code', () => {

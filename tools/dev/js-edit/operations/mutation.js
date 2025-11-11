@@ -1070,7 +1070,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
 
   if (!record.replaceable) {
     throw new Error(
-      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, variable-assigned function or arrow expressions, CommonJS export assignments, default exports, class methods, and recognised call-site callbacks (describe/test hooks).`
+      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, variable-assigned function and arrow expressions (including nested bindings), CommonJS export assignments, ES module default exports, class methods, and recognised call-site callbacks (describe/test hooks).`
     );
   }
 
@@ -1251,7 +1251,8 @@ function replaceFunction(options, source, record, replacementPath, selector) {
     extras: {
       postResolved: Boolean(postRecord),
       applied: Boolean(options.fix),
-      renameTo: options.renameTo || null
+      renameTo: options.renameTo || null,
+      identifierSpan: record.identifierSpan ? toSpanPayload(record.identifierSpan) : null
     }
   });
 
@@ -1265,7 +1266,8 @@ function replaceFunction(options, source, record, replacementPath, selector) {
       column: record.column,
       exportKind: record.exportKind,
       pathSignature: record.pathSignature,
-      hash: record.hash
+      hash: record.hash,
+      identifierSpan: record.identifierSpan ? toSpanPayload(record.identifierSpan) : null
     },
     applied: Boolean(options.fix),
     guard
@@ -1307,6 +1309,18 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   fmt.section(`${functionLabel}: ${record.canonicalName || record.name}`);
   fmt.stat(fmt.translateLabel('kind', 'Kind', { englishFirst: language.englishFirst }), record.kind);
   fmt.stat(fmt.translateLabel('location', 'Location', { englishFirst: language.englishFirst }), `${record.line}:${record.column}`);
+  if (record.exportKind) {
+    fmt.stat(fmt.translateLabel('exported_as', 'Exported As', { englishFirst: language.englishFirst }), record.exportKind);
+  }
+  const replaceableLabel = fmt.translateLabel('replaceable', 'Replaceable', { englishFirst: language.englishFirst });
+  const replaceableValue = record.replaceable
+    ? fmt.translateLabel('yes', 'Yes', { englishFirst: language.englishFirst })
+    : fmt.translateLabel('no', 'No', { englishFirst: language.englishFirst });
+  fmt.stat(replaceableLabel, replaceableValue);
+  if (record.identifierSpan) {
+    const identifierLabel = fmt.translateLabel('identifier', 'Identifier', { englishFirst: language.englishFirst });
+    fmt.stat(identifierLabel, formatSpanDetails(toSpanPayload(record.identifierSpan)));
+  }
   fmt.stat(fmt.translateLabel('path_signature', 'Path', { englishFirst: language.englishFirst }), record.pathSignature);
   fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), record.hash);
   fmt.stat(fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst }), formatModeValue(Boolean(options.fix), language));
@@ -1339,6 +1353,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   }
   fmt.footer();
 }
+
 
 
 function toSpanPayload(span) {

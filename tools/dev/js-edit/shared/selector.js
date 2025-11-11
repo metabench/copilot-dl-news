@@ -510,9 +510,40 @@ function collectHashCandidates(record) {
 }
 
 function collectPathCandidates(record) {
-  const values = [record.pathSignature, record.declaratorPathSignature, record.declarationPathSignature];
-  return values.filter((value) => typeof value === 'string' && value.length > 0);
+  const seen = new Set();
+  const add = (value) => {
+    if (typeof value === 'string' && value.length > 0) {
+      seen.add(value);
+    }
+  };
+
+  const register = (signature) => {
+    if (typeof signature !== 'string' || signature.length === 0) {
+      return;
+    }
+    add(signature);
+
+    const withoutFunction = signature.replace(/\.(ArrowFunctionExpression|FunctionExpression)$/u, '');
+    if (withoutFunction !== signature) {
+      add(withoutFunction);
+
+      if (withoutFunction.endsWith('.init')) {
+        add(withoutFunction.slice(0, -'.init'.length));
+      }
+
+      if (withoutFunction.endsWith('.right')) {
+        add(withoutFunction.slice(0, -'.right'.length));
+      }
+    }
+  };
+
+  register(record.pathSignature);
+  register(record.declaratorPathSignature);
+  register(record.declarationPathSignature);
+
+  return Array.from(seen);
 }
+
 
 function variableRecordMatchesPath(record, pathSignature) {
   if (!pathSignature) {

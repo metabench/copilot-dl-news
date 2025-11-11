@@ -1233,6 +1233,7 @@ function collectFunctions(ast, source, mapper = null) {
             scopeChain,
             pathSegments: currentPath,
             nodeType: init.type,
+            identifierSpan: id.span || null,
             enclosingContexts: baseEnclosing
           });
         }
@@ -1601,6 +1602,7 @@ function collectFunctions(ast, source, mapper = null) {
   functions.sort((a, b) => a.span.start - b.span.start);
   return { functions, classMetadata: classMetadataMap, lineIndex, mapper: sourceMapper };
 }
+
 
 
 
