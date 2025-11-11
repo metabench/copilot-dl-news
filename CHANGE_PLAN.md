@@ -38,9 +38,24 @@
 - Revert changes to the swcAst collector, mutation guard checks, selector helpers, and revert the new tests/docs if we discover guardrails become unstable; existing `--replace-variable` workflows remain intact as a fallback.
 
 ### Branch & Notes
+### Branch & Notes
 - Working branch: `feature/api-handler-expansion` (dirty with prior API/hash work; continue on this branch while coordinating with open tasks, ensuring we do not drop existing staged changes).
 - Record any js-edit guardrail regressions or parser gaps in this plan before widening scope.
 - 2025-11-19: Refreshed `tools/dev/README.md` Core Commands to call out variable-assigned and CommonJS replacements now covered by `--replace`.
+- 2025-11-19: Added identifier span propagation for variable-assigned functions in `collectFunctions`; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js tests/tools/__tests__/js-edit.discovery.test.js --bail=1 --maxWorkers=50%` now passes locally.
+- 2025-11-19: Surface replaceable coverage and identifier span metadata in `replaceFunction` guard summaries and digest payloads to support rename workflows without falling back to `--replace-variable`.
+- 2025-11-19: Expanded `collectPathCandidates` to add fallback signatures (e.g., `.init`, `.right`) so older plan files using variable-based path selectors continue to resolve the same targets after enabling direct function replacements.
+- 2025-11-19: Added guard metadata assertions for variable-assigned and CommonJS replacements in `tests/tools/__tests__/js-edit.test.js` to confirm identifier span payloads remain non-null; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` passes locally.
+
+### Branch & Notes
+- Working branch: `feature/api-handler-expansion` (dirty with prior API/hash work; continue on this branch while coordinating with open tasks, ensuring we do not drop existing staged changes).
+- Record any js-edit guardrail regressions or parser gaps in this plan before widening scope.
+- 2025-11-19: Refreshed `tools/dev/README.md` Core Commands to call out variable-assigned and CommonJS replacements now covered by `--replace`.
+- 2025-11-19: Added identifier span propagation for variable-assigned functions in `collectFunctions`; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js tests/tools/__tests__/js-edit.discovery.test.js --bail=1 --maxWorkers=50%` now passes locally.
+- 2025-11-19: Surface replaceable coverage and identifier span metadata in `replaceFunction` guard summaries and digest payloads to support rename workflows without falling back to `--replace-variable`.
+- 2025-11-19: Expanded `collectPathCandidates` to add fallback signatures (e.g., `.init`, `.right`) so older plan files using variable-based path selectors continue to resolve the same targets after enabling direct function replacements.
+- 2025-11-19: Added guard metadata assertions for variable-assigned and CommonJS replacements in `tests/tools/__tests__/js-edit.test.js` to confirm identifier span payloads remain non-null; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` passes locally.
+- 2025-11-19: Updated `tools/dev/README.md` and `docs/CLI_REFACTORING_QUICK_START.md` with guidance on `identifierSpan` metadata embedded in all replaceable function payloads (variable-assigned, CommonJS exports, call-site callbacks) and clarified `--replace-variable` fallback for non-function bindings only. **✅ Plan Complete: All 5 proposed changes implemented and validated.**
 
 ## Active Plan — js-scan Next-File Suggestions (Initiated 2025-11-11)
 
@@ -125,6 +140,24 @@
 
 ### Branch & Notes
 ### Branch & Notes
+- Working branch: `feature/api-handler-expansion` (dirty with prior API/hash work; continue on this branch while coordinating with open tasks, ensuring we do not drop existing staged changes).
+- Record any js-edit guardrail regressions or parser gaps in this plan before widening scope.
+- 2025-11-19: Refreshed `tools/dev/README.md` Core Commands to call out variable-assigned and CommonJS replacements now covered by `--replace`.
+- 2025-11-19: Added identifier span propagation for variable-assigned functions in `collectFunctions`; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js tests/tools/__tests__/js-edit.discovery.test.js --bail=1 --maxWorkers=50%` now passes locally.
+- 2025-11-19: Surface replaceable coverage and identifier span metadata in `replaceFunction` guard summaries and digest payloads to support rename workflows without falling back to `--replace-variable`.
+- 2025-11-19: Expanded `collectPathCandidates` to add fallback signatures (e.g., `.init`, `.right`) so older plan files using variable-based path selectors continue to resolve the same targets after enabling direct function replacements.
+- 2025-11-19: Added guard metadata assertions for variable-assigned and CommonJS replacements in `tests/tools/__tests__/js-edit.test.js` to confirm identifier span payloads remain non-null; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` passes locally.
+
+### Branch & Notes
+### Branch & Notes
+- Working branch: `feature/api-handler-expansion` (dirty with prior API/hash work; continue on this branch while coordinating with open tasks, ensuring we do not drop existing staged changes).
+- Record any js-edit guardrail regressions or parser gaps in this plan before widening scope.
+- 2025-11-19: Refreshed `tools/dev/README.md` Core Commands to call out variable-assigned and CommonJS replacements now covered by `--replace`.
+- 2025-11-19: Added identifier span propagation for variable-assigned functions in `collectFunctions`; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js tests/tools/__tests__/js-edit.discovery.test.js --bail=1 --maxWorkers=50%` now passes locally.
+- 2025-11-19: Surface replaceable coverage and identifier span metadata in `replaceFunction` guard summaries and digest payloads to support rename workflows without falling back to `--replace-variable`.
+- 2025-11-19: Expanded `collectPathCandidates` to add fallback signatures (e.g., `.init`, `.right`) so older plan files using variable-based path selectors continue to resolve the same targets after enabling direct function replacements.
+- 2025-11-19: Added guard metadata assertions for variable-assigned and CommonJS replacements in `tests/tools/__tests__/js-edit.test.js` to confirm identifier span payloads remain non-null; `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%` passes locally.
+
 ### Branch & Notes
 - Working branch: `feature/api-handler-expansion` (created 2025-11-17 to implement new routers and dependency wiring).
 - Discovery references: `src/deprecated-ui/express/routes/api.background-tasks.js`, `src/deprecated-ui/express/routes/api.analysis.js`, `src/deprecated-ui/express/routes/api.crawls.js`, `src/deprecated-ui/express/routes/api.crawl.js`, `src/background/BackgroundTaskManager.js`, `src/background/jobRegistry.js`, `src/db/writableDb.js`.
