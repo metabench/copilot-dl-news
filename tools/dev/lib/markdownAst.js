@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const MarkdownIt = require('markdown-it');
+const { HASH_PRIMARY_ENCODING, normalizeHashEncoding, encodeHash } = require('../shared/hashConfig');
 
 const md = new MarkdownIt({
   html: true,
@@ -186,13 +187,10 @@ function findSections(sections, selector) {
 /**
  * Create a hash for a section (heading + content)
  */
-function createSectionHash(heading, content) {
+function createSectionHash(heading, content, encoding = HASH_PRIMARY_ENCODING) {
   const combined = `${heading}\n${content}`;
-  return crypto
-    .createHash('sha256')
-    .update(combined, 'utf8')
-    .digest('hex')
-    .substring(0, 16);
+  const digestBuffer = crypto.createHash('sha256').update(combined, 'utf8').digest();
+  return encodeHash(digestBuffer, normalizeHashEncoding(encoding));
 }
 
 /**

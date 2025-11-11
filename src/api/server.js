@@ -22,14 +22,19 @@ const path = require('path');
 const fs = require('fs');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('js-yaml');
+const { ensureDb } = require('../db/sqlite/ensureDb');
+const { createWritableDbAccessor } = require('../deprecated-ui/express/db/writableDb');
 
 // Load OpenAPI specification
 const openApiPath = path.join(__dirname, 'openapi.yaml');
 const openApiSpec = YAML.load(fs.readFileSync(openApiPath, 'utf8'));
 
-// Import route modules (to be created)
+// Import route modules
 const { createHealthRouter } = require('./routes/health');
 const { createPlaceHubsRouter } = require('./routes/place-hubs');
+const { createBackgroundTasksRouter } = require('./routes/background-tasks');
+const { createAnalysisRouter } = require('./routes/analysis');
+const { createCrawlsRouter } = require('./routes/crawls');
 
 /**
  * Create and configure the API server
@@ -37,12 +42,32 @@ const { createPlaceHubsRouter } = require('./routes/place-hubs');
  * @param {string} options.dbPath - Path to SQLite database
  * @param {number} options.port - Server port (default: 3000)
  * @param {boolean} options.verbose - Enable verbose logging
+ * @param {Console} [options.logger=console] - Logger forwarded to request logging and crawl routes
+ * @param {Function} [options.createCrawlService] - Factory used to create the crawl service
+ * @param {Object} [options.crawlService] - Preconfigured crawl service instance
+ * @param {Object} [options.crawlServiceOptions] - Options passed to the crawl service factory
+ * @param {string} [options.crawlBasePath='/api/v1/crawl'] - Base path used for crawl API routes
+ * @param {Object} [options.backgroundTaskManager] - BackgroundTaskManager instance for task routes
+ * @param {Function} [options.getDbRW] - Function returning the writable database handle
+ * @param {Object} [options.jobRegistry] - Job registry instance for crawl job routes
+ * @param {Function} [options.broadcastProgress] - Broadcast function for crawl job progress updates
+ * @param {Function} [options.broadcastJobs] - Broadcast function for crawl job snapshots
  * @returns {express.Application} Configured Express app
  */
 function createApiServer(options = {}) {
   const app = express();
   const port = options.port || process.env.PORT || 3000;
   const dbPath = options.dbPath || path.join(process.cwd(), 'data', 'news.db');
+  const logger = options.logger || console;
+  const registerCrawlApiV1Routes = require('./route-loaders/crawl-v1').registerCrawlApiV1Routes;
+  const getDbRW = typeof options.getDbRW === 'function'
+    ? options.getDbRW
+    : createWritableDbAccessor({
+        ensureDb,
+        urlsDbPath: dbPath,
+        verbose: Boolean(options.verbose),
+        logger
+      });
 
   // Middleware
   app.use(compression());
@@ -55,7 +80,14 @@ function createApiServer(options = {}) {
     res.on('finish', () => {
       const duration = Date.now() - start;
       if (options.verbose) {
-        console.log(`${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+        const message = `${req.method} ${req.path} ${res.statusCode} ${duration}ms`;
+        if (logger && typeof logger.info === 'function') {
+          logger.info(message);
+        } else if (logger && typeof logger.log === 'function') {
+          logger.log(message);
+        } else {
+          console.log(message);
+        }
       }
     });
     next();
@@ -75,6 +107,10 @@ function createApiServer(options = {}) {
   // Attach database path to app locals
   app.locals.dbPath = dbPath;
   app.locals.verbose = options.verbose || false;
+  app.locals.logger = logger;
+  app.locals.getDbRW = getDbRW;
+  app.locals.backgroundTaskManager = options.backgroundTaskManager || null;
+  app.locals.jobRegistry = options.jobRegistry || null;
 
   // Swagger UI customization options
   const swaggerOptions = {
@@ -108,6 +144,28 @@ function createApiServer(options = {}) {
   // Mount API routes
   app.use('/api', createHealthRouter({ dbPath }));
   app.use('/api/place-hubs', createPlaceHubsRouter({ dbPath }));
+  app.use('/api/background-tasks', createBackgroundTasksRouter({
+    taskManager: options.backgroundTaskManager,
+    getDbRW,
+    logger
+  }));
+  app.use('/api/analysis', createAnalysisRouter({
+    getDbRW,
+    logger
+  }));
+  app.use('/api/crawls', createCrawlsRouter({
+    jobRegistry: options.jobRegistry,
+    broadcastProgress: options.broadcastProgress,
+    broadcastJobs: options.broadcastJobs,
+    logger
+  }));
+  registerCrawlApiV1Routes(app, {
+    basePath: options.crawlBasePath || '/api/v1/crawl',
+    logger,
+    crawlService: options.crawlService,
+    createCrawlService: options.createCrawlService,
+    serviceOptions: options.crawlServiceOptions
+  });
 
   // Root endpoint - redirect to API docs
   app.get('/', (req, res) => {
@@ -125,7 +183,11 @@ function createApiServer(options = {}) {
 
   // Error handler
   app.use((err, req, res, next) => {
-    console.error('API Error:', err);
+    if (logger && typeof logger.error === 'function') {
+      logger.error('API Error:', err);
+    } else {
+      console.error('API Error:', err);
+    }
     res.status(err.status || 500).json({
       error: err.code || 'INTERNAL_ERROR',
       message: err.message || 'An unexpected error occurred',
@@ -136,6 +198,7 @@ function createApiServer(options = {}) {
 
   return app;
 }
+
 
 /**
  * Start the API server
@@ -168,6 +231,7 @@ async function startApiServer(options = {}) {
         app,
         server,
         port,
+        getDbRW: app.locals.getDbRW,
         close: () => new Promise((resolve, reject) => {
           server.close((err) => {
             if (err) reject(err);

@@ -278,6 +278,29 @@ node tests/run-tests.js e2e               # Standard E2E tests
 node tests/run-tests.js dev-geography     # Development test (long-running)
 ```
 
+### API regression quick-runner
+
+The API handlers ship with a focused Jest harness that exercises the background
+task, analysis, and crawl routers via SuperTest. Run it directly or through the
+convenience npm script:
+
+```bash
+node scripts/jest_api_tests.mjs          # Runs all API endpoint suites
+npm run test:api                         # Same as above via package.json
+node scripts/jest_api_tests.mjs --list   # Show the default test files
+node scripts/jest_api_tests.mjs tests/server/api/crawls.test.js -- --detectOpenHandles
+```
+
+- Without positional arguments the runner executes:
+  - `tests/server/api/background-tasks.test.js`
+  - `tests/server/api/analysis.test.js`
+  - `tests/server/api/crawls.test.js`
+- Provide one or more test file paths to target a subset while keeping the
+  guard-rail flags (`--bail=1`, `--maxWorkers=50%`, and `--runTestsByPath`).
+- Use `--` to forward options directly to Jest (for example,
+  `--detectOpenHandles` when chasing lingering handles).
+- Invoke `node scripts/jest_api_tests.mjs --help` for a full usage summary.
+
 ### Modifying Configuration
 
 AI agents can edit `test-config.json` to:

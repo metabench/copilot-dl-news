@@ -1,3 +1,9 @@
+const {
+  HASH_PRIMARY_ENCODING,
+  HASH_FALLBACK_ENCODING,
+  HASH_LENGTH_BY_ENCODING
+} = require('../../shared/hashConfig');
+
 const SELECTOR_TYPE_PREFIXES = new Map([
   ['function', 'function'],
   ['variable', 'variable']

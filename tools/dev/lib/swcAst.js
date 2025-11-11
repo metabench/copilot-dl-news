@@ -1,12 +1,14 @@
 const { parseSync } = require('@swc/core');
 const crypto = require('crypto');
 
-const HASH_PRIMARY_ENCODING = 'base64';
-const HASH_FALLBACK_ENCODING = 'hex';
-const HASH_LENGTH_BY_ENCODING = Object.freeze({
-  base64: 8,
-  hex: 12
-});
+const {
+  HASH_PRIMARY_ENCODING,
+  HASH_FALLBACK_ENCODING,
+  HASH_LENGTH_BY_ENCODING,
+  HASH_BYTE_LENGTH,
+  normalizeHashEncoding,
+  encodeHash
+} = require('../shared/hashConfig');
 
 function parseModule(source, fileName = 'anonymous.js') {
   return parseSync(source, {
@@ -417,10 +419,9 @@ function buildPathSignature(pathSegments, nodeType) {
 }
 
 function createDigest(text, encoding = HASH_PRIMARY_ENCODING) {
-  const digestEncoding = HASH_LENGTH_BY_ENCODING[encoding] ? encoding : HASH_FALLBACK_ENCODING;
-  const digest = crypto.createHash('sha256').update(text).digest(digestEncoding);
-  const sliceLength = HASH_LENGTH_BY_ENCODING[digestEncoding] || digest.length;
-  return digest.slice(0, sliceLength);
+  const normalizedEncoding = normalizeHashEncoding(encoding);
+  const digestBuffer = crypto.createHash('sha256').update(text, 'utf8').digest();
+  return encodeHash(digestBuffer, normalizedEncoding);
 }
 
 function computeHash(source, span, encoding = HASH_PRIMARY_ENCODING) {
@@ -1223,7 +1224,7 @@ function collectFunctions(ast, source, mapper = null) {
             name: id.value,
             kind: init.type === 'FunctionExpression' ? 'function-expression' : 'arrow-function',
             exportKind: context.exportKind || null,
-            replaceable: false,
+            replaceable: true,
             span: init.span || node.span,
             lineIndex,
             byteIndex,
@@ -1388,7 +1389,7 @@ function collectFunctions(ast, source, mapper = null) {
               name: funcName,
               kind: right.type === 'FunctionExpression' ? 'function-expression' : 'arrow-function',
               exportKind,
-              replaceable: false,
+              replaceable: true,
               span: right.span,
               lineIndex,
               byteIndex,
@@ -1593,6 +1594,7 @@ function collectFunctions(ast, source, mapper = null) {
       }
     }
   }
+
 
   visit(ast, { scopeChain: [], exportKind: null, enclosingContexts: [], callContext: null }, ['module']);
 
@@ -1971,5 +1973,8 @@ module.exports = {
   resolveByteMapper,
   HASH_PRIMARY_ENCODING,
   HASH_FALLBACK_ENCODING,
-  HASH_LENGTH_BY_ENCODING
+  HASH_LENGTH_BY_ENCODING,
+  HASH_BYTE_LENGTH,
+  normalizeHashEncoding,
+  encodeHash
 };

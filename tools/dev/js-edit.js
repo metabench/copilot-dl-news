@@ -23,6 +23,7 @@ const {
   HASH_FALLBACK_ENCODING,
   HASH_LENGTH_BY_ENCODING
 } = require('./lib/swcAst');
+const { HASH_CHARSETS } = require('./shared/hashConfig');
 const contextOperations = require('./js-edit/operations/context');
 const mutationOperations = require('./js-edit/operations/mutation');
 const discoveryOperations = require('./js-edit/operations/discovery');
@@ -83,11 +84,6 @@ const DEFAULT_SEARCH_LIMIT = 20;
 const DEFAULT_SEARCH_CONTEXT = 60;
 
 const CONTEXT_ENCLOSING_MODES = new Set(['exact', 'class', 'function']);
-
-const HASH_CHARSETS = Object.freeze({
-  base64: /^[A-Za-z0-9+/]+$/,
-  hex: /^[0-9a-f]+$/i
-});
 
 const CHINESE_HELP_ROWS = Object.freeze([
   { flag: '--list-functions', lexKey: 'list_functions', note: '函列: 函数清单' },
@@ -1411,6 +1407,10 @@ async function main() {
     resolveVariableTargetInfo,
     variableRecordMatchesPath,
     buildSearchSuggestionsForMatch,
+    buildSearchSnippet,
+    positionFromIndex,
+    findFunctionOwner,
+    findVariableOwner,
     maybeEmitPlan: contextOperations.maybeEmitPlan,
     buildPlanPayload: contextOperations.buildPlanPayload,
     computeAggregateSpan: contextOperations.computeAggregateSpan,
@@ -1422,7 +1422,10 @@ async function main() {
     HASH_PRIMARY_ENCODING,
     HASH_FALLBACK_ENCODING,
     HASH_LENGTH_BY_ENCODING,
-    DEFAULT_SEARCH_CONTEXT
+    DEFAULT_SEARCH_CONTEXT,
+    DEFAULT_SEARCH_LIMIT,
+    createPreviewSnippet,
+    buildLineIndex
   };
 
   contextOperations.init(deps);

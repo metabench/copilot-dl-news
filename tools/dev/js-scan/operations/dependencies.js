@@ -1,12 +1,39 @@
 'use strict';
 
 const path = require('path');
+const {
+  HASH_LENGTH_BY_ENCODING,
+  HASH_CHARSETS,
+  HASH_PRIMARY_ENCODING,
+  HASH_FALLBACK_ENCODING
+} = require('../../shared/hashConfig');
 
 function normalizeKey(value) {
   if (typeof value !== 'string') {
     return '';
   }
   return value.replace(/\\/g, '/');
+}
+
+function isHashLike(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+
+  const encodings = new Set([HASH_PRIMARY_ENCODING, HASH_FALLBACK_ENCODING].filter(Boolean));
+  for (const encoding of encodings) {
+    const expectedLength = HASH_LENGTH_BY_ENCODING[encoding];
+    const charset = HASH_CHARSETS[encoding];
+    if (typeof expectedLength === 'number' && expectedLength > 0 && charset?.test(trimmed) && trimmed.length === expectedLength) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function createNode(file) {
@@ -136,8 +163,7 @@ function selectTargetRecord(files, query, rootDir) {
     throw new Error(`Multiple files match '${query}'. Use a more specific path.`);
   }
 
-  const hashLike = /^[0-9a-z]{6,}$/i;
-  if (hashLike.test(query)) {
+  if (isHashLike(query)) {
     const hashMatches = [];
     records.forEach((record) => {
       if (!Array.isArray(record.functions)) {

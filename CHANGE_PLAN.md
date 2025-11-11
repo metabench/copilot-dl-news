@@ -1,5 +1,211 @@
 # CHANGE_PLAN.md — URL Foreign Key Normalization (Active)
 
+## Active Plan — js-edit Replaceability Expansion (Initiated 2025-11-11)
+
+### Goal
+- Allow js-edit to treat nested arrow/function expressions and CommonJS export assignments as replaceable targets so guarded workflows no longer fall back to `--replace-variable` for common patterns.
+
+### Current Behavior
+- `collectFunctions` marks variable-assigned functions and CommonJS export RHS expressions as `replaceable: false`, so `--replace` aborts even when span/hash data is available.
+- Operators must pivot to `--replace-variable`, which lacks rename/range helpers and produces different guard metadata, slowing guarded refactors in mixed-module files.
+
+### Proposed Changes
+1. Update `tools/dev/lib/swcAst.js` collection logic to set `replaceable: true` for function/arrow expressions when they are named via variable declarators or CommonJS export assignments, capturing identifier spans when present.
+2. Teach `tools/dev/js-edit/operations/mutation.js` to accept the newly replaceable kinds, ensuring guard summaries and error messaging list the expanded coverage.
+3. Extend selector metadata (`tools/dev/js-edit/shared/selector.js`) so canonical names/path signatures remain stable after the flag change and hash/path lookups continue to work.
+4. Add focused fixtures and assertions in `tests/tools/__tests__/js-edit.test.js` and `tests/tools/__tests__/js-edit.discovery.test.js` covering nested arrow assignments, exported factory functions, and CommonJS bindings to verify locate/replace flows succeed.
+5. Refresh CLI documentation (`tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`) to describe the expanded replaceable surface and reference variable workflows as a fallback only for non-function initializers.
+
+### Risks & Unknowns
+- Some anonymous arrow expressions without stable identifiers may still be unsafe to replace; we must confirm guard metadata remains deterministic before enabling replacement.
+- Changing replaceability flags may expose latent bugs in guard validation (e.g., identifier span absence) that require additional null checks.
+- Existing plan files captured before this change may still mark these records as non-replaceable; we should call out the incompatibility in docs.
+
+### Integration Points
+- `tools/dev/lib/swcAst.js`
+- `tools/dev/js-edit/operations/mutation.js`
+- `tools/dev/js-edit/shared/selector.js`
+- `tests/tools/__tests__/js-edit.test.js`, `tests/tools/__tests__/js-edit.discovery.test.js`
+- `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`
+
+### Docs Impact
+- Update js-edit workflow guidance to highlight the broader replaceable set and adjust troubleshooting notes that previously directed operators to `--replace-variable`.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js tests/tools/__tests__/js-edit.discovery.test.js --bail=1 --maxWorkers=50%`
+
+### Rollback Plan
+- Revert changes to the swcAst collector, mutation guard checks, selector helpers, and revert the new tests/docs if we discover guardrails become unstable; existing `--replace-variable` workflows remain intact as a fallback.
+
+### Branch & Notes
+- Working branch: `feature/api-handler-expansion` (dirty with prior API/hash work; continue on this branch while coordinating with open tasks, ensuring we do not drop existing staged changes).
+- Record any js-edit guardrail regressions or parser gaps in this plan before widening scope.
+- 2025-11-19: Refreshed `tools/dev/README.md` Core Commands to call out variable-assigned and CommonJS replacements now covered by `--replace`.
+
+## Active Plan — js-scan Next-File Suggestions (Initiated 2025-11-11)
+
+### Goal
+- Provide dependency-aware “next file” suggestions in js-scan and md-scan outputs so agents can follow related modules or documents without manual graph exploration.
+
+### Current Behavior
+- `js-scan` can traverse dependencies via `--follow-deps`, but the CLI stops at listing matches; it does not recommend specific follow-up files or explain why a neighbor matters.
+- `md-scan` enumerates matches within a document set but lacks link-based guidance to continue investigations.
+
+### Proposed Changes
+1. Capture import/require edges during `js-scan` traversal (existing dependency map) and rank candidate neighbors based on shared search terms, hash collisions, or export overlaps; surface the top 3–5 with short relevance notes in both text and JSON output.
+2. Extend `tools/dev/js-scan/operations/dependencies.js` (or add a dedicated suggestion helper) to assemble the suggestion payload and integrate it into search/hash lookup operations when `--follow-deps` or `--suggest-next` is enabled (default on for follow-deps).
+3. Mirror the feature in `md-scan` using intra-document links/front-matter references where available, emitting a similar “Next files” section with explanation snippets.
+4. Add configuration flags (`--suggest-next` / `--no-suggest-next`, plus Chinese aliases) so operators can toggle suggestions, and update JSON schemas to include a `suggestions` array with relevance metadata.
+5. Update docs and help output to describe the new section, including how relevance scores are computed and how to follow the suggestions programmatically.
+6. Expand Jest coverage for js-scan and md-scan to validate suggestion payloads, ordering, and CLI formatting under both English and Chinese modes.
+
+### Risks & Unknowns
+- Suggestion relevance heuristics may need tuning; poor ranking could overwhelm operators with noise.
+- Dependency graphs for large directories may be expensive to compute; ensure we reuse existing traversal data to avoid regressions.
+- Markdown link extraction might miss custom link syntaxes; document limitations so expectations stay aligned.
+
+### Integration Points
+- `tools/dev/js-scan/operations/dependencies.js`, `tools/dev/js-scan/operations/search.js`
+- `tools/dev/md-scan/operations/search.js`
+- Shared CLI option parsing in `tools/dev/js-scan.js` and `tools/dev/md-scan.js`
+- `tools/dev/README.md`, `docs/CLI_REFACTORING_QUICK_START.md`
+- Jest suites under `tests/tools/__tests__/js-scan.test.js`, `tests/tools/__tests__/md-scan.test.js`
+
+### Docs Impact
+- Document the suggestion feature in the tooling README and quick-start guide, adding examples that show how the CLI explains relevance.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-scan.test.js tests/tools/__tests__/md-scan.test.js --bail=1 --maxWorkers=50%`
+
+### Rollback Plan
+- Gate suggestion output behind the new flag so disabling it restores prior behavior; if needed, revert suggestion helpers and associated docs/tests while leaving dependency traversal unchanged.
+
+### Branch & Notes
+- Working branch: `feature/api-handler-expansion` (shared with other tooling work; ensure commits stay focused and coordinate merge strategy once API tasks conclude).
+- Capture feedback on suggestion quality in this plan so heuristics can be iterated quickly.
+
+## Active Plan — Express API Handler Expansion (Initiated 2025-11-17)
+
+### Goal
+- Ship Express handlers for background task, crawl control, and analysis endpoints promised in the OpenAPI spec so the standalone API server reaches feature parity with the legacy UI routes.
+
+### Current Behavior
+- The standalone API server currently mounts only health, place hub, and crawl operation routes; background task, crawl job control, and analysis endpoints are absent.
+- `src/api/openapi.yaml` advertises `/api/background-tasks`, `/api/crawls`, and `/api/analysis` paths, but no modern handlers back those routes.
+- Mature implementations live under `src/deprecated-ui/express/routes/`, yet they rely on dependencies (background task manager, job registry, writable DB accessor) that are not wired into the new server.
+
+### Proposed Changes
+1. Document the dependency graph for background tasks, analysis, and crawl orchestration (e.g., `BackgroundTaskManager`, `JobRegistry`, writable DB accessor) and define the service factory contract the API server will use.
+2. Create dedicated routers under `src/api/routes/` (for example, `background-tasks.js`, `analysis.js`, `crawls.js`) that adapt the legacy logic to JSON-first responses with shared error handling and dependency injection.
+3. Extend the route loader layer so `/api/background-tasks`, `/api/analysis`, and `/api/crawls` mount from the new routers with version-aware prefixes that align with the OpenAPI document.
+4. Wire the API server bootstrap to provide the required services (task manager, job registry, DB accessor, telemetry/loggers) to the routers without breaking CLI or background worker lifecycles.
+5. Reconcile OpenAPI schemas and handler payloads, recording any gaps as follow-up items, and add targeted integration tests (or supertest harnesses) that exercise the new endpoints.
+
+### Risks & Unknowns
+- Reusing `BackgroundTaskManager` inside the API may interfere with existing worker lifecycles or double-register consumers if not scoped carefully.
+- Legacy routes sometimes expect template/session context; translating them to pure JSON responses may expose undocumented response shapes.
+- Background operations launched through HTTP must return quickly; additional queuing or async signaling might be required to avoid request timeouts.
+
+### Integration Points
+- `src/api/server.js` and the route loader modules under `src/api/route-loaders/`.
+- New Express routers under `src/api/routes/`.
+- Background orchestration helpers: `src/background/BackgroundTaskManager.js`, `src/background/jobRegistry.js`, `src/db/writableDb.js`.
+- Legacy references to port: `src/deprecated-ui/express/routes/api.background-tasks.js`, `api.analysis.js`, `api.crawls.js`, `api.crawl.js`.
+
+### Docs Impact
+- Update `src/api/openapi.yaml` (and related API docs) once handlers match the specification.
+- Add implementation notes to `docs/API_SERVER_ARCHITECTURE.md` describing dependency injection and background task wiring for the API server.
+
+### Focused Test Plan
+- Add supertest-based integration tests that spin up the API server with test doubles and validate representative requests for each new route group.
+- Manual smoke tests: start the API server and exercise task listing, crawl start/stop, and analysis run retrieval endpoints with curl or HTTPie.
+
+### Rollback Plan
+- Feature-gate new routers behind loader configuration; removing the router modules and reverting loader wiring returns the server to its current surface area.
+
+### Branch & Notes
+### Branch & Notes
+### Branch & Notes
+- Working branch: `feature/api-handler-expansion` (created 2025-11-17 to implement new routers and dependency wiring).
+- Discovery references: `src/deprecated-ui/express/routes/api.background-tasks.js`, `src/deprecated-ui/express/routes/api.analysis.js`, `src/deprecated-ui/express/routes/api.crawls.js`, `src/deprecated-ui/express/routes/api.crawl.js`, `src/background/BackgroundTaskManager.js`, `src/background/jobRegistry.js`, `src/db/writableDb.js`.
+- 2025-11-17: js-edit replacement commands could not introduce multiple const declarations (error: "Code is not valid JavaScript"), so import additions in `src/api/server.js` used a guarded text patch; log improvement request to support multi-statement replacements.
+- 2025-11-18: Preparing comprehensive SuperTest coverage — draft suites `tests/server/api/background-tasks.test.js`, `tests/server/api/analysis.test.js`, and `tests/server/api/crawls.test.js` that spin up `startApiServer` with stubbed `BackgroundTaskManager`, `JobRegistry`, and `getDbRW`; include RateLimitError serialization, dependency-missing guards, and success/error permutations for each route group. Added dedicated runner `scripts/jest_api_tests.mjs` plus README guidance so the suites run through a single documented entry point.
+- 2025-11-19: Expanding API regression coverage to the legacy routers — adding SuperTest suites `tests/server/api/health.test.js` and `tests/server/api/place-hubs.test.js`, mocking filesystem/dependency layers to exercise healthy vs. degraded health responses and both validation/error and success flows for place hub guessing/readiness. Update the Jest runner defaults so all five API suites execute together.
+- 2025-11-19 (later): Build API suite logging workflow — add quiet timing-reporter mode plus runner wiring so API Jest runs persist logs under `testlogs/` with the established historical format before implementing the reporter updates.
+- 2025-11-19 (later+1): Propagate quiet timing reporter defaults to `scripts/jest_careful_runner.mjs` so ad-hoc suites share the quiet console summary while preserving the detailed log artifacts.
+
+## Active Plan — CLI Hash Digest Harmonization (Initiated 2025-11-10)
+
+### Goal
+- Standardize hash display across `js-edit`, `js-scan`, `md-edit`, and `md-scan` so all guard and lookup surfaces emit an 8-byte base64 digest governed by a shared configuration module.
+
+### Current Behavior
+- `js-edit` emits base64 slices via `tools/dev/lib/swcAst.js`, but `js-scan` and `md-edit` rely on independent helpers or heuristics, leading to hex digests, length mismatches, and inconsistent encoding detectors.
+- Hash detection logic in `js-scan` guesses encoding from string length/content, so truncated or hex hashes from other tools cannot be resolved reliably.
+- `markdownAst.createSectionHash` hardcodes a 16-character hex digest, so markdown plans and guards drift from JavaScript guardrails.
+
+### Proposed Changes
+1. Extract the hash encoding constants (`HASH_PRIMARY_ENCODING`, `HASH_FALLBACK_ENCODING`, `HASH_LENGTH_BY_ENCODING`) into `tools/dev/shared/hashConfig.js` and expose helpers for generating and validating digests.
+2. Update `tools/dev/lib/swcAst.js`, `tools/dev/lib/markdownAst.js`, and any CLI helpers that compute hashes to consume the shared config and produce 8-byte base64 digests by default.
+3. Align `js-scan` hash lookup and guidance output to rely on the shared helpers instead of regex heuristics, and ensure markdown section hashes adopt the same presentation in `md-edit` outputs.
+4. Refresh CLI help/README snippets to mention the unified hash format and how to override it if we add future options.
+
+### Risks & Unknowns
+- Shorter base64 slices may increase hash collision risk; need to evaluate whether 8-byte entropy is sufficient for large codebases and note mitigation options.
+- Jest snapshots or integration tests might assert on previous hex strings; we must identify and update any fixtures.
+- CLI consumers may have scripts parsing legacy hex hashes; communicate the change in release notes if necessary.
+
+### Integration Points
+- `tools/dev/shared/hashConfig.js` (new) consumed by `tools/dev/lib/swcAst.js`, `tools/dev/lib/markdownAst.js`, and CLI operations.
+- `tools/dev/js-edit.js`, `tools/dev/js-scan.js`, `tools/dev/md-edit.js`, `tools/dev/md-scan.js` output formatting and guidance helpers.
+
+### Docs Impact
+- Update `tools/dev/README.md` and relevant quick-start guides to describe the unified hash format and the shared config module.
+- Add a troubleshooting note in `docs/CLI_REFACTORING_QUICK_START.md` for hash mismatch expectations after the upgrade.
+
+### Focused Test Plan
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/js-edit.test.js --bail=1 --maxWorkers=50%`
+- `npx jest --config jest.careful.config.js --runTestsByPath tests/tools/__tests__/md-edit.test.js --bail=1 --maxWorkers=50%`
+- Spot-check `node tools/dev/js-scan.js --search <term>` hash outputs and `md-edit` plan emission to confirm the new base64 slices.
+
+### Rollback Plan
+- Revert the shared hash config module and restore the prior hashing logic within `swcAst` and `markdownAst` if unforeseen collisions or downstream regressions occur.
+- Announce the rollback in CLI release notes to ensure operators realign their guard expectations.
+
+## Active Plan — API Server Route Loader Integration (Initiated 2025-11-08)
+
+### Goal
+- Wire the standalone API server to expose the existing crawl API v1 Express routes via a reusable loader so operators can mount the crawl surface without editing multiple files.
+
+### Current Behavior
+- `src/api/server.js` only mounts health and place hub routers; the crawl API v1 Express routes remain unused by the standalone server.
+- No shared loader exists to bind versioned crawl API routes into the standalone server, so each route must be connected manually today.
+
+### Proposed Changes
+1. Add a route loader module (for example, `src/api/route-loaders/crawl-v1.js`) that registers every Express v1 crawl route on a supplied app or router with minimal configuration.
+2. Update `src/api/server.js` to consume the loader, expose a configurable base path, and forward logger/service overrides for crawl operations.
+3. Verify the loader wiring keeps future v1 route additions centralized and document any follow-up needed to align OpenAPI definitions.
+
+### Risks & Unknowns
+- Loader must respect existing base paths so routes do not double-prefix or collide with other endpoints.
+- Crawl service dependencies may require specific logger/service options; pass-through wiring needs validation to avoid regressions.
+- OpenAPI documentation currently omits these endpoints; updating the spec may be deferred but should be tracked.
+
+### Integration Points
+- `src/api/server.js`
+- New loader module under `src/api/route-loaders/`
+- Crawl service wiring in `src/server/crawl-api/core/crawlService.js`
+
+### Docs Impact
+- Evaluate whether `src/api/openapi.yaml` or related docs need updates after wiring; capture follow-up items if deferred.
+
+### Focused Test Plan
+- Manual smoke: start the API server and issue `GET /api/v1/crawl/availability` to confirm routes respond.
+- Optional: add an integration test harness if manual smoke uncovers issues.
+
+### Rollback Plan
+- Remove the new loader module and revert `src/api/server.js` to its previous imports and route registrations.
+
 ## Active Plan — Careful js-edit Builder Instructions Refresh (Initiated 2025-11-17)
 
 ### Goal

@@ -1070,7 +1070,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
 
   if (!record.replaceable) {
     throw new Error(
-      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, default exports, class methods, and recognised call-site callbacks (describe/test hooks).`
+      `Function "${record.canonicalName || record.name}" is not currently replaceable. js-edit supports replacements for function declarations, variable-assigned function or arrow expressions, CommonJS export assignments, default exports, class methods, and recognised call-site callbacks (describe/test hooks).`
     );
   }
 
@@ -1339,6 +1339,7 @@ function replaceFunction(options, source, record, replacementPath, selector) {
   }
   fmt.footer();
 }
+
 
 function toSpanPayload(span) {
   if (!span || typeof span !== 'object') {

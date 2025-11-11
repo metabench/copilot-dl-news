@@ -17,7 +17,7 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 - `node tools/dev/js-scan.js --dir src --search planner telemetry` — multi-term search with star-ranked results, optional guidance, and JSON output.
 - `node tools/dev/js-scan.js --dir src --search planner --lang zh --view summary` — render bilingual stats (`搜果`, `匹数`, `档总`) while keeping terse English guidance for mixed-language operators.
-- `node tools/dev/js-scan.js --dir src --find-hash 6Z4U7cYZ` — resolve a js-edit hash across the workspace, detecting collisions.
+- `node tools/dev/js-scan.js --dir src --find-hash 4XrPWVfA1Ww=` — resolve a js-edit hash across the workspace, detecting collisions.
 - `node tools/dev/js-scan.js --dir src --build-index --limit 15` — summarize module stats (exports, functions, entry points) for the top files.
 - `node tools/dev/js-scan.js --dir src --find-pattern "*Adapter" --exported --limit 30 --json` — glob/regex pattern discovery with export filters and machine-readable payloads.
 - `node tools/dev/js-scan.js --dir deprecated-ui-root --deprecated-only --search carousel` — target deprecated bundles explicitly; deprecated directories stay excluded unless `--include-deprecated` or `--deprecated-only` is provided.
@@ -44,17 +44,16 @@ The js-edit CLI is modularized into three focused operation modules (November 20
 - **`operations/discovery.js`** — Symbol inventory and pattern matching (`--list-functions`, `--list-variables`, `--list-constructors`, `--search-text`, `--snipe`, `--outline`). Handles `--match`/`--exclude` filtering, position-based lookups, and search result formatting.
 - **`operations/context.js`** — Context retrieval and guard operations (`--context-function`, `--context-variable`, `--preview`). Manages padding, enclosing context modes, plan emission for context workflows, and guard summary rendering.
 - **`operations/mutation.js`** — Locate, extract, and replace workflows with guardrail enforcement (`--locate`, `--extract`, `--replace`, `--replace-variable`). Handles hash/span verification, syntax validation, unified diff generation, and dry-run vs. fix execution.
-- **`shared/`** — Common utilities and formatting constants (hash encoding, selector parsing, output formatting).
+- **`shared/`** — Common utilities and formatting constants (hash encoding, selector parsing, output formatting). `hashConfig.js` centralises the 8-byte base64 digest settings used by js-edit, js-scan, md-edit, and md-scan.
 
 All operations use dependency injection initialized via `cli.js`, ensuring consistent access to the SWC parser, formatter utilities, and shared constants. The modular design enables focused testing and maintainability while preserving backward compatibility for all command-line interfaces.
 
 ### Core Commands
 
 - `--replace <selector> --rename <identifier>` — rename the located function without providing an external snippet (identifier must exist on the target).
-- `--replace <selector> --with <file> --replace-range start:end` — swap only the specified character range (0-based, end-exclusive) within the located function using the supplied snippet. Prefer `--with-file <relativePath>` when the replacement snippet lives alongside the target file; js-edit resolves the path relative to the target file’s directory.
+- `--replace <selector> --with <file> --replace-range start:end` — swap only the specified character range (0-based, end-exclusive) within the located function using the supplied snippet. Prefer `--with-file <relativePath>` when the replacement snippet lives alongside the target file; js-edit resolves the path relative to the target file's directory.
+- Function replacements cover function declarations, variable-assigned function or arrow expressions, default exports, and CommonJS export assignments. Select targets such as `gamma`, `module.exports.handler`, or `exports.worker` and reuse the standard guardrail workflow with `--expect-hash` / `--expect-span`.
 - `--locate-variable <selector>` / `--extract-variable <selector>` / `--replace-variable <selector> --with <file>` — perform the same guarded locate/extract/replace workflow for variable bindings (including destructured declarators and CommonJS assignments). Combine with `--variable-target <binding|declarator|declaration>` to choose which span/hash/path guardrails to emit. Variable replacements require `--with <file>` and honour `--expect-hash` the same way function replacements do.
-
-Locate/context tables and JSON payloads report both UTF-16 code-unit offsets and raw byte offsets. Each entry includes `charSpanRange` and `byteSpanRange` summaries so agents can reason about guardrails even when newline normalization or multi-byte glyphs change the byte footprint.
 
 ### Discovery Filters & Pattern Matching
 

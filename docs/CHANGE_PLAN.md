@@ -74,7 +74,7 @@
 
 **Task 9.4 verification (2025-11-06):**
 - Syntax: `js-edit --file <target> --list-constructors [--filter-text <substring>] [--match <pattern>] [--exclude <pattern>] [--include-internals] [--include-paths] [--list-output dense|verbose] [--json]`
-- Hash display: Explicit constructors show 8-character hashes (e.g., `6Z4U7cYZ`); implicit constructors show `(implicit)` for params
+- Hash display: Explicit constructors show 8-byte base64 hashes (e.g., `4XrPWVfA1Ww=`); implicit constructors show `(implicit)` for params
 - Output formats: Dense list (default), verbose table with columns (index/class/export/extends/implements/params/hash/kind/line/column/internal), JSON with full metadata
 - Example: `node tools/dev/js-edit.js --file src/example.js --list-constructors --list-output verbose` displays table with all constructor details including hashes
 - Filtering: Supports --filter-text across class names, hashes, params, heritage; --match/--exclude for pattern-based class filtering; --include-internals to show non-exported classes without heritage

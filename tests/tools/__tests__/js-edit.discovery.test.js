@@ -1,8 +1,11 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { HASH_LENGTH_BY_ENCODING } = require('../../../tools/dev/shared/hashConfig');
 
 const jsEditPath = path.join(__dirname, '../../../tools/dev/js-edit.js');
 const fixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-sample.js');
+
+const EXPECTED_HASH_LENGTH = HASH_LENGTH_BY_ENCODING.base64;
 
 const runJsEdit = (args, options = {}) => {
   return spawnSync(process.execPath, [jsEditPath, ...args], {
@@ -86,7 +89,7 @@ describe('js-edit discovery helpers', () => {
 
     const workerMatch = payload.matches.find((match) => match.guard.function && match.guard.function.canonicalName === 'exports.worker');
     expect(workerMatch).toBeDefined();
-    expect(workerMatch.guard.function.hash).toHaveLength(8);
+    expect(workerMatch.guard.function.hash).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(workerMatch.snippet.highlighted).toContain('<<<');
     expect(workerMatch.snippet.highlighted).toContain('>>>');
     expect(Array.isArray(workerMatch.suggestions)).toBe(true);

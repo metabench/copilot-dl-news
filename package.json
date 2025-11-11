@@ -19,6 +19,7 @@
     "tests:review": "node tests/tests-review.js",
     "tests:status": "node tests/get-test-summary.js",
     "test:list": "node scripts/jest_careful_runner.mjs --list-only",
+    "test:api": "node scripts/jest_api_tests.mjs",
     "test:by-path": "node scripts/jest_careful_runner.mjs --runTestsByPath",
     "test:related": "npx jest --findRelatedTests --listTests",
     "test:name": "npx jest -t",

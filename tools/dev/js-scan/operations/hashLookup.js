@@ -1,10 +1,16 @@
 'use strict';
 
+const { HASH_LENGTH_BY_ENCODING, HASH_CHARSETS } = require('../../shared/hashConfig');
+
 function detectEncoding(hash) {
-  if (/^[A-Za-z0-9+/=]{8,}$/.test(hash)) {
+  if (typeof hash !== 'string') {
+    return 'unknown';
+  }
+  const trimmed = hash.trim();
+  if (trimmed.length === HASH_LENGTH_BY_ENCODING.base64 && HASH_CHARSETS.base64.test(trimmed)) {
     return 'base64';
   }
-  if (/^[0-9a-f]+$/i.test(hash)) {
+  if (trimmed.length === HASH_LENGTH_BY_ENCODING.hex && HASH_CHARSETS.hex.test(trimmed)) {
     return 'hex';
   }
   return 'unknown';

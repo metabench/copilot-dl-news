@@ -3,6 +3,11 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { parseModule, collectFunctions, collectVariables, extractCode, replaceSpan } = require('../../../tools/dev/lib/swcAst');
+const { HASH_LENGTH_BY_ENCODING } = require('../../../tools/dev/shared/hashConfig');
+
+const EXPECTED_HASH_LENGTH = HASH_LENGTH_BY_ENCODING.base64;
+
+const stripAnsi = (value) => (typeof value === 'string' ? value.replace(/\[[0-?]*[ -\/]*[@-~]/g, '') : value);
 
 describe('swcAst helpers', () => {
   const fixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-sample.js');
@@ -45,10 +50,14 @@ describe('swcAst helpers', () => {
     expect(alpha.canonicalName).toBe('exports.alpha');
     expect(alpha.scopeChain).toEqual(['exports', 'alpha']);
     expect(alpha.pathSignature).toBe('module.body[0].ExportDeclaration.declaration.FunctionDeclaration.FunctionDeclaration');
-    expect(alpha.hash).toHaveLength(8);
+    expect(alpha.hash).toHaveLength(EXPECTED_HASH_LENGTH);
 
     const gamma = functions.find((fn) => fn.name === 'gamma');
-    expect(gamma.replaceable).toBe(false);
+    expect(gamma.replaceable).toBe(true);
+    expect(gamma.identifierSpan).toEqual(expect.objectContaining({
+      start: expect.any(Number),
+      end: expect.any(Number)
+    }));
     expect(gamma.canonicalName).toBe('gamma');
     expect(gamma.pathSignature.endsWith('ArrowFunctionExpression')).toBe(true);
 
@@ -56,8 +65,9 @@ describe('swcAst helpers', () => {
     expect(defaultFn.exportKind).toBe('default');
     expect(defaultFn.canonicalName).toBe('exports.default');
     expect(defaultFn.scopeChain).toEqual(['exports', 'default']);
-    expect(defaultFn.hash).toHaveLength(8);
-  });
+    expect(defaultFn.hash).toHaveLength(EXPECTED_HASH_LENGTH);
+  })
+;
 
   test('collectFunctions recognises CommonJS exports patterns', () => {
     const moduleDefault = functions.find((fn) => fn.canonicalName === 'module.exports');
@@ -110,7 +120,7 @@ describe('swcAst helpers', () => {
     expect(render).toBeDefined();
     expect(render.scopeChain).toEqual(['exports', 'NewsSummary', '#render']);
     expect(render.pathSignature).toBe('module.body[1].ExportDeclaration.declaration.ClassDeclaration.body[1].ClassMethod.ClassMethod');
-    expect(render.hash).toHaveLength(8);
+    expect(render.hash).toHaveLength(EXPECTED_HASH_LENGTH);
 
     const statik = nestedFunctions.find((fn) => fn.canonicalName === 'exports.NewsSummary > static > initialize');
     expect(statik.scopeChain).toEqual(['exports', 'NewsSummary', 'static', 'initialize']);
@@ -137,7 +147,7 @@ describe('swcAst helpers', () => {
     expect(summaryEntry.class.extends).toBe('BaseSummary');
     expect(summaryEntry.class.implements).toBe(null);
     expect(summaryEntry.constructor.params).toBe('title, url = null');
-    expect(summaryEntry.constructor.hash).toHaveLength(8);
+    expect(summaryEntry.constructor.hash).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(summaryEntry.constructor.canonicalName).toContain('#constructor');
 
     const baseEntry = payload.constructors.find((entry) => entry.class && entry.class.name === 'BaseSummary');
@@ -322,7 +332,7 @@ describe('swcAst helpers', () => {
     expect(alphaPayload.byteLength).toBe(expectedLength);
     expect(alphaPayload.byteLength).toBeGreaterThan(0);
     expect(alphaPayload.hash).toBe(expectedAlpha.hash);
-    expect(alphaPayload.hash).toHaveLength(8);
+    expect(alphaPayload.hash).toHaveLength(EXPECTED_HASH_LENGTH);
   });
 
   test('list-functions defaults to dense layout', () => {
@@ -336,7 +346,7 @@ describe('swcAst helpers', () => {
       throw new Error(`list-functions (dense) failed: ${result.stderr || result.stdout}`);
     }
 
-    const output = result.stdout;
+    const output = stripAnsi(result.stdout);
     expect(output).toContain('Function Inventory');
     expect(output).toContain('Detected Functions');
     expect(output).toContain('alpha | kind=function-declaration | hash=');
@@ -358,8 +368,8 @@ describe('swcAst helpers', () => {
       throw new Error(`list-functions (verbose) failed: ${result.stderr || result.stdout}`);
     }
 
-    const output = result.stdout;
-    expect(output).toContain('index │ name');
+    const output = stripAnsi(result.stdout);
+    expect(output).toMatch(/index\s+│\s+name/);
     expect(output).toContain('Detected Functions');
     expect(output).not.toContain('| kind=');
   });
@@ -376,8 +386,8 @@ describe('swcAst helpers', () => {
       throw new Error(`list-functions (env verbose) failed: ${result.stderr || result.stdout}`);
     }
 
-    const output = result.stdout;
-    expect(output).toContain('index │ name');
+    const output = stripAnsi(result.stdout);
+    expect(output).toMatch(/index\s+│\s+name/);
     expect(output).not.toContain('| kind=');
   });
 
@@ -414,8 +424,8 @@ describe('swcAst helpers', () => {
     expect(inventoryHeadline).toBeDefined();
     expect(inventoryStatic.kind).toBe('class-method');
     expect(inventoryHeadline.kind).toBe('function-declaration');
-    expect(inventoryStatic.hash).toHaveLength(8);
-    expect(inventoryHeadline.hash).toHaveLength(8);
+    expect(inventoryStatic.hash).toHaveLength(EXPECTED_HASH_LENGTH);
+    expect(inventoryHeadline.hash).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(inventoryStatic.byteLength).toBeGreaterThan(0);
     expect(inventoryHeadline.byteLength).toBeGreaterThan(0);
 
@@ -678,7 +688,7 @@ describe('swcAst helpers', () => {
     const [match] = payload.matches;
     expect(match.name).toBe('ren');
     expect(match.targetMode).toBe('declarator');
-    expect(match.hash).toHaveLength(8);
+    expect(match.hash).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(match.span.start).toBeLessThan(match.span.end);
     expect(match.span.byteStart).toBeLessThan(match.span.byteEnd);
     expect(match.span.byteLength).toBeGreaterThan(0);
@@ -703,7 +713,7 @@ describe('swcAst helpers', () => {
     const payload = JSON.parse(result.stdout);
     expect(payload.variable).toBeDefined();
     expect(payload.variable.targetMode).toBe('declarator');
-    expect(payload.variable.hash).toHaveLength(8);
+    expect(payload.variable.hash).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(payload.variable.span.start).toBeLessThan(payload.variable.span.end);
     expect(payload.code).toContain('ren, stimpy: renAlias');
     expect(payload.code.trim().endsWith('= cartoon;')).toBe(true);
@@ -991,7 +1001,7 @@ describe('swcAst helpers', () => {
     expect(contextEntry.name).toBe('exports.alpha');
     expect(contextEntry.snippets.context).toContain('function alpha');
     expect(contextEntry.snippets.base).toContain("return 'alpha'");
-    expect(contextEntry.hashes.context).toHaveLength(8);
+    expect(contextEntry.hashes.context).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(contextEntry.appliedPadding.before).toBeLessThanOrEqual(24);
     expect(contextEntry.appliedPadding.after).toBeLessThanOrEqual(24);
   });
@@ -1091,7 +1101,7 @@ describe('swcAst helpers', () => {
     const [contextEntry] = contextPayload.contexts;
     expect(contextEntry.name).toBe('exports.worker');
     expect(contextEntry.snippets.base).toContain('worker-ready');
-    expect(contextEntry.hashes.base).toHaveLength(8);
+    expect(contextEntry.hashes.base).toHaveLength(EXPECTED_HASH_LENGTH);
   });
 
   test('context-variable json handles emoji bindings', () => {
@@ -1117,7 +1127,7 @@ describe('swcAst helpers', () => {
     const [contextEntry] = payload.contexts;
     expect(contextEntry.name).toContain('face');
     expect(contextEntry.snippets.context).toContain('😀');
-    expect(contextEntry.hashes.context).toHaveLength(8);
+    expect(contextEntry.hashes.context).toHaveLength(EXPECTED_HASH_LENGTH);
     expect(contextEntry.appliedPadding.before).toBeLessThanOrEqual(16);
     expect(contextEntry.appliedPadding.after).toBeLessThanOrEqual(16);
     expect(contextEntry.offsets.baseEnd).toBeGreaterThan(contextEntry.offsets.baseStart);
@@ -1213,6 +1223,75 @@ describe('swcAst helpers', () => {
       }
     });
 
+
+    test('js-edit replaces variable-assigned arrow functions with guardrails', () => {
+      const gammaRecord = functions.find((fn) => fn.canonicalName === 'gamma');
+      expect(gammaRecord).toBeDefined();
+      const replacementPath = path.join(tempDir, 'replacement-gamma.js');
+      fs.writeFileSync(
+        replacementPath,
+        "() => {\n  return 'gamma-updated';\n};\n"
+      );
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'gamma',
+        '--expect-hash',
+        gammaRecord.hash,
+        '--with',
+        replacementPath,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.guard.hash.status).toBe('ok');
+      expect(payload.guard.path.status).toBe('ok');
+      expect(payload.guard.result.status).toBe('changed');
+      expect(payload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
+
+      const updatedSource = fs.readFileSync(targetFile, 'utf8');
+      expect(updatedSource).toContain("return 'gamma-updated';");
+      expect(updatedSource).not.toContain("return 'gamma';");
+    });
+
+    test('js-edit replaces CommonJS export assignments with guardrails', () => {
+      const handlerRecord = functions.find((fn) => fn.canonicalName === 'module.exports.handler');
+      expect(handlerRecord).toBeDefined();
+      const replacementPath = path.join(tempDir, 'replacement-module-handler.js');
+      fs.writeFileSync(
+        replacementPath,
+        "function handler() {\n  return 'handler-updated';\n};\n"
+      );
+
+      const result = runJsEdit([
+        '--file',
+        targetFile,
+        '--replace',
+        'module.exports.handler',
+        '--expect-hash',
+        handlerRecord.hash,
+        '--with',
+        replacementPath,
+        '--json',
+        '--fix'
+      ]);
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.guard.hash.status).toBe('ok');
+      expect(payload.guard.path.status).toBe('ok');
+      expect(payload.guard.result.status).toBe('changed');
+      expect(payload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
+
+      const updatedSource = fs.readFileSync(targetFile, 'utf8');
+      expect(updatedSource).toContain("return 'handler-updated';");
+      expect(updatedSource).not.toContain('return exports.worker();');
+    });
+
     test('locate emits a guard plan when requested', () => {
       const planPath = path.join(tempDir, 'locate-plan.json');
       const result = runJsEdit([
@@ -1235,7 +1314,7 @@ describe('swcAst helpers', () => {
       const planFile = JSON.parse(fs.readFileSync(planPath, 'utf8'));
       expect(planFile.operation).toBe('locate');
       expect(planFile.selector).toBe('exports.alpha');
-      expect(planFile.matches[0].expectedHash).toHaveLength(8);
+      expect(planFile.matches[0].expectedHash).toHaveLength(EXPECTED_HASH_LENGTH);
       const alphaRecord = functions.find((fn) => fn.canonicalName === 'exports.alpha');
       expect(planFile.matches[0].identifierSpan).toMatchObject({
         start: alphaRecord.identifierSpan.start,
@@ -1302,7 +1381,7 @@ describe('swcAst helpers', () => {
       expect(planFile.matches).toHaveLength(1);
       expect(planFile.matches[0].canonicalName).toBe('exports.NewsSummary');
       expect(planFile.matches[0].kind).toBe('class');
-      expect(planFile.matches[0].hash).toHaveLength(8);
+      expect(planFile.matches[0].hash).toHaveLength(EXPECTED_HASH_LENGTH);
     })
 ;
 
@@ -1318,7 +1397,7 @@ describe('swcAst helpers', () => {
       expect(locate.status).toBe(0);
       const locatePayload = JSON.parse(locate.stdout);
       expect(locatePayload.matches).toHaveLength(1);
-      expect(locatePayload.matches[0].hash).toHaveLength(8);
+      expect(locatePayload.matches[0].hash).toHaveLength(EXPECTED_HASH_LENGTH);
 
       const mismatch = runJsEdit([
         '--file',
@@ -1349,7 +1428,7 @@ describe('swcAst helpers', () => {
       const forcedPayload = JSON.parse(forced.stdout);
       expect(forcedPayload.guard.hash.status).toBe('ok');
       expect(forcedPayload.guard.path.status).toBe('bypass');
-      expect(forcedPayload.guard.result.after).toHaveLength(8);
+      expect(forcedPayload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
     });
 
     test('replacement aborts on hash drift unless forced', () => {
@@ -1364,7 +1443,7 @@ describe('swcAst helpers', () => {
       expect(locate.status).toBe(0);
       const locatePayload = JSON.parse(locate.stdout);
       const expectedHash = locatePayload.matches[0].hash;
-      expect(expectedHash).toHaveLength(8);
+      expect(expectedHash).toHaveLength(EXPECTED_HASH_LENGTH);
 
       const drifted = fs
         .readFileSync(targetFile, 'utf8')
@@ -1405,7 +1484,7 @@ describe('swcAst helpers', () => {
       expect(forcedPayload.guard.hash.status).toBe('bypass');
       expect(forcedPayload.guard.hash.expected).toBe(expectedHash);
       expect(forcedPayload.guard.path.status).toBe('ok');
-      expect(forcedPayload.guard.result.after).toHaveLength(8);
+      expect(forcedPayload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
     });
 
     test('replacement aborts on span drift unless forced', () => {
@@ -1481,7 +1560,7 @@ describe('swcAst helpers', () => {
       const locatePayload = JSON.parse(locate.stdout);
       expect(locatePayload.matches).toHaveLength(1);
       const expectedHash = locatePayload.matches[0].hash;
-      expect(expectedHash).toHaveLength(8);
+      expect(expectedHash).toHaveLength(EXPECTED_HASH_LENGTH);
 
       const replaceResult = runJsEdit([
         '--file',
@@ -1500,7 +1579,7 @@ describe('swcAst helpers', () => {
       const replacePayload = JSON.parse(replaceResult.stdout);
       expect(replacePayload.guard.hash.status).toBe('ok');
       expect(replacePayload.guard.path.status).toBe('ok');
-      expect(replacePayload.guard.result.after).toHaveLength(8);
+      expect(replacePayload.guard.result.after).toHaveLength(EXPECTED_HASH_LENGTH);
 
       const updatedSource = fs.readFileSync(nestedTargetFile, 'utf8');
       expect(updatedSource).toContain("return { flag: 'updated' };");
@@ -1683,7 +1762,8 @@ describe('swcAst helpers', () => {
       const output = `${result.stderr}${result.stdout}`;
       expect(output).toContain('Replacement produced invalid JavaScript');
     });
-  });
+  })
+;
 
   describe('js-edit --with-code inline code', () => {
     let tempDir;
@@ -2142,7 +2222,7 @@ describe('swcAst helpers', () => {
       expect(payload.symbol).toBeDefined();
       expect(payload.symbol.type).toBe('function');
       expect(payload.symbol.canonicalName).toBe('exports.alpha');
-      expect(payload.symbol.hash).toHaveLength(8);
+      expect(payload.symbol.hash).toHaveLength(EXPECTED_HASH_LENGTH);
     });
 
     test.skip('--snipe accepts byte offset with @ prefix', () => {
@@ -2356,7 +2436,7 @@ describe('swcAst helpers', () => {
 
       const withExplicit = payload.constructors.find((c) => c.kind === 'explicit');
       if (withExplicit) {
-        expect(withExplicit.hash).toHaveLength(8);
+        expect(withExplicit.hash).toHaveLength(EXPECTED_HASH_LENGTH);
         expect(withExplicit.params).toBeDefined();
       }
     });
@@ -2509,8 +2589,9 @@ class InternalHelper {
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain('Constructor Inventory');
-      expect(result.stdout).toContain('index │');
-      expect(result.stdout).toMatch(/hash/);
+      const stdout = stripAnsi(result.stdout);
+      expect(stdout).toMatch(/index\s+│/);
+      expect(stdout).toMatch(/hash/);
     });
   });
 });
