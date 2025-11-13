@@ -1,0 +1,83 @@
+{
+  "version": "1.0",
+  "name": "Extract service layer",
+  "description": "Refactor tightly-coupled code into a new service module with clean interface",
+  "parameters": {
+    "serviceName": {
+      "type": "string",
+      "description": "Name of new service to create",
+      "required": true
+    },
+    "functions": {
+      "type": "array",
+      "description": "Array of function names to extract into service",
+      "required": true
+    },
+    "sourceFile": {
+      "type": "string",
+      "description": "Source file containing functions",
+      "required": true
+    },
+    "targetDir": {
+      "type": "string",
+      "description": "Directory where service will be created",
+      "default": "src/services/"
+    }
+  },
+  "validation": {
+    "fileExists": ["${sourceFile}"],
+    "arrayNotEmpty": ["${functions}"]
+  },
+  "steps": [
+    {
+      "name": "Analyze dependencies for each function",
+      "operation": "js-scan",
+      "forEach": "${functions[*]}",
+      "ripple-analysis": "$item",
+      "file": "${sourceFile}",
+      "depth": 2,
+      "emit": "deps_$item"
+    },
+    {
+      "name": "Check for circular dependencies",
+      "operation": "js-scan",
+      "search": "circular",
+      "scope": "src/",
+      "condition": "${functions.length > 0}",
+      "emit": "circular_check"
+    },
+    {
+      "name": "Create service file",
+      "operation": "js-edit",
+      "action": "create-service-file",
+      "serviceName": "${serviceName}",
+      "functions": "${functions}",
+      "targetDir": "${targetDir}",
+      "condition": "${circular_check.hasCircular|false} == false",
+      "onError": "abort",
+      "emit": "service_created"
+    },
+    {
+      "name": "Update source file - replace with import",
+      "operation": "js-edit",
+      "action": "replace-with-import",
+      "file": "${sourceFile}",
+      "functions": "${functions}",
+      "sourceModule": "${service_created.moduleId}",
+      "emit": "source_updated"
+    },
+    {
+      "name": "Find all callers",
+      "operation": "js-scan",
+      "search": "${serviceName}",
+      "scope": "src/",
+      "exclude-path": ["${sourceFile}", "*.test.js"],
+      "emit": "callers"
+    },
+    {
+      "name": "Report extraction",
+      "operation": "report",
+      "message": "Extracted ${functions.length} functions into ${serviceName} service. Updated imports in ${callers.count} files."
+    }
+  ]
+}

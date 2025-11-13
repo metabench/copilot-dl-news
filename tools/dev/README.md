@@ -29,6 +29,115 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 
 Use `--async`, `--generator`, `--kind`, `--include-path`, and `--exclude-path` to refine search results. Text output respects `--max-lines`, `--no-snippets`, and `--hashes-only` for concise listings, while JSON payloads include guidance hints when result sets overflow.
 
+### Ripple Analysis — Dependency Impact Assessment
+
+`--ripple-analysis <file>` performs multi-layer dependency graph analysis to assess refactoring risk before making changes. The analyzer builds a complete import graph, scores risk factors, detects circular dependencies, and provides safety assertions for common refactoring operations.
+
+**Quick Examples:**
+```powershell
+# Analyze a file's dependency impact (human-readable output)
+node tools/dev/js-scan.js --ripple-analysis src/modules/crawler.js
+
+# Get JSON output for automation
+node tools/dev/js-scan.js --ripple-analysis src/modules/crawler.js --json
+
+# Analyze before renaming a widely-used module
+node tools/dev/js-scan.js --ripple-analysis src/db/adapters/postgres.js
+```
+
+**Output Includes:**
+- **Dependency Graph**: Multi-layer import chains (direct imports + reverse dependencies)
+- **Risk Score**: 0-100 scale with weighted factors (importers 40%, circular deps 30%, public interface 20%, usage patterns 10%)
+- **Risk Level**: GREEN (<30), YELLOW (30-70), RED (>70) with actionable recommendations
+- **Circular Dependencies**: Complete cycle detection with path traces
+- **Safety Assertions**: Boolean checks for `canRename`, `canDelete`, `canModifySignature`, `canExtract`
+
+**Risk Levels Explained:**
+- **GREEN (0-29)**: Safe to refactor with minimal impact. Limited importers, no cycles, small public surface.
+- **YELLOW (30-69)**: Moderate risk. Review importers carefully, run full test suite after changes.
+- **RED (70-100)**: High risk. Break into smaller refactors, resolve circular dependencies first, coordinate with team.
+
+**Human-Readable Output Example:**
+```
+┌ Ripple Analysis ═══════════════════════════
+  Target File          src/modules/crawler.js
+  Nodes                14
+  Edges                13
+  Max Depth            1
+  Has Cycles           NO
+
+┌ Risk Assessment ══════════════════════════
+  Overall Score        5
+  Risk Level           GREEN
+  
+  Factor Breakdown
+    Importers          2.0  (0.8 weight)
+    Circular Deps      0.0  (0.3 weight)
+    Public Interface   10.0 (0.2 weight)
+    Usage Patterns     2.8  (0.1 weight)
+
+┌ Safety Assertions ════════════════════════
+  Can Rename           ✓ YES
+  Can Delete           ✓ YES
+  Can Modify Signature ✓ YES
+  Can Extract          ✓ YES
+
+┌ Recommendations ══════════════════════════
+  ✓ LOW RISK: Safe to refactor
+  ✓ Limited impact on codebase
+```
+
+**JSON Output Structure:**
+```json
+{
+  "targetFile": "src/modules/crawler.js",
+  "success": true,
+  "graph": {
+    "nodeCount": 14,
+    "edgeCount": 13,
+    "depth": 1,
+    "hasCycles": false,
+    "nodes": [...]
+  },
+  "risk": {
+    "score": 5,
+    "level": "GREEN",
+    "factors": {
+      "importerCount": 2.0,
+      "circularDeps": 0.0,
+      "publicInterface": 10.0,
+      "usagePatterns": 2.8
+    },
+    "recommendations": [...]
+  },
+  "cycles": {
+    "hasCycles": false,
+    "cycleCount": 0,
+    "cycles": []
+  },
+  "safetyAssertions": {
+    "canRename": true,
+    "canDelete": true,
+    "canModifySignature": true,
+    "canExtract": true
+  },
+  "summary": {
+    "message": "Ripple analysis for crawler.js: GREEN risk",
+    "nodeCount": 14,
+    "riskScore": 5,
+    "riskLevel": "GREEN",
+    "hasCycles": false
+  }
+}
+```
+
+**Integration with Refactoring Workflows:**
+1. Run ripple analysis before major refactors to assess impact
+2. Check `safetyAssertions` to confirm operation is safe
+3. Review `risk.recommendations` for specific guidance
+4. If RED level, break refactor into smaller steps or resolve cycles first
+5. Use `--json` output to automate safety checks in CI/CD pipelines
+
 ## `js-edit` — Guarded JavaScript Function Surgery
 
 `js-edit` is the flagship AST-aware utility in this workspace. It uses SWC to parse files on demand (no cached ASTs) and provides selectors, guardrails, and dry-run defaults tailored for refactor automation.
@@ -180,6 +289,228 @@ node tools/dev/js-edit.js --file src/example.js --replace "exports.Widget > #ren
 # Guarded variable replacement using declarator spans
 node tools/dev/js-edit.js --file src/example.js --locate-variable "exports.settings" --variable-target declarator --json
 node tools/dev/js-edit.js --file src/example.js --replace-variable "exports.settings" --with tmp/settings.snippet.js --expect-hash <hash-from-locate> --variable-target declarator --emit-diff --fix
+```
+
+### Recipe System — Multi-Step Refactoring Workflows
+
+`--recipe <path>` executes declarative JSON workflows that orchestrate multiple js-scan, js-edit, and report operations with variable substitution, conditional logic, and error handling strategies.
+
+**Quick Examples:**
+```powershell
+# Execute a recipe (dry-run by default)
+node tools/dev/js-edit.js --recipe tools/dev/js-edit/recipes/rename-globally.json
+
+# Apply changes with --fix
+node tools/dev/js-edit.js --recipe tools/dev/js-edit/recipes/rename-globally.json --fix
+
+# Override recipe parameters
+node tools/dev/js-edit.js --recipe recipes/refactor.json --param targetFile=src/example.js --param newName=updateHandler
+
+# Get JSON output for automation
+node tools/dev/js-edit.js --recipe recipes/refactor.json --json
+
+# Verbose mode for debugging
+node tools/dev/js-edit.js --recipe recipes/refactor.json --verbose
+```
+
+**Recipe JSON Structure:**
+```json
+{
+  "name": "rename-globally",
+  "description": "Rename a function across multiple files",
+  "version": "1.0.0",
+  "parameters": {
+    "targetFile": { "type": "string", "required": true },
+    "oldName": { "type": "string", "required": true },
+    "newName": { "type": "string", "required": true }
+  },
+  "steps": [
+    {
+      "name": "Analyze impact",
+      "operation": "js-scan",
+      "action": "ripple-analysis",
+      "target": "${parameters.targetFile}",
+      "emit": "analysis"
+    },
+    {
+      "name": "Safety check",
+      "condition": "${step1.analysis.safetyAssertions.canRename}",
+      "operation": "report",
+      "message": "✓ Safe to rename"
+    },
+    {
+      "name": "Locate function",
+      "operation": "js-edit",
+      "action": "locate",
+      "file": "${parameters.targetFile}",
+      "selector": "${parameters.oldName}",
+      "emit": "location"
+    },
+    {
+      "name": "Replace function",
+      "operation": "js-edit",
+      "action": "rename",
+      "file": "${parameters.targetFile}",
+      "selector": "${parameters.oldName}",
+      "rename": "${parameters.newName}",
+      "expectHash": "${step3.location.hash}",
+      "onError": "abort"
+    }
+  ]
+}
+```
+
+**Variable Substitution:**
+- `${parameters.variableName}` — Access recipe parameters (passed via `--param` or defined in JSON)
+- `${stepN.key.path}` — Access results from previous steps (e.g., `${step1.analysis.risk.level}`)
+- `${NOW}` — Current timestamp (ISO 8601)
+- `${TODAY}` — Current date (YYYY-MM-DD)
+- `${WORKSPACE}` — Workspace root directory
+- `${BRANCH}` — Current git branch (if available)
+- `${variable|fallback}` — Provide fallback value if variable is undefined
+
+**Conditional Execution:**
+```json
+{
+  "condition": "${step1.analysis.safetyAssertions.canRename}",
+  "operation": "js-edit",
+  "action": "rename",
+  ...
+}
+```
+
+Conditions support:
+- Comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- Logical operators: `&&`, `||`, `!`
+- Precedence with parentheses: `(A && B) || C`
+
+**Error Handling Strategies:**
+```json
+{
+  "operation": "js-edit",
+  "onError": "abort",     // Stop recipe on error (default)
+  ...
+}
+
+{
+  "operation": "js-scan",
+  "onError": "continue",  // Log error and continue to next step
+  ...
+}
+
+{
+  "operation": "js-edit",
+  "onError": "retry",     // Retry step once before failing
+  "maxRetries": 3,        // Optional: specify retry count
+  ...
+}
+```
+
+**Supported Operations:**
+
+**js-scan Operations:**
+- `search` — Multi-term search with pattern matching
+- `find-hash` — Locate function by guard hash
+- `ripple-analysis` — Dependency impact analysis
+- `build-index` — Generate module statistics
+
+**js-edit Operations:**
+- `locate` — Find function/variable and capture guard metadata
+- `rename` — Rename function identifier
+- `replace` — Replace function/variable with new content
+- `extract` — Extract function/variable to separate file
+- `batch` — Perform multiple operations in sequence
+
+**report Operations:**
+- `message` — Print status message
+- `summary` — Display step execution summary
+- `manifest` — Output recipe manifest with timing
+
+**Recipe Output:**
+
+Human-readable format shows step-by-step progress:
+```
+Recipe validated successfully
+
+┌ Recipe Execution ════════════════════════════
+  Recipe                         rename-globally.json
+  Steps                          4
+
+  Status                         SUCCESS
+  Total Duration                 245ms
+  Steps Executed                 4
+
+┌ Step Results ════════════════════════════════
+  [1] ✓ Analyze impact (89ms)
+  [2] ✓ Safety check (1ms)
+  [3] ✓ Locate function (102ms)
+  [4] ✓ Replace function (53ms)
+
+┌ Variables ═══════════════════════════════════
+  NOW                            2025-11-11T14:23:45.123Z
+  TODAY                          2025-11-11
+  WORKSPACE                      c:\Users\james\Documents\repos\copilot-dl-news
+```
+
+JSON format includes complete execution details:
+```json
+{
+  "recipeName": "rename-globally",
+  "status": "success",
+  "totalDuration": 245,
+  "stepsExecuted": 4,
+  "stepResults": [
+    {
+      "stepName": "Analyze impact",
+      "operation": "js-scan",
+      "status": "success",
+      "results": { ... },
+      "duration": 89
+    },
+    ...
+  ],
+  "variables": {
+    "NOW": "2025-11-11T14:23:45.123Z",
+    ...
+  }
+}
+```
+
+**Best Practices:**
+1. Always start recipes with `ripple-analysis` to assess impact
+2. Use conditional steps to guard against unsafe operations
+3. Store intermediate results with `emit` for use in later steps
+4. Test recipes in dry-run mode before applying `--fix`
+5. Use `abort` error strategy for critical operations
+6. Keep recipes modular and focused on single refactoring goals
+7. Document parameters clearly in the recipe JSON
+
+**Integration with Ripple Analysis:**
+```json
+{
+  "steps": [
+    {
+      "name": "Check safety",
+      "operation": "js-scan",
+      "action": "ripple-analysis",
+      "target": "${parameters.targetFile}",
+      "emit": "safety"
+    },
+    {
+      "name": "Abort if high risk",
+      "condition": "${step1.safety.risk.level} == RED",
+      "operation": "report",
+      "message": "⚠️  High risk detected. Aborting refactor.",
+      "onError": "abort"
+    },
+    {
+      "name": "Proceed with refactor",
+      "condition": "${step1.safety.safetyAssertions.canRename}",
+      "operation": "js-edit",
+      ...
+    }
+  ]
+}
 ```
 
 ### Hash-Driven Selection & Relative Snippets

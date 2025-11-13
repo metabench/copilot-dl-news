@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "name": "Large-scale refactor orchestration",
+  "description": "Execute a multi-phase refactor with validation checkpoints, rollback plan, and comprehensive reporting",
+  "parameters": {
+    "phases": {
+      "type": "array",
+      "description": "Array of phase configurations",
+      "required": true
+    },
+    "dryRun": {
+      "type": "boolean",
+      "description": "Preview changes without committing",
+      "default": false
+    },
+    "analysisTarget": {
+      "type": "string",
+      "description": "Representative module to analyze for ripple impact",
+      "required": true
+    },
+    "analysisWorkspace": {
+      "type": "string",
+      "description": "Workspace root for ripple analysis",
+      "default": "src/"
+    },
+    "checkpointDir": {
+      "type": "string",
+      "description": "Directory to save phase checkpoints",
+      "default": "tmp/refactor-checkpoints/"
+    }
+  },
+  "validation": {
+    "arrayNotEmpty": ["${phases}"]
+  },
+  "steps": [
+    {
+      "name": "Initialize refactor workspace",
+      "operation": "report",
+      "message": "Starting large-scale refactor with ${phases.length} phases. Dry-run mode: ${dryRun}"
+    },
+    {
+      "name": "Phase 1: Preparation",
+      "operation": "js-scan",
+      "search": "TODO|FIXME",
+      "scope": "src/",
+      "emit": "preparation_notes"
+    },
+    {
+      "name": "Phase 2: Analysis",
+      "operation": "js-scan",
+      "ripple-analysis": "${analysisTarget}",
+      "file": "${analysisTarget}",
+      "workspace": "${analysisWorkspace}",
+      "scope": "${analysisWorkspace}",
+      "depth": 4,
+      "emit": "dependency_graph"
+    },
+    {
+      "name": "Phase 3: Execute transformations",
+      "operation": "js-edit",
+      "action": "batch",
+      "forEach": "${phases[*]}",
+      "steps": [
+        {
+          "operation": "js-edit",
+          "action": "execute-phase",
+          "phase": "$item",
+          "dryRun": "${dryRun}",
+          "onError": "continue"
+        }
+      ],
+      "emit": "transformation_results"
+    },
+    {
+      "name": "Phase 4: Validation",
+      "operation": "js-scan",
+      "search": "error|warn",
+      "scope": "src/",
+      "exclude-path": ["*.test.js"],
+      "emit": "validation_scan"
+    },
+    {
+      "name": "Phase 5: Report",
+      "operation": "report",
+      "message": "Refactor complete.\nPhases executed: ${transformation_results.phasesCompleted}/${phases.length}\nValidation warnings: ${validation_scan.count}\nDry-run mode: ${dryRun}"
+    }
+  ]
+}

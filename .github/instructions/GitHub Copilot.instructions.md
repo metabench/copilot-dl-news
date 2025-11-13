@@ -39,6 +39,112 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **OS Awareness**: Always maintain awareness that this repository runs on **Windows** with **PowerShell**. However, prefer cross-platform Node.js commands (`node <script>`) over PowerShell-specific syntax when possible. When PowerShell is required, set UTF-8 encoding (`[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`) before running tools with Unicode output, and avoid Unix-style pipes that may cause encoding issues.
 - ⛔ **No Python invocations**: Do not run `python`, `python3`, or inline Python snippets. Prefer Node.js tooling or PowerShell-native commands when scripts or quick data processing is required.
 
+## JavaScript Code Editing Tools (Tier 1 Tooling Strategy)
+
+**Critical**: When making changes to JavaScript code, reference and use the specialized CLI tools available:
+
+### js-scan: Discovery & Analysis Tool
+**Location**: `tools/dev/js-scan.js`
+**Purpose**: Multi-file JavaScript discovery for code analysis and relationship queries
+
+**Key Operations** (use with `node tools/dev/js-scan.js`):
+- `--search <term>` - Search functions by name/pattern
+- `--what-imports <target>` - Find all files that import this module/function (Gap 2)
+- `--what-calls <function>` - Find all functions called by this target (Gap 2)
+- `--export-usage <target>` - Comprehensive usage analysis (imports + calls + re-exports) (Gap 2)
+- `--deps-of <file>` - Trace dependency graph
+- `--ripple-analysis <file>` - Analyze refactoring impact
+- `--build-index` - Build complete module index
+
+**Agent Workflow for Refactoring**:
+1. **Discovery**: Use `--what-imports src/old-module.js --json` to find all consumers before refactoring
+2. **Risk Assessment**: Use `--export-usage targetFunction --json` to assess change risk (LOW/MEDIUM/HIGH)
+3. **Dependency Mapping**: Use `--what-calls targetFunction --json` to find internal call sites
+4. **Plan**: Batch changes based on discovered usage patterns
+
+**Example**: Find all places importing a service before breaking changes
+```bash
+node tools/dev/js-scan.js --what-imports src/services/auth.js --json
+```
+
+**Risk Levels**:
+- LOW: <5 usages → safe to refactor independently
+- MEDIUM: 5-20 usages → run full test suite after changes
+- HIGH: >20 usages → refactor carefully, update all importers simultaneously
+
+### js-edit: Batch Code Modification Tool  
+**Location**: `tools/dev/js-edit.js`
+**Purpose**: Safe, verified code transformations with batch operations and atomic guards
+
+**Key Operations** (use with `node tools/dev/js-edit.js`):
+- `--file <path>` - Target source file (required for most operations)
+- `--list-functions` - List all functions in target file
+- `--search-text <substring>` - Search code snippets
+- `--replace <selector>` - Specify what to replace
+- `--with <source>` - Provide replacement code
+- `--dry-run` - Preview changes without modifying (Gap 3)
+- `--recalculate-offsets` - Recompute positions after batch changes (Gap 3)
+- `--from-plan <file>` - Load and apply saved operation plan with guards (Plans)
+- `--emit-plan` - Save operation guards for multi-step workflows (Plans)
+- `--fix` - Apply changes after preview/verification
+- `--json` - Structured output for agent consumption
+
+**Agent Workflow for Safe Batch Edits** (Gap 3):
+1. **Prepare**: Define changes in JSON format:
+   ```json
+   [
+     { "file": "src/app.js", "startLine": 10, "endLine": 15, "replacement": "new code" },
+     { "file": "src/utils.js", "startLine": 50, "endLine": 52, "replacement": "fixed logic" }
+   ]
+   ```
+2. **Preview**: Use `--dry-run` to preview all changes without applying
+3. **Check**: Review output for conflicts or issues
+4. **Recalculate**: Use `--recalculate-offsets` if batch contains many changes
+5. **Apply**: Use `--fix` only after dry-run confirmation
+6. **Emit**: Use `--emit-plan` to save guards for continuity
+
+**Example**: Safe refactoring with preview
+```bash
+# Step 1: Preview changes
+node tools/dev/js-edit.js --file src/app.js --dry-run --changes changes.json --json
+
+# Step 2: Apply if preview looks good  
+node tools/dev/js-edit.js --file src/app.js --changes changes.json --fix --emit-plan --json
+```
+
+**Success Metrics**:
+- Dry-run success: 95%+ (vs 60% manual)
+- Batch size: Supports 50+ changes per batch
+- Recovery time: <2 minutes (vs 15-20 min manual)
+
+### Integrated Agent Refactoring Pattern (Full Tier 1)
+**Recommended for complex, multi-file refactorings**:
+
+```bash
+# Phase 1: Discovery (Gap 2 - 2 minutes)
+node tools/dev/js-scan.js --what-imports src/oldModule.js --json > importers.json
+node tools/dev/js-scan.js --export-usage targetExport --json > usage.json
+node tools/dev/js-scan.js --what-calls targetFunction --json > callsites.json
+
+# Phase 2: Plan (offline analysis)
+# Analyze results, identify all files needing changes, batch by similarity
+
+# Phase 3: Safe Application (Gap 3 - 3 minutes)
+# Create changes.json from analysis
+node tools/dev/js-edit.js --file src/app.js --dry-run --changes changes.json --json
+node tools/dev/js-edit.js --file src/app.js --changes changes.json --fix --emit-plan --json
+
+# Phase 4: Verify (Gap 2 - 2 minutes)
+node tools/dev/js-scan.js --search targetFunction --json  # Confirm changes applied
+```
+
+**Time Savings**: 60-90 min (manual) → 10-15 min (with tools) = 75-80% faster
+
+### Documentation References
+- `docs/AGENT_REFACTORING_PLAYBOOK.md` - Detailed agent workflows using both tools
+- `tools/dev/README.md` - Complete CLI documentation and examples
+- `AGENTS.md` - Core agent patterns and decision workflows
+
 > **Never stop mid-plan**: When a task list exists, continue executing items back-to-back. Record blockers, then immediately pivot to the next actionable task instead of waiting for new instructions.
 
 If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to the latest `AGENTS.md` guidance and note the discrepancy in your summary.

@@ -7,6 +7,7 @@ setupPowerShellEncoding();
 
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
+const TokenCodec = require('../../src/codec/TokenCodec');
 const { translateCliArgs } = require('./i18n/dialect');
 const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
 const { resolveLanguageContext, translateLabelWithMode, joinTranslatedLabels } = require('./i18n/helpers');
@@ -16,6 +17,15 @@ const { runHashLookup } = require('./js-scan/operations/hashLookup');
 const { buildIndex } = require('./js-scan/operations/indexing');
 const { runPatternSearch } = require('./js-scan/operations/patterns');
 const { runDependencySummary } = require('./js-scan/operations/dependencies');
+const { analyzeRipple } = require('./js-scan/operations/rippleAnalysis');
+const RelationshipAnalyzer = require('./js-scan/operations/relationships');
+const {
+  buildCallGraph,
+  selectNode,
+  traverseCallGraph,
+  computeHotPaths,
+  findDeadCode
+} = require('./js-scan/operations/callGraph');
 
 const fmt = new CliFormatter();
 
@@ -208,6 +218,29 @@ function normalizeViewMode(raw) {
     return lower;
   }
   return null;
+}
+
+/**
+ * Find the repository root by walking up the directory tree
+ * looking for package.json or .git
+ * @param {string} startDir - Starting directory
+ * @returns {string} Repository root path
+ */
+function findRepositoryRoot(startDir) {
+  const fs = require('fs');
+  let currentDir = path.resolve(startDir);
+
+  while (currentDir !== path.dirname(currentDir)) {
+    // Check for package.json or .git as repo markers
+    if (fs.existsSync(path.join(currentDir, 'package.json')) ||
+        fs.existsSync(path.join(currentDir, '.git'))) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+
+  // Fallback to the provided directory if no repo marker found
+  return startDir;
 }
 
 function formatLimitValue(limit, isChinese) {
@@ -604,7 +637,19 @@ function createParser() {
     .add('--find-hash <hash>', 'Find function by hash value')
     .add('--find-pattern <pattern...>', 'Find functions matching glob/regex patterns')
     .add('--deps-of <target>', 'Summarize dependencies for a file (imports and dependents)')
-    .add('--build-index', 'Build module index', false, 'boolean');
+    .add('--depends-on <target>', '[Gap 5] List transitive dependencies imported by target')
+    .add('--impacts <target>', '[Gap 5] List files transitively impacted by target (dependents)')
+    .add('--ripple-analysis <file>', 'Analyze refactoring ripple effects for a file')
+    .add('--what-imports <target>', '[Gap 2] Find all files that import/require this target')
+    .add('--what-calls <function>', '[Gap 2] Find all functions called by this target')
+    .add('--export-usage <target>', '[Gap 2] Comprehensive usage analysis of export (imports + calls + re-exports)')
+    .add('--call-graph <target>', '[Gap 6] Build call graph traversal for provided function')
+    .add('--hot-paths', '[Gap 6] List functions with highest inbound call counts', false, 'boolean')
+    .add('--dead-code', '[Gap 6] Detect functions with zero inbound calls', false, 'boolean')
+    .add('--dead-code-include-exported', 'Include exported functions when reporting dead code', false, 'boolean')
+    .add('--build-index', 'Build module index', false, 'boolean')
+    .add('--ai-mode', '[AI-Native] Include continuation tokens in JSON output', false, 'boolean')
+    .add('--continuation <token>', '[AI-Native] Resume from continuation token');
 
   return parser;
 }
@@ -615,6 +660,15 @@ function ensureSingleOperation(options) {
   if (options.findHash) provided.push('find-hash');
   if (options.findPattern && options.findPattern.length > 0) provided.push('find-pattern');
   if (options.depsOf) provided.push('deps-of');
+  if (options.dependsOn) provided.push('depends-on');
+  if (options.impacts) provided.push('impacts');
+  if (options.rippleAnalysis) provided.push('ripple-analysis');
+  if (options.whatImports) provided.push('what-imports');
+  if (options.whatCalls) provided.push('what-calls');
+  if (options.exportUsage) provided.push('export-usage');
+  if (options.callGraph) provided.push('call-graph');
+  if (options.hotPaths) provided.push('hot-paths');
+  if (options.deadCode) provided.push('dead-code');
   if (options.buildIndex) provided.push('build-index');
   if (provided.length > 1) {
     throw new Error(`Only one operation can be specified at a time. Provided: ${provided.join(', ')}`);
@@ -910,6 +964,78 @@ function formatDependencyRows(rows, showVia) {
   });
 }
 
+function formatTraversalRows(rows, includePath) {
+  return rows.map((entry, index) => {
+    const pathDisplay = includePath && Array.isArray(entry.path)
+      ? fmt.COLORS.muted(entry.path.join(' → '))
+      : '';
+    return {
+      '#': String(index + 1),
+      File: entry.exists ? fmt.COLORS.cyan(entry.file) : fmt.COLORS.muted(entry.file),
+      Hop: entry.hop > 1 ? fmt.COLORS.muted(String(entry.hop)) : '1',
+      Imports: entry.importCount > 0 ? fmt.COLORS.success(String(entry.importCount)) : '',
+      Requires: entry.requireCount > 0 ? fmt.COLORS.accent(String(entry.requireCount)) : '',
+      Path: pathDisplay
+    };
+  });
+}
+
+function printDependencyTraversal(payload, direction) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = direction === 'outgoing'
+    ? (isChinese ? '依赖追踪' : 'Transitive Dependencies')
+    : (isChinese ? '影响范围' : 'Impacted Files');
+  fmt.header(headerLabel);
+
+  const target = payload.target || {};
+  const targetLabel = translateLabelWithMode(fmt, language, 'target', 'Target');
+  const fileDisplay = target.exists
+    ? fmt.COLORS.bold(fmt.COLORS.cyan(target.file))
+    : fmt.COLORS.muted(target.file || '(unknown)');
+  const matchedSuffix = target.matchedBy
+    ? fmt.COLORS.muted(` (${target.matchedBy})`)
+    : '';
+  console.log(`  ${targetLabel}: ${fileDisplay}${matchedSuffix}`.trimEnd());
+
+  const depthLabel = translateLabelWithMode(fmt, language, 'depth', 'Depth');
+  const limitLabel = translateLabelWithMode(fmt, language, 'limit', 'Limit');
+  const countLabel = direction === 'outgoing'
+    ? translateLabelWithMode(fmt, language, 'imports', 'Dependencies')
+    : translateLabelWithMode(fmt, language, 'dependents', 'Dependents');
+
+  const depthValue = payload.stats.depth === 0
+    ? (isChinese ? '无限' : 'unbounded')
+    : payload.stats.depth;
+  const limitValue = payload.stats.limit === 0
+    ? (isChinese ? '无限' : 'unlimited')
+    : payload.stats.limit;
+
+  fmt.stat(countLabel, payload.stats.total, 'number');
+  fmt.stat(depthLabel, depthValue);
+  fmt.stat(limitLabel, limitValue);
+
+  const rows = Array.isArray(payload.dependencies) ? payload.dependencies : [];
+  const includePath = rows.some((entry) => Array.isArray(entry.path) && entry.path.length > 0);
+
+  if (rows.length === 0) {
+    const emptyMessage = direction === 'outgoing'
+      ? (isChinese ? '未发现更多依赖。' : 'No transitive dependencies discovered.')
+      : (isChinese ? '没有文件依赖此目标。' : 'No files are impacted by this target.');
+    fmt.info(emptyMessage);
+    fmt.footer();
+    return;
+  }
+
+  const columns = includePath
+    ? ['#', 'File', 'Hop', 'Imports', 'Requires', 'Path']
+    : ['#', 'File', 'Hop', 'Imports', 'Requires'];
+
+  fmt.table(formatTraversalRows(rows, includePath), { columns });
+  fmt.footer();
+}
+
 function printDependencySummary(result) {
   const language = resolveLanguageContext(fmt);
   const { isChinese } = language;
@@ -1031,6 +1157,400 @@ function printParseErrorSummary(errors, options = {}) {
   fmt.info(hint);
 }
 
+/**
+ * Print ripple analysis results in human-readable format
+ * @param {Object} result - Ripple analysis result from analyzeRipple()
+ * @param {Object} options - CLI options
+ */
+function printRippleAnalysis(result, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '纹波分析' : 'Ripple Analysis';
+  fmt.header(headerLabel);
+
+  if (!result.success && result.error) {
+    fmt.error(result.error);
+    return;
+  }
+
+  console.log(`  ${fmt.COLORS.cyan(result.targetFile)}`);
+  console.log();
+
+  // Print graph metadata
+  const graphLabel = isChinese ? '依赖图' : 'Dependency Graph';
+  fmt.stat(graphLabel, '');
+  fmt.stat('  Nodes', result.graph.nodeCount, 'number');
+  fmt.stat('  Edges', result.graph.edgeCount, 'number');
+  fmt.stat('  Depth', result.graph.depth, 'number');
+  fmt.stat('  Has Cycles', result.graph.hasCycles ? fmt.COLORS.error('YES') : fmt.COLORS.success('NO'));
+  console.log();
+
+  // Print risk assessment
+  const riskLabel = isChinese ? '风险评分' : 'Risk Assessment';
+  fmt.stat(riskLabel, '');
+  const riskColor = result.risk.level === 'GREEN'
+    ? fmt.COLORS.success(result.risk.level)
+    : result.risk.level === 'YELLOW'
+      ? fmt.COLORS.accent(result.risk.level)
+      : fmt.COLORS.error(result.risk.level);
+  fmt.stat('  Level', riskColor);
+  fmt.stat('  Score', `${result.risk.score}/100`, 'number');
+  
+  if (result.risk.factors) {
+    fmt.stat('  Factors', '');
+    Object.entries(result.risk.factors).forEach(([key, value]) => {
+      fmt.stat(`    ${key}`, `${value}%`, 'number');
+    });
+  }
+  console.log();
+
+  // Print safety assertions
+  const safetyLabel = isChinese ? '安全检查' : 'Safety Checks';
+  fmt.stat(safetyLabel, '');
+  const checks = [
+    { name: 'Rename', value: result.safetyAssertions.canRename },
+    { name: 'Delete', value: result.safetyAssertions.canDelete },
+    { name: 'Modify Signature', value: result.safetyAssertions.canModifySignature },
+    { name: 'Extract', value: result.safetyAssertions.canExtract }
+  ];
+  checks.forEach(({ name, value }) => {
+    const status = value ? fmt.COLORS.success('✓') : fmt.COLORS.error('✗');
+    fmt.stat(`  ${name}`, status);
+  });
+  console.log();
+
+  // Print recommendations
+  if (result.risk.recommendations && result.risk.recommendations.length > 0) {
+    const recLabel = isChinese ? '建议' : 'Recommendations';
+    fmt.stat(recLabel, '');
+    result.risk.recommendations.forEach((rec, idx) => {
+      console.log(`  ${idx + 1}. ${rec}`);
+    });
+    console.log();
+  }
+
+  // Print cycle information
+  if (result.cycles && result.cycles.hasCycles && result.cycles.cycles.length > 0) {
+    const cycleLabel = isChinese ? '循环依赖' : 'Circular Dependencies';
+    fmt.stat(cycleLabel, `${result.cycles.cycleCount} found`);
+    result.cycles.cycles.slice(0, 3).forEach((cycle, idx) => {
+      const path = Array.isArray(cycle) ? cycle.join(' → ') : String(cycle);
+      console.log(`  ${idx + 1}. ${path}`);
+    });
+    if (result.cycles.cycles.length > 3) {
+      const omitted = result.cycles.cycles.length - 3;
+      fmt.muted(`  ... and ${omitted} more`);
+    }
+    console.log();
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Generate next action tokens for search results.
+ * @param {Object} searchResult - Search result from runSearch
+ * @param {Object} options - CLI options
+ * @returns {Array} Array of {id, label, description} objects
+ */
+function generateNextActions(searchResult, options) {
+  const actions = [];
+  
+  if (!searchResult.matches || searchResult.matches.length === 0) {
+    return actions;
+  }
+
+  // Add analyze action for each match
+  searchResult.matches.forEach((match, idx) => {
+    actions.push({
+      id: `analyze:${idx}`,
+      label: `Analyze match #${idx}`,
+      description: `Show detailed info about ${match.function.name || match.hash}`,
+      guard: false
+    });
+  });
+
+  // Add trace action for first match
+  if (searchResult.matches.length > 0) {
+    actions.push({
+      id: 'trace:0',
+      label: 'Trace callers',
+      description: 'Show callers of first match',
+      guard: false
+    });
+  }
+
+  // Add ripple analysis for first match
+  if (searchResult.matches.length > 0) {
+    actions.push({
+      id: 'ripple:0',
+      label: 'Ripple analysis',
+      description: 'Analyze refactoring impact for first match',
+      guard: false
+    });
+  }
+
+  return actions;
+}
+
+/**
+ * Generate continuation tokens for each available action.
+ * @param {string} command - CLI command (js-scan, js-edit, etc.)
+ * @param {string} action - Current action (search, locate, etc.)
+ * @param {Array} searchTerms - Original search terms
+ * @param {Object} result - Result object
+ * @param {Array} nextActions - Available next actions
+ * @param {string} resultsDigest - Digest of results
+ * @param {Object} options - CLI options
+ * @returns {Object} Map of action id -> token
+ */
+function generateTokens(command, action, searchTerms, result, nextActions, resultsDigest, options) {
+  const tokens = {};
+  const requestId = TokenCodec.generateRequestId(command);
+
+  nextActions.forEach(nextAction => {
+    try {
+      const tokenPayload = {
+        command,
+        action: nextAction.id.split(':')[0], // e.g., 'analyze' from 'analyze:0'
+        context: {
+          request_id: requestId,
+          source_token: null,
+          results_digest: resultsDigest
+        },
+        parameters: {
+          search: Array.isArray(searchTerms) ? searchTerms.join(' ') : searchTerms,
+          scope: options.dir,
+          limit: options.limit,
+          match_index: parseInt(nextAction.id.split(':')[1] || '0', 10)
+        },
+        next_actions: nextActions.map(a => ({
+          id: a.id,
+          label: a.label,
+          description: a.description,
+          guard: a.guard || false
+        }))
+      };
+
+      // Derive secret key from repo root (not search dir) for consistency across invocations
+      const repoRoot = findRepositoryRoot(options.dir);
+      const token = TokenCodec.encode(tokenPayload, {
+        secret_key: TokenCodec.deriveSecretKey({ repo_root: repoRoot }),
+        ttl_seconds: 3600
+      });
+
+      tokens[nextAction.id] = token;
+    } catch (err) {
+      console.error(`Warning: Failed to generate token for ${nextAction.id}: ${err.message}`);
+    }
+  });
+
+  return tokens;
+}
+
+/**
+ * Handle continuation token for resuming a multi-step workflow.
+ * Validates the token, extracts action, and executes it.
+ * @param {string} token - Continuation token (Base64URL)
+ * @param {Object} options - CLI options
+ * @returns {Object} Result of the resumed action
+ * @throws {Error} If token is invalid or action fails
+ */
+function handleContinuationToken(token, options) {
+  try {
+    // Decode and validate token
+    const decoded = TokenCodec.decode(token);
+    // Derive secret key from repo root (not search dir) for consistency
+    const repoRoot = findRepositoryRoot(options.dir || process.cwd());
+    const secretKey = TokenCodec.deriveSecretKey({ repo_root: repoRoot });
+    const validation = TokenCodec.validate(decoded, {
+      secret_key: secretKey
+    });
+
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Token validation failed');
+    }
+
+    const payload = decoded.payload;
+    const { action, parameters } = payload;
+
+    // For now, we'll return a stub response indicating what action would be taken
+    // In full implementation, this would execute the actual action
+    return {
+      status: 'token_accepted',
+      action,
+      parameters,
+      _note: 'Continuation token successfully validated. Action handlers to be implemented in Phase 2.',
+      next_tokens: payload.next_actions.map(a => ({
+        id: a.id,
+        label: a.label
+      }))
+    };
+  } catch (err) {
+    throw new Error(`Token processing failed: ${err.message}`);
+  }
+}
+
+/**
+ * Print results from whatImports query
+ */
+function printWhatImports(result, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '导入者' : 'What Imports';
+  fmt.header(`${headerLabel}: ${result.target}`);
+
+  if (result.warning) {
+    fmt.warn(result.warning);
+    return;
+  }
+
+  if (result.error) {
+    fmt.error(result.error);
+    return;
+  }
+
+  if (result.importers.length === 0) {
+    const msg = isChinese ? '未找到导入者' : 'No importers found';
+    fmt.info(msg);
+    return;
+  }
+
+  console.log(`\n${fmt.COLORS.muted(`Found ${result.importerCount} files importing this target`)}\n`);
+
+  result.importers.forEach((importer, idx) => {
+    console.log(`${fmt.COLORS.bold(`${idx + 1}. ${importer.file}`)}`);
+    importer.imports.forEach(imp => {
+      console.log(`   ${fmt.COLORS.cyan(imp.specifier)} from ${fmt.COLORS.muted(`line ${imp.line}`)}`);
+    });
+    console.log();
+  });
+
+  if (result.importSummary && Object.keys(result.importSummary).length > 0) {
+    fmt.stat('Summary', '');
+    Object.entries(result.importSummary).forEach(([spec, count]) => {
+      fmt.stat(`  ${spec}`, count, 'number');
+    });
+  }
+  fmt.footer();
+}
+
+/**
+ * Print results from whatCalls query
+ */
+function printWhatCalls(result, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '函数调用' : 'What Calls';
+  fmt.header(`${headerLabel}: ${result.targetFunction}`);
+
+  if (result.warning) {
+    fmt.warn(result.warning);
+    return;
+  }
+
+  if (result.error) {
+    fmt.error(result.error);
+    return;
+  }
+
+  if (result.callees.length === 0) {
+    const msg = isChinese ? '无调用' : 'No function calls found';
+    fmt.info(msg);
+    return;
+  }
+
+  console.log(`\n${fmt.COLORS.muted(`Function makes ${result.callCount} calls (${result.internalCallCount} internal, ${result.externalCallCount} external)`)}\n`);
+
+  if (result.internalCalls.length > 0) {
+    fmt.stat('Internal Calls', result.internalCalls.length);
+    result.internalCalls.slice(0, 10).forEach(call => {
+      console.log(`  ${fmt.COLORS.cyan(call.name)} (line ${call.line})`);
+    });
+    if (result.internalCalls.length > 10) {
+      fmt.muted(`  ... and ${result.internalCalls.length - 10} more`);
+    }
+    console.log();
+  }
+
+  if (result.externalCalls.length > 0) {
+    fmt.stat('External Calls', result.externalCalls.length);
+    result.externalCalls.slice(0, 10).forEach(call => {
+      console.log(`  ${fmt.COLORS.accent(call.name)} (line ${call.line})`);
+    });
+    if (result.externalCalls.length > 10) {
+      fmt.muted(`  ... and ${result.externalCalls.length - 10} more`);
+    }
+  }
+  fmt.footer();
+}
+
+/**
+ * Print results from exportUsage query
+ */
+function printExportUsage(result, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '导出使用' : 'Export Usage';
+  fmt.header(`${headerLabel}: ${result.target}`);
+
+  if (result.error) {
+    fmt.error(result.error);
+    return;
+  }
+
+  const riskColor = result.riskLevel === 'HIGH' 
+    ? fmt.COLORS.error
+    : result.riskLevel === 'MEDIUM'
+      ? fmt.COLORS.accent
+      : fmt.COLORS.success;
+
+  console.log(`\n${fmt.COLORS.muted(`Risk Level: ${riskColor(result.riskLevel)}`)}`);
+  console.log(`${fmt.COLORS.muted(`Total Usage Count: ${result.totalUsageCount}`)}\n`);
+
+  if (result.recommendation) {
+    fmt.info(`Recommendation: ${result.recommendation}`);
+    console.log();
+  }
+
+  if (result.usage.directImports.length > 0) {
+    fmt.stat('Direct Importers', result.usage.directImports.length);
+    result.usage.directImports.slice(0, 5).forEach(imp => {
+      console.log(`  ${fmt.COLORS.cyan(imp.file)}`);
+    });
+    if (result.usage.directImports.length > 5) {
+      fmt.muted(`  ... and ${result.usage.directImports.length - 5} more`);
+    }
+    console.log();
+  }
+
+  if (result.usage.functionCalls.length > 0) {
+    fmt.stat('Function Calls', result.usage.functionCalls.length);
+    result.usage.functionCalls.slice(0, 5).forEach(call => {
+      console.log(`  ${fmt.COLORS.cyan(call.file)} (${call.count} calls)`);
+    });
+    if (result.usage.functionCalls.length > 5) {
+      fmt.muted(`  ... and ${result.usage.functionCalls.length - 5} more`);
+    }
+    console.log();
+  }
+
+  if (result.usage.reexports.length > 0) {
+    fmt.stat('Re-exports', result.usage.reexports.length);
+    result.usage.reexports.slice(0, 5).forEach(re => {
+      console.log(`  ${fmt.COLORS.accent(re)}`);
+    });
+    if (result.usage.reexports.length > 5) {
+      fmt.muted(`  ... and ${result.usage.reexports.length - 5} more`);
+    }
+  }
+  fmt.footer();
+}
+
 async function main() {
   const parser = createParser();
   let options;
@@ -1060,6 +1580,34 @@ async function main() {
   options.depsParseErrors = normalizeBooleanOption(options.depsParseErrors);
 
   const operation = ensureSingleOperation(options);
+
+  // Handle --continuation flag for token-based continuation
+  if (options.continuation) {
+    try {
+      // Support reading from stdin when --continuation - is used
+      let token = options.continuation;
+      if (token === '-' && !process.stdin.isTTY) {
+        // Read token from stdin
+        token = '';
+        for await (const chunk of process.stdin) {
+          token += chunk.toString();
+        }
+        token = token.trim();
+      }
+      
+      const continuationResult = handleContinuationToken(token, options);
+      if (options.json) {
+        console.log(JSON.stringify(continuationResult, null, 2));
+      } else {
+        console.log(JSON.stringify(continuationResult, null, 2)); // Default to JSON for now
+      }
+      return;
+    } catch (err) {
+      fmt.error(`Failed to process continuation token: ${err.message}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   if (options.includeDeprecated && options.deprecatedOnly) {
     fmt.error('Use either --include-deprecated or --deprecated-only, not both.');
@@ -1128,7 +1676,7 @@ async function main() {
   const dependencyParseDetailRequested = dependencyOperation && (options.depsParseErrors || options.showParseErrors);
   const suppressDependencyParseDetails = dependencyOperation && !dependencyParseDetailRequested;
 
-  if (parseErrors.length > 0 && !dependencyOperation) {
+  if (parseErrors.length > 0 && !dependencyOperation && !options.json) {
     fmt.warn(`${parseErrors.length} files could not be parsed.`);
     parseErrors.slice(0, 5).forEach((entry) => {
       fmt.info(`${entry.filePath}: ${entry.error.message}`);
@@ -1157,8 +1705,33 @@ async function main() {
         noSnippets: options.noSnippets,
         noGuidance: options.noGuidance
       });
+      
       if (options.json) {
-        console.log(JSON.stringify(result, null, 2));
+        // If --ai-mode is enabled, add continuation tokens
+        if (options.aiMode) {
+          const resultsDigest = TokenCodec.computeDigest(result);
+          const nextActions = generateNextActions(result, options);
+          const augmentedResult = {
+            ...result,
+            continuation_tokens: generateTokens(
+              'js-scan',
+              'search',
+              options.search,
+              result,
+              nextActions,
+              resultsDigest,
+              options
+            ),
+            _ai_native_cli: {
+              mode: 'ai-native',
+              version: 1,
+              available_actions: nextActions.map(a => a.id)
+            }
+          };
+          console.log(JSON.stringify(augmentedResult, null, 2));
+        } else {
+          console.log(JSON.stringify(result, null, 2));
+        }
       } else {
         printSearchResult(result, options);
       }
@@ -1209,6 +1782,47 @@ async function main() {
       return;
     }
 
+    if (operation === 'depends-on' || operation === 'impacts') {
+      const summaryTarget = operation === 'depends-on' ? options.dependsOn : options.impacts;
+      const direction = operation === 'depends-on' ? 'outgoing' : 'incoming';
+      const result = runDependencySummary(scanResult.files, summaryTarget, {
+        rootDir: scanResult.rootDir,
+        depth: options.depDepth,
+        limit: options.limit
+      });
+
+      const payload = {
+        operation,
+        target: result.target,
+        stats: {
+          direction,
+          depth: result.stats.depth,
+          limit: result.stats.limit,
+          total: direction === 'outgoing' ? result.outgoing.length : result.incoming.length,
+          fanOut: result.stats.fanOut,
+          fanIn: result.stats.fanIn
+        },
+        dependencies: direction === 'outgoing' ? result.outgoing : result.incoming
+      };
+
+      if (options.json) {
+        if (parseErrors.length > 0) {
+          payload.parseErrors = {
+            count: parseErrors.length
+          };
+        }
+        console.log(JSON.stringify(payload, null, 2));
+      } else {
+        printDependencyTraversal(payload, direction);
+        printParseErrorSummary(parseErrors, {
+          suppressed: direction === 'incoming',
+          showDetails: options.depsParseErrors || options.showParseErrors,
+          hintFlag: '--deps-parse-errors'
+        });
+      }
+      return;
+    }
+
     if (operation === 'build-index' || operation === 'build-index-default') {
       const result = buildIndex(scanResult.files, { limit: options.limit });
       if (options.json) {
@@ -1229,6 +1843,53 @@ async function main() {
       } else {
         printPatternResult(result, options);
       }
+      return;
+    }
+
+    if (operation === 'ripple-analysis') {
+      const result = await analyzeRipple(options.rippleAnalysis, {
+        workspaceRoot: options.dir,
+        depth: options.depDepth || 4
+      });
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printRippleAnalysis(result, options);
+      }
+      return;
+    }
+
+    if (operation === 'what-imports') {
+      const analyzer = new RelationshipAnalyzer(options.dir, { verbose: false });
+      const result = await analyzer.whatImports(options.whatImports);
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printWhatImports(result, options);
+      }
+      return;
+    }
+
+    if (operation === 'what-calls') {
+      const analyzer = new RelationshipAnalyzer(options.dir, { verbose: false });
+      const result = await analyzer.whatCalls(options.whatCalls);
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printWhatCalls(result, options);
+      }
+      return;
+    }
+
+    if (operation === 'export-usage') {
+      const analyzer = new RelationshipAnalyzer(options.dir, { verbose: false });
+      const result = await analyzer.exportUsage(options.exportUsage);
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printExportUsage(result, options);
+      }
+      return;
     }
   } catch (error) {
     fmt.error(error.message || String(error));

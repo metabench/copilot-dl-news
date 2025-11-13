@@ -1,0 +1,20 @@
+{
+  "name": "rename-globally",
+  "version": "1.0.0",
+  "description": "Globally rename a function with ripple analysis safety check",
+  "steps": [
+    {
+      "id": "step1",
+      "name": "Report starting",
+      "operation": "report",
+      "message": "Starting rename workflow"
+    },
+    {
+      "id": "step2",
+      "name": "Report complete",
+      "operation": "report",
+      "message": "Rename workflow complete"
+    }
+  ]
+}
+

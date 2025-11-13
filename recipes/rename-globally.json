@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "name": "Rename function globally",
+  "description": "Rename a function across all files in the workspace",
+  "parameters": {
+    "oldName": {
+      "type": "string",
+      "description": "Current function name",
+      "required": true
+    },
+    "newName": {
+      "type": "string",
+      "description": "New function name",
+      "required": true
+    },
+    "scope": {
+      "type": "string",
+      "description": "Directory scope for search",
+      "default": "src/"
+    }
+  },
+  "validation": {
+    "checkDirExists": ["src/"]
+  },
+  "steps": [
+    {
+      "name": "Find usage sites",
+      "operation": "js-scan",
+      "search": "${oldName}",
+      "scope": "${scope}",
+      "exclude-path": "*.test.js",
+      "emit": "usage_sites"
+    },
+    {
+      "name": "Verify function can be renamed",
+      "operation": "js-scan",
+      "ripple-analysis": "${oldName}",
+      "file": "${usage_sites.matches[0].file}",
+      "emit": "ripple_report"
+    },
+    {
+      "name": "Rename globally",
+      "operation": "js-edit",
+      "rename-global": "${oldName}",
+      "to": "${newName}",
+      "search-scope": "${scope}",
+      "exclude-patterns": ["*.test.js"],
+      "condition": "${ripple_report.safetyAssertions.canRename}",
+      "onError": "abort",
+      "emit": "rename_result"
+    },
+    {
+      "name": "Report results",
+      "operation": "report",
+      "message": "Successfully renamed ${oldName} to ${newName} (${rename_result.result.occurrencesRenamed} occurrences)"
+    }
+  ]
+}

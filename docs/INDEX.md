@@ -33,6 +33,7 @@ _Last updated: 2025-11-04_
 - [Adapters Overview](reference/adapters_overview.md)
 - [Build Process](reference/build_process.md)
 - [CLI Tooling](reference/cli_tooling.md)
+- [CLI Tool Testing Guide](CLI_TOOL_TESTING_GUIDE.md) - Test runners for js-scan, js-edit, md-scan, md-edit
 - [Database Schemas](reference/db_schemas.md)
 - [Enhanced Database Adapter](reference/enhanced_database_adapter.md)
 - [Project Overview](reference/project_overview.md)

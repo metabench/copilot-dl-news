@@ -192,7 +192,7 @@ function selectTargetRecord(files, query, rootDir) {
   throw new Error(`Could not find a file matching '${query}'.`);
 }
 
-function edgeCountsToRow(targetKey, counts, hop, via, graph) {
+function edgeCountsToRow(targetKey, counts, hop, via, graph, path = []) {
   const node = graph.byFile.get(targetKey);
   const record = node ? node.record : null;
   const total = (counts.import || 0) + (counts.require || 0);
@@ -206,7 +206,8 @@ function edgeCountsToRow(targetKey, counts, hop, via, graph) {
     via: hop > 1 ? via || '' : '',
     exists: Boolean(node && node.exists),
     entryPoint: Boolean(record && record.entryPoint),
-    priority: Boolean(record && record.priority)
+    priority: Boolean(record && record.priority),
+    path: Array.isArray(path) ? path.slice() : []
   };
 }
 
@@ -222,7 +223,7 @@ function collectDirection(graph, startKey, direction, options = {}) {
 
   const queue = [];
 
-  const enqueue = (targetKey, counts, hop, viaSeed) => {
+  const enqueue = (targetKey, counts, hop, viaSeed, pathSeed) => {
     if (!targetKey || targetKey === startKey) {
       return;
     }
@@ -235,7 +236,7 @@ function collectDirection(graph, startKey, direction, options = {}) {
           import: existingRow.importCount,
           require: existingRow.requireCount
         }, counts);
-        const mergedRow = edgeCountsToRow(targetKey, mergedCounts, hop, viaSeed, graph);
+        const mergedRow = edgeCountsToRow(targetKey, mergedCounts, hop, viaSeed, graph, existingRow.path.length > 0 ? existingRow.path : pathSeed);
         resultMap.set(targetKey, mergedRow);
       }
       return;
@@ -243,16 +244,19 @@ function collectDirection(graph, startKey, direction, options = {}) {
 
     bestHop.set(targetKey, hop);
     const viaDisplay = hop > 1 ? viaSeed : '';
-    const row = edgeCountsToRow(targetKey, counts, hop, viaDisplay, graph);
+    const path = Array.isArray(pathSeed) && pathSeed.length > 0
+      ? pathSeed
+      : [startKey, targetKey];
+    const row = edgeCountsToRow(targetKey, counts, hop, viaDisplay, graph, path);
     resultMap.set(targetKey, row);
 
     if (hop < maxDepth) {
-      queue.push({ key: targetKey, hop, viaSeed: viaSeed || targetKey });
+      queue.push({ key: targetKey, hop, viaSeed: viaSeed || targetKey, path });
     }
   };
 
   adjacency.forEach((counts, targetKey) => {
-    enqueue(targetKey, counts, 1, targetKey);
+    enqueue(targetKey, counts, 1, targetKey, [startKey, targetKey]);
   });
 
   while (queue.length > 0) {
@@ -270,7 +274,8 @@ function collectDirection(graph, startKey, direction, options = {}) {
     }
     const nextAdjacency = direction === 'incoming' ? node.incoming : node.outgoing;
     nextAdjacency.forEach((counts, targetKey) => {
-      enqueue(targetKey, counts, next.hop + 1, next.viaSeed);
+      const nextPath = Array.isArray(next.path) ? next.path.concat(targetKey) : [startKey, targetKey];
+      enqueue(targetKey, counts, next.hop + 1, next.viaSeed, nextPath);
     });
   }
 

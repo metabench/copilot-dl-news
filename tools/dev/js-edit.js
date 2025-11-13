@@ -76,6 +76,9 @@ const {
   resolveVariableTargetInfo,
   buildSearchSuggestionsForMatch
 } = require('./js-edit/shared/selector');
+const RecipeEngine = require('./js-edit/recipes/RecipeEngine');
+const OperationDispatcher = require('./js-edit/recipes/OperationDispatcher');
+const BatchDryRunner = require('./js-edit/BatchDryRunner');
 
 const fmt = new CliFormatter();
 const DEFAULT_CONTEXT_PADDING = 512;
@@ -654,14 +657,30 @@ function buildVariableRecords(variables) {
 function normalizeOptions(raw) {
   const resolved = { ...raw };
 
-  const fileInput = resolved.file ? String(resolved.file).trim() : '';
-  if (!fileInput) {
-    throw new Error('Missing required option: --file <path>');
-  }
+  // Recipe mode and batch operations don't require --file
+  let filePath = null;
+  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan);
+  if (!resolved.recipe && !isBatchOperation) {
+    const fileInput = resolved.file ? String(resolved.file).trim() : '';
+    if (!fileInput) {
+      throw new Error('Missing required option: --file <path>');
+    }
 
-  const filePath = path.isAbsolute(fileInput)
-    ? fileInput
-    : path.resolve(process.cwd(), fileInput);
+    filePath = path.isAbsolute(fileInput)
+      ? fileInput
+      : path.resolve(process.cwd(), fileInput);
+
+    resolved.filePath = filePath;
+  } else if (resolved.file) {
+    // For batch operations, still store the file path if provided
+    const fileInput = String(resolved.file).trim();
+    if (fileInput) {
+      filePath = path.isAbsolute(fileInput)
+        ? fileInput
+        : path.resolve(process.cwd(), fileInput);
+      resolved.filePath = filePath;
+    }
+  }
 
   const includePaths = Boolean(resolved.includePaths);
   const functionSummary = Boolean(resolved.functionSummary);
@@ -749,6 +768,7 @@ function normalizeOptions(raw) {
   }
 
   const operationMatrix = [
+    ['--recipe', resolved.recipe !== undefined && resolved.recipe !== null],
     ['--list-functions', Boolean(resolved.listFunctions)],
     ['--list-constructors', Boolean(resolved.listConstructors)],
     ['--function-summary', functionSummary],
@@ -767,17 +787,22 @@ function normalizeOptions(raw) {
     ['--locate', resolved.locate !== undefined && resolved.locate !== null],
     ['--locate-variable', resolved.locateVariable !== undefined && resolved.locateVariable !== null],
     ['--extract-variable', resolved.extractVariable !== undefined && resolved.extractVariable !== null],
-    ['--replace-variable', resolved.replaceVariable !== undefined && resolved.replaceVariable !== null]
+    ['--replace-variable', resolved.replaceVariable !== undefined && resolved.replaceVariable !== null],
+    ['--dry-run', Boolean(resolved.dryRun)],
+    ['--recalculate-offsets', Boolean(resolved.recalculateOffsets)],
+    ['--from-plan', resolved.fromPlan !== undefined && resolved.fromPlan !== null]
   ];
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
   if (enabledOperations.length === 0) {
-    throw new Error('Provide one of --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, or --replace-variable <selector>.');
+    throw new Error('Provide one of --recipe <path>, --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, --replace-variable <selector>, --dry-run, --recalculate-offsets, or --from-plan.');
   }
   if (enabledOperations.length > 1) {
     const flags = enabledOperations.map(([flag]) => flag).join(', ');
     throw new Error(`Only one operation may be specified at a time. Found: ${flags}.`);
   }
+  // Store param array
+  resolved.param = Array.isArray(resolved.param) ? resolved.param : [];
 
   if (filterText !== null && !resolved.listFunctions && !resolved.listVariables && !resolved.listConstructors) {
     throw new Error('--filter-text can only be used with --list-functions, --list-constructors, or --list-variables.');
@@ -1195,7 +1220,13 @@ function normalizeOptions(raw) {
     digestDir,
     digestIncludeSnippets,
     includeInternals,
-    listOutputStyle
+    listOutputStyle,
+    recipe: resolved.recipe,
+    param: Array.isArray(resolved.param) ? resolved.param : [],
+    dryRun: Boolean(resolved.dryRun),
+    recalculateOffsets: Boolean(resolved.recalculateOffsets),
+    changes: resolved.changes,
+    fromPlan: resolved.fromPlan  // Keep as string (file path), not boolean
   };
 }
 
@@ -1272,7 +1303,22 @@ function parseCliArgs(argv) {
     .add('--expect-span <start:end>', 'Guard replacement by ensuring the target span matches')
     .add('--select <index|hash:...>', 'Select a specific match by 1-based index or hash')
     .add('--select-path <signature>', 'Select a match by its AST path signature')
-    .add('--benchmark', 'Show benchmark timing for parsing', false, 'boolean');
+    .add('--recipe <path>', 'Load and execute a recipe JSON file for multi-step refactoring')
+    .add(
+      '--param <key=value>',
+      'Override recipe parameter (repeatable)',
+      [],
+      (value, previous) => {
+        const list = Array.isArray(previous) ? [...previous] : [];
+        list.push(value);
+        return list;
+      }
+    )
+    .add('--benchmark', 'Show benchmark timing for parsing', false, 'boolean')
+    .add('--dry-run', 'Preview batch changes without modifying files (requires --changes)', false, 'boolean')
+    .add('--recalculate-offsets', 'Recompute line/column offsets after batch changes (Gap 3)', false, 'boolean')
+    .add('--changes <path>', 'JSON file containing batch changes: [{ file, startLine, endLine, replacement }]')
+    .add('--from-plan <path>', 'Load and apply a saved operation plan with guard verification (Gap 4)');
 
   const helpSections = [
     '',
@@ -1315,6 +1361,255 @@ function parseCliArgs(argv) {
   return { options: parsedOptions, parser };
 }
 
+
+/**
+ * Handle recipe mode execution
+ * Loads a recipe JSON file and executes multi-step refactoring workflow
+ * @param {Object} options - CLI options including recipe path and params
+ */
+async function handleRecipeMode(options) {
+  try {
+    const recipePath = path.isAbsolute(options.recipe)
+      ? options.recipe
+      : path.resolve(process.cwd(), options.recipe);
+
+    // Create operation dispatcher
+    const dispatcher = new OperationDispatcher({
+      logger: options.verbose ? console.log : () => {},
+      verbose: options.verbose || false
+    });
+
+    const engine = new RecipeEngine(recipePath, {
+      dispatcher,
+      verbose: options.verbose,
+      dryRun: !options.fix
+    });
+
+    await engine.load();
+    const recipeDefinition = engine.recipe || {};
+
+    // Parse --param arguments into parameter overrides
+    const paramOverrides = {};
+    const cliParams = Array.isArray(options.param)
+      ? options.param
+      : (typeof options.param === 'string' ? [options.param] : []);
+
+    cliParams.forEach((param) => {
+      const [rawKey, rawValue] = param.split('=', 2);
+      if (!rawKey || rawValue === undefined) {
+        return;
+      }
+
+      const key = rawKey.trim();
+      let value = rawValue.trim();
+      const quoted = (value.startsWith('"') && value.endsWith('"'))
+        || (value.startsWith('\'') && value.endsWith('\''));
+      if (quoted && value.length >= 2) {
+        value = value.slice(1, -1);
+      }
+
+      if (key) {
+        paramOverrides[key] = value;
+      }
+    });
+
+    await engine.validate();
+
+    if (!options.json) {
+      console.log('Recipe validated successfully');
+
+      fmt.header('Recipe Execution');
+      const recipeName = recipeDefinition.name || path.basename(recipePath);
+      const stepCount = Array.isArray(recipeDefinition.steps) ? recipeDefinition.steps.length : 0;
+      fmt.stat('Recipe', recipeName);
+      fmt.stat('Steps', stepCount, 'number');
+      console.log();
+    }
+
+    await engine.execute(Object.keys(paramOverrides).length > 0 ? { params: paramOverrides } : {});
+    const baseResult = engine.getResults();
+    const result = {
+      ...baseResult,
+      recipeFile: recipePath,
+      builtInVariables: { ...engine.builtInVariables },
+      parameters: engine.manifest?.parameters || {}
+    };
+
+    // Print results
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      printRecipeResult(result);
+    }
+
+    if (result.status === 'failed') {
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    fmt.error(`Recipe execution failed: ${error.message}`);
+    if (error.stack && options.verbose) {
+      console.error(error.stack);
+    }
+    process.exitCode = 1;
+  }
+}
+
+
+
+/**
+ * Print recipe execution results in human-readable format
+ * @param {Object} result - Result from engine.execute()
+ */
+function printRecipeResult(result) {
+  const stepResults = result.stepResults || [];
+  const isChinese = fmt.getLanguageMode() === 'zh';
+
+  fmt.stat('Status', result.status === 'success' ? fmt.COLORS.success('SUCCESS') : fmt.COLORS.error('FAILED'));
+  fmt.stat('Total Duration', `${result.totalDuration}ms`, 'number');
+  fmt.stat('Steps Executed', stepResults.length, 'number');
+
+  if (result.errorCount > 0) {
+    fmt.stat('Errors', fmt.COLORS.error(result.errorCount), 'number');
+  }
+
+  console.log();
+
+  // Show per-step results
+  if (stepResults.length > 0) {
+    const stepsLabel = isChinese ? '步骤结果' : 'Step Results';
+    fmt.header(stepsLabel);
+    stepResults.forEach((step, idx) => {
+      const status = step.status === 'success'
+        ? fmt.COLORS.success('✓')
+        : step.status === 'skipped'
+          ? fmt.COLORS.muted('○')
+          : fmt.COLORS.error('✗');
+      const stepNum = fmt.COLORS.muted(`[${idx + 1}]`);
+      const stepName = step.stepName || 'unnamed';
+      const duration = step.duration ? ` (${step.duration}ms)` : '';
+
+      console.log(`  ${stepNum} ${status} ${stepName}${duration}`);
+
+      if (step.error) {
+        fmt.warn(`     Error: ${step.error}`);
+      }
+    });
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print dry-run preview results
+ * Shows proposed changes and any conflicts detected
+ */
+function printDryRunResult(result, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  
+  if (options.json) {
+    outputJson(result);
+    return;
+  }
+
+  const status = result.success ? fmt.COLORS.success('✓') : fmt.COLORS.error('✗');
+  fmt.stat('Dry-Run Status', status);
+  fmt.stat('Changes to Apply', result.changeCount, 'number');
+  fmt.stat('Conflicts Detected', result.conflicts.length, 'number');
+  
+  if (result.conflicts.length > 0) {
+    console.log();
+    const conflictsLabel = isChinese ? '冲突' : 'Conflicts';
+    fmt.header(conflictsLabel);
+    result.conflicts.forEach((conflict, idx) => {
+      fmt.warn(`  [${idx + 1}] File: ${conflict.file}`);
+      fmt.warn(`      Lines ${conflict.startLine}-${conflict.endLine}: ${conflict.reason}`);
+    });
+  }
+
+  if (result.preview && result.preview.length > 0) {
+    console.log();
+    const previewLabel = isChinese ? '变更预览' : 'Preview';
+    fmt.header(previewLabel);
+    result.preview.forEach((change, idx) => {
+      fmt.stat(`Change ${idx + 1}`, `${change.file}:${change.startLine}`, 'muted');
+      console.log(`  Before: ${change.before.substring(0, 60)}...`);
+      console.log(`  After:  ${change.after.substring(0, 60)}...`);
+    });
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print offset recalculation results
+ * Shows updated line/column positions after cascading changes
+ */
+function printRecalculateOffsetsResult(result, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  
+  if (options.json) {
+    outputJson(result);
+    return;
+  }
+
+  fmt.stat('Offsets Recalculated', result.success ? fmt.COLORS.success('✓') : fmt.COLORS.error('✗'));
+  fmt.stat('Changes Adjusted', result.adjustedCount, 'number');
+  fmt.stat('Total Line Shift', result.totalLineShift, 'number');
+  fmt.stat('Max Column Shift', result.maxColumnShift, 'number');
+
+  if (result.adjustments && result.adjustments.length > 0) {
+    console.log();
+    const adjustLabel = isChinese ? '偏移调整' : 'Offset Adjustments';
+    fmt.header(adjustLabel);
+    result.adjustments.forEach((adj, idx) => {
+      fmt.stat(`Adjustment ${idx + 1}`, `Lines +${adj.lineShift}, Cols +${adj.columnShift}`, 'muted');
+    });
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print plan application results
+ * Shows which changes were applied, any failures, and guard verification
+ */
+function printPlanResult(result, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  
+  if (options.json) {
+    outputJson(result);
+    return;
+  }
+
+  const status = result.success ? fmt.COLORS.success('✓') : fmt.COLORS.error('✗');
+  fmt.stat('Plan Status', status);
+  fmt.stat('Applied', result.applied, 'number');
+  fmt.stat('Failed', result.failed, 'number');
+  
+  if (result.changes && result.changes.length > 0) {
+    console.log();
+    const changesLabel = isChinese ? '应用结果' : 'Application Results';
+    fmt.header(changesLabel);
+    result.changes.forEach((change, idx) => {
+      const changeStatus = change.status === 'applied'
+        ? fmt.COLORS.success('✓')
+        : fmt.COLORS.error('✗');
+      fmt.stat(`[${idx + 1}]`, `${change.description || 'Change'} ${changeStatus}`, 'muted');
+      if (change.error) {
+        fmt.warn(`     ${change.error}`);
+      }
+    });
+  }
+
+  if (result.resultPlan) {
+    console.log();
+    const planLabel = isChinese ? '结果计划' : 'Result Plan Emitted';
+    fmt.stat(planLabel, 'Ready for next operation', 'success');
+  }
+
+  fmt.footer();
+}
+
 async function main() {
   const originalTokens = process.argv.slice(2);
   const translation = translateCliArgs('js-edit', originalTokens);
@@ -1350,6 +1645,113 @@ async function main() {
   options.lang = langOverride || rawOptions.lang || 'auto';
   options.languageMode = fmt.getLanguageMode();
   options._i18n = translation;
+
+  // Handle recipe mode first (doesn't need file processing)
+  if (options.recipe) {
+    return handleRecipeMode(options);
+  }
+
+  // Handle batch operations (Gap 3)
+  if (options.dryRun || options.recalculateOffsets || options.fromPlan) {
+    try {
+      const batchRunner = new BatchDryRunner();
+      
+      // For dry-run: load changes file and preview without modifying
+      if (options.dryRun && options.changes) {
+        const fs = require('fs');
+        const changesPath = path.isAbsolute(options.changes)
+          ? options.changes
+          : path.resolve(process.cwd(), options.changes);
+        
+        const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
+        const result = batchRunner.dryRun(changesData);
+        printDryRunResult(result, options);
+        return;
+      }
+
+      // For recalculate-offsets: recompute positions after cascading changes
+      if (options.recalculateOffsets && options.changes) {
+        const fs = require('fs');
+        const changesPath = path.isAbsolute(options.changes)
+          ? options.changes
+          : path.resolve(process.cwd(), options.changes);
+        
+        const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
+        const result = batchRunner.recalculateOffsets(changesData);
+        printRecalculateOffsetsResult(result, options);
+        return;
+      }
+
+      // For from-plan: load and apply a saved operation plan (Gap 4)
+      if (options.fromPlan) {
+        const fs = require('fs');
+        
+        // --from-plan <path> is the plan file itself
+        const planPath = path.isAbsolute(options.fromPlan)
+          ? options.fromPlan
+          : path.resolve(process.cwd(), options.fromPlan);
+        
+        const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+        
+        // Reconstruct BatchDryRunner from plan data
+        const batchRunnerFromPlan = new BatchDryRunner('', { verbose: options.verbose });
+        
+        // Load changes from plan
+        if (planData.changes && Array.isArray(planData.changes)) {
+          planData.changes.forEach(change => batchRunnerFromPlan.addChange(change));
+        }
+        
+        // Verify guards before applying
+        const guardResult = batchRunnerFromPlan.verifyGuards();
+        if (!guardResult.valid && !options.force) {
+          fmt.warn(`Guard verification failed: ${guardResult.failed} checks failed`);
+          if (options.json) {
+            console.log(JSON.stringify(guardResult, null, 2));
+          }
+          process.exitCode = 1;
+          return;
+        }
+        
+        // Apply changes if --fix flag is provided
+        if (options.fix) {
+          const result = await batchRunnerFromPlan.apply({
+            force: options.force,
+            continueOnError: options.continueOnError || false,
+            emitPlan: options.emitPlan
+          });
+          printPlanResult(result, options);
+          
+          // If requested, write result plan to file
+          if (result.resultPlan && options.emitPlan) {
+            const planOutputPath = path.isAbsolute(options.emitPlan)
+              ? options.emitPlan
+              : path.resolve(process.cwd(), options.emitPlan);
+            fs.writeFileSync(planOutputPath, JSON.stringify(result.resultPlan, null, 2), 'utf8');
+            if (!options.quiet) {
+              fmt.stat('Result plan written', planOutputPath);
+            }
+          }
+        } else {
+          // Dry-run mode: show what would happen
+          const result = batchRunnerFromPlan.dryRun(planData);
+          printDryRunResult(result, options);
+        }
+        return;
+      }
+
+      // Missing required flags
+      fmt.error('Gap 3 batch operations require: --dry-run <changes>, --recalculate-offsets <changes>, or --from-plan <plan>');
+      process.exitCode = 1;
+      return;
+    } catch (error) {
+      fmt.error(`Batch operation error: ${error.message}`);
+      if (process.env.DEBUG) {
+        console.error(error);
+      }
+      process.exitCode = 1;
+      return;
+    }
+  }
 
   const { source, sourceMapper } = await readSource(options.filePath);
   const { newline, newlineGuard } = computeNewlineStats(source);

@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "name": "Consolidate imports",
+  "description": "Merge multiple imports from the same module into a single import statement",
+  "parameters": {
+    "targetModule": {
+      "type": "string",
+      "description": "Module to consolidate imports from",
+      "required": true
+    },
+    "scope": {
+      "type": "string",
+      "description": "Directory scope for consolidation",
+      "default": "src/"
+    },
+    "excludeTest": {
+      "type": "boolean",
+      "description": "Skip test files",
+      "default": true
+    }
+  },
+  "validation": {
+    "moduleExists": ["${targetModule}"]
+  },
+  "steps": [
+    {
+      "name": "Find all imports of module",
+      "operation": "js-scan",
+      "search": "${targetModule}",
+      "scope": "${scope}",
+      "exclude-path": ["$(${excludeTest} ? '*.test.js' : '')"],
+      "pattern": "import.*from.*${targetModule}",
+      "emit": "import_instances"
+    },
+    {
+      "name": "Group imports by file",
+      "operation": "js-scan",
+      "action": "group-by",
+      "data": "${import_instances.matches}",
+      "groupKey": "file",
+      "emit": "imports_by_file"
+    },
+    {
+      "name": "Consolidate each file",
+      "operation": "js-edit",
+      "action": "batch",
+      "forEach": "${imports_by_file[*].file}",
+      "steps": [
+        {
+          "operation": "js-edit",
+          "action": "consolidate-imports",
+          "file": "$item",
+          "targetModule": "${targetModule}",
+          "onError": "continue"
+        }
+      ],
+      "emit": "consolidation_results"
+    },
+    {
+      "name": "Report consolidation",
+      "operation": "report",
+      "message": "Consolidated imports from ${targetModule} in ${consolidation_results.filesProcessed} files. Removed ${consolidation_results.duplicateImportsRemoved} duplicate imports."
+    }
+  ]
+}
