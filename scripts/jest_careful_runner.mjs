@@ -1,9 +1,22 @@
 'use strict'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+const jestCliPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', 'jest', 'bin', 'jest.js')
 
-const run = (args) => spawnSync('npx', ['jest', ...args], { stdio: 'inherit' })
+const run = (args) => {
+  const result = spawnSync(process.execPath, [jestCliPath, ...args], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      FORCE_COLOR: process.env.FORCE_COLOR || '1'
+    }
+  })
+  if (result.error) {
+    throw result.error
+  }
+  return result.status ?? 0
+}
 
 const main = () => {
   const argv = process.argv.slice(2)
@@ -16,4 +29,7 @@ const main = () => {
   return run([...base, ...mode, ...argv])
 }
 
-main()
+const status = main()
+if (typeof status === 'number') {
+  process.exit(status)
+}

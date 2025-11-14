@@ -46,8 +46,9 @@ class RelationshipAnalyzer {
 
     try {
       // Normalize target path
-      const targetPath = this._normalizePath(target);
-      if (!fs.existsSync(targetPath)) {
+      const normalizedTarget = this._normalizePath(target);
+      const targetPath = this._resolveExistingPath(normalizedTarget);
+      if (!targetPath) {
         results.warning = `Target not found: ${target}`;
         return results;
       }
@@ -58,7 +59,7 @@ class RelationshipAnalyzer {
       // For each file, check if it imports the target
       for (const file of allFiles) {
         const imports = await this._extractImports(file);
-        const fileImporters = imports.filter(imp => this._matchesTarget(imp.source, targetPath));
+        const fileImporters = imports.filter((imp) => this._matchesTarget(imp.source, targetPath, file));
         
         if (fileImporters.length > 0) {
           results.importers.push({
@@ -417,24 +418,26 @@ class RelationshipAnalyzer {
     return path.join(this.root, filePath);
   }
 
-  _matchesTarget(importSource, targetPath) {
-    // Normalize both paths for comparison
-    const normalized = this._resolveImportPath(importSource);
-    return normalized === targetPath || 
-           normalized.endsWith(targetPath) ||
-           targetPath.endsWith(normalized);
+  _matchesTarget(importSource, targetPath, fromFile) {
+    const normalizedImport = this._resolveImportPath(importSource, fromFile);
+    if (!normalizedImport || !targetPath) {
+      return false;
+    }
+    const normalizedTarget = this._normalizeFilePath(targetPath);
+    return normalizedImport === normalizedTarget;
   }
 
   _resolveImportPath(importPath, fromFile = null) {
-    if (path.isAbsolute(importPath)) return importPath;
-    if (!importPath.startsWith('.')) {
-      // npm module
-      return path.join(this.root, 'node_modules', importPath);
+    let resolved;
+    if (path.isAbsolute(importPath)) {
+      resolved = importPath;
+    } else if (!importPath.startsWith('.')) {
+      resolved = path.join(this.root, 'node_modules', importPath);
+    } else {
+      const baseDir = fromFile ? path.dirname(fromFile) : this.root;
+      resolved = path.resolve(baseDir, importPath);
     }
-    if (fromFile) {
-      return path.resolve(path.dirname(fromFile), importPath);
-    }
-    return path.join(this.root, importPath);
+    return this._normalizeFilePath(resolved);
   }
 
   _getAllJsFiles() {
@@ -483,6 +486,62 @@ class RelationshipAnalyzer {
   _isLikelyImport(word, content) {
     // Check if word appears in import statements
     return /import\s+.*\b{word}\b|require\s*\(.*{word}/.test(content.substring(0, content.indexOf(word)));
+  }
+
+  _normalizeFilePath(filePath) {
+    if (!filePath) {
+      return null;
+    }
+    const resolved = this._resolveExistingPath(filePath);
+    return resolved || path.resolve(filePath);
+  }
+
+  _resolveExistingPath(candidatePath) {
+    const candidates = this._buildPathCandidates(candidatePath);
+    for (const option of candidates) {
+      try {
+        const stats = fs.statSync(option);
+        if (stats.isFile()) {
+          return path.resolve(option);
+        }
+        if (stats.isDirectory()) {
+          const indexFile = this._findIndexFile(option);
+          if (indexFile) {
+            return indexFile;
+          }
+        }
+      } catch (_) {
+        // ignore missing candidates
+      }
+    }
+    return null;
+  }
+
+  _buildPathCandidates(candidatePath) {
+    const normalized = path.resolve(candidatePath);
+    const candidates = [normalized];
+    if (!path.extname(normalized)) {
+      ['.js', '.mjs', '.cjs', '.ts', '.tsx'].forEach((ext) => {
+        candidates.push(`${normalized}${ext}`);
+      });
+    }
+    return candidates;
+  }
+
+  _findIndexFile(directoryPath) {
+    const indexNames = ['index.js', 'index.mjs', 'index.cjs'];
+    for (const name of indexNames) {
+      const candidate = path.join(directoryPath, name);
+      try {
+        const stats = fs.statSync(candidate);
+        if (stats.isFile()) {
+          return path.resolve(candidate);
+        }
+      } catch (_) {
+        // ignore missing index candidates
+      }
+    }
+    return null;
   }
 }
 

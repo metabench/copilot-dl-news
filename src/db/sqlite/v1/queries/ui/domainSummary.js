@@ -6,12 +6,24 @@ const CACHE_KEY = Symbol.for("db.sqlite.ui.domainSummary");
 
 function prepareStatements(db) {
   return getCachedStatements(db, CACHE_KEY, (handle) => ({
-    articlesByHost: handle.prepare(`
-      SELECT COUNT(*) AS c
-      FROM articles a
-      JOIN urls u ON u.url = a.url
-      WHERE LOWER(u.host) = ?
-    `),
+    articlesByHost: (() => {
+      try {
+        return handle.prepare(`
+          SELECT COUNT(*) AS c
+          FROM fetches f
+          JOIN urls u ON u.id = f.url_id
+          WHERE LOWER(u.host) = ? AND f.classification = 'article'
+        `);
+      } catch (_) {
+        // Fall back to legacy articles table if it exists
+        return handle.prepare(`
+          SELECT COUNT(*) AS c
+          FROM articles a
+          JOIN urls u ON u.url = a.url
+          WHERE LOWER(u.host) = ?
+        `);
+      }
+    })(),
     fetchesDirect: (() => {
       try {
         return handle.prepare('SELECT COUNT(*) AS c FROM fetches WHERE LOWER(host) = ?');
@@ -19,12 +31,23 @@ function prepareStatements(db) {
         return null;
       }
     })(),
-    fetchesViaJoin: handle.prepare(`
-      SELECT COUNT(*) AS c
-      FROM fetches f
-      JOIN urls u ON u.url = f.url
-      WHERE LOWER(u.host) = ?
-    `)
+    fetchesViaJoin: (() => {
+      try {
+        return handle.prepare(`
+          SELECT COUNT(*) AS c
+          FROM fetches f
+          JOIN urls u ON u.id = f.url_id
+          WHERE LOWER(u.host) = ?
+        `);
+      } catch (_) {
+        return handle.prepare(`
+          SELECT COUNT(*) AS c
+          FROM fetches f
+          JOIN urls u ON u.url = f.url
+          WHERE LOWER(u.host) = ?
+        `);
+      }
+    })()
   }));
 }
 

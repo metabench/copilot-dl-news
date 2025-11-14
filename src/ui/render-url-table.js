@@ -7,7 +7,15 @@ const jsgui = require("jsgui3-html");
 const { openNewsDb } = require("../db/dbAccess");
 const { findProjectRoot } = require("../utils/project-root");
 const { selectInitialUrls } = require("../db/sqlite/v1/queries/ui/urlListingNormalized");
-const { TableControl } = require("./controls/Table");
+const {
+  UrlListingTableControl,
+  buildColumns,
+  buildDisplayRows,
+  buildIndexCell,
+  formatDateTime
+} = require("./controls/UrlListingTable");
+const { PagerButtonControl } = require("./controls/PagerButton");
+const { SparklineControl } = require("./controls");
 
 const StringControl = jsgui.String_Control;
 
@@ -55,142 +63,151 @@ function resolveDbPath(cliPath) {
   return path.join(projectRoot, "data", "news.db");
 }
 
-function formatDateTime(value, includeSeconds = false) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  const pad = (n) => String(n).padStart(2, "0");
-  const base = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
-  const time = `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}${includeSeconds ? `:${pad(date.getUTCSeconds())}` : ""}`;
-  return `${base} ${time} UTC`;
-}
-
-function formatStatus(code) {
-  if (code == null) return { text: "—", classNames: "badge badge--muted" };
-  let variant = "info";
-  if (code >= 200 && code < 300) variant = "success";
-  else if (code >= 300 && code < 400) variant = "accent";
-  else if (code >= 400 && code < 500) variant = "warn";
-  else if (code >= 500) variant = "danger";
-  return { text: String(code), classNames: `badge badge--${variant}` };
-}
-
-function buildDisplayRows(rows) {
-  return rows.map((row, index) => ({
-    index: { text: String(index + 1), classNames: "is-index" },
-    url: { text: row.url, title: row.url, classNames: "is-url" },
-    host: row.host || "—",
-    createdAt: formatDateTime(row.createdAt),
-    lastSeenAt: formatDateTime(row.lastSeenAt),
-    lastFetchAt: formatDateTime(row.lastFetchAt),
-    status: formatStatus(row.httpStatus)
-  }));
-}
-
-function buildColumns() {
-  return [
-    { key: "index", label: "#", align: "right", cellClass: "is-index" },
-    { key: "url", label: "URL", cellClass: "is-url" },
-    { key: "host", label: "Host", cellClass: "is-host" },
-    { key: "createdAt", label: "Created", cellClass: "is-timestamp" },
-    { key: "lastSeenAt", label: "Last Seen", cellClass: "is-timestamp" },
-    { key: "lastFetchAt", label: "Last Fetch", cellClass: "is-timestamp" },
-    { key: "status", label: "HTTP", align: "center" }
-  ];
-}
 
 function buildCss() {
   return `:root {
-  color-scheme: light dark;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  background-color: #eef2ff;
+  background-color: #f5f5f5;
+  color: #1f2933;
 }
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #f5f7ff 0%, #e6ebff 45%, #fdfdff 100%);
-  color: #1f2430;
+  background-color: #f5f5f5;
+  color: #1f2933;
 }
 .page-shell {
-  width: min(calc(100vw - 32px), 2200px);
-  margin: 0;
-  padding: 20px 20px 32px;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px;
 }
-@media (min-width: 1280px) {
-  .page-shell.page-shell--offset {
-    margin-left: 32px;
-    margin-right: auto;
-    width: min(calc(100vw - 96px), 2200px);
-    padding-right: 72px;
-    padding-left: 12px;
-  }
+.page-shell.page-shell--offset {
+  width: 100%;
+  max-width: 1280px;
 }
 .page-shell__header {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 .page-shell__header h1 {
-  margin: 0 0 0.25rem;
-  font-size: 2rem;
-  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  font-size: 1.75rem;
 }
 .page-shell__subtitle {
   margin: 0;
-  color: #5c637a;
+  color: #4a5568;
+}
+.primary-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.primary-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  background: #e2e8f0;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.primary-nav__link:hover {
+  background: #cbd5f5;
+}
+.primary-nav__link--active {
+  background: #4338ca;
+  color: #fff;
+  border-color: #312e81;
+}
+.primary-nav__link[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: default;
+}
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 8px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+.breadcrumbs__link {
+  color: #4338ca;
+  text-decoration: none;
+  font-weight: 600;
+}
+.breadcrumbs__link:hover {
+  text-decoration: underline;
+}
+.breadcrumbs__sep {
+  color: #94a3b8;
+}
+.breadcrumbs__current {
+  font-weight: 600;
+  color: #0f172a;
 }
 .panel {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 20px;
-  padding: 20px 28px 24px;
-  box-shadow: 0 25px 50px rgba(15, 23, 42, 0.15);
-  backdrop-filter: blur(16px);
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 20px;
 }
 .panel__meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .meta-card {
-  border: 1px solid rgba(99, 102, 241, 0.15);
-  border-radius: 14px;
-  padding: 12px 16px;
-  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #fafafa;
 }
 .meta-card__label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #6b7280;
   margin: 0 0 4px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #5f6c7b;
 }
 .meta-card__value {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 600;
 }
+
+.sparkline { width: 160px; height: 32px; display: block; }
+.sparkline polyline { stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .ui-table {
   width: 100%;
   border-collapse: collapse;
-  border-radius: 16px;
-  overflow: hidden;
+  table-layout: auto;
+  border: 1px solid #d0d7de;
 }
 .ui-table thead {
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.2));
+  background: #f0f4f8;
 }
 .ui-table__cell {
-  padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  font-size: 0.92rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
 }
 .ui-table__cell--header {
-  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #273043;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  color: #4a5568;
   font-weight: 600;
 }
 .ui-table__row--striped .ui-table__cell {
-  background-color: rgba(99, 102, 241, 0.03);
+  background-color: #fafafa;
 }
 .ui-table__cell--right {
   text-align: right;
@@ -201,42 +218,108 @@ body {
 .is-url {
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 0.82rem;
-  min-width: 420px;
-  width: 60%;
-  word-break: break-all;
+  max-width: 100%;
+  word-break: break-word;
+}
+.is-id {
+  font-variant-numeric: tabular-nums;
+  color: #475569;
+  min-width: 60px;
 }
 .is-host {
-  color: #475467;
+  color: #374151;
 }
 .is-index {
   font-weight: 600;
-  color: #6366f1;
+  color: #1f2933;
 }
-.is-metric {
+.is-metric,
+.is-timestamp {
   font-variant-numeric: tabular-nums;
 }
 .is-timestamp {
   min-width: 150px;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+}
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+}
+.pager__info {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+.pager__buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pager-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2933;
+  background: #f8fafc;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.pager-button:hover:not(.pager-button--disabled) {
+  background: #e2e8f0;
+}
+.pager-button--kind-first,
+.pager-button--kind-last {
+  background: #edf2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+.pager-button--kind-prev,
+.pager-button--kind-next {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+.pager-button--disabled,
+.pager-button[aria-disabled="true"] {
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
 }
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 48px;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
 }
 .badge--muted { background: #e5e7eb; color: #4b5563; }
-.badge--info { background: rgba(59, 130, 246, 0.15); color: #1d4ed8; }
-.badge--success { background: rgba(16, 185, 129, 0.18); color: #065f46; }
-.badge--accent { background: rgba(99, 102, 241, 0.18); color: #3730a3; }
-.badge--warn { background: rgba(251, 191, 36, 0.2); color: #92400e; }
-.badge--danger { background: rgba(248, 113, 113, 0.2); color: #991b1b; }
+.badge--info { background: #dbeafe; color: #1d4ed8; }
+.badge--success { background: #d1fae5; color: #065f46; }
+.badge--accent { background: #ede9fe; color: #5b21b6; }
+.badge--warn { background: #fef3c7; color: #92400e; }
+.badge--danger { background: #fee2e2; color: #991b1b; }
+.table-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+.table-link:hover {
+  text-decoration: underline;
+}
 `;
 }
 
@@ -245,7 +328,11 @@ function createMetaCard(context, label, value) {
   const labelCtrl = new jsgui.p({ context, class: "meta-card__label" });
   labelCtrl.add(new StringControl({ context, text: label }));
   const valueCtrl = new jsgui.p({ context, class: "meta-card__value" });
-  valueCtrl.add(new StringControl({ context, text: value }));
+  if (value instanceof jsgui.Control) {
+    valueCtrl.add(value);
+  } else {
+    valueCtrl.add(new StringControl({ context, text: value }));
+  }
   card.add(labelCtrl);
   card.add(valueCtrl);
   return card;
@@ -257,7 +344,94 @@ function createStyleTag(context, cssText) {
   return styleCtrl;
 }
 
-function renderHtml({ columns, rows, meta, title }) {
+function createPagerButton(context, { label, href, disabled, kind }) {
+  const button = new PagerButtonControl({
+    context,
+    text: label,
+    kind,
+    disabled: disabled || !href,
+    title: label,
+    href
+  });
+  button.setHref(href);
+  return button;
+}
+
+function createPaginationNav(context, pagination) {
+  if (!pagination) return null;
+  const nav = new jsgui.Control({ context, tagName: "nav" });
+  nav.add_class("pager");
+  const info = new jsgui.p({ context, class: "pager__info" });
+  const { currentPage, totalPages, startRow, endRow, totalRows } = pagination;
+  const startDisplay = totalRows === 0 ? 0 : startRow;
+  const endDisplay = totalRows === 0 ? 0 : endRow;
+  const summary = `Page ${currentPage} of ${totalPages} • Rows ${startDisplay}-${endDisplay} of ${totalRows}`;
+  info.add(new StringControl({ context, text: summary }));
+  const buttons = new jsgui.div({ context, class: "pager__buttons" });
+  const buttonConfigs = [
+    { kind: "first", label: "<< First", href: pagination.firstHref, disabled: currentPage === 1 },
+    { kind: "prev", label: "< Previous", href: pagination.prevHref, disabled: currentPage === 1 },
+    { kind: "next", label: "Next >", href: pagination.nextHref, disabled: currentPage === totalPages },
+    { kind: "last", label: "Last >>", href: pagination.lastHref, disabled: currentPage === totalPages }
+  ];
+  buttonConfigs.forEach((config) => buttons.add(createPagerButton(context, config)));
+  nav.add(info);
+  nav.add(buttons);
+  return nav;
+}
+
+function createPrimaryNav(context, navLinks) {
+  if (!Array.isArray(navLinks) || navLinks.length === 0) return null;
+  const filtered = navLinks.filter((link) => link && link.label);
+  if (!filtered.length) return null;
+  const nav = new jsgui.Control({ context, tagName: "nav" });
+  nav.add_class("primary-nav");
+  filtered.forEach((link) => {
+    const anchor = new jsgui.Control({ context, tagName: "a" });
+    anchor.add_class("primary-nav__link");
+    anchor.add(new StringControl({ context, text: link.label }));
+    if (link.href) {
+      anchor.dom.attributes.href = link.href;
+    } else {
+      anchor.dom.attributes["aria-disabled"] = "true";
+    }
+    if (link.active) {
+      anchor.add_class("primary-nav__link--active");
+    }
+    nav.add(anchor);
+  });
+  return nav;
+}
+
+function createBreadcrumbsNav(context, crumbs) {
+  if (!Array.isArray(crumbs) || crumbs.length === 0) return null;
+  const items = crumbs.filter((crumb) => crumb && crumb.label);
+  if (!items.length) return null;
+  const nav = new jsgui.Control({ context, tagName: "nav" });
+  nav.add_class("breadcrumbs");
+  items.forEach((crumb, index) => {
+    if (index > 0) {
+      nav.add(new jsgui.span({ context, class: "breadcrumbs__sep", text: "/" }));
+    }
+    if (crumb.href) {
+      const anchor = new jsgui.Control({ context, tagName: "a" });
+      anchor.add_class("breadcrumbs__link");
+      anchor.dom.attributes.href = crumb.href;
+      anchor.add(new StringControl({ context, text: crumb.label }));
+      nav.add(anchor);
+    } else {
+      const span = new jsgui.span({ context, class: "breadcrumbs__current", text: crumb.label });
+      nav.add(span);
+    }
+  });
+  return nav;
+}
+
+function renderHtml({ columns, rows, meta, title }, options = {}) {
+  const clientScriptPath = options.clientScriptPath;
+  const bindingPluginEnabled = options.bindingPlugin !== false;
+  const navLinks = Array.isArray(options.navLinks) ? options.navLinks : null;
+  const breadcrumbs = Array.isArray(options.breadcrumbs) ? options.breadcrumbs : null;
   const context = new jsgui.Page_Context();
   const document = new jsgui.Blank_HTML_Document({ context });
 
@@ -272,8 +446,18 @@ function renderHtml({ columns, rows, meta, title }) {
   shell.add_class("page-shell--offset");
   const header = new jsgui.Control({ context, tagName: "header" });
   header.add_class("page-shell__header");
-  header.add(new jsgui.h1({ context, text: title }));
-  header.add(new jsgui.p({ context, class: "page-shell__subtitle", text: meta.subtitle }));
+  const breadcrumbNav = breadcrumbs ? createBreadcrumbsNav(context, breadcrumbs) : null;
+  if (breadcrumbNav) header.add(breadcrumbNav);
+  const heading = new jsgui.h1({ context });
+  if (title) {
+    heading.add(new StringControl({ context, text: title }));
+  }
+  header.add(heading);
+  const subtitle = new jsgui.p({ context, class: "page-shell__subtitle" });
+  if (meta && meta.subtitle) {
+    subtitle.add(new StringControl({ context, text: meta.subtitle }));
+  }
+  header.add(subtitle);
 
   const panel = new jsgui.Control({ context, tagName: "section" });
   panel.add_class("panel");
@@ -282,14 +466,38 @@ function renderHtml({ columns, rows, meta, title }) {
   metaGrid.add(createMetaCard(context, "Requested Limit", meta.limit.toLocaleString("en-US")));
   metaGrid.add(createMetaCard(context, "Database", meta.dbLabel));
   metaGrid.add(createMetaCard(context, "Generated", meta.generatedAt));
+  // Allow additional custom cards provided by routes (e.g., sparkline control)
+  if (Array.isArray(meta.extraCards)) {
+    meta.extraCards.forEach((card) => {
+      if (card && card.label) {
+        const content = card.control || card.value || (Array.isArray(card.series) ? new SparklineControl({ context, series: card.series, width: card.width || 240, height: card.height || 36 }) : "—");
+        metaGrid.add(createMetaCard(context, card.label, content));
+      }
+    });
+  }
 
-  const table = new TableControl({ context, columns, rows });
+  const table = new UrlListingTableControl({ context, columns, rows });
+  const paginationNavTop = meta.pagination ? createPaginationNav(context, meta.pagination) : null;
+  const paginationNavBottom = meta.pagination ? createPaginationNav(context, meta.pagination) : null;
 
   panel.add(metaGrid);
+  if (paginationNavTop) panel.add(paginationNavTop);
   panel.add(table);
+  if (paginationNavBottom) panel.add(paginationNavBottom);
   shell.add(header);
+  const primaryNav = navLinks ? createPrimaryNav(context, navLinks) : null;
+  if (primaryNav) shell.add(primaryNav);
   shell.add(panel);
   body.add(shell);
+
+  if (clientScriptPath) {
+    const attrs = { src: clientScriptPath, defer: "defer" };
+    if (!bindingPluginEnabled) {
+      attrs["data-binding-plugin"] = "off";
+    }
+    const clientScript = new jsgui.script({ context, attrs });
+    body.add(clientScript);
+  }
 
   return `<!DOCTYPE html>${document.all_html_render()}`;
 }
@@ -344,5 +552,7 @@ module.exports = {
   resolveDbPath,
   buildColumns,
   buildDisplayRows,
-  renderHtml
+  renderHtml,
+  formatDateTime,
+  buildIndexCell
 };

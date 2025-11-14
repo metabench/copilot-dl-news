@@ -27,7 +27,13 @@ function appendText(control, text) {
 class TableCellControl extends jsgui.Control {
   constructor(spec = {}) {
     const { header = false, align = null } = spec;
-    super({ ...spec, tagName: header ? "th" : "td" });
+    const {
+      content: initialContent,
+      control: initialControl,
+      text: initialText,
+      ...rest
+    } = spec;
+    super({ ...rest, tagName: header ? "th" : "td" });
     this.add_class("ui-table__cell");
     if (header) {
       this.add_class("ui-table__cell--header");
@@ -40,20 +46,20 @@ class TableCellControl extends jsgui.Control {
       this.dom.attributes.title = spec.title;
     }
     if (!spec.el) {
-      if (spec.control && spec.control instanceof jsgui.Control) {
-        this.add(spec.control);
-      } else if (spec.content instanceof jsgui.Control) {
-        this.add(spec.content);
-      } else if (Array.isArray(spec.content)) {
-        spec.content.forEach((child) => {
+      if (initialControl && initialControl instanceof jsgui.Control) {
+        this.add(initialControl);
+      } else if (initialContent instanceof jsgui.Control) {
+        this.add(initialContent);
+      } else if (Array.isArray(initialContent)) {
+        initialContent.forEach((child) => {
           if (child instanceof jsgui.Control) {
             this.add(child);
           } else if (child != null) {
             appendText(this, child);
           }
         });
-      } else if (spec.text != null) {
-        appendText(this, spec.text);
+      } else if (initialText != null) {
+        appendText(this, initialText);
       }
     }
   }
@@ -130,6 +136,18 @@ class TableControl extends jsgui.Control {
 
   _normalizeCellSpec(value, column, rowData, rowIndex) {
     const columnClasses = toArray(column.cellClass);
+    if (value && typeof value === "object" && value.href) {
+      return {
+        classNames: columnClasses.concat(toArray(value.classNames || value.className)),
+        content: this._createLinkControl({
+          text: value.text,
+          href: value.href,
+          title: value.title || (rowData && rowData.title) || undefined,
+          target: value.target
+        }),
+        align: value.align || column.align
+      };
+    }
     if (value && value.control instanceof jsgui.Control) {
       return {
         ...value,
@@ -157,6 +175,26 @@ class TableControl extends jsgui.Control {
     if (this.tbody && this.tbody.content) {
       this.tbody.content.clear();
     }
+  }
+
+  _createLinkControl({ text, href, title, target }) {
+    const anchor = new jsgui.Control({ context: this.context, tagName: "a" });
+    anchor.add_class("table-link");
+    if (href) {
+      anchor.dom.attributes.href = href;
+    }
+    if (title) {
+      anchor.dom.attributes.title = title;
+    }
+    if (target) {
+      anchor.dom.attributes.target = target;
+      if (target === "_blank") {
+        anchor.dom.attributes.rel = "noopener noreferrer";
+      }
+    }
+    const linkText = text != null ? text : href || "";
+    anchor.add(new StringControl({ context: this.context, text: linkText }));
+    return anchor;
   }
 }
 

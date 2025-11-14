@@ -19,19 +19,38 @@ function prepareStatements(db) {
       WHERE (status = 'running' AND ended_at IS NULL)
          OR (status IS NULL AND ended_at IS NULL)
     `),
-    listQueues: handle.prepare(`
-      SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
-             COALESCE(e.events, 0) AS events,
-             e.lastEventAt
-      FROM crawl_jobs j
-      LEFT JOIN (
-        SELECT job_id, COUNT(*) AS events, MAX(ts) AS lastEventAt
-        FROM queue_events
-        GROUP BY job_id
-      ) e ON e.job_id = j.id
-      ORDER BY COALESCE(j.ended_at, j.started_at) DESC
-      LIMIT ?
-    `),
+    listQueues: (() => {
+      try {
+        return handle.prepare(`
+          SELECT j.id, j.url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
+                 COALESCE(e.events, 0) AS events,
+                 e.lastEventAt
+          FROM crawl_jobs j
+          LEFT JOIN (
+            SELECT job_id, COUNT(*) AS events, MAX(ts) AS lastEventAt
+            FROM queue_events
+            GROUP BY job_id
+          ) e ON e.job_id = j.id
+          ORDER BY COALESCE(j.ended_at, j.started_at) DESC
+          LIMIT ?
+        `);
+      } catch (_) {
+        // Fallback for older schema without url column
+        return handle.prepare(`
+          SELECT j.id, NULL AS url, j.pid, j.started_at AS startedAt, j.ended_at AS endedAt, j.status,
+                 COALESCE(e.events, 0) AS events,
+                 e.lastEventAt
+          FROM crawl_jobs j
+          LEFT JOIN (
+            SELECT job_id, COUNT(*) AS events, MAX(ts) AS lastEventAt
+            FROM queue_events
+            GROUP BY job_id
+          ) e ON e.job_id = j.id
+          ORDER BY COALESCE(j.ended_at, j.started_at) DESC
+          LIMIT ?
+        `);
+      }
+    })(),
     latestQueueId: handle.prepare(`
       SELECT id FROM crawl_jobs
       ORDER BY COALESCE(ended_at, started_at) DESC

@@ -1,0 +1,18 @@
+{
+  "dbPath": "data/news.db",
+  "defaultIntervalMs": 60000,
+  "stats": {
+    "urls.total_count": {
+      "intervalMs": 300000
+    },
+    "domains.top_hosts_window": {
+      "intervalMs": 300000
+    },
+    "storage.total_bytes": {
+      "intervalMs": 600000
+    },
+    "errors.daily_host_histogram": {
+      "intervalMs": 600000
+    }
+  }
+}

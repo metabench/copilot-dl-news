@@ -31,6 +31,99 @@
 
 ## Current Session
 
+### Session 2025-11-20: UI Data Explorer Production Tests
+
+**Duration**: Active
+**Type**: UI validation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Exercise every Data Explorer view against production-sized SQLite snapshots
+- Add Jest/SuperTest coverage that targets `data/news.db` with graceful skip logic
+- Fix any regressions surfaced by the production-data runs and capture next steps
+
+**Location**: `docs/sessions/2025-11-20-ui-data-explorer-tests/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-20-ui-data-explorer-tests/INDEX.md)
+- 🗺️ [Plan](./2025-11-20-ui-data-explorer-tests/PLAN.md)
+- 📝 [Working Notes](./2025-11-20-ui-data-explorer-tests/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-20-ui-data-explorer-tests/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-20-ui-data-explorer-tests/FOLLOW_UPS.md)
+
+### Session 2025-11-14: Binding Plugin Stabilization
+
+**Duration**: Active
+**Type**: UI bindings
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Stabilize the new binding plugin so server-rendered pager buttons expose correct attributes
+- Re-run pager button snapshot + Jest tests with improved coverage
+- Capture follow-ups for broader binding design work
+
+**Location**: `docs/sessions/2025-11-14-binding-plugin/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-binding-plugin/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-binding-plugin/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-binding-plugin/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-binding-plugin/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-binding-plugin/FOLLOW_UPS.md)
+
+### Session 2025-11-14: Binding Plugin Review
+
+**Duration**: Active
+**Type**: UI bindings investigation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Diagnose the `Data_Model_View_Model_Control` runtime failure surfaced by Puppeteer logging
+- Inspect the binding plugin/model wiring to ensure controls receive models with `.on`
+- Document findings and fixes for future binding plugin work
+
+**Location**: `docs/sessions/2025-11-14-binding-plugin-review/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-14-binding-plugin-review/PLAN.md)
+
+### Session 2025-11-14: Ui Express Server
+
+**Duration**: Active
+**Type**: Implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement Express server for URL table with pagination
+
+**Location**: `docs/sessions/2025-11-14-ui-express-server/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-ui-express-server/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-ui-express-server/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-ui-express-server/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-ui-express-server/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-ui-express-server/FOLLOW_UPS.md)
+
+### Session 2025-11-14: UI Data Explorer
+
+**Duration**: Active
+**Type**: UI surfaces & dashboards
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Broaden the Express server into a multi-view data explorer with additional DB summaries
+
+**Location**: `docs/sessions/2025-11-14-ui-data-explorer/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-ui-data-explorer/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-ui-data-explorer/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-ui-data-explorer/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-ui-data-explorer/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-ui-data-explorer/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-14: Db View Implementation
 
 **Duration**: Active
@@ -89,6 +182,26 @@
 - 📘 [Session Summary](./2025-11-14-strategic-analysis-mode/SESSION_SUMMARY.md)
 - ✅ [Follow Ups](./2025-11-14-strategic-analysis-mode/FOLLOW_UPS.md)
 
+### Session 2025-11-14: jsgui Transform Fix
+
+**Duration**: Active
+**Type**: UI bindings
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Patch vendored resize helpers so the esbuild UI bundle stops throwing `each_source_dest_pixels_resized` ReferenceErrors
+- Rebuild `ui-client.js` and verify bindings load in the browser
+- Capture notes + follow-ups for longer-term vendoring strategy
+
+**Location**: `docs/sessions/2025-11-14-jsgui-transform-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-jsgui-transform-fix/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-jsgui-transform-fix/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-jsgui-transform-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-jsgui-transform-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-jsgui-transform-fix/FOLLOW_UPS.md)
+
 
 ### Session 2025-11-18: Crawl Output Refresh
 
@@ -107,6 +220,26 @@
 - 🧭 [Session Index](./2025-11-18-crawl-output-refresh/INDEX.md)
 - 📝 [Working Notes](./2025-11-18-crawl-output-refresh/WORKING_NOTES.md)
 - 🗺️ [Plan](./2025-11-18-crawl-output-refresh/PLAN.md)
+
+### Session 2025-11-19: jsgui Binding Report
+
+**Duration**: Active
+**Type**: Documentation & analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run static analysis on `jsgui3-html` bindings to understand current attribute/value flows
+- Capture observations + risks in session notes
+- Produce a `docs/ui/` report describing a simplified data-binding approach
+
+**Location**: `docs/sessions/2025-11-19-jsgui-binding-report/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-19-jsgui-binding-report/INDEX.md)
+- 🗺️ [Plan](./2025-11-19-jsgui-binding-report/PLAN.md)
+- 📝 [Working Notes](./2025-11-19-jsgui-binding-report/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-19-jsgui-binding-report/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-19-jsgui-binding-report/FOLLOW_UPS.md)
 
 ### Session 2025-11-17: Hub Eligibility Refresh
 

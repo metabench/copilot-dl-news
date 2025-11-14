@@ -2555,6 +2555,16 @@ const TABLE_DEFINITIONS = [
       source TEXT,
       metadata JSON
     );`, target: "topic_keywords" },
+  { name: "ui_cached_metrics", sql: `CREATE table IF NOT EXISTS ui_cached_metrics (
+      stat_key TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      generated_at TEXT NOT NULL,
+      source_window TEXT,
+      duration_ms INTEGER,
+      max_age_ms INTEGER,
+      error TEXT,
+      metadata JSON
+    );`, target: "ui_cached_metrics" },
   { name: "url_aliases", sql: `CREATE table IF NOT EXISTS "url_aliases" (
   id INTEGER PRIMARY KEY,
   classification TEXT,
@@ -2792,6 +2802,7 @@ const INDEX_DEFINITIONS = [
   { name: "idx_topic_keywords_lang", sql: `CREATE index IF NOT EXISTS idx_topic_keywords_lang ON topic_keywords(lang);`, target: "topic_keywords" },
   { name: "idx_unknown_terms_host", sql: `CREATE index IF NOT EXISTS idx_unknown_terms_host ON place_hub_unknown_terms(host);`, target: "place_hub_unknown_terms" },
   { name: "idx_unknown_terms_slug", sql: `CREATE index IF NOT EXISTS idx_unknown_terms_slug ON place_hub_unknown_terms(term_slug);`, target: "place_hub_unknown_terms" },
+  { name: "idx_ui_cached_metrics_generated_at", sql: `CREATE index IF NOT EXISTS idx_ui_cached_metrics_generated_at ON ui_cached_metrics(generated_at DESC);`, target: "ui_cached_metrics" },
   { name: "idx_urls_canonical", sql: `CREATE index IF NOT EXISTS idx_urls_canonical ON urls(canonical_url);`, target: "urls" },
   { name: "idx_urls_host", sql: `CREATE index IF NOT EXISTS idx_urls_host ON urls(host);`, target: "urls" },
   { name: "idx_urls_url", sql: `CREATE index IF NOT EXISTS idx_urls_url ON urls(url);`, target: "urls" },

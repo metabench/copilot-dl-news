@@ -36,6 +36,8 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
+Checking scripts ride alongside tests. Every UI control, renderer, or service that emits HTML should ship a bite-sized Node script under a local `checks/` folder (e.g., `src/ui/controls/checks/ConfigMatrixControl.check.js`). These scripts render representative data, assert structural expectations, and print the generated markup so diffs stay obvious. Keep them under 60 lines, drop fixtures in the same subtree, and reference them in your plan/tests so future agents can run `node <feature>/checks/<name>.check.js` to sanity-check jsgui3 output without touching the global test runner.
+
 Tight feedback. After each change: self-review the diff; run tests; update JSDoc + docs; capture a decision note if you chose between viable options.
 
 The improvement loop (run this every task)

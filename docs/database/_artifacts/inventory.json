@@ -9,7 +9,8 @@
     "src/db/migrations/010-articles-view.sql",
     "src/db/migrations/011-articles-view-no-html.sql",
     "src/db/migrations/url-normalization-schema.sql",
-    "src/db/sqlite/v1/migrations/add_news_websites_table.sql"
+    "src/db/sqlite/v1/migrations/add_news_websites_table.sql",
+    "src/db/sqlite/v1/migrations/add_ui_cached_metrics_table.sql"
   ],
   "raw_sql": [
     "docs/phase4-create-views.sql",

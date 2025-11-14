@@ -1,0 +1,19 @@
+{
+  "name": "jsgui3-client",
+  "main": "client.js",
+  "license": "MIT",
+  "dependencies": {
+    "fnl": "0.0.36",
+    "jsgui3-html": "^0.0.166"
+  },
+  "engines": {
+    "node": ">=15.0.0"
+  },
+  "description": "ES6 JSGUI Client. For delivery to the browser.",
+  "author": "James Vickers <james@metabench.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metabench/jsgui3-client.git"
+  },  
+  "version": "0.0.120"
+}
