@@ -32,7 +32,9 @@ Primary options:
   --max-pages=<n>                     Hard cap on pages/downloads for this run
   --max-age=<seconds|m|h|d>           Refetch content older than the given age (alias: --refetch-if-older-than)
   --max-age-article=<age>             Refetch threshold specifically for article pages
-  --max-age-hub=<age>                 Refetch threshold for hub/index pages
+  --max-age-hub=<age>                 Refetch threshold for hub/index pages (default 10 minutes)
+  --seed-from-cache                   Serve the start URL from cache when available
+  --cached-seed=<url>                 Queue cached URLs as additional seeds (repeat flag per URL)
   --max-queue=<n>                     Limit in-flight queue size before backpressure
   --concurrency=<n>                   Parallel downloads (treated as max for geography modes)
   --rate-limit-ms=<n>                 Minimum delay between requests in milliseconds

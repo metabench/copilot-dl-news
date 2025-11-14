@@ -20,6 +20,7 @@ class WorkerRunner {
     safeHostFromUrl,
     getQueueSize,
     onBusyChange,
+    onExitReason,
     pausePollIntervalMs = 200
   } = {}) {
     if (!queue || typeof queue.pullNext !== 'function') {
@@ -66,11 +67,30 @@ class WorkerRunner {
     this.getQueueSize = getQueueSize;
     this.onBusyChange = typeof onBusyChange === 'function' ? onBusyChange : () => {};
     this.pausePollIntervalMs = pausePollIntervalMs;
+    this.onExitReason = typeof onExitReason === 'function' ? onExitReason : null;
+  }
+
+  _emitExitReason(reason, workerId, details = {}) {
+    if (!reason || !this.onExitReason) {
+      return;
+    }
+    try {
+      this.onExitReason(reason, {
+        workerId,
+        ...details
+      });
+    } catch (_) {}
   }
 
   async run(workerId) {
+    const signalExit = (reason, details) => {
+      if (reason) {
+        this._emitExitReason(reason, workerId, details);
+      }
+    };
     while (true) {
       if (this.isAbortRequested()) {
+        signalExit('abort-requested', { phase: 'pre-loop' });
         return;
       }
 
@@ -79,17 +99,23 @@ class WorkerRunner {
         this.emitProgress();
       }
       if (this.isAbortRequested()) {
+        signalExit('abort-requested', { phase: 'paused-loop' });
         return;
       }
 
       const maxDownloads = this.getMaxDownloads();
       const stats = this.getStats();
       if (maxDownloads !== undefined && stats && typeof stats.pagesDownloaded === 'number' && stats.pagesDownloaded >= maxDownloads) {
+        signalExit('max-downloads-reached', {
+          downloads: stats.pagesDownloaded,
+          limit: maxDownloads
+        });
         return;
       }
 
       const pick = await this.queue.pullNext();
       if (this.isAbortRequested()) {
+        signalExit('abort-requested', { phase: 'post-pull' });
         return;
       }
 
@@ -108,9 +134,15 @@ class WorkerRunner {
           }
         }
         if (this.isAbortRequested()) {
+          signalExit('abort-requested', { phase: 'wait-check' });
           return;
         }
         if (this.getQueueSize() === 0 && !this.isPaused()) {
+          const latestStats = this.getStats ? this.getStats() : stats;
+          signalExit('queue-exhausted', {
+            downloads: latestStats && typeof latestStats.pagesDownloaded === 'number' ? latestStats.pagesDownloaded : null,
+            visited: latestStats && typeof latestStats.pagesVisited === 'number' ? latestStats.pagesVisited : null
+          });
           return;
         }
         continue;
@@ -139,6 +171,9 @@ class WorkerRunner {
       };
 
       if (extraCtx) {
+        if (extraCtx.processCacheResult) {
+          processContext.processCacheResult = true;
+        }
         if (extraCtx.forceCache) {
           processContext.forceCache = true;
         }

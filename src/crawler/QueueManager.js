@@ -122,6 +122,7 @@ class QueueManager {
       url,
       depth,
       type,
+      meta,
       queueSize: currentSize,
       isDuplicate: (queueKey) => queueKey && this.queuedUrls.has(queueKey)
     }) || null;
@@ -740,6 +741,7 @@ class QueueManager {
     }
 
     const meta = item.meta && typeof item.meta === 'object' ? item.meta : null;
+    const wantsCacheProcessing = meta?.processCacheResult === true || meta?.seedFromCache === true;
     const fetchPolicy = meta && typeof meta.fetchPolicy === 'string' ? meta.fetchPolicy : null;
     const fallbackToCache = meta && meta.fallbackToCache === false ? false : true;
     const metaMaxCacheAge = typeof meta?.maxCacheAgeMs === 'number' && Number.isFinite(meta.maxCacheAgeMs) && meta.maxCacheAgeMs >= 0
@@ -764,7 +766,7 @@ class QueueManager {
       getContextRef().fallbackToCache = fallbackToCache;
     }
 
-    if (item.allowRevisit) {
+    if (item.allowRevisit && !wantsCacheProcessing) {
       return nextContext;
     }
 
@@ -782,6 +784,13 @@ class QueueManager {
     const ctx = ensureContext();
     if (!ctx.cachedHost) {
       ctx.cachedHost = host || this.safeHostFromUrl(item.url);
+    }
+
+    if (wantsCacheProcessing) {
+      ctx.processCacheResult = true;
+      ctx.forceCache = true;
+      ctx.cachedPage = cached;
+      return ctx;
     }
 
     const cachedAgeMs = getCachedAgeMs(cached);

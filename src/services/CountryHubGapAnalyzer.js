@@ -17,6 +17,8 @@ const { slugify } = require('../tools/slugify');
 const { PredictionStrategyManager } = require('./shared/PredictionStrategyManager');
 const { UrlPatternGenerator } = require('./shared/UrlPatternGenerator');
 
+const MAX_KNOWN_404_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
   constructor({ 
     db,
@@ -41,6 +43,10 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
       buildMetadata: this.buildEntityMetadata.bind(this),
       logger: this.logger
     });
+
+    this.maxKnown404AgeMs = MAX_KNOWN_404_AGE_MS;
+    this._knownStatusCache = new Map();
+    this._initLatestHttpStatusStatement();
 
     // Override the _getExistingMappings method for country-specific logic
     this.predictionManager._getExistingMappings = (domain) => {
@@ -161,8 +167,10 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
     // Remove duplicates and score predictions
     const uniquePredictions = this.deduplicateAndScore(predictions);
+    const filteredPredictions = uniquePredictions.filter((prediction) => !this._isKnown404Url(prediction.url));
+    const finalPredictions = filteredPredictions.length > 0 ? filteredPredictions : uniquePredictions;
 
-    return uniquePredictions.slice(0, 5).map(p => p.url); // Return just URLs for compatibility
+    return finalPredictions.slice(0, 5).map((p) => p.url); // Return just URLs for compatibility
   }
 
   /**
@@ -290,6 +298,63 @@ class CountryHubGapAnalyzer extends HubGapAnalyzerBase {
 
   _calculatePriority(country) {
     return Math.max(10, Math.floor(country.importance || 0));
+  }
+
+  _initLatestHttpStatusStatement() {
+    try {
+      this._selectLatestHttpStatusStmt = this.db.prepare(`
+        SELECT hr.http_status AS http_status, hr.fetched_at AS fetched_at
+        FROM urls u
+        INNER JOIN http_responses hr ON hr.url_id = u.id
+        WHERE u.url = ?
+        ORDER BY hr.fetched_at DESC
+        LIMIT 1
+      `);
+    } catch (err) {
+      if (err && typeof err.message === 'string' && err.message.includes('no such table')) {
+        this._selectLatestHttpStatusStmt = null;
+        return;
+      }
+      throw err;
+    }
+  }
+
+  _getLatestHttpStatus(url) {
+    if (!url || !this._selectLatestHttpStatusStmt) {
+      return null;
+    }
+
+    const cached = this._knownStatusCache.get(url);
+    if (cached && (Date.now() - cached.cachedAt) <= 5 * 60 * 1000) { // 5 minute memoization window
+      return cached.row;
+    }
+
+    try {
+      const row = this._selectLatestHttpStatusStmt.get(url) || null;
+      this._knownStatusCache.set(url, { row, cachedAt: Date.now() });
+      return row;
+    } catch (err) {
+      if (err && typeof err.message === 'string' && err.message.includes('no such table')) {
+        this._selectLatestHttpStatusStmt = null;
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  _isKnown404Url(url) {
+    const row = this._getLatestHttpStatus(url);
+    if (!row || row.http_status !== 404) {
+      return false;
+    }
+    if (!row.fetched_at) {
+      return true;
+    }
+    const fetchedAtMs = Date.parse(row.fetched_at);
+    if (!Number.isFinite(fetchedAtMs)) {
+      return true;
+    }
+    return (Date.now() - fetchedAtMs) <= this.maxKnown404AgeMs;
   }
 }
 

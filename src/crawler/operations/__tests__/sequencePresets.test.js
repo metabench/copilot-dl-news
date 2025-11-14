@@ -14,6 +14,8 @@ describe('sequencePresets', () => {
     expect(Array.isArray(presets)).toBe(true);
     expect(names).toEqual(expect.arrayContaining([
       'ensureCountryStructure',
+      'basicArticleDiscovery',
+      'intelligentCountryHubDiscovery',
       'fullCountryHubDiscovery',
       'resilientCountryExploration'
     ]));
@@ -50,5 +52,25 @@ describe('sequencePresets', () => {
     preset.steps[0] = 'mutated';
     const presetAgain = getSequencePreset('ensureCountryStructure');
     expect(presetAgain.steps[0]).toBe('ensureCountryHubs');
+  });
+
+  it('keeps basicArticleDiscovery limited to the basic article crawl', () => {
+    const preset = getSequencePreset('basicArticleDiscovery');
+    expect(preset).not.toBeNull();
+    const operations = preset.steps.map((step) => (typeof step === 'string' ? step : step.operation));
+    expect(operations).toEqual(['basicArticleCrawl']);
+  });
+
+  it('keeps intelligentCountryHubDiscovery starting with exploreCountryHubs', () => {
+    const preset = getSequencePreset('intelligentCountryHubDiscovery');
+    expect(preset).not.toBeNull();
+    expect(preset.steps[0].operation).toBe('exploreCountryHubs');
+    const operations = preset.steps.map((step) => step.operation || step);
+    expect(operations).toEqual([
+      'exploreCountryHubs',
+      'ensureCountryHubs',
+      'findTopicHubs',
+      'findPlaceAndTopicHubs'
+    ]);
   });
 });

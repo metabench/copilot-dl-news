@@ -202,6 +202,8 @@ When run with `--crawl-type=intelligent` (or selecting the Intelligent crawl typ
 
 These are streamed over SSE (`event: problem` / `event: milestone`) and persisted for SSR history pages if the DB is writable.
 
+The helper CLI `node tools/intelligent-crawl.js` wires these planner stages together. It now downloads article content by default so capped runs like `--max-downloads 100` actually persist pages. Pass `--hub-exclusive` when you want the previous structure-only behavior (hub validation without article fetches).
+
 ### Problems & Milestones pages
 
 - `/problems/ssr` newest-first list with filters (`job`, `kind`, `scope`) & cursor pagination (`before`, `after`).
@@ -937,6 +939,7 @@ Advanced debugging and experimental features:
 # Experimental modes
 --structure-only            # Map navigation without fetching articles
 --country-hub-exclusive     # Only crawl country hub content
+--hub-exclusive             # Helper alias (intelligent-crawl.js) for structure-only hub audits
 --exhaustive-country-hub    # Comprehensive country hub discovery
 
 # Connection handling

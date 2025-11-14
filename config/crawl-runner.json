@@ -1,0 +1,9 @@
+{
+  "mode": "sequence",
+  "sequence": "basicArticleDiscovery",
+  "startUrl": "https://www.theguardian.com",
+  "sharedOverrides": {
+    "concurrency": 2,
+    "maxDownloads": 2000
+  }
+}

@@ -1,5 +1,10 @@
 'use strict';
 
+const {
+  normalizeOutputVerbosity,
+  DEFAULT_OUTPUT_VERBOSITY
+} = require('../utils/outputVerbosity');
+
 class CrawlerEvents {
   constructor(options = {}) {
     const {
@@ -21,7 +26,8 @@ class CrawlerEvents {
       getGoalSummary,
       getQueueHeatmap,
       getCoverageSummary,
-      logger
+      logger,
+      outputVerbosity = DEFAULT_OUTPUT_VERBOSITY
     } = options;
 
     if (!domain) throw new Error('CrawlerEvents requires domain');
@@ -48,6 +54,7 @@ class CrawlerEvents {
     this.getCoverageSummary = typeof getCoverageSummary === 'function' ? getCoverageSummary : () => null;
     this.logger = logger || console;
     this.isPausedFn = typeof isPaused === 'function' ? isPaused : () => false;
+    this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
 
     this._lastProgressEmitAt = 0;
     this.problemCounters = new Map();
@@ -327,10 +334,41 @@ class CrawlerEvents {
 
   _log(level, ...args) {
     if (!this.logger) return;
+    if (level === 'log') {
+      const first = args[0];
+      if (this.outputVerbosity === 'extra-terse' && this._shouldSuppressLogLine(first)) {
+        return;
+      }
+      if (this.outputVerbosity === 'terse' && this._isQueueLogLine(first)) {
+        return;
+      }
+    }
     const fn = this.logger[level];
     if (typeof fn === 'function') {
       fn.apply(this.logger, args);
     }
+  }
+
+  _isQueueLogLine(firstArg) {
+    if (typeof firstArg !== 'string') {
+      return false;
+    }
+    const trimmed = firstArg.trim();
+    if (!trimmed) {
+      return false;
+    }
+    return /^QUEUE\b/i.test(trimmed);
+  }
+
+  _shouldSuppressLogLine(firstArg) {
+    if (typeof firstArg !== 'string') {
+      return false;
+    }
+    const trimmed = firstArg.trim();
+    if (!trimmed) {
+      return false;
+    }
+    return /^(PROGRESS|QUEUE|PROBLEM|MILESTONE|PLANNER_STAGE|TELEMETRY)\b/i.test(trimmed);
   }
 
   _recordPlannerTimeline(event) {

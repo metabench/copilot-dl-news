@@ -9,6 +9,11 @@ const fs = require('fs');
 const path = require('path');
 const { CliFormatter } = require('../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../src/utils/CliArgumentParser');
+const {
+  getPriorityConfig,
+  getPriorityConfigPath,
+  setPriorityConfigProfile
+} = require('../src/utils/priorityConfig');
 
 class CliError extends Error {
   constructor(message, exitCode = 1) {
@@ -40,11 +45,14 @@ function createParser() {
     .add('--limit <lines>', 'Limit console output to N lines', undefined, 'int')
     .add('--concurrency <count>', 'Crawler concurrency (default: 1)', 1, 'int')
     .add('--max-downloads <count>', 'Maximum number of pages to download', undefined, 'int')
+    .add('--hub-exclusive', 'Restrict crawl to hub-only structure mode (no article downloads)', false, 'boolean')
     .add('--verbose', 'Stream full crawler output', false, 'boolean')
     .add('--compact', 'Show compact progress output', false, 'boolean')
     .add('--json', 'Emit JSON summary (alias for --summary-format json)', false, 'boolean')
     .add('--summary-format <mode>', 'Summary format: ascii | json', 'ascii')
-    .add('--quiet', 'Suppress ASCII summary and emit JSON only', false, 'boolean');
+    .add('--quiet', 'Suppress ASCII summary and emit JSON only', false, 'boolean')
+    .add('--seed-from-cache', 'Process the start URL directly from cache when available', false, 'boolean')
+    .add('--cached-seed <url...>', 'Queue cached URLs as additional seeds (space-separated list)', undefined, 'string');
 
   return parser;
 }
@@ -84,6 +92,15 @@ function normalizeOptions(rawOptions) {
     throw new CliError('Quiet mode requires JSON output. Use --json or --summary-format json.');
   }
 
+  const seedFromCache = Boolean(rawOptions.seedFromCache);
+  const cachedSeedInput = rawOptions.cachedSeed;
+  const cachedSeedUrls = Array.isArray(cachedSeedInput)
+    ? cachedSeedInput
+    : (typeof cachedSeedInput === 'string' && cachedSeedInput.length ? [cachedSeedInput] : []);
+  const normalizedCachedSeeds = cachedSeedUrls
+    .map((value) => typeof value === 'string' ? value.trim() : '')
+    .filter((value) => value.length > 0);
+
   return {
     providedUrl: rawOptions.url || positionalUrl,
     limit,
@@ -95,6 +112,9 @@ function normalizeOptions(rawOptions) {
     quickVerification: Boolean(rawOptions.quickVerification),
     summaryFormat,
     quiet,
+    hubExclusive: Boolean(rawOptions.hubExclusive),
+    seedFromCache,
+    cachedSeedUrls: normalizedCachedSeeds,
     positional,
   };
 }
@@ -199,6 +219,7 @@ const verbose = options.verbose;
 const compact = options.compact;
 const verification = options.verification;
 const quickVerification = options.quickVerification;
+const hubExclusiveMode = Boolean(options.hubExclusive);
 let outputLimit = options.limit;
 let concurrency = options.concurrency;
 let maxDownloads = options.maxDownloads;
@@ -646,7 +667,33 @@ function summariseList(items, limit = 25) {
   return { bounded, omitted };
 }
 
-function buildCrawlReport({ startUrl, totalPrioritisation, crawlConfig }) {
+function describeExitSummary(exitSummary) {
+  if (!exitSummary) {
+    return 'not recorded';
+  }
+  const parts = [exitSummary.reason];
+  const details = exitSummary.details || {};
+  if (typeof details.downloads === 'number' && typeof details.limit === 'number') {
+    parts.push(`downloads ${details.downloads}/${details.limit}`);
+  } else if (typeof details.downloads === 'number') {
+    parts.push(`downloads=${details.downloads}`);
+  }
+  if (typeof details.visited === 'number') {
+    parts.push(`visited=${details.visited}`);
+  }
+  if (typeof details.errors === 'number' && details.errors > 0) {
+    parts.push(`errors=${details.errors}`);
+  }
+  if (details.message) {
+    parts.push(details.message);
+  }
+  if (exitSummary.at) {
+    parts.push(`at ${exitSummary.at}`);
+  }
+  return parts.filter(Boolean).join(' | ');
+}
+
+function buildCrawlReport({ startUrl, totalPrioritisation, crawlConfig, crawlStats = null, exitSummary = null }) {
   ensureGazetteerLoaded();
 
   const uniqueCountries = [...new Set(discoveredHubs.country)].sort((a, b) => a.localeCompare(b));
@@ -672,7 +719,11 @@ function buildCrawlReport({ startUrl, totalPrioritisation, crawlConfig }) {
       topics: uniqueTopics
     },
     totalPrioritisation: Boolean(totalPrioritisation),
-    config: crawlConfig
+    config: crawlConfig,
+    runtime: {
+      stats: crawlStats ? { ...crawlStats } : null,
+      exitSummary: exitSummary || null
+    }
   };
 }
 
@@ -695,6 +746,11 @@ function emitCrawlReport(report, options) {
     }
     return report.config.maxDownloads;
   })();
+  const runtimeStats = report.runtime?.stats || null;
+  const pagesVisited = runtimeStats?.pagesVisited ?? 'n/a';
+  const pagesDownloaded = runtimeStats?.pagesDownloaded ?? 'n/a';
+  const articlesSaved = runtimeStats?.articlesSaved ?? 'n/a';
+  const exitReasonText = describeExitSummary(report.runtime?.exitSummary);
 
   fmt.header('Intelligent Crawl Summary');
   fmt.success('Crawl completed');
@@ -702,6 +758,10 @@ function emitCrawlReport(report, options) {
     'Target URL': report.startUrl,
     Concurrency: report.config?.concurrency ?? 'n/a',
     'Max downloads': maxDownloadsDisplay,
+    'Pages visited': pagesVisited,
+    'Pages downloaded': pagesDownloaded,
+    'Articles saved': articlesSaved,
+    'Exit reason': exitReasonText,
     'Country hubs discovered': report.stats.countryHubs,
     'Other place hubs': report.stats.otherPlaceHubs,
     'Topic hubs': report.stats.topicHubs,
@@ -759,13 +819,12 @@ function emitCrawlFailure(error, options) {
 
 // Load priority configuration
 console.log('Loading priority configuration...');
-const priorityConfigPath = path.join(__dirname, '..', 'config', 'priority-config.json');
-let priorityConfig = {};
-try {
-   const priorityData = fs.readFileSync(priorityConfigPath, 'utf-8');
-   priorityConfig = JSON.parse(priorityData);
-} catch (error) {
-   console.warn(`Warning: Could not load priority-config.json, using defaults`);
+setPriorityConfigProfile('intelligent');
+const priorityConfigPath = getPriorityConfigPath();
+let priorityConfig = getPriorityConfig() || {};
+if (!priorityConfig || typeof priorityConfig !== 'object') {
+  console.warn('Warning: Could not load intelligent priority configuration, using defaults');
+  priorityConfig = {};
 }
 
 
@@ -847,7 +906,7 @@ if (typeof totalPriorityOverride === 'boolean') {
       );
       console.log(`Priority configuration updated: totalPrioritisation set to ${totalPriorityOverride ? 'ENABLED' : 'DISABLED'} via config.json`);
     } catch (error) {
-      console.warn(`Warning: Failed to persist total priority setting to priority-config.json (${error.message})`);
+      console.warn(`Warning: Failed to persist total priority setting to ${path.basename(priorityConfigPath)} (${error.message})`);
     }
   }
 }
@@ -955,16 +1014,17 @@ if (verification || quickVerification) {
 
 if (verbose) {
   console.log(`Starting intelligent crawl of: ${startUrl}`);
-  console.log('Configuration: single-threaded, depth 2, intelligent mode');
+  console.log(`Configuration: concurrency ${concurrency}, depth ${hubExclusiveMode ? 1 : 2}, intelligent mode (${hubExclusiveMode ? 'hub-exclusive' : 'article-enabled'})`);
   console.log('---');
 } else if (compact) {
   console.log(colorize('🌍 Country Hub Discovery', 'blue'));
   console.log(colorize(`Target: ${startUrl}`, 'cyan'));
+  console.log(colorize(hubExclusiveMode ? 'Mode: Hub-exclusive (structure only)' : 'Mode: Intelligent + article fetch', hubExclusiveMode ? 'yellow' : 'green'));
   console.log('');
 } else if (shouldStreamOutput) {
   console.log(colorize('🚀 Starting Intelligent Crawl', 'blue'));
   console.log(colorize(`📍 Target: ${startUrl}`, 'cyan'));
-  console.log(colorize('🎯 Mode: Country Hub Prioritization', 'green'));
+  console.log(colorize(hubExclusiveMode ? '🎯 Mode: Country Hub Structure Mapping' : '🎯 Mode: Intelligent crawl with article downloads', 'green'));
   console.log(colorize('🌍 Focus: Geographic Coverage & Country Hub Discovery', 'yellow'));
   console.log('');
 }
@@ -975,6 +1035,7 @@ if (shouldStreamOutput && !verbose && !compact) {
   ensureGazetteerLoaded();
   console.log(colorize(`   ✓ ${allCountries.length} countries loaded from gazetteer`, 'green'));
   console.log(colorize(`   🎯 Total Prioritisation: ${totalPrioritisation ? 'ENABLED' : 'DISABLED'}`, totalPrioritisation ? 'green' : 'yellow'));
+  console.log(colorize(`   🧭 Mode: ${hubExclusiveMode ? 'Hub-exclusive (structure only)' : 'Article downloads enabled'}`, hubExclusiveMode ? 'yellow' : 'green'));
   console.log('');
 }
 
@@ -982,50 +1043,54 @@ if (shouldStreamOutput && !verbose && !compact) {
 const effectiveMaxDownloads = typeof maxDownloads === 'number' ? maxDownloads : 500;
 
 const crawler = new NewsCrawler(startUrl, {
-  crawlType: 'intelligent',  // Use intelligent crawl to discover country hubs
-  concurrency,               // Configurable concurrency (default 1)
-  maxDepth: 1,               // Only crawl hub pages themselves (depth 0 = start, depth 1 = hubs)
-  maxDownloads: effectiveMaxDownloads, // Allow enough downloads for all country hubs + pagination
+  crawlType: 'intelligent',
+  concurrency,
+  maxDepth: hubExclusiveMode ? 1 : 2,
+  maxDownloads: effectiveMaxDownloads,
   enableDb: true,
-  useSitemap: false,         // DISABLE sitemap loading - interferes with country hub focus
+  useSitemap: false,
   preferCache: true,
-  maxAgeMs: 24 * 60 * 60 * 1000,  // Use cache if < 24 hours old
-  // Enable country hub discovery and exhaustive pagination crawling
-  plannerEnabled: true,      // Enable intelligent planning for country hub discovery
+  maxAgeMs: 24 * 60 * 60 * 1000,
+  plannerEnabled: true,
   behavioralProfile: 'country-hub-focused',
   totalPrioritisation,
   gapDrivenPrioritization: true,
-  patternDiscovery: true,    // Enable pattern discovery for country hubs
+  patternDiscovery: true,
   countryHubGaps: true,
   countryHubBehavioralProfile: true,
-  countryHubTargetCount: 250, // Target all 250 countries
-  exhaustiveCountryHubMode: true,
-  countryHubExclusiveMode: true,
-  disableTopicHubs: true,    // Disable topic hubs
-  disableRegularArticles: true, // Disable regular articles
-  priorityMode: 'country-hubs-only',
-  skipQueryUrls: false,      // Allow pagination query URLs (page=2, etc.)
-  // Pagination-specific settings
-  enablePaginationCrawling: true,  // Enable pagination detection and following
-  maxPaginationPages: 50,    // Maximum pages to crawl per country hub
-  paginationDetectionEnabled: true, // Detect pagination links
-  paginationLoopProtection: true,  // Prevent infinite pagination loops
-  paginationTimeoutMs: 30000, // Timeout for pagination crawling per hub
-  // Hub-specific settings
-  hubMaxPages: 50,          // Maximum pages per hub (for pagination)
-  hubMaxDays: 365,          // No time limit for hub crawling
-  // Disable all non-hub content
-  disableNavigationDiscovery: false, // Keep navigation discovery for pagination
-  disableContentAcquisition: true,   // Don't save articles, just crawl structure
-  structureOnly: true        // Skip article downloads and focus on hub structure
+  countryHubTargetCount: hubExclusiveMode ? 250 : 150,
+  exhaustiveCountryHubMode: hubExclusiveMode,
+  countryHubExclusiveMode: hubExclusiveMode,
+  disableTopicHubs: hubExclusiveMode,
+  disableRegularArticles: hubExclusiveMode,
+  priorityMode: hubExclusiveMode ? 'country-hubs-only' : undefined,
+  skipQueryUrls: false,
+  enablePaginationCrawling: true,
+  maxPaginationPages: 50,
+  paginationDetectionEnabled: true,
+  paginationLoopProtection: true,
+  paginationTimeoutMs: 30000,
+  hubMaxPages: 50,
+  hubMaxDays: 365,
+  disableNavigationDiscovery: false,
+  disableContentAcquisition: hubExclusiveMode,
+  structureOnly: hubExclusiveMode,
+  seedStartFromCache: options.seedFromCache,
+  cachedSeedUrls: options.cachedSeedUrls
 });
 
 // Show planning phase with EXHAUSTIVE mode messaging
 if (shouldStreamOutput && !verbose && !compact) {
-  console.log(colorize('🧠 Planning Phase - EXHAUSTIVE COUNTRY HUB MODE:', 'blue'));
-  console.log(colorize('   🔍 Analyzing existing coverage and gaps...', 'cyan'));
-  console.log(colorize('   📊 Prioritizing ALL 250 country hubs for discovery...', 'cyan'));
-  console.log(colorize('   🎯 EXHAUSTIVE: Process all country hubs before other content', 'green'));
+  if (hubExclusiveMode) {
+    console.log(colorize('🧠 Planning Phase - EXHAUSTIVE COUNTRY HUB MODE:', 'blue'));
+    console.log(colorize('   🔍 Analyzing existing coverage and gaps...', 'cyan'));
+    console.log(colorize('   📊 Prioritizing ALL 250 country hubs for discovery...', 'cyan'));
+    console.log(colorize('   🎯 EXHAUSTIVE: Process all country hubs before other content', 'green'));
+  } else {
+    console.log(colorize('🧠 Planning Phase - HUBS + ARTICLE FETCH:', 'blue'));
+    console.log(colorize('   🔍 Seeding hub predictions and article queues...', 'cyan'));
+    console.log(colorize('   📄 Articles from hubs will be fetched until max downloads reached', 'green'));
+  }
   console.log(colorize(`   🚀 Concurrency: ${concurrency} parallel download${concurrency === 1 ? '' : 's'}`, 'yellow'));
   console.log('');
 }
@@ -1033,6 +1098,10 @@ if (shouldStreamOutput && !verbose && !compact) {
 // Start the crawl
 crawler.crawl()
   .then(() => {
+    const finalStats = crawler && crawler.stats ? { ...crawler.stats } : null;
+    const exitSummary = typeof crawler.getExitSummary === 'function'
+      ? crawler.getExitSummary()
+      : null;
     const report = buildCrawlReport({
       startUrl,
       totalPrioritisation,
@@ -1044,7 +1113,9 @@ crawler.crawl()
         summaryFormat: options.summaryFormat,
         verbose,
         compact
-      }
+      },
+      crawlStats: finalStats,
+      exitSummary
     });
     emitCrawlReport(report, options);
     process.exit(0);

@@ -1,5 +1,9 @@
 const cheerio = require('cheerio');
 const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
+const {
+  normalizeOutputVerbosity,
+  DEFAULT_OUTPUT_VERBOSITY
+} = require('../utils/outputVerbosity');
 
 class PageExecutionService {
   constructor({
@@ -29,7 +33,8 @@ class PageExecutionService {
     domain = null,
     structureOnly = false,
     hubOnlyMode = false,
-    getCountryHubBehavioralProfile = null
+    getCountryHubBehavioralProfile = null,
+    outputVerbosity = DEFAULT_OUTPUT_VERBOSITY
   } = {}) {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
@@ -79,6 +84,7 @@ class PageExecutionService {
     this.getCountryHubBehavioralProfile = typeof getCountryHubBehavioralProfile === 'function'
       ? getCountryHubBehavioralProfile
       : () => null;
+    this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -102,6 +108,16 @@ class PageExecutionService {
     });
 
     if (!fetchResult) {
+      this._emitPageLog({
+        url,
+        normalizedUrl: null,
+        source: null,
+        status: 'failed',
+        fetchMeta: null,
+        cacheInfo: null,
+        depth,
+        error: 'fetch-pipeline-empty'
+      });
       return {
         status: 'failed',
         retriable: true
@@ -114,7 +130,9 @@ class PageExecutionService {
       html
     } = fetchResult;
     const fetchMeta = meta.fetchMeta || null;
+    const cacheInfo = meta.cacheInfo || null;
     const resolvedUrl = meta.url || url;
+    const wantsCacheProcessing = context && context.processCacheResult === true;
 
     let normalizedUrl = null;
     if (this.normalizeUrl) {
@@ -133,7 +151,7 @@ class PageExecutionService {
       };
     }
 
-    if (source === 'cache') {
+    if (source === 'cache' && !wantsCacheProcessing) {
       if (normalizedUrl) {
         try {
           this.state.addVisited(normalizedUrl);
@@ -200,6 +218,15 @@ class PageExecutionService {
         });
       }
 
+      this._emitPageLog({
+        url: resolvedUrl,
+        normalizedUrl,
+        source,
+        status: 'cache',
+        fetchMeta,
+        cacheInfo,
+        depth
+      });
       return {
         status: 'cache'
       };
@@ -250,19 +277,57 @@ class PageExecutionService {
           });
         } catch (_) {}
       }
+      this._emitPageLog({
+        url: resolvedUrl,
+        normalizedUrl,
+        source,
+        status: 'not-modified',
+        fetchMeta,
+        cacheInfo,
+        depth
+      });
       return {
         status: 'not-modified'
       };
     }
 
     if (source === 'error') {
+      const httpStatus = meta?.error?.httpStatus;
+      const isNotFound = httpStatus === 404 || httpStatus === 410;
+      if (isNotFound) {
+        this._emitPageLog({
+          url: resolvedUrl,
+          normalizedUrl,
+          source,
+          status: 'skipped',
+          fetchMeta,
+          cacheInfo,
+          depth,
+          error: meta.error || meta.reason || null
+        });
+
+        return {
+          status: 'skipped',
+          reason: 'not-found',
+          retriable: false
+        };
+      }
       try {
         this.state.incrementErrors();
       } catch (_) {}
-      const httpStatus = meta?.error?.httpStatus;
-      const retriable = typeof httpStatus === 'number' ?
-        (httpStatus === 429 || (httpStatus >= 500 && httpStatus < 600)) :
-        true;
+      const retriable = typeof httpStatus === 'number'
+        ? (httpStatus === 429 || (httpStatus >= 500 && httpStatus < 600))
+        : true;
+      this._emitPageLog({
+        url: resolvedUrl,
+        normalizedUrl,
+        source,
+        status: 'failed',
+        fetchMeta,
+        cacheInfo,
+        depth,
+        error: meta.error || meta.reason || null
+      });
       return {
         status: 'failed',
         retriable,
@@ -277,11 +342,14 @@ class PageExecutionService {
       } catch (_) {}
     }
 
+    const countedDownload = source === 'network';
     try {
       this.state.incrementPagesVisited();
-      this.state.incrementPagesDownloaded();
-      if (fetchMeta?.bytesDownloaded != null) {
-        this.state.incrementBytesDownloaded(fetchMeta.bytesDownloaded);
+      if (countedDownload) {
+        this.state.incrementPagesDownloaded();
+        if (fetchMeta?.bytesDownloaded != null) {
+          this.state.incrementBytesDownloaded(fetchMeta.bytesDownloaded);
+        }
       }
     } catch (_) {}
 
@@ -361,6 +429,16 @@ class PageExecutionService {
             });
           } catch (_) {}
         }
+        this._emitPageLog({
+          url: resolvedUrl,
+          normalizedUrl,
+          source,
+          status: 'failed',
+          fetchMeta,
+          cacheInfo,
+          depth,
+          error
+        });
         return {
           status: 'failed',
           retriable: false
@@ -411,9 +489,7 @@ class PageExecutionService {
       } catch (_) {}
     }
 
-    try {
-      console.log(`Found ${navigationLinks.length} navigation links and ${articleLinks.length} article links on ${resolvedUrl}`);
-    } catch (_) {}
+    // Suppress noisy per-page link summaries in favor of concise PAGE logs
 
     if (!this.structureOnly && processorResult?.isArticle && processorResult.metadata) {
       try {
@@ -494,6 +570,16 @@ class PageExecutionService {
     }
 
     this._updateCountryHubProgress();
+
+    this._emitPageLog({
+      url: resolvedUrl,
+      normalizedUrl,
+      source,
+      status: 'success',
+      fetchMeta,
+      cacheInfo,
+      depth
+    });
 
     return {
       status: 'success'
@@ -660,6 +746,91 @@ class PageExecutionService {
       }
       this._updateCountryHubProgress();
     }
+  }
+
+  _emitPageLog({
+    url,
+    normalizedUrl,
+    source,
+    status,
+    fetchMeta,
+    cacheInfo,
+    depth,
+    error
+  }) {
+    try {
+      const payload = {
+        url: normalizedUrl || url || null,
+        source: source || null,
+        status: status || null,
+        depth: depth ?? null,
+        downloadMs: Number.isFinite(fetchMeta?.downloadMs) ? Math.round(fetchMeta.downloadMs) : null,
+        totalMs: Number.isFinite(fetchMeta?.totalMs) ? Math.round(fetchMeta.totalMs) : null,
+        httpStatus: fetchMeta?.httpStatus ?? null,
+        bytesDownloaded: Number.isFinite(fetchMeta?.bytesDownloaded) ? fetchMeta.bytesDownloaded : null,
+        cacheAgeSeconds: Number.isFinite(cacheInfo?.ageSeconds) ? cacheInfo.ageSeconds : null,
+        cacheReason: cacheInfo?.reason || null,
+        cacheSource: cacheInfo?.source || null
+      };
+      if (error) {
+        payload.error = typeof error === 'string' ? error : (error.message || error.kind || null);
+      }
+      this._logPerVerbosity(payload);
+    } catch (_) {}
+  }
+
+  _logPerVerbosity(payload) {
+    const stats = typeof this.getStats === 'function' ? this.getStats() : null;
+    const verbosity = this.outputVerbosity || DEFAULT_OUTPUT_VERBOSITY;
+    if (verbosity === 'extra-terse') {
+      const line = this._formatExtraTerse(payload, stats);
+      console.log(line);
+      return;
+    }
+    if (verbosity === 'terse') {
+      console.log(this._formatTerse(payload));
+      return;
+    }
+    console.log('PAGE ' + JSON.stringify(payload));
+  }
+
+  _formatTerse(payload) {
+    const url = payload.url || payload.normalizedUrl || 'unknown-url';
+    const status = payload.status || 'unknown';
+    const downloadMs = Number.isFinite(payload.downloadMs)
+      ? `${payload.downloadMs}ms`
+      : (Number.isFinite(payload.totalMs) ? `${payload.totalMs}ms` : 'n/a');
+    const httpStatus = payload.httpStatus || payload.cacheInfo?.httpStatus || 'n/a';
+    return `PAGE ${url} status=${status} http=${httpStatus} download=${downloadMs}`;
+  }
+
+  _formatExtraTerse(payload, stats) {
+    const url = payload.url || payload.normalizedUrl || 'unknown-url';
+    const parts = [url];
+    if (payload.status && payload.status !== 'success') {
+      parts.push(payload.status === 'failed' ? 'FAIL' : payload.status.toUpperCase());
+    }
+    const downloadMs = Number.isFinite(payload.downloadMs)
+      ? `${payload.downloadMs}ms`
+      : (Number.isFinite(payload.totalMs) ? `${payload.totalMs}ms` : null);
+    if (downloadMs) {
+      parts.push(downloadMs);
+    }
+    const downloaded = this._safeDownloadedCount(stats);
+    if (downloaded != null) {
+      const limit = Number.isFinite(this.maxDownloads) ? this.maxDownloads : null;
+      const counter = limit ? `${downloaded}/${limit}` : `${downloaded}`;
+      parts.push(counter);
+    }
+    return parts.join(' ');
+  }
+
+  _safeDownloadedCount(stats) {
+    if (!stats || typeof stats !== 'object') {
+      return null;
+    }
+    const value = stats.pagesDownloaded;
+    return Number.isFinite(value) ? value : null;
   }
 }
 

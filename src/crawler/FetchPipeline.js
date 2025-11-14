@@ -612,11 +612,14 @@ class FetchPipeline {
         }
 
         const failureHost = this._safeHost(finalUrl, host);
-        this._noteHostFailure(failureHost, {
-          type: 'http',
-          status,
-          retryAfterMs
-        });
+        const shouldCountTowardsHostBudget = !(status === 404 || status === 410);
+        if (shouldCountTowardsHostBudget) {
+          this._noteHostFailure(failureHost, {
+            type: 'http',
+            status,
+            retryAfterMs
+          });
+        }
 
         if (shouldFallbackToCache) {
           const fallbackResult = buildFallbackResult({ fallbackReason: `http-${status}`, httpStatus: status });

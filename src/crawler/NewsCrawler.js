@@ -7,6 +7,10 @@ const path = require('path');
 const { tof, is_array } = require('lang-tools');
 const { buildOptions } = require('../utils/optionsBuilder');
 const {
+  normalizeOutputVerbosity,
+  DEFAULT_OUTPUT_VERBOSITY
+} = require('../utils/outputVerbosity');
+const {
   URL
 } = require('url');
 const {
@@ -103,6 +107,26 @@ function normalizeHost(host) {
   const withoutScheme = value.replace(/^https?:\/\//, '');
   return withoutScheme.replace(/\/.*$/, '');
 }
+
+function resolvePriorityProfileFromCrawlType(crawlType) {
+  if (typeof crawlType !== 'string') {
+    return 'basic';
+  }
+  const normalized = crawlType.trim().toLowerCase();
+  if (!normalized) {
+    return 'basic';
+  }
+  if (normalized.startsWith('intelligent')) {
+    return 'intelligent';
+  }
+  if (normalized === 'geography' || normalized === 'gazetteer') {
+    return 'geography';
+  }
+  if (normalized === 'wikidata') {
+    return 'wikidata';
+  }
+  return 'basic';
+}
 const {
   loadSitemaps
 } = require('./sitemap');
@@ -112,6 +136,9 @@ const {
 const {
   RobotsAndSitemapCoordinator
 } = require('./RobotsAndSitemapCoordinator');
+const {
+  setPriorityConfigProfile
+} = require('../utils/priorityConfig');
 
 const QueueManager = require('./QueueManager');
 const {
@@ -200,6 +227,8 @@ const {
   StartupProgressTracker
 } = require('./StartupProgressTracker');
 
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+
 /**
  * Schema for NewsCrawler constructor options
  */
@@ -220,7 +249,7 @@ const crawlerOptionsSchema = {
   maxDownloads: { type: 'number', default: undefined, validator: (val) => val > 0 },
   maxAgeMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
   maxAgeArticleMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
-  maxAgeHubMs: { type: 'number', default: undefined, validator: (val) => val >= 0 },
+  maxAgeHubMs: { type: 'number', default: TEN_MINUTES_MS, validator: (val) => val >= 0 },
   dbPath: { type: 'string', default: null }, // Will be computed after dataDir
   fastStart: { type: 'boolean', default: true },
   enableDb: { type: 'boolean', default: true },
@@ -240,10 +269,13 @@ const crawlerOptionsSchema = {
   pacerJitterMinMs: { type: 'number', default: 25, processor: (val) => Math.max(0, val) },
   pacerJitterMaxMs: { type: 'number', default: 50 },
   crawlType: { type: 'string', default: 'basic', processor: (val) => val.toLowerCase() },
+  outputVerbosity: { type: 'string', default: DEFAULT_OUTPUT_VERBOSITY, processor: (val) => normalizeOutputVerbosity(val) },
   skipQueryUrls: { type: 'boolean', default: true },
   connectionResetWindowMs: { type: 'number', default: 2 * 60 * 1000, validator: (val) => val > 0 },
   connectionResetThreshold: { type: 'number', default: 3, validator: (val) => val > 0 },
-  useSequenceRunner: { type: 'boolean', default: true }
+  useSequenceRunner: { type: 'boolean', default: true },
+  seedStartFromCache: { type: 'boolean', default: false },
+  cachedSeedUrls: { type: 'array', default: () => [] }
 };
 
 class NewsCrawler extends Crawler {
@@ -305,6 +337,7 @@ class NewsCrawler extends Crawler {
     this.startUrlNormalized = null;
     this.isProcessing = false;
     this.dbAdapter = null;
+    this.exitSummary = null;
   // Enhanced features (initialized later)
   this.adaptiveSeedPlanner = null;
     this.articleSignals = new ArticleSignalsService({
@@ -349,6 +382,8 @@ class NewsCrawler extends Crawler {
     this.pacerJitterMaxMs = Math.max(this.pacerJitterMinMs, opts.pacerJitterMaxMs);
     // Crawl type determines planner features (e.g., 'intelligent')
     this.crawlType = opts.crawlType;
+    this.outputVerbosity = opts.outputVerbosity;
+    this.priorityProfile = setPriorityConfigProfile(resolvePriorityProfileFromCrawlType(this.crawlType));
     this.gazetteerVariant = this._resolveGazetteerVariant(this.crawlType);
     this.isGazetteerMode = !!this.gazetteerVariant;
     this.countryHubExclusiveMode = Boolean(
@@ -368,6 +403,10 @@ class NewsCrawler extends Crawler {
     }
   this.plannerEnabled = this.crawlType.startsWith('intelligent') || this.structureOnly;
     this.skipQueryUrls = opts.skipQueryUrls;
+    this.seedStartFromCache = !!opts.seedStartFromCache;
+    this.cachedSeedUrls = Array.isArray(opts.cachedSeedUrls)
+      ? opts.cachedSeedUrls.filter((value) => typeof value === 'string' && value.trim().length > 0)
+      : [];
     if (this.isGazetteerMode) {
       this._applyGazetteerDefaults(options);
     }
@@ -422,7 +461,8 @@ class NewsCrawler extends Crawler {
       getGoalSummary: () => this.milestoneTracker ? this.milestoneTracker.getGoalsSummary() : [],
       getQueueHeatmap: () => (this.queue && typeof this.queue.getHeatmapSnapshot === 'function') ? this.queue.getHeatmapSnapshot() : null,
       getCoverageSummary: () => this._getCoverageSummary(),
-      logger: console
+      logger: console,
+      outputVerbosity: this.outputVerbosity
     });
 
     this.telemetry = new CrawlerTelemetry({
@@ -523,7 +563,8 @@ class NewsCrawler extends Crawler {
       hasVisited: (normalized) => this.state.hasVisited(normalized),
       looksLikeArticle: (normalized) => this.looksLikeArticle(normalized),
       knownArticlesCache: this.state.getKnownArticlesCache(),
-      getDbAdapter: () => this.dbAdapter
+      getDbAdapter: () => this.dbAdapter,
+      maxAgeHubMs: this.maxAgeHubMs
     });
 
     this.queue = new QueueManager({
@@ -635,6 +676,7 @@ class NewsCrawler extends Crawler {
     this.pageExecutionService = new PageExecutionService({
       maxDepth: this.maxDepth,
       maxDownloads: this.maxDownloads,
+      outputVerbosity: this.outputVerbosity,
       getStats: () => this.stats,
       state: this.state,
       fetchPipeline: this.fetchPipeline,
@@ -1443,6 +1485,63 @@ class NewsCrawler extends Crawler {
     return this.errorTracker?.determineOutcomeError(this.stats) || null;
   }
 
+  _recordExit(reason, details = {}) {
+    if (!reason || this.exitSummary) {
+      return;
+    }
+    const payload = typeof details === 'object' && details !== null ? { ...details } : {};
+    this.exitSummary = {
+      reason,
+      at: new Date().toISOString(),
+      details: payload
+    };
+    try {
+      const telemetryDetails = {
+        reason,
+        ...payload
+      };
+      this.telemetry?.milestoneOnce?.(`crawl-exit:${reason}`, {
+        kind: 'crawl-exit',
+        message: `Crawler exit: ${reason}`,
+        details: telemetryDetails
+      });
+    } catch (_) {}
+  }
+
+  _describeExitSummary(summary) {
+    if (!summary) {
+      return 'not recorded';
+    }
+    const parts = [summary.reason];
+    const details = summary.details || {};
+    if (typeof details.downloads === 'number') {
+      parts.push(`downloads=${details.downloads}`);
+    }
+    if (typeof details.limit === 'number') {
+      parts.push(`limit=${details.limit}`);
+    }
+    if (typeof details.visited === 'number') {
+      parts.push(`visited=${details.visited}`);
+    }
+    if (details.message) {
+      parts.push(details.message);
+    }
+    return parts.filter(Boolean).join(' | ');
+  }
+
+  getExitSummary() {
+    if (!this.exitSummary) {
+      return null;
+    }
+    const clonedDetails = this.exitSummary.details && typeof this.exitSummary.details === 'object'
+      ? { ...this.exitSummary.details }
+      : {};
+    return {
+      ...this.exitSummary,
+      details: clonedDetails
+    };
+  }
+
   _getUrlDecision(rawUrl, context = {}) {
     return this.urlDecisionService.getDecision(rawUrl, context);
   }
@@ -2182,7 +2281,8 @@ class NewsCrawler extends Crawler {
         getQueueSize: () => this.queue.size(),
         onBusyChange: (delta) => {
           this.busyWorkers = Math.max(0, this.busyWorkers + delta);
-        }
+        },
+        onExitReason: (reason, details) => this._recordExit(reason, details)
       });
     }
     return this.workerRunner;
@@ -2517,17 +2617,64 @@ class NewsCrawler extends Crawler {
     if (respectSitemapOnly && this.sitemapOnly) {
       return { seeded: false };
     }
-    this.enqueueRequest({
-      url: this.startUrl,
-      depth: 0,
-      type: 'nav'
-    });
-    return { seeded: true };
+    const seen = new Set();
+    let seedsEnqueued = 0;
+
+    const enqueueSeed = (targetUrl, meta = null) => {
+      if (typeof targetUrl !== 'string' || !targetUrl.trim()) {
+        return;
+      }
+      const key = targetUrl.trim();
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      this.enqueueRequest({
+        url: targetUrl,
+        depth: 0,
+        type: 'nav',
+        meta: meta || null
+      });
+      seedsEnqueued += 1;
+    };
+
+    const startMeta = this.seedStartFromCache ? this._buildCachedSeedMeta('start-url') : null;
+    enqueueSeed(this.startUrl, startMeta);
+
+    if (Array.isArray(this.cachedSeedUrls) && this.cachedSeedUrls.length) {
+      for (const rawUrl of this.cachedSeedUrls) {
+        if (typeof rawUrl !== 'string') continue;
+        const trimmed = rawUrl.trim();
+        if (!trimmed) continue;
+        enqueueSeed(trimmed, this._buildCachedSeedMeta('cli-cache-seed'));
+      }
+    }
+
+    return {
+      seeded: seedsEnqueued > 0,
+      seedsEnqueued
+    };
+  }
+
+  _buildCachedSeedMeta(reason = null) {
+    const meta = {
+      seedFromCache: true,
+      processCacheResult: true
+    };
+    if (reason) {
+      meta.seedReason = reason;
+    }
+    return meta;
   }
 
   async _runSequentialLoop() {
     while (true) {
       if (this.isAbortRequested()) {
+        this._recordExit('abort-requested', {
+          phase: 'loop-guard',
+          downloads: this.stats.pagesDownloaded,
+          visited: this.stats.pagesVisited
+        });
         break;
       }
       while (this.isPaused() && !this.isAbortRequested()) {
@@ -2535,20 +2682,38 @@ class NewsCrawler extends Crawler {
         this.emitProgress();
       }
       if (this.isAbortRequested()) {
+        this._recordExit('abort-requested', {
+          phase: 'post-pause',
+          downloads: this.stats.pagesDownloaded,
+          visited: this.stats.pagesVisited
+        });
         break;
       }
       if (this.maxDownloads !== undefined && this.stats.pagesDownloaded >= this.maxDownloads) {
         console.log(`Reached max downloads limit: ${this.maxDownloads}`);
+        this._recordExit('max-downloads-reached', {
+          downloads: this.stats.pagesDownloaded,
+          limit: this.maxDownloads
+        });
         break;
       }
       const pick = await this._pullNextWorkItem();
       if (this.isAbortRequested()) {
+        this._recordExit('abort-requested', {
+          phase: 'post-pull',
+          downloads: this.stats.pagesDownloaded,
+          visited: this.stats.pagesVisited
+        });
         break;
       }
       const now = nowMs();
       if (!pick || !pick.item) {
         const queueSize = this.queue.size();
         if (queueSize === 0 && !this.isPaused()) {
+          this._recordExit('queue-exhausted', {
+            downloads: this.stats.pagesDownloaded,
+            visited: this.stats.pagesVisited
+          });
           break;
         }
         const wakeTarget = pick && pick.wakeAt ? Math.max(0, pick.wakeAt - now) : (this.rateLimitMs || 100);
@@ -2574,6 +2739,9 @@ class NewsCrawler extends Crawler {
         type: item.type,
         allowRevisit: item.allowRevisit
       };
+      if (extraCtx && extraCtx.processCacheResult) {
+        processContext.processCacheResult = true;
+      }
       if (extraCtx && extraCtx.forceCache) {
         processContext.forceCache = true;
         if (extraCtx.cachedPage) processContext.cachedPage = extraCtx.cachedPage;
@@ -2582,6 +2750,11 @@ class NewsCrawler extends Crawler {
 
       await this.processPage(item.url, item.depth, processContext);
       if (this.isAbortRequested()) {
+        this._recordExit('abort-requested', {
+          phase: 'post-process',
+          downloads: this.stats.pagesDownloaded,
+          visited: this.stats.pagesVisited
+        });
         break;
       }
 
@@ -2603,10 +2776,20 @@ class NewsCrawler extends Crawler {
 
   async _finalizeRun({ includeCleanup = false } = {}) {
     const outcomeErr = this._determineOutcomeError();
+    if (!this.exitSummary) {
+      this._recordExit(outcomeErr ? 'failed' : 'completed', {
+        downloads: this.stats.pagesDownloaded,
+        visited: this.stats.pagesVisited,
+        errors: this.stats.errors
+      });
+    }
     if (outcomeErr) {
       log.error(`Crawl ended: ${outcomeErr.message}`);
     } else {
       log.success('Crawl completed');
+    }
+    if (this.exitSummary) {
+      log.info(`Exit reason: ${this._describeExitSummary(this.exitSummary)}`);
     }
     log.stat('Pages visited', this.stats.pagesVisited);
     log.stat('Pages downloaded', this.stats.pagesDownloaded);

@@ -77,4 +77,28 @@ describe('normalizeLegacyArguments', () => {
 
     expect(enable.interactiveControls).toEqual({ enabled: true, explicit: true });
   });
+
+  it('defaults maxAgeHubMs to 10 minutes and propagates cached seed flags', () => {
+    const result = normalizeLegacyArguments([
+      '--seed-from-cache',
+      '--cached-seed', 'https://cached.example/hub',
+      '--cached-seed=https://cached-2.example/hub',
+      '--start-url', 'https://start.example.com'
+    ], { log: createMockLogger() });
+
+    expect(result.options.seedStartFromCache).toBe(true);
+    expect(result.options.cachedSeedUrls).toEqual([
+      'https://cached.example/hub',
+      'https://cached-2.example/hub'
+    ]);
+    expect(result.options.maxAgeHubMs).toBe(10 * 60 * 1000);
+  });
+
+  it('honors explicit --max-age-hub overrides', () => {
+    const result = normalizeLegacyArguments([
+      '--max-age-hub=5m'
+    ], { log: createMockLogger() });
+
+    expect(result.options.maxAgeHubMs).toBe(5 * 60 * 1000);
+  });
 });

@@ -2,6 +2,9 @@
 
 const { URL } = require('url');
 
+const statementCache = new WeakMap();
+const ACQUISITION_KINDS = new Set(['article', 'refresh', 'history']);
+
 class UrlEligibilityService {
   constructor(options = {}) {
     const {
@@ -12,7 +15,8 @@ class UrlEligibilityService {
       hasVisited,
       looksLikeArticle,
       knownArticlesCache,
-      getDbAdapter
+      getDbAdapter,
+      maxAgeHubMs
     } = options;
     if (typeof getUrlDecision !== 'function') {
       throw new Error('UrlEligibilityService requires getUrlDecision function');
@@ -34,6 +38,7 @@ class UrlEligibilityService {
     this.looksLikeArticle = typeof looksLikeArticle === 'function' ? looksLikeArticle : () => false;
     this.knownArticlesCache = knownArticlesCache || new Map();
     this.getDbAdapter = typeof getDbAdapter === 'function' ? getDbAdapter : null;
+    this.maxAgeHubMs = Number.isFinite(maxAgeHubMs) && maxAgeHubMs >= 0 ? maxAgeHubMs : null;
   }
 
   evaluate({ url, depth = 0, type, queueSize = 0, isDuplicate }) {
@@ -109,7 +114,7 @@ class UrlEligibilityService {
     const allowRevisit = !!meta?.allowRevisit;
 
     // Check database first for already processed URLs (prevents duplicate processing across crawl sessions)
-    if (!allowRevisit && this._isAlreadyProcessed(normalized)) {
+    if (!allowRevisit && this._isAlreadyProcessed(normalized, { kind })) {
       return {
         status: 'drop',
         reason: 'already-processed',
@@ -186,7 +191,7 @@ class UrlEligibilityService {
    * @param {string} normalized - Normalized URL to check
    * @returns {boolean} - True if URL has successful HTTP response with content storage
    */
-  _isAlreadyProcessed(normalized) {
+  _isAlreadyProcessed(normalized, options = {}) {
     if (!normalized) return false;
     
     // Check cache first
@@ -203,20 +208,100 @@ class UrlEligibilityService {
       // Check if URL has successful HTTP response with content storage
       const db = adapter.getDb ? adapter.getDb() : null;
       if (!db) return false;
-      
-      const row = db.prepare(`
-        SELECT 1 FROM urls u
-        INNER JOIN http_responses hr ON hr.url_id = u.id
-        INNER JOIN content_storage cs ON cs.http_response_id = hr.id
-        WHERE u.url = ? AND hr.http_status >= 200 AND hr.http_status < 300
-        LIMIT 1
-      `).get(normalized);
-      
+
+      const { processedCheck, latestFetch } = this._getStatements(db);
+      const isNavigationKind = this._isNavigationKind(options.kind);
+
+      if (isNavigationKind && this.maxAgeHubMs != null) {
+        const latestRow = this._getLatestFetch(latestFetch, normalized);
+        if (!this._isHubFetchFresh(latestRow)) {
+          return false;
+        }
+      }
+
+      if (!processedCheck) {
+        return false;
+      }
+
+      const row = processedCheck.get(normalized);
       return !!row;
     } catch (error) {
       // If database check fails, err on the side of processing (don't block potentially valid URLs)
       return false;
     }
+  }
+
+  _getStatements(db) {
+    if (!db) return { processedCheck: null, latestFetch: null };
+    let cached = statementCache.get(db);
+    if (cached) {
+      return cached;
+    }
+
+    let processedCheck = null;
+    let latestFetch = null;
+
+    try {
+      processedCheck = db.prepare(`
+        SELECT 1 FROM urls u
+        INNER JOIN http_responses hr ON hr.url_id = u.id
+        INNER JOIN content_storage cs ON cs.http_response_id = hr.id
+        WHERE u.url = ? AND hr.http_status >= 200 AND hr.http_status < 300
+        LIMIT 1
+      `);
+    } catch (_) {}
+
+    try {
+      latestFetch = db.prepare(`
+        SELECT hr.fetched_at AS fetched_at
+        FROM urls u
+        INNER JOIN http_responses hr ON hr.url_id = u.id
+        WHERE u.url = ?
+        ORDER BY hr.fetched_at DESC
+        LIMIT 1
+      `);
+    } catch (_) {}
+
+    cached = { processedCheck, latestFetch };
+    statementCache.set(db, cached);
+    return cached;
+  }
+
+  _getLatestFetch(statement, normalized) {
+    if (!statement || !normalized) {
+      return null;
+    }
+    try {
+      return statement.get(normalized) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _isHubFetchFresh(row) {
+    if (!row || !row.fetched_at) {
+      return false;
+    }
+    if (this.maxAgeHubMs == null) {
+      return false;
+    }
+    const fetchedAtMs = Date.parse(row.fetched_at);
+    if (!Number.isFinite(fetchedAtMs)) {
+      return false;
+    }
+    const ageMs = Date.now() - fetchedAtMs;
+    if (ageMs < 0) {
+      return false;
+    }
+    return ageMs < this.maxAgeHubMs;
+  }
+
+  _isNavigationKind(kind) {
+    if (!kind || typeof kind !== 'string') {
+      return true;
+    }
+    const normalized = kind.toLowerCase();
+    return !ACQUISITION_KINDS.has(normalized);
   }
 
   _safeHost(url) {

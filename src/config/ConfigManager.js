@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { tof, clone, is_array, fp } = require('lang-tools');
+const { getPriorityConfigPath } = require('../utils/priorityConfig');
 
 function deepMerge(target, source) {
   if (!source || tof(source) !== 'object') return target;
@@ -88,7 +89,7 @@ class ConfigManager {
       watch: options.watch !== undefined ? !!options.watch : !process.env.JEST_WORKER_ID,
       fs: options.fs || fs
     };
-    this.configPath = configPath || path.join(process.cwd(), 'config', 'priority-config.json');
+    this.configPath = configPath || getPriorityConfigPath();
     this.fs = this.options.fs;
     this.config = null;
     this.watchers = new Set();

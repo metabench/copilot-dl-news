@@ -21,7 +21,8 @@ describe('UrlEligibilityService', () => {
       hasVisited: overrides.hasVisited || jest.fn().mockReturnValue(false),
       looksLikeArticle: overrides.looksLikeArticle || jest.fn().mockReturnValue(true),
       knownArticlesCache,
-      getDbAdapter: overrides.getDbAdapter || (() => adapter)
+      getDbAdapter: overrides.getDbAdapter || (() => adapter),
+      maxAgeHubMs: overrides.maxAgeHubMs
     });
   };
 
@@ -122,5 +123,69 @@ describe('UrlEligibilityService', () => {
     });
     expect(result.status).toBe('drop');
     expect(result.reason).toBe('robots-disallow');
+  });
+
+  describe('hub freshness with maxAgeHubMs', () => {
+    const buildDb = (fetchedAtIso) => ({
+      prepare: jest.fn((sql) => {
+        if (sql.includes('content_storage')) {
+          return { get: jest.fn(() => ({ ok: 1 })) };
+        }
+        if (sql.includes('ORDER BY hr.fetched_at DESC')) {
+          return { get: jest.fn(() => ({ fetched_at: fetchedAtIso })) };
+        }
+        throw new Error(`Unexpected SQL: ${sql}`);
+      })
+    });
+
+    it('allows nav hubs when latest fetch is older than maxAgeHubMs', () => {
+      const threshold = 60 * 1000;
+      const fetchedAt = new Date(Date.now() - threshold - 1000).toISOString();
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(fetchedAt)
+      };
+      const service = createService({
+        getDbAdapter: () => adapter,
+        looksLikeArticle: jest.fn().mockReturnValue(false),
+        maxAgeHubMs: threshold
+      });
+
+      const result = service.evaluate({
+        url: 'https://example.com/front-page',
+        depth: 0,
+        type: 'nav',
+        queueSize: 0,
+        isDuplicate: () => false
+      });
+
+      expect(result.status).toBe('allow');
+      expect(result.kind).toBe('nav');
+    });
+
+    it('continues dropping nav hubs when fetch is fresher than maxAgeHubMs', () => {
+      const threshold = 60 * 1000;
+      const fetchedAt = new Date(Date.now() - 500).toISOString();
+      const adapter = {
+        isEnabled: () => true,
+        getDb: () => buildDb(fetchedAt)
+      };
+      const service = createService({
+        getDbAdapter: () => adapter,
+        looksLikeArticle: jest.fn().mockReturnValue(false),
+        maxAgeHubMs: threshold
+      });
+
+      const result = service.evaluate({
+        url: 'https://example.com/front-page',
+        depth: 0,
+        type: 'nav',
+        queueSize: 0,
+        isDuplicate: () => false
+      });
+
+      expect(result.status).toBe('drop');
+      expect(result.reason).toBe('already-processed');
+    });
   });
 });

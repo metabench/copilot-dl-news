@@ -85,7 +85,9 @@ node tools/db-schema.js tables
 node tools/db-schema.js describe articles
 
 # Data analysis
-node tools/intelligent-crawl.js --limit 50
+node tools/intelligent-crawl.js --max-downloads 100
+# Revert to structure-only hub validation mode
+node tools/intelligent-crawl.js --hub-exclusive --limit 50
 node tools/analyze-country-hub-patterns.js
 node tools/analysis/enhanced-hub-discovery.js
 

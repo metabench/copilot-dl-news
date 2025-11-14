@@ -22,6 +22,28 @@ const BASE_PRESETS = {
     ]),
     continueOnError: false
   }),
+  basicArticleDiscovery: freeze({
+    name: 'basicArticleDiscovery',
+    label: 'Basic Article Discovery',
+    description: 'Crawl articles using the basic crawler without hub discovery steps.',
+    steps: freeze([
+      { operation: 'basicArticleCrawl', label: 'Basic Article Crawl' }
+    ]),
+    continueOnError: false
+  }),
+  intelligentCountryHubDiscovery: freeze({
+    name: 'intelligentCountryHubDiscovery',
+    label: 'Intelligent Country Hub Discovery',
+    description: 'Explore country hubs first, ensure structure, then expand into topic and place hubs.',
+    sharedOverrides: freeze({ plannerVerbosity: 1 }),
+    steps: freeze([
+      { operation: 'exploreCountryHubs', label: 'Explore Country Hubs', overrides: { plannerVerbosity: 1 } },
+      { operation: 'ensureCountryHubs', label: 'Ensure Country Hubs' },
+      { operation: 'findTopicHubs', label: 'Discover Topic Hubs' },
+      { operation: 'findPlaceAndTopicHubs', label: 'Discover Place & Topic Hubs' }
+    ]),
+    continueOnError: false
+  }),
   fullCountryHubDiscovery: freeze({
     name: 'fullCountryHubDiscovery',
     label: 'Full Country Hub Discovery',

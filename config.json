@@ -4,8 +4,9 @@
     "totalPriority": true
   },
   "crawlDefaults": {
-    "sequence": "fullCountryHubDiscovery",
+    "sequence": "basicArticleDiscovery",
     "startUrl": "https://www.theguardian.com",
+    "outputVerbosity": "extra-terse",
     "sharedOverrides": {
       "concurrency": 2,
       "maxDownloads": 2000

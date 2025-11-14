@@ -4,34 +4,78 @@ const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('./project-root');
 
-let cachedConfig = null;
-let cachedMtimeMs = null;
-let cachedPath = null;
+const PROFILE_FILE_MAP = Object.freeze({
+  default: 'priority-config.json',
+  basic: 'priority-config.basic.json',
+  intelligent: 'priority-config.intelligent.json',
+  geography: 'priority-config.geography.json',
+  wikidata: 'priority-config.wikidata.json'
+});
 
-function getConfigPath() {
-  if (cachedPath) {
-    return cachedPath;
+const configCache = new Map();
+
+function normalizeProfileName(value) {
+  if (typeof value !== 'string') {
+    return 'default';
   }
-  const projectRoot = findProjectRoot(process.cwd());
-  const configPath = path.join(projectRoot, 'config', 'priority-config.json');
-  cachedPath = configPath;
-  return cachedPath;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return 'default';
+  }
+  return PROFILE_FILE_MAP[normalized] ? normalized : 'default';
 }
 
-function readPriorityConfig() {
-  const configPath = getConfigPath();
+let activeProfile = normalizeProfileName(process.env.PRIORITY_CONFIG_PROFILE || 'default');
+
+function getConfigFilename(profile = activeProfile) {
+  const normalized = normalizeProfileName(profile);
+  return PROFILE_FILE_MAP[normalized] || PROFILE_FILE_MAP.default;
+}
+
+function getPriorityConfigPath(profile = activeProfile) {
+  const projectRoot = findProjectRoot(process.cwd());
+  return path.join(projectRoot, 'config', getConfigFilename(profile));
+}
+
+function setPriorityConfigProfile(profile) {
+  const normalized = normalizeProfileName(profile);
+  if (normalized !== activeProfile) {
+    activeProfile = normalized;
+    process.env.PRIORITY_CONFIG_PROFILE = normalized;
+  }
+  return activeProfile;
+}
+
+function getActivePriorityConfigProfile() {
+  return activeProfile;
+}
+
+function readPriorityConfig(profile = activeProfile) {
+  const normalized = normalizeProfileName(profile);
+  const configPath = getPriorityConfigPath(normalized);
+
   try {
     const stats = fs.statSync(configPath);
-    if (!cachedConfig || cachedMtimeMs !== stats.mtimeMs) {
-      const raw = fs.readFileSync(configPath, 'utf8');
-      cachedConfig = JSON.parse(raw);
-      cachedMtimeMs = stats.mtimeMs;
+    const cached = configCache.get(normalized);
+    if (cached && cached.mtimeMs === stats.mtimeMs && cached.path === configPath) {
+      return cached.config;
     }
-    return cachedConfig;
+
+    const raw = fs.readFileSync(configPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    configCache.set(normalized, {
+      config: parsed,
+      mtimeMs: stats.mtimeMs,
+      path: configPath
+    });
+    return parsed;
   } catch (error) {
-    // If the file can't be read, fall back to null and clear the cache
-    cachedConfig = null;
-    cachedMtimeMs = null;
+    configCache.delete(normalized);
+    if (normalized !== 'default') {
+      console.warn(`Priority config '${normalized}' unavailable (${error.message}); falling back to default profile.`);
+      return readPriorityConfig('default');
+    }
+    console.warn(`Priority config not found at ${configPath}: ${error.message}`);
     return null;
   }
 }
@@ -48,5 +92,8 @@ function isTotalPrioritisationEnabled() {
 
 module.exports = {
   getPriorityConfig,
-  isTotalPrioritisationEnabled
+  getPriorityConfigPath,
+  getActivePriorityConfigProfile,
+  isTotalPrioritisationEnabled,
+  setPriorityConfigProfile
 };

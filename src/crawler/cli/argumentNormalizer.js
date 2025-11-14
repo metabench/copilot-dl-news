@@ -3,6 +3,7 @@ const { existsSync } = require('fs');
 
 const DEFAULT_START_URL = 'https://www.theguardian.com';
 const PLACEHOLDER_START_URL = 'https://placeholder.local';
+const DEFAULT_MAX_AGE_HUB_MS = 10 * 60 * 1000;
 const GAZETTEER_TYPES = new Set(['geography', 'gazetteer', 'wikidata']);
 const SPLIT_VALUE_FLAGS = new Set([
   '--db',
@@ -16,7 +17,8 @@ const SPLIT_VALUE_FLAGS = new Set([
   '--config-host',
   '--config-cli',
   '--shared-overrides',
-  '--step-overrides'
+  '--step-overrides',
+  '--cached-seed'
 ]);
 
 function resolveExplicitDbPath(args) {
@@ -134,6 +136,52 @@ function collectCountrySpecifiers(args) {
   }
 
   return unique.length ? unique : undefined;
+}
+
+function collectCachedSeeds(args) {
+  if (!Array.isArray(args) || !args.length) {
+    return undefined;
+  }
+
+  const seeds = [];
+  const pushSeed = (raw) => {
+    if (raw === undefined || raw === null) {
+      return;
+    }
+    const tokens = String(raw)
+      .split(',')
+      .map((token) => token.trim())
+      .filter(Boolean);
+    for (const token of tokens) {
+      seeds.push(token);
+    }
+  };
+
+  for (let i = 0; i < args.length; i += 1) {
+    const token = args[i];
+    if (typeof token !== 'string') {
+      continue;
+    }
+    if (token.startsWith('--cached-seed=')) {
+      const [, valuePart] = token.split('=');
+      pushSeed(valuePart);
+      continue;
+    }
+    if (token === '--cached-seed') {
+      const next = args[i + 1];
+      if (typeof next === 'string' && !next.startsWith('--')) {
+        pushSeed(next);
+        i += 1;
+      }
+    }
+  }
+
+  if (!seeds.length) {
+    return undefined;
+  }
+
+  const uniqueSeeds = Array.from(new Set(seeds));
+  return uniqueSeeds.length ? uniqueSeeds : undefined;
 }
 
 function collectGazetteerStages(args) {
@@ -541,6 +589,8 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
   const useSitemapExplicit = sitemapOnly || useSitemapToggle.explicit;
   const skipQueryUrls = skipQueryToggle.value;
   const skipQueryExplicit = skipQueryToggle.explicit || hasFlag('--allow-query-urls');
+  const seedFromCache = hasFlag('--seed-from-cache');
+  const cachedSeedUrls = collectCachedSeeds(args);
 
   const sharedOverridesRaw = getRawOption('shared-overrides');
   const stepOverridesRaw = getRawOption('step-overrides');
@@ -625,6 +675,12 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
   if (verboseMode) {
     options.verbose = true;
   }
+  if (seedFromCache) {
+    options.seedStartFromCache = true;
+  }
+  if (Array.isArray(cachedSeedUrls) && cachedSeedUrls.length) {
+    options.cachedSeedUrls = cachedSeedUrls;
+  }
 
   if (dataDir) {
     options.dataDir = dataDir;
@@ -667,8 +723,9 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
   if (typeof maxAgeArticleMs === 'number') {
     options.maxAgeArticleMs = maxAgeArticleMs;
   }
-  if (typeof maxAgeHubMs === 'number') {
-    options.maxAgeHubMs = maxAgeHubMs;
+  const effectiveMaxAgeHubMs = typeof maxAgeHubMs === 'number' ? maxAgeHubMs : DEFAULT_MAX_AGE_HUB_MS;
+  if (Number.isFinite(effectiveMaxAgeHubMs)) {
+    options.maxAgeHubMs = effectiveMaxAgeHubMs;
   }
   if (typeof requestTimeoutMs === 'number') {
     options.requestTimeoutMs = requestTimeoutMs;

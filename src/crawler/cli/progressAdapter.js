@@ -55,6 +55,44 @@ const DEFAULT_SUPPRESSED_PREFIXES = Object.freeze([
   '[GazetteerPriorityScheduler]'
 ]);
 
+const formatPageEvent = (payload) => {
+  if (!payload || !payload.url) return null;
+
+  const isError = payload.status === 'failed' || payload.status === 'error';
+  const isCache = payload.source === 'cache' || payload.status === 'cache' || payload.status === 'not-modified';
+  const icon = isError ? CLI_ICONS.error : (isCache ? CLI_ICONS.info : CLI_ICONS.success);
+  const color = isError ? CLI_COLORS.error : (isCache ? CLI_COLORS.accent : CLI_COLORS.success);
+
+  const rounded = (value) => Math.max(0, Math.round(value));
+  let timingLabel = null;
+  if (Number.isFinite(payload.downloadMs)) {
+    timingLabel = `${rounded(payload.downloadMs)}ms`;
+  } else if (Number.isFinite(payload.totalMs)) {
+    timingLabel = `${rounded(payload.totalMs)}ms`;
+  } else if (Number.isFinite(payload.cacheAgeSeconds)) {
+    timingLabel = `cache~${rounded(payload.cacheAgeSeconds)}s`;
+  } else if (isCache) {
+    timingLabel = 'cache';
+  }
+
+  const parts = [];
+  if (timingLabel) parts.push(timingLabel);
+  const sourceLabel = payload.source || (isCache ? 'cache' : 'network');
+  parts.push(sourceLabel);
+
+  if (payload.httpStatus && payload.httpStatus !== 200) {
+    parts.push(`HTTP ${payload.httpStatus}`);
+  }
+
+  parts.push(payload.url);
+
+  if (payload.error) {
+    parts.push(`(${payload.error})`);
+  }
+
+  return color(`${icon} ${parts.join(' ')}`);
+};
+
 function createCliConsoleInterceptor({
   log,
   consoleRef = console,
@@ -115,6 +153,25 @@ function createCliConsoleInterceptor({
 
   consoleRef.log = function cliConsoleLog(...logArgs) {
     const firstArg = logArgs[0];
+
+    if (typeof firstArg === 'string' && firstArg.startsWith('PAGE ')) {
+      try {
+        const payload = JSON.parse(firstArg.substring('PAGE '.length));
+        const formatted = formatPageEvent(payload);
+        if (formatted) {
+          originalConsoleLog(formatted);
+          return;
+        }
+        return;
+      } catch (_) {
+        // fall through
+      }
+    }
+
+    if (!isVerboseMode() && typeof firstArg === 'string' && firstArg.startsWith('CACHE ')) {
+      return;
+    }
+
     if (typeof firstArg === 'string' && firstArg.startsWith('PROGRESS ')) {
       try {
         const jsonStr = firstArg.substring('PROGRESS '.length);

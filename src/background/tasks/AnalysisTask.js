@@ -257,11 +257,18 @@ class AnalysisTask {
       // For now, match all articles that don't have place relations yet
       // In the future, we could be more selective
       const articlesToMatch = this.db.prepare(`
-        SELECT a.id, a.title, a.url
-        FROM articles a
-        LEFT JOIN article_place_relations apr ON a.id = apr.article_id
-        WHERE apr.article_id IS NULL
-        ORDER BY a.published_at DESC
+        SELECT
+          hr.id,
+          COALESCE(ca.title, u.url) AS title,
+          u.url,
+          hr.fetched_at
+        FROM http_responses hr
+        JOIN urls u ON u.id = hr.url_id
+        LEFT JOIN content_analysis ca ON ca.content_id = hr.id
+        WHERE NOT EXISTS (
+          SELECT 1 FROM article_place_relations apr WHERE apr.article_id = hr.id
+        )
+        ORDER BY hr.fetched_at DESC, hr.id DESC
         LIMIT ?
       `).all(this.pageLimit || 1000);
       

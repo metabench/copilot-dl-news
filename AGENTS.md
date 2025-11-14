@@ -136,6 +136,8 @@ Create/refresh your Plan (template above).
 
 Check /docs/INDEX.md; if your path lacks a workflow, add a stub and link it here.
 
+For crawl-output refinements, review `docs/sessions/2025-11-18-crawl-output-refresh/PLAN.md` and WORKING_NOTES before touching code.
+
 Implement in short hops; keep adapters clean and measured.
 
 Prove it with tests (and a tiny benchmark if DB-heavy).

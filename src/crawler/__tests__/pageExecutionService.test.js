@@ -266,4 +266,202 @@ describe('PageExecutionService', () => {
     });
     expect(deps.enqueueRequest).not.toHaveBeenCalled();
   });
+
+  test('processes cached fetch when context requests cache processing', async () => {
+    const deps = baseDeps();
+    const html = '<html><body>cached</body></html>';
+
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'cache',
+      meta: {
+        url: 'https://example.com/cache-seed'
+      },
+      html
+    });
+
+    const navigationLinks = [{ url: 'https://example.com/nav', type: 'nav' }];
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      linkSummary: {
+        navigation: navigationLinks,
+        articles: [],
+        all: navigationLinks
+      },
+      looksLikeArticle: false,
+      $: null
+    });
+
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0 },
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      isArticle: false,
+      metadata: null
+    });
+
+    const service = new PageExecutionService(deps);
+
+    const context = {
+      processCacheResult: true,
+      cachedPage: { html },
+      forceCache: true
+    };
+
+    const result = await service.processPage({
+      url: 'https://example.com/cache-seed',
+      depth: 0,
+      context
+    });
+
+    expect(result).toEqual({ status: 'success' });
+    expect(deps.contentAcquisitionService.acquire).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://example.com/cache-seed',
+      html
+    }));
+    expect(deps.navigationDiscoveryService.discover).toHaveBeenCalled();
+    expect(deps.enqueueRequest).toHaveBeenCalledTimes(1);
+  });
+
+  test('continues normal processing when cache seed context falls back to network', async () => {
+    const deps = baseDeps();
+    const html = '<html><body>network</body></html>';
+
+    deps.fetchPipeline.fetch.mockImplementation(async ({ context }) => {
+      expect(context.processCacheResult).toBe(true);
+      return {
+        source: 'network',
+        meta: {
+          url: 'https://example.com/cache-miss',
+          fetchMeta: { bytesDownloaded: 256 }
+        },
+        html
+      };
+    });
+
+    const navigationLinks = [{ url: 'https://example.com/next', type: 'nav' }];
+    deps.navigationDiscoveryService.discover.mockReturnValue({
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      linkSummary: {
+        navigation: navigationLinks,
+        articles: [],
+        all: navigationLinks
+      },
+      looksLikeArticle: false,
+      $: null
+    });
+
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0 },
+      navigationLinks,
+      articleLinks: [],
+      allLinks: navigationLinks,
+      isArticle: false,
+      metadata: null
+    });
+
+    const service = new PageExecutionService(deps);
+
+    const result = await service.processPage({
+      url: 'https://example.com/cache-miss',
+      depth: 1,
+      context: { processCacheResult: true }
+    });
+
+    expect(result).toEqual({ status: 'success' });
+    expect(deps.state.incrementPagesDownloaded).toHaveBeenCalled();
+    expect(deps.contentAcquisitionService.acquire).toHaveBeenCalled();
+    expect(deps.enqueueRequest).toHaveBeenCalledTimes(1);
+  });
+
+  test('emits PAGE telemetry for network fetches', async () => {
+    const deps = baseDeps();
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'network',
+      meta: {
+        url: 'https://example.com/article',
+        fetchMeta: {
+          downloadMs: 221,
+          httpStatus: 200,
+          bytesDownloaded: 1024
+        }
+      },
+      html: '<html></html>'
+    });
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0, articlesSaved: 0 },
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: []
+    });
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    const service = new PageExecutionService(deps);
+    await service.processPage({
+      url: 'https://example.com/article',
+      depth: 1,
+      context: {}
+    });
+
+    const pageCall = logSpy.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].startsWith('PAGE ')
+    );
+    expect(pageCall).toBeDefined();
+    const payload = JSON.parse(pageCall[0].slice('PAGE '.length));
+    expect(payload.url).toBe('https://example.com/article');
+    expect(payload.source).toBe('network');
+    expect(payload.downloadMs).toBe(221);
+    expect(payload.status).toBe('success');
+
+    logSpy.mockRestore();
+  });
+
+  test('formats extra-terse page logs with running totals', async () => {
+    const deps = baseDeps();
+    deps.maxDownloads = 100;
+    deps.getStats = () => ({ pagesDownloaded: 10 });
+    deps.fetchPipeline.fetch.mockResolvedValue({
+      source: 'network',
+      meta: {
+        url: 'https://example.com/article',
+        fetchMeta: {
+          downloadMs: 221,
+          httpStatus: 200,
+          bytesDownloaded: 2048
+        }
+      },
+      html: '<html></html>'
+    });
+    deps.contentAcquisitionService.acquire.mockResolvedValue({
+      statsDelta: { articlesFound: 0, articlesSaved: 0 },
+      navigationLinks: [],
+      articleLinks: [],
+      allLinks: []
+    });
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    const service = new PageExecutionService({
+      ...deps,
+      outputVerbosity: 'extra-terse'
+    });
+    await service.processPage({
+      url: 'https://example.com/article',
+      depth: 1,
+      context: {}
+    });
+
+    const terseCall = logSpy.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].includes('10/100')
+    );
+    expect(terseCall).toBeDefined();
+    expect(terseCall[0]).toBe('https://example.com/article 221ms 10/100');
+
+    logSpy.mockRestore();
+  });
 });

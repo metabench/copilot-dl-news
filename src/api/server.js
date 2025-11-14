@@ -24,6 +24,14 @@ const swaggerUi = require('swagger-ui-express');
 const YAML = require('js-yaml');
 const { ensureDb } = require('../db/sqlite/ensureDb');
 const { createWritableDbAccessor } = require('../deprecated-ui/express/db/writableDb');
+const { JobRegistry } = require('../deprecated-ui/express/services/jobRegistry');
+const { RealtimeBroadcaster } = require('../deprecated-ui/express/services/realtimeBroadcaster');
+const { BackgroundTaskManager } = require('../background/BackgroundTaskManager');
+const { CompressionWorkerPool } = require('../background/workers/CompressionWorkerPool');
+const { CompressionTask } = require('../background/tasks/CompressionTask');
+const { AnalysisTask } = require('../background/tasks/AnalysisTask');
+const { CompressionLifecycleTask } = require('../background/tasks/CompressionLifecycleTask');
+const { GuessPlaceHubsTask } = require('../background/tasks/GuessPlaceHubsTask');
 
 // Load OpenAPI specification
 const openApiPath = path.join(__dirname, 'openapi.yaml');
@@ -35,6 +43,244 @@ const { createPlaceHubsRouter } = require('./routes/place-hubs');
 const { createBackgroundTasksRouter } = require('./routes/background-tasks');
 const { createAnalysisRouter } = require('./routes/analysis');
 const { createCrawlsRouter } = require('./routes/crawls');
+
+function parseEnvBoolean(value, fallback = false) {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
+function parseNumber(value, fallback) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function initializeJobInfrastructure({
+  jobRegistry: providedJobRegistry,
+  broadcastProgress: providedBroadcastProgress,
+  broadcastJobs: providedBroadcastJobs,
+  allowMultiJobs,
+  guardWindowMs,
+  verbose = false,
+  logger
+} = {}) {
+  let jobRegistry = providedJobRegistry || null;
+  let realtime = null;
+  let broadcastProgress = providedBroadcastProgress || null;
+  let broadcastJobs = providedBroadcastJobs || null;
+
+  const resolvedAllowMultiJobs = parseEnvBoolean(
+    allowMultiJobs,
+    parseEnvBoolean(process.env.API_ALLOW_MULTI_JOBS ?? process.env.UI_ALLOW_MULTI_JOBS, false)
+  );
+  const resolvedGuardWindowMs = parseNumber(
+    guardWindowMs ?? process.env.API_JOB_GUARD_MS,
+    600
+  );
+
+  if (!jobRegistry) {
+    try {
+      jobRegistry = new JobRegistry({
+        allowMultiJobs: resolvedAllowMultiJobs,
+        guardWindowMs: resolvedGuardWindowMs
+      });
+      if (verbose && logger?.log) {
+        logger.log('[api] Initialized JobRegistry');
+      }
+    } catch (error) {
+      const log = logger?.error || console.error;
+      log('[api] Failed to initialize JobRegistry:', error);
+      return {
+        jobRegistry: null,
+        realtime: null,
+        broadcastProgress: broadcastProgress || (() => {}),
+        broadcastJobs: broadcastJobs || (() => {})
+      };
+    }
+  }
+
+  if (!broadcastProgress || !broadcastJobs) {
+    try {
+      realtime = new RealtimeBroadcaster({
+        jobRegistry,
+        logsMaxPerSec: parseNumber(
+          process.env.API_LOGS_MAX_PER_SEC ?? process.env.UI_LOGS_MAX_PER_SEC,
+          200
+        ),
+        logLineMaxChars: parseNumber(
+          process.env.API_LOG_LINE_MAX_CHARS ?? process.env.UI_LOG_LINE_MAX_CHARS,
+          8192
+        )
+      });
+
+      if (!jobRegistry.metrics) {
+        jobRegistry.metrics = realtime.getMetrics();
+      }
+
+      broadcastProgress = broadcastProgress || realtime.getBroadcastProgress();
+      broadcastJobs = broadcastJobs || ((force = false) => realtime.broadcastJobs(force));
+
+      if (verbose && logger?.log) {
+        logger.log('[api] Initialized RealtimeBroadcaster for crawl jobs');
+      }
+    } catch (error) {
+      const log = logger?.error || console.error;
+      log('[api] Failed to initialize RealtimeBroadcaster:', error);
+      realtime = null;
+    }
+  }
+
+  return {
+    jobRegistry,
+    realtime,
+    broadcastProgress: broadcastProgress || (() => {}),
+    broadcastJobs: broadcastJobs || (() => {})
+  };
+}
+
+function initializeBackgroundInfrastructure({
+  backgroundTaskManager: providedManager,
+  getDbRW,
+  dbPath,
+  logger,
+  verbose = false,
+  realtime = null,
+  metricsSink = null
+} = {}) {
+  if (providedManager) {
+    return {
+      backgroundTaskManager: providedManager,
+      compressionWorkerPool: null
+    };
+  }
+
+  if (typeof getDbRW !== 'function') {
+    return {
+      backgroundTaskManager: null,
+      compressionWorkerPool: null
+    };
+  }
+
+  let db = null;
+  try {
+    db = getDbRW();
+  } catch (error) {
+    const log = logger?.error || console.error;
+    log('[api] Failed to obtain writable database for background tasks:', error);
+    return {
+      backgroundTaskManager: null,
+      compressionWorkerPool: null
+    };
+  }
+
+  if (!db) {
+    const warn = logger?.warn || console.warn;
+    warn('[api] Writable database unavailable; background tasks disabled');
+    return {
+      backgroundTaskManager: null,
+      compressionWorkerPool: null
+    };
+  }
+
+  const metricsReporter = typeof metricsSink === 'function' ? metricsSink : () => {};
+
+  const manager = new BackgroundTaskManager({
+    db,
+    broadcastEvent: realtime
+      ? (eventType, data) => {
+          try {
+            realtime.broadcast(eventType, data);
+          } catch (error) {
+            const log = logger?.error || console.error;
+            log('[api] Failed to broadcast background task event:', error);
+          }
+        }
+      : null,
+    updateMetrics: (stats) => {
+      metricsReporter(stats);
+    },
+    emitTelemetry: realtime ? realtime.getBroadcastTelemetry() : null
+  });
+
+  const isTestEnv = Boolean(process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test');
+  let compressionWorkerPool = null;
+
+  if (!isTestEnv) {
+    compressionWorkerPool = new CompressionWorkerPool({
+      poolSize: parseNumber(process.env.API_COMPRESSION_POOL_SIZE, 1),
+      brotliQuality: parseNumber(process.env.API_COMPRESSION_BROTLI_QUALITY, 10),
+      lgwin: parseNumber(process.env.API_COMPRESSION_LGWIN, 24)
+    });
+
+    compressionWorkerPool
+      .initialize()
+      .then(() => {
+        if (verbose && logger?.log) {
+          logger.log('[api] Compression worker pool ready (background tasks)');
+        }
+      })
+      .catch((error) => {
+        const log = logger?.error || console.error;
+        log('[api] Failed to initialize compression worker pool:', error);
+      });
+  } else if (verbose && logger?.log) {
+    logger.log('[api] Skipping compression worker pool in test environment');
+  }
+
+  try {
+    manager.registerTaskType('article-compression', CompressionTask, compressionWorkerPool ? { workerPool: compressionWorkerPool } : {});
+    manager.registerTaskType('analysis-run', AnalysisTask, { dbPath });
+    manager.registerTaskType('compression-lifecycle', CompressionLifecycleTask, { dbPath });
+    manager.registerTaskType('guess-place-hubs', GuessPlaceHubsTask, { dbPath });
+  } catch (error) {
+    const log = logger?.error || console.error;
+    log('[api] Failed to register background task types:', error);
+  }
+
+  if (!isTestEnv) {
+    const resumeDelay = parseNumber(process.env.API_TASK_RESUME_DELAY_MS, 1000);
+    setTimeout(async () => {
+      try {
+        await manager.resumeAllPausedTasks();
+      } catch (error) {
+        const log = logger?.error || console.error;
+        log('[api] Failed to resume paused background tasks:', error);
+      }
+    }, resumeDelay);
+  }
+
+  return {
+    backgroundTaskManager: manager,
+    compressionWorkerPool
+  };
+}
+
+async function cleanupAppResources(app, logger) {
+  if (!app || !app.locals) {
+    return;
+  }
+
+  const pool = app.locals.compressionWorkerPool;
+  if (pool && typeof pool.shutdown === 'function') {
+    try {
+      await pool.shutdown();
+    } catch (error) {
+      const warn = logger?.warn || console.warn;
+      warn('[api] Failed to shut down compression worker pool cleanly:', error);
+    }
+  }
+}
 
 /**
  * Create and configure the API server
@@ -109,8 +355,37 @@ function createApiServer(options = {}) {
   app.locals.verbose = options.verbose || false;
   app.locals.logger = logger;
   app.locals.getDbRW = getDbRW;
-  app.locals.backgroundTaskManager = options.backgroundTaskManager || null;
-  app.locals.jobRegistry = options.jobRegistry || null;
+  app.locals.backgroundTaskMetrics = null;
+
+  const jobInfrastructure = initializeJobInfrastructure({
+    jobRegistry: options.jobRegistry,
+    broadcastProgress: options.broadcastProgress,
+    broadcastJobs: options.broadcastJobs,
+    allowMultiJobs: options.allowMultiJobs,
+    guardWindowMs: options.guardWindowMs,
+    verbose: app.locals.verbose,
+    logger
+  });
+
+  app.locals.jobRegistry = jobInfrastructure.jobRegistry;
+  app.locals.realtime = jobInfrastructure.realtime;
+  app.locals.broadcastProgress = jobInfrastructure.broadcastProgress;
+  app.locals.broadcastJobs = jobInfrastructure.broadcastJobs;
+
+  const backgroundInfrastructure = initializeBackgroundInfrastructure({
+    backgroundTaskManager: options.backgroundTaskManager,
+    getDbRW,
+    dbPath,
+    logger,
+    verbose: app.locals.verbose,
+    realtime: jobInfrastructure.realtime,
+    metricsSink: (stats) => {
+      app.locals.backgroundTaskMetrics = stats;
+    }
+  });
+
+  app.locals.backgroundTaskManager = backgroundInfrastructure.backgroundTaskManager;
+  app.locals.compressionWorkerPool = backgroundInfrastructure.compressionWorkerPool;
 
   // Swagger UI customization options
   const swaggerOptions = {
@@ -145,7 +420,7 @@ function createApiServer(options = {}) {
   app.use('/api', createHealthRouter({ dbPath }));
   app.use('/api/place-hubs', createPlaceHubsRouter({ dbPath }));
   app.use('/api/background-tasks', createBackgroundTasksRouter({
-    taskManager: options.backgroundTaskManager,
+    taskManager: app.locals.backgroundTaskManager,
     getDbRW,
     logger
   }));
@@ -154,9 +429,9 @@ function createApiServer(options = {}) {
     logger
   }));
   app.use('/api/crawls', createCrawlsRouter({
-    jobRegistry: options.jobRegistry,
-    broadcastProgress: options.broadcastProgress,
-    broadcastJobs: options.broadcastJobs,
+    jobRegistry: app.locals.jobRegistry,
+    broadcastProgress: app.locals.broadcastProgress,
+    broadcastJobs: app.locals.broadcastJobs,
     logger
   }));
   registerCrawlApiV1Routes(app, {
@@ -208,6 +483,10 @@ function createApiServer(options = {}) {
 async function startApiServer(options = {}) {
   const app = createApiServer(options);
   const port = options.port || 3000;
+  const autoShutdownSeconds = parseNumber(
+    options.autoShutdownSeconds ?? process.env.API_SERVER_TIMEOUT_SECONDS,
+    undefined
+  );
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, (err) => {
@@ -227,18 +506,74 @@ async function startApiServer(options = {}) {
       console.log(`│  Database:        ${options.dbPath || 'data/news.db'}${' '.repeat(Math.max(0, 27 - (options.dbPath || 'data/news.db').length))}│`);
       console.log('└─────────────────────────────────────────────────────────────┘');
 
-      resolve({
+      const logger = app.locals?.logger || console;
+      let shutdownPromise = null;
+      const closeServer = () => {
+        if (shutdownPromise) {
+          return shutdownPromise;
+        }
+
+        shutdownPromise = new Promise((resolveClose, rejectClose) => {
+          Promise.resolve()
+            .then(() => cleanupAppResources(app, logger))
+            .catch((error) => {
+              const warn = logger?.warn || console.warn;
+              warn('[api] Cleanup encountered an error during shutdown:', error);
+            })
+            .finally(() => {
+              server.close((closeError) => {
+                if (closeError) {
+                  rejectClose(closeError);
+                } else {
+                  resolveClose();
+                }
+              });
+            });
+        });
+
+        return shutdownPromise;
+      };
+
+      const resolvedHandle = {
         app,
         server,
         port,
+        jobRegistry: app.locals.jobRegistry || null,
+        backgroundTaskManager: app.locals.backgroundTaskManager || null,
+        compressionWorkerPool: app.locals.compressionWorkerPool || null,
+        realtime: app.locals.realtime || null,
         getDbRW: app.locals.getDbRW,
-        close: () => new Promise((resolve, reject) => {
-          server.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        })
-      });
+        close: closeServer
+      };
+
+      if (autoShutdownSeconds && autoShutdownSeconds > 0) {
+        const timeoutMs = autoShutdownSeconds * 1000;
+        const timer = setTimeout(() => {
+          const log = logger?.log || console.log;
+          log(`[api] Auto shutdown triggered after ${autoShutdownSeconds}s`);
+          closeServer()
+            .then(() => {
+              if (options.exitOnShutdown !== false && require.main === module) {
+                process.exit(0);
+              }
+            })
+            .catch((shutdownError) => {
+              const errorLog = logger?.error || console.error;
+              errorLog('[api] Auto shutdown failed:', shutdownError);
+              if (options.exitOnShutdown !== false && require.main === module) {
+                process.exit(1);
+              }
+            });
+        }, timeoutMs);
+
+        if (typeof timer.unref === 'function') {
+          timer.unref();
+        }
+
+        resolvedHandle.autoShutdownTimer = timer;
+      }
+
+      resolve(resolvedHandle);
     });
   });
 }
@@ -249,7 +584,8 @@ if (require.main === module) {
   const options = {
     port: parseInt(process.env.PORT || '3000', 10),
     dbPath: process.env.DB_PATH || path.join(process.cwd(), 'data', 'news.db'),
-    verbose: args.includes('--verbose') || args.includes('-v')
+    verbose: args.includes('--verbose') || args.includes('-v'),
+    autoShutdownSeconds: parseNumber(process.env.API_SERVER_TIMEOUT_SECONDS, undefined)
   };
 
   // Parse CLI arguments
@@ -259,6 +595,9 @@ if (require.main === module) {
       i++;
     } else if (args[i] === '--db' && args[i + 1]) {
       options.dbPath = args[i + 1];
+      i++;
+    } else if ((args[i] === '--timeout' || args[i] === '--auto-timeout') && args[i + 1]) {
+      options.autoShutdownSeconds = parseNumber(args[i + 1], undefined);
       i++;
     } else if (args[i] === '--help' || args[i] === '-h') {
       console.log(`
@@ -270,17 +609,20 @@ Options:
   --port <number>     Server port (default: 3000, env: PORT)
   --db <path>         Database path (default: data/news.db, env: DB_PATH)
   --verbose, -v       Enable verbose logging
+  --timeout <seconds> Auto shutdown after the specified number of seconds (env: API_SERVER_TIMEOUT_SECONDS)
   --help, -h          Show this help message
 
 Environment Variables:
   PORT                Server port
   DB_PATH             Database file path
+  API_SERVER_TIMEOUT_SECONDS  Auto shutdown timer in seconds
   NODE_ENV            Environment (development|production)
 
 Examples:
   node src/api/server.js
   node src/api/server.js --port 8080 --db data/test.db --verbose
-  PORT=3001 DB_PATH=data/news.db node src/api/server.js
+  node src/api/server.js --timeout 30
+  PORT=3001 DB_PATH=data/news.db API_SERVER_TIMEOUT_SECONDS=45 node src/api/server.js
 
 API Documentation:
   Once started, visit http://localhost:3000/api-docs for interactive API documentation.

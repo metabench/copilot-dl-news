@@ -1,0 +1,112 @@
+{
+  "profile": "intelligent",
+  "queue": {
+    "description": "Queue priority configuration for intelligent crawl orchestration",
+    "version": "1.0.0",
+    "lastUpdated": "2025-11-14T00:00:00.000Z",
+    "bonuses": {
+      "adaptive-seed": {
+        "value": 20,
+        "description": "URLs discovered by intelligent planning and adaptive hub detection",
+        "category": "intelligent"
+      },
+      "gap-prediction": {
+        "value": 15,
+        "description": "URLs predicted to fill coverage gaps based on problem clustering",
+        "category": "intelligent"
+      },
+      "country-hub-discovery": {
+        "value": 100,
+        "description": "Country hub pages predicted by gazetteer-aware reasoning - TOTAL PRIORITY",
+        "category": "intelligent",
+        "totalPrioritisationValue": 1000
+      },
+      "country-hub-article": {
+        "value": 90,
+        "description": "Article links discovered on country hub pages - HIGH PRIORITY",
+        "category": "intelligent",
+        "totalPrioritisationValue": 900
+      },
+      "sitemap": {
+        "value": 5,
+        "description": "URLs from structured sitemaps (reduced priority for country hub focus)",
+        "category": "structured"
+      },
+      "hub-validated": {
+        "value": 3,
+        "description": "Hub pages validated by previous crawls (reduced for country focus)",
+        "category": "validated"
+      },
+      "link": {
+        "value": 0,
+        "description": "Regular link discovery from page parsing (lowest priority)",
+        "category": "organic"
+      }
+    },
+    "weights": {
+      "article": {
+        "value": 0,
+        "description": "Article content pages (highest priority - lowest weight)"
+      },
+      "hub-seed": {
+        "value": 4,
+        "description": "Hub pages seeded by intelligent planner"
+      },
+      "history": {
+        "value": 6,
+        "description": "Archive and historical content pages"
+      },
+      "nav": {
+        "value": 10,
+        "description": "Navigation and category pages"
+      },
+      "refresh": {
+        "value": 25,
+        "description": "Known URLs being refreshed/updated (lowest priority - highest weight)"
+      }
+    },
+    "clustering": {
+      "problemThreshold": 5,
+      "timeWindowMinutes": 30,
+      "maxClusterSize": 100,
+      "boostFactorPerCluster": 2.5
+    }
+  },
+  "coverage": {
+    "telemetryIntervalSeconds": 30,
+    "milestoneThresholds": {
+      "hubDiscoveryMinimum": 10,
+      "coveragePercentageTargets": [
+        25,
+        50,
+        75,
+        90
+      ],
+      "gapReductionSignificant": 0.15
+    }
+  },
+  "features": {
+    "advancedPlanningSuite": true,
+    "gapDrivenPrioritization": true,
+    "plannerKnowledgeReuse": true,
+    "realTimeCoverageAnalytics": true,
+    "problemClustering": true,
+    "problemResolution": true,
+    "graphReasonerPlugin": true,
+    "gazetteerAwareReasoner": true,
+    "gap-driven-prioritization": true,
+    "costAwarePriority": false,
+    "patternDiscovery": true,
+    "adaptiveBranching": false,
+    "realTimePlanAdjustment": false,
+    "dynamicReplanning": false,
+    "crossDomainSharing": false,
+    "totalPrioritisation": true
+  },
+  "hubFreshness": {
+    "refreshOnStartup": true,
+    "maxCacheAgeMs": 600000,
+    "firstPageMaxAgeMs": 600000,
+    "fallbackToCacheOnFailure": true
+  }
+}

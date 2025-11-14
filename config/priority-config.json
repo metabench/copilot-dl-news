@@ -1,4 +1,5 @@
 {
+  "profile": "basic",
   "queue": {
     "description": "Queue priority configuration for crawl orchestration",
     "version": "1.0.0",
@@ -108,5 +109,5 @@
     "firstPageMaxAgeMs": 600000,
     "fallbackToCacheOnFailure": true
   },
-  "lastUpdated": "2025-09-28T09:29:04.035Z"
+  "lastUpdated": "2025-11-14T00:00:00.000Z"
 }

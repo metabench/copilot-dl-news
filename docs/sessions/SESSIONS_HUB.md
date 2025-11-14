@@ -31,6 +31,61 @@
 
 ## Current Session
 
+### Session 2025-11-14: Strategic Analysis Mode
+
+**Duration**: Active
+**Type**: Tooling analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Assess additional JS tooling improvements for agents
+
+**Location**: `docs/sessions/2025-11-14-strategic-analysis-mode/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-strategic-analysis-mode/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-strategic-analysis-mode/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-strategic-analysis-mode/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-strategic-analysis-mode/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-strategic-analysis-mode/FOLLOW_UPS.md)
+
+
+### Session 2025-11-18: Crawl Output Refresh
+
+**Duration**: Active
+**Type**: Crawl ergonomics & cache tuning
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Replace noisy crawl logs with one concise per-page line including download timing
+- Reuse cached place/country hub seeds when available and fetch uncached hubs immediately
+- Enforce a 10-minute hub freshness window via `maxAgeHubMs` defaults + CLI wiring
+
+**Location**: `docs/sessions/2025-11-18-crawl-output-refresh/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-18-crawl-output-refresh/INDEX.md)
+- 📝 [Working Notes](./2025-11-18-crawl-output-refresh/WORKING_NOTES.md)
+- 🗺️ [Plan](./2025-11-18-crawl-output-refresh/PLAN.md)
+
+### Session 2025-11-17: Hub Eligibility Refresh
+
+**Duration**: Active
+**Type**: Crawl behavior improvements
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Allow QueueManager to re-enqueue navigation/front-page URLs when `maxAgeHubMs` demands fresh hubs
+- Update UrlEligibilityService to treat stale hubs based on SQLite fetch recency instead of skipping them outright
+- Capture documentation, tests, and follow-ups that keep hub reseeding reliable
+
+**Location**: `docs/sessions/2025-11-17-hub-eligibility-refresh/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-17-hub-eligibility-refresh/INDEX.md)
+- 🗺️ [Roadmap](./2025-11-17-hub-eligibility-refresh/ROADMAP.md)
+- 📝 [Working Notes](./2025-11-17-hub-eligibility-refresh/WORKING_NOTES.md)
+
 ### Session 2025-11-13: Gap 5 Scouting & Feasibility
 
 **Duration**: Active
@@ -66,6 +121,254 @@
 - 🧭 [Session Index](./2025-11-13-agent-docs-improvements/INDEX.md)
 - 🗺️ [Roadmap](./2025-11-13-agent-docs-improvements/ROADMAP.md)
 - 📝 [Working Notes](./2025-11-13-agent-docs-improvements/WORKING_NOTES.md)
+
+### Session 2025-11-13: Basic Crawl Health
+
+**Duration**: Active
+**Type**: Operational health check
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Determine whether the "basic crawl" workflow is functioning as expected
+- Surface existing telemetry/tests covering crawl health
+- Recommend remediation steps if issues are detected
+
+**Location**: `docs/sessions/2025-11-13-basic-crawl-health/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-13-basic-crawl-health/INDEX.md)
+- 🗺️ [Roadmap](./2025-11-13-basic-crawl-health/ROADMAP.md)
+- 📝 [Working Notes](./2025-11-13-basic-crawl-health/WORKING_NOTES.md)
+
+### Session 2025-11-13: Crawl Config Runner
+
+**Duration**: Active
+**Type**: Crawl tooling enablement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make `crawl.js` load crawler options from reusable config manifests
+- Support zero-argument runs with file-driven defaults plus CLI overrides
+- Document operator workflow for storing and invoking configs
+
+**Location**: `docs/sessions/2025-11-13-crawl-config-runner/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-13-crawl-config-runner/INDEX.md)
+- 🗺️ [Roadmap](./2025-11-13-crawl-config-runner/ROADMAP.md)
+- 📝 [Working Notes](./2025-11-13-crawl-config-runner/WORKING_NOTES.md)
+
+### Session 2025-11-13: Front Page Seeding
+
+**Duration**: Active
+**Type**: Crawl behavior improvements
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Guarantee each intelligent crawl run downloads the publication front page first
+- Reseed hub/article queues automatically when existing work drains
+- Persist all discovered links into the URLs table and enqueue them for follow-up
+
+**Location**: `docs/sessions/2025-11-13-frontpage-seeding/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-13-frontpage-seeding/INDEX.md)
+- 🗺️ [Roadmap](./2025-11-13-frontpage-seeding/ROADMAP.md)
+- 📝 [Working Notes](./2025-11-13-frontpage-seeding/WORKING_NOTES.md)
+
+### Session 2025-11-13: Cached Seed Refactor
+
+**Duration**: Active
+**Type**: Crawl cache enablement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make QueueManager/fetch pipeline respect `processCacheResult` hints end-to-end
+- Hydrate seeds directly from ArticleCache when requested
+- Add CLI toggles, docs, and tests covering cached seed workflows
+
+**Location**: `docs/sessions/2025-11-13-cached-seed-refactor/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-13-cached-seed-refactor/INDEX.md)
+- 🗺️ [Roadmap](./2025-11-13-cached-seed-refactor/ROADMAP.md)
+- 📝 [Working Notes](./2025-11-13-cached-seed-refactor/WORKING_NOTES.md)
+
+### Session 2025-11-13: Guardian Crawl Verification
+
+**Duration**: Active
+**Type**: Operational validation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run `basicArticleDiscovery` with `--max-downloads 100` after the CLI summary enhancements
+- Capture telemetry proving the `Final stats` line reports accurate download counts
+- Document any anomalies (queue exhaustion, HTTP errors) for follow-up actions
+
+**Location**: `docs/sessions/2025-11-13-guardian-crawl-verification/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-13-guardian-crawl-verification/INDEX.md)
+- 📝 [Working Notes](./2025-11-13-guardian-crawl-verification/WORKING_NOTES.md)
+- 📋 [Session Summary](./2025-11-13-guardian-crawl-verification/SESSION_SUMMARY.md)
+
+### Session 2025-11-14: Place-Focused CLI Enablement
+
+**Duration**: Active
+**Type**: Tooling enhancement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Expose place discovery workflows (GuessPlaceHubs, place exploration) via `crawl.js`
+- Provide agent-friendly defaults and help text for new commands
+- Capture follow-ups for additional place-hub automation
+
+**Location**: `docs/sessions/2025-11-14-place-cli/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-place-cli/INDEX.md)
+- 📝 [Working Notes](./2025-11-14-place-cli/WORKING_NOTES.md)
+
+### Session 2025-11-14: Page Log Resilience
+
+**Duration**: Active
+**Type**: Crawl telemetry
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Guarantee `_emitPageLog` fires for every crawl fetch outcome (success, cache, failure).
+- Keep CLI per-page summaries accurate even when content acquisition aborts a URL.
+- Document the logging expectations for future refactors.
+
+**Location**: `docs/sessions/2025-11-14-page-log-resilience/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-page-log-resilience/INDEX.md)
+- 📝 [Plan](./2025-11-14-page-log-resilience/PLAN.md)
+- 🗒️ [Working Notes](./2025-11-14-page-log-resilience/WORKING_NOTES.md)
+
+### Session 2025-11-14: Crawl Download Investigation
+
+**Duration**: Active
+**Type**: Crawl analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Understand why `crawl.js` (basicArticleDiscovery) exited after 51 downloads.
+- Inspect queue telemetry, prioritisation filters, and exit reasons for evidence.
+- Recommend knobs to reach higher download counts when needed.
+
+**Location**: `docs/sessions/2025-11-14-download-investigation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-download-investigation/INDEX.md)
+- 📝 [Plan](./2025-11-14-download-investigation/PLAN.md)
+- 🗒️ [Working Notes](./2025-11-14-download-investigation/WORKING_NOTES.md)
+
+### Session 2025-11-14: Basic Crawl Validation
+
+**Duration**: Active
+**Type**: Operational validation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run the default intelligent crawl with `--max-downloads 100` to confirm the cap is honored
+- Capture runtime telemetry (downloads, articles saved, exit reason) for comparison with prior sessions
+- Record observations and follow-ups inside the new session notes
+
+**Location**: `docs/sessions/2025-11-14-basic-crawl-run/`
+
+**Quick Links**:
+- 📝 [Session Notes](./2025-11-14-basic-crawl-run/notes.md)
+
+### Session 2025-11-14: Crawl Verbosity Controls
+
+**Duration**: Active
+**Type**: Crawl telemetry ergonomics
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Introduce an `outputVerbosity` option that defaults basic crawls to extra-terse per-page logs
+- Format per-page output as `URL downloadMs completed/goal` while preserving CLI overrides for richer logs
+- Ensure monitoring and telemetry still track max-download targets accurately under the new formatting
+
+**Location**: `docs/sessions/2025-11-14-crawl-verbosity-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-crawl-verbosity-controls/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-crawl-verbosity-controls/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-crawl-verbosity-controls/WORKING_NOTES.md)
+
+### Session 2025-11-14: Session Bootstrap CLI & Micro Policy
+
+**Duration**: Active
+**Type**: Tooling + agent guidance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a CLI helper to scaffold session directories and standard markdown templates automatically
+- Document a decision tree for full sessions vs. lightweight sessions vs. micro tasks
+- Introduce a shared micro-task log for tracing very small changes without per-task folders
+
+**Location**: `docs/sessions/2025-11-14-session-bootstrap-cli/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-session-bootstrap-cli/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-session-bootstrap-cli/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-session-bootstrap-cli/WORKING_NOTES.md)
+
+### Session 2025-11-15: API Server Bootstrap
+
+**Duration**: Active
+**Type**: Service bootstrap
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure `src/api/server.js` initializes crawl job and background task infrastructure by default
+- Preserve override hooks for custom dependency injection
+- Identify validation steps or test coverage gaps introduced by the wiring
+
+**Location**: `docs/sessions/2025-11-15-api-server-bootstrap/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-15-api-server-bootstrap/INDEX.md)
+- 🗺️ [Roadmap](./2025-11-15-api-server-bootstrap/ROADMAP.md)
+- 📝 [Working Notes](./2025-11-15-api-server-bootstrap/WORKING_NOTES.md)
+
+### Session 2025-11-15: Intelligent Crawl Defaults
+
+**Duration**: Active
+**Type**: Crawl tooling refinement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make the intelligent crawl helper download article content by default so max-download caps are meaningful
+- Preserve the structure-only workflow behind an explicit `--hub-exclusive` switch
+- Capture follow-ups for UI parity if operators need the toggle surfaced elsewhere
+
+**Location**: `docs/sessions/2025-11-15-intelligent-crawl-defaults/`
+
+**Quick Links**:
+- 📝 [Session Notes](./2025-11-15-intelligent-crawl-defaults/notes.md)
+
+### Session 2025-11-16: Intelligent Crawl Behavior Persistence
+
+**Duration**: Active
+**Type**: Crawl behavior analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Capture the current intelligent crawl flow after the 404 resilience fixes
+- Explain why capped runs terminate early despite healthy downloaders
+- Propose planner/persistence tweaks that keep the crawl going without a new start URL
+
+**Location**: `docs/sessions/2025-11-16-intelligent-crawl-behavior/`
+
+**Quick Links**:
+- 📝 [Session Notes](./2025-11-16-intelligent-crawl-behavior/notes.md)
+- 🧪 [Exit Diagnostics](./2025-11-16-intelligent-crawl-behavior/diagnostic.md)
+- 🛠️ [Persistence Fix Plan](./2025-11-16-intelligent-crawl-behavior/fix-plan.md)
+
 
 ---
 
@@ -387,6 +690,7 @@ const matches = searchIndex.find(item => item.keywords.includes('refactor'));
 
 ### 2025 Sessions
 - [2025-11-13: Strategic Planning & Documentation](./2025-11-13-strategic-planning/INDEX.md)
+- [2025-11-14: Place-Focused CLI Enablement](./2025-11-14-place-cli/INDEX.md)
 
 ### Previous Sessions Archive
 - Location: `docs/sessions/archive/`
@@ -406,8 +710,8 @@ const matches = searchIndex.find(item => item.keywords.includes('refactor'));
 
 ---
 
-**Last Updated**: November 13, 2025  
-**Current Session**: 2025-11-13-strategic-planning  
+**Last Updated**: November 15, 2025  
+**Current Session**: 2025-11-15-intelligent-crawl-defaults  
 **Maintenance**: Add new sessions as they complete  
 **For Agents**: This is your memory system. Use it!
 

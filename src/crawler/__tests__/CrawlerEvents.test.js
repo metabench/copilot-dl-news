@@ -1,15 +1,22 @@
 const { CrawlerEvents } = require('../CrawlerEvents');
 
+const baseRequiredOptions = () => ({
+  domain: 'example.com',
+  getStats: () => ({}),
+  getQueueSize: () => 0,
+  getCurrentDownloads: () => new Map(),
+  getDomainLimits: () => new Map(),
+  getRobotsInfo: () => ({ robotsLoaded: false }),
+  getSitemapInfo: () => ({ urls: [], discovered: 0 })
+});
+
+const createLogger = () => ({
+  log: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn()
+});
+
 describe('CrawlerEvents problem resolution integration', () => {
-  const baseRequiredOptions = () => ({
-    domain: 'example.com',
-    getStats: () => ({}),
-    getQueueSize: () => 0,
-    getCurrentDownloads: () => new Map(),
-    getDomainLimits: () => new Map(),
-    getRobotsInfo: () => ({ robotsLoaded: false }),
-    getSitemapInfo: () => ({ urls: [], discovered: 0 })
-  });
 
   test('invokes problem resolution when missing hub problem emitted', () => {
     const resolveMissingHub = jest.fn();
@@ -62,5 +69,40 @@ describe('CrawlerEvents problem resolution integration', () => {
     });
 
     expect(resolveMissingHub).not.toHaveBeenCalled();
+  });
+});
+
+describe('CrawlerEvents logging verbosity rules', () => {
+  test('suppresses queue logs when output verbosity is terse', () => {
+    const logger = createLogger();
+    const terseEvents = new CrawlerEvents({
+      ...baseRequiredOptions(),
+      logger,
+      outputVerbosity: 'terse'
+    });
+
+    terseEvents.emitQueueEvent({ action: 'enqueue', url: 'https://example.com' });
+
+    expect(logger.log).not.toHaveBeenCalled();
+  });
+
+  test('logs queue events when verbosity is verbose but still suppresses for extra-terse', () => {
+    const verboseLogger = createLogger();
+    const verboseEvents = new CrawlerEvents({
+      ...baseRequiredOptions(),
+      logger: verboseLogger,
+      outputVerbosity: 'verbose'
+    });
+    verboseEvents.emitQueueEvent({ action: 'enqueue' });
+    expect(verboseLogger.log).toHaveBeenCalledTimes(1);
+
+    const extraTerseLogger = createLogger();
+    const extraTerseEvents = new CrawlerEvents({
+      ...baseRequiredOptions(),
+      logger: extraTerseLogger,
+      outputVerbosity: 'extra-terse'
+    });
+    extraTerseEvents.emitQueueEvent({ action: 'enqueue' });
+    expect(extraTerseLogger.log).not.toHaveBeenCalled();
   });
 });

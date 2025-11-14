@@ -42,3 +42,7 @@ _Last updated: 2025-11-04_
 - [Database Backup](checklists/database_backup.md)
 - [Doc Link Integrity](checklists/doc_link_integrity.md)
 - [Release Preflight](checklists/release_preflight.md)
+
+## Sessions
+- [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
+- [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.

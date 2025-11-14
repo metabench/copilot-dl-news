@@ -244,6 +244,76 @@ describe('QueueManager basic', () => {
     }));
   });
 
+  test('cached seed meta enforces processCacheResult context even when allowRevisit is true', async () => {
+    const cachedPage = { html: '<html>seed</html>', crawledAt: new Date().toISOString() };
+    const cacheGet = jest.fn().mockResolvedValue(cachedPage);
+
+    const urlEligibilityService = {
+      evaluate: ({ url, meta }) => ({
+        status: 'allow',
+        normalized: url,
+        kind: 'nav',
+        queueKey: url,
+        meta,
+        allowRevisit: true
+      })
+    };
+
+    const qm = new QueueManager({
+      urlEligibilityService,
+      cache: { get: cacheGet },
+      safeHostFromUrl: (url) => new URL(url).host,
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => false
+    });
+
+    const meta = { seedFromCache: true, processCacheResult: true };
+    const targetUrl = 'https://example.com/cache-seed';
+    qm.enqueue({ url: targetUrl, depth: 0, type: 'nav', meta });
+
+    const result = await qm.pullNext();
+    expect(result).not.toBeNull();
+    expect(result.context).toEqual(expect.objectContaining({
+      processCacheResult: true,
+      forceCache: true,
+      cachedPage,
+      cachedHost: 'example.com'
+    }));
+    expect(cacheGet).toHaveBeenCalledWith(targetUrl);
+  });
+
+  test('cached seed meta falls back to network when cache entry is missing', async () => {
+    const cacheGet = jest.fn().mockResolvedValue(null);
+
+    const urlEligibilityService = {
+      evaluate: ({ url, meta }) => ({
+        status: 'allow',
+        normalized: url,
+        kind: 'nav',
+        queueKey: url,
+        meta,
+        allowRevisit: true
+      })
+    };
+
+    const qm = new QueueManager({
+      urlEligibilityService,
+      cache: { get: cacheGet },
+      safeHostFromUrl: (url) => new URL(url).host,
+      usePriorityQueue: true,
+      isTotalPrioritisationEnabled: () => false
+    });
+
+    const meta = { seedFromCache: true, processCacheResult: true };
+    const targetUrl = 'https://example.com/cache-miss';
+    qm.enqueue({ url: targetUrl, depth: 0, type: 'nav', meta });
+
+    const result = await qm.pullNext();
+    expect(result).not.toBeNull();
+    expect(result.context).toBeNull();
+    expect(cacheGet).toHaveBeenCalledWith(targetUrl);
+  });
+
   test('heatmap tracks origin/role/depth buckets and decrements on pull', async () => {
     const urlEligibilityService = {
       evaluate: ({ url, depth }) => ({

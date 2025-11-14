@@ -1,0 +1,100 @@
+{
+  "profile": "geography",
+  "queue": {
+    "description": "Queue configuration tuned for geography (gazetteer) crawls",
+    "version": "1.0.0",
+    "lastUpdated": "2025-11-14T00:00:00.000Z",
+    "bonuses": {
+      "gazetteer-country": {
+        "value": 120,
+        "description": "Country seeds sourced from Wikidata + Gazetteer",
+        "category": "gazetteer"
+      },
+      "gazetteer-region": {
+        "value": 60,
+        "description": "ADM1/region pages discovered via geography planner",
+        "category": "gazetteer"
+      },
+      "gazetteer-city": {
+        "value": 40,
+        "description": "City hubs emitted by geography crawl",
+        "category": "gazetteer"
+      },
+      "adaptive-seed": {
+        "value": 20,
+        "description": "Generic planner/adaptive seeds",
+        "category": "intelligent"
+      },
+      "sitemap": {
+        "value": 5,
+        "description": "Structured sitemap URLs (fallback)",
+        "category": "structured"
+      },
+      "link": {
+        "value": 0,
+        "description": "Organic link discovery",
+        "category": "organic"
+      }
+    },
+    "weights": {
+      "country-hub": {
+        "value": 0,
+        "description": "Country hubs fetched during geography mode"
+      },
+      "adm1-hub": {
+        "value": 2,
+        "description": "Region hubs (ADM1)"
+      },
+      "city-hub": {
+        "value": 4,
+        "description": "City/place hubs"
+      },
+      "article": {
+        "value": 6,
+        "description": "Article fetches triggered from geography crawl"
+      },
+      "nav": {
+        "value": 10,
+        "description": "Navigation/category URLs"
+      }
+    },
+    "clustering": {
+      "problemThreshold": 5,
+      "timeWindowMinutes": 30,
+      "maxClusterSize": 100,
+      "boostFactorPerCluster": 2.5
+    }
+  },
+  "coverage": {
+    "telemetryIntervalSeconds": 30,
+    "milestoneThresholds": {
+      "hubDiscoveryMinimum": 10,
+      "coveragePercentageTargets": [25, 50, 75, 90],
+      "gapReductionSignificant": 0.15
+    }
+  },
+  "features": {
+    "advancedPlanningSuite": false,
+    "gapDrivenPrioritization": true,
+    "plannerKnowledgeReuse": true,
+    "realTimeCoverageAnalytics": true,
+    "problemClustering": true,
+    "problemResolution": false,
+    "graphReasonerPlugin": true,
+    "gazetteerAwareReasoner": true,
+    "gap-driven-prioritization": true,
+    "costAwarePriority": false,
+    "patternDiscovery": false,
+    "adaptiveBranching": true,
+    "realTimePlanAdjustment": false,
+    "dynamicReplanning": false,
+    "crossDomainSharing": false,
+    "totalPrioritisation": false
+  },
+  "hubFreshness": {
+    "refreshOnStartup": true,
+    "maxCacheAgeMs": 3600000,
+    "firstPageMaxAgeMs": 3600000,
+    "fallbackToCacheOnFailure": true
+  }
+}

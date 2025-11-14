@@ -1,0 +1,100 @@
+{
+  "profile": "wikidata",
+  "queue": {
+    "description": "Queue configuration for Wikidata ingestion crawls",
+    "version": "1.0.0",
+    "lastUpdated": "2025-11-14T00:00:00.000Z",
+    "bonuses": {
+      "wikidata-country": {
+        "value": 120,
+        "description": "Country entities fetched from Wikidata",
+        "category": "wikidata"
+      },
+      "wikidata-region": {
+        "value": 80,
+        "description": "ADM1 (region/state) entities",
+        "category": "wikidata"
+      },
+      "wikidata-city": {
+        "value": 60,
+        "description": "City entities emitted from Wikidata queries",
+        "category": "wikidata"
+      },
+      "osm-boundary": {
+        "value": 40,
+        "description": "OSM boundary lookups triggered by Wikidata",
+        "category": "gazetteer"
+      },
+      "adaptive-seed": {
+        "value": 15,
+        "description": "Planner/adaptive fallback seeds",
+        "category": "intelligent"
+      },
+      "link": {
+        "value": 0,
+        "description": "Organic link discovery",
+        "category": "organic"
+      }
+    },
+    "weights": {
+      "wikidata-country": {
+        "value": 0,
+        "description": "Country-level Wikidata work items"
+      },
+      "wikidata-region": {
+        "value": 2,
+        "description": "ADM1-level work items"
+      },
+      "wikidata-city": {
+        "value": 4,
+        "description": "City-level work items"
+      },
+      "article": {
+        "value": 8,
+        "description": "Article fetches triggered indirectly"
+      },
+      "nav": {
+        "value": 12,
+        "description": "Navigation / metadata URLs"
+      }
+    },
+    "clustering": {
+      "problemThreshold": 5,
+      "timeWindowMinutes": 60,
+      "maxClusterSize": 150,
+      "boostFactorPerCluster": 3
+    }
+  },
+  "coverage": {
+    "telemetryIntervalSeconds": 60,
+    "milestoneThresholds": {
+      "hubDiscoveryMinimum": 5,
+      "coveragePercentageTargets": [25, 50, 75, 90],
+      "gapReductionSignificant": 0.15
+    }
+  },
+  "features": {
+    "advancedPlanningSuite": false,
+    "gapDrivenPrioritization": false,
+    "plannerKnowledgeReuse": true,
+    "realTimeCoverageAnalytics": true,
+    "problemClustering": false,
+    "problemResolution": false,
+    "graphReasonerPlugin": true,
+    "gazetteerAwareReasoner": true,
+    "gap-driven-prioritization": false,
+    "costAwarePriority": false,
+    "patternDiscovery": false,
+    "adaptiveBranching": true,
+    "realTimePlanAdjustment": false,
+    "dynamicReplanning": false,
+    "crossDomainSharing": false,
+    "totalPrioritisation": false
+  },
+  "hubFreshness": {
+    "refreshOnStartup": true,
+    "maxCacheAgeMs": 7200000,
+    "firstPageMaxAgeMs": 7200000,
+    "fallbackToCacheOnFailure": true
+  }
+}
