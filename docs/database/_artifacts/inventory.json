@@ -5,6 +5,9 @@
     "src/db/migrations/008-article-place-matching.sql",
     "src/db/migrations/008-article-place-relations.sql",
     "src/db/migrations/008-fix-article-place-relations.sql",
+    "src/db/migrations/009-place-hubs-with-urls-view.sql",
+    "src/db/migrations/010-articles-view.sql",
+    "src/db/migrations/011-articles-view-no-html.sql",
     "src/db/migrations/url-normalization-schema.sql",
     "src/db/sqlite/v1/migrations/add_news_websites_table.sql"
   ],

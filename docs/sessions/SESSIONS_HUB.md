@@ -31,6 +31,46 @@
 
 ## Current Session
 
+### Session 2025-11-14: Db View Implementation
+
+**Duration**: Active
+**Type**: db-migration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add articles and place hub views
+
+**Location**: `docs/sessions/2025-11-14-db-view-implementation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-db-view-implementation/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-db-view-implementation/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-db-view-implementation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-db-view-implementation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-db-view-implementation/FOLLOW_UPS.md)
+
+
+### Session 2025-11-14: UI Controls Table Rendering
+
+**Duration**: Active
+**Type**: UI tooling & visualization
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate `jsgui3-html` control patterns and dependencies
+- Create `src/ui/controls` with reusable table, row, and cell controls
+- Render the first 1000 crawler URLs into a styled HTML page via a new script
+
+**Location**: `docs/sessions/2025-11-14-ui-controls-table/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-14-ui-controls-table/INDEX.md)
+- 🗺️ [Plan](./2025-11-14-ui-controls-table/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-ui-controls-table/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-14-ui-controls-table/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-14-ui-controls-table/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-14: Strategic Analysis Mode
 
 **Duration**: Active

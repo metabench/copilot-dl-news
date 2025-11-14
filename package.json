@@ -60,6 +60,7 @@
     "fast-xml-parser": "^5.3.0",
     "js-yaml": "^4.1.0",
     "jsdom": "^27.0.1",
+    "jsgui3-html": "^0.0.169",
     "lang-tools": "^0.0.39",
     "ndjson": "^2.0.0",
     "node-fetch": "^3.3.2",

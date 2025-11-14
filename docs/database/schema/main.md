@@ -6,6 +6,7 @@ _Last snapshot: 2025-11-04 (`docs/database/_artifacts/news_db_schema.sql`)_
 - **Engine:** SQLite 3 (better-sqlite3 bindings) in WAL mode.
 - **File size:** ~4.5 GB (`news_db_stats.json`).
 - **Tables:** 75 (no materialized views); 300+ indexes; 20+ triggers enforcing data integrity.
+- **Views:** 2 compatibility layers (`articles_view`, `place_hubs_with_urls`) bridging legacy consumers while Phase 4 normalization lands.
 - **Dominant workloads:** crawler ingestion, URL normalization, place/gazetteer enrichment, coverage analytics, background task tracking.
 
 ### Row Count Highlights
@@ -155,7 +156,7 @@ Full row counts are available in `news_db_stats.json` and should be consulted be
 | `queue_events` | Queue | 1,670,293 | Legacy queue log; heavy analytic workload.
 | `queue_events_enhanced` | Queue | 0 | Enhanced queue log with URL IDs.
 | `schema_metadata` | Ops | 1 | Stores last schema fingerprint hash.
-| `schema_migrations` | Ops | 4 | Migration journal; current entries 006–008 + url normalization.
+| `schema_migrations` | Ops | 7 | Migration journal; entries 006–011 plus the URL normalization bootstrap for shared adapters.
 | `sqlite_sequence` | SQLite internal | 26 | Autoincrement book-keeping.
 | `topic_keywords` | Reference | 73 | Keywords per topic/language.
 | `url_aliases` | Content | 9,850 | URL ↔ alias mapping for dedupe & coverage.
@@ -164,6 +165,12 @@ Full row counts are available in `news_db_stats.json` and should be consulted be
 | `urls` | Content | 227,819 | Canonical URL registry.
 
 (Any tables not listed above are internal SQLite constructs or deprecated scratch tables.)
+
+## View Reference
+| View | Purpose | Notes |
+| --- | --- | --- |
+| `articles_view` | Backfills the legacy `articles` table shape (metadata only) for analytics/tests that still expect denormalized columns. | Created via migrations `010-articles-view.sql` + `011-articles-view-no-html.sql`; joins URL, response, storage, analysis, and discovery metadata while intentionally omitting `html`/`text`/`compressed_html`. Consumers must fetch blobs through the storage adapter and decompress before doing any content-level work.
+| `place_hubs_with_urls` | Provides canonical URL strings alongside `place_hubs` metadata for CLI/services that seed crawls from known hubs. | Added in `009-place-hubs-with-urls-view.sql`; hosts inherit from `place_hubs`, `url` comes from the joined `urls` row.
 
 ## Trigger Inventory
 | Trigger | Target | Purpose |

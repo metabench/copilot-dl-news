@@ -1,7 +1,9 @@
 -- Phase 4: Create backward compatibility views for testing
 -- This view reconstructs the denormalized articles table from normalized schema
 
--- Create articles_view that reconstructs the original articles table structure
+-- Create articles_view that reconstructs the original articles table structure (metadata only)
+-- Note: raw/compressed HTML blobs are intentionally omitted; consumers should fetch via
+-- content storage adapters and perform decompression themselves when analysis requires it.
 CREATE VIEW articles_view AS
 SELECT
     -- Primary key and identity
@@ -13,9 +15,6 @@ SELECT
     ca.date AS date,
     ca.section AS section,
 
-    -- HTML content from content_storage
-    cs.content_blob AS html,
-
     -- Timing from http_responses
     hr.fetched_at AS crawled_at,
     hr.request_started_at AS request_started_at,
@@ -24,7 +23,7 @@ SELECT
     -- HTTP metadata from http_responses
     hr.http_status AS http_status,
     hr.content_type AS content_type,
-    hr.content_length AS content_length,
+    NULL AS content_length,  -- Not tracked in hr table; fetchers must calculate when needed
     hr.etag AS etag,
     hr.last_modified AS last_modified,
     hr.redirect_chain AS redirect_chain,
@@ -49,11 +48,9 @@ SELECT
 
     -- Compression info from content_storage (legacy fields)
     cs.content_sha256 AS html_sha256,
-    NULL AS text,  -- Not stored separately in normalized schema
-    cs.content_blob AS compressed_html,  -- Same as html for now
     cs.compression_type_id AS compression_type_id,
-    NULL AS compression_bucket_id,  -- Not implemented yet
-    NULL AS compression_bucket_key,  -- Not implemented yet
+    cs.compression_bucket_id AS compression_bucket_id,
+    cs.bucket_entry_key AS compression_bucket_key,
     cs.uncompressed_size AS original_size,
     cs.compressed_size AS compressed_size,
     cs.compression_ratio AS compression_ratio,
