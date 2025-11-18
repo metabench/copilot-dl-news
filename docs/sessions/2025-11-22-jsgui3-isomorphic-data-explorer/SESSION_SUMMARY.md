@@ -10,7 +10,7 @@
 | :--- | :--- | :--- |
 | Refresh Data Explorer SSR surface | ✅ | Updated `renderHtml` and `buildCss` with new layout/typography |
 | Match Diagram Atlas polish | ✅ | Aligned headers, stats, and table styles |
-| Stable on ultra-wide windows | ✅ | Added max-width clamps up to 1680px and flex-based hero header |
+| Stable on ultra-wide windows | ✅ | Added max-width clamps up to 1760px and flex-based hero header |
 
 ## 📊 Metrics
 

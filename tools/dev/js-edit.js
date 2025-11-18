@@ -46,6 +46,11 @@ const {
   writeOutputFile,
   outputJson
 } = require('./js-edit/shared/io');
+const {
+  hydrateMatchSnapshotContext
+} = require('./js-edit/shared/snapshot');
+const BatchDryRunner = require('./js-edit/BatchDryRunner');
+const { handleRecipeMode } = require('./js-edit/operations/recipe');
 const { getReplacementSource } = require('./js-edit/shared/replacement');
 const { applyRenameToSnippet } = require('./js-edit/shared/rename');
 const {
@@ -82,11 +87,12 @@ const {
   variableRecordMatchesPath,
   getConfiguredHashEncodings,
   resolveVariableTargetInfo,
-  buildSearchSuggestionsForMatch
+  buildSearchSuggestionsForMatch,
+  MultipleMatchesError,
+  generateSelectorSuggestions
 } = require('./js-edit/shared/selector');
-const RecipeEngine = require('./js-edit/recipes/RecipeEngine');
-const OperationDispatcher = require('./js-edit/recipes/OperationDispatcher');
-const BatchDryRunner = require('./js-edit/BatchDryRunner');
+
+
 
 const fmt = new CliFormatter();
 const DEFAULT_CONTEXT_PADDING = 512;
@@ -189,273 +195,11 @@ function printHelpOutput(languageMode, parser) {
   }
 }
 
-let cachedStdinData = null;
 
-function readAllStdin() {
-  if (cachedStdinData !== null) {
-    return Promise.resolve(cachedStdinData);
-  }
-  return new Promise((resolve, reject) => {
-    if (!process.stdin) {
-      cachedStdinData = '';
-      resolve('');
-      return;
-    }
-    let data = '';
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (chunk) => {
-      data += chunk;
-    });
-    process.stdin.on('error', (error) => {
-      reject(error);
-    });
-    process.stdin.on('end', () => {
-      cachedStdinData = data;
-      resolve(data);
-    });
-    try {
-      process.stdin.resume();
-    } catch (err) {
-      cachedStdinData = '';
-      resolve('');
-    }
-  });
-}
 
-async function readSnapshotJsonInput(ref) {
-  if (!ref) {
-    throw new Error('Provide a snapshot file path or "-" to read from stdin.');
-  }
-  if (ref === '-') {
-    const stdinPayload = await readAllStdin();
-    if (!stdinPayload || !stdinPayload.trim()) {
-      throw new Error('No match snapshot data received from stdin. Pipe js-scan JSON output into --match-snapshot -.');
-    }
-    try {
-      return JSON.parse(stdinPayload);
-    } catch (error) {
-      throw new Error(`Failed to parse match snapshot JSON from stdin: ${error.message}`);
-    }
-  }
-  const absolute = path.isAbsolute(ref) ? ref : path.resolve(process.cwd(), ref);
-  if (!fs.existsSync(absolute)) {
-    throw new Error(`Match snapshot file not found: ${absolute}`);
-  }
-  const raw = fs.readFileSync(absolute, 'utf8');
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    throw new Error(`Failed to parse match snapshot JSON from ${absolute}: ${error.message}`);
-  }
-}
 
-async function readTokenInput(ref) {
-  if (!ref) {
-    throw new Error('Provide a continuation token reference or "-" to read from stdin.');
-  }
-  if (ref === '-') {
-    const stdinPayload = await readAllStdin();
-    const token = typeof stdinPayload === 'string' ? stdinPayload.trim() : '';
-    if (!token) {
-      throw new Error('No continuation token provided via stdin. Pipe the js-scan token into --from-token -.');
-    }
-    return token;
-  }
-  const absolute = path.isAbsolute(ref) ? ref : path.resolve(process.cwd(), ref);
-  if (fs.existsSync(absolute) && fs.statSync(absolute).isFile()) {
-    const tokenFromFile = fs.readFileSync(absolute, 'utf8').trim();
-    if (!tokenFromFile) {
-      throw new Error(`Continuation token file ${absolute} is empty.`);
-    }
-    return tokenFromFile;
-  }
-  return ref.trim();
-}
 
-function extractMatchSnapshotPayload(payload) {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-  if (payload.match && typeof payload.match === 'object') {
-    return payload.match;
-  }
-  if (payload.snapshot && typeof payload.snapshot === 'object') {
-    return payload.snapshot;
-  }
-  if (payload.relationship && payload.relationship.entry && payload.relationship.entry.match) {
-    return payload.relationship.entry.match;
-  }
-  if (payload.file && typeof payload.file === 'string') {
-    return payload;
-  }
-  return null;
-}
 
-function normalizeMatchSnapshotForIngestion(snapshot) {
-  if (!snapshot || typeof snapshot !== 'object') {
-    return null;
-  }
-  const clone = { ...snapshot };
-  const candidateFile = typeof clone.file === 'string' && clone.file.length > 0
-    ? clone.file
-    : (typeof clone.relativeFile === 'string' ? path.resolve(process.cwd(), clone.relativeFile) : null);
-  if (candidateFile) {
-    clone.file = path.isAbsolute(candidateFile) ? candidateFile : path.resolve(process.cwd(), candidateFile);
-    clone.relativeFile = clone.relativeFile || path.relative(process.cwd(), clone.file);
-  }
-  return clone;
-}
-
-function deriveSnapshotHints(snapshot) {
-  const hints = {
-    selector: null,
-    selectHash: null,
-    selectIndex: null,
-    selectPath: null,
-    expectHash: null
-  };
-  if (!snapshot || typeof snapshot !== 'object') {
-    return hints;
-  }
-  const plan = snapshot.jsEditHint && snapshot.jsEditHint.plan ? snapshot.jsEditHint.plan : null;
-  if (plan) {
-    if (plan.selector && typeof plan.selector === 'string') {
-      hints.selector = plan.selector;
-    }
-    if (plan.select && typeof plan.select === 'string') {
-      const selectValue = plan.select.trim();
-      const lower = selectValue.toLowerCase();
-      if (lower.startsWith('hash:')) {
-        hints.selectHash = selectValue.slice(selectValue.indexOf(':') + 1).trim();
-      } else if (/^\d+$/.test(selectValue)) {
-        hints.selectIndex = parseInt(selectValue, 10);
-      } else if (lower.startsWith('path:')) {
-        hints.selectPath = selectValue;
-      }
-    }
-    if (plan.expectHash && typeof plan.expectHash === 'string') {
-      hints.expectHash = plan.expectHash;
-    }
-  }
-
-  if (!hints.selector) {
-    if (snapshot.canonicalName) {
-      hints.selector = snapshot.canonicalName;
-    } else if (snapshot.name) {
-      hints.selector = snapshot.name;
-    } else if (snapshot.hash) {
-      hints.selector = `hash:${snapshot.hash}`;
-    }
-  }
-
-  if (!hints.selectHash && snapshot.hash) {
-    hints.selectHash = snapshot.hash;
-  }
-
-  if (!hints.expectHash && snapshot.hash) {
-    hints.expectHash = snapshot.hash;
-  }
-
-  return hints;
-}
-
-function findRepositoryRoot(startDir) {
-  let currentDir = path.resolve(startDir);
-  while (currentDir !== path.dirname(currentDir)) {
-    if (fs.existsSync(path.join(currentDir, 'package.json')) || fs.existsSync(path.join(currentDir, '.git'))) {
-      return currentDir;
-    }
-    currentDir = path.dirname(currentDir);
-  }
-  return startDir;
-}
-
-async function hydrateMatchSnapshotContext(options) {
-  if (!options.matchSnapshotInput && !options.fromTokenInput) {
-    return;
-  }
-
-  let rawPayload;
-  let ingestSource = 'snapshot';
-  let tokenMetadata = null;
-
-  if (options.matchSnapshotInput) {
-    rawPayload = await readSnapshotJsonInput(options.matchSnapshotInput);
-  } else {
-    ingestSource = 'token';
-    const tokenString = await readTokenInput(options.fromTokenInput);
-    let decoded;
-    try {
-      decoded = TokenCodec.decode(tokenString);
-    } catch (error) {
-      throw new Error(`Failed to decode continuation token: ${error.message}`);
-    }
-    const repoRoot = findRepositoryRoot(process.cwd());
-    const secretKey = TokenCodec.deriveSecretKey({ repo_root: repoRoot });
-    const validation = TokenCodec.validate(decoded, { secret_key: secretKey });
-    if (!validation.valid) {
-      throw new Error(validation.error || 'Continuation token validation failed.');
-    }
-    rawPayload = decoded.payload && decoded.payload.parameters
-      ? { match: decoded.payload.parameters.match }
-      : null;
-    tokenMetadata = {
-      tokenId: decoded._token_id || null,
-      action: decoded.payload ? decoded.payload.action : null,
-      requestId: decoded.payload && decoded.payload.context ? decoded.payload.context.request_id : null
-    };
-  }
-
-  const snapshot = normalizeMatchSnapshotForIngestion(extractMatchSnapshotPayload(rawPayload));
-  if (!snapshot || !snapshot.file) {
-    throw new Error('Match snapshot payload is missing file metadata. Re-run js-scan --continuation --json to refresh tokens.');
-  }
-
-  if (!fs.existsSync(snapshot.file)) {
-    throw new Error(`Snapshot target file not found: ${snapshot.file}`);
-  }
-
-  const hints = deriveSnapshotHints(snapshot);
-  if (!hints.selector) {
-    throw new Error('Snapshot missing selector hints; rerun js-scan with --ai-mode to capture canonical selectors.');
-  }
-
-  if (options.filePath) {
-    const normalizedFile = path.isAbsolute(options.filePath)
-      ? options.filePath
-      : path.resolve(process.cwd(), options.filePath);
-    if (path.normalize(normalizedFile) !== path.normalize(snapshot.file)) {
-      throw new Error(`Snapshot points to ${snapshot.file}, but --file was set to ${options.filePath}. Run the command without --file or provide the matching path.`);
-    }
-    options.filePath = normalizedFile;
-  } else {
-    options.filePath = snapshot.file;
-  }
-  options.matchSnapshotContext = {
-    snapshot,
-    selector: hints.selector,
-    selectHash: hints.selectHash,
-    selectIndex: hints.selectIndex,
-    selectPath: hints.selectPath,
-    expectHash: hints.expectHash,
-    source: ingestSource,
-    tokenMetadata,
-    warnings: []
-  };
-
-  if (!options.selectHash && hints.selectHash) {
-    options.selectHash = hints.selectHash;
-  }
-  if (!options.selectIndex && typeof hints.selectIndex === 'number') {
-    options.selectIndex = hints.selectIndex;
-  }
-  if (!options.selectPath && hints.selectPath) {
-    options.selectPath = hints.selectPath;
-  }
-  if (!options.expectHash && hints.expectHash) {
-    options.expectHash = hints.expectHash;
-  }
-}
 
 function formatHashDescriptor(encodings) {
   return encodings
@@ -952,7 +696,7 @@ function normalizeOptions(raw) {
 
   // Recipe mode and batch operations don't require --file
   let filePath = null;
-  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan || resolved.copyBatch);
+  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan || resolved.copyBatch || (resolved.changes && resolved.emitPlan));
   const isSnapshotIngest = Boolean(matchSnapshotInput || fromTokenInput);
   if (!resolved.recipe && !isBatchOperation && !isSnapshotIngest) {
     const fileInput = resolved.file ? String(resolved.file).trim() : '';
@@ -1090,8 +834,9 @@ function normalizeOptions(raw) {
     ['--recalculate-offsets', Boolean(resolved.recalculateOffsets)],
     ['--from-plan', resolved.fromPlan !== undefined && resolved.fromPlan !== null],
     ['--match-snapshot', hasMatchSnapshotOperation],
-    ['--from-token', hasTokenIngestOperation]
-    ,['--copy-batch', resolved.copyBatch !== undefined && resolved.copyBatch !== null]
+    ['--from-token', hasTokenIngestOperation],
+    ['--copy-batch', resolved.copyBatch !== undefined && resolved.copyBatch !== null],
+    ['--emit-plan', resolved.emitPlan !== undefined && resolved.emitPlan !== null && resolved.changes !== undefined && resolved.changes !== null && !resolved.dryRun && !resolved.recalculateOffsets]
   ];
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
@@ -1548,6 +1293,8 @@ function normalizeOptions(raw) {
     selectHash,
     selectPath,
     allowMultiple,
+    suggestSelectors: Boolean(resolved.suggestSelectors),
+    fuzzy: Boolean(resolved.fuzzy),
     replaceRange,
     renameTo,
     extractVariableSelector,
@@ -1659,6 +1406,8 @@ function parseCliArgs(argv) {
     .add('--expect-span <start:end>', 'Guard replacement by ensuring the target span matches')
     .add('--select <index|hash:...>', 'Select a specific match by 1-based index or hash')
     .add('--select-path <signature>', 'Select a match by its AST path signature')
+    .add('--suggest-selectors', 'Suggest canonical selectors when multiple matches are found', false, 'boolean')
+    .add('--fuzzy', 'Enable fuzzy matching (ignore whitespace) for search and verification', false, 'boolean')
     .add('--recipe <path>', 'Load and execute a recipe JSON file for multi-step refactoring')
     .add(
       '--param <key=value>',
@@ -1721,142 +1470,7 @@ function parseCliArgs(argv) {
 }
 
 
-/**
- * Handle recipe mode execution
- * Loads a recipe JSON file and executes multi-step refactoring workflow
- * @param {Object} options - CLI options including recipe path and params
- */
-async function handleRecipeMode(options) {
-  try {
-    const recipePath = path.isAbsolute(options.recipe)
-      ? options.recipe
-      : path.resolve(process.cwd(), options.recipe);
 
-    // Create operation dispatcher
-    const dispatcher = new OperationDispatcher({
-      logger: options.verbose ? console.log : () => {},
-      verbose: options.verbose || false
-    });
-
-    const engine = new RecipeEngine(recipePath, {
-      dispatcher,
-      verbose: options.verbose,
-      dryRun: !options.fix
-    });
-
-    await engine.load();
-    const recipeDefinition = engine.recipe || {};
-
-    // Parse --param arguments into parameter overrides
-    const paramOverrides = {};
-    const cliParams = Array.isArray(options.param)
-      ? options.param
-      : (typeof options.param === 'string' ? [options.param] : []);
-
-    cliParams.forEach((param) => {
-      const [rawKey, rawValue] = param.split('=', 2);
-      if (!rawKey || rawValue === undefined) {
-        return;
-      }
-
-      const key = rawKey.trim();
-      let value = rawValue.trim();
-      const quoted = (value.startsWith('"') && value.endsWith('"'))
-        || (value.startsWith('\'') && value.endsWith('\''));
-      if (quoted && value.length >= 2) {
-        value = value.slice(1, -1);
-      }
-
-      if (key) {
-        paramOverrides[key] = value;
-      }
-    });
-
-    await engine.validate();
-
-    if (!options.json) {
-      console.log('Recipe validated successfully');
-
-      fmt.header('Recipe Execution');
-      const recipeName = recipeDefinition.name || path.basename(recipePath);
-      const stepCount = Array.isArray(recipeDefinition.steps) ? recipeDefinition.steps.length : 0;
-      fmt.stat('Recipe', recipeName);
-      fmt.stat('Steps', stepCount, 'number');
-      console.log();
-    }
-
-    await engine.execute(Object.keys(paramOverrides).length > 0 ? { params: paramOverrides } : {});
-    const baseResult = engine.getResults();
-    const result = {
-      ...baseResult,
-      recipeFile: recipePath,
-      builtInVariables: { ...engine.builtInVariables },
-      parameters: engine.manifest?.parameters || {}
-    };
-
-    // Print results
-    if (options.json) {
-      console.log(JSON.stringify(result, null, 2));
-    } else {
-      printRecipeResult(result);
-    }
-
-    if (result.status === 'failed') {
-      process.exitCode = 1;
-    }
-  } catch (error) {
-    fmt.error(`Recipe execution failed: ${error.message}`);
-    if (error.stack && options.verbose) {
-      console.error(error.stack);
-    }
-    process.exitCode = 1;
-  }
-}
-
-
-
-/**
- * Print recipe execution results in human-readable format
- * @param {Object} result - Result from engine.execute()
- */
-function printRecipeResult(result) {
-  const stepResults = result.stepResults || [];
-  const isChinese = fmt.getLanguageMode() === 'zh';
-
-  fmt.stat('Status', result.status === 'success' ? fmt.COLORS.success('SUCCESS') : fmt.COLORS.error('FAILED'));
-  fmt.stat('Total Duration', `${result.totalDuration}ms`, 'number');
-  fmt.stat('Steps Executed', stepResults.length, 'number');
-
-  if (result.errorCount > 0) {
-    fmt.stat('Errors', fmt.COLORS.error(result.errorCount), 'number');
-  }
-
-  console.log();
-
-  // Show per-step results
-  if (stepResults.length > 0) {
-    const stepsLabel = isChinese ? '步骤结果' : 'Step Results';
-    fmt.header(stepsLabel);
-    stepResults.forEach((step, idx) => {
-      const status = step.status === 'success'
-        ? fmt.COLORS.success('✓')
-        : step.status === 'skipped'
-          ? fmt.COLORS.muted('○')
-          : fmt.COLORS.error('✗');
-      const stepNum = fmt.COLORS.muted(`[${idx + 1}]`);
-      const stepName = step.stepName || 'unnamed';
-      const duration = step.duration ? ` (${step.duration}ms)` : '';
-
-      console.log(`  ${stepNum} ${status} ${stepName}${duration}`);
-
-      if (step.error) {
-        fmt.warn(`     Error: ${step.error}`);
-      }
-    });
-  }
-
-  fmt.footer();
-}
 
 /**
  * Print dry-run preview results
@@ -2015,13 +1629,13 @@ async function main() {
 
   // Handle recipe mode first (doesn't need file processing)
   if (options.recipe) {
-    return handleRecipeMode(options);
+    return handleRecipeMode(options, fmt);
   }
 
-  // Handle batch operations (Gap 3)
-  if (options.dryRun || options.recalculateOffsets || options.fromPlan || options.copyBatch) {
+  // Handle batch operations (Gap 3 & 4)
+  if (options.dryRun || options.recalculateOffsets || options.fromPlan || options.copyBatch || (options.changes && options.emitPlanPath)) {
     try {
-      const batchRunner = new BatchDryRunner();
+      const batchRunner = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
       
       // For dry-run: load changes file and preview without modifying
       if (options.dryRun && options.changes) {
@@ -2034,6 +1648,36 @@ async function main() {
         batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
         const result = batchRunner.dryRun();
         printDryRunResult(result, options);
+        
+        // Gap 4: Emit plan from dry-run if requested
+        if (options.emitPlanPath) {
+          const plan = batchRunner.generatePlan();
+          const planPath = options.emitPlanPath;
+          fs.writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf8');
+          if (!options.quiet) {
+            fmt.stat('Plan emitted', planPath);
+          }
+        }
+        return;
+      }
+
+      // Gap 4: Emit plan from changes without dry-run output
+      if (options.emitPlanPath && options.changes && !options.fix) {
+        const fs = require('fs');
+        const changesPath = path.isAbsolute(options.changes)
+          ? options.changes
+          : path.resolve(process.cwd(), options.changes);
+        
+        const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
+        batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
+        
+        const plan = batchRunner.generatePlan();
+        const planPath = options.emitPlanPath;
+        
+        fs.writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf8');
+        if (!options.quiet) {
+          fmt.stat('Plan emitted', planPath);
+        }
         return;
       }
 
@@ -2070,6 +1714,7 @@ async function main() {
           if (!op || op.type !== 'copy') continue;
 
           // Required: op.source.file and op.source.selector
+         
           const sourceFile = op.source && op.source.file ? (path.isAbsolute(op.source.file) ? op.source.file : path.resolve(path.dirname(planPath), op.source.file)) : null;
           const sourceSelector = op.source && op.source.selector ? op.source.selector : null;
           if (!sourceFile || !sourceSelector) {
@@ -2136,7 +1781,7 @@ async function main() {
 
           if (!runnersByFile[change.file]) {
             const fileSource = fs.readFileSync(change.file, 'utf8');
-            runnersByFile[change.file] = new BatchDryRunner(fileSource, { verbose: options.verbose });
+            runnersByFile[change.file] = new BatchDryRunner(fileSource, { verbose: options.verbose, fuzzy: options.fuzzy });
           }
           runnersByFile[change.file].addChange(change);
         }
@@ -2151,10 +1796,17 @@ async function main() {
           conflicts: []
         };
 
+
         for (const file of Object.keys(runnersByFile)) {
           const runner = runnersByFile[file];
           if (options.fix) {
             const result = await runner.apply({ force: options.force, continueOnError: options.continueOnError || false, emitPlan: options.emitPlan });
+            
+            if (result.success && result.resultingSource) {
+              const fs = require('fs');
+              fs.writeFileSync(file, result.resultingSource, 'utf8');
+            }
+
             aggregated.applied += result.applied || 0;
             aggregated.failed += result.failed || 0;
             aggregated.changeCount += result.changes ? result.changes.length : 0;
@@ -2186,11 +1838,12 @@ async function main() {
         const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
         
         // Reconstruct BatchDryRunner from plan data
-        const batchRunnerFromPlan = new BatchDryRunner('', { verbose: options.verbose });
+        const batchRunnerFromPlan = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
         
         // Load changes from plan
         if (planData.changes && Array.isArray(planData.changes)) {
-          planData.changes.forEach(change => batchRunnerFromPlan.addChange(change));
+          // Use loadChanges to ensure source file is loaded and paths are resolved
+          batchRunnerFromPlan.loadChanges(planData.changes, { baseDir: path.dirname(planPath) });
         }
         
         // Verify guards before applying
@@ -2215,7 +1868,7 @@ async function main() {
               throw new Error('--copy-batch plan must contain an "operations" array');
             }
 
-            const batchRunner = new BatchDryRunner('', { verbose: options.verbose });
+            const batchRunner = new BatchDryRunner('', { verbose: options.verbose, fuzzy: options.fuzzy });
 
             for (const op of planData.operations) {
               if (!op || op.type !== 'copy') continue;
@@ -2306,6 +1959,13 @@ async function main() {
             continueOnError: options.continueOnError || false,
             emitPlan: options.emitPlan
           });
+          
+          // Write changes to disk if successful
+          if (result.success && result.resultingSource && batchRunnerFromPlan.filePath) {
+            const fs = require('fs');
+            fs.writeFileSync(batchRunnerFromPlan.filePath, result.resultingSource, 'utf8');
+          }
+          
           printPlanResult(result, options);
           
           // If requested, write result plan to file
@@ -2396,25 +2056,15 @@ async function main() {
     resolveVariableTargetInfo,
     variableRecordMatchesPath,
     buildSearchSuggestionsForMatch,
-    buildSearchSnippet,
-    positionFromIndex,
-    findFunctionOwner,
-    findVariableOwner,
+    MultipleMatchesError,
+    generateSelectorSuggestions,
+    // Context operations exports required by other modules
     maybeEmitPlan: contextOperations.maybeEmitPlan,
-    buildPlanPayload: contextOperations.buildPlanPayload,
     computeAggregateSpan: contextOperations.computeAggregateSpan,
     formatAggregateSpan: contextOperations.formatAggregateSpan,
     formatSpanRange: contextOperations.formatSpanRange,
     formatSpanDetails: contextOperations.formatSpanDetails,
-    renderGuardrailSummary: contextOperations.renderGuardrailSummary,
-    toReadableScope,
-    HASH_PRIMARY_ENCODING,
-    HASH_FALLBACK_ENCODING,
-    HASH_LENGTH_BY_ENCODING,
-    DEFAULT_SEARCH_CONTEXT,
-    DEFAULT_SEARCH_LIMIT,
-    createPreviewSnippet,
-    buildLineIndex
+    renderGuardrailSummary: contextOperations.renderGuardrailSummary
   };
 
   contextOperations.init(deps);
@@ -2425,92 +2075,115 @@ async function main() {
     return mutationOperations.ingestMatchSnapshot(options, functionRecords);
   }
 
-  if (options.listFunctions) {
-    return discoveryOperations.listFunctions(options, source, functionRecords);
-  }
-
-  if (options.listConstructors) {
-    return discoveryOperations.listConstructors(options, functionRecords, classMetadata);
-  }
-
-  if (options.functionSummary) {
-    return discoveryOperations.summarizeFunctions(options, functionRecords);
-  }
-
-  if (options.listVariables) {
-    return discoveryOperations.listVariables(options, source, variableRecords);
-  }
-
-  if (options.contextFunctionSelector) {
-    return contextOperations.showFunctionContext(options, source, functionRecords, options.contextFunctionSelector);
-  }
-
-  if (options.contextVariableSelector) {
-    return contextOperations.showVariableContext(options, source, variableRecords, options.contextVariableSelector);
-  }
-
-  if (options.previewSelector) {
-    return discoveryOperations.previewFunction(options, source, functionRecords, options.previewSelector);
-  }
-
-  if (options.previewVariableSelector) {
-    return discoveryOperations.previewVariable(options, source, variableRecords, options.previewVariableSelector);
-  }
-
-  if (options.snipePosition) {
-    return discoveryOperations.snipeSymbol(options, source, functionRecords, variableRecords, options.snipePosition);
-  }
-
-  if (options.outline) {
-    return discoveryOperations.outlineSymbols(options, source, functionRecords, variableRecords);
-  }
-
-  if (options.searchText) {
-    return discoveryOperations.searchTextMatches(options, source, functionRecords, variableRecords);
-  }
-
-  if (options.scanTargetsSelector) {
-    if (options.scanTargetKind === 'variable') {
-      return mutationOperations.scanVariableTargets(options, variableRecords, options.scanTargetsSelector);
+  try {
+    if (options.listFunctions) {
+      return discoveryOperations.listFunctions(options, source, functionRecords);
     }
-    return discoveryOperations.scanFunctionTargets(options, functionRecords, options.scanTargetsSelector);
-  }
 
-  if (options.extractSelector) {
-    const [record] = resolveMatches(functionRecords, options.extractSelector, options, { operation: 'extract' });
-    return mutationOperations.extractFunction(options, source, record, options.extractSelector);
-  }
+    if (options.listConstructors) {
+      return discoveryOperations.listConstructors(options, functionRecords, classMetadata);
+    }
 
-  if (options.extractHashes.length > 0) {
-    return extractFunctionsByHashes(options, source, functionRecords);
-  }
+    if (options.functionSummary) {
+      return discoveryOperations.summarizeFunctions(options, functionRecords);
+    }
 
-  if (options.replaceSelector) {
-    const [record] = resolveMatches(functionRecords, options.replaceSelector, options, { operation: 'replace' });
-    return mutationOperations.replaceFunction(options, source, record, options.replacementPath, options.replaceSelector);
-  }
+    if (options.listVariables) {
+      return discoveryOperations.listVariables(options, source, variableRecords);
+    }
 
-  if (options.locateSelector) {
-    return mutationOperations.locateFunctions(options, functionRecords, options.locateSelector);
-  }
+    if (options.contextFunctionSelector) {
+      return contextOperations.showFunctionContext(options, source, functionRecords, options.contextFunctionSelector);
+    }
 
-  if (options.locateVariableSelector) {
-    return mutationOperations.locateVariables(options, variableRecords, options.locateVariableSelector);
-  }
+    if (options.contextVariableSelector) {
+      return contextOperations.showVariableContext(options, source, variableRecords, options.contextVariableSelector);
+    }
 
-  if (options.extractVariableSelector) {
-    const [record] = resolveVariableMatches(variableRecords, options.extractVariableSelector, options, { operation: 'extract-variable' });
-    return mutationOperations.extractVariable(options, source, record, options.extractVariableSelector);
-  }
+    if (options.previewSelector) {
+      return discoveryOperations.previewFunction(options, source, functionRecords, options.previewSelector);
+    }
 
-  if (options.replaceVariableSelector) {
-    const [record] = resolveVariableMatches(variableRecords, options.replaceVariableSelector, options, { operation: 'replace-variable' });
-    return mutationOperations.replaceVariable(options, source, record, options.replacementPath, options.replaceVariableSelector);
-  }
+    if (options.previewVariableSelector) {
+      return discoveryOperations.previewVariable(options, source, variableRecords, options.previewVariableSelector);
+    }
 
-  if (options.copySelector) {
-    const [record] = resolveMatches(functionRecords, options.copySelector, options, { operation: 'copy-function' });
-    return mutationOperations.copyFunction(options, source, record, options.copySelector);
+    if (options.snipePosition) {
+      return discoveryOperations.snipeSymbol(options, source, functionRecords, variableRecords, options.snipePosition);
+    }
+
+    if (options.outline) {
+      return discoveryOperations.outlineSymbols(options, source, functionRecords, variableRecords);
+    }
+
+    if (options.searchText) {
+      return discoveryOperations.searchTextMatches(options, source, functionRecords, variableRecords);
+    }
+
+    if (options.scanTargetsSelector) {
+      if (options.scanTargetKind === 'variable') {
+        return mutationOperations.scanVariableTargets(options, variableRecords, options.scanTargetsSelector);
+      }
+      return discoveryOperations.scanFunctionTargets(options, functionRecords, options.scanTargetsSelector);
+    }
+
+    if (options.extractSelector) {
+      const [record] = resolveMatches(functionRecords, options.extractSelector, options, { operation: 'extract' });
+      return mutationOperations.extractFunction(options, source, record, options.extractSelector);
+    }
+
+    if (options.extractHashes.length > 0) {
+      return extractFunctionsByHashes(options, source, functionRecords);
+    }
+
+    if (options.replaceSelector) {
+      const [record] = resolveMatches(functionRecords, options.replaceSelector, options, { operation: 'replace' });
+      return mutationOperations.replaceFunction(options, source, record, options.replacementPath, options.replaceSelector);
+    }
+
+    if (options.locateSelector) {
+      return mutationOperations.locateFunctions(options, functionRecords, options.locateSelector);
+    }
+
+    if (options.locateVariableSelector) {
+      return mutationOperations.locateVariables(options, variableRecords, options.locateVariableSelector);
+    }
+
+    if (options.extractVariableSelector) {
+      const [record] = resolveVariableMatches(variableRecords, options.extractVariableSelector, options, { operation: 'extract-variable' });
+      return mutationOperations.extractVariable(options, source, record, options.extractVariableSelector);
+    }
+
+    if (options.replaceVariableSelector) {
+      const [record] = resolveVariableMatches(variableRecords, options.replaceVariableSelector, options, { operation: 'replace-variable' });
+      return mutationOperations.replaceVariable(options, source, record, options.replacementPath, options.replaceVariableSelector);
+    }
+
+    if (options.copySelector) {
+      const [record] = resolveMatches(functionRecords, options.copySelector, options, { operation: 'copy-function' });
+      return mutationOperations.copyFunction(options, source, record, options.copySelector);
+    }
+  } catch (error) {
+    if (error.name === 'MultipleMatchesError' && options.suggestSelectors) {
+      const suggestions = generateSelectorSuggestions(error.matches);
+      if (options.json) {
+        outputJson({
+          status: 'multiple_matches',
+          message: error.message,
+          suggestions
+        });
+      } else {
+        fmt.error(error.message);
+        fmt.header('Suggestions');
+        suggestions.forEach((s, i) => {
+          fmt.section(`Match ${i + 1}: ${s.name} (Line ${s.line})`);
+          s.selectors.forEach((sel) => console.log(`  ${sel}`));
+        });
+      }
+      process.exitCode = 1;
+      return;
+    }
+    throw error;
   }
 }
 

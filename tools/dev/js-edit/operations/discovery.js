@@ -1130,16 +1130,38 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
   const matches = [];
   let truncated = false;
   const lineOffsets = buildLineIndex(source);
+  
+  let searchRegex = null;
+  if (options.fuzzy) {
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = escaped.replace(/\s+/g, '\\s+');
+    searchRegex = new RegExp(pattern, 'g');
+  }
+
   const step = Math.max(1, query.length);
   let searchIndex = 0;
 
   while (searchIndex <= source.length) {
-    const matchIndex = source.indexOf(query, searchIndex);
+    let matchIndex = -1;
+    let matchEnd = -1;
+
+    if (searchRegex) {
+      searchRegex.lastIndex = searchIndex;
+      const result = searchRegex.exec(source);
+      if (result) {
+        matchIndex = result.index;
+        matchEnd = matchIndex + result[0].length;
+      }
+    } else {
+      matchIndex = source.indexOf(query, searchIndex);
+      if (matchIndex !== -1) {
+        matchEnd = matchIndex + query.length;
+      }
+    }
+
     if (matchIndex === -1) {
       break;
     }
-
-    const matchEnd = matchIndex + query.length;
 
     if (matches.length < limit) {
       const location = positionFromIndex(matchIndex, lineOffsets);
@@ -1207,7 +1229,10 @@ function searchTextMatches(options, source, functionRecords, variableRecords) {
       break;
     }
 
-    searchIndex = matchIndex + step;
+    searchIndex = matchEnd;
+    if (matchEnd === matchIndex) {
+      searchIndex++; // Avoid infinite loop for zero-length matches
+    }
   }
 
   const payloadMatches = matches.map((match) => ({

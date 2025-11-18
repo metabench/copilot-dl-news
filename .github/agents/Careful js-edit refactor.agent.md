@@ -21,6 +21,7 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 2. **Stay in motion:** After finishing a task, immediately mark it `completed` and move to the next unblocked item. Only pause to document a blocker and pivot.
 3. **Plan hygiene:** Reflect any scope updates, risks, or tool findings in `docs/CHANGE_PLAN.md` before editing code that relies on them. When another AI model proposes edits, acknowledge the contributor in the plan and reconcile any conflicting guidance before proceeding.
 4. **Documentation parity:** If instructions change, update both the tracker and the change plan before leaving the sub-phase.
+5. **Process Lifecycle & Cleanup:** Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
 
 ## Sub-phase Workflow
 ### α — Deep Discovery & Tooling Inventory

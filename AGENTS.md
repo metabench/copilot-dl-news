@@ -37,6 +37,8 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
+Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
+
 Checking scripts ride alongside tests. Every UI control, renderer, or service that emits HTML should ship a bite-sized Node script under a local `checks/` folder (e.g., `src/ui/controls/checks/ConfigMatrixControl.check.js`). These scripts render representative data, assert structural expectations, and print the generated markup so diffs stay obvious. Keep them under 60 lines, drop fixtures in the same subtree, and reference them in your plan/tests so future agents can run `node <feature>/checks/<name>.check.js` to sanity-check jsgui3 output without touching the global test runner.
 
 Tight feedback. After each change: self-review the diff; run tests; update JSDoc + docs; capture a decision note if you chose between viable options.
@@ -138,6 +140,8 @@ Open AGENTS.md and skim Core directives.
 Create/refresh your Plan (template above).
 
 Check /docs/INDEX.md; if your path lacks a workflow, add a stub and link it here.
+
+For Data Explorer polish, review `docs/sessions/2025-11-22-jsgui3-isomorphic-data-explorer/PLAN.md` and WORKING_NOTES before touching code.
 
 Implement in short hops; keep adapters clean and measured.
 
@@ -247,6 +251,18 @@ token=$(cat search_result.json | jq -r '.continuation_tokens.analyze[0]')
 echo "$token" | node js-scan.js --continuation - --json
 ```
 
+### Handling Ambiguity
+
+When a selector matches multiple targets (e.g., overloaded names):
+- Use `--suggest-selectors` to get a list of canonical selectors (hash/path)
+- Use the returned suggestions to disambiguate in the next step
+
+Example:
+```bash
+node js-edit.js --locate "processData" --suggest-selectors --json
+# Returns suggestions with specific hashes/paths
+```
+
 ### Codebase Analysis Prerequisites
 
 Before making large-scale changes, assess the codebase:
@@ -289,14 +305,14 @@ See `/docs/` for detailed guides:
 
 ---
 
-## Planned Tooling Improvements (Gap 2, Gap 3, Plans)
+## Completed Tooling Improvements (Gap 2, Gap 3, Gap 4)
 
 **Strategic Initiative**: Three focused enhancements to js-scan/js-edit for 75-80% faster agent refactoring.
 
 **Current Status**: 
 - ✅ **Gap 2 complete** - Semantic relationship queries fully implemented and tested (26 tests passing)
 - ✅ **Gap 3 complete** - Batch dry-run & recovery fully implemented and tested (8 tests passing, CLI integrated)
-- 🟠 **Plans pending** - Multi-step workflow threading with guard verification (2-3 hours remaining)
+- ✅ **Gap 4 complete** - Multi-step workflow threading with guard verification fully implemented and tested
 
 ### The Three Improvements
 
@@ -311,12 +327,12 @@ See `/docs/` for detailed guides:
    - **Benefit**: Batch failure 60% → 95%+, recovery 15-20 min → <2 min
    - **Available now**: `node tools/dev/js-edit.js --dry-run --changes batch.json --json`
 
-3. **Plans Integration** 🟠 PENDING
-   - `--from-plan` CLI dispatch ready, core logic complete
-   - **Estimated**: 2-3 hours for full completion
-   - Guard verification system implemented in BatchDryRunner
+3. **Gap 4: Plans Integration** ✅ COMPLETE
+   - `--emit-plan`, `--from-plan` CLI dispatch ready, core logic complete
+   - **Status**: Guard verification system fully implemented and tested (Unit + Integration)
+   - **Benefit**: Enables safe, resumable multi-step refactoring workflows
 
-### How to Use (When Deployed)
+### How to Use (Available Now)
 
 Agents should follow: **Discover → Dry-Run → Apply → Verify**
 
@@ -329,7 +345,7 @@ node js-scan.js --what-calls "processData" --recursive --json
 # 3. Dry-run (Gap 3) — <1 min [AVAILABLE NOW]
 node js-edit.js --dry-run --changes batch.json --json
 
-# 4. Apply (Gap 3+4) — <2 min [COMING SOON]
+# 4. Apply (Gap 3+4) — <2 min [AVAILABLE NOW]
 node js-edit.js --from-plan saved-plan.json --fix
 
 # 5. Verify (Gap 2) — <1 min [AVAILABLE NOW]
@@ -344,7 +360,7 @@ Start here for comprehensive guidance:
 
 - **`.github/agents/Singularity Engineer.agent.md`** — Agent-specific tool guidance
 - **`.github/instructions/GitHub Copilot.instructions.md`** — Copilot tool guidance
-- **`tmp/GAP3_CLI_INTEGRATION_SUMMARY.md`** — Gap 3 implementation details (NEW!)
+- **`docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md`** — Gap 4 implementation details (NEW!)
 - **`/docs/AGENT_REFACTORING_PLAYBOOK.md`** — How agents use the tools (with examples)
 - **`/tools/dev/README.md`** — CLI reference for both tools
 
@@ -354,7 +370,7 @@ Start here for comprehensive guidance:
 |--------|-------|--------|
 | Gap 2 Implementation | ✅ Complete | 26/26 tests |
 | Gap 3 Implementation | ✅ Complete | 8/8 tests |
-| Gap 3 CLI Integration | ✅ Complete | Manual verification |
+| Gap 4 Implementation | ✅ Complete | Unit + Integration tests |
 | Discovery Speed | 20-30 min → <2 min | 90% faster |
 | Batch Success | 60% → 95%+ | 58% safer |
 | Recovery Time | 15-20 min → <2 min | 87% faster |
@@ -365,6 +381,6 @@ Start here for comprehensive guidance:
 
 **Phase 1** ✅ Complete: Gap 2 — Semantic relationship queries  
 **Phase 2** ✅ Complete: Gap 3 — Batch dry-run + recovery (core + CLI)  
-**Phase 3** 🟠 2-3 hrs: Gap 4 — Plans workflow threading  
+**Phase 3** ✅ Complete: Gap 4 — Plans workflow threading  
 
-See `tmp/GAP3_CLI_INTEGRATION_SUMMARY.md` for detailed implementation report and next steps.
+See `docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md` for detailed implementation report.

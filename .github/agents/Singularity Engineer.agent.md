@@ -22,6 +22,11 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - Keep checks short: construct the control with realistic data, render it, and log/assert the bits that must never change. No global harness—just `node path/to/check`. Fixtures live beside the check so context stays local.
 - Reference the check script in your plan/tests and mention it inside the session notes so other agents know how to replay the HTML verification without running the full Jest suite.
 
+## Process Lifecycle & Cleanup
+
+- **Ensure clean exits.** All scripts (especially verification tools, one-off checks, and CLI tools) must exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block.
+- **No hanging processes.** Hanging processes block CI and confuse users. If a script doesn't exit, it's a bug.
+
 ## JavaScript Code Refactoring & Analysis Workflow
 
 **CRITICAL: Before making any changes to JavaScript code, use the CLI tools below for discovery and safe application. Treat `js-scan` and `js-edit` as the default interface for understanding and editing code—open files manually only after the tools have mapped out the terrain.**

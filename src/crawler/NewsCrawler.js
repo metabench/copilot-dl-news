@@ -76,6 +76,7 @@ const {
 const {
   CountryHubBehavioralProfile
 } = require('./CountryHubBehavioralProfile');
+const { GazetteerManager } = require('./components/GazetteerManager');
 const {
   createCliLogger,
   isVerboseMode
@@ -166,18 +167,6 @@ const {
   ContentAcquisitionService
 } = require('./ContentAcquisitionService');
 const ArticleSignalsService = require('./ArticleSignalsService');
-const {
-  GazetteerModeController
-} = require('./gazetteer/GazetteerModeController');
-const {
-  StagedGazetteerCoordinator
-} = require('./gazetteer/StagedGazetteerCoordinator');
-const {
-  WikidataCountryIngestor
-} = require('./gazetteer/ingestors/WikidataCountryIngestor');
-const WikidataAdm1Ingestor = require('./gazetteer/ingestors/WikidataAdm1Ingestor');
-const WikidataCitiesIngestor = require('./gazetteer/ingestors/WikidataCitiesIngestor');
-const OsmBoundaryIngestor = require('./gazetteer/ingestors/OsmBoundaryIngestor');
 const {
   sleep,
   nowMs,
@@ -384,7 +373,8 @@ class NewsCrawler extends Crawler {
     this.crawlType = opts.crawlType;
     this.outputVerbosity = opts.outputVerbosity;
     this.priorityProfile = setPriorityConfigProfile(resolvePriorityProfileFromCrawlType(this.crawlType));
-    this.gazetteerVariant = this._resolveGazetteerVariant(this.crawlType);
+    this.gazetteerManager = new GazetteerManager(this);
+    this.gazetteerVariant = this.gazetteerManager.resolveVariant(this.crawlType);
     this.isGazetteerMode = !!this.gazetteerVariant;
     this.countryHubExclusiveMode = Boolean(
       opts.exhaustiveCountryHubMode ||
@@ -408,7 +398,7 @@ class NewsCrawler extends Crawler {
       ? opts.cachedSeedUrls.filter((value) => typeof value === 'string' && value.trim().length > 0)
       : [];
     if (this.isGazetteerMode) {
-      this._applyGazetteerDefaults(options);
+      this.gazetteerManager.applyDefaults(options);
     }
     this._gazetteerPipelineConfigured = false;
     this.gazetteerPlanner = null;
@@ -699,7 +689,7 @@ class NewsCrawler extends Crawler {
       countryHubGapService: () => this.enhancedFeatures?.getCountryHubGapService?.(),
       jobId: this.jobId,
       domain: this.domain,
-      structureOnly: this.structureOnly,
+      structureOnly: this.countryHubExclusiveMode,
       hubOnlyMode: this.countryHubExclusiveMode,
       getCountryHubBehavioralProfile: () => this.countryHubBehavioralProfile
     });
@@ -854,619 +844,28 @@ class NewsCrawler extends Crawler {
     return this.articleSignals.combineSignals(urlSignals, contentSignals, opts);
   }
 
-  /**
-   * Determine if crawlType represents a specialized gazetteer mode
-   * 
-   * Specialized modes (gazetteer, geography, wikidata) have different execution
-   * characteristics than regular web crawls:
-   * - Sequential processing (not concurrent by default)
-   * - External API dependencies with rate limits
-   * - Hierarchical data relationships requiring ordered processing
-   * - concurrency parameter treated as maximum allowed, not requirement
-   */
   _resolveGazetteerVariant(crawlType) {
-    if (!crawlType) {
-      return null;
-    }
-    const normalized = String(crawlType).toLowerCase();
-    if (normalized === 'wikidata') {
-      return 'wikidata';
-    }
-    if (normalized === 'geography' || normalized === 'gazetteer') {
-      return 'geography';
-    }
-    return null;
+    return this.gazetteerManager.resolveVariant(crawlType);
   }
 
-  /**
-   * Apply default settings for gazetteer/geography crawl modes
-   * 
-   * CONCURRENCY: The concurrency parameter is stored but treated as a MAXIMUM
-   * ALLOWED limit, not a requirement. Gazetteer and geography crawls process
-   * data sequentially by default due to:
-   * - External API rate limits (Wikidata SPARQL: 60 req/min, Overpass API)
-   * - Database transaction ordering (parent places must exist before children)
-   * - Sequential dependencies (countries → regions → boundaries)
-   * 
-   * Future optimizations may add limited parallelism (e.g., parallel ingestors
-   * within a stage), but will always respect this.concurrency as an upper bound.
-   */
   _applyGazetteerDefaults(options = {}) {
-    this.structureOnly = false;
-    this.useSitemap = false;
-    this.sitemapOnly = false;
-    if (options.skipQueryUrls == null) {
-      this.skipQueryUrls = false;
-    }
-    if (options.preferCache == null) {
-      this.preferCache = false;
-    }
-    // Store concurrency as maximum allowed, not as required parallelism level
-    this.concurrency = Math.max(1, options.concurrency || 1);
-    this.usePriorityQueue = false;
-    
-    // Geography/gazetteer crawls should process all stages regardless of depth
-    // Set maxDepth to 999 to effectively disable depth filtering
-    if (options.maxDepth == null) {
-      this.maxDepth = 999;
-    }
+    this.gazetteerManager.applyDefaults(options);
   }
 
   _shouldBypassDepth(info = {}) {
-    if (this.isGazetteerMode) {
-      return true;
-    }
-    const meta = info.meta || null;
-    if (meta && (meta.depthPolicy === 'ignore' || meta.depthPolicy === 'bypass' || meta.origin === 'gazetteer' || meta.mode === 'gazetteer')) {
-      return true;
-    }
-    const decisionMeta = info.decision?.meta || null;
-    if (decisionMeta && (decisionMeta.depthPolicy === 'ignore' || decisionMeta.depthPolicy === 'bypass')) {
-      return true;
-    }
-    return false;
+    return this.gazetteerManager.shouldBypassDepth(info);
   }
 
   _setupGazetteerModeController(options = {}) {
-    const gazetteerOptions = options.gazetteer || {};
-    const controllerOptions = {
-      telemetry: this.telemetry,
-      milestoneTracker: this.milestoneTracker,
-      state: this.state,
-      dbAdapter: this.dbAdapter,
-      logger: console,
-      jobId: this.jobId,
-      mode: this.gazetteerVariant || 'gazetteer'
-    };
-    if (gazetteerOptions.ingestionCoordinator) {
-      controllerOptions.ingestionCoordinator = gazetteerOptions.ingestionCoordinator;
-    }
-    this.gazetteerOptions = gazetteerOptions;
-    this.gazetteerModeController = new GazetteerModeController(controllerOptions);
-    this.gazetteerModeProfile = controllerOptions.mode;
+    this.gazetteerManager.setupController(options);
   }
 
   _configureGazetteerPipeline() {
-    if (!this.isGazetteerMode || this._gazetteerPipelineConfigured) {
-      return;
-    }
-    
-    // Emit milestone at start of configuration
-    log.debug('[GAZETTEER-DEBUG] _configureGazetteerPipeline() STARTING');
-    try {
-      this.telemetry.milestoneOnce('gazetteer:pipeline-config-start', {
-        kind: 'debug',
-        message: '_configureGazetteerPipeline() starting',
-        details: { variant: this.gazetteerVariant }
-      });
-    } catch (_) {}
-    
-    if (this.gazetteerOptions && this.gazetteerOptions.ingestionCoordinator) {
-      this._gazetteerPipelineConfigured = true;
-      log.debug('[GAZETTEER-DEBUG] Using provided ingestionCoordinator, returning early');
-      return;
-    }
-    if (!this.dbAdapter || typeof this.dbAdapter.getDb !== 'function') {
-      this._gazetteerPipelineConfigured = true;
-      log.debug('[GAZETTEER-DEBUG] No dbAdapter, returning early');
-      return;
-    }
-
-    const dbWrapper = this.dbAdapter.getDb();
-    if (!dbWrapper) {
-      this._gazetteerPipelineConfigured = true;
-      log.debug('[GAZETTEER-DEBUG] No dbWrapper, returning early');
-      return;
-    }
-
-    // Get raw better-sqlite3 database handle for gazetteer operations
-    // Gazetteer ingestors use db.prepare() directly for performance
-    const db = dbWrapper.getHandle();
-    if (!db) {
-      this._gazetteerPipelineConfigured = true;
-      log.debug('[GAZETTEER-DEBUG] No db handle, returning early');
-      return;
-    }
-
-    const variant = this.gazetteerVariant || 'geography';
-    const logger = console;
-    const testMode = this.maxPages <= 1000;
-    const cacheRoot = testMode 
-      ? path.join(os.tmpdir(), 'copilot-gazetteer-test-cache')
-      : path.join(this.dataDir, 'cache', 'gazetteer');
-
-    const stages = [];
-
-    const resolveIngestorOverrides = (...keys) => {
-      if (!this.gazetteerOptions || typeof this.gazetteerOptions !== 'object') {
-        return {};
-      }
-      const sources = [this.gazetteerOptions];
-      if (this.gazetteerOptions.ingestors && typeof this.gazetteerOptions.ingestors === 'object') {
-        sources.push(this.gazetteerOptions.ingestors);
-      }
-      const merged = {};
-      for (const source of sources) {
-        for (const key of keys) {
-          const value = source?.[key];
-          if (value && typeof value === 'object') {
-            Object.assign(merged, value);
-          }
-        }
-      }
-      return merged;
-    };
-
-    const pickIngestorOptions = (source, allowedKeys) => {
-      if (!source || typeof source !== 'object') {
-        return {};
-      }
-      const picked = {};
-      for (const key of allowedKeys) {
-        if (Object.prototype.hasOwnProperty.call(source, key)) {
-          picked[key] = source[key];
-        }
-      }
-      return picked;
-    };
-
-    const normalizeFreshnessWindow = (options) => {
-      if (!options || typeof options !== 'object') {
-        return {};
-      }
-      const normalized = { ...options };
-      if (normalized.freshnessIntervalMs == null) {
-        if (normalized.freshnessIntervalDays != null) {
-          const days = Number(normalized.freshnessIntervalDays);
-          if (Number.isFinite(days) && days >= 0) {
-            normalized.freshnessIntervalMs = days * 24 * 60 * 60 * 1000;
-          }
-        } else if (normalized.freshnessIntervalHours != null) {
-          const hours = Number(normalized.freshnessIntervalHours);
-          if (Number.isFinite(hours) && hours >= 0) {
-            normalized.freshnessIntervalMs = hours * 60 * 60 * 1000;
-          }
-        }
-      }
-      delete normalized.freshnessIntervalDays;
-      delete normalized.freshnessIntervalHours;
-      return normalized;
-    };
-
-    const wikidataCountryOverrides = normalizeFreshnessWindow(pickIngestorOptions(
-      resolveIngestorOverrides('countries', 'country', 'wikidataCountry'),
-      [
-        'entitiesBatchSize',
-        'entityBatchDelayMs',
-        'freshnessIntervalMs',
-        'freshnessIntervalDays',
-        'freshnessIntervalHours',
-        'transactionChunkSize',
-        'timeoutMs',
-        'sleepMs',
-        'useCache',
-        'maxRetries'
-      ]
-    ));
-
-    const osmBoundaryOverrides = normalizeFreshnessWindow(pickIngestorOptions(
-      resolveIngestorOverrides('boundaries', 'boundary', 'osmBoundaries', 'osmBoundary'),
-      [
-        'batchSize',
-        'overpassTimeout',
-        'maxConcurrentFetches',
-        'maxBatchSize',
-        'freshnessIntervalMs',
-        'freshnessIntervalDays',
-        'freshnessIntervalHours'
-      ]
-    ));
-
-    if (osmBoundaryOverrides.maxConcurrentFetches != null) {
-      const cap = Math.max(1, this.concurrency || 1);
-      const requested = Number(osmBoundaryOverrides.maxConcurrentFetches);
-      if (Number.isFinite(requested) && requested > 0) {
-        osmBoundaryOverrides.maxConcurrentFetches = Math.max(1, Math.min(Math.floor(requested), cap));
-      } else {
-        delete osmBoundaryOverrides.maxConcurrentFetches;
-      }
-    }
-    
-    // Emit milestone before creating WikidataCountryIngestor
-    log.debug('[GAZETTEER-DEBUG] About to create WikidataCountryIngestor');
-    try {
-      this.telemetry.milestoneOnce('gazetteer:creating-wikidata-ingestor', {
-        kind: 'debug',
-        message: 'Creating WikidataCountryIngestor',
-        details: { variant }
-      });
-    } catch (_) {}
-
-    const maxCountriesForQuery = (this.targetCountries && this.targetCountries.length)
-      ? null
-      : (this.limitCountries || null);
-
-    const wikidataCountry = new WikidataCountryIngestor({
-      db,
-      logger,
-      cacheDir: path.join(cacheRoot, 'wikidata'),
-      useCache: this.preferCache !== false,
-      maxCountries: maxCountriesForQuery,
-      targetCountries: this.targetCountries,
-      verbose: isVerboseMode(),
-      ...wikidataCountryOverrides
-    });
-
-    if (variant === 'wikidata') {
-      stages.push({
-        name: 'countries',
-        kind: 'country',
-        crawlDepth: 0,
-        priority: 1000,
-        ingestors: [wikidataCountry]
-      });
-    } else {
-      stages.push({
-        name: 'countries',
-        kind: 'country',
-        crawlDepth: 0,
-        priority: 1000,
-        ingestors: [wikidataCountry]
-      });
-      stages.push({
-        name: 'adm1',
-        kind: 'region',
-        crawlDepth: 1,
-        priority: 100,
-        ingestors: [
-          new WikidataAdm1Ingestor({
-            db,
-            logger,
-            cacheDir: path.join(cacheRoot, 'wikidata'),
-            useCache: this.preferCache !== false,
-            useDynamicFetch: true,  // Enable dynamic Wikidata fetching per country
-            limitCountries: this.limitCountries,
-            targetCountries: this.targetCountries
-          })
-        ]
-      });
-      
-      // Add cities stage for geography crawl
-      stages.push({
-        name: 'cities',
-        kind: 'city',
-        crawlDepth: 2,
-        priority: 90,
-        ingestors: [
-          new WikidataCitiesIngestor({
-            db,
-            logger,
-            cacheDir: path.join(cacheRoot, 'wikidata'),
-            useCache: this.preferCache !== false,
-            maxCitiesPerCountry: 200,  // Increased from 50 to 200
-            minPopulation: 10000,  // Lowered from 100000 to 10000
-            limitCountries: this.limitCountries,
-            targetCountries: this.targetCountries,
-            verbose: isVerboseMode()
-          })
-        ]
-      });
-    }
-
-    if (variant === 'geography') {
-      if (this.limitCountries || (this.targetCountries && this.targetCountries.length)) {
-        log.debug('[GAZETTEER-DEBUG] Skipping boundaries stage because limit or target countries are set');
-      } else {
-        stages.push({
-          name: 'boundaries',
-          kind: 'boundary',
-          crawlDepth: 1,
-          priority: 80,
-          ingestors: [
-            new OsmBoundaryIngestor({
-              db,
-              logger,
-              ...osmBoundaryOverrides
-            })
-          ]
-        });
-      }
-    }
-
-    const originalStageOrder = stages.map(stage => stage.name);
-    let selectedStages = stages;
-
-    if (this.gazetteerStageFilter && this.gazetteerStageFilter.size) {
-      const requestedStages = Array.from(this.gazetteerStageFilter).map(name => String(name).toLowerCase());
-      const availableStages = new Map(stages.map(stage => [stage.name.toLowerCase(), stage.name]));
-      const dependencyMap = new Map([
-        ['adm1', ['countries']],
-        ['adm2', ['adm1', 'countries']],
-        ['cities', ['countries', 'adm1']],
-        ['boundaries', ['countries']]
-      ]);
-
-      const resolvedStages = new Set();
-      const missingStages = new Set();
-
-      const addStageWithDependencies = (stageName, stack = []) => {
-        const normalized = String(stageName || '').toLowerCase();
-        if (!normalized) {
-          return;
-        }
-        if (stack.includes(normalized)) {
-          return; // Prevent cyclic dependencies
-        }
-        if (!resolvedStages.has(normalized) && availableStages.has(normalized)) {
-          resolvedStages.add(normalized);
-        }
-        if (!availableStages.has(normalized) && !dependencyMap.has(normalized)) {
-          missingStages.add(normalized);
-        }
-        const deps = dependencyMap.get(normalized);
-        if (deps && deps.length) {
-          for (const dep of deps) {
-            addStageWithDependencies(dep, stack.concat(normalized));
-          }
-        }
-      };
-
-      for (const stageName of requestedStages) {
-        addStageWithDependencies(stageName);
-        if (!availableStages.has(stageName) && !dependencyMap.has(stageName)) {
-          missingStages.add(stageName);
-        }
-      }
-
-      if (resolvedStages.size === 0) {
-        log.warn('[GAZETTEER] Stage filter requested, but no matching stages were found. Available stages:', originalStageOrder);
-      } else {
-        selectedStages = stages.filter(stage => resolvedStages.has(stage.name.toLowerCase()));
-        const resolvedList = Array.from(resolvedStages);
-        log.info('[GAZETTEER] Applying stage filter', {
-          requested: requestedStages,
-          resolved: resolvedList,
-          dependenciesAdded: resolvedList.filter(name => !requestedStages.includes(name)),
-          missing: Array.from(missingStages)
-        });
-        try {
-          this.telemetry?.milestoneOnce('gazetteer:stage-filter-applied', {
-            kind: 'debug',
-            message: 'Gazetteer stage filter applied',
-            details: {
-              requested: requestedStages,
-              resolved: resolvedList,
-              missing: Array.from(missingStages)
-            }
-          });
-        } catch (_) {}
-      }
-    }
-
-    // Create planner for gazetteer mode
-    // Uses GazetteerPlanRunner with optional advanced planning support
-    try {
-      this.telemetry.milestoneOnce('gazetteer:creating-planner', {
-        kind: 'debug',
-        message: 'Creating GazetteerPlanRunner',
-        details: { variant }
-      });
-    } catch (_) {}
-    
-    const { GazetteerPlanRunner } = require('./gazetteer/GazetteerPlanRunner');
-    const useAdvancedPlanning = this.config?.features?.advancedPlanningSuite === true;
-    
-    // Get enhanced database adapter for meta-planning (if available)
-    const dbAdapter = this.enhancedDbAdapter || null;
-    
-    const planner = new GazetteerPlanRunner({
-      telemetry: this.telemetry,
-      logger,
-      config: this.config,
-      useAdvancedPlanning,
-      dbAdapter
-    });
-    
-    try {
-      this.telemetry.milestoneOnce('gazetteer:planner-created', {
-        kind: 'debug',
-        message: 'GazetteerPlanRunner created successfully',
-        details: { 
-          useAdvancedPlanning,
-          hasDbAdapter: !!dbAdapter 
-        }
-      });
-    } catch (_) {}
-
-    try {
-      this.telemetry.milestoneOnce('gazetteer:creating-coordinator', {
-        kind: 'debug',
-        message: 'Creating StagedGazetteerCoordinator',
-        details: { stageCount: selectedStages.length }
-      });
-    } catch (_) {}
-
-    log.debug('[CRAWL] About to create StagedGazetteerCoordinator with', selectedStages.length, 'stages');
-    log.debug('[CRAWL] Stage summary (before depth filter):', selectedStages.map(s => ({ 
-      name: s.name, 
-      kind: s.kind, 
-      priority: s.priority,
-      crawlDepth: s.crawlDepth,
-      ingestors: s.ingestors.length 
-    })));
-    
-    // Filter stages based on maxDepth (if specified)
-    // Stages with crawlDepth <= maxDepth are included
-    const filteredStages = typeof this.maxDepth === 'number'
-      ? selectedStages.filter(s => s.crawlDepth <= this.maxDepth)
-      : selectedStages;
-    
-    log.debug('[CRAWL] Stages after depth filter:', filteredStages.map(s => ({ 
-      name: s.name, 
-      crawlDepth: s.crawlDepth 
-    })));
-    log.debug('[CRAWL] maxDepth:', this.maxDepth);
-    
-    const ingestionCoordinator = new StagedGazetteerCoordinator({
-      db,
-      telemetry: this.telemetry,
-      logger,
-      stages: filteredStages,
-      planner
-    });
-    
-    try {
-      this.telemetry.milestoneOnce('gazetteer:coordinator-created', {
-        kind: 'debug',
-        message: 'StagedGazetteerCoordinator created successfully',
-        details: {}
-      });
-    } catch (_) {}
-
-    if (this.gazetteerModeController) {
-      this.gazetteerModeController.ingestionCoordinator = ingestionCoordinator;
-    }
-    this.gazetteerPlanner = planner;
-    this._gazetteerPipelineConfigured = true;
-    
-    try {
-      this.telemetry.milestoneOnce('gazetteer:pipeline-config-complete', {
-        kind: 'debug',
-        message: '_configureGazetteerPipeline() complete',
-        details: { stageCount: filteredStages.length }
-      });
-    } catch (_) {}
+    this.gazetteerManager.configurePipeline();
   }
 
   async _runGazetteerMode() {
-    if (!this.gazetteerModeController) {
-      throw new Error('Gazetteer mode controller not configured');
-    }
-
-    await this._trackStartupStage('gazetteer-prepare', 'Preparing gazetteer services', async () => {
-      this.gazetteerModeController.dbAdapter = this.dbAdapter;
-      
-      // Wrap entire preparation phase in timeout
-      const prepareTimeout = 30000; // 30 seconds for pipeline + initialization
-      
-      try {
-        await Promise.race([
-          (async () => {
-            // Emit telemetry before pipeline configuration
-            try {
-              this.telemetry.milestoneOnce('gazetteer:configuring-pipeline', {
-                kind: 'gazetteer-config',
-                message: 'Configuring gazetteer ingestion pipeline',
-                details: { mode: this.gazetteerVariant || 'geography' }
-              });
-            } catch (_) {}
-            
-            this._configureGazetteerPipeline();
-            
-            // Emit milestone after pipeline configured
-            try {
-              this.telemetry.milestoneOnce('gazetteer:pipeline-configured', {
-                kind: 'gazetteer-config',
-                message: 'Gazetteer pipeline configuration complete',
-                details: { mode: this.gazetteerVariant || 'geography' }
-              });
-            } catch (_) {}
-            
-            // Emit telemetry before controller initialization
-            try {
-              this.telemetry.milestoneOnce('gazetteer:initializing-controller', {
-                kind: 'gazetteer-init',
-                message: 'Initializing gazetteer mode controller',
-                details: { mode: this.gazetteerVariant || 'geography' }
-              });
-            } catch (_) {}
-            
-            // Add separate timeout for initialize() to diagnose hang
-            const initTimeout = 15000; // 15 seconds for initialize
-            await Promise.race([
-              (async () => {
-                await this.gazetteerModeController.initialize();
-                
-                try {
-                  this.telemetry.milestoneOnce('gazetteer:controller-initialized', {
-                    kind: 'gazetteer-init',
-                    message: 'Controller initialization complete',
-                    details: {}
-                  });
-                } catch (_) {}
-              })(),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error(`Controller initialize() timeout after ${initTimeout}ms`)), initTimeout)
-              )
-            ]);
-          })(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error(`Gazetteer preparation timeout after ${prepareTimeout}ms`)), prepareTimeout)
-          )
-        ]);
-      } catch (err) {
-        const message = err?.message || String(err);
-        try {
-          this.telemetry.problem({
-            kind: 'gazetteer-init-failed',
-            scope: this.domain || 'gazetteer',
-            message,
-            details: { stack: err?.stack || null }
-          });
-        } catch (_) {}
-        throw err;
-      }
-      
-      return { status: 'completed' };
-    });
-
-    this._markStartupComplete('Gazetteer services ready');
-
-    let summary = null;
-    try {
-      summary = await this.gazetteerModeController.run();
-      log.success('Gazetteer crawl completed');
-      if (summary && summary.totals) {
-        try {
-          console.log(`[gazetteer] Totals: ${JSON.stringify(summary.totals)}`);
-        } catch (_) {}
-      }
-      this.emitProgress(true);
-      this.milestoneTracker.emitCompletionMilestone({ outcomeErr: null });
-      await this.gazetteerModeController.shutdown({ reason: 'completed' });
-      if (this.dbAdapter && this.dbAdapter.isEnabled && this.dbAdapter.isEnabled()) {
-        const count = this.dbAdapter.getArticleCount();
-        console.log(`Database contains ${count} article records`);
-        this.dbAdapter.close();
-      }
-    } catch (error) {
-      await this.gazetteerModeController.shutdown({ reason: 'failed' });
-      this.emitProgress(true);
-      if (this.dbAdapter && this.dbAdapter.isEnabled && this.dbAdapter.isEnabled()) {
-        this.dbAdapter.close();
-      }
-      throw error;
-    }
+    return this.gazetteerManager.run();
   }
 
   _noteDepthVisit(normalizedUrl, depth) {
@@ -1564,6 +963,32 @@ class NewsCrawler extends Crawler {
     return this.domainThrottle.isHostRateLimited(host);
   }
 
+
+  /**
+   * Public lifecycle method to ensure clean shutdown of all resources.
+   * Call this when the crawler instance is no longer needed, especially in tests or scripts.
+   */
+  close() {
+    // Stop processing
+    this.state.setPaused(true);
+    this.state.requestAbort();
+
+    // Close database
+    if (this.dbAdapter && typeof this.dbAdapter.close === 'function') {
+      try {
+        this.dbAdapter.close();
+      } catch (err) {
+        console.error('Error closing DB adapter:', err);
+      }
+    }
+
+    // Cleanup enhanced features (timers, observers)
+    try {
+      this._cleanupEnhancedFeatures();
+    } catch (err) {
+      console.error('Error cleaning up enhanced features:', err);
+    }
+  }
 
   async init() {
     await this._trackStartupStage('prepare-data', 'Preparing data directory', async () => {
@@ -2733,6 +2158,7 @@ class NewsCrawler extends Crawler {
           host,
           queueSize: this.queue.size()
         });
+     
       } catch (_) {}
 
       const processContext = {

@@ -9,8 +9,8 @@ const { renderHtml, resolveDbPath } = require("../../render-url-table");
 const { DEFAULT_PAGE_SIZE, renderUrlListingView, DATA_VIEWS } = require("../dataExplorerServer");
 const { buildNavLinks } = require("../navigation");
 
-function createRequest() {
-  return { baseUrl: "", path: "/urls", query: {} };
+function createRequest(path = "/urls") {
+  return { baseUrl: "", path, query: {} };
 }
 
 function run() {
@@ -19,29 +19,64 @@ function run() {
   const relativeDb = path.relative(projectRoot, dbPath) || path.basename(dbPath);
   const dbAccess = openNewsDb(dbPath);
   try {
-    const payload = renderUrlListingView({
-      req: createRequest(),
+    // Render URL Listing
+    const listingPayload = renderUrlListingView({
+      req: createRequest("/urls"),
       db: dbAccess.db,
       relativeDb,
       pageSize: DEFAULT_PAGE_SIZE,
       now: new Date()
     });
-    const html = renderHtml(
+    const listingHtml = renderHtml(
       {
-        columns: payload.columns,
-        rows: payload.rows,
-        meta: payload.meta,
-        title: payload.title
+        columns: listingPayload.columns,
+        rows: listingPayload.rows,
+        meta: listingPayload.meta,
+        title: listingPayload.title
       },
       {
         navLinks: buildNavLinks("urls", DATA_VIEWS),
-        filterOptions: payload.filterOptions,
-        homeCards: payload.homeCards
+        filterOptions: listingPayload.renderOptions.filterOptions,
+        listingState: listingPayload.renderOptions.listingState,
+        clientScriptPath: "/assets/ui-client.js"
       }
     );
-    const target = path.join(process.cwd(), "data-explorer.urls.check.html");
-    fs.writeFileSync(target, html, "utf8");
-    console.log(`Saved Data Explorer preview to ${target}`);
+    const listingTarget = path.join(process.cwd(), "data-explorer.urls.check.html");
+    fs.writeFileSync(listingTarget, listingHtml, "utf8");
+    console.log(`Saved Data Explorer Listing preview to ${listingTarget}`);
+
+    // Render Dashboard
+    const dashboardView = DATA_VIEWS.find(v => v.key === "home");
+    if (dashboardView) {
+      const dashboardPayload = dashboardView.render({
+        req: createRequest("/"),
+        db: dbAccess.db,
+        relativeDb,
+        pageSize: DEFAULT_PAGE_SIZE,
+        now: new Date()
+      });
+      const dashboardHtml = renderHtml(
+        {
+          columns: dashboardPayload.columns,
+          rows: dashboardPayload.rows,
+          meta: dashboardPayload.meta,
+          title: dashboardPayload.title
+        },
+        {
+          navLinks: buildNavLinks("home", DATA_VIEWS),
+          homeCards: dashboardPayload.renderOptions.homeCards,
+          layoutMode: dashboardPayload.renderOptions.layoutMode,
+          hideListingPanel: dashboardPayload.renderOptions.hideListingPanel,
+          includeDashboardScaffold: dashboardPayload.renderOptions.includeDashboardScaffold,
+          dashboardSections: dashboardPayload.renderOptions.dashboardSections,
+          clientScriptPath: "/assets/ui-client.js"
+        }
+      );
+      const dashboardTarget = path.join(process.cwd(), "data-explorer.dashboard.check.html");
+      fs.writeFileSync(dashboardTarget, dashboardHtml, "utf8");
+      console.log(`Saved Data Explorer Dashboard preview to ${dashboardTarget}`);
+    }
+
   } finally {
     dbAccess.close();
   }

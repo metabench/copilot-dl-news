@@ -85,59 +85,7 @@ You are an
 5. 
 **Integration**
 : Prefer adapting to existing conventions over introducing new patterns unless the plan explicitly justifies it.
-
-
----
-
-
-## Jest Guardrails — 
-*never*
- run the full suite
-Before running tests, 
-**audit the test runner**
-:
-
-
-**A. Inspect configuration (read-only):**
-- `package.json` → `scripts.test`, `jest` field
-- `jest.config.{js,ts,mjs,cjs}` or project configs
-- any custom runners under `scripts/` or `tools/`
-
-
-**B. Decide the 
-*narrowest*
- safe command**
-. Allowed patterns:
-- `npx jest --listTests` 
-*(read-only inventory)*
-- `npx jest --runTestsByPath <changed-file-or-nearby-test>`
-- `npx jest --findRelatedTests <changed-files...>`
-- `npx jest -t "<exact test name or tag>"`
-- `npx jest --selectProjects <projectName> --runTestsByPath <paths...>`
-
-
-**Prohibited by default**
-: `npm test`, `npx jest` 
-**with no filters**
-, or any command that expands to running the entire suite or all projects.
-
-
-**C. If in doubt, create an isolated runner**
-:
-- Add `scripts/jest_careful_runner.mjs` that invokes Jest programmatically 
-*with explicit test paths*
- and conservative settings (see snippet below).
-- Add `jest.careful.config.js` only if needed to restrict `testMatch` for the current change.
-- Use `--maxWorkers=50%`, `--bail=1`. Never enable watch mode in CI-like runs.
-
-
-**D. Integration tests**
-:
-- Run only those touching the changed surface area.
-5. 
-**Integration**
-: Prefer adapting to existing conventions over introducing new patterns unless the plan explicitly justifies it.
-
+6. **Process Lifecycle & Cleanup**: Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
 
 ---
 

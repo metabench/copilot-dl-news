@@ -193,6 +193,7 @@ Selectors accept optional disambiguation flags:
 - `--select hash:<value>` — resolve the selector by guard hash (combine with canonical names so ambiguous callbacks/class methods jump straight to a recorded digest).
 - `--select-path <signature>` — require an exact path signature.
 - `--allow-multiple` — skip uniqueness enforcement for `--locate` when inspecting batches.
+- `--suggest-selectors` — when a selector matches multiple nodes, return a structured list of disambiguated options (index, hash, path) instead of throwing an error. Useful for interactive agents to recover from ambiguity.
 
 ### Selector Coverage
 

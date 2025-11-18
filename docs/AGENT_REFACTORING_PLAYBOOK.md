@@ -388,6 +388,41 @@ done
 
 ---
 
+## Handling Ambiguity: Selector Suggestions
+
+When a selector matches multiple targets, `js-edit` will fail to prevent accidental edits. Use `--suggest-selectors` to get precise options.
+
+### Scenario: "Selector matched 2 targets"
+
+```bash
+# ❌ Fails: Ambiguous selector
+node js-edit.js --file src/app.js --locate "init" --json
+# Error: Selector "init" matched 2 targets (App > init, Component > init)
+
+# ✅ Fix: Ask for suggestions
+node js-edit.js --file src/app.js --locate "init" --suggest-selectors --json
+
+# Output:
+{
+  "status": "multiple_matches",
+  "suggestions": [
+    {
+      "name": "App > init",
+      "selectors": ["path:...", "hash:..."]
+    },
+    {
+      "name": "Component > init",
+      "selectors": ["path:...", "hash:..."]
+    }
+  ]
+}
+
+# Retry with precise selector
+node js-edit.js --file src/app.js --locate "path:..." --json
+```
+
+---
+
 ## Checklist: When to Use Which Tool
 
 ### Use `js-scan --what-*` (Gap 2) When You Need to:

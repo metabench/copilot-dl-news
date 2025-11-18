@@ -87,61 +87,27 @@ function prepareStatements(db) {
         };
       } catch (_) {
         const selectFetchedPage = handle.prepare(`
-          WITH normalized_fetches AS (
-            SELECT
-              f.url_id,
-              COALESCE(f.fetched_at, f.request_started_at) AS ts,
-              f.http_status,
-              f.classification,
-              f.word_count
-            FROM fetches f
-            WHERE f.url_id IS NOT NULL
-          ),
-          aggregated AS (
-            SELECT url_id, MIN(ts) AS first_fetched_at, MAX(ts) AS last_fetched_at, COUNT(*) AS fetch_count
-            FROM normalized_fetches
-            GROUP BY url_id
-          ),
-          latest AS (
-            SELECT nf.url_id, nf.http_status, nf.classification, nf.word_count
-            FROM normalized_fetches nf
-            JOIN (
-              SELECT url_id, MAX(ts) AS last_ts
-              FROM normalized_fetches
-              GROUP BY url_id
-            ) newest
-              ON newest.url_id = nf.url_id AND newest.last_ts = nf.ts
-          )
           SELECT
-            u.id AS id,
-            u.url,
-            u.host,
-            u.canonical_url AS canonicalUrl,
-            u.created_at AS createdAt,
-            u.last_seen_at AS lastSeenAt,
-            agg.last_fetched_at AS lastFetchAt,
-            latest.http_status AS httpStatus,
-            latest.classification AS classification,
-            latest.word_count AS wordCount,
-            agg.fetch_count AS fetchCount
-          FROM urls u
-          JOIN aggregated agg ON agg.url_id = u.id
-          LEFT JOIN latest ON latest.url_id = u.id
-          ORDER BY u.id ASC
+            url_id AS id,
+            url,
+            host,
+            canonical_url AS canonicalUrl,
+            url_created_at AS createdAt,
+            url_last_seen_at AS lastSeenAt,
+            last_fetched_at AS lastFetchAt,
+            last_http_status AS httpStatus,
+            last_classification AS classification,
+            last_word_count AS wordCount,
+            fetch_count AS fetchCount
+          FROM fetched_urls
+          ORDER BY url_id ASC
           LIMIT ? OFFSET ?
         `);
-        const countFetched = handle.prepare(`
-          SELECT COUNT(*) AS total
-          FROM (
-            SELECT DISTINCT url_id
-            FROM fetches
-            WHERE url_id IS NOT NULL
-          ) x
-        `);
+        const countFetched = handle.prepare(`SELECT COUNT(*) AS total FROM fetched_urls`);
         return {
           selectFetchedPage,
           countFetched,
-          hasFetchedView: false
+          hasFetchedView: true
         };
       }
     })();

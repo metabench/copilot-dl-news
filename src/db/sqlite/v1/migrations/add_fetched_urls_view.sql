@@ -9,13 +9,15 @@ DROP VIEW IF EXISTS fetched_urls;
 CREATE VIEW fetched_urls AS
 WITH normalized_fetches AS (
   SELECT
-    f.url_id,
-    COALESCE(f.fetched_at, f.request_started_at) AS ts,
-    f.http_status,
-    f.classification,
-    f.word_count
-  FROM fetches f
-  WHERE f.url_id IS NOT NULL
+    hr.url_id,
+    COALESCE(hr.fetched_at, hr.request_started_at) AS ts,
+    hr.http_status,
+    ca.classification,
+    ca.word_count
+  FROM http_responses hr
+  LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+  LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+  WHERE hr.url_id IS NOT NULL
 ),
 aggregated AS (
   SELECT
@@ -35,6 +37,7 @@ latest AS (
     GROUP BY url_id
   ) newest
     ON newest.url_id = nf.url_id AND newest.last_ts = nf.ts
+  GROUP BY nf.url_id
 )
 SELECT
   u.id AS url_id,

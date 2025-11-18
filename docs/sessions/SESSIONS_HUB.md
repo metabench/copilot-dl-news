@@ -269,9 +269,9 @@
 
 ### Session 2025-11-21: jsgui3 Isomorphic Diagram Polish
 
-**Duration**: Active
+**Duration**: Closed
 **Type**: UI polish & data surfacing
-**Completion**: 🔄 In progress
+**Completion**: ✅ Completed
 
 **Focus**:
 - Extend the diagram data CLI/service so code tiles carry real byte sizes for accurate area scaling
@@ -282,12 +282,14 @@
 
 **Quick Links**:
 - 🗺️ [Plan](./2025-11-21-jsgui3-isomorphic-diagram-polish/PLAN.md)
+- 📝 [Working Notes](./2025-11-21-jsgui3-isomorphic-diagram-polish/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-21-jsgui3-isomorphic-diagram-polish/SESSION_SUMMARY.md)
 
 ### Session 2025-11-22: jsgui3 Isomorphic Data Explorer
 
-**Duration**: Active
+**Duration**: Closed
 **Type**: UI polish & responsiveness
-**Completion**: 🔄 In progress
+**Completion**: ✅ Completed
 
 **Focus**:
 - Refresh Data Explorer headers, stats, and tables so they match the recent Diagram Atlas makeover polish
@@ -298,926 +300,77 @@
 
 **Quick Links**:
 - 🗺️ [Plan](./2025-11-22-jsgui3-isomorphic-data-explorer/PLAN.md)
+- 📘 [Session Summary](./2025-11-22-jsgui3-isomorphic-data-explorer/SESSION_SUMMARY.md)
 
-### Session 2025-11-21: URL Filter Toggle Fix
+### Session 2025-11-22: Gap 4 Plans Integration
 
 **Duration**: Closed
-**Type**: UI hydration & diagnostics
+**Type**: Tooling implementation
 **Completion**: ✅ Completed
 
 **Focus**:
-- Diagnose why the “Show fetched URLs only” toggle fails after hydration and repair the `/api/urls` + client sync path.
-- Ensure UrlListingTable, meta cards, pagination, and history update atomically when the toggle switches states.
-- Capture js-scan usage, code changes, and verification steps (Puppeteer + server tests) inside the session folder.
+- Implement `--emit-plan` and `--from-plan` in `js-edit` to enable safe, multi-step editing workflows.
+- Build guard verification (file hashing) to prevent applying plans to stale files.
+- Add comprehensive tests for plan generation, verification failure, and successful application.
 
-**Location**: `docs/sessions/2025-11-21-url-filter-toggle/`
+**Location**: `docs/sessions/2025-11-22-gap4-plans-integration/`
 
 **Quick Links**:
-- 🗺️ [Plan](./2025-11-21-url-filter-toggle/PLAN.md)
-- 📝 [Working Notes](./2025-11-21-url-filter-toggle/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-21-url-filter-toggle/SESSION_SUMMARY.md)
+- 🗺️ [Plan](./2025-11-22-gap4-plans-integration/PLAN.md)
+- 📝 [Working Notes](./2025-11-22-gap4-plans-integration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md)
 
-### Session 2025-11-16: Singularity Agent Refresh
+### Session 2025-11-22: Selector Suggestions
 
-**Duration**: Active
-**Type**: Agent documentation refresh
-**Completion**: 🔄 In progress
+**Duration**: Closed
+**Type**: Tooling enhancement
+**Completion**: ✅ Completed
 
 **Focus**:
-- Study vibebible.org methodology patterns and extract actionable storytelling + workflow cues
-- Apply those cues to `.github/agents/💡Singularity Engineer💡.agent.md` so the agent brief stays concise but more actionable
-- Capture the research + deltas inside this session folder for future reference
+- Implement `--suggest-selectors` in `js-edit` to provide structured disambiguation for ambiguous matches.
+- Improve error messages for multiple matches to guide users toward the new flag.
+- Verify with tests and document in AGENTS.md.
 
-**Location**: `docs/sessions/2025-11-16-singularity-agent-refresh/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-singularity-agent-refresh/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-singularity-agent-refresh/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-singularity-agent-refresh/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: Doc Migration Cleanup
-
-**Duration**: Active
-**Type**: Documentation structure
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Relocate root-level documentation files into `docs/`.
-- Update indexes and references so agents can still find the content quickly.
-- Capture the relocation workflow (commands, follow-ups) inside this session folder.
-
-**Location**: `docs/sessions/2025-11-16-doc-migration/`
+**Location**: `docs/sessions/2025-11-22-selector-suggestions/`
 
 **Quick Links**:
-- 🗺️ [Plan](./2025-11-16-doc-migration/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-doc-migration/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-doc-migration/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: Workflow Docs
-
-**Duration**: Active
-**Type**: Documentation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Capture the session bootstrap and Tier 1 tooling loops as standalone workflow guides under `docs/workflows/`
-- Ensure the new docs inherit guidance from AGENTS.md + Singularity Engineer instructions without duplicating them verbatim
-- Update the documentation index and session records so agents can find the workflows easily
-
-**Location**: `docs/sessions/2025-11-16-workflow-docs/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-workflow-docs/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-workflow-docs/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-workflow-docs/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: Diagram UI
-
-**Duration**: Active
-**Type**: Express + jsgui3 visualization
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Build a new Express server that renders jsgui3 diagrams for code/database structures
-- Consume CLI tool outputs (js-scan, md-scan, etc.) to drive file/feature size visuals
-- Document the workflow so agents can refresh the data and extend the diagrams
-
-**Location**: `docs/sessions/2025-11-16-diagram-ui/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-diagram-ui/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-diagram-ui/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-diagram-ui/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: Diagram Atlas E2E
-
-**Duration**: Active
-**Type**: Express + Jest e2e validation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Diagnose the Diagram Atlas server startup failure and document prerequisites (diagram data generation, UI build assets, etc.)
-- Add an end-to-end Jest test that boots the server on a random port, hits `/diagram-atlas`, and asserts jsgui output renders
-- Capture Tier 1 tooling usage + smoke instructions in this session folder
-
-**Location**: `docs/sessions/2025-11-16-diagram-atlas-e2e/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-diagram-atlas-e2e/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-diagram-atlas-e2e/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-diagram-atlas-e2e/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: Diagram Atlas Async Loading
-
-**Duration**: Active
-**Type**: Express + client hydration
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Serve a lightweight Diagram Atlas shell while deferring data fetch to the client.
-- Build a pulsing jsgui3 progress control that reflects loading/error states.
-- Integrate client activation + `/api/diagram-data` fetch logic with updated e2e coverage.
-
-**Location**: `docs/sessions/2025-11-16-diagram-atlas-async-loading/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-diagram-atlas-async-loading/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-diagram-atlas-async-loading/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-diagram-atlas-async-loading/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: jsgui3 Isomorphic Diagram Atlas
-
-**Duration**: Active
-**Type**: UI hydration (jsgui3)
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Share diagram atlas controls between server (jsgui3-html) and client (jsgui3-client)
-- Fetch `/api/diagram-data` on the client and render diagnostics/sections via jsgui controls
-- Verify SSR snapshots, hydration, and docs/check coverage for the atlas shell
-
-**Location**: `docs/sessions/2025-11-16-jsgui3-isomorphic-diagram-atlas/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-jsgui3-isomorphic-diagram-atlas/PLAN.md)
-- 📓 [Working Notes](./2025-11-16-jsgui3-isomorphic-diagram-atlas/WORKING_NOTES.md)
-
-### Session 2025-11-16: Scan/Edit Remnants
-
-**Duration**: Active
-**Type**: Tooling backlog inventory
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Reconcile prior js-scan/js-edit sessions and extract all unfinished improvements
-- Capture required Tier 1 follow-ups (plans integration, guard tooling, doc gaps)
-- Produce a summary for next implementation pass
-
-**Location**: `docs/sessions/2025-11-16-scan-edit-remnants/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-scan-edit-remnants/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-scan-edit-remnants/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-scan-edit-remnants/SESSION_SUMMARY.md)
-
-### Session 2025-11-14: Binding Plugin Stabilization
-
-### Session 2025-11-16: JS Improvements
-
-**Duration**: Active
-**Type**: Tooling implementation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Fix the Gap 3 regression blocking `js-edit --changes --dry-run`
-- Sequence the remaining js-scan/js-edit backlog (TypeScript enablement, structured plans, advanced batching)
-- Document progress + next steps for each improvement
-
-**Location**: `docs/sessions/2025-11-16-js-improvements/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-js-improvements/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-js-improvements/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-js-improvements/SESSION_SUMMARY.md)
-
-### Session 2025-11-16: JS-scan Terse Output
-
-**Duration**: Active
-**Type**: Tooling implementation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Investigate js-scan’s current TypeScript parsing gaps using Tier 1 discovery commands
-- Implement parser/output enhancements so TypeScript sources can be inspected with concise, targeted payloads
-- Capture updated CLI behavior plus verification steps for future agents
-
-**Location**: `docs/sessions/2025-11-16-js-scan-terse-output/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-js-scan-terse-output/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-js-scan-terse-output/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-16-js-scan-terse-output/SESSION_SUMMARY.md)
-
-**Duration**: Active
-**Type**: UI bindings
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Stabilize the new binding plugin so server-rendered pager buttons expose correct attributes
-- Re-run pager button snapshot + Jest tests with improved coverage
-- Capture follow-ups for broader binding design work
-
-**Location**: `docs/sessions/2025-11-14-binding-plugin/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-binding-plugin/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-binding-plugin/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-binding-plugin/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-binding-plugin/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-binding-plugin/FOLLOW_UPS.md)
-
-### Session 2025-11-14: Binding Plugin Review
-
-**Duration**: Active
-**Type**: UI bindings investigation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Diagnose the `Data_Model_View_Model_Control` runtime failure surfaced by Puppeteer logging
-- Inspect the binding plugin/model wiring to ensure controls receive models with `.on`
-- Document findings and fixes for future binding plugin work
-
-**Location**: `docs/sessions/2025-11-14-binding-plugin-review/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-14-binding-plugin-review/PLAN.md)
-
-### Session 2025-11-14: Ui Express Server
-
-**Duration**: Active
-**Type**: Implementation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Implement Express server for URL table with pagination
-
-**Location**: `docs/sessions/2025-11-14-ui-express-server/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-ui-express-server/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-ui-express-server/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-ui-express-server/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-ui-express-server/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-ui-express-server/FOLLOW_UPS.md)
-
-### Session 2025-11-14: UI Data Explorer
-
-**Duration**: Active
-**Type**: UI surfaces & dashboards
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Broaden the Express server into a multi-view data explorer with additional DB summaries
-
-**Location**: `docs/sessions/2025-11-14-ui-data-explorer/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-ui-data-explorer/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-ui-data-explorer/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-ui-data-explorer/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-ui-data-explorer/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-ui-data-explorer/FOLLOW_UPS.md)
-
-### Session 2025-11-14: URL Fetch Filter
-
-**Duration**: Active
-**Type**: UI/DB enhancement
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Surface a `hasFetches` filter for the URLs view backed by a dedicated SQLite view
-- Add `/api/urls` JSON endpoint plus server pagination aware of the new filter
-- Refresh the client-side table via an in-place toggle that calls the API and rehydrates the DOM
-
-**Location**: `docs/sessions/2025-11-14-url-fetch-filter/`
-### Session 2025-11-15: URL Filter Client
-
-**Duration**: Active
-**Type**: UI binding + activation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Wire the `UrlFilterToggleControl` into the client activation lifecycle
-- Refresh the `/urls` table via `/api/urls` when the toggle switches without a full page reload
-- Document the toggle lifecycle for future agents
-
-**Location**: `docs/sessions/2025-11-15-url-filter-client/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-url-filter-client/PLAN.md)
-
-### Session 2025-11-15: URL Filter Debug
-
-**Duration**: Active
-**Type**: UI runtime + bindings
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Eliminate the `each_source_dest_pixels_resized_limited_further_info` reference error in the bundled client.
-- Verify the `UrlFilterToggle` control refreshes `/urls` data via `/api/urls`.
-- Capture manual smoke steps until Playwright coverage exists.
-
-**Location**: `docs/sessions/2025-11-15-url-filter-debug/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-url-filter-debug/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-url-filter-debug/WORKING_NOTES.md)
-
-### Session 2025-11-15: UI Reliability Improvements
-
-**Duration**: Active
-**Type**: UI reliability & diagnostics
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Assess `/urls` UI pain points impacting reliability or debuggability.
-- Ship targeted control/binding fixes plus diagnostic hooks.
-- Capture tooling/test updates so regressions are easier to track.
-
-**Location**: `docs/sessions/2025-11-15-ui-reliability/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-ui-reliability/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-ui-reliability/WORKING_NOTES.md)
-
-### Session 2025-11-15: Front Page Home Grid
-
-**Duration**: Active
-**Type**: UI surfacing & summary cards
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Surface URLs/domains/crawls/errors directly on the `/urls` landing page via a card grid.
-- Wire server-side counts + cached metrics into the new home cards without breaking pagination.
-- Document the Tier 1 CLI workflow (js-edit) used to refresh CSS + server helpers.
-
-**Location**: `docs/sessions/2025-11-15-front-page-home-grid/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-front-page-home-grid/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-front-page-home-grid/WORKING_NOTES.md)
-
-### Session 2025-11-15: UI Home Grid Refresh
-
-**Duration**: Active
-**Type**: UI polish & documentation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Enrich the `/urls` home cards with deep links + diagnostics context without breaking layout.
-- Add lightweight `checks/` scripts for table/pager controls so agents can preview markup quickly.
-- Update `src/ui/README.md` and session docs to reflect the shipped data explorer + client bundle wiring.
-
-**Location**: `docs/sessions/2025-11-15-ui-home-grid-refresh/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-ui-home-grid-refresh/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-ui-home-grid-refresh/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-15-ui-home-grid-refresh/SESSION_SUMMARY.md)
-
-### Session 2025-11-15: Control Map Registration
-
-**Duration**: Active
-**Type**: Client control hydration
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Trace how vendor `update_standard_Controls` and `page_context.update_Controls` seed `map_Controls`.
-- Align `src/ui/client/index.js` so custom controls register through the same pathway.
-- Document the lifecycle for Puppeteer tests and future binding work.
-
-**Location**: `docs/sessions/2025-11-15-control-map-registration/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-control-map-registration/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-control-map-registration/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-15-control-map-registration/SESSION_SUMMARY.md)
-
-### Session 2025-11-15: Puppeteer E2E Coverage
-
-**Duration**: Active
-**Type**: UI automation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Replace the stalled Playwright work with Puppeteer coverage for the `/urls` toggle.
-- Boot the Express data explorer inside the test harness and drive the filter toggle end-to-end.
-- Document fixtures, commands, and next steps inside the session folder for future agents.
-
-**Location**: `docs/sessions/2025-11-15-puppeteer-e2e/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-15-puppeteer-e2e/INDEX.md)
-- 🗺️ [Plan](./2025-11-15-puppeteer-e2e/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-puppeteer-e2e/WORKING_NOTES.md)
-- 🛣️ [Roadmap](./2025-11-15-puppeteer-e2e/ROADMAP.md)
-- ✅ [Follow Ups](./2025-11-15-puppeteer-e2e/FOLLOW_UPS.md)
-- 📘 [Session Summary](./2025-11-15-puppeteer-e2e/SESSION_SUMMARY.md)
-
-### Session 2025-11-15: Kilo Agent Readiness
-
-**Duration**: Active
-**Type**: Tooling & documentation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Stand up `.kilo/` rules directories plus documentation so Kilo Code can follow repo-specific guardrails
-- Define a custom "Kilo Agent Fabricator" mode that can draft new Kilo agents per workflow request
-- Document how these instructions plug into the existing AGENTS.md improvement loop
-
-**Location**: `docs/sessions/2025-11-15-kilo-agent-readiness/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-kilo-agent-readiness/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-kilo-agent-readiness/WORKING_NOTES.md)
-
-### Session 2025-11-15: URL Filter e2e Improvements
-
-**Duration**: Active
-**Type**: UI e2e hardening
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Extend the Puppeteer toggle test so it covers switching back to "all URLs"
-- Assert row count, subtitle, and toggle metadata across both states
-- Keep session docs updated for future UI filter validation work
-
-**Location**: `docs/sessions/2025-11-15-url-filter-e2e-improvements/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-url-filter-e2e-improvements/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-url-filter-e2e-improvements/WORKING_NOTES.md)
-
-### Session 2025-11-15: Client Controls Bundle Investigation
-
-**Duration**: Active
-**Type**: UI bundling analysis
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Trace how `scripts/build-ui-client.js` and the esbuild entry gather controls for the browser bundle.
-- Compare the approach with `jsgui3-server` examples to ensure every control used at runtime is explicitly imported.
-- Capture recommendations for keeping the bundle aligned with the binding/plugin expectations.
-
-**Location**: `docs/sessions/2025-11-15-client-controls-bundle/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-15-client-controls-bundle/PLAN.md)
-- 📝 [Working Notes](./2025-11-15-client-controls-bundle/WORKING_NOTES.md)
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-14-url-fetch-filter/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-url-fetch-filter/WORKING_NOTES.md)
-
-
-### Session 2025-11-14: Db View Implementation
-
-**Duration**: Active
-**Type**: db-migration
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Add articles and place hub views
-
-**Location**: `docs/sessions/2025-11-14-db-view-implementation/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-db-view-implementation/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-db-view-implementation/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-db-view-implementation/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-db-view-implementation/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-db-view-implementation/FOLLOW_UPS.md)
-
-
-### Session 2025-11-14: UI Controls Table Rendering
-
-**Duration**: Active
-**Type**: UI tooling & visualization
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Investigate `jsgui3-html` control patterns and dependencies
-- Create `src/ui/controls` with reusable table, row, and cell controls
-- Render the first 1000 crawler URLs into a styled HTML page via a new script
-
-**Location**: `docs/sessions/2025-11-14-ui-controls-table/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-ui-controls-table/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-ui-controls-table/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-ui-controls-table/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-ui-controls-table/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-ui-controls-table/FOLLOW_UPS.md)
-
-
-### Session 2025-11-14: Strategic Analysis Mode
-
-**Duration**: Active
-**Type**: Tooling analysis
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Assess additional JS tooling improvements for agents
-
-**Location**: `docs/sessions/2025-11-14-strategic-analysis-mode/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-strategic-analysis-mode/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-strategic-analysis-mode/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-strategic-analysis-mode/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-strategic-analysis-mode/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-strategic-analysis-mode/FOLLOW_UPS.md)
-
-### Session 2025-11-14: jsgui Transform Fix
-
-**Duration**: Active
-**Type**: UI bindings
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Patch vendored resize helpers so the esbuild UI bundle stops throwing `each_source_dest_pixels_resized` ReferenceErrors
-- Rebuild `ui-client.js` and verify bindings load in the browser
-- Capture notes + follow-ups for longer-term vendoring strategy
-
-**Location**: `docs/sessions/2025-11-14-jsgui-transform-fix/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-jsgui-transform-fix/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-jsgui-transform-fix/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-jsgui-transform-fix/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-14-jsgui-transform-fix/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-14-jsgui-transform-fix/FOLLOW_UPS.md)
-
-
-### Session 2025-11-18: Crawl Output Refresh
-
-**Duration**: Active
-**Type**: Crawl ergonomics & cache tuning
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Replace noisy crawl logs with one concise per-page line including download timing
-- Reuse cached place/country hub seeds when available and fetch uncached hubs immediately
-- Enforce a 10-minute hub freshness window via `maxAgeHubMs` defaults + CLI wiring
-
-**Location**: `docs/sessions/2025-11-18-crawl-output-refresh/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-18-crawl-output-refresh/INDEX.md)
-- 📝 [Working Notes](./2025-11-18-crawl-output-refresh/WORKING_NOTES.md)
-- 🗺️ [Plan](./2025-11-18-crawl-output-refresh/PLAN.md)
-
-### Session 2025-11-19: jsgui Binding Report
-
-**Duration**: Active
-**Type**: Documentation & analysis
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Run static analysis on `jsgui3-html` bindings to understand current attribute/value flows
-- Capture observations + risks in session notes
-- Produce a `docs/ui/` report describing a simplified data-binding approach
-
-**Location**: `docs/sessions/2025-11-19-jsgui-binding-report/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-19-jsgui-binding-report/INDEX.md)
-- 🗺️ [Plan](./2025-11-19-jsgui-binding-report/PLAN.md)
-- 📝 [Working Notes](./2025-11-19-jsgui-binding-report/WORKING_NOTES.md)
-- 📘 [Session Summary](./2025-11-19-jsgui-binding-report/SESSION_SUMMARY.md)
-- ✅ [Follow Ups](./2025-11-19-jsgui-binding-report/FOLLOW_UPS.md)
-
-### Session 2025-11-19: Client Control Hydration
-
-**Duration**: Active
-**Type**: UI activation & bundling
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Populate browser `context.map_Controls` with UrlListingTable, UrlFilterToggle, and PagerButton constructors.
-- Patch pre-activation hooks so server-rendered markup hydrates into live controls.
-- Stabilize the Puppeteer `/urls` toggle test by ensuring the client bundle loads custom controls.
-
-**Location**: `docs/sessions/2025-11-19-client-control-hydration/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-19-client-control-hydration/PLAN.md)
-- 📝 [Working Notes](./2025-11-19-client-control-hydration/WORKING_NOTES.md)
-
-### Session 2025-11-17: Hub Eligibility Refresh
-
-**Duration**: Active
-**Type**: Crawl behavior improvements
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Allow QueueManager to re-enqueue navigation/front-page URLs when `maxAgeHubMs` demands fresh hubs
-- Update UrlEligibilityService to treat stale hubs based on SQLite fetch recency instead of skipping them outright
-- Capture documentation, tests, and follow-ups that keep hub reseeding reliable
-
-**Location**: `docs/sessions/2025-11-17-hub-eligibility-refresh/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-17-hub-eligibility-refresh/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-17-hub-eligibility-refresh/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-17-hub-eligibility-refresh/WORKING_NOTES.md)
-
-### Session 2025-11-13: Gap 5 Scouting & Feasibility
-
-**Duration**: Active
-**Type**: Tooling assessment, roadmap execution
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Assess feasibility of Gap 5 & Gap 6 js-scan/js-edit enhancements
-- Capture blockers, scope, and required effort refinements
-- Produce implementation recommendations and next actions
-
-**Location**: `docs/sessions/2025-11-13-gap5-scouting/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-gap5-scouting/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-13-gap5-scouting/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-13-gap5-scouting/WORKING_NOTES.md)
-
-### Session 2025-11-13: Agent Docs Improvements
-
-**Duration**: Active
-**Type**: Documentation analysis
-**Completion**: 🟡 In progress
-
-**Focus**:
-- Inventory `.agent.md` personas and capture current coverage
-- Identify inconsistencies or outdated guidance vs. current tooling
-- Produce prioritized recommendations for updates
-
-**Location**: `docs/sessions/2025-11-13-agent-docs-improvements/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-agent-docs-improvements/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-13-agent-docs-improvements/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-13-agent-docs-improvements/WORKING_NOTES.md)
-
-### Session 2025-11-13: Basic Crawl Health
-
-**Duration**: Active
-**Type**: Operational health check
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Determine whether the "basic crawl" workflow is functioning as expected
-- Surface existing telemetry/tests covering crawl health
-- Recommend remediation steps if issues are detected
-
-**Location**: `docs/sessions/2025-11-13-basic-crawl-health/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-basic-crawl-health/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-13-basic-crawl-health/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-13-basic-crawl-health/WORKING_NOTES.md)
-
-### Session 2025-11-13: Crawl Config Runner
-
-**Duration**: Active
-**Type**: Crawl tooling enablement
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Make `crawl.js` load crawler options from reusable config manifests
-- Support zero-argument runs with file-driven defaults plus CLI overrides
-- Document operator workflow for storing and invoking configs
-
-**Location**: `docs/sessions/2025-11-13-crawl-config-runner/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-crawl-config-runner/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-13-crawl-config-runner/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-13-crawl-config-runner/WORKING_NOTES.md)
-
-### Session 2025-11-13: Front Page Seeding
-
-**Duration**: Active
-**Type**: Crawl behavior improvements
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Guarantee each intelligent crawl run downloads the publication front page first
-- Reseed hub/article queues automatically when existing work drains
-- Persist all discovered links into the URLs table and enqueue them for follow-up
-
-**Location**: `docs/sessions/2025-11-13-frontpage-seeding/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-frontpage-seeding/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-13-frontpage-seeding/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-13-frontpage-seeding/WORKING_NOTES.md)
-
-### Session 2025-11-13: Cached Seed Refactor
-
-**Duration**: Active
-**Type**: Crawl cache enablement
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Make QueueManager/fetch pipeline respect `processCacheResult` hints end-to-end
-- Hydrate seeds directly from ArticleCache when requested
-- Add CLI toggles, docs, and tests covering cached seed workflows
-
-**Location**: `docs/sessions/2025-11-13-cached-seed-refactor/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-cached-seed-refactor/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-13-cached-seed-refactor/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-13-cached-seed-refactor/WORKING_NOTES.md)
-
-### Session 2025-11-13: Guardian Crawl Verification
-
-**Duration**: Active
-**Type**: Operational validation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Run `basicArticleDiscovery` with `--max-downloads 100` after the CLI summary enhancements
-- Capture telemetry proving the `Final stats` line reports accurate download counts
-- Document any anomalies (queue exhaustion, HTTP errors) for follow-up actions
-
-**Location**: `docs/sessions/2025-11-13-guardian-crawl-verification/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-13-guardian-crawl-verification/INDEX.md)
-- 📝 [Working Notes](./2025-11-13-guardian-crawl-verification/WORKING_NOTES.md)
-- 📋 [Session Summary](./2025-11-13-guardian-crawl-verification/SESSION_SUMMARY.md)
-
-### Session 2025-11-14: Place-Focused CLI Enablement
+- 🗺️ [Plan](./2025-11-22-selector-suggestions/PLAN.md)
+- 📝 [Working Notes](./2025-11-22-selector-suggestions/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-22-selector-suggestions/SESSION_SUMMARY.md)
+
+### Session 2025-11-22: Partial Match & Diffing
 
 **Duration**: Active
 **Type**: Tooling enhancement
 **Completion**: 🔄 In progress
 
 **Focus**:
-- Expose place discovery workflows (GuessPlaceHubs, place exploration) via `crawl.js`
-- Provide agent-friendly defaults and help text for new commands
-- Capture follow-ups for additional place-hub automation
+- Enable `js-edit` to match code blocks with minor whitespace/formatting differences (fuzzy matching).
+- Add `--diff` flag to show unified diffs of changes.
+- Increase robustness against auto-formatting differences.
 
-**Location**: `docs/sessions/2025-11-14-place-cli/`
+**Location**: `docs/sessions/2025-11-22-partial-match-diffing/`
 
 **Quick Links**:
-- 🧭 [Session Index](./2025-11-14-place-cli/INDEX.md)
-- 📝 [Working Notes](./2025-11-14-place-cli/WORKING_NOTES.md)
+- 🗺️ [Plan](./2025-11-22-partial-match-diffing/PLAN.md)
+- 📝 [Working Notes](./2025-11-22-partial-match-diffing/WORKING_NOTES.md)
 
-### Session 2025-11-14: Page Log Resilience
+### Session 2025-11-22: UI Dashboard Completion
 
-**Duration**: Active
-**Type**: Crawl telemetry
-**Completion**: 🔄 In progress
+**Duration**: Closed
+**Type**: UI Polish
+**Completion**: ✅ Completed
 
 **Focus**:
-- Guarantee `_emitPageLog` fires for every crawl fetch outcome (success, cache, failure).
-- Keep CLI per-page summaries accurate even when content acquisition aborts a URL.
-- Document the logging expectations for future refactors.
+- Finalize the split between Home Dashboard and URL Listing.
+- Verify client-side hydration on `/urls`.
+- Ensure navigation and state preservation.
 
-**Location**: `docs/sessions/2025-11-14-page-log-resilience/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-page-log-resilience/INDEX.md)
-- 📝 [Plan](./2025-11-14-page-log-resilience/PLAN.md)
-- 🗒️ [Working Notes](./2025-11-14-page-log-resilience/WORKING_NOTES.md)
-
-### Session 2025-11-14: Crawl Download Investigation
-
-**Duration**: Active
-**Type**: Crawl analysis
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Understand why `crawl.js` (basicArticleDiscovery) exited after 51 downloads.
-- Inspect queue telemetry, prioritisation filters, and exit reasons for evidence.
-- Recommend knobs to reach higher download counts when needed.
-
-**Location**: `docs/sessions/2025-11-14-download-investigation/`
+**Location**: `docs/sessions/2025-11-22-ui-dashboard-completion/`
 
 **Quick Links**:
-- 🧭 [Session Index](./2025-11-14-download-investigation/INDEX.md)
-- 📝 [Plan](./2025-11-14-download-investigation/PLAN.md)
-- 🗒️ [Working Notes](./2025-11-14-download-investigation/WORKING_NOTES.md)
-
-### Session 2025-11-14: Basic Crawl Validation
-
-**Duration**: Active
-**Type**: Operational validation
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Run the default intelligent crawl with `--max-downloads 100` to confirm the cap is honored
-- Capture runtime telemetry (downloads, articles saved, exit reason) for comparison with prior sessions
-- Record observations and follow-ups inside the new session notes
-
-**Location**: `docs/sessions/2025-11-14-basic-crawl-run/`
-
-**Quick Links**:
-- 📝 [Session Notes](./2025-11-14-basic-crawl-run/notes.md)
-
-### Session 2025-11-14: Crawl Verbosity Controls
-
-**Duration**: Active
-**Type**: Crawl telemetry ergonomics
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Introduce an `outputVerbosity` option that defaults basic crawls to extra-terse per-page logs
-- Format per-page output as `URL downloadMs completed/goal` while preserving CLI overrides for richer logs
-- Ensure monitoring and telemetry still track max-download targets accurately under the new formatting
-
-**Location**: `docs/sessions/2025-11-14-crawl-verbosity-controls/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-crawl-verbosity-controls/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-crawl-verbosity-controls/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-crawl-verbosity-controls/WORKING_NOTES.md)
-
-### Session 2025-11-14: Session Bootstrap CLI & Micro Policy
-
-**Duration**: Active
-**Type**: Tooling + agent guidance
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Build a CLI helper to scaffold session directories and standard markdown templates automatically
-- Document a decision tree for full sessions vs. lightweight sessions vs. micro tasks
-- Introduce a shared micro-task log for tracing very small changes without per-task folders
-
-**Location**: `docs/sessions/2025-11-14-session-bootstrap-cli/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-14-session-bootstrap-cli/INDEX.md)
-- 🗺️ [Plan](./2025-11-14-session-bootstrap-cli/PLAN.md)
-- 📝 [Working Notes](./2025-11-14-session-bootstrap-cli/WORKING_NOTES.md)
-
-### Session 2025-11-15: API Server Bootstrap
-
-**Duration**: Active
-**Type**: Service bootstrap
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Ensure `src/api/server.js` initializes crawl job and background task infrastructure by default
-- Preserve override hooks for custom dependency injection
-- Identify validation steps or test coverage gaps introduced by the wiring
-
-**Location**: `docs/sessions/2025-11-15-api-server-bootstrap/`
-
-**Quick Links**:
-- 🧭 [Session Index](./2025-11-15-api-server-bootstrap/INDEX.md)
-- 🗺️ [Roadmap](./2025-11-15-api-server-bootstrap/ROADMAP.md)
-- 📝 [Working Notes](./2025-11-15-api-server-bootstrap/WORKING_NOTES.md)
-
-### Session 2025-11-15: Intelligent Crawl Defaults
-
-**Duration**: Active
-**Type**: Crawl tooling refinement
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Make the intelligent crawl helper download article content by default so max-download caps are meaningful
-- Preserve the structure-only workflow behind an explicit `--hub-exclusive` switch
-- Capture follow-ups for UI parity if operators need the toggle surfaced elsewhere
-
-**Location**: `docs/sessions/2025-11-15-intelligent-crawl-defaults/`
-
-**Quick Links**:
-- 📝 [Session Notes](./2025-11-15-intelligent-crawl-defaults/notes.md)
-
-### Session 2025-11-16: JS/TS Scan and Edit Tooling Brainstorm
-
-**Duration**: Active
-**Type**: Tooling analysis & brainstorming
-**Completion**: 🔄 In progress
-
-**Focus**:
-- Review js-scan and js-edit tools for current capabilities and limitations
-- Brainstorm improvements for better AI agent code editing, including potential TypeScript support
-- Implement `--copy-batch` and batch plan generation + guard verification (planned)
-- Document findings and prioritized enhancement ideas
-
-**Location**: `docs/sessions/2025-11-16-js-ts-scan-edit-brainstorm/`
-
-**Quick Links**:
-- 🗺️ [Plan](./2025-11-16-js-ts-scan-edit-brainstorm/PLAN.md)
-- 📝 [Working Notes](./2025-11-16-js-ts-scan-edit-brainstorm/WORKING_NOTES.md)
-- 📘 [Batch Improvements](./2025-11-16-typescript-support-copy-functions/BATCH_IMPROVEMENTS.md)
-
-
----
-
-### Session 2025-11-13: Strategic Planning & Documentation Completion
-
-**Duration**: Full session  
-**Type**: Strategic planning, documentation, roadmapping  
-**Completion**: ✅ 100% Complete
-
-**Key Deliverables**:
-- 10 comprehensive strategic documents (~2,650 lines)
-- Tier 1 implementation verification (34/34 tests passing)
-- 13-gap roadmap with prioritization
-- Agent guidance and training materials
-
-**Location**: `docs/sessions/2025-11-13-strategic-planning/`
-
-**Quick Links**:
-- 📋 [Session Index](./2025-11-13-strategic-planning/INDEX.md)
-- 🎯 [Session Summary](./2025-11-13-strategic-planning/SESSION_SUMMARY.md)
-- 🗺️ [Roadmap & Future Gaps](./2025-11-13-strategic-planning/ROADMAP.md)
-- 📚 [All Session Documents](./2025-11-13-strategic-planning/)
+- 🗺️ [Plan](./2025-11-22-ui-dashboard-completion/PLAN.md)
+- 📘 [Session Summary](./2025-11-22-ui-dashboard-completion/SESSION_SUMMARY.md)
 
 ---
 
@@ -1353,7 +506,7 @@ docs/sessions/[YYYY-MM-DD]-[session-slug]/
 2. Agent searches: Recent sessions (last 4 weeks)
    → Finds similar issue reported 2 weeks ago
    
-3. Agent reads: Prior session's DECISIONS.md
+3. Agent reads: prior session's DECISIONS.md
    → Learns why that approach was rejected
    
 4. Agent reads: Archive for historical context
@@ -1537,8 +690,8 @@ const matches = searchIndex.find(item => item.keywords.includes('refactor'));
 
 ---
 
-**Last Updated**: November 21, 2025  
-**Current Session**: 2025-11-21-js-scan-relationship-tokens  
+**Last Updated**: November 22, 2025  
+**Current Session**: 2025-11-22-gap4-plans-integration  
 **Maintenance**: Add new sessions as they complete  
 **For Agents**: This is your memory system. Use it!
 

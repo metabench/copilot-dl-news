@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { createDigest, HASH_PRIMARY_ENCODING } = require('../lib/swcAst');
+const { normalizeText } = require('./shared/text-utils');
 
 /**
  * BatchDryRunner: Batch operation preview and dry-run with recovery
@@ -24,6 +25,7 @@ class BatchDryRunner {
     this.applied = [];
     this.conflicts = [];
     this.verbose = options.verbose || false;
+    this.fuzzy = options.fuzzy || false;
     this.sortByOffset = options.sortByOffset !== false;
     this.filePath = options.filePath || null;
   }
@@ -50,6 +52,7 @@ class BatchDryRunner {
       endLine: Number(change.endLine),
       replacement: change.replacement || '',
       delete: Boolean(change.delete),
+      original: change.original || null,
       id: change.id || `change-${this.changes.length}`,
       description: change.description || '',
       guards: change.guards || {}
@@ -265,6 +268,47 @@ class BatchDryRunner {
     }
 
     return suggestions;
+  }
+
+  /**
+   * Generate a guarded plan for the current batch without applying it
+   * Calculates all necessary hashes and guards
+   */
+  generatePlan(options = {}) {
+    const plan = {
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      source: 'js-edit',
+      changes: []
+    };
+
+    // Calculate file hash once
+    const fileHash = createDigest(this.source);
+
+    for (const change of this.changes) {
+      const lines = this.source.split('\n');
+      
+      // Calculate content hash for the target range
+      let contentHash = null;
+      if (change.startLine < lines.length) {
+        const safeEnd = Math.min(change.endLine, lines.length - 1);
+        const content = lines.slice(change.startLine, safeEnd + 1).join('\n');
+        contentHash = createDigest(content);
+      }
+
+      const guards = {
+        ...change.guards,
+        fileHash,
+        hash: contentHash
+      };
+
+      plan.changes.push({
+        ...change,
+        guards
+      });
+    }
+
+    return plan;
   }
 
   /**
@@ -541,12 +585,50 @@ class BatchDryRunner {
     // Check hash guard if present
     if (change.guards.hash) {
       const content = lines.slice(change.startLine, change.endLine + 1).join('\n');
-      // Simplified hash check (would use actual hash function)
+      const actualHash = createDigest(content);
+      let match = actualHash === change.guards.hash;
+      let fuzzyMatch = false;
+
+      if (!match && this.fuzzy && change.original) {
+        const normalizedContent = normalizeText(content);
+        const normalizedOriginal = normalizeText(change.original);
+        if (normalizedContent === normalizedOriginal) {
+          match = true;
+          fuzzyMatch = true;
+        }
+      }
+      
       result.checks.push({
         type: 'hash',
-        valid: true,
-        message: 'Hash guard present (not verified in dry-run)'
+        valid: match,
+        expected: change.guards.hash,
+        actual: actualHash,
+        message: match 
+          ? (fuzzyMatch ? 'Content matched via fuzzy normalization' : 'Content hash matches') 
+          : 'Content hash mismatch'
       });
+      
+      if (!match) {
+        result.valid = false;
+      }
+    }
+
+    // Check file hash guard if present
+    if (change.guards.fileHash) {
+      const actualFileHash = createDigest(source);
+      const match = actualFileHash === change.guards.fileHash;
+      
+      result.checks.push({
+        type: 'fileHash',
+        valid: match,
+        expected: change.guards.fileHash,
+        actual: actualFileHash,
+        message: match ? 'File hash matches' : 'File hash mismatch'
+      });
+      
+      if (!match) {
+        result.valid = false;
+      }
     }
 
     // Support copy-specific guard: sourceHash verifies the replacement snippet's digest

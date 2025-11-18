@@ -75,6 +75,9 @@ You are **not** the one doing large-scale code edits. You plan, coordinate, and 
 5. ✅ **Maintain the repo-required planning scaffolding**
   - Spin up or refresh `docs/sessions/<yyyy-mm-dd>-<slug>/` (PLAN, WORKING_NOTES, SESSION_SUMMARY) before touching plans.
   - Always use `manage_todo_list` for multi-step work so downstream agents inherit an explicit task ledger.
+6. ✅ **Enforce Process Lifecycle**
+   - When planning script creation or execution, explicitly include cleanup steps (closing DBs, clearing timers).
+   - Ensure plans require verification scripts to exit cleanly.
 
 ---
 

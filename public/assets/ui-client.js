@@ -82230,6 +82230,9 @@ div.grid .row .cell span {
           if (!payload || payload.ok === false) {
             return;
           }
+          if (!this._listingStore) {
+            this._initListingStore();
+          }
           if (this._listingStore) {
             this._listingStore.setState(payload);
             return;
@@ -82279,6 +82282,9 @@ div.grid .row .cell span {
           const hasFetches = !!(state.filters && state.filters.hasFetches);
           this._state.hasFetches = hasFetches;
           this._syncDomState();
+          if (this._checkbox) {
+            this._checkbox.checked = hasFetches;
+          }
           const query = state.query || {};
           this._updateQueryState(query);
           this._updateBasePath(state.basePath);

@@ -34,6 +34,7 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **One search, one read, start coding**: For UI features, one search + one example = enough to start. Don't map entire codebase.
 - ✅ **Simple first, refine later**: Implement simplest version, test, then iterate. Don't design perfect solution before coding.
 - ✅ **Trivial commands, no plan**: When a request is clearly solved by a single, low-risk shell/Node command (e.g., `Stop-Process -Name node -Force`), run it immediately without spinning up a todo list or multi-step plan—just execute and report the outcome.
+- ✅ **Clean exits**: Ensure scripts (especially verification/test scripts) close all resources (DBs, timers) and exit with code 0/1. Don't leave processes hanging.
 - ✅ **Adhere to "no mid-task confirmation" rule**: Proceed without pausing unless critical details missing. Summaries: 1–2 sentences max.
 - ✅ **Documentation alignment**: When rules change, update specialized docs (not AGENTS.md unless navigation-related). Keep AGENTS.md <500 lines.
 - ✅ **No standalone documents**: Always integrate into existing docs, never create new standalone guides

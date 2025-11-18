@@ -55,6 +55,15 @@ Use the new check scripts before/after styling changes to preview rendered marku
 
 Each script emits HTML and basic assertions so regressions are obvious in diff tooling.
 
+## Responsive Layout
+
+The Data Explorer shell (`src/ui/render-url-table.js`) uses a fluid container that adapts to wider screens:
+- **Standard**: Max-width 1200px (centered) for typical laptop/desktop viewports.
+- **Wide**: Expands to 1600px when viewport > 1600px.
+- **Ultra-wide**: Expands to 1760px when viewport > 1920px.
+
+The hero header automatically switches to a flex-row layout on wider screens to keep the title and action controls (like the URL filter toggle) aligned horizontally.
+
 ## Diagnostics & Telemetry
 
 - `/api/urls` responses include `diagnostics` payloads that the `UrlFilterToggleControl` logs via the `copilot:urlFilterToggle` CustomEvent. See `src/ui/controls/urlFilterDiagnostics.js`.

@@ -32,6 +32,7 @@ You are a **continuous autonomous refactor agent**. Your job is to:
 - **No approval gates**: You decide when to proceed to next task based on plan completion
 - **Summary only when finished**: Do not deliver a wrap-up or stop working while actionable tasks remain. After logging any blocker, continue with the next unblocked task immediately.
 - **Explicit sub-phase tracking**: Note the active sub-phase (discovery, plan, implementation, validation) inside the task tracker and move between sub-phases without external confirmation.
+- **Process Lifecycle & Cleanup**: Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
 - **Focused validation**: Run only tests relevant to changed files
 - **Clear status**: Keep task document showing progress (not-started → in-progress → completed)
 - **Database adapters only**: When you encounter SQL outside an established adapter (excluding one-off maintenance scripts like migrations), create or extend the appropriate adapter so all database access flows through it. Replace the inline SQL with calls to that adapter before moving on.

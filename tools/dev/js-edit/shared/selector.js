@@ -4,6 +4,14 @@ const {
   HASH_LENGTH_BY_ENCODING
 } = require('../../shared/hashConfig');
 
+class MultipleMatchesError extends Error {
+  constructor(message, matches) {
+    super(message);
+    this.name = 'MultipleMatchesError';
+    this.matches = matches;
+  }
+}
+
 const SELECTOR_TYPE_PREFIXES = new Map([
   ['function', 'function'],
   ['variable', 'variable']
@@ -364,10 +372,31 @@ function ensureSingleMatch(matches, selector, options, context) {
   }
 
   const names = matches.slice(0, 5).map((record) => record.canonicalName || record.name || '(anonymous)');
-  throw new Error(
-    `Selector "${selector}" matched ${matches.length} targets (${names.join(', ')}). `
-    + 'Refine the selector or pass --allow-multiple to operate on all matches.'
-  );
+  const message = `Selector "${selector}" matched ${matches.length} targets (${names.join(', ')}). `
+    + 'Refine the selector or pass --allow-multiple to operate on all matches.';
+
+  throw new MultipleMatchesError(message, matches);
+}
+
+function generateSelectorSuggestions(matches) {
+  return matches.map((match) => {
+    const suggestions = [];
+
+    if (match.pathSignature) {
+      suggestions.push(`path:${match.pathSignature}`);
+    }
+
+    if (match.hash) {
+      suggestions.push(`hash:${match.hash}`);
+    }
+
+    return {
+      name: match.canonicalName || match.name || '(anonymous)',
+      kind: match.kind,
+      line: match.line,
+      selectors: suggestions
+    };
+  });
 }
 
 function resolveMatches(records, selector, options, context = {}) {
@@ -783,5 +812,7 @@ module.exports = {
   variableRecordMatchesPath,
   getConfiguredHashEncodings,
   resolveVariableTargetInfo,
-  buildSearchSuggestionsForMatch
+  buildSearchSuggestionsForMatch,
+  MultipleMatchesError,
+  generateSelectorSuggestions
 };
