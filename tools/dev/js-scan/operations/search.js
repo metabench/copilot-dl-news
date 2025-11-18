@@ -4,6 +4,61 @@ const { filterFunctions } = require('../shared/filters');
 const { computeRelevanceScore, scoreToStars } = require('../shared/ranker');
 const { buildGuidance } = require('../shared/guidance');
 
+function formatCliArgument(arg) {
+  if (arg === null || arg === undefined) {
+    return '';
+  }
+  const stringValue = String(arg);
+  if (stringValue.length === 0) {
+    return '""';
+  }
+  if (!/[\s"\\]/.test(stringValue)) {
+    return stringValue;
+  }
+  return `"${stringValue.replace(/(["\\])/g, '\\$1')}"`;
+}
+
+function buildJsEditHint(fileRecord, functionRecord) {
+  if (!fileRecord || !functionRecord) {
+    return null;
+  }
+
+  const relativeFile = fileRecord.relativePath || fileRecord.filePath;
+  if (!relativeFile) {
+    return null;
+  }
+
+  const selector = functionRecord.canonicalName
+    || functionRecord.name
+    || (functionRecord.exportKind ? `exports.${functionRecord.exportKind}` : null);
+  const hash = functionRecord.hash || null;
+  const selectArg = hash ? `hash:${hash}` : null;
+
+  const args = ['node', 'tools/dev/js-edit.js', '--file', relativeFile];
+  if (selector) {
+    args.push('--locate', selector);
+  }
+  if (selectArg) {
+    args.push('--select', selectArg);
+  }
+
+  const command = args.map(formatCliArgument).filter((segment) => segment.length > 0).join(' ');
+
+  return {
+    file: relativeFile,
+    selector: selector || null,
+    hash,
+    args,
+    command,
+    plan: {
+      file: relativeFile,
+      selector: selector || null,
+      expectHash: hash || null,
+      select: selectArg
+    }
+  };
+}
+
 function normalizeTerms(terms) {
   if (!Array.isArray(terms)) {
     return [];
@@ -68,6 +123,8 @@ function buildMatchRecord(fileRecord, functionRecord, normalizedTerms, options =
 
   const snippet = options.noSnippets ? undefined : functionRecord.snippetPreview;
 
+  const jsEditHint = buildJsEditHint(fileRecord, functionRecord);
+
   return {
     rank: stars,
     score,
@@ -85,6 +142,7 @@ function buildMatchRecord(fileRecord, functionRecord, normalizedTerms, options =
       isAsync: functionRecord.isAsync,
       isGenerator: functionRecord.isGenerator
     },
+    jsEditHint,
     context: {
       snippet,
       matchTerms: Array.from(new Set([...nameHits, ...bodyHits])),

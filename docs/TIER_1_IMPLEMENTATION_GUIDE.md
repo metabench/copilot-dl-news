@@ -107,7 +107,7 @@ These workflows are new, being tested, and feedback is welcome. They'll promote 
 
 | Workflow | Purpose | Time | Created | Feedback To |
 |----------|---------|------|---------|-------------|
-| [Tooling Enhancements Plan](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) | Strategic improvements for js-scan/js-edit (10 features, priority matrix) | 20 min | 2025-11-13 | [GitHub Issue](link) |
+| [Tooling Enhancements Plan](./AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) | Strategic improvements for js-scan/js-edit (10 features, priority matrix) | 20 min | 2025-11-13 | [GitHub Issue](link) |
 
 _Have feedback? Open an issue or comment in the PR._
 

@@ -1,0 +1,13 @@
+{
+  "mode": "sequence",
+  "sequence": "basicArticleDiscovery",
+  "startUrl": "https://www.theguardian.com",
+  "cadenceMinutes": 30,
+  "sharedOverrides": {
+    "concurrency": 1,
+    "maxDownloads": 500,
+    "maxDepth": 2,
+    "respectRobots": true,
+    "timeoutMs": 120000
+  }
+}

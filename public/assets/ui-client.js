@@ -15450,7 +15450,7 @@
           }
         }
       };
-      var each_source_dest_pixels_resized_limited_further_info2 = each_source_dest_pixels_resized_limited_further_info$inline;
+      var each_source_dest_pixels_resized_limited_further_info = each_source_dest_pixels_resized_limited_further_info$inline;
       var copy_px_24bipp = (ta_source2, byi_read, ta_dest, byi_write) => {
         ta_dest[byi_write] = ta_source2[byi_read++];
         ta_dest[byi_write + 1] = ta_source2[byi_read++];
@@ -15802,7 +15802,7 @@
         const dest_to_source_ratio = new Float32Array([source_colorspace[0] / dest_size[0], source_colorspace[1] / dest_size[1]]);
         const [width, height2, bypp2, bypr2, bipp, bipr] = source_colorspace;
         const fpx_area_recip2 = 1 / (dest_to_source_ratio[0] * dest_to_source_ratio[1]);
-        each_source_dest_pixels_resized_limited_further_info2(source_colorspace, dest_size, (dest_byi, source_i_any_coverage_size, edge_distances_proportions_of_total, corner_areas_proportions_of_total, byi_read) => {
+        each_source_dest_pixels_resized_limited_further_info(source_colorspace, dest_size, (dest_byi, source_i_any_coverage_size, edge_distances_proportions_of_total, corner_areas_proportions_of_total, byi_read) => {
           if (source_i_any_coverage_size[0] === 1) {
             if (source_i_any_coverage_size[1] === 1) {
               copy_px_24bipp(ta_source2, byi_read, opt_ta_dest2, dest_byi);
@@ -58729,7 +58729,7 @@ body .overlay {
           }
         }
       };
-      each_source_dest_pixels_resized_limited_further_info = each_source_dest_pixels_resized_limited_further_info$inline;
+      var each_source_dest_pixels_resized_limited_further_info = each_source_dest_pixels_resized_limited_further_info$inline;
       var copy_px_24bipp = (ta_source2, byi_read, ta_dest, byi_write) => {
         ta_dest[byi_write] = ta_source2[byi_read++];
         ta_dest[byi_write + 1] = ta_source2[byi_read++];
@@ -66829,7 +66829,13 @@ body .overlay {
       var Data = require_Data2();
       var Control_Data = class extends Data {
         constructor(spec = {}) {
-          super(spec);
+          const enriched_spec = Object.assign(
+            {
+              model_constructor: Data_Object
+            },
+            spec
+          );
+          super(enriched_spec);
         }
         // but will have a model on change system of some sort(s).
         // Reassigning events (change event handlers).
@@ -66880,6 +66886,111 @@ body .overlay {
     "../jsgui3-html/html-core/Control_View_UI.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang3();
       var Control_View_UI_Low_Level = require_Control_View_UI_Low_Level2();
+      var Control_View_UI_Slot = class extends Data_Object {
+        constructor(spec = {}) {
+          super(spec);
+          if (!spec.name) {
+            throw new Error("Control_View_UI_Slot requires a name");
+          }
+          this.name = spec.name;
+          this.accepts = spec.accepts || ["*"];
+          this.multiple = spec.multiple !== void 0 ? spec.multiple : true;
+          this.required = !!spec.required;
+          this.description = spec.description;
+          this.template = spec.template;
+          this.meta = spec.meta || {};
+          this._items = [];
+        }
+        get_items() {
+          return this._items.slice();
+        }
+        assign(item2, options = {}) {
+          this._validate_item(item2);
+          let previous;
+          let index;
+          let action = "insert";
+          if (this.multiple) {
+            if (typeof options.index === "number") {
+              index = Math.max(0, Math.min(options.index, this._items.length));
+              this._items.splice(index, 0, item2);
+            } else if (options.prepend) {
+              this._items.unshift(item2);
+              index = 0;
+            } else {
+              this._items.push(item2);
+              index = this._items.length - 1;
+            }
+          } else {
+            previous = this._items[0];
+            this._items = [item2];
+            index = 0;
+            action = "replace";
+          }
+          this.raise("change", {
+            name: "content",
+            slot: this.name,
+            action,
+            value: item2,
+            index,
+            old: previous
+          });
+          return item2;
+        }
+        clear() {
+          if (!this._items.length) return [];
+          const removed = this._items.slice();
+          this._items.length = 0;
+          this.raise("change", {
+            name: "content",
+            slot: this.name,
+            action: "clear",
+            old: removed
+          });
+          return removed;
+        }
+        remove(item2) {
+          const idx = this._items.indexOf(item2);
+          if (idx === -1) return null;
+          const removed = this._items.splice(idx, 1)[0];
+          this.raise("change", {
+            name: "content",
+            slot: this.name,
+            action: "remove",
+            value: removed,
+            index: idx
+          });
+          return removed;
+        }
+        has_content() {
+          return this._items.length > 0;
+        }
+        _validate_item(item2) {
+          if (!this.accepts || this.accepts.length === 0 || this.accepts.includes("*")) {
+            return true;
+          }
+          const signature = this._get_signature(item2);
+          const matches = this.accepts.some((token) => {
+            if (token === "Control") {
+              return item2 && typeof item2 === "object" && !!(item2.__type_name || item2._is_control);
+            }
+            return token === signature;
+          });
+          if (!matches) {
+            throw new Error(`Slot "${this.name}" does not accept value of type "${signature}"`);
+          }
+          return true;
+        }
+        _get_signature(item2) {
+          if (item2 === null) return "null";
+          if (item2 === void 0) return "undefined";
+          if (item2 && item2.__type_name) return item2.__type_name;
+          const type = typeof item2;
+          if (type === "object") {
+            return item2.constructor && item2.constructor.name ? item2.constructor.name : "object";
+          }
+          return type;
+        }
+      };
       var Control_View_UI_Compositional = class extends Data_Object {
         constructor(...a) {
           super(...a);
@@ -66906,6 +67017,52 @@ body .overlay {
           Object.defineProperty(this, "active", { get: () => active });
           const compositional = new Control_View_UI_Compositional();
           Object.defineProperty(this, "compositional", { get: () => compositional });
+          this._slots = /* @__PURE__ */ Object.create(null);
+        }
+        define_slot(name, spec = {}) {
+          if (!name) {
+            throw new Error("define_slot requires a slot name");
+          }
+          let slot = this._slots[name];
+          if (slot) {
+            slot.accepts = spec.accepts || slot.accepts;
+            slot.multiple = spec.multiple !== void 0 ? spec.multiple : slot.multiple;
+            slot.required = spec.required !== void 0 ? spec.required : slot.required;
+            slot.description = spec.description || slot.description;
+            slot.template = spec.template || slot.template;
+            slot.meta = spec.meta || slot.meta;
+          } else {
+            slot = new Control_View_UI_Slot(Object.assign({}, spec, {
+              name,
+              context: this.context
+            }));
+            slot.on("change", (e) => {
+              this.raise("slot-change", Object.assign({ slot: name }, e));
+            });
+            this._slots[name] = slot;
+            this.raise("slot-defined", { slot: name, definition: slot });
+          }
+          return slot;
+        }
+        get_slot(name) {
+          return this._slots[name];
+        }
+        assign_slot(name, value2, options = {}) {
+          const slot = this.get_slot(name) || this.define_slot(name, {});
+          slot.assign(value2, options);
+          return slot;
+        }
+        clear_slot(name) {
+          const slot = this.get_slot(name);
+          if (!slot) return [];
+          return slot.clear();
+        }
+        get_slot_content(name) {
+          const slot = this.get_slot(name);
+          return slot ? slot.get_items() : [];
+        }
+        list_slots() {
+          return Object.keys(this._slots);
         }
       };
       module.exports = Control_View_UI;
@@ -67167,6 +67324,51 @@ body .overlay {
     }
   });
 
+  // ../jsgui3-html/html-core/control_model_factory.js
+  var require_control_model_factory = __commonJS({
+    "../jsgui3-html/html-core/control_model_factory.js"(exports, module) {
+      var { Data_Object } = require_lang3();
+      var Control_Data = require_Control_Data2();
+      var Control_View = require_Control_View2();
+      var Control_View_Data = require_Control_View_Data2();
+      var Control_View_UI = require_Control_View_UI2();
+      var ensure_control_models = (ctrl2, spec = {}) => {
+        const context2 = ctrl2.context;
+        if (!ctrl2.data) {
+          ctrl2.data = new Control_Data({
+            context: context2,
+            model: spec.data && spec.data.model ? spec.data.model : void 0,
+            model_constructor: Data_Object
+          });
+        } else if (!ctrl2.data.model) {
+          ctrl2.data.model = spec.data && spec.data.model ? spec.data.model : new Data_Object({ context: context2 });
+        }
+        if (!ctrl2.view) {
+          ctrl2.view = new Control_View({
+            context: context2,
+            data: spec.view && spec.view.data ? spec.view.data : void 0
+          });
+        } else {
+          if (!ctrl2.view.data) {
+            ctrl2.view.data = new Control_View_Data({
+              context: context2,
+              model: spec.view && spec.view.data ? spec.view.data.model : void 0
+            });
+          } else if (!ctrl2.view.data.model) {
+            ctrl2.view.data.model = spec.view && spec.view.data && spec.view.data.model ? spec.view.data.model : new Data_Object({ context: context2 });
+          }
+          if (!ctrl2.view.ui) {
+            ctrl2.view.ui = new Control_View_UI({ context: context2 });
+          }
+        }
+        return ctrl2;
+      };
+      module.exports = {
+        ensure_control_models
+      };
+    }
+  });
+
   // ../jsgui3-html/control_mixins/model_data_view_compositional_representation.js
   var require_model_data_view_compositional_representation2 = __commonJS({
     "../jsgui3-html/control_mixins/model_data_view_compositional_representation.js"(exports, module) {
@@ -67182,6 +67384,7 @@ body .overlay {
       var Control_Data = require_Control_Data2();
       var Control_View = require_Control_View2();
       var Control_Validation = require_Control_Validation2();
+      var { ensure_control_models } = require_control_model_factory();
       var model_data_view_compositional_representation = (ctrl2, options = {}) => {
         const { data } = options;
         ctrl2.using_model_data_view_compositional_representation = true;
@@ -67194,17 +67397,9 @@ body .overlay {
         const can_proceed = verify_ctrl_conditions(ctrl2);
         if (can_proceed) {
           const { context: context2 } = ctrl2;
-          const o_cd = {
-            context: context2
-          };
-          if (data) {
-            if (data.model) {
-              o_cd.model = data.model;
-            }
-          }
-          ctrl2.data = new Control_Data(o_cd);
+          ensure_control_models(ctrl2, { data });
           ctrl2.validation = new Control_Validation();
-          ctrl2.view = new Control_View({
+          ctrl2.view = ctrl2.view || new Control_View({
             context: context2
           });
           ctrl2.view.data.model.mixins = ctrl2.view.data.model.mixins || new Collection();
@@ -68105,8 +68300,29 @@ body .overlay {
   var require_ModelBinder = __commonJS({
     "../jsgui3-html/html-core/ModelBinder.js"(exports, module) {
       var { Data_Object, Data_Value: Data_Value2, tof, each } = require_lang3();
-      var ModelBinder = class {
+      var ModelBinder = class _ModelBinder {
         constructor(sourceModel, targetModel, bindings = {}, options = {}) {
+          if (typeof targetModel === "string") {
+            const [
+              sourceProp,
+              legacyTargetModel,
+              targetProp,
+              legacyOptions = {}
+            ] = Array.prototype.slice.call(arguments, 1);
+            const normalizedBindings = {
+              [sourceProp]: Object.assign(
+                { to: targetProp },
+                legacyOptions.transform ? { transform: legacyOptions.transform } : {},
+                legacyOptions.reverse ? { reverse: legacyOptions.reverse } : {}
+              )
+            };
+            const normalizedOptions = Object.assign({
+              bidirectional: legacyOptions.twoWay || legacyOptions.bidirectional || !!legacyOptions.reverse,
+              immediate: legacyOptions.immediate !== false,
+              debug: legacyOptions.debug || false
+            }, legacyOptions);
+            return new _ModelBinder(sourceModel, legacyTargetModel, normalizedBindings, normalizedOptions);
+          }
           this.sourceModel = sourceModel;
           this.targetModel = targetModel;
           this.bindings = bindings;
@@ -68116,6 +68332,7 @@ body .overlay {
             debug: false
           }, options);
           this._listeners = [];
+          this._locks = /* @__PURE__ */ new Set();
           this._active = false;
           if (this.options.immediate) {
             this.activate();
@@ -68171,9 +68388,13 @@ body .overlay {
               const value2 = e.value;
               const transformedValue = transform ? transform(value2) : value2;
               if (!condition || condition(value2)) {
-                this.targetModel[targetProp] = transformedValue;
-                if (this.options.debug) {
-                  console.log(`[ModelBinder] ${sourceProp} \u2192 ${targetProp}:`, value2, "\u2192", transformedValue);
+                const lock_key = `${sourceProp}->${targetProp}`;
+                if (this._acquire(lock_key)) {
+                  this.targetModel[targetProp] = transformedValue;
+                  if (this.options.debug) {
+                    console.log(`[ModelBinder] ${sourceProp} \u2192 ${targetProp}:`, value2, "\u2192", transformedValue);
+                  }
+                  this._release(lock_key);
                 }
               }
             }
@@ -68190,9 +68411,13 @@ body .overlay {
                 const value2 = e.value;
                 const reversedValue = reverse(value2);
                 if (!condition || condition(reversedValue)) {
-                  this.sourceModel[sourceProp] = reversedValue;
-                  if (this.options.debug) {
-                    console.log(`[ModelBinder] ${targetProp} \u2190 ${sourceProp}:`, value2, "\u2190", reversedValue);
+                  const lock_key = `${targetProp}->${sourceProp}`;
+                  if (this._acquire(lock_key)) {
+                    this.sourceModel[sourceProp] = reversedValue;
+                    if (this.options.debug) {
+                      console.log(`[ModelBinder] ${targetProp} \u2192 ${sourceProp}:`, value2, "\u2192", reversedValue);
+                    }
+                    this._release(lock_key);
                   }
                 }
               }
@@ -68204,6 +68429,25 @@ body .overlay {
               handler: targetHandler
             });
           }
+        }
+        _acquire(key2) {
+          if (!key2) return true;
+          if (this._locks.has(key2)) {
+            if (this.options.debug) {
+              console.warn("[ModelBinder] Loop suppressed for", key2);
+            }
+            return false;
+          }
+          this._locks.add(key2);
+          return true;
+        }
+        _release(key2) {
+          if (key2) {
+            this._locks.delete(key2);
+          }
+        }
+        unbind() {
+          this.deactivate();
         }
         /**
          * Update a specific binding manually
@@ -68293,11 +68537,14 @@ body .overlay {
         get value() {
           return this._lastValue;
         }
+        destroy() {
+          this.deactivate();
+        }
       };
       var PropertyWatcher = class {
         constructor(model, property, callback2, options = {}) {
           this.model = model;
-          this.property = property;
+          this.properties = Array.isArray(property) ? property : [property];
           this.callback = callback2;
           this.options = Object.assign({
             immediate: false,
@@ -68311,14 +68558,15 @@ body .overlay {
         activate() {
           if (this._active) return;
           this._active = true;
-          if (this.options.immediate && this.model[this.property] !== void 0) {
-            this.callback(this.model[this.property], void 0);
+          if (this.options.immediate && this.properties.length > 0) {
+            const prop = this.properties[0];
+            this.callback(this.model[prop], void 0, prop);
           }
           this._handler = (e) => {
-            if (e.name === this.property) {
-              this.callback(e.value, e.old);
+            if (this.properties.includes(e.name)) {
+              this.callback(e.value, e.old, e.name);
               if (this.options.debug) {
-                console.log("[PropertyWatcher] Property changed:", this.property, e.old, "\u2192", e.value);
+                console.log("[PropertyWatcher] Property changed:", e.name, e.old, "\u2192", e.value);
               }
             }
           };
@@ -68331,6 +68579,9 @@ body .overlay {
             this.model.off("change", this._handler);
           }
           this._handler = null;
+        }
+        unwatch() {
+          this.deactivate();
         }
       };
       var BindingManager = class {
@@ -68347,6 +68598,40 @@ body .overlay {
           const binder = new ModelBinder(sourceModel, targetModel, bindings, options);
           this.binders.push(binder);
           return binder;
+        }
+        bind_value(sourceModel, sourceProp, targetModel, targetProp = sourceProp, options = {}) {
+          const bindings = {
+            [sourceProp]: Object.assign(
+              { to: targetProp },
+              options.transform ? { transform: options.transform } : {},
+              options.reverse ? { reverse: options.reverse } : {},
+              options.condition ? { condition: options.condition } : {}
+            )
+          };
+          const binder_options = {
+            bidirectional: options.bidirectional !== void 0 ? options.bidirectional : !!options.reverse,
+            immediate: options.immediate !== void 0 ? options.immediate : true,
+            debug: options.debug || false
+          };
+          return this.bind(sourceModel, targetModel, bindings, binder_options);
+        }
+        bind_collection(sourceModel, sourceProp, targetModel, targetProp = sourceProp, options = {}) {
+          const map_fn = options.map;
+          const clone = options.clone !== false;
+          const transform = (collection = []) => {
+            const arr = Array.isArray(collection) ? collection : [];
+            const mapped = map_fn ? arr.map(map_fn) : arr.slice();
+            return clone ? mapped.slice() : mapped;
+          };
+          const reverse = options.reverse_map ? (collection = []) => {
+            const arr = Array.isArray(collection) ? collection : [];
+            return arr.map(options.reverse_map);
+          } : void 0;
+          return this.bind_value(sourceModel, sourceProp, targetModel, targetProp, Object.assign({}, options, {
+            transform,
+            reverse,
+            bidirectional: options.bidirectional && !!reverse
+          }));
         }
         /**
          * Create a computed property
@@ -68808,46 +69093,36 @@ body .overlay {
       var { Transformations, Validators } = require_Transformations();
       var Control_Data = require_Control_Data2();
       var Control_View = require_Control_View2();
+      var { ensure_control_models } = require_control_model_factory();
       var Data_Model_View_Model_Control = class extends Ctrl_Enh {
         constructor(...a) {
           super(...a);
           const spec = a[0] || {};
           this._binding_manager = new BindingManager(this);
           const { context: context2 } = this;
-          if (spec.data) {
-            this.data = new Control_Data();
-            if (spec.data.model) {
-              this.data.model = spec.data.model;
-              this.data.model.on("change", (e) => {
-                console.log("Data_Model_View_Model_Control this.data.model change e:", e);
-              });
+          ensure_control_models(this, spec);
+          if (this.data && this.data.model) {
+            this.data.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.data.model change e:", e);
+            });
+            if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-data-model"] = this.data.model._id();
             }
           }
-          if (spec.view) {
-            this.view = new Control_View();
-            if (!spec.view.data) {
-              const view_data_model = new Data_Object({ context: context2 });
-              this.view.data = {
-                model: view_data_model
-              };
-            } else {
-              this.view.data = spec.view.data;
-              if (!this.view.data.model) {
-                this.view.data.model = new Data_Object({ context: context2 });
-              }
-            }
-            if (this.view.data.model) {
-              this.view.data.model.on("change", (e) => {
-                console.log("Data_Model_View_Model_Control this.view.data.model change e:", e);
-              });
+          if (this.view && this.view.data && this.view.data.model) {
+            this.view.data.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.view.data.model change e:", e);
+            });
+            if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-view-data-model"] = this.view.data.model._id();
             }
-            if (spec.view.model) {
-              this.view.model = spec.view.model;
-              this.view.model.on("change", (e) => {
-                console.log("Data_Model_View_Model_Control this.view.model change e:", e);
-              });
+          }
+          if (spec.view && spec.view.model) {
+            this.view.model = spec.view.model;
+            this.view.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.view.model change e:", e);
+            });
+            if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-view-model"] = this.view.model._id();
             }
           }
@@ -68860,9 +69135,9 @@ body .overlay {
               if (data_model) {
                 this.data = this.data || new Control_Data({ context: context2 });
                 this.data.model = data_model;
+                data_model.on("change", (e) => {
+                });
               }
-              data_model.on("change", (e) => {
-              });
             }
             if (this.dom.el.hasAttribute("data-jsgui-view-model")) {
               this.view = this.view || new Control_View({ context: context2 });
@@ -69266,16 +69541,16 @@ body .overlay {
   var require_htmlparser2 = __commonJS({
     "../jsgui3-html/node_modules/htmlparser/lib/htmlparser.js"(exports, module) {
       (function() {
+        const root = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
         function runningInNode() {
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          if (!this.Tautologistics)
-            this.Tautologistics = {};
-          else if (this.Tautologistics.NodeHtmlParser)
+          const tautologistics = root.Tautologistics || (root.Tautologistics = {});
+          if (tautologistics.NodeHtmlParser)
             return;
-          this.Tautologistics.NodeHtmlParser = {};
-          exports = this.Tautologistics.NodeHtmlParser;
+          tautologistics.NodeHtmlParser = {};
+          exports = tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",
@@ -75547,7 +75822,7 @@ div.grid .row .cell span {
             this.data.model.value = spec.value;
           }
           this.dom.tagName = "input";
-          this.dom.attributes.type = "input";
+          this.dom.attributes.type = "text";
         }
         get value() {
           return this.data.model.value;
@@ -75927,7 +76202,7 @@ div.grid .row .cell span {
             this.compose_text_field();
           }
           if (spec.value !== void 0) {
-            this.data.model.value = value;
+            this.data.model.value = spec.value;
           }
         }
         setup_inner_control_events() {
@@ -78466,6 +78741,8 @@ div.grid .row .cell span {
           this.add_class("radio-button");
           var context2 = this.context;
           if (spec.group_name) this.group_name = spec.group_name;
+          if (spec.text) this.text = spec.text;
+          if (spec.label) this.text = spec.label;
           if (!spec.abstract && !spec.el) {
             var name = this.group_name;
             var html_radio = new Control2({
@@ -80274,6 +80551,7 @@ div.grid .row .cell span {
     "../jsgui3-html/controls/organised/1-standard/6-layout/window.js"(exports, module) {
       var jsgui = require_html_core2();
       var Horizontal_Menu = require_horizontal_menu2();
+      var Button = require_button2();
       var { def, each } = jsgui;
       var Control2 = jsgui.Control;
       var { dragable, resizable } = require_mx2();
@@ -80309,7 +80587,7 @@ div.grid .row .cell span {
               });
               right_button_group.add_class("button-group");
               right_button_group.add_class("right");
-              btn_minimize = new jsgui.controls.Button({
+              btn_minimize = new Button({
                 context: context2
               });
               const span = (text) => {
@@ -80319,12 +80597,12 @@ div.grid .row .cell span {
               };
               btn_minimize.add(span("\u2296"));
               right_button_group.add(btn_minimize);
-              btn_maximize = new jsgui.controls.Button({
+              btn_maximize = new Button({
                 context: context2
               });
               btn_maximize.add(span("\u2295"));
               right_button_group.add(btn_maximize);
-              btn_close = new jsgui.controls.Button({
+              btn_close = new Button({
                 context: context2
               });
               btn_close.add(span("\u2297"));
@@ -81115,9 +81393,3395 @@ div.grid .row .cell span {
     }
   });
 
+  // src/ui/controls/Table.js
+  var require_Table = __commonJS({
+    "src/ui/controls/Table.js"(exports, module) {
+      "use strict";
+      var jsgui = require_html2();
+      var StringControl = jsgui.String_Control;
+      function toArray(value2) {
+        if (!value2) return [];
+        if (Array.isArray(value2)) return value2.filter(Boolean);
+        if (typeof value2 === "string") {
+          return value2.split(/\s+/).map((token) => token.trim()).filter(Boolean);
+        }
+        return [value2].filter(Boolean);
+      }
+      function appendText(control, text) {
+        if (text == null) return;
+        const normalized = String(text);
+        control.add(new StringControl({ context: control.context, text: normalized }));
+      }
+      var TableCellControl = class extends jsgui.Control {
+        constructor(spec = {}) {
+          const { header = false, align = null } = spec;
+          const {
+            content: initialContent,
+            control: initialControl,
+            text: initialText,
+            ...rest
+          } = spec;
+          super({ ...rest, tagName: header ? "th" : "td" });
+          this.add_class("ui-table__cell");
+          if (header) {
+            this.add_class("ui-table__cell--header");
+          }
+          if (align) {
+            this.add_class(`ui-table__cell--${align}`);
+          }
+          toArray(spec.classNames).forEach((cls) => this.add_class(cls));
+          if (spec.title) {
+            this.dom.attributes.title = spec.title;
+          }
+          if (!spec.el) {
+            if (initialControl && initialControl instanceof jsgui.Control) {
+              this.add(initialControl);
+            } else if (initialContent instanceof jsgui.Control) {
+              this.add(initialContent);
+            } else if (Array.isArray(initialContent)) {
+              initialContent.forEach((child) => {
+                if (child instanceof jsgui.Control) {
+                  this.add(child);
+                } else if (child != null) {
+                  appendText(this, child);
+                }
+              });
+            } else if (initialText != null) {
+              appendText(this, initialText);
+            }
+          }
+        }
+      };
+      var TableRowControl = class extends jsgui.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "tr" });
+          this.add_class("ui-table__row");
+          toArray(spec.classNames).forEach((cls) => this.add_class(cls));
+          if (typeof spec.rowIndex === "number") {
+            this.dom.attributes["data-row-index"] = String(spec.rowIndex);
+          }
+        }
+      };
+      var TableControl = class extends jsgui.Control {
+        constructor(spec = {}) {
+          const { columns = [], rows = [] } = spec;
+          super({ ...spec, tagName: "table" });
+          this.add_class("ui-table");
+          this.columns = Array.isArray(columns) ? columns : [];
+          this._rows = [];
+          if (!spec.el) {
+            this.compose();
+            if (rows.length) {
+              this.setRows(rows);
+            }
+          }
+        }
+        compose() {
+          const context2 = this.context;
+          this.thead = new jsgui.Control({ context: context2, tagName: "thead" });
+          this.tbody = new jsgui.Control({ context: context2, tagName: "tbody" });
+          this.add(this.thead);
+          this.add(this.tbody);
+          this._buildHeader();
+        }
+        _buildHeader() {
+          const headerRow = new TableRowControl({ context: this.context, classNames: "ui-table__row--header" });
+          this.columns.forEach((column) => {
+            headerRow.add(
+              new TableCellControl({
+                context: this.context,
+                header: true,
+                text: column.label || column.key || "",
+                align: column.align,
+                classNames: column.headerClass
+              })
+            );
+          });
+          this.thead.add(headerRow);
+        }
+        setRows(rows = []) {
+          this._rows = Array.isArray(rows) ? rows : [];
+          this._clearBody();
+          this._rows.forEach((rowData, index) => {
+            const row = new TableRowControl({
+              context: this.context,
+              rowIndex: index,
+              classNames: index % 2 === 1 ? "ui-table__row--striped" : null
+            });
+            this.columns.forEach((column) => {
+              const rawValue = rowData[column.key];
+              const cellSpec = this._normalizeCellSpec(rawValue, column, rowData, index);
+              row.add(new TableCellControl({ context: this.context, ...cellSpec }));
+            });
+            this.tbody.add(row);
+          });
+        }
+        _normalizeCellSpec(value2, column, rowData, rowIndex) {
+          const columnClasses = toArray(column.cellClass);
+          if (value2 && typeof value2 === "object" && value2.href) {
+            return {
+              classNames: columnClasses.concat(toArray(value2.classNames || value2.className)),
+              content: this._createLinkControl({
+                text: value2.text,
+                href: value2.href,
+                title: value2.title || rowData && rowData.title || void 0,
+                target: value2.target
+              }),
+              align: value2.align || column.align
+            };
+          }
+          if (value2 && value2.control instanceof jsgui.Control) {
+            return {
+              ...value2,
+              classNames: columnClasses.concat(toArray(value2.classNames || value2.className))
+            };
+          }
+          if (value2 && typeof value2 === "object" && !Array.isArray(value2)) {
+            const { text, title, classNames, className, align, content } = value2;
+            return {
+              text: text != null ? text : "",
+              title,
+              classNames: columnClasses.concat(toArray(classNames || className)),
+              align: align || column.align,
+              content
+            };
+          }
+          return {
+            text: value2 == null ? "" : String(value2),
+            align: column.align,
+            classNames: columnClasses
+          };
+        }
+        _clearBody() {
+          if (this.tbody && this.tbody.content) {
+            this.tbody.content.clear();
+          }
+        }
+        _createLinkControl({ text, href, title, target }) {
+          const anchor = new jsgui.Control({ context: this.context, tagName: "a" });
+          anchor.add_class("table-link");
+          if (href) {
+            anchor.dom.attributes.href = href;
+          }
+          if (title) {
+            anchor.dom.attributes.title = title;
+          }
+          if (target) {
+            anchor.dom.attributes.target = target;
+            if (target === "_blank") {
+              anchor.dom.attributes.rel = "noopener noreferrer";
+            }
+          }
+          const linkText = text != null ? text : href || "";
+          anchor.add(new StringControl({ context: this.context, text: linkText }));
+          return anchor;
+        }
+      };
+      module.exports = {
+        TableControl,
+        TableRowControl,
+        TableCellControl
+      };
+    }
+  });
+
+  // src/ui/controls/controlRegistry.js
+  var require_controlRegistry = __commonJS({
+    "src/ui/controls/controlRegistry.js"(exports, module) {
+      "use strict";
+      var jsgui = require_html2();
+      function registerControlType(typeName, ControlClass, { jsguiInstance = jsgui } = {}) {
+        if (!typeName || !ControlClass || !jsguiInstance) {
+          return ControlClass;
+        }
+        const normalized = String(typeName).trim();
+        if (!normalized) {
+          return ControlClass;
+        }
+        const key2 = normalized.toLowerCase();
+        const proto = ControlClass.prototype || ControlClass.__proto__;
+        if (proto && !proto.__type_name) {
+          proto.__type_name = key2;
+        }
+        jsguiInstance.controls = jsguiInstance.controls || {};
+        jsguiInstance.controls[key2] = ControlClass;
+        if (!jsguiInstance.map_Controls) {
+          jsguiInstance.map_Controls = {};
+        }
+        jsguiInstance.map_Controls[key2] = ControlClass;
+        if (!jsguiInstance[key2]) {
+          jsguiInstance[key2] = ControlClass;
+        }
+        return ControlClass;
+      }
+      module.exports = {
+        registerControlType
+      };
+    }
+  });
+
+  // src/ui/controls/UrlListingTable.js
+  var require_UrlListingTable = __commonJS({
+    "src/ui/controls/UrlListingTable.js"(exports, module) {
+      "use strict";
+      var { TableControl } = require_Table();
+      var { registerControlType } = require_controlRegistry();
+      var URL_LISTING_COLUMNS = Object.freeze([
+        { key: "index", label: "#", align: "right", cellClass: "is-index" },
+        { key: "urlId", label: "ID", align: "right", cellClass: "is-id" },
+        { key: "url", label: "URL", cellClass: "is-url" },
+        { key: "host", label: "Host", cellClass: "is-host" },
+        { key: "createdAt", label: "Created", cellClass: "is-timestamp" },
+        { key: "lastSeenAt", label: "Last Seen", cellClass: "is-timestamp" },
+        { key: "lastFetchAt", label: "Last Fetch", cellClass: "is-timestamp" },
+        { key: "status", label: "HTTP", align: "center" }
+      ]);
+      function cloneColumn(column) {
+        return { ...column };
+      }
+      function buildColumns() {
+        return URL_LISTING_COLUMNS.map(cloneColumn);
+      }
+      function formatCount(value2) {
+        const numeric = Number(value2);
+        if (!Number.isFinite(numeric) || numeric < 0) return "0";
+        return numeric.toLocaleString("en-US");
+      }
+      function formatDateTime(value2, includeSeconds = false) {
+        if (!value2) return "\u2014";
+        const date = new Date(value2);
+        if (Number.isNaN(date.getTime())) return "\u2014";
+        const pad = (n) => String(n).padStart(2, "0");
+        const base = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+        const time = `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}${includeSeconds ? `:${pad(date.getUTCSeconds())}` : ""}`;
+        return `${base} ${time} UTC`;
+      }
+      function formatStatus(code) {
+        if (code == null) return { text: "\u2014", classNames: "badge badge--muted" };
+        let variant = "info";
+        if (code >= 200 && code < 300) variant = "success";
+        else if (code >= 300 && code < 400) variant = "accent";
+        else if (code >= 400 && code < 500) variant = "warn";
+        else if (code >= 500) variant = "danger";
+        return { text: String(code), classNames: `badge badge--${variant}` };
+      }
+      function buildIndexCell(position, startIndex = 1) {
+        const base = Number.isFinite(startIndex) ? Math.max(1, Math.trunc(startIndex)) : 1;
+        const offset2 = Number.isFinite(position) ? Math.trunc(position) : 0;
+        return { text: String(base + offset2), classNames: "is-index" };
+      }
+      function buildDisplayRows(rows, options = {}) {
+        const baseIndex = Number.isFinite(options.startIndex) ? Math.max(1, Math.trunc(options.startIndex)) : 1;
+        return rows.map((row, index) => ({
+          index: buildIndexCell(index, baseIndex),
+          urlId: row.id != null ? { text: String(row.id), classNames: "is-id" } : "\u2014",
+          url: (() => {
+            const cell = { text: row.url, title: row.url, classNames: "is-url" };
+            if (row.id != null) {
+              cell.href = `/urls/${row.id}`;
+            }
+            return cell;
+          })(),
+          host: row.host ? { text: row.host, href: `/domains/${encodeURIComponent(row.host)}`, classNames: "is-host" } : "\u2014",
+          createdAt: formatDateTime(row.createdAt),
+          lastSeenAt: formatDateTime(row.lastSeenAt),
+          lastFetchAt: formatDateTime(row.lastFetchAt),
+          status: formatStatus(row.httpStatus)
+        }));
+      }
+      var CONTROL_TYPE = "url_listing_table";
+      var UrlListingTableControl = class extends TableControl {
+        constructor(spec = {}) {
+          const { columns, records, rows, startIndex, rowOptions, ...rest } = spec || {};
+          const resolvedColumns = Array.isArray(columns) && columns.length ? columns : buildColumns();
+          super({ ...rest, columns: resolvedColumns, __type_name: CONTROL_TYPE });
+          if (spec && spec.el) {
+            return;
+          }
+          if (Array.isArray(rows) && rows.length) {
+            this.setRows(rows);
+          } else if (Array.isArray(records) && records.length) {
+            this.setRecords(records, rowOptions || { startIndex });
+          }
+        }
+        setRecords(records = [], options = {}) {
+          const mapped = buildDisplayRows(records, options);
+          this.setRows(mapped);
+        }
+        static buildColumns() {
+          return buildColumns();
+        }
+        static buildRows(records = [], options = {}) {
+          return buildDisplayRows(records, options);
+        }
+      };
+      registerControlType(CONTROL_TYPE, UrlListingTableControl);
+      module.exports = {
+        UrlListingTableControl,
+        buildColumns,
+        buildDisplayRows,
+        buildIndexCell,
+        formatDateTime,
+        formatCount
+      };
+    }
+  });
+
+  // src/ui/controls/urlFilterDiagnostics.js
+  var require_urlFilterDiagnostics = __commonJS({
+    "src/ui/controls/urlFilterDiagnostics.js"(exports, module) {
+      "use strict";
+      var EVENT_NAME = "copilot:urlFilterToggle";
+      var DEFAULT_MAX_ENTRIES = 50;
+      function nowIso() {
+        return (/* @__PURE__ */ new Date()).toISOString();
+      }
+      function resolveEventCtor() {
+        if (typeof window !== "undefined" && typeof window.CustomEvent === "function") {
+          return window.CustomEvent;
+        }
+        if (typeof CustomEvent === "function") {
+          return CustomEvent;
+        }
+        return null;
+      }
+      function resolveWindow() {
+        if (typeof window === "undefined") {
+          return null;
+        }
+        return window;
+      }
+      function ensureDebugStore(w, maxEntries = DEFAULT_MAX_ENTRIES) {
+        if (!w) {
+          return null;
+        }
+        const root = w.__COPILOT_UI_DEBUG__ || (w.__COPILOT_UI_DEBUG__ = {});
+        if (!Array.isArray(root.urlFilterToggle)) {
+          root.urlFilterToggle = [];
+        }
+        root.__maxEntries = maxEntries;
+        return root.urlFilterToggle;
+      }
+      function pushDebugEntry(entry, maxEntries = DEFAULT_MAX_ENTRIES) {
+        const w = resolveWindow();
+        const bucket = ensureDebugStore(w, maxEntries);
+        if (!bucket) {
+          return;
+        }
+        bucket.push(entry);
+        while (bucket.length > maxEntries) {
+          bucket.shift();
+        }
+      }
+      function dispatchDebugEvent(entry) {
+        const w = resolveWindow();
+        if (!w || typeof w.dispatchEvent !== "function") {
+          return;
+        }
+        const EventCtor = resolveEventCtor();
+        if (!EventCtor) {
+          try {
+            w.dispatchEvent({ type: EVENT_NAME, detail: entry });
+          } catch (_) {
+          }
+          return;
+        }
+        try {
+          w.dispatchEvent(new EventCtor(EVENT_NAME, { detail: entry }));
+        } catch (error2) {
+          if (typeof console !== "undefined" && console.warn) {
+            console.warn("[copilot] failed to dispatch url filter debug event", error2);
+          }
+        }
+      }
+      function emitUrlFilterDebug(detail, options = {}) {
+        const entry = {
+          timestamp: nowIso(),
+          ...detail
+        };
+        const maxEntries = Number.isFinite(options.maxEntries) && options.maxEntries > 0 ? Math.trunc(options.maxEntries) : DEFAULT_MAX_ENTRIES;
+        pushDebugEntry(entry, maxEntries);
+        dispatchDebugEvent(entry);
+        return entry;
+      }
+      module.exports = {
+        EVENT_NAME,
+        emitUrlFilterDebug,
+        pushDebugEntry,
+        dispatchDebugEvent
+      };
+    }
+  });
+
+  // src/ui/controls/helpers/urlListingDom.js
+  var require_urlListingDom = __commonJS({
+    "src/ui/controls/helpers/urlListingDom.js"(exports, module) {
+      "use strict";
+      var { formatCount } = require_UrlListingTable();
+      function resolveDocument(root) {
+        if (!root) {
+          if (typeof document !== "undefined") {
+            return document;
+          }
+          return null;
+        }
+        if (root.ownerDocument) {
+          return root.ownerDocument;
+        }
+        if (root.documentElement) {
+          return root;
+        }
+        if (typeof document !== "undefined") {
+          return document;
+        }
+        return null;
+      }
+      function setNodeText(node, text) {
+        if (!node) return;
+        node.textContent = text == null ? "" : String(text);
+      }
+      function applyCellClassList(cell, classNames) {
+        if (!cell || !classNames) {
+          return;
+        }
+        const classes = Array.isArray(classNames) ? classNames : String(classNames).split(/\s+/).map((token) => token.trim()).filter(Boolean);
+        classes.forEach((cls) => {
+          if (cls) {
+            cell.classList.add(cls);
+          }
+        });
+      }
+      function createTableCell(doc, column, value2) {
+        const cell = doc.createElement("td");
+        cell.className = "ui-table__cell";
+        if (column && column.align) {
+          cell.classList.add(`ui-table__cell--${column.align}`);
+        }
+        if (column && column.cellClass) {
+          applyCellClassList(cell, column.cellClass);
+        }
+        if (value2 && typeof value2 === "object") {
+          if (value2.classNames) {
+            applyCellClassList(cell, value2.classNames);
+          }
+        }
+        if (value2 && typeof value2 === "object" && value2.href) {
+          const link = doc.createElement("a");
+          link.className = "table-link";
+          link.textContent = value2.text != null ? String(value2.text) : value2.href;
+          link.href = value2.href;
+          if (value2.title) {
+            link.title = value2.title;
+          }
+          if (value2.target) {
+            link.target = value2.target;
+            link.rel = value2.target === "_blank" ? "noopener noreferrer" : link.rel || "";
+          }
+          cell.appendChild(link);
+          return cell;
+        }
+        if (value2 && typeof value2 === "object" && value2.text != null) {
+          cell.appendChild(doc.createTextNode(String(value2.text)));
+          return cell;
+        }
+        cell.appendChild(doc.createTextNode(value2 == null ? "" : String(value2)));
+        return cell;
+      }
+      function updateListingTable(root, payload = {}) {
+        const doc = resolveDocument(root);
+        if (!doc) return;
+        const table2 = doc.querySelector("table.ui-table");
+        if (!table2) return;
+        const tbody = table2.querySelector("tbody");
+        if (!tbody) return;
+        const incomingColumns = Array.isArray(payload.columns) && payload.columns.length ? payload.columns : null;
+        const columns = incomingColumns || table2.__copilotListingColumns || null;
+        if (!columns || !columns.length) {
+          return;
+        }
+        table2.__copilotListingColumns = columns;
+        const rows = Array.isArray(payload.rows) ? payload.rows : [];
+        const fragment = doc.createDocumentFragment();
+        rows.forEach((row, index) => {
+          const tr = doc.createElement("tr");
+          tr.className = "ui-table__row";
+          if (index % 2 === 1) {
+            tr.classList.add("ui-table__row--striped");
+          }
+          tr.setAttribute("data-row-index", String(index));
+          columns.forEach((column) => {
+            const cell = createTableCell(doc, column, row ? row[column.key] : null);
+            tr.appendChild(cell);
+          });
+          fragment.appendChild(tr);
+        });
+        while (tbody.firstChild) {
+          tbody.removeChild(tbody.firstChild);
+        }
+        tbody.appendChild(fragment);
+      }
+      function updateListingMeta(root, meta = {}) {
+        var _a, _b;
+        const doc = resolveDocument(root);
+        if (!doc) return;
+        const setField = (field, value2) => {
+          const target = doc.querySelector(`[data-meta-field="${field}"]`);
+          if (target) {
+            setNodeText(target, value2);
+          }
+        };
+        setField("rowCount", formatCount((_a = meta.rowCount) != null ? _a : 0));
+        setField("limit", formatCount((_b = meta.limit) != null ? _b : 0));
+        if (meta.dbLabel) {
+          setField("dbLabel", meta.dbLabel);
+        }
+        if (meta.generatedAt) {
+          setField("generatedAt", meta.generatedAt);
+        }
+      }
+      function updateListingSubtitle(root, subtitle) {
+        const doc = resolveDocument(root);
+        if (!doc) return;
+        const el = doc.querySelector('[data-meta-field="subtitle"]');
+        if (el) {
+          setNodeText(el, subtitle || "");
+        }
+      }
+      function safeCount(value2, fallback = 0) {
+        const numeric = Number(value2);
+        if (!Number.isFinite(numeric)) return fallback;
+        return Math.max(fallback, Math.trunc(numeric));
+      }
+      function buildPagerSummary(pagination = {}) {
+        if (!pagination || typeof pagination !== "object") {
+          return "";
+        }
+        const page = safeCount(pagination.currentPage, 1) || 1;
+        const totalPages = safeCount(pagination.totalPages, 1) || 1;
+        const startDisplay = pagination.totalRows === 0 ? 0 : safeCount(pagination.startRow, 0);
+        const endDisplay = pagination.totalRows === 0 ? 0 : safeCount(pagination.endRow, 0);
+        const totalRows = safeCount(pagination.totalRows, 0) || 0;
+        return `Page ${page} of ${totalPages} \u2022 Rows ${startDisplay}-${endDisplay} of ${totalRows}`;
+      }
+      function applyPagerLink(nav, kind, href, shouldDisable) {
+        if (!nav) return;
+        const link = nav.querySelector(`[data-pager-link="${kind}"]`);
+        if (!link) return;
+        if (!href || shouldDisable) {
+          link.setAttribute("aria-disabled", "true");
+          link.classList.add("pager-button--disabled");
+          link.removeAttribute("href");
+        } else {
+          link.removeAttribute("aria-disabled");
+          link.classList.remove("pager-button--disabled");
+          link.setAttribute("href", href);
+        }
+      }
+      function updateListingPagination(root, pagination = {}) {
+        const doc = resolveDocument(root);
+        if (!doc || !pagination) return;
+        const summary = buildPagerSummary(pagination);
+        const navs = doc.querySelectorAll("nav.pager");
+        navs.forEach((nav) => {
+          const info = nav.querySelector("[data-pager-info]");
+          if (info) {
+            setNodeText(info, summary);
+          }
+          applyPagerLink(nav, "first", pagination.firstHref, pagination.currentPage === 1);
+          applyPagerLink(nav, "prev", pagination.prevHref, pagination.currentPage === 1);
+          applyPagerLink(nav, "next", pagination.nextHref, pagination.currentPage === pagination.totalPages);
+          applyPagerLink(nav, "last", pagination.lastHref, pagination.currentPage === pagination.totalPages);
+        });
+      }
+      function applyListingStateToDocument(root, state = {}) {
+        if (!state || typeof state !== "object") {
+          return;
+        }
+        updateListingTable(root, state);
+        updateListingMeta(root, state.meta || {});
+        const subtitle = state.meta && state.meta.subtitle ? state.meta.subtitle : state.subtitle;
+        updateListingSubtitle(root, subtitle);
+        const pagination = state.meta && state.meta.pagination || state.pagination;
+        if (pagination) {
+          updateListingPagination(root, pagination);
+        }
+      }
+      module.exports = {
+        applyListingStateToDocument,
+        updateListingTable,
+        updateListingMeta,
+        updateListingSubtitle,
+        updateListingPagination,
+        buildPagerSummary
+      };
+    }
+  });
+
+  // src/ui/controls/UrlFilterToggle.js
+  var require_UrlFilterToggle = __commonJS({
+    "src/ui/controls/UrlFilterToggle.js"(exports, module) {
+      "use strict";
+      var jsgui = require_html2();
+      var { registerControlType } = require_controlRegistry();
+      var { installBindingPlugin: installBindingPlugin2 } = require_bindingPlugin();
+      var { emitUrlFilterDebug } = require_urlFilterDiagnostics();
+      var { applyListingStateToDocument } = require_urlListingDom();
+      installBindingPlugin2(jsgui);
+      var CONTROL_TYPE = "url_filter_toggle";
+      function encodeQueryPayload(query = {}) {
+        try {
+          return encodeURIComponent(JSON.stringify(query));
+        } catch (_) {
+          return encodeURIComponent("{}");
+        }
+      }
+      function decodeQueryPayload(value2) {
+        if (!value2) return {};
+        try {
+          return JSON.parse(decodeURIComponent(value2));
+        } catch (_) {
+          return {};
+        }
+      }
+      function buildSearchParams(query = {}) {
+        const params = new URLSearchParams();
+        Object.entries(query).forEach(([key2, rawValue]) => {
+          if (rawValue == null) return;
+          if (Array.isArray(rawValue)) {
+            rawValue.forEach((entry) => {
+              if (entry == null) return;
+              params.append(key2, String(entry));
+            });
+            return;
+          }
+          params.append(key2, String(rawValue));
+        });
+        return params;
+      }
+      var UrlFilterToggleControl = class extends jsgui.Control {
+        constructor(spec = {}) {
+          const normalized = {
+            ...spec,
+            tagName: "div",
+            __type_name: CONTROL_TYPE
+          };
+          super(normalized);
+          this.add_class("filter-toggle");
+          this._config = {
+            apiPath: spec.apiPath || "/api/urls",
+            basePath: spec.basePath || "/urls",
+            query: spec.query || {},
+            label: spec.label || "Show fetched URLs only",
+            defaultPage: Number.isFinite(spec.defaultPage) ? Math.max(1, Math.trunc(spec.defaultPage)) : 1
+          };
+          this._state = {
+            hasFetches: !!spec.hasFetches
+          };
+          this._lastDiagnostics = null;
+          this._listingStore = null;
+          this._storeUnsubscribe = null;
+          this._lastHistoryHref = null;
+          if (!spec.el) {
+            this.compose();
+          }
+          this._applyDataAttributes();
+        }
+        compose() {
+          const label = new jsgui.label({ context: this.context, class: "filter-toggle__label" });
+          const switchWrap = new jsgui.span({ context: this.context, class: "filter-toggle__switch" });
+          const checkbox = new jsgui.input({ context: this.context, class: "filter-toggle__checkbox" });
+          checkbox.dom.attributes.type = "checkbox";
+          checkbox.dom.attributes.value = "1";
+          if (this._state.hasFetches) {
+            checkbox.dom.attributes.checked = "checked";
+          }
+          const slider = new jsgui.span({ context: this.context, class: "filter-toggle__slider" });
+          switchWrap.add(checkbox);
+          switchWrap.add(slider);
+          const copy = new jsgui.span({ context: this.context, class: "filter-toggle__text" });
+          copy.add_text(this._config.label);
+          label.add(switchWrap);
+          label.add(copy);
+          this.add(label);
+        }
+        _applyDataAttributes() {
+          const attrs = this.dom.attributes;
+          attrs["data-api-path"] = this._config.apiPath;
+          attrs["data-base-path"] = this._config.basePath;
+          attrs["data-query"] = encodeQueryPayload(this._config.query);
+          attrs["data-default-page"] = String(this._config.defaultPage || 1);
+          attrs["data-has-fetches"] = this._state.hasFetches ? "1" : "0";
+        }
+        activate(el) {
+          super.activate(el);
+          if (this.__activatedOnce) return;
+          this.__activatedOnce = true;
+          this._rootEl = el || this.dom.el;
+          this._checkbox = this._rootEl ? this._rootEl.querySelector(".filter-toggle__checkbox") : null;
+          if (this._checkbox) {
+            this._checkbox.addEventListener("change", () => this.handleToggle(this._checkbox.checked));
+          }
+          this._initListingStore();
+        }
+        async handleToggle(enabled) {
+          if (this._pending) return;
+          const nextQuery = this._buildQuery(enabled);
+          this._state.hasFetches = !!enabled;
+          this._syncDomState();
+          this._setBusy(true);
+          let diagnostics = null;
+          try {
+            const result = await this._fetchListing(nextQuery);
+            diagnostics = result.diagnostics || null;
+            this._publishListingPayload(result.payload, nextQuery);
+            this._emitDebugEvent({
+              status: "success",
+              diagnostics,
+              query: nextQuery,
+              meta: result.payload ? result.payload.meta : null
+            });
+          } catch (error2) {
+            diagnostics = error2 && error2.diagnostics ? error2.diagnostics : diagnostics;
+            console.error("Failed to refresh URL listing:", error2);
+            if (this._checkbox) {
+              this._checkbox.checked = !enabled;
+            }
+            this._state.hasFetches = !enabled;
+            this._syncDomState();
+            this._emitDebugEvent({
+              status: "error",
+              diagnostics,
+              query: nextQuery,
+              error: {
+                message: error2 && error2.message ? error2.message : "Unknown error"
+              }
+            });
+          } finally {
+            this._setBusy(false);
+          }
+        }
+        _syncDomState() {
+          if (this._rootEl) {
+            this._rootEl.setAttribute("data-has-fetches", this._state.hasFetches ? "1" : "0");
+          }
+        }
+        _setBusy(state) {
+          this._pending = state;
+          if (!this._rootEl) return;
+          if (state) {
+            this._rootEl.classList.add("is-loading");
+          } else {
+            this._rootEl.classList.remove("is-loading");
+          }
+        }
+        _buildQuery(enabled) {
+          const snapshot = this._decodeQuery();
+          const next = { ...snapshot };
+          if (enabled) {
+            next.hasFetches = "1";
+          } else {
+            delete next.hasFetches;
+          }
+          next.page = String(this._config.defaultPage || 1);
+          return next;
+        }
+        _decodeQuery() {
+          if (this._rootEl) {
+            return decodeQueryPayload(this._rootEl.getAttribute("data-query"));
+          }
+          return JSON.parse(JSON.stringify(this._config.query || {}));
+        }
+        async _fetchListing(query) {
+          const params = buildSearchParams(query);
+          const qs = params.toString();
+          const apiPath = this._rootEl ? this._rootEl.getAttribute("data-api-path") || this._config.apiPath : this._config.apiPath;
+          const target = qs ? `${apiPath}?${qs}` : apiPath;
+          const response = await fetch(target, {
+            headers: { accept: "application/json" },
+            credentials: "same-origin"
+          });
+          const diagnostics = this._extractResponseDiagnostics(response, { query });
+          let payload;
+          try {
+            payload = await response.json();
+          } catch (error2) {
+            const parseError = new Error("Failed to parse /api/urls response");
+            parseError.cause = error2;
+            parseError.diagnostics = diagnostics;
+            throw parseError;
+          }
+          if (!response.ok || payload && payload.ok === false) {
+            const fallbackMessage = payload && payload.error && payload.error.message ? payload.error.message : `Refresh failed (${response.status})`;
+            const apiError = new Error(fallbackMessage);
+            apiError.diagnostics = {
+              ...diagnostics,
+              ...payload && payload.diagnostics ? payload.diagnostics : {}
+            };
+            apiError.payload = payload;
+            throw apiError;
+          }
+          const mergedDiagnostics = {
+            ...diagnostics,
+            ...payload && payload.diagnostics ? payload.diagnostics : {}
+          };
+          return { payload, diagnostics: mergedDiagnostics };
+        }
+        _publishListingPayload(payload, query) {
+          if (!payload || payload.ok === false) {
+            return;
+          }
+          if (this._listingStore) {
+            this._listingStore.setState(payload);
+            return;
+          }
+          applyListingStateToDocument(this._getDocument(), payload);
+          const nextQuery = payload.query || query || {};
+          this._state.hasFetches = !!(payload.filters && payload.filters.hasFetches);
+          this._syncDomState();
+          this._updateQueryState(nextQuery);
+          this._updateBasePath(payload.basePath);
+          this._syncHistory(nextQuery, payload.basePath);
+        }
+        _updateBasePath(basePath) {
+          if (!basePath) {
+            return;
+          }
+          this._config.basePath = basePath;
+          if (this._rootEl) {
+            this._rootEl.setAttribute("data-base-path", basePath);
+          }
+        }
+        _resolveListingStore() {
+          if (typeof window === "undefined") {
+            return null;
+          }
+          const store = window.__COPILOT_URL_LISTING_STORE__;
+          if (!store || typeof store.subscribe !== "function" || typeof store.setState !== "function") {
+            return null;
+          }
+          return store;
+        }
+        _initListingStore() {
+          if (this._listingStore || this._storeUnsubscribe) {
+            return;
+          }
+          const store = this._resolveListingStore();
+          if (!store) {
+            return;
+          }
+          this._listingStore = store;
+          this._storeUnsubscribe = store.subscribe((state) => this._handleStoreState(state), { immediate: true });
+        }
+        _handleStoreState(state) {
+          if (!state || typeof state !== "object") {
+            return;
+          }
+          const hasFetches = !!(state.filters && state.filters.hasFetches);
+          this._state.hasFetches = hasFetches;
+          this._syncDomState();
+          const query = state.query || {};
+          this._updateQueryState(query);
+          this._updateBasePath(state.basePath);
+          this._syncHistory(query, state.basePath);
+        }
+        _updateQueryState(query) {
+          this._config.query = { ...query };
+          if (this._rootEl) {
+            this._rootEl.setAttribute("data-query", encodeQueryPayload(this._config.query));
+          }
+        }
+        _syncHistory(query, basePathOverride) {
+          if (typeof window === "undefined" || !window.history || typeof window.history.replaceState !== "function") {
+            return;
+          }
+          const params = buildSearchParams(query);
+          const basePath = basePathOverride || (this._rootEl ? this._rootEl.getAttribute("data-base-path") : null) || this._config.basePath;
+          if (!basePath) {
+            return;
+          }
+          const qs = params.toString();
+          const nextUrl = qs ? `${basePath}?${qs}` : basePath;
+          if (nextUrl === this._lastHistoryHref) {
+            return;
+          }
+          window.history.replaceState({}, document.title, nextUrl);
+          this._lastHistoryHref = nextUrl;
+        }
+        _getDocument() {
+          if (this.context && this.context.document) {
+            return this.context.document;
+          }
+          if (typeof document !== "undefined") {
+            return document;
+          }
+          return null;
+        }
+        _extractResponseDiagnostics(response, context2 = {}) {
+          var _a;
+          if (!response || typeof ((_a = response.headers) == null ? void 0 : _a.get) !== "function") {
+            return { ...context2 };
+          }
+          const durationHeader = response.headers.get("x-copilot-duration-ms");
+          const durationMs = durationHeader != null ? Number(durationHeader) : null;
+          return {
+            ...context2,
+            requestId: response.headers.get("x-copilot-request-id") || null,
+            durationMs: Number.isFinite(durationMs) ? durationMs : null,
+            source: response.headers.get("x-copilot-api") || "dataExplorer",
+            status: response.status
+          };
+        }
+        _emitDebugEvent(detail) {
+          this._lastDiagnostics = detail || null;
+          emitUrlFilterDebug({
+            control: CONTROL_TYPE,
+            ...detail
+          });
+        }
+      };
+      registerControlType(CONTROL_TYPE, UrlFilterToggleControl);
+      module.exports = {
+        UrlFilterToggleControl
+      };
+    }
+  });
+
+  // src/ui/controls/PagerButton.js
+  var require_PagerButton = __commonJS({
+    "src/ui/controls/PagerButton.js"(exports, module) {
+      "use strict";
+      var jsgui = require_html2();
+      var { installBindingPlugin: installBindingPlugin2 } = require_bindingPlugin();
+      var { registerControlType } = require_controlRegistry();
+      installBindingPlugin2(jsgui);
+      var StringControl = jsgui.String_Control;
+      var CONTROL_TYPE = "pager_button";
+      var PagerButtonControl = class extends jsgui.Control {
+        constructor(spec = {}) {
+          const normalized = { ...spec, tagName: "a", __type_name: CONTROL_TYPE };
+          super(normalized);
+          this.dom.attributes.role = "button";
+          this.dom.attributes.title = spec.title || spec.text || "";
+          this.add_class("pager-button");
+          this._hrefValue = spec.href || null;
+          this._isDisabled = !!spec.disabled || !spec.href;
+          if (this._hrefValue) {
+            this.dom.attributes.href = this._hrefValue;
+          }
+          this.dom.attributes.tabindex = "0";
+          if (spec.text) {
+            this.add(new StringControl({ context: this.context, text: spec.text }));
+          }
+          this.ensureBindingViewModel({
+            kind: spec.kind || "default",
+            disabled: this._isDisabled
+          });
+          this.bindDataToView({
+            disabled: { to: "disabled" },
+            kind: { to: "kind" }
+          });
+          this.bindViewToAttributes({
+            disabled: [
+              { attr: "aria-disabled", boolean: true, trueValue: "true" },
+              { toggleClass: "pager-button--disabled" },
+              {
+                onChange: (value2, control) => {
+                  control._isDisabled = !!value2;
+                  if (control._isDisabled) {
+                    delete control.dom.attributes.href;
+                    control.dom.attributes.tabindex = "-1";
+                  } else {
+                    control.dom.attributes.tabindex = "0";
+                    if (control._hrefValue) {
+                      control.dom.attributes.href = control._hrefValue;
+                    } else {
+                      delete control.dom.attributes.href;
+                    }
+                  }
+                }
+              }
+            ],
+            kind: [
+              { attr: "data-kind" },
+              { classPrefix: "pager-button--kind-" }
+            ]
+          });
+          this.setKind(spec.kind || "default");
+          this.setDisabled(this._isDisabled);
+        }
+        setDisabled(state) {
+          const viewModel = this.ensureBindingViewModel();
+          viewModel.set("disabled", !!state);
+        }
+        setHref(href) {
+          this._hrefValue = href || null;
+          if (!this._isDisabled && this._hrefValue) {
+            this.dom.attributes.href = this._hrefValue;
+          } else if (!this._hrefValue) {
+            delete this.dom.attributes.href;
+          }
+        }
+        setKind(kind) {
+          const viewModel = this.ensureBindingViewModel();
+          viewModel.set("kind", kind || "default");
+        }
+      };
+      registerControlType(CONTROL_TYPE, PagerButtonControl);
+      module.exports = {
+        PagerButtonControl
+      };
+    }
+  });
+
+  // src/ui/controls/controlManifest.js
+  var require_controlManifest = __commonJS({
+    "src/ui/controls/controlManifest.js"(exports, module) {
+      "use strict";
+      var manifest = [
+        {
+          type: "url_listing_table",
+          loader: () => require_UrlListingTable().UrlListingTableControl
+        },
+        {
+          type: "url_filter_toggle",
+          loader: () => require_UrlFilterToggle().UrlFilterToggleControl
+        },
+        {
+          type: "pager_button",
+          loader: () => require_PagerButton().PagerButtonControl
+        }
+      ];
+      function ensureControlsRegistered2(jsguiInstance) {
+        if (!jsguiInstance) {
+          return [];
+        }
+        const { registerControlType } = require_controlRegistry();
+        return manifest.map((entry) => {
+          const ControlClass = typeof entry.loader === "function" ? entry.loader() : null;
+          if (!ControlClass) {
+            return null;
+          }
+          registerControlType(entry.type, ControlClass, { jsguiInstance });
+          return { type: entry.type, control: ControlClass };
+        }).filter(Boolean);
+      }
+      function listControlTypes2() {
+        return manifest.map((entry) => entry.type);
+      }
+      module.exports = {
+        ensureControlsRegistered: ensureControlsRegistered2,
+        listControlTypes: listControlTypes2
+      };
+    }
+  });
+
+  // src/ui/client/listingStateStore.js
+  var require_listingStateStore = __commonJS({
+    "src/ui/client/listingStateStore.js"(exports, module) {
+      "use strict";
+      function normalizeListingState(payload) {
+        if (!payload || typeof payload !== "object") {
+          return null;
+        }
+        const clonedPagination = payload.pagination ? { ...payload.pagination } : void 0;
+        const normalized = { ...payload };
+        if (clonedPagination) {
+          normalized.pagination = clonedPagination;
+        }
+        if (!normalized.meta && payload.meta) {
+          normalized.meta = { ...payload.meta };
+        } else if (normalized.meta && payload.meta && normalized.meta !== payload.meta) {
+          normalized.meta = { ...payload.meta };
+        }
+        if (clonedPagination && (!normalized.meta || !normalized.meta.pagination)) {
+          normalized.meta = normalized.meta ? { ...normalized.meta } : {};
+          normalized.meta.pagination = clonedPagination;
+        }
+        return normalized;
+      }
+      function createListingStateStore(initialState) {
+        let state = normalizeListingState(initialState);
+        const listeners = /* @__PURE__ */ new Set();
+        const getState = () => state;
+        const notify = () => {
+          listeners.forEach((listener) => {
+            try {
+              listener(state);
+            } catch (error2) {
+              if (typeof console !== "undefined" && console.warn) {
+                console.warn("[copilot] listing store listener failed", error2);
+              }
+            }
+          });
+        };
+        const setState = (nextState) => {
+          state = normalizeListingState(nextState);
+          if (typeof window !== "undefined") {
+            window.__COPILOT_URL_LISTING_STATE__ = state;
+          }
+          notify();
+        };
+        const subscribe = (listener, options = {}) => {
+          if (typeof listener !== "function") {
+            return () => {
+            };
+          }
+          listeners.add(listener);
+          if (options.immediate !== false) {
+            try {
+              listener(state);
+            } catch (error2) {
+              if (typeof console !== "undefined" && console.warn) {
+                console.warn("[copilot] listing store immediate subscriber failed", error2);
+              }
+            }
+          }
+          return () => {
+            listeners.delete(listener);
+          };
+        };
+        return { getState, setState, subscribe };
+      }
+      function ensureGlobalListingStateStore2(initialState) {
+        if (typeof window === "undefined") {
+          return null;
+        }
+        if (window.__COPILOT_URL_LISTING_STORE__) {
+          if (initialState) {
+            window.__COPILOT_URL_LISTING_STORE__.setState(initialState);
+          }
+          return window.__COPILOT_URL_LISTING_STORE__;
+        }
+        const store = createListingStateStore(initialState);
+        window.__COPILOT_URL_LISTING_STORE__ = store;
+        return store;
+      }
+      module.exports = {
+        createListingStateStore,
+        ensureGlobalListingStateStore: ensureGlobalListingStateStore2,
+        normalizeListingState
+      };
+    }
+  });
+
+  // src/ui/client/listingDomBindings.js
+  var require_listingDomBindings = __commonJS({
+    "src/ui/client/listingDomBindings.js"(exports, module) {
+      "use strict";
+      var { applyListingStateToDocument } = require_urlListingDom();
+      function attachListingDomBindings2(store, options = {}) {
+        if (!store || typeof store.subscribe !== "function") {
+          return null;
+        }
+        const doc = options.document || (typeof document !== "undefined" ? document : null);
+        if (!doc) {
+          return null;
+        }
+        const applyState = (state) => {
+          if (!state) {
+            return;
+          }
+          applyListingStateToDocument(doc, state);
+        };
+        applyState(store.getState ? store.getState() : null);
+        return store.subscribe(applyState);
+      }
+      module.exports = {
+        attachListingDomBindings: attachListingDomBindings2
+      };
+    }
+  });
+
+  // src/ui/controls/diagramAtlasControlsFactory.js
+  var require_diagramAtlasControlsFactory = __commonJS({
+    "src/ui/controls/diagramAtlasControlsFactory.js"(exports, module) {
+      "use strict";
+      function createDiagramAtlasControls(jsgui) {
+        if (!jsgui) {
+          throw new Error("jsgui instance is required to build diagram atlas controls");
+        }
+        const StringControl = jsgui.String_Control;
+        class DiagramProgressControl extends jsgui.Control {
+          constructor(spec = {}) {
+            const normalized = {
+              ...spec,
+              tagName: "section",
+              __type_name: "diagram_progress"
+            };
+            super(normalized);
+            this.add_class("diagram-loading");
+            this.dom.attributes["data-role"] = "diagram-progress";
+            this._state = {
+              status: spec.status || "loading",
+              label: spec.label || "Preparing Diagram Atlas",
+              detail: spec.detail || "Collecting sources and metrics..."
+            };
+            if (!spec.el) {
+              this.compose();
+            }
+            this._syncStateAttributes();
+          }
+          compose() {
+            const pulse = new jsgui.div({ context: this.context, class: "diagram-loading__pulse" });
+            const title = new jsgui.h3({ context: this.context, class: "diagram-loading__title" });
+            title.add(new StringControl({ context: this.context, text: this._state.label }));
+            const detail = new jsgui.p({ context: this.context, class: "diagram-loading__detail" });
+            detail.add(new StringControl({ context: this.context, text: this._state.detail }));
+            const bar = new jsgui.div({ context: this.context, class: "diagram-loading__bar" });
+            const inner = new jsgui.div({ context: this.context, class: "diagram-loading__bar-inner" });
+            bar.add(inner);
+            this.add(pulse);
+            this.add(title);
+            this.add(detail);
+            this.add(bar);
+          }
+          setStatus(status, detail) {
+            if (status) {
+              this._state.status = status;
+            }
+            if (detail) {
+              this._state.detail = detail;
+            }
+            this._syncStateAttributes();
+          }
+          _syncStateAttributes() {
+            this.dom.attributes["data-state"] = this._state.status;
+          }
+        }
+        function clamp(value2, min, max) {
+          if (!Number.isFinite(value2)) return min;
+          return Math.max(min, Math.min(max, value2));
+        }
+        function formatBytes(bytes) {
+          if (!Number.isFinite(bytes) || bytes <= 0) {
+            return "0 B";
+          }
+          const units = ["B", "KB", "MB", "GB", "TB"];
+          const exponent = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+          const value2 = bytes / 1024 ** exponent;
+          const fixed = value2 >= 100 ? value2.toFixed(0) : value2 >= 10 ? value2.toFixed(1) : value2.toFixed(2);
+          return `${fixed} ${units[exponent]}`;
+        }
+        function formatNumber(value2, fallback = "\u2014") {
+          if (!Number.isFinite(value2)) {
+            return fallback;
+          }
+          return value2.toLocaleString("en-US");
+        }
+        function computeTileSize(metric, { min = 72, max = 220 } = {}) {
+          if (!Number.isFinite(metric) || metric <= 0) return min;
+          const scaled = Math.sqrt(metric);
+          return clamp(scaled * 1.4, min, max);
+        }
+        function resolveTileSize(spec) {
+          const options = spec.sizeScale || {};
+          if (Number.isFinite(spec.metricRatio)) {
+            const clampedRatio = clamp(spec.metricRatio, 0, 1);
+            const range = Math.max(0, (options.max || 220) - (options.min || 72));
+            return (options.min || 72) + Math.sqrt(clampedRatio) * range;
+          }
+          return computeTileSize(spec.metric || 0, options);
+        }
+        function summarizePath(value2, segments = 2) {
+          if (!value2 || typeof value2 !== "string") return value2 || "";
+          const normalized = value2.split("\\").join("/");
+          const parts = normalized.split("/");
+          if (parts.length <= segments) {
+            return normalized;
+          }
+          const tail = parts.slice(-segments).join("/");
+          return `.../${tail}`;
+        }
+        function createPopoverLabel(context2, { text = "", fullText = "", className = "diagram-label", clampLines = 1 } = {}) {
+          const classes = ["diagram-label"];
+          if (className && className !== "diagram-label") {
+            classes.push(className);
+          }
+          const label = new jsgui.div({ context: context2, class: classes.join(" ") });
+          if (Number.isFinite(clampLines) && clampLines > 1) {
+            label.add_class("diagram-label--multiline");
+            const lines = Math.min(Math.max(Math.floor(clampLines), 2), 4);
+            const style = label.dom.attributes.style || "";
+            label.dom.attributes.style = `${style}--diagram-label-lines:${lines};`;
+          }
+          const textClasses = [`${className}__text`, "diagram-label__text"].filter(Boolean).join(" ");
+          const content = new jsgui.span({ context: context2, class: textClasses });
+          content.add(new StringControl({ context: context2, text }));
+          label.add(content);
+          const normalizedFull = fullText || text;
+          if (normalizedFull && normalizedFull !== text) {
+            label.add_class("diagram-label--with-popover");
+            label.dom.attributes.tabindex = "0";
+            const popover = new jsgui.div({ context: context2, class: "diagram-popover" });
+            popover.add(new StringControl({ context: context2, text: normalizedFull }));
+            label.add(popover);
+          }
+          return label;
+        }
+        function createTile(context2, spec = {}) {
+          const tile = new jsgui.div({ context: context2, class: "diagram-tile" });
+          const variant = spec.variant || null;
+          if (variant === "db") {
+            tile.add_class("diagram-tile--db");
+          }
+          const styleParts = [];
+          if (variant !== "db") {
+            const size = resolveTileSize(spec);
+            styleParts.push(`width:${size}px`, `height:${size}px`);
+          }
+          if (Number.isFinite(spec.index)) {
+            styleParts.push(`--diagram-tile-index:${spec.index}`);
+          }
+          if (Number.isFinite(spec.hue)) {
+            styleParts.push(`--diagram-tile-hue:${spec.hue}`);
+          }
+          if (spec.tint) {
+            styleParts.push(`--diagram-tile-tint:${spec.tint}`);
+          }
+          if (styleParts.length) {
+            tile.dom.attributes.style = `${styleParts.join(";")};`;
+          }
+          if (Number.isFinite(spec.bytes)) {
+            tile.dom.attributes["data-bytes"] = String(spec.bytes);
+          }
+          if (Number.isFinite(spec.lines)) {
+            tile.dom.attributes["data-lines"] = String(spec.lines);
+          }
+          if (Number.isFinite(spec.functions)) {
+            tile.dom.attributes["data-functions"] = String(spec.functions);
+          }
+          if (spec.color) {
+            tile.dom.attributes["data-color"] = spec.color;
+          }
+          if (spec.category) {
+            tile.dom.attributes["data-category"] = spec.category;
+          }
+          if (spec.tone) {
+            tile.dom.attributes["data-tone"] = spec.tone;
+          }
+          if (spec.title) {
+            tile.dom.attributes.title = spec.title;
+          }
+          if (spec.badge) {
+            const badge = new jsgui.span({ context: context2, class: "diagram-tile__badge" });
+            badge.add(new StringControl({ context: context2, text: spec.badge }));
+            tile.add(badge);
+          }
+          const label = createPopoverLabel(context2, {
+            text: spec.label || "",
+            fullText: spec.fullLabel || spec.label || "",
+            className: "diagram-tile__label",
+            clampLines: spec.labelLines || 1
+          });
+          const value2 = new jsgui.div({ context: context2, class: "diagram-tile__value" });
+          value2.add(new StringControl({ context: context2, text: spec.value || "" }));
+          tile.add(label);
+          tile.add(value2);
+          if (spec.caption) {
+            const caption = new jsgui.div({ context: context2, class: "diagram-tile__caption" });
+            caption.add(new StringControl({ context: context2, text: spec.caption }));
+            tile.add(caption);
+          }
+          if (Array.isArray(spec.meta) && spec.meta.length) {
+            const metaWrap = new jsgui.div({ context: context2, class: "diagram-tile__meta" });
+            spec.meta.forEach((entry) => {
+              if (!entry || !entry.label) return;
+              const metaEntry = new jsgui.div({ context: context2, class: "diagram-tile__meta-item" });
+              const metaLabel = new jsgui.span({ context: context2, class: "diagram-tile__meta-label" });
+              metaLabel.add(new StringControl({ context: context2, text: entry.label }));
+              const metaValue = new jsgui.span({ context: context2, class: "diagram-tile__meta-value" });
+              metaValue.add(new StringControl({ context: context2, text: entry.value || "\u2014" }));
+              metaEntry.add(metaLabel);
+              metaEntry.add(metaValue);
+              metaWrap.add(metaEntry);
+            });
+            tile.add(metaWrap);
+          }
+          return tile;
+        }
+        function createSection(context2, heading, description) {
+          const section = new jsgui.Control({ context: context2, tagName: "section" });
+          section.add_class("diagram-section");
+          const title = new jsgui.h2({ context: context2, class: "diagram-section__title" });
+          title.add(new StringControl({ context: context2, text: heading }));
+          section.add(title);
+          if (description) {
+            const desc = new jsgui.p({ context: context2, class: "diagram-section__description" });
+            desc.add(new StringControl({ context: context2, text: description }));
+            section.add(desc);
+          }
+          return section;
+        }
+        function createGrid(context2) {
+          const grid = new jsgui.div({ context: context2, class: "diagram-grid" });
+          return grid;
+        }
+        function createLegend(context2, items) {
+          if (!Array.isArray(items) || !items.length) return null;
+          const legend = new jsgui.div({ context: context2, class: "diagram-legend" });
+          items.forEach((item2) => {
+            if (!item2 || !item2.label) return;
+            const entry = new jsgui.div({ context: context2, class: "diagram-legend__item" });
+            const swatch = new jsgui.span({ context: context2, class: "diagram-legend__swatch" });
+            if (item2.color) {
+              swatch.dom.attributes.style = `background:${item2.color};`;
+            }
+            const text = new jsgui.span({ context: context2, class: "diagram-legend__label" });
+            text.add(new StringControl({ context: context2, text: item2.label }));
+            entry.add(swatch);
+            entry.add(text);
+            legend.add(entry);
+          });
+          return legend;
+        }
+        function createSummaryStat(context2, label, value2, detail) {
+          const stat = new jsgui.div({ context: context2, class: "diagram-code-summary__item" });
+          const labelNode = new jsgui.span({ context: context2, class: "diagram-code-summary__label" });
+          labelNode.add(new StringControl({ context: context2, text: label }));
+          const valueNode = new jsgui.span({ context: context2, class: "diagram-code-summary__value" });
+          valueNode.add(new StringControl({ context: context2, text: value2 }));
+          stat.add(labelNode);
+          stat.add(valueNode);
+          if (detail) {
+            const detailNode = new jsgui.span({ context: context2, class: "diagram-code-summary__detail" });
+            detailNode.add(new StringControl({ context: context2, text: detail }));
+            stat.add(detailNode);
+          }
+          return stat;
+        }
+        function buildCodeSummary(context2, summary = {}) {
+          const stats = [];
+          if (summary && Number.isFinite(summary.totalBytes)) {
+            const rawBytes = summary.totalBytes;
+            stats.push({
+              label: "Total bytes",
+              value: formatBytes(rawBytes),
+              detail: `${formatNumber(rawBytes)} bytes raw`
+            });
+          }
+          if (summary && Number.isFinite(summary.totalLines)) {
+            stats.push({
+              label: "Lines",
+              value: formatNumber(summary.totalLines)
+            });
+          }
+          if (summary && Number.isFinite(summary.fileCount)) {
+            stats.push({
+              label: "Files",
+              value: formatNumber(summary.fileCount)
+            });
+          }
+          if (!stats.length) {
+            return null;
+          }
+          const block = new jsgui.div({ context: context2, class: "diagram-code-summary" });
+          stats.forEach((entry) => {
+            block.add(createSummaryStat(context2, entry.label, entry.value, entry.detail));
+          });
+          return block;
+        }
+        function resolveEntryMetric(entry) {
+          if (!entry || typeof entry !== "object") return 0;
+          if (Number.isFinite(entry.bytes) && entry.bytes > 0) {
+            return entry.bytes;
+          }
+          if (Number.isFinite(entry.lines) && entry.lines > 0) {
+            return entry.lines;
+          }
+          return 0;
+        }
+        function createDirectoryMetric(context2, label, value2) {
+          const metric = new jsgui.span({ context: context2, class: "diagram-code-directory__metric" });
+          const labelNode = new jsgui.span({ context: context2, class: "diagram-code-directory__metric-label" });
+          labelNode.add(new StringControl({ context: context2, text: label }));
+          const valueNode = new jsgui.span({ context: context2, class: "diagram-code-directory__metric-value" });
+          valueNode.add(new StringControl({ context: context2, text: value2 }));
+          metric.add(labelNode);
+          metric.add(valueNode);
+          return metric;
+        }
+        function createDirectoryRow(context2, directory, maxMetric) {
+          const row = new jsgui.div({ context: context2, class: "diagram-code-directory" });
+          if (Number.isFinite(directory.bytes)) {
+            row.dom.attributes["data-bytes"] = String(directory.bytes);
+          }
+          if (Number.isFinite(directory.files)) {
+            row.dom.attributes["data-files"] = String(directory.files);
+          }
+          const label = createPopoverLabel(context2, {
+            text: summarizePath(directory.directory, 3) || directory.directory || "(root)",
+            fullText: directory.directory,
+            className: "diagram-code-directory__label"
+          });
+          row.add(label);
+          const metrics = new jsgui.div({ context: context2, class: "diagram-code-directory__metrics" });
+          const bytesText = Number.isFinite(directory.bytes) ? formatBytes(directory.bytes) : "\u2014";
+          const linesText = formatNumber(directory.lines);
+          const filesText = formatNumber(directory.files);
+          metrics.add(createDirectoryMetric(context2, "Bytes", bytesText));
+          metrics.add(createDirectoryMetric(context2, "Lines", linesText));
+          metrics.add(createDirectoryMetric(context2, "Files", filesText));
+          row.add(metrics);
+          const bar = new jsgui.div({ context: context2, class: "diagram-code-directory__bar" });
+          const fill = new jsgui.div({ context: context2, class: "diagram-code-directory__bar-fill" });
+          const metricValue = resolveEntryMetric(directory);
+          const ratio = maxMetric ? clamp(metricValue / maxMetric, 0.04, 1) : 0;
+          fill.dom.attributes.style = `width:${(ratio * 100).toFixed(2)}%;`;
+          bar.add(fill);
+          row.add(bar);
+          return row;
+        }
+        function buildDirectoryList(context2, directories) {
+          if (!Array.isArray(directories) || !directories.length) {
+            return null;
+          }
+          const topDirectories = directories.slice(0, 8);
+          const maxMetric = topDirectories.reduce((max, entry) => Math.max(max, resolveEntryMetric(entry)), 0) || 1;
+          const wrapper = new jsgui.div({ context: context2, class: "diagram-code-directories" });
+          const heading = new jsgui.h3({ context: context2, class: "diagram-section__subheading" });
+          heading.add(new StringControl({ context: context2, text: "Top directories" }));
+          wrapper.add(heading);
+          const list = new jsgui.div({ context: context2, class: "diagram-code-directories__list" });
+          topDirectories.forEach((entry) => {
+            list.add(createDirectoryRow(context2, entry, maxMetric));
+          });
+          wrapper.add(list);
+          return wrapper;
+        }
+        function buildCodeSection(context2, codeData) {
+          const section = createSection(context2, "Codebase Map", "Top files sized by byte count (fs.stat + js-scan --build-index).");
+          section.add_class("diagram-section--code");
+          const summary = buildCodeSummary(context2, codeData && codeData.summary);
+          const grid = createGrid(context2);
+          const files = Array.isArray(codeData && codeData.topFiles) ? codeData.topFiles.slice(0, 30) : [];
+          const maxMetric = files.reduce((max, file) => Math.max(max, resolveEntryMetric(file)), 0) || 1;
+          const tonePalette = ["teal", "violet", "amber", "berry", "cyan"];
+          files.forEach((file, index) => {
+            const label = file.file;
+            const lines = file.lines || 0;
+            const bytes = file.bytes || 0;
+            const shortLabel = summarizePath(label, 3);
+            const tileTone = tonePalette[index % tonePalette.length];
+            const hue = 210 + index * 9;
+            const tile = createTile(context2, {
+              label: shortLabel,
+              fullLabel: label,
+              value: formatBytes(bytes),
+              metricRatio: clamp(resolveEntryMetric(file) / maxMetric, 0, 1),
+              sizeScale: { min: 80, max: 260 },
+              caption: file.entryPoint ? "entry" : null,
+              title: `${label}
+${formatBytes(bytes)}
+${lines} lines
+${file.functions || 0} functions`,
+              bytes,
+              lines,
+              functions: file.functions || 0,
+              index,
+              category: file.entryPoint ? "entry" : "file",
+              tone: tileTone,
+              hue,
+              badge: file.entryPoint ? "Entry" : null,
+              labelLines: 2,
+              meta: [
+                { label: "Lines", value: lines.toLocaleString("en-US") },
+                { label: "Funcs", value: (file.functions || 0).toLocaleString("en-US") }
+              ]
+            });
+            grid.add(tile);
+          });
+          const layout = new jsgui.div({ context: context2, class: "diagram-code-layout" });
+          const sidebar = new jsgui.div({ context: context2, class: "diagram-code-sidebar" });
+          let sidebarHasContent = false;
+          if (summary) {
+            sidebar.add(summary);
+            sidebarHasContent = true;
+          }
+          const directories = buildDirectoryList(context2, codeData && codeData.directories);
+          if (directories) {
+            sidebar.add(directories);
+            sidebarHasContent = true;
+          }
+          if (sidebarHasContent) {
+            layout.add(sidebar);
+          }
+          const gridWrap = new jsgui.div({ context: context2, class: "diagram-code-grid" });
+          gridWrap.add(grid);
+          layout.add(gridWrap);
+          section.add(layout);
+          return section;
+        }
+        function buildDbSection(context2, dbData) {
+          const section = createSection(context2, "Database Structure", "Tables parsed from migration SQL files (column count as area).");
+          section.add_class("diagram-section--db");
+          const grid = createGrid(context2);
+          const tables = Array.isArray(dbData && dbData.tables) ? dbData.tables.slice(0, 24) : [];
+          const maxColumns = tables.reduce((max, table2) => Math.max(max, table2.columnCount || 0), 0) || 1;
+          tables.forEach((table2, index) => {
+            const foreignKeyCount = Array.isArray(table2.foreignKeys) ? table2.foreignKeys.length : 0;
+            const tile = createTile(context2, {
+              label: table2.name,
+              value: `${table2.columnCount || 0} columns`,
+              metric: (table2.columnCount || 0) / maxColumns * 400 + 20,
+              caption: foreignKeyCount ? `${foreignKeyCount} links` : null,
+              title: `${table2.name}
+Columns: ${(table2.columns || []).join(", ")}`,
+              category: "table",
+              tone: foreignKeyCount ? "violet" : "teal",
+              hue: 160 + index * 11,
+              badge: foreignKeyCount ? `${foreignKeyCount} FK` : null,
+              variant: "db",
+              meta: [
+                { label: "Columns", value: formatNumber(table2.columnCount) },
+                { label: "FK", value: formatNumber(foreignKeyCount) }
+              ]
+            });
+            grid.add(tile);
+          });
+          section.add(grid);
+          return section;
+        }
+        function buildFeatureSection(context2, featureData) {
+          const section = createSection(context2, "Feature Footprints", "Each feature aggregates multiple files plus intra-file segments (js-scan --deps-of + js-edit --list-functions).");
+          section.add_class("diagram-section--features");
+          const features = Array.isArray(featureData && featureData.features) ? featureData.features : [];
+          const legend = features.length ? createLegend(context2, features.map((feature) => ({ label: feature.name, color: feature.color }))) : null;
+          if (legend) {
+            section.add(legend);
+          }
+          if (!features.length) {
+            return section;
+          }
+          const featureGrid = new jsgui.div({ context: context2, class: "diagram-feature-grid" });
+          features.forEach((feature, featureIndex) => {
+            const article = new jsgui.Control({ context: context2, tagName: "article" });
+            article.add_class("diagram-feature");
+            if (feature.color) {
+              article.dom.attributes["data-color"] = feature.color;
+            }
+            article.dom.attributes["data-feature-index"] = String(featureIndex);
+            const totalLines = Number(feature.totalLines) || 0;
+            const filesForFeature = Array.isArray(feature.files) ? feature.files : [];
+            const header = new jsgui.div({ context: context2, class: "diagram-feature__header" });
+            const title = new jsgui.h3({ context: context2, class: "diagram-feature__title" });
+            title.add(new StringControl({ context: context2, text: feature.name }));
+            header.add(title);
+            const stats = new jsgui.div({ context: context2, class: "diagram-feature__stats" });
+            const statEntries = [
+              { label: "Files", value: filesForFeature.length.toLocaleString("en-US") },
+              { label: "Lines", value: totalLines.toLocaleString("en-US") }
+            ];
+            statEntries.forEach((entry) => {
+              const stat = new jsgui.div({ context: context2, class: "diagram-feature__stat" });
+              const statLabel = new jsgui.span({ context: context2, class: "diagram-feature__stat-label" });
+              statLabel.add(new StringControl({ context: context2, text: entry.label }));
+              const statValue = new jsgui.span({ context: context2, class: "diagram-feature__stat-value" });
+              statValue.add(new StringControl({ context: context2, text: entry.value }));
+              stat.add(statLabel);
+              stat.add(statValue);
+              stats.add(stat);
+            });
+            header.add(stats);
+            if (feature.tags && feature.tags.length) {
+              const tags = new jsgui.div({ context: context2, class: "diagram-feature__tags" });
+              feature.tags.forEach((tag) => {
+                const pill = new jsgui.span({ context: context2, class: "diagram-feature__tag" });
+                pill.add(new StringControl({ context: context2, text: tag }));
+                tags.add(pill);
+              });
+              header.add(tags);
+            }
+            if (feature.description) {
+              const desc = new jsgui.p({ context: context2, class: "diagram-feature__description" });
+              desc.add(new StringControl({ context: context2, text: feature.description }));
+              header.add(desc);
+            }
+            article.add(header);
+            const fileList = new jsgui.div({ context: context2, class: "diagram-feature__files" });
+            const files = filesForFeature.slice(0, 10);
+            const maxLines = files.reduce((max, file) => Math.max(max, file.lines || 1), 1);
+            files.forEach((file) => {
+              const row = new jsgui.div({ context: context2, class: "diagram-feature__file-row" });
+              const widthPercent = clamp((file.lines || 0) / maxLines, 0.05, 1) * 100;
+              const bar = new jsgui.div({ context: context2, class: "diagram-feature__file-bar" });
+              bar.dom.attributes.style = `--diagram-feature-width:${widthPercent}%;--diagram-feature-color:${feature.color || "#5b7c99"};`;
+              const label = createPopoverLabel(context2, {
+                text: summarizePath(file.file, 3),
+                fullText: file.file,
+                className: "diagram-feature__file-label",
+                clampLines: 2
+              });
+              let via = null;
+              if (file.via) {
+                via = new jsgui.span({ context: context2, class: "diagram-feature__file-meta" });
+                via.add(new StringControl({ context: context2, text: file.via }));
+              }
+              row.add(bar);
+              row.add(label);
+              if (via) {
+                row.add(via);
+              }
+              const segmentsWrap = new jsgui.div({ context: context2, class: "diagram-feature__segments" });
+              const segmentEntry = (feature.segments || []).find((segment) => segment.file === file.file);
+              if (segmentEntry && Array.isArray(segmentEntry.functions) && segmentEntry.functions.length) {
+                const maxBytes = segmentEntry.functions.reduce((max, fn) => Math.max(max, fn.byteLength || 1), 1);
+                segmentEntry.functions.forEach((fn) => {
+                  const fnSpan = new jsgui.span({ context: context2, class: "diagram-feature__segment" });
+                  const pct = clamp((fn.byteLength || 0) / maxBytes, 0.05, 1) * 100;
+                  fnSpan.dom.attributes.style = `width:${pct}%;`;
+                  fnSpan.dom.attributes.title = `${fn.name} (${fn.byteLength} bytes @ line ${fn.line})`;
+                  fnSpan.add(new StringControl({ context: context2, text: fn.name }));
+                  segmentsWrap.add(fnSpan);
+                });
+              }
+              row.add(segmentsWrap);
+              fileList.add(row);
+            });
+            article.add(fileList);
+            featureGrid.add(article);
+          });
+          section.add(featureGrid);
+          return section;
+        }
+        function buildDiagramAtlasStyles() {
+          return `
+:root {
+  --diagram-bg: #05060d;
+  --diagram-panel: #101628;
+  --diagram-text: #f4f7ff;
+  --diagram-muted: #9ba5c4;
+  --diagram-accent: #4cc9f0;
+  --diagram-accent-strong: #ff7b9c;
+  --diagram-accent-amber: #f6c177;
+  --diagram-accent-berry: #c77dff;
+  --diagram-font-display: "Spectral", "Georgia", serif;
+  --diagram-font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --diagram-font-mono: "IBM Plex Mono", "Consolas", monospace;
+}
+body {
+  font-family: var(--diagram-font-body);
+  background: radial-gradient(circle at 20% 20%, rgba(76, 201, 240, 0.08), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(199, 125, 255, 0.08), transparent 40%),
+    var(--diagram-bg);
+  color: var(--diagram-text);
+  margin: 0;
+  padding: 0;
+}
+.diagram-shell {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.diagram-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(76,201,240,0.08), rgba(199,125,255,0.06) 40%, transparent),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 40px);
+  pointer-events: none;
+  z-index: 0;
+}
+.diagram-shell > * {
+  position: relative;
+  z-index: 1;
+}
+.diagram-shell__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.diagram-shell__placeholder {
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,0.2);
+  text-align: center;
+  color: var(--diagram-muted);
+}
+.diagram-shell__header {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(10, 14, 32, 0.7);
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 20px 40px rgba(2,8,23,0.6);
+  position: relative;
+  overflow: hidden;
+}
+.diagram-hero {
+  isolation: isolate;
+}
+.diagram-shell__header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 10% 10%, rgba(76,201,240,0.25), transparent 55%),
+    radial-gradient(circle at 80% 0%, rgba(199,125,255,0.25), transparent 60%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.diagram-shell__header > * {
+  position: relative;
+  z-index: 1;
+}
+.diagram-shell__subtitle {
+  color: rgba(244,247,255,0.72);
+  margin: 0;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.diagram-hero__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.diagram-hero__heading h1 {
+  margin: 0;
+  font-size: 2.2rem;
+}
+.diagram-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.diagram-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.diagram-toolbar__status,
+.diagram-toolbar__actions,
+.diagram-toolbar__progress {
+  background: rgba(8, 12, 24, 0.8);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+.diagram-toolbar__status-title {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  color: var(--diagram-muted);
+}
+.diagram-toolbar__status-value {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.diagram-toolbar__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+.diagram-toolbar__hint {
+  font-size: 0.78rem;
+  color: var(--diagram-muted);
+}
+.diagram-toolbar__progress {
+  display: flex;
+  align-items: center;
+}
+.diagram-toolbar__progress .diagram-loading {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+.diagram-section {
+  background: var(--diagram-panel);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  animation: diagram-section-reveal 0.8s ease both;
+}
+.diagram-section--code {
+  background: linear-gradient(135deg, rgba(76,201,240,0.1), rgba(5,6,13,0.95));
+}
+.diagram-section--db {
+  background: linear-gradient(135deg, rgba(246,193,119,0.12), rgba(5,6,13,0.95));
+  --diagram-db-min-width: 420px;
+}
+.diagram-section--db .diagram-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--diagram-db-min-width, 420px), 1fr));
+  align-items: stretch;
+}
+.diagram-tile--db {
+  width: auto !important;
+  height: auto !important;
+  min-height: 140px;
+  padding: 18px 24px;
+  gap: 12px;
+}
+.diagram-tile--db .diagram-tile__label__text {
+  white-space: nowrap;
+}
+.diagram-tile--db .diagram-tile__meta {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.diagram-section--features {
+  background: linear-gradient(135deg, rgba(199,125,255,0.12), rgba(5,6,13,0.95));
+}
+.diagram-section__title {
+  margin: 0 0 8px;
+  font-family: var(--diagram-font-display);
+}
+.diagram-section__description {
+  margin: 0 0 16px;
+  color: var(--diagram-muted);
+}
+.diagram-section__subheading {
+  margin: 24px 0 12px;
+  font-size: 0.85rem;
+  color: var(--diagram-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.diagram-code-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.diagram-code-summary__item {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 160px;
+  flex: 1 1 160px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  animation: diagram-chip-reveal 0.7s ease both;
+}
+.diagram-code-summary__label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--diagram-muted);
+}
+.diagram-code-summary__value {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--diagram-text);
+  font-family: var(--diagram-font-display);
+}
+.diagram-code-summary__detail {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--diagram-muted);
+}
+.diagram-code-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.diagram-code-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.diagram-code-grid {
+  position: relative;
+}
+.diagram-code-grid::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 20px;
+  border: 1px dashed rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+.diagram-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.diagram-tile {
+  --diagram-tile-hue: 210;
+  --diagram-tile-tint: 62%;
+  border-radius: 16px;
+  background: linear-gradient(135deg, hsla(var(--diagram-tile-hue), 80%, var(--diagram-tile-tint), 0.2), rgba(255,255,255,0.02));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 24px rgba(5,6,13,0.45);
+  position: relative;
+  overflow: hidden;
+  animation: diagram-tile-reveal 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--diagram-tile-index, 0) * 40ms);
+}
+.diagram-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15), transparent 55%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.diagram-tile > * {
+  position: relative;
+  z-index: 1;
+}
+.diagram-tile[data-tone="violet"] {
+  --diagram-tile-hue: 278;
+}
+.diagram-tile[data-tone="amber"] {
+  --diagram-tile-hue: 40;
+}
+.diagram-tile[data-tone="berry"] {
+  --diagram-tile-hue: 320;
+}
+.diagram-tile[data-tone="cyan"] {
+  --diagram-tile-hue: 195;
+}
+.diagram-tile__badge {
+  align-self: flex-start;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--diagram-text);
+}
+.diagram-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.diagram-label__text {
+  display: inline-flex;
+  max-width: 100%;
+}
+.diagram-label--multiline .diagram-label__text {
+  display: -webkit-box;
+  -webkit-line-clamp: var(--diagram-label-lines, 2);
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.diagram-tile__label {
+  font-size: 0.85rem;
+  color: rgba(235, 245, 255, 0.92);
+  display: block;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.diagram-tile__value {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.diagram-tile__caption {
+  font-size: 0.75rem;
+  color: var(--diagram-muted);
+}
+.diagram-label--with-popover {
+  position: relative;
+  cursor: pointer;
+  outline: none;
+}
+.diagram-label--with-popover:focus-visible {
+  outline: 1px dashed rgba(59,160,255,0.8);
+  outline-offset: 2px;
+}
+.diagram-popover {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  transform: translateY(6px);
+  background: rgba(2, 8, 23, 0.95);
+  color: var(--diagram-text);
+  padding: 6px 8px;
+  border-radius: 6px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 4;
+}
+.diagram-label--with-popover:hover .diagram-popover,
+.diagram-label--with-popover:focus .diagram-popover {
+  opacity: 1;
+}
+.diagram-tile__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--diagram-muted);
+}
+.diagram-tile__meta-item {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+.diagram-tile__meta-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(244,247,255,0.68);
+  font-weight: 600;
+}
+.diagram-tile__meta-value {
+  color: var(--diagram-text);
+}
+.diagram-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.diagram-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+.diagram-legend__swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.4);
+}
+.diagram-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.diagram-feature {
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.02);
+  padding: 18px;
+  box-shadow: 0 14px 30px rgba(4,6,12,0.6);
+  animation: diagram-section-reveal 0.6s ease both;
+}
+.diagram-feature__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.diagram-feature__title {
+  margin: 0;
+  font-size: 1.28rem;
+  font-family: var(--diagram-font-display);
+}
+.diagram-feature__stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.diagram-feature__stat-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244,247,255,0.65);
+}
+.diagram-feature__stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--diagram-font-body);
+}
+.diagram-feature__stat {
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 90px;
+}
+.diagram-feature__tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.diagram-feature__tag {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+.diagram-feature__description {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 4px 0 0;
+  color: rgba(244,247,255,0.9);
+}
+.diagram-feature__files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.diagram-feature__file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 140px);
+  grid-template-areas:
+    "bar bar"
+    "label meta"
+    "segments segments";
+  gap: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.diagram-feature__file-bar {
+  grid-area: bar;
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.diagram-feature__file-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--diagram-feature-width, 50%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.15), var(--diagram-feature-color, #5b7c99));
+  border-radius: inherit;
+}
+.diagram-feature__file-label {
+  font-size: 0.9rem;
+  color: rgba(235, 245, 255, 0.9);
+  grid-area: label;
+  line-height: 1.4;
+  font-weight: 600;
+  white-space: normal;
+}
+.diagram-feature__file-label .diagram-label__text {
+  display: inline;
+  white-space: normal;
+}
+.diagram-feature__file-meta {
+  font-size: 0.72rem;
+  color: var(--diagram-muted);
+  grid-area: meta;
+  justify-self: end;
+  letter-spacing: 0.04em;
+}
+.diagram-feature__segments {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  grid-area: segments;
+}
+.diagram-feature__segment {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  white-space: nowrap;
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diagram-code-directories {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.diagram-code-directories__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.diagram-code-directory {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+  backdrop-filter: blur(6px);
+  animation: diagram-chip-reveal 0.8s ease both;
+}
+.diagram-code-directory__label {
+  font-size: 0.9rem;
+  color: rgba(235,245,255,0.95);
+}
+.diagram-code-directory__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 10px;
+  font-size: 0.75rem;
+  color: var(--diagram-muted);
+}
+.diagram-code-directory__metric {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+.diagram-code-directory__metric-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  color: rgba(244,247,255,0.65);
+  font-weight: 600;
+}
+.diagram-code-directory__metric-value {
+  color: var(--diagram-text);
+}
+.diagram-code-directory__bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.diagram-code-directory__bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(59,160,255,0.2), rgba(59,160,255,0.9));
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.diagram-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+.diagram-loading[data-state="error"] {
+  border-color: rgba(255,120,120,0.5);
+}
+.diagram-loading__pulse {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,160,255,0.9) 0%, rgba(59,160,255,0) 70%);
+  box-shadow: 0 0 40px rgba(59,160,255,0.5);
+  animation: diagram-pulse 1.6s ease-in-out infinite;
+}
+.diagram-loading__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.diagram-loading__detail {
+  margin: 0;
+  color: var(--diagram-muted);
+}
+.diagram-loading__bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.diagram-loading__bar-inner {
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(59,160,255,0.1), rgba(59,160,255,0.9));
+  border-radius: inherit;
+  animation: diagram-bar 1.2s ease-in-out infinite;
+}
+.diagram-loading[data-state="complete"] .diagram-loading__bar-inner {
+  width: 100%;
+  animation: none;
+  background: linear-gradient(90deg, rgba(59,160,255,0.3), rgba(59,160,255,1));
+}
+.diagram-loading[data-state="error"] .diagram-loading__bar-inner {
+  width: 100%;
+  animation: none;
+  background: linear-gradient(90deg, rgba(255,120,120,0.2), rgba(255,120,120,0.9));
+}
+@keyframes diagram-pulse {
+  0% { transform: scale(0.9); opacity: 0.75; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.75; }
+}
+@keyframes diagram-bar {
+  0% { transform: translateX(-40%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(110%); }
+}
+.diagram-diagnostics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+.diagram-diagnostics__item {
+  position: relative;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+  min-height: 90px;
+  overflow: hidden;
+}
+.diagram-diagnostics__item::before {
+  content: attr(data-icon);
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 1.4rem;
+  opacity: 0.15;
+}
+.diagram-diagnostics__label {
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: rgba(244,247,255,0.75);
+  font-family: var(--diagram-font-body);
+  font-weight: 600;
+}
+.diagram-diagnostics__value {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.3;
+  font-family: var(--diagram-font-display);
+}
+.diagram-diagnostics__detail {
+  font-size: 0.75rem;
+  color: var(--diagram-muted);
+  letter-spacing: 0.04em;
+}
+.diagram-button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--diagram-accent);
+  color: #020817;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 10px 25px rgba(76,201,240,0.3);
+}
+.diagram-button[data-loading="1"],
+.diagram-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (min-width: 1100px) {
+  .diagram-shell__header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .diagram-code-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .diagram-code-sidebar {
+    flex: 0 0 320px;
+    position: sticky;
+    top: 32px;
+  }
+  .diagram-code-grid {
+    flex: 1;
+  }
+}
+
+@keyframes diagram-section-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes diagram-chip-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes diagram-tile-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+  `;
+        }
+        return {
+          DiagramProgressControl,
+          buildDiagramAtlasStyles,
+          buildCodeSection,
+          buildDbSection,
+          buildFeatureSection
+        };
+      }
+      module.exports = {
+        createDiagramAtlasControls
+      };
+    }
+  });
+
+  // src/ui/client/diagramAtlas.js
+  var require_diagramAtlas = __commonJS({
+    "src/ui/client/diagramAtlas.js"(exports, module) {
+      "use strict";
+      var { createDiagramAtlasControls: defaultDiagramAtlasFactory } = require_diagramAtlasControlsFactory();
+      function formatNumber(value2, fallback = "\u2014") {
+        if (!Number.isFinite(value2)) {
+          return fallback;
+        }
+        return value2.toLocaleString("en-US");
+      }
+      function formatBytes(bytes, fallback = "\u2014") {
+        if (!Number.isFinite(bytes) || bytes <= 0) {
+          return fallback;
+        }
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        const exponent = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+        const value2 = bytes / 1024 ** exponent;
+        const fixed = value2 >= 100 ? value2.toFixed(0) : value2 >= 10 ? value2.toFixed(1) : value2.toFixed(2);
+        return `${fixed} ${units[exponent]}`;
+      }
+      function formatTimestamp(value2) {
+        if (!value2) return "\u2014";
+        const parsed = new Date(value2);
+        if (Number.isNaN(parsed.getTime())) {
+          return value2;
+        }
+        return parsed.toLocaleString();
+      }
+      function setNodeText(node, text) {
+        if (!node) return;
+        node.textContent = text == null ? "" : String(text);
+      }
+      function createElement(doc, tag, className, text) {
+        const el = doc.createElement(tag);
+        if (className) {
+          el.className = className;
+        }
+        if (text != null) {
+          el.textContent = text;
+        }
+        return el;
+      }
+      function collectDiagnosticsMap(shell) {
+        const diagnostics = {};
+        shell.querySelectorAll("[data-metric]").forEach((node) => {
+          const metric = node.getAttribute("data-metric");
+          if (!metric) return;
+          diagnostics[metric] = {
+            container: node,
+            value: node.querySelector(".diagram-diagnostics__value") || node
+          };
+        });
+        const toolbar = {};
+        shell.querySelectorAll("[data-toolbar-metric]").forEach((node) => {
+          const metric = node.getAttribute("data-toolbar-metric");
+          if (!metric) return;
+          toolbar[metric] = node;
+        });
+        return { diagnostics, toolbar };
+      }
+      function createDiagramAtlasBootstrap2(options = {}) {
+        const {
+          jsguiClient: jsguiClient2,
+          createDiagramAtlasControls = defaultDiagramAtlasFactory,
+          registerControls
+        } = options;
+        if (!jsguiClient2) {
+          throw new Error("createDiagramAtlasBootstrap requires a jsguiClient instance");
+        }
+        const atlasControlsFactory = typeof createDiagramAtlasControls === "function" ? createDiagramAtlasControls : defaultDiagramAtlasFactory;
+        const diagramAtlasSharedControls = atlasControlsFactory(jsguiClient2);
+        const {
+          DiagramProgressControl,
+          buildCodeSection,
+          buildDbSection,
+          buildFeatureSection
+        } = diagramAtlasSharedControls;
+        let diagramAtlasContext = null;
+        const DIAGRAM_STATUS_POLL_MS = 1500;
+        function getDiagramAtlasContext() {
+          if (typeof document === "undefined") {
+            return null;
+          }
+          if (diagramAtlasContext && diagramAtlasContext.document === document) {
+            return diagramAtlasContext;
+          }
+          if (typeof jsguiClient2.Client_Page_Context === "function") {
+            diagramAtlasContext = new jsguiClient2.Client_Page_Context({ document });
+            if (typeof registerControls === "function") {
+              registerControls(diagramAtlasContext);
+            }
+          } else {
+            diagramAtlasContext = null;
+          }
+          return diagramAtlasContext;
+        }
+        function renderControlToFragment(control) {
+          if (!control || typeof document === "undefined") {
+            return null;
+          }
+          const html = typeof control.all_html_render === "function" ? control.all_html_render() : "";
+          if (!html) {
+            return null;
+          }
+          const template = document.createElement("template");
+          template.innerHTML = html;
+          return template.content;
+        }
+        function renderAtlasSections(target, payload) {
+          if (!target) return;
+          while (target.firstChild) {
+            target.removeChild(target.firstChild);
+          }
+          const context2 = getDiagramAtlasContext();
+          if (!context2) {
+            target.appendChild(createElement(document, "div", "diagram-shell__placeholder", "Diagram context unavailable."));
+            return;
+          }
+          const sections = [];
+          if (payload && payload.code) {
+            sections.push(buildCodeSection(context2, payload.code));
+          }
+          if (payload && payload.db) {
+            sections.push(buildDbSection(context2, payload.db));
+          }
+          if (payload && payload.features) {
+            sections.push(buildFeatureSection(context2, payload.features));
+          }
+          const fragment = document.createDocumentFragment();
+          sections.forEach((sectionControl) => {
+            const rendered = renderControlToFragment(sectionControl);
+            if (rendered) {
+              fragment.appendChild(rendered);
+            }
+          });
+          if (fragment.childNodes.length) {
+            target.appendChild(fragment);
+          } else {
+            target.appendChild(createElement(document, "div", "diagram-shell__placeholder", "Diagram Atlas will populate once data loads."));
+          }
+        }
+        function updateDiagnostics(nodes, payload) {
+          if (!nodes) return;
+          const diagnosticEntries = nodes.diagnostics;
+          const codeSummary = payload && payload.code && payload.code.summary ? payload.code.summary : {};
+          const topFiles = payload && payload.code && Array.isArray(payload.code.topFiles) ? payload.code.topFiles : [];
+          const largestFile = topFiles.length ? topFiles[0] : null;
+          const stats = {
+            generatedAt: {
+              text: formatTimestamp(payload && payload.generatedAt)
+            },
+            codeFiles: {
+              text: formatNumber(codeSummary.fileCount)
+            },
+            codeBytes: {
+              text: formatBytes(codeSummary.totalBytes),
+              tooltip: Number.isFinite(codeSummary.totalBytes) ? `${formatNumber(codeSummary.totalBytes)} bytes` : null
+            },
+            largestFile: largestFile ? { text: formatBytes(largestFile.bytes), tooltip: largestFile.file } : { text: "\u2014" },
+            dbTables: {
+              text: formatNumber(payload && payload.db && payload.db.totalTables)
+            },
+            features: {
+              text: formatNumber(payload && payload.features && payload.features.featureCount)
+            }
+          };
+          if (diagnosticEntries) {
+            Object.keys(stats).forEach((key2) => {
+              if (!Object.prototype.hasOwnProperty.call(diagnosticEntries, key2)) return;
+              const entry = diagnosticEntries[key2];
+              if (!entry) return;
+              const valueNode = entry.value || entry;
+              const details = stats[key2] || {};
+              setNodeText(valueNode, details.text == null ? "\u2014" : String(details.text));
+              if (details.tooltip) {
+                entry.container.setAttribute("title", details.tooltip);
+              } else {
+                entry.container.removeAttribute("title");
+              }
+            });
+          }
+          if (nodes.toolbar) {
+            Object.keys(nodes.toolbar).forEach((metric) => {
+              if (!Object.prototype.hasOwnProperty.call(stats, metric)) return;
+              const target = nodes.toolbar[metric];
+              if (!target) return;
+              const details = stats[metric] || {};
+              setNodeText(target, details.text == null ? "\u2014" : String(details.text));
+            });
+          }
+        }
+        function resolveProgressControl(progressEl) {
+          if (!progressEl || typeof DiagramProgressControl !== "function") {
+            return null;
+          }
+          if (progressEl.__diagramProgressControl) {
+            return progressEl.__diagramProgressControl;
+          }
+          const context2 = getDiagramAtlasContext();
+          if (!context2) {
+            return null;
+          }
+          try {
+            const control = new DiagramProgressControl({ context: context2, el: progressEl });
+            control.activate(progressEl);
+            progressEl.__diagramProgressControl = control;
+            return control;
+          } catch (error2) {
+            if (typeof console !== "undefined" && console.warn) {
+              console.warn("[copilot] unable to bind diagram progress control", error2);
+            }
+            return null;
+          }
+        }
+        function setProgressState(progressEl, status, label, detail) {
+          if (!progressEl) return;
+          const progressControl = resolveProgressControl(progressEl);
+          if (progressControl && typeof progressControl.setStatus === "function") {
+            const currentState = progressControl._state || {};
+            progressControl.setStatus(status || currentState.status, detail || currentState.detail);
+          }
+          if (status) {
+            progressEl.setAttribute("data-state", status);
+          }
+          if (label) {
+            const titleNode = progressEl.querySelector(".diagram-loading__title");
+            setNodeText(titleNode, label);
+          }
+          if (detail) {
+            const detailNode = progressEl.querySelector(".diagram-loading__detail");
+            setNodeText(detailNode, detail);
+          }
+        }
+        function renderAtlasError(target, message) {
+          if (!target) return;
+          const errorNode = createElement(document, "div", "diagram-shell__placeholder", message || "Failed to load diagram atlas data.");
+          target.innerHTML = "";
+          target.appendChild(errorNode);
+        }
+        function setRefreshButtonState(button, loading) {
+          if (!button) return;
+          if (loading) {
+            button.dataset.loading = "1";
+            button.setAttribute("disabled", "disabled");
+          } else {
+            delete button.dataset.loading;
+            button.removeAttribute("disabled");
+          }
+        }
+        function stopDiagramStatusWatcher(nodes) {
+          if (!nodes || typeof nodes.statusWatcherStop !== "function") {
+            return;
+          }
+          try {
+            nodes.statusWatcherStop();
+          } finally {
+            nodes.statusWatcherStop = null;
+          }
+        }
+        function handleDiagramStatus(status, nodes) {
+          if (!status || !nodes) {
+            return;
+          }
+          if (status.state === "refreshing") {
+            const detail = status.detail || (status.startedAt ? `Running since ${formatTimestamp(status.startedAt)}` : "diagram-data CLI running...");
+            setProgressState(nodes.progress, "loading", "Refreshing diagram data", detail);
+            return;
+          }
+          if (status.state === "error") {
+            const errorDetail = status.lastError && status.lastError.message ? status.lastError.message : "Check server logs for details";
+            setProgressState(nodes.progress, "error", "Diagram refresh failed", errorDetail);
+          }
+        }
+        function startDiagramStatusWatcher(config, nodes) {
+          if (!nodes || !nodes.progress || typeof fetch !== "function") {
+            return null;
+          }
+          const statusUrl = config && config.statusUrl || "/api/diagram-data/status";
+          let stopped = false;
+          const poll = async () => {
+            if (stopped) {
+              return;
+            }
+            try {
+              const response = await fetch(statusUrl, { headers: { Accept: "application/json" } });
+              if (!response.ok) {
+                stopped = true;
+                return;
+              }
+              const status = await response.json();
+              handleDiagramStatus(status, nodes);
+              if (!stopped && status && status.state === "refreshing") {
+                setTimeout(poll, DIAGRAM_STATUS_POLL_MS);
+                return;
+              }
+              if (!status || status.state !== "pending") {
+                stopped = true;
+              }
+            } catch (error2) {
+              stopped = true;
+              if (typeof console !== "undefined" && console.debug) {
+                console.debug("[copilot] diagram status poll stopped", error2);
+              }
+            }
+          };
+          poll();
+          return () => {
+            stopped = true;
+          };
+        }
+        function attachRefreshHandler(config, nodes) {
+          if (!nodes || !nodes.refresh) {
+            return;
+          }
+          const button = nodes.refresh;
+          button.addEventListener("click", () => {
+            if (button.dataset.loading === "1") {
+              return;
+            }
+            setRefreshButtonState(button, true);
+            stopDiagramStatusWatcher(nodes);
+            hydrateDiagramAtlas(config, nodes, { forceRefresh: true }).catch(() => {
+            }).finally(() => setRefreshButtonState(button, false));
+          });
+        }
+        async function hydrateDiagramAtlas(config, nodes, options2 = {}) {
+          const dataUrl = config && config.dataUrl || "/api/diagram-data";
+          const forceRefresh = Boolean(options2.forceRefresh);
+          const shouldRefresh = forceRefresh && config && config.refreshUrl;
+          const endpoint = shouldRefresh ? config.refreshUrl : dataUrl;
+          const method = shouldRefresh ? "POST" : "GET";
+          const label = shouldRefresh ? "Refreshing diagram data" : "Fetching diagram data";
+          const detail = shouldRefresh ? "Triggering CLI + cache refresh..." : "Collecting sources and metrics...";
+          setProgressState(nodes.progress, "loading", label, detail);
+          if (shouldRefresh) {
+            const stopWatcher = startDiagramStatusWatcher(config, nodes);
+            if (stopWatcher) {
+              nodes.statusWatcherStop = stopWatcher;
+            }
+          }
+          try {
+            const response = await fetch(endpoint, {
+              method,
+              headers: { Accept: "application/json", "Content-Type": "application/json" }
+            });
+            if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+            }
+            const payload = await response.json();
+            updateDiagnostics(nodes, payload);
+            renderAtlasSections(nodes.sections, payload);
+            setProgressState(nodes.progress, "complete", "Diagram Atlas ready", payload.generatedAt || "Loaded from cache");
+            if (typeof window !== "undefined") {
+              window.__DIAGRAM_ATLAS_STATE__ = payload;
+            }
+          } catch (error2) {
+            setProgressState(nodes.progress, "error", "Failed to load diagram data", error2.message);
+            renderAtlasError(nodes.sections, error2.message);
+            if (typeof console !== "undefined" && console.error) {
+              console.error("[copilot] diagram atlas hydration failed", error2);
+            }
+          } finally {
+            stopDiagramStatusWatcher(nodes);
+          }
+        }
+        function applyInitialDiagramPayload(config, nodes) {
+          if (!config || !config.initialData) return false;
+          updateDiagnostics(nodes, config.initialData);
+          renderAtlasSections(nodes.sections, config.initialData);
+          setProgressState(nodes.progress, "complete", "Diagram Atlas ready", config.initialData.generatedAt || "Loaded from snapshot");
+          return true;
+        }
+        function bootstrapDiagramAtlas2() {
+          if (typeof document === "undefined" || typeof window === "undefined") {
+            return;
+          }
+          const config = window.__DIAGRAM_ATLAS__ || null;
+          if (!config) {
+            return;
+          }
+          const shell = document.querySelector('[data-role="diagram-shell"]');
+          if (!shell || shell.dataset.diagramHydrated === "1") {
+            return;
+          }
+          shell.dataset.diagramHydrated = "1";
+          const sections = shell.querySelector('[data-role="diagram-atlas-sections"]');
+          const progress = shell.querySelector('[data-role="diagram-progress"]');
+          const refresh = shell.querySelector('[data-role="diagram-refresh"]');
+          const metricNodes = collectDiagnosticsMap(shell);
+          const nodes = {
+            shell,
+            sections,
+            progress,
+            refresh,
+            diagnostics: metricNodes.diagnostics,
+            toolbar: metricNodes.toolbar,
+            statusWatcherStop: null
+          };
+          attachRefreshHandler(config, nodes);
+          if (applyInitialDiagramPayload(config, nodes)) {
+            return;
+          }
+          hydrateDiagramAtlas(config, nodes);
+        }
+        return {
+          bootstrapDiagramAtlas: bootstrapDiagramAtlas2
+        };
+      }
+      module.exports = {
+        createDiagramAtlasBootstrap: createDiagramAtlasBootstrap2
+      };
+    }
+  });
+
+  // src/ui/client/jobsManager.js
+  var require_jobsManager = __commonJS({
+    "src/ui/client/jobsManager.js"(exports, module) {
+      var { each } = require_lang2();
+      function createJobsManager2({
+        elements = {},
+        actions = {},
+        scheduleResumeInventoryRefresh = () => {
+        }
+      }) {
+        const jobsList = elements && elements.jobsList ? elements.jobsList : null;
+        const {
+          setStage = () => {
+          },
+          setPausedBadge = () => {
+          },
+          hidePausedBadge = () => {
+          },
+          setCrawlType = () => {
+          },
+          updateStartupStatus = () => {
+          }
+        } = actions;
+        function renderEmptyState(target) {
+          if (!target) {
+            return;
+          }
+          target.innerHTML = '<div class="jobs-empty-state"><span class="jobs-empty-icon">\u{1F4ED}</span><p>No active crawls</p></div>';
+          setStage("idle");
+          hidePausedBadge();
+          scheduleResumeInventoryRefresh(600);
+          target.setAttribute("aria-busy", "false");
+        }
+        function renderJobs(jobs) {
+          try {
+            if (!jobsList) {
+              return;
+            }
+            jobsList.setAttribute("aria-busy", "true");
+            if (!jobs || !Array.isArray(jobs.items) || jobs.items.length === 0) {
+              renderEmptyState(jobsList);
+              return;
+            }
+            const cards = [];
+            each(jobs.items, (job) => {
+              var _a, _b, _c, _d, _e;
+              const url = job.url || "(unknown)";
+              const visited = (_a = job.visited) != null ? _a : 0;
+              const downloaded = (_c = (_b = job.download) != null ? _b : job.downloaded) != null ? _c : 0;
+              const errors = (_d = job.errors) != null ? _d : 0;
+              const queueSize = (_e = job.queueSize) != null ? _e : 0;
+              const stage = job.stage || "";
+              const status = job.status || stage || "running";
+              const pid = job.pid ? job.pid : null;
+              const startedAt = job.startedAt ? new Date(job.startedAt).toLocaleString() : "Unknown";
+              const lastActivity = job.lastActivityAt ? Math.round((Date.now() - job.lastActivityAt) / 1e3) : null;
+              const activityClass = lastActivity && lastActivity < 10 ? "activity-recent" : lastActivity && lastActivity < 60 ? "activity-active" : "activity-stale";
+              const activityText = lastActivity !== null ? `${lastActivity}s ago` : "No recent activity";
+              let statusBadgeClass = "status-badge";
+              if (status === "running" && !job.paused) statusBadgeClass += " status-badge--running";
+              else if (job.paused) statusBadgeClass += " status-badge--paused";
+              else if (status === "done") statusBadgeClass += " status-badge--done";
+              else statusBadgeClass += " status-badge--neutral";
+              const startupSummary = job.startup && typeof job.startup === "object" ? job.startup.summary : null;
+              const startupProgress = startupSummary && startupSummary.done === false && Number.isFinite(startupSummary.progress) ? Math.round(Math.max(0, Math.min(1, startupSummary.progress)) * 100) : null;
+              const startupHtml = startupProgress !== null ? `<div class="job-card-startup"><span class="job-card-startup-label">Startup:</span><span class="job-card-startup-value">${startupProgress}%</span></div>` : "";
+              const statusTextHtml = job.statusText ? `<div class="job-card-status-text">${job.statusText}</div>` : "";
+              cards.push(`
+          <div class="job-card">
+            <div class="job-card-header">
+              <div class="job-card-status">
+                <span class="${statusBadgeClass}">${status}</span>
+                ${stage && stage !== status ? `<span class="job-card-stage">${stage}</span>` : ""}
+                ${job.paused ? '<span class="job-card-paused-indicator">\u23F8 Paused</span>' : ""}
+              </div>
+              ${pid ? `<span class="job-card-pid">PID: ${pid}</span>` : ""}
+            </div>
+
+            <div class="job-card-url">
+              <a href="/url?url=${encodeURIComponent(url)}" class="job-card-link" title="${url}">${url}</a>
+            </div>
+
+            ${statusTextHtml}
+            ${startupHtml}
+
+            <div class="job-card-metrics">
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Visited</span>
+                <span class="job-card-metric-value">${visited.toLocaleString()}</span>
+              </div>
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Downloaded</span>
+                <span class="job-card-metric-value">${downloaded.toLocaleString()}</span>
+              </div>
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Errors</span>
+                <span class="job-card-metric-value ${errors > 0 ? "job-card-metric-value--error" : ""}">${errors.toLocaleString()}</span>
+              </div>
+              <div class="job-card-metric">
+                <span class="job-card-metric-label">Queue</span>
+                <span class="job-card-metric-value">${queueSize.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div class="job-card-footer">
+              <div class="job-card-time">
+                <span class="job-card-time-label">Started:</span>
+                <span class="job-card-time-value">${startedAt}</span>
+              </div>
+              <div class="job-card-activity ${activityClass}">
+                <span class="job-card-activity-indicator">\u25CF</span>
+                <span class="job-card-activity-text">${activityText}</span>
+              </div>
+            </div>
+          </div>
+        `);
+            });
+            jobsList.innerHTML = cards.join("");
+            jobsList.setAttribute("aria-busy", "false");
+            if (jobs.items.length === 1) {
+              const job = jobs.items[0];
+              if (job.startup || job.statusText) {
+                updateStartupStatus(job.startup, job.statusText);
+              }
+              setStage(job.stage || job.status || "running");
+              if (job.paused != null) {
+                setPausedBadge(!!job.paused);
+              } else if (job.status === "done") {
+                hidePausedBadge();
+              }
+              if (job.stage && /intelligent/i.test(job.stage)) {
+                const stageType = job.crawlType === "discover-structure" ? "discover-structure" : "intelligent";
+                setCrawlType(stageType);
+              }
+            } else {
+              setStage("multi-run");
+              setPausedBadge(null);
+              updateStartupStatus(null, null);
+            }
+            scheduleResumeInventoryRefresh(1200);
+          } catch (_) {
+          } finally {
+            if (jobsList) {
+              jobsList.setAttribute("aria-busy", "false");
+            }
+          }
+        }
+        async function initialJobsPoll() {
+          try {
+            const response = await fetch("/api/crawls");
+            if (!response.ok) {
+              return;
+            }
+            const payload = await response.json();
+            renderJobs(payload);
+          } catch (_) {
+          }
+        }
+        return {
+          renderJobs,
+          initialJobsPoll
+        };
+      }
+      module.exports = {
+        createJobsManager: createJobsManager2
+      };
+    }
+  });
+
+  // src/ui/client/sseHandlers.js
+  var require_sseHandlers = __commonJS({
+    "src/ui/client/sseHandlers.js"(exports, module) {
+      var { is_defined } = require_lang2();
+      function createSseHandlers2({
+        jobsManager,
+        diagramAtlas,
+        scheduleResumeInventoryRefresh,
+        updateStartupStatus,
+        jobsList
+      }) {
+        let eventSource;
+        let reconnectTimer;
+        function cleanup() {
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+          }
+        }
+        function handleJobsUpdate(payload) {
+          if (jobsManager && payload && payload.items) {
+            jobsManager.renderJobs(payload);
+          }
+        }
+        function handleDiagramAtlas(payload) {
+          if (!diagramAtlas || !payload) {
+            return;
+          }
+          if (payload.sections) {
+            diagramAtlas.renderAtlasSections(payload.sections);
+          }
+          if (payload.status) {
+            diagramAtlas.renderAtlasStatus(payload.status);
+          }
+        }
+        function handleResumeInventory(payload) {
+          const delay = payload && Number.isFinite(payload.delayMs) ? payload.delayMs : 2e3;
+          scheduleResumeInventoryRefresh(delay);
+        }
+        function handleStartupStatus(payload) {
+          if (!payload) {
+            return;
+          }
+          updateStartupStatus(payload.startup, payload.statusText);
+        }
+        function attachSse() {
+          cleanup();
+          const source = new EventSource("/api/events");
+          eventSource = source;
+          source.addEventListener("open", () => {
+            if (jobsList) {
+              jobsList.setAttribute("aria-busy", "true");
+            }
+          });
+          source.addEventListener("message", (evt) => {
+            try {
+              if (!evt.data) {
+                return;
+              }
+              const payload = JSON.parse(evt.data);
+              if (!payload || !payload.type) {
+                return;
+              }
+              switch (payload.type) {
+                case "jobs:update":
+                  handleJobsUpdate(payload.data);
+                  break;
+                case "diagramAtlas:update":
+                  handleDiagramAtlas(payload.data);
+                  break;
+                case "jobs:resumeInventory":
+                  handleResumeInventory(payload.data);
+                  break;
+                case "jobs:startupStatus":
+                  handleStartupStatus(payload.data);
+                  break;
+                default:
+                  break;
+              }
+            } catch (_) {
+            }
+          });
+          source.addEventListener("error", () => {
+            cleanup();
+            reconnectTimer = setTimeout(attachSse, 2e3);
+          });
+        }
+        function initSse() {
+          if (!is_defined(window) || typeof window.EventSource !== "function") {
+            return;
+          }
+          attachSse();
+        }
+        return {
+          initSse,
+          cleanup
+        };
+      }
+      module.exports = {
+        createSseHandlers: createSseHandlers2
+      };
+    }
+  });
+
   // src/ui/client/index.js
   var jsguiClient = require_client();
   var { installBindingPlugin } = require_bindingPlugin();
+  var { ensureControlsRegistered, listControlTypes } = require_controlManifest();
+  var { ensureGlobalListingStateStore } = require_listingStateStore();
+  var { attachListingDomBindings } = require_listingDomBindings();
+  var { createDiagramAtlasBootstrap } = require_diagramAtlas();
+  var { createJobsManager } = require_jobsManager();
+  var { createSseHandlers } = require_sseHandlers();
+  var REGISTERED_CONTROLS = ensureControlsRegistered(jsguiClient);
+  var REGISTERED_CONTROL_TYPES = REGISTERED_CONTROLS.map((entry) => entry.type);
+  var DEFAULT_EXPECTED_CONTROL_TYPES = listControlTypes();
+  var { bootstrapDiagramAtlas } = createDiagramAtlasBootstrap({
+    jsguiClient,
+    registerControls: injectControlsIntoContext
+  });
+  function seedContextControlMap(context2) {
+    if (!context2) {
+      return null;
+    }
+    const map = context2.map_Controls || (context2.map_Controls = {});
+    if (!context2.__copilotControlsSeeded) {
+      const sources = [jsguiClient.map_Controls, jsguiClient.controls];
+      sources.forEach((source) => {
+        if (!source) return;
+        Object.keys(source).forEach((key2) => {
+          if (!key2) return;
+          const normalized = key2.toLowerCase();
+          if (!map[normalized]) {
+            map[normalized] = source[key2];
+          }
+        });
+      });
+      context2.__copilotControlsSeeded = true;
+    }
+    REGISTERED_CONTROLS.forEach(({ type, control }) => {
+      if (!control) return;
+      const proto = control.prototype || {};
+      const key2 = (type || proto.__type_name || "").toLowerCase();
+      if (!key2 || map[key2]) {
+        return;
+      }
+      map[key2] = control;
+    });
+    return map;
+  }
+  function ensureClientControlsRegistered() {
+    return REGISTERED_CONTROLS;
+  }
+  ensureClientControlsRegistered();
+  function injectControlsIntoContext(context2) {
+    if (!context2) {
+      return;
+    }
+    const map = seedContextControlMap(context2);
+    if (!map) {
+      return;
+    }
+    if (typeof window !== "undefined" && !window.__COPILOT_LOGGED_CONTROLS__) {
+      window.__COPILOT_LOGGED_CONTROLS__ = true;
+      try {
+        console.log("[copilot] context.map_Controls keys", Object.keys(map));
+      } catch (_) {
+      }
+    }
+    REGISTERED_CONTROLS.forEach(({ control, type }) => {
+      if (!control) return;
+      const proto = control.prototype || {};
+      const key2 = (type || proto.__type_name || "").toLowerCase();
+      if (!key2 || map[key2]) {
+        return;
+      }
+      map[key2] = control;
+      if (typeof context2.update_Controls === "function") {
+        context2.update_Controls(key2, control);
+      }
+    });
+  }
+  function verifyExpectedControls() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const expected = Array.isArray(window.__COPILOT_EXPECTED_CONTROLS__) ? window.__COPILOT_EXPECTED_CONTROLS__ : DEFAULT_EXPECTED_CONTROL_TYPES;
+    const missing = (expected || []).map((type) => (type || "").toLowerCase()).filter((type) => type && !REGISTERED_CONTROL_TYPES.includes(type));
+    if (missing.length && typeof console !== "undefined" && console.warn) {
+      console.warn("[copilot] missing registered jsgui controls", missing);
+    }
+    window.__COPILOT_EXPECTED_CONTROLS__ = expected;
+    window.__COPILOT_REGISTERED_CONTROLS__ = REGISTERED_CONTROL_TYPES;
+  }
+  function wrapPreActivate(fn) {
+    if (typeof fn !== "function") {
+      return fn;
+    }
+    if (fn.__copilotWrapped) {
+      return fn;
+    }
+    const wrapped = function copilotPreActivate(context2, ...args) {
+      injectControlsIntoContext(context2);
+      return fn.call(this, context2, ...args);
+    };
+    wrapped.__copilotWrapped = true;
+    return wrapped;
+  }
+  function ensurePreActivateHook() {
+    if (typeof jsguiClient.pre_activate !== "function") {
+      return;
+    }
+    jsguiClient.pre_activate = wrapPreActivate(jsguiClient.pre_activate);
+  }
+  ensurePreActivateHook();
+  var originalUpdateStandardControls = typeof jsguiClient.update_standard_Controls === "function" ? jsguiClient.update_standard_Controls : null;
+  if (originalUpdateStandardControls) {
+    jsguiClient.update_standard_Controls = function patchedUpdateStandardControls(context2, ...args) {
+      ensureClientControlsRegistered();
+      injectControlsIntoContext(context2);
+      return originalUpdateStandardControls.call(this, context2, ...args);
+    };
+  }
+  var originalActivate = typeof jsguiClient.activate === "function" ? jsguiClient.activate : null;
+  if (originalActivate) {
+    jsguiClient.activate = function patchedActivate(context2, ...args) {
+      injectControlsIntoContext(context2);
+      return originalActivate.call(this, context2, ...args);
+    };
+  }
+  var ClientPageContext = jsguiClient.Client_Page_Context;
+  if (typeof ClientPageContext === "function") {
+    class CopilotClientPageContext extends ClientPageContext {
+      constructor(...args) {
+        super(...args);
+        injectControlsIntoContext(this);
+      }
+    }
+    jsguiClient.Client_Page_Context = CopilotClientPageContext;
+  }
   function readScriptDatasetConfig() {
     if (typeof document === "undefined") return {};
     const script = document.currentScript || (document.getElementsByTagName("script") || [])[document.getElementsByTagName("script").length - 1];
@@ -81137,7 +84801,229 @@ div.grid .row .cell span {
     const enabled = ((_b = (_a = datasetConfig.enabled) != null ? _a : globalConfig.enabled) != null ? _b : defaultEnabled) !== false;
     return { enabled };
   }
+  function bootstrapUrlListingStore() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const initialState = window.__COPILOT_URL_LISTING_STATE__;
+    const store = ensureGlobalListingStateStore(initialState);
+    if (!store) {
+      return;
+    }
+    attachListingDomBindings(store);
+  }
+  function selectDomElement(selectors) {
+    if (typeof document === "undefined" || !Array.isArray(selectors)) {
+      return null;
+    }
+    for (let i = 0; i < selectors.length; i += 1) {
+      const selector = selectors[i];
+      if (!selector) continue;
+      const node = document.querySelector(selector);
+      if (node) {
+        return node;
+      }
+    }
+    return null;
+  }
+  function showNode(node) {
+    if (!node) return;
+    node.removeAttribute("hidden");
+  }
+  function hideNode(node) {
+    if (!node) return;
+    node.setAttribute("hidden", "hidden");
+  }
+  function createStatusIndicators() {
+    if (typeof document === "undefined") {
+      const noop = () => {
+      };
+      return {
+        elements: {},
+        actions: {
+          setStage: noop,
+          setPausedBadge: noop,
+          hidePausedBadge: noop,
+          setCrawlType: noop,
+          updateStartupStatus: noop
+        }
+      };
+    }
+    const elements = {
+      stageBadge: selectDomElement(["[data-crawl-stage]", "#stageBadge"]),
+      pausedBadge: selectDomElement(["[data-crawl-paused]", "#pausedBadge"]),
+      startupStatusEl: selectDomElement(["[data-crawl-startup-status]", "#startupStatus"]),
+      startupStatusText: selectDomElement(["[data-crawl-startup-text]", "#startupStatusText"]),
+      startupProgressFill: selectDomElement(["[data-crawl-startup-progress]", "#startupProgressFill", "#startupProgress"]),
+      startupStagesList: selectDomElement(["[data-crawl-startup-stages]", "#startupStages"]),
+      crawlTypeLabel: selectDomElement(["[data-crawl-type-label]", "#crawlTypeLabel"]),
+      jobsList: selectDomElement(["[data-crawl-jobs-list]", "#jobsList"])
+    };
+    function setStage(stage) {
+      const normalized = stage ? String(stage).replace(/[_-]+/g, " ") : "idle";
+      if (elements.stageBadge) {
+        elements.stageBadge.textContent = normalized;
+        elements.stageBadge.setAttribute("data-stage", stage || "idle");
+      }
+      if (typeof document !== "undefined" && document.body) {
+        document.body.setAttribute("data-crawl-stage", stage || "");
+      }
+    }
+    function setPausedBadge(paused) {
+      const target = elements.pausedBadge;
+      if (!target) {
+        return;
+      }
+      if (paused == null) {
+        target.textContent = "";
+        target.dataset.state = "hidden";
+        hideNode(target);
+        return;
+      }
+      const label = paused ? "Paused" : "Running";
+      target.textContent = label;
+      target.dataset.state = paused ? "paused" : "running";
+      showNode(target);
+    }
+    function hidePausedBadge() {
+      setPausedBadge(null);
+    }
+    function setCrawlType(type) {
+      const normalized = type ? String(type) : "";
+      if (elements.crawlTypeLabel) {
+        elements.crawlTypeLabel.textContent = normalized || "standard";
+      }
+      if (typeof document !== "undefined" && document.body) {
+        document.body.setAttribute("data-crawl-type", normalized);
+      }
+    }
+    function updateStartupStatus(startup, statusText) {
+      const container = elements.startupStatusEl;
+      if (!container) {
+        return;
+      }
+      const summary = startup && typeof startup.summary === "object" ? startup.summary : null;
+      const stages = Array.isArray(startup && startup.stages) ? startup.stages : [];
+      const done = summary && summary.done;
+      const runningStage = stages.find((stage) => stage && stage.status === "running");
+      const label = statusText || runningStage && runningStage.label || (stages.length ? stages[stages.length - 1].label : null) || (done ? "Startup complete" : null);
+      if (!startup && !statusText) {
+        container.dataset.state = "idle";
+        if (elements.startupStagesList) {
+          elements.startupStagesList.innerHTML = "";
+        }
+        if (elements.startupProgressFill) {
+          elements.startupProgressFill.style.width = "0%";
+        }
+        hideNode(container);
+        return;
+      }
+      showNode(container);
+      container.dataset.state = done ? "complete" : "running";
+      if (elements.startupStatusText) {
+        elements.startupStatusText.textContent = label || "Preparing\u2026";
+      }
+      if (elements.startupProgressFill) {
+        let pct = summary && Number.isFinite(summary.progress) ? summary.progress : null;
+        if (!Number.isFinite(pct)) {
+          pct = done ? 1 : 0;
+        }
+        const normalizedPct = Math.max(0, Math.min(1, pct || 0));
+        elements.startupProgressFill.style.width = `${Math.round(normalizedPct * 100)}%`;
+      }
+      if (elements.startupStagesList) {
+        const list = elements.startupStagesList;
+        list.innerHTML = "";
+        const recentStages = stages.slice(-6);
+        if (recentStages.length) {
+          recentStages.forEach((stage) => {
+            if (!stage) return;
+            const li = document.createElement("li");
+            li.className = stage.status ? `stage-${String(stage.status).toLowerCase()}` : "stage-pending";
+            const parts = [stage.label || stage.id || "stage"];
+            if (stage.status) {
+              parts.push(stage.status.replace(/[_-]+/g, " "));
+            }
+            if (Number.isFinite(stage.durationMs) && stage.status && stage.status !== "running") {
+              parts.push(`${Math.round(stage.durationMs)}ms`);
+            }
+            li.textContent = parts.join(" \xB7 ");
+            if (stage.message) {
+              const meta = document.createElement("span");
+              meta.className = "startup-stage-meta";
+              meta.textContent = stage.message;
+              li.appendChild(meta);
+            }
+            list.appendChild(li);
+          });
+        } else if (label) {
+          const li = document.createElement("li");
+          li.className = "stage-running";
+          li.textContent = label;
+          list.appendChild(li);
+        }
+      }
+    }
+    return {
+      elements,
+      actions: {
+        setStage,
+        setPausedBadge,
+        hidePausedBadge,
+        setCrawlType,
+        updateStartupStatus
+      }
+    };
+  }
+  function createResumeInventoryScheduler() {
+    if (typeof window === "undefined") {
+      return () => {
+      };
+    }
+    let timer = null;
+    return function scheduleResumeInventoryRefresh(delayMs = 1500) {
+      const normalizedDelay = Number.isFinite(delayMs) ? Math.max(0, delayMs) : 1500;
+      if (timer) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        timer = null;
+        const resumeManager = window.CopilotResumeQueueManager;
+        if (resumeManager && typeof resumeManager.refresh === "function") {
+          resumeManager.refresh({ silent: true });
+        }
+      }, normalizedDelay);
+    };
+  }
+  function bootstrapJobsAndSse() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const { elements, actions } = createStatusIndicators();
+    const scheduleResumeInventoryRefresh = createResumeInventoryScheduler();
+    const jobsManager = createJobsManager({
+      elements: { jobsList: elements.jobsList },
+      actions,
+      scheduleResumeInventoryRefresh
+    });
+    if (jobsManager && typeof jobsManager.initialJobsPoll === "function") {
+      jobsManager.initialJobsPoll();
+    }
+    const sseHandlers = createSseHandlers({
+      jobsManager,
+      scheduleResumeInventoryRefresh,
+      updateStartupStatus: actions.updateStartupStatus,
+      jobsList: elements.jobsList
+    });
+    if (sseHandlers && typeof sseHandlers.initSse === "function") {
+      sseHandlers.initSse();
+    }
+    window.CopilotStatusIndicators = actions;
+    window.CopilotJobsManager = jobsManager;
+    window.CopilotSseHandlers = sseHandlers;
+  }
   (function bootstrap() {
+    ensureClientControlsRegistered();
     const { enabled } = resolveBindingPluginConfig();
     if (enabled) {
       installBindingPlugin(jsguiClient);
@@ -81149,7 +85035,11 @@ div.grid .row .cell span {
       window.CopilotBindingPlugin.enabled = enabled;
       window.CopilotBindingPlugin.installBindingPlugin = installBindingPlugin;
       window.CopilotBindingPlugin.jsgui = jsguiClient;
+      verifyExpectedControls();
     }
+    bootstrapDiagramAtlas();
+    bootstrapUrlListingStore();
+    bootstrapJobsAndSse();
   })();
 })();
 //# sourceMappingURL=ui-client.js.map

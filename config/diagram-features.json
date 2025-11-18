@@ -1,0 +1,32 @@
+[
+  {
+    "id": "data-explorer",
+    "name": "Data Explorer UI",
+    "entry": "src/ui/server/dataExplorerServer.js",
+    "depth": 2,
+    "segmentSampleLimit": 12,
+    "tags": ["ui", "express", "jsgui3"],
+    "color": "#4F7CAC",
+    "description": "Express-powered UI for exploring crawler data tables."
+  },
+  {
+    "id": "crawl-api",
+    "name": "Crawl API",
+    "entry": "src/server/crawl-api/index.js",
+    "depth": 2,
+    "segmentSampleLimit": 10,
+    "tags": ["api", "crawler"],
+    "color": "#A23E48",
+    "description": "Task orchestration API powering crawl jobs and scheduling."
+  },
+  {
+    "id": "place-hub-cli",
+    "name": "Place Hub CLI",
+    "entry": "tools/guess-place-hubs.js",
+    "depth": 1,
+    "segmentSampleLimit": 8,
+    "tags": ["cli", "places"],
+    "color": "#3B8EA5",
+    "description": "Command-line workflow for discovering and ranking place hubs."
+  }
+]

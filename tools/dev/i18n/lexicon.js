@@ -182,6 +182,7 @@ const RAW_LEXICON = Object.freeze({
   include_deprecated: Object.freeze(['含旧']),
   deprecated_only: Object.freeze(['旧专']),
   lang: Object.freeze(['语']),
+  source_language: Object.freeze(['码']),
   internal: Object.freeze(['内']),
   async: Object.freeze(['异']),
   generator: Object.freeze(['生']),

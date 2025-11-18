@@ -1,78 +1,72 @@
-# UI v2 - New Data-Focused Interface
+# UI Data Explorer (Active)
 
-**Status**: Planned - Not yet implemented
+The UI stack under `src/ui` now powers the crawler "Data Explorer" views (URLs, domains, crawls, and errors). The current implementation replaces the deprecated UI with a lean server-rendered surface plus a small hydration bundle for interactive controls.
 
-## Overview
+## Key Components
 
-The new UI (v2) will be a much simpler, data-focused interface compared to the deprecated UI in `src/deprecated-ui/`. The focus will be on rendering focused views of data from the database rather than complex interactive features.
+- `src/ui/server/dataExplorerServer.js`  Express server that serves `/urls`, `/domains`, `/crawls`, `/errors`, and `/api/urls` with diagnostics headers (`x-copilot-request-id`, `x-copilot-duration-ms`). Start it via `npm run ui:data-explorer`.
+- `src/ui/render-url-table.js`  Shared renderer used by the server and standalone CLI (`node src/ui/render-url-table.js --output urls.html`). Responsible for the header, home cards, table shell, and pagination controls.
+- `src/ui/controls/`  jsgui3 controls for tables, pagers, toggles, and workspace panels. Each control now has a corresponding lightweight check script under `src/ui/controls/checks/`.
+- `src/ui/client/index.js`  Browser bundle entry. Registers UrlListingTable, UrlFilterToggle, and PagerButton with `jsgui3-client`, installs the binding plugin, and falls back to manual activation if hydration misses.
+- `public/assets/ui-client.js`  Built artifact created by `npm run ui:client-build` (esbuild). Always rebuild after touching anything under `src/ui/client`.
 
-## Goals
+## Running & Testing
 
-- **Simplicity**: Minimal, clean interface focused on data presentation
-- **Performance**: Fast rendering of database queries and results
-- **Data-Centric**: Primary purpose is viewing and exploring crawled data
-- **Maintainable**: Much simpler codebase than the current deprecated UI
+```bash
+# Serve the data explorer (defaults to data/news.db)
+npm run ui:data-explorer
 
-## Planned Structure
+# Build the browser bundle after client/control updates
+npm run ui:client-build
 
-```
-src/ui/
-├── README.md              # This file
-├── server.js              # Simple Express server for data views
-├── routes/
-│   ├── data.js           # API routes for database queries
-│   └── views.js          # Routes for HTML views
-├── views/
-│   ├── layout.html       # Simple HTML layout
-│   ├── articles.html     # Article listing/search
-│   ├── crawls.html       # Crawl status and results
-│   └── analysis.html     # Analysis results
-├── public/
-│   ├── styles.css        # Minimal CSS
-│   └── app.js            # Simple client-side JavaScript
-└── db/
-    └── queries.js        # Database query helpers
+# Focused Jest / Puppeteer coverage for the filter toggle
+npm run test:by-path tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js
 ```
 
-## Key Differences from Deprecated UI
+### UI E2E Testing Workflow
 
-| Aspect | Deprecated UI (v1) | New UI (v2) |
-|--------|-------------------|-------------|
-| Complexity | Complex Express app with many routes | Simple server with few routes |
-| Features | Interactive crawling, real-time updates | Static data views, basic search |
-| Dependencies | Many UI libraries, complex build process | Minimal dependencies, simple build |
-| Testing | Extensive E2E and integration tests | Basic integration tests only |
-| Maintenance | High maintenance burden | Low maintenance |
+1. **Prep the bundle + fixtures**
+	- Run `npm run ui:client-build` whenever the client, controls, or binding plugin changes.
+	- The Puppeteer suite seeds an in-memory SQLite DB; refresh `tests/ui/e2e/helpers` if the schema shifts (URLs, fetches, diagnostics tables must stay in sync with `src/ui/db`).
+2. **Run the suite**
+	- Fastest entry point: `npm run test:by-path tests/ui/e2e/url-filter-toggle.puppeteer.e2e.test.js`.
+	- To batch additional scenarios later, wire them into `node tests/run-tests.js e2e-quick` so CI can smoke everything in one go.
+3. **Wait on diagnostics events, not arbitrary timeouts**
+	- The toggle emits `copilot:urlFilterToggle` via `emitUrlFilterDebug`. In Puppeteer you can `await page.waitForEvent('copilot:urlFilterToggle', { predicate: ev => ev.detail.status === 'success' })` to guarantee the request finished before asserting DOM state.
+	- Capture the event payload (meta row counts, pagination) rather than scraping the DOM when possible—this keeps tests fast and deterministic.
+4. **Troubleshoot common failures**
+	- `TimeoutError` usually means the client bundle didn’t hydrate; ensure `npm run ui:client-build` ran and that the Puppeteer test sets `headless: 'new'`.
+	- If Chromium is missing, run any Puppeteer script once (the dependency downloads automatically) or set `PUPPETEER_SKIP_DOWNLOAD=0` before `npm install`.
+5. **Log everything in session docs**
+	- UI Singularity mode requires a dedicated `docs/sessions/<date>-ui-*/` folder. Record the exact commands + exit codes so future agents can replay the run.
 
-## Development Status
+Upcoming scenarios live in `docs/sessions/2025-11-20-ui-e2e-testing/FOLLOW_UPS.md` (pager state, home cards, shared fixtures). Tackle them once the toggle test stabilizes under the event-driven wait.
 
-- [ ] Plan detailed requirements
-- [ ] Design database query APIs
-- [ ] Implement basic server structure
-- [ ] Create simple HTML views
-- [ ] Add basic CSS styling
-- [ ] Implement search/filtering
-- [ ] Add pagination for large datasets
-- [ ] Write basic tests
-- [ ] Documentation
+Additional server-side diagnostics live in `tests/ui/server/dataExplorerServer.test.js` and `tests/ui/server/dataExplorerServer.production.test.js`.
 
-## Getting Started
+## Control Checks
 
-When ready to implement:
+Use the new check scripts before/after styling changes to preview rendered markup without running the full server:
 
-1. Review the deprecated UI in `src/deprecated-ui/` for reference
-2. Start with simple database query endpoints
-3. Build HTML views that render data from those endpoints
-4. Keep the implementation minimal and focused
+- `node src/ui/controls/checks/UrlListingTable.check.js`
+- `node src/ui/controls/checks/DomainSummaryTable.check.js`
+- `node src/ui/controls/checks/CrawlJobsTable.check.js`
+- `node src/ui/controls/checks/PagerButton.check.js`
 
-## Migration Notes
+Each script emits HTML and basic assertions so regressions are obvious in diff tooling.
 
-The deprecated UI in `src/deprecated-ui/` contains many features that will NOT be carried forward:
+## Diagnostics & Telemetry
 
-- Real-time crawl monitoring
-- Interactive crawl controls
-- Complex state management
-- Advanced UI components
-- Puppeteer-based testing
+- `/api/urls` responses include `diagnostics` payloads that the `UrlFilterToggleControl` logs via the `copilot:urlFilterToggle` CustomEvent. See `src/ui/controls/urlFilterDiagnostics.js`.
+- HTML responses set `x-copilot-request-id`/`x-copilot-api` headers for observability; thread the IDs through client logs when possible.
+- Home cards on `/urls` surface cached metric freshness, top host hints, crawl status, and last error context via the new hint list rendering.
 
-The new UI will focus solely on viewing and exploring the data that has been collected.
+## Session Protocol
+
+All UI work is documented under `docs/sessions/` (see `docs/sessions/SESSIONS_HUB.md`). Before editing controls or templates:
+
+1. Create a dated `docs/sessions/<date>-ui-<slug>/` folder with PLAN/WORKING_NOTES.
+2. Run `node tools/dev/js-scan.js --what-imports <file> --json --ai-mode` to record dependencies.
+3. Log commands/tests in `WORKING_NOTES.md` and summarize outcomes in `SESSION_SUMMARY.md`.
+
+This workflow keeps the UI surface debuggable and repeatable as new controls arrive.

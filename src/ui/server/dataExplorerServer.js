@@ -3,13 +3,19 @@
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
+const crypto = require("crypto");
 const express = require("express");
 const compression = require("compression");
+const jsgui = require("jsgui3-html");
 
 const { openNewsDb } = require("../../db/dbAccess");
 const { findProjectRoot } = require("../../utils/project-root");
-const { selectUrlPage, countUrls } = require("../../db/sqlite/v1/queries/ui/urlListingNormalized");
-const { selectRecentDomains } = require("../../db/sqlite/v1/queries/ui/recentDomains");
+const {
+  selectUrlPage,
+  countUrls,
+  selectFetchedUrlPage,
+  countFetchedUrls
+} = require("../../db/sqlite/v1/queries/ui/urlListingNormalized");
 const {
   getArticleCount,
   getFetchCountDirect,
@@ -21,6 +27,8 @@ const { selectUrlById, selectFetchHistory } = require("../../db/sqlite/v1/querie
 const { selectHostSummary, selectHostDownloads } = require("../../db/sqlite/v1/queries/ui/domainDetails");
 const { getCachedMetric } = require("./services/metricsService");
 const { renderHtml, resolveDbPath } = require("../render-url-table");
+const { buildDomainSnapshot, createHomeCardLoaders } = require("../homeCardData");
+const { buildHomeCards: buildSharedHomeCards } = require("../homeCards");
 const {
   buildColumns,
   buildDisplayRows,
@@ -51,6 +59,9 @@ const {
   appendBackParams,
   buildBreadcrumbs
 } = require("./navigation");
+const { ensureClientBundle } = require("./utils/ensureClientBundle");
+
+const StringControl = jsgui.String_Control;
 
 function attachBackLink(rows, key, backLink) {
   if (!Array.isArray(rows) || !backLink || !backLink.href) return rows;
@@ -71,8 +82,11 @@ const DOMAIN_WINDOW_SIZE = 4000;
 const DOMAIN_LIMIT = 40;
 const CRAWL_LIMIT = 80;
 const ERROR_LIMIT = 200;
+const HOME_CARD_CRAWL_LIMIT = 12;
+const HOME_CARD_ERROR_LIMIT = 50;
 const DEFAULT_TITLE = "Crawler Data Explorer";
 const DOMAIN_DOWNLOAD_LIMIT = 200;
+const API_HEADER_NAME = "dataExplorer";
 
 function sanitizePage(value) {
   const numeric = Number(value);
@@ -84,6 +98,70 @@ function sanitizePageSize(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric <= 0) return DEFAULT_PAGE_SIZE;
   return Math.min(MAX_PAGE_SIZE, Math.max(10, Math.trunc(numeric)));
+}
+
+const TRUTHY_QUERY_VALUES = new Set(["1", "true", "t", "yes", "on", "only"]);
+const FALSY_QUERY_VALUES = new Set(["0", "false", "f", "no", "off"]);
+
+function toBooleanQueryFlag(value) {
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      const resolved = toBooleanQueryFlag(value[i]);
+      if (resolved !== undefined) return resolved;
+    }
+    return false;
+  }
+  if (value == null) return false;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return false;
+    return value !== 0;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return false;
+    if (TRUTHY_QUERY_VALUES.has(normalized)) return true;
+    if (FALSY_QUERY_VALUES.has(normalized)) return false;
+    return true;
+  }
+  return Boolean(value);
+}
+
+function resolveUrlFilterState(query = {}) {
+  return {
+    hasFetches: toBooleanQueryFlag(query.hasFetches)
+  };
+}
+
+function snapshotQueryParams(query = {}) {
+  const result = {};
+  Object.entries(query || {}).forEach(([key, rawValue]) => {
+    if (rawValue == null) return;
+    if (Array.isArray(rawValue)) {
+      const values = rawValue
+        .map((value) => (value == null ? null : String(value)))
+        .filter((value) => value != null);
+      if (values.length) {
+        result[key] = values;
+      }
+      return;
+    }
+    result[key] = String(rawValue);
+  });
+  return result;
+}
+
+function buildUrlFilterOptions({ req, basePath, filters, querySnapshot }) {
+  if (!req || !basePath) return null;
+  const apiPath = `${req.baseUrl || ""}/api/urls`;
+  return {
+    apiPath,
+    basePath,
+    query: querySnapshot || {},
+    hasFetches: !!(filters && filters.hasFetches),
+    label: "Show fetched URLs only",
+    defaultPage: 1
+  };
 }
 
 function buildHref(basePath, query, targetPage) {
@@ -123,7 +201,14 @@ function tryGetCachedUrlTotals(db) {
   return null;
 }
 
-function buildUrlTotals(db) {
+function buildUrlTotals(db, options = {}) {
+  if (options.hasFetches) {
+    return {
+      source: "live",
+      totalRows: countFetchedUrls(db),
+      cache: null
+    };
+  }
   const cached = tryGetCachedUrlTotals(db);
   if (cached) {
     return cached;
@@ -158,6 +243,18 @@ function buildPagination(basePath, query, { totalRows, pageSize, currentPage }) 
   };
 }
 
+function formatStatValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return "—";
+  return formatCount(numeric);
+}
+
+function formatOptionalDate(value) {
+  if (!value) return null;
+  const formatted = formatDateTime(value, true);
+  return formatted && formatted !== "—" ? formatted : null;
+}
+
 function buildHourlySparkline(fetches, { bucketCount = 24, bucketMs = 60 * 60 * 1000, nowMs } = {}) {
   const count = Number.isFinite(bucketCount) && bucketCount > 0 ? Math.trunc(bucketCount) : 24;
   const interval = Number.isFinite(bucketMs) && bucketMs > 0 ? bucketMs : 60 * 60 * 1000;
@@ -180,6 +277,63 @@ function buildHourlySparkline(fetches, { bucketCount = 24, bucketMs = 60 * 60 * 
     }
   });
   return series;
+}
+
+function generateRequestId() {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return crypto.randomBytes(8).toString("hex");
+}
+
+function markRequestStart() {
+  if (typeof process.hrtime === "function" && typeof process.hrtime.bigint === "function") {
+    return process.hrtime.bigint();
+  }
+  return Date.now();
+}
+
+function computeDurationMs(startMark) {
+  if (typeof startMark === "bigint" && typeof process.hrtime === "function" && typeof process.hrtime.bigint === "function") {
+    const diff = process.hrtime.bigint() - startMark;
+    return Number(diff) / 1e6;
+  }
+  if (typeof startMark === "number") {
+    return Date.now() - startMark;
+  }
+  return null;
+}
+
+function buildRequestDiagnostics(req, extra = {}) {
+  const durationMs = computeDurationMs(req && req.__copilotRequestStart);
+  return {
+    requestId: (req && req.__copilotRequestId) || null,
+    durationMs: durationMs != null ? Number(durationMs) : null,
+    timestamp: new Date().toISOString(),
+    route: req && req.path ? req.path : null,
+    ...extra
+  };
+}
+
+function applyDiagnosticsHeaders(res, diagnostics = {}) {
+  if (!res) return;
+  if (diagnostics.requestId) {
+    res.setHeader("x-copilot-request-id", diagnostics.requestId);
+  }
+  if (Number.isFinite(diagnostics.durationMs)) {
+    res.setHeader("x-copilot-duration-ms", diagnostics.durationMs.toFixed(2));
+  }
+  if (diagnostics.error) {
+    res.setHeader("x-copilot-error", "1");
+  }
+  res.setHeader("x-copilot-api", API_HEADER_NAME);
+}
+
+function acceptsJson(req) {
+  if (!req || !req.headers) return false;
+  const accept = req.headers.accept;
+  if (!accept || typeof accept !== "string") return false;
+  return accept.toLowerCase().includes("application/json");
 }
 
 function getFetchCountForHost(db, host) {
@@ -205,6 +359,13 @@ function toLowerHost(host) {
 const URL_COLUMNS = buildColumns();
 
 const DATA_VIEWS = [
+  {
+    key: "home",
+    path: "/",
+    navLabel: "Home",
+    title: "Crawler Operations Dashboard",
+    render: renderDashboardView
+  },
   {
     key: "urls",
     path: "/urls",
@@ -235,42 +396,222 @@ const DATA_VIEWS = [
   }
 ];
 
-function renderUrlListingView({ req, db, relativeDb, pageSize, now }) {
-  const requestedPage = sanitizePage(req.query.page);
-  const totals = buildUrlTotals(db);
-  const totalRows = totals.totalRows;
-  const basePath = ((req.baseUrl || "") + (req.path || "")) || "/urls";
-  const backTarget = buildBackLinkTarget(req, { defaultLabel: "URLs" });
-  const pagination = buildPagination(basePath, req.query, {
-    totalRows,
+function buildUrlListingPayload({ req, db, relativeDb, pageSize, now, basePathOverride }) {
+  if (!req || !db) {
+    throw new Error("buildUrlListingPayload requires an express request and database handle");
+  }
+  const query = req.query || {};
+  const filters = resolveUrlFilterState(query);
+  const totals = buildUrlTotals(db, { hasFetches: filters.hasFetches });
+  const requestedPage = sanitizePage(query.page);
+  const basePath = basePathOverride || (((req.baseUrl || "") + (req.path || "")) || "/urls");
+  const querySnapshot = snapshotQueryParams(query);
+  const pagination = buildPagination(basePath, query, {
+    totalRows: totals.totalRows,
     pageSize,
     currentPage: requestedPage
   });
-  const { offset, currentPage, totalPages, startRow, endRow } = pagination;
-  const records = selectUrlPage(db, { limit: pageSize, offset });
-  const rows = buildDisplayRows(records, { startIndex: startRow > 0 ? startRow : 1 });
-  attachBackLink(rows, "url", backTarget);
-  attachBackLink(rows, "host", backTarget);
-  const subtitle = totalRows === 0
-    ? `No URLs available in ${relativeDb}`
-    : buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, totalPages, totals });
+  const selector = filters.hasFetches ? selectFetchedUrlPage : selectUrlPage;
+  const records = selector(db, { limit: pageSize, offset: pagination.offset });
+  const rows = buildDisplayRows(records, { startIndex: pagination.startRow > 0 ? pagination.startRow : 1 });
+  const subtitle = totals.totalRows === 0
+    ? filters.hasFetches
+      ? `No fetched URLs available in ${relativeDb}`
+      : `No URLs available in ${relativeDb}`
+    : buildUrlSummarySubtitle({
+      startRow: pagination.startRow,
+      endRow: pagination.endRow,
+      totalRows: totals.totalRows,
+      currentPage: pagination.currentPage,
+      totalPages: pagination.totalPages,
+      totals,
+      filters
+    });
   const meta = {
     rowCount: rows.length,
     limit: pageSize,
     dbLabel: relativeDb,
     generatedAt: formatDateTime(now, true),
     subtitle,
-    pagination
+    pagination,
+    filters: { ...filters }
+  };
+  return {
+    rows,
+    records,
+    filters,
+    totals,
+    meta,
+    pagination,
+    basePath,
+    query: querySnapshot
+  };
+}
+
+function buildHomeCards({ totals, db }) {
+  if (!db) {
+    return buildSharedHomeCards({ totals });
+  }
+  const loaders = createHomeCardLoaders({
+    db,
+    domainWindowSize: DOMAIN_WINDOW_SIZE,
+    domainLimit: DOMAIN_LIMIT,
+    crawlLimit: HOME_CARD_CRAWL_LIMIT,
+    errorLimit: HOME_CARD_ERROR_LIMIT
+  });
+  return buildSharedHomeCards({ totals, loaders });
+}
+
+function renderDashboardView({ db, relativeDb, now }) {
+  const totals = buildUrlTotals(db);
+  const totalCount = totals && Number.isFinite(Number(totals.totalRows)) ? Number(totals.totalRows) : null;
+  const subtitle = totalCount != null
+    ? `Monitoring ${formatCount(totalCount)} URLs tracked in ${relativeDb}`
+    : `Monitoring crawler activity for ${relativeDb}`;
+  const homeCards = buildHomeCards({ totals, db });
+  return {
+    title: "Crawler Operations Dashboard",
+    columns: [],
+    rows: [],
+    meta: {
+      rowCount: 0,
+      limit: 0,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle
+    },
+    renderOptions: {
+      homeCards,
+      layoutMode: "dashboard",
+      hideListingPanel: true,
+      includeDashboardScaffold: true,
+      dashboardSections: buildDashboardSections()
+    }
+  };
+}
+
+function createCrawlerStatusSection(context) {
+  const container = new jsgui.div({ context });
+  const badges = new jsgui.div({ context, class: "status-badges" });
+
+  const stageBadge = new jsgui.span({ context, class: "status-pill" });
+  stageBadge.dom.attributes["data-crawl-stage"] = "";
+  stageBadge.add(new StringControl({ context, text: "Stage: idle" }));
+  badges.add(stageBadge);
+
+  const pausedBadge = new jsgui.span({ context, class: "status-pill status-pill--paused" });
+  pausedBadge.dom.attributes["data-crawl-paused"] = "";
+  pausedBadge.dom.attributes.hidden = "hidden";
+  pausedBadge.add(new StringControl({ context, text: "Paused" }));
+  badges.add(pausedBadge);
+
+  const typeBadge = new jsgui.span({ context, class: "status-pill status-pill--meta" });
+  typeBadge.dom.attributes["data-crawl-type-label"] = "";
+  typeBadge.add(new StringControl({ context, text: "standard" }));
+  badges.add(typeBadge);
+
+  container.add(badges);
+
+  const startupStatus = new jsgui.div({ context, class: "startup-status" });
+  startupStatus.dom.attributes["data-crawl-startup-status"] = "";
+  startupStatus.dom.attributes.hidden = "hidden";
+
+  const statusText = new jsgui.p({ context, class: "startup-status__text" });
+  statusText.dom.attributes["data-crawl-startup-text"] = "";
+  statusText.add(new StringControl({ context, text: "Awaiting startup events" }));
+  startupStatus.add(statusText);
+
+  const progress = new jsgui.div({ context, class: "startup-progress" });
+  const progressFill = new jsgui.div({ context, class: "startup-progress__fill" });
+  progressFill.dom.attributes["data-crawl-startup-progress"] = "";
+  progress.add(progressFill);
+  startupStatus.add(progress);
+
+  const stagesList = new jsgui.ul({ context, class: "startup-stage-list" });
+  stagesList.dom.attributes["data-crawl-startup-stages"] = "";
+  const placeholder = new jsgui.li({ context });
+  placeholder.add(new StringControl({ context, text: "No startup activity yet." }));
+  stagesList.add(placeholder);
+  startupStatus.add(stagesList);
+
+  container.add(startupStatus);
+  return container;
+}
+
+function createJobsPanelSection(context) {
+  const wrapper = new jsgui.div({ context });
+  const list = new jsgui.div({ context, class: "jobs-list" });
+  list.dom.attributes["data-crawl-jobs-list"] = "";
+  list.dom.attributes["aria-live"] = "polite";
+  list.dom.attributes["aria-busy"] = "true";
+  const empty = new jsgui.div({ context, class: "jobs-empty-state" });
+  const icon = new jsgui.span({ context, class: "jobs-empty-state__icon" });
+  icon.add(new StringControl({ context, text: "..." }));
+  const text = new jsgui.p({ context, class: "jobs-empty-state__text" });
+  text.add(new StringControl({ context, text: "Waiting for crawl jobs to start." }));
+  empty.add(icon);
+  empty.add(text);
+  list.add(empty);
+  wrapper.add(list);
+  return wrapper;
+}
+
+function buildDashboardSections() {
+  return [
+    {
+      key: "crawler-status",
+      title: "Crawler Status",
+      className: "status-panel",
+      meta: "Live stage + startup feed",
+      render: ({ context }) => createCrawlerStatusSection(context)
+    },
+    {
+      key: "crawler-jobs",
+      title: "Active Jobs",
+      className: "jobs-panel",
+      meta: "Latest crawl jobs from SSE stream",
+      render: ({ context }) => createJobsPanelSection(context)
+    }
+  ];
+}
+
+
+function renderUrlListingView({ req, db, relativeDb, pageSize, now }) {
+  const { rows, totals, meta, filters, basePath, query, records } = buildUrlListingPayload({ req, db, relativeDb, pageSize, now });
+  const backTarget = buildBackLinkTarget(req, { defaultLabel: "URLs" });
+  attachBackLink(rows, "url", backTarget);
+  attachBackLink(rows, "host", backTarget);
+  const decoratedMeta = buildUrlMeta({
+    meta,
+    totals,
+    now
+  });
+  const filterOptions = buildUrlFilterOptions({
+    req,
+    basePath,
+    filters,
+    querySnapshot: query
+  });
+  const listingState = {
+    ok: true,
+    columns: URL_COLUMNS,
+    rows,
+    meta: decoratedMeta,
+    filters,
+    totals,
+    records,
+    query,
+    basePath
   };
   return {
     title: "Crawler URL Snapshot",
     columns: URL_COLUMNS,
     rows,
-    meta: buildUrlMeta({
-      meta,
-      totals,
-      now
-    })
+    meta: decoratedMeta,
+    renderOptions: {
+      filterOptions,
+      listingState
+    }
   };
 }
 
@@ -294,7 +635,7 @@ function buildUrlMeta({ meta, totals, now }) {
   return payload;
 }
 
-function buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, totalPages, totals }) {
+function buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, totalPages, totals, filters }) {
   const normalize = (value, fallback = 1) => {
     if (!Number.isFinite(value)) return fallback;
     return Math.max(fallback, Math.trunc(value));
@@ -315,57 +656,15 @@ function buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, tot
     const sourceLabel = totals.source === "cache" ? "cached" : totals.source;
     parts.push(freshness ? `${sourceLabel} metric as of ${freshness}` : `${sourceLabel} metric`);
   }
+  if (filters && filters.hasFetches) {
+    parts.push("Fetched URLs only");
+  }
   return parts.join(" • ");
 }
 
-function tryGetCachedDomainSnapshot(db) {
-  if (!db) return null;
-  try {
-    const cached = getCachedMetric(db, "domains.top_hosts_window");
-    if (cached && cached.payload && Array.isArray(cached.payload.hosts)) {
-      return {
-        source: "cache",
-        hosts: cached.payload.hosts.map(normalizeDomainEntry),
-        cache: {
-          statKey: cached.statKey,
-          generatedAt: cached.generatedAt,
-          stale: cached.stale,
-          maxAgeMs: cached.maxAgeMs
-        }
-      };
-    }
-  } catch (_) {
-    // Ignore cache read failures and fall back to live queries.
-  }
-  return null;
-}
-
-function normalizeDomainEntry(entry) {
-  if (!entry) {
-    return { host: null, articleCount: 0, lastSavedAt: null };
-  }
-  return {
-    host: entry.host || null,
-    articleCount: Number(entry.articleCount ?? entry.article_count ?? 0) || 0,
-    lastSavedAt: entry.lastSavedAt ?? entry.last_saved_at ?? null
-  };
-}
-
-function buildDomainSnapshot(db) {
-  const cached = tryGetCachedDomainSnapshot(db);
-  if (cached) {
-    return cached;
-  }
-  const liveRows = selectRecentDomains(db, { windowSize: DOMAIN_WINDOW_SIZE, limit: DOMAIN_LIMIT }).map(normalizeDomainEntry);
-  return {
-    source: "live",
-    hosts: liveRows,
-    cache: null
-  };
-}
 
 function renderDomainSummaryView({ req, db, relativeDb, now }) {
-  const snapshot = buildDomainSnapshot(db);
+  const snapshot = buildDomainSnapshot(db, { windowSize: DOMAIN_WINDOW_SIZE, limit: DOMAIN_LIMIT });
   const entries = snapshot.hosts.map((domain) => {
     const normalizedHost = domain.host ? toLowerHost(domain.host) : null;
     return {
@@ -458,6 +757,7 @@ function renderErrorLogView({ req, db, relativeDb, now }) {
 }
 
 function createDataExplorerServer(options = {}) {
+  ensureClientBundle({ silent: options.quietClientBuild });
   const app = express();
   const resolvedDbPath = resolveDbPath(options.dbPath);
   const dbAccess = openNewsDb(resolvedDbPath);
@@ -471,6 +771,14 @@ function createDataExplorerServer(options = {}) {
   const pageSize = sanitizePageSize(options.pageSize ?? DEFAULT_PAGE_SIZE);
   const bindingPluginEnabled = options.bindingPlugin !== false;
   const serverTitle = options.title || DEFAULT_TITLE;
+
+  app.use((req, res, next) => {
+    req.__copilotRequestId = generateRequestId();
+    req.__copilotRequestStart = markRequestStart();
+    res.setHeader("x-copilot-request-id", req.__copilotRequestId);
+    res.setHeader("x-copilot-api", API_HEADER_NAME);
+    next();
+  });
 
   app.use(
     compression({
@@ -487,10 +795,6 @@ function createDataExplorerServer(options = {}) {
   if (fs.existsSync(publicDir)) {
     app.use(express.static(publicDir));
   }
-
-  app.get("/", (req, res) => {
-    res.redirect("/urls");
-  });
 
   DATA_VIEWS.forEach((view) => {
     app.get(view.path, (req, res, next) => {
@@ -511,6 +815,15 @@ function createDataExplorerServer(options = {}) {
         if (meta.rowCount == null) meta.rowCount = rows.length;
         if (meta.limit == null) meta.limit = rows.length;
         if (!meta.subtitle) meta.subtitle = `${rows.length} rows rendered`;
+        const baseRenderOptions = {
+          clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
+          bindingPlugin: bindingPluginEnabled,
+          navLinks: buildNavLinks(view.key, DATA_VIEWS)
+        };
+        const mergedRenderOptions = {
+          ...baseRenderOptions,
+          ...(payload.renderOptions || {})
+        };
         const html = renderHtml(
           {
             columns,
@@ -518,17 +831,52 @@ function createDataExplorerServer(options = {}) {
             meta,
             title: payload.title || view.title || serverTitle
           },
-          {
-            clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
-            bindingPlugin: bindingPluginEnabled,
-            navLinks: buildNavLinks(view.key, DATA_VIEWS)
-          }
+          mergedRenderOptions
         );
         res.type("html").send(html);
       } catch (error) {
         next(error);
       }
     });
+  });
+
+  app.get("/api/urls", (req, res, next) => {
+    try {
+      const now = new Date();
+      const viewBasePath = `${req.baseUrl || ""}/urls`;
+      const payload = buildUrlListingPayload({
+        req,
+        db: dbAccess.db,
+        relativeDb,
+        pageSize,
+        now,
+        basePathOverride: viewBasePath
+      });
+      const backTarget = buildBackLinkTarget({
+        baseUrl: "",
+        path: viewBasePath,
+        query: req.query
+      }, { defaultLabel: "URLs" });
+      attachBackLink(payload.rows, "url", backTarget);
+      attachBackLink(payload.rows, "host", backTarget);
+      const meta = buildUrlMeta({ meta: payload.meta, totals: payload.totals, now });
+      const diagnostics = buildRequestDiagnostics(req, { route: "/api/urls" });
+      applyDiagnosticsHeaders(res, diagnostics);
+      res.json({
+        ok: true,
+        columns: URL_COLUMNS,
+        rows: payload.rows,
+        meta,
+        filters: payload.filters,
+        totals: payload.totals,
+        records: payload.records,
+        query: payload.query,
+        basePath: payload.basePath,
+        diagnostics
+      });
+    } catch (error) {
+      next(error);
+    }
   });
 
   // URL detail + downloads view
@@ -650,7 +998,29 @@ function createDataExplorerServer(options = {}) {
 
   app.use((err, req, res, _next) => {
     console.error("Data explorer server error:", err);
-    res.status(500).type("text/plain").send("Internal server error");
+    const statusCode = Number.isFinite(err && err.statusCode) ? err.statusCode : 500;
+    const diagnostics = buildRequestDiagnostics(req, {
+      status: statusCode,
+      error: err && err.message ? err.message : "Internal server error"
+    });
+    const wantsJson = (req && req.path && req.path.startsWith("/api/")) || acceptsJson(req);
+    if (wantsJson) {
+      applyDiagnosticsHeaders(res, { ...diagnostics, error: true });
+      res
+        .status(statusCode)
+        .type("application/json")
+        .json({
+          ok: false,
+          error: {
+            message: err && err.message ? err.message : "Internal server error",
+            code: err && err.code ? err.code : "ERR_UI_SERVER"
+          },
+          diagnostics
+        });
+      return;
+    }
+    applyDiagnosticsHeaders(res, { ...diagnostics, error: true });
+    res.status(statusCode).type("text/plain").send("Internal server error");
   });
 
   const close = () => {
@@ -736,5 +1106,7 @@ module.exports = {
   createDataExplorerServer,
   parseServerArgs,
   DEFAULT_PAGE_SIZE,
-  MAX_PAGE_SIZE
+  MAX_PAGE_SIZE,
+  DATA_VIEWS,
+  renderUrlListingView
 };

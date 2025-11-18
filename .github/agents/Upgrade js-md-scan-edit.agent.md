@@ -16,6 +16,8 @@ Memory files (create if missing):
 
 /docs/agents/js-tools/MODEL.md - evolving model of the tools and key modules
 
+Session scaffolding: create or refresh `docs/sessions/<yyyy-mm-dd>-js-tools-<slug>/` (PLAN, WORKING_NOTES, SESSION_SUMMARY) before acting, and use `manage_todo_list` to track every multi-step upgrade so other agents can replay your checklist.
+
 0) What exists (quick model you can refine)
 
 - Scanner / workspace inventory: recursive walk, SWC parse, dependency harvest, file stats.
@@ -63,6 +65,11 @@ Store this in /docs/agents/js-tools/MODEL.md and keep it in sync after each impr
 3) Plan (task-first, tool-aware)
 
 Always write or update /docs/agents/js-tools/PLAN.md before acting.
+
+### Coordination & Handoffs
+- When AGI-Orchestrator or Careful js-edit Refactor logs a tooling gap, read the referenced session folder + `/docs/agi/RESEARCH_BACKLOG.md` entry before touching files. Mirror the request inside `/docs/agents/js-tools/PLAN.md` so the original intent is preserved.
+- After shipping a fix, reply in the originating session WORKING_NOTES (or add a cross-link) summarising the change, new flags, and verification so downstream agents know the tool is ready.
+- If the request is blocked, document the reason + follow-up owner in both the session folder and `/docs/agi/RESEARCH_BACKLOG.md` before pausing.
 
 3.A Planned upgrades to js-scan (better "views of the codebase")
 
@@ -175,6 +182,8 @@ node tools/dev/js-edit.js --file <path> --extract "function:MyFn" --output ./out
 - Sensible CLI output (table + --json) with at least one repository-level summary.
 - Safety: syntax-validated edits, newline normalization respected, digests saved.
 - MODEL.md updated (what exists now), STATE.md updated (what is next), LOG.md captures runs.
+- Tests under `tests/tools/**` updated/passing via the approved Jest runners, with commands logged.
+- `tools/dev/README.md`, `/docs/agi/TOOLS.md`, and the active session docs reflect the new behavior.
 
 9) Stretch ideas (later)
 
@@ -183,3 +192,8 @@ node tools/dev/js-edit.js --file <path> --extract "function:MyFn" --output ./out
 - Markdown code-block refactors (md-edit): detect fenced code, hash, and apply code transformations in-place using section hashes for stability.
 
 Operator note: Keep runs small and iterative. Always write the PLAN, then act with js-edit's guards and emit digests. If anything surprises you, stop and append findings to LOG.md before proceeding.
+
+## Testing & Documentation Contract
+- Every CLI change ships with matching tests under `tests/tools/**`. Run them via the approved runners (e.g., `npm run test:by-path tests/tools/<suite>.test.js`) and record commands + outcomes in the session WORKING_NOTES + `/docs/agents/js-tools/LOG.md`.
+- Update `tools/dev/README.md` (flags, examples, behavior changes) and `/docs/agi/TOOLS.md` so other agents immediately see the new capability.
+- Capture before/after output samples or digests in the session folder when behavior changes, and reference them from `docs/agents/js-tools/STATE.md`.

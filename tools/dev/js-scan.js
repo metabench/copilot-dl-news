@@ -39,6 +39,7 @@ const CHINESE_HELP_ROWS = Object.freeze([
   { lexKey: 'include_deprecated', alias: '含旧', summary: '含旧', params: '' },
   { lexKey: 'deprecated_only', alias: '旧专', summary: '旧专', params: '' },
   { lexKey: 'lang', alias: '语', summary: '设模', params: '[英 中 双 自]' },
+  { lexKey: 'source_language', alias: '码', summary: '码模', params: '[js ts 自]' },
   { lexKey: 'view', alias: '视', summary: '视模', params: '[详 简 概]' },
   { lexKey: 'fields', alias: '域', summary: '简列', params: '[location name hash]'},
   { lexKey: 'follow_deps', alias: '依', summary: '依扫', params: '' },
@@ -51,10 +52,6 @@ const CHINESE_HELP_DETAILS = Object.freeze({
   search: [
     '搜要: 搜文 限数 片显',
     '示: node tools/dev/js-scan.js --搜 service'
-  ],
-  hash: [
-    '哈要: 以哈 定函',
-    '示: node tools/dev/js-scan.js --哈 1a2b3c4d'
   ],
   pattern: [
     '型要: 模式 选函 限数',
@@ -77,11 +74,17 @@ const CHINESE_HELP_DETAILS = Object.freeze({
     '旧专 要: 仅扫 旧径'
   ],
   lang: [
-    '语 要: 设模 英 中 双 自'
+    '语 要: 设模 英 中 双 自',
+    '双语: 可混用中英别名; --lang zh 强制中文输出'
   ],
   view: [
     '视 要: 详 简 概',
     '示: node tools/dev/js-scan.js --视 简'
+  ],
+  source_language: [
+    '码要: js/ts/自',
+    '示: node tools/dev/js-scan.js --码 ts --搜 service',
+    '提示: --码 ts 可扫描 .ts/.tsx, --码 自 按扩展自检'
   ],
   fields: [
     '域 要: 简列 逗分',
@@ -142,6 +145,7 @@ const TERSE_FIELD_ALIASES = Object.freeze({
   function: 'name',
   canonical: 'canonical',
   'canonical-name': 'canonical',
+  selector: 'selector',
   hash: 'hash',
   digest: 'hash',
   rank: 'rank',
@@ -166,6 +170,7 @@ const SUPPORTED_TERSE_FIELDS = Object.freeze([
   'column',
   'name',
   'canonical',
+  'selector',
   'kind',
   'hash',
   'rank',
@@ -177,6 +182,7 @@ const SUPPORTED_TERSE_FIELDS = Object.freeze([
 ]);
 
 const DEFAULT_TERSE_FIELDS = Object.freeze(['location', 'name', 'hash', 'exported']);
+const MAX_RELATIONSHIP_ACTIONS = 10;
 
 function normalizeBooleanOption(value) {
   if (typeof value === 'boolean') {
@@ -291,6 +297,16 @@ function parseTerseFields(raw) {
 
 function formatTerseMatch(match, fields, language, formatter = fmt) {
   const isChinese = language && language.isChinese;
+  const resolvedFields = Array.isArray(fields) && fields.length > 0
+    ? [...fields]
+    : Array.from(DEFAULT_TERSE_FIELDS);
+  const hasLocation = resolvedFields.some((field) => field === 'location' || field === 'file' || field === 'line' || field === 'column');
+  if (!hasLocation) {
+    resolvedFields.unshift('location');
+  }
+  if (!resolvedFields.includes('hash')) {
+    resolvedFields.push('hash');
+  }
   const segments = [];
 
   let pendingLocation = null;
@@ -337,7 +353,7 @@ function formatTerseMatch(match, fields, language, formatter = fmt) {
     return parts.join(':');
   };
 
-  fields.forEach((field) => {
+  resolvedFields.forEach((field) => {
     switch (field) {
       case 'location':
         flushPendingLocation();
@@ -360,6 +376,16 @@ function formatTerseMatch(match, fields, language, formatter = fmt) {
         flushPendingLocation();
         if (match.function.canonicalName) {
           segments.push(formatter.COLORS.muted(match.function.canonicalName));
+        }
+        break;
+      case 'selector':
+        flushPendingLocation();
+        {
+          const selectorValue = match.function.canonicalName
+            || match.function.pathSignature
+            || match.function.name
+            || '(anonymous)';
+          segments.push(formatter.COLORS.muted(selectorValue));
         }
         break;
       case 'kind':
@@ -616,6 +642,7 @@ function createParser() {
     .add('--include-deprecated', 'Include deprecated directories in the scan', false, 'boolean')
     .add('--deprecated-only', 'Scan only deprecated directories', false, 'boolean')
     .add('--lang <code>', 'Output language (en, zh, bilingual, auto)', 'auto')
+    .add('--source-language <mode>', 'Source parser language (javascript, typescript, auto)', 'auto')
     .add('--kind <kind>', 'Filter by function kind (function, method, class, constructor)', [])
     .add('--exported', 'Only include exported symbols', false, 'boolean')
     .add('--internal', 'Only include internal (non-exported) symbols', false, 'boolean')
@@ -1294,6 +1321,490 @@ function generateNextActions(searchResult, options) {
   return actions;
 }
 
+function normalizeSearchTerms(terms) {
+  if (Array.isArray(terms)) {
+    return terms
+      .map((term) => (typeof term === 'string' ? term : String(term)))
+      .map((term) => term.trim())
+      .filter(Boolean);
+  }
+  if (typeof terms === 'string') {
+    return terms
+      .split(/\s+/)
+      .map((term) => term.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function snapshotSearchOptions(options = {}) {
+  return {
+    limit: typeof options.limit === 'number' ? options.limit : undefined,
+    maxLines: typeof options.maxLines === 'number' ? options.maxLines : undefined,
+    noSnippets: !!options.noSnippets,
+    noGuidance: !!options.noGuidance,
+    filters: {
+      exportedOnly: !!options.exported,
+      internalOnly: !!options.internal,
+      asyncOnly: !!options.async,
+      generatorOnly: !!options.generator,
+      kinds: Array.isArray(options.kind) ? options.kind.slice() : [],
+      includePaths: Array.isArray(options.includePath) ? options.includePath.slice() : [],
+      excludePaths: Array.isArray(options.excludePath) ? options.excludePath.slice() : []
+    }
+  };
+}
+
+function snapshotScanContext(options = {}) {
+  const scopeDir = options.dir ? path.resolve(options.dir) : process.cwd();
+  return {
+    dir: scopeDir,
+    exclude: Array.isArray(options.exclude) ? options.exclude.slice() : [],
+    includeDeprecated: !!options.includeDeprecated,
+    deprecatedOnly: !!options.deprecatedOnly,
+    followDependencies: !!options.followDeps,
+    dependencyDepth: typeof options.depDepth === 'number' ? options.depDepth : undefined,
+    language: typeof options.sourceLanguage === 'string' ? options.sourceLanguage : 'auto'
+  };
+}
+
+function createAiNativeEnvelope(result, continuationTokens) {
+  const actionIds = Object.keys(continuationTokens);
+  return {
+    ...result,
+    continuation_tokens: continuationTokens,
+    version: 1,
+    available_actions: actionIds,
+    _ai_native_cli: {
+      mode: 'ai-native',
+      version: 1,
+      available_actions: actionIds,
+      token_count: actionIds.length
+    }
+  };
+}
+
+function captureImporterSnapshot(importer, scopeDir) {
+  if (!importer) {
+    return null;
+  }
+  const absoluteFile = path.isAbsolute(importer.file)
+    ? importer.file
+    : path.resolve(scopeDir, importer.file);
+  const firstImport = importer.imports && importer.imports[0];
+  return {
+    type: 'importer',
+    file: absoluteFile,
+    relativeFile: path.relative(scopeDir, absoluteFile),
+    displayFile: importer.file,
+    count: importer.count || (importer.imports ? importer.imports.length : 0),
+    importSpecifiers: (importer.imports || []).map((imp) => ({
+      specifier: imp.specifier,
+      source: imp.source,
+      line: imp.line
+    })),
+    jsEditHint: firstImport && firstImport.line
+      ? {
+          command: 'node tools/dev/js-edit.js',
+          args: [
+            '--file',
+            path.relative(scopeDir, absoluteFile),
+            '--snipe-position',
+            `${firstImport.line}:1`
+          ],
+          description: 'Jump to import statement for guarded edit'
+        }
+      : null
+  };
+}
+
+function captureUsageCallSnapshot(entry, scopeDir) {
+  if (!entry) {
+    return null;
+  }
+  const absoluteFile = path.isAbsolute(entry.file)
+    ? entry.file
+    : path.resolve(scopeDir, entry.file);
+  const firstCall = entry.calls && entry.calls[0];
+  return {
+    type: 'usage-call',
+    file: absoluteFile,
+    relativeFile: path.relative(scopeDir, absoluteFile),
+    displayFile: entry.file,
+    count: entry.count || (entry.calls ? entry.calls.length : 0),
+    calls: (entry.calls || []).map((call) => ({
+      line: call.line,
+      context: call.context
+    })),
+    jsEditHint: firstCall && firstCall.line
+      ? {
+          command: 'node tools/dev/js-edit.js',
+          args: [
+            '--file',
+            path.relative(scopeDir, absoluteFile),
+            '--snipe-position',
+            `${firstCall.line}:1`
+          ],
+          description: 'Jump to first usage call for guarded edit'
+        }
+      : null
+  };
+}
+
+function captureReexportSnapshot(filePath, scopeDir) {
+  if (!filePath) {
+    return null;
+  }
+  const absoluteFile = path.isAbsolute(filePath)
+    ? filePath
+    : path.resolve(scopeDir, filePath);
+  return {
+    type: 'usage-reexport',
+    file: absoluteFile,
+    relativeFile: path.relative(scopeDir, absoluteFile),
+    displayFile: filePath,
+    jsEditHint: {
+      command: 'node tools/dev/js-edit.js',
+      args: [
+        '--file',
+        path.relative(scopeDir, absoluteFile),
+        '--outline'
+      ],
+      description: 'Outline file to locate re-export'
+    }
+  };
+}
+
+function buildRelationshipActionEntries(operation, result, options, scopeDir) {
+  const entries = [];
+  const hardLimit = Math.max(1, Math.min(MAX_RELATIONSHIP_ACTIONS, options.limit && options.limit > 0 ? options.limit : MAX_RELATIONSHIP_ACTIONS));
+
+  if (operation === 'what-imports' && Array.isArray(result.importers)) {
+    result.importers.slice(0, hardLimit).forEach((importer, idx) => {
+      const snapshot = captureImporterSnapshot(importer, scopeDir);
+      entries.push({
+        actionId: `importer-analyze:${idx}`,
+        actionType: 'importer-analyze',
+        entryKind: 'importer',
+        entryIndex: idx,
+        label: `Importer ${idx + 1}`,
+        description: `Inspect ${path.basename(importer.file)}`,
+        matchSnapshot: snapshot,
+        entryPayload: importer
+      });
+    });
+  }
+
+  if (operation === 'export-usage' && result.usage) {
+    const directImports = Array.isArray(result.usage.directImports) ? result.usage.directImports : [];
+    directImports.slice(0, hardLimit).forEach((importer, idx) => {
+      const snapshot = captureImporterSnapshot(importer, scopeDir);
+      entries.push({
+        actionId: `usage-import:${idx}`,
+        actionType: 'usage-import',
+        entryKind: 'usage-direct',
+        entryIndex: idx,
+        label: `Direct Import ${idx + 1}`,
+        description: `Inspect importer ${path.basename(importer.file)}`,
+        matchSnapshot: snapshot,
+        entryPayload: importer
+      });
+    });
+
+    const functionCalls = Array.isArray(result.usage.functionCalls) ? result.usage.functionCalls : [];
+    functionCalls.slice(0, hardLimit).forEach((callEntry, idx) => {
+      const snapshot = captureUsageCallSnapshot(callEntry, scopeDir);
+      entries.push({
+        actionId: `usage-call:${idx}`,
+        actionType: 'usage-call',
+        entryKind: 'usage-call',
+        entryIndex: idx,
+        label: `Call Site ${idx + 1}`,
+        description: `Calls within ${path.basename(callEntry.file)}`,
+        matchSnapshot: snapshot,
+        entryPayload: callEntry
+      });
+    });
+
+    const reexports = Array.isArray(result.usage.reexports) ? result.usage.reexports : [];
+    reexports.slice(0, hardLimit).forEach((filePath, idx) => {
+      const snapshot = captureReexportSnapshot(filePath, scopeDir);
+      entries.push({
+        actionId: `usage-reexport:${idx}`,
+        actionType: 'usage-reexport',
+        entryKind: 'usage-reexport',
+        entryIndex: idx,
+        label: `Re-export ${idx + 1}`,
+        description: `Re-export in ${path.basename(filePath)}`,
+        matchSnapshot: snapshot,
+        entryPayload: { file: filePath }
+      });
+    });
+  }
+
+  return entries;
+}
+
+function generateRelationshipTokens(operation, result, options) {
+  const scopeDir = options.dir ? path.resolve(options.dir) : process.cwd();
+  const entries = buildRelationshipActionEntries(operation, result, options, scopeDir);
+  if (!entries.length) {
+    return { tokens: {}, actionIds: [] };
+  }
+
+  const tokens = {};
+  const requestId = TokenCodec.generateRequestId('js-scan');
+  const scanContextSnapshot = snapshotScanContext(options);
+  const resultsDigest = TokenCodec.computeDigest(result);
+  const repoRoot = findRepositoryRoot(scopeDir);
+  const target = result.target || options.whatImports || options.exportUsage || options.search;
+  const nextActionsMetadata = entries.map((entry) => ({
+    id: entry.actionId,
+    label: entry.label,
+    description: entry.description,
+    guard: false
+  }));
+
+  entries.forEach((entry) => {
+    try {
+      const payload = {
+        command: 'js-scan',
+        action: entry.actionType,
+        context: {
+          request_id: requestId,
+          source_token: null,
+          results_digest: resultsDigest
+        },
+        parameters: {
+          relationship: operation,
+          target,
+          entry_kind: entry.entryKind,
+          entry_index: entry.entryIndex,
+          scope: scopeDir,
+          match: entry.matchSnapshot,
+          entry_payload: entry.entryPayload,
+          scanContext: scanContextSnapshot
+        },
+        next_actions: nextActionsMetadata
+      };
+
+      const token = TokenCodec.encode(payload, {
+        secret_key: TokenCodec.deriveSecretKey({ repo_root: repoRoot }),
+        ttl_seconds: 3600
+      });
+
+      tokens[entry.actionId] = token;
+    } catch (error) {
+      console.error(`Warning: Failed to generate relationship token for ${entry.actionId}: ${error.message}`);
+    }
+  });
+
+  return { tokens, actionIds: Object.keys(tokens) };
+}
+
+function sanitizeRelationshipEntry(entryKind, entry) {
+  if (!entry) {
+    return null;
+  }
+  if (entryKind === 'importer' || entryKind === 'usage-direct') {
+    return {
+      file: entry.file,
+      count: entry.count,
+      imports: (entry.imports || []).map((imp) => ({
+        specifier: imp.specifier,
+        source: imp.source,
+        line: imp.line
+      }))
+    };
+  }
+  if (entryKind === 'usage-call') {
+    return {
+      file: entry.file,
+      count: entry.count,
+      calls: (entry.calls || []).map((call) => ({
+        line: call.line,
+        context: call.context
+      }))
+    };
+  }
+  if (entryKind === 'usage-reexport') {
+    if (typeof entry === 'string') {
+      return { file: entry };
+    }
+    return { file: entry.file };
+  }
+  return entry;
+}
+
+async function replayRelationshipContinuation(parameters, scopeDir) {
+  const analyzer = new RelationshipAnalyzer(scopeDir, { verbose: false });
+  const relationshipType = parameters.relationship;
+  const target = parameters.target || parameters.search;
+  if (!relationshipType || !target) {
+    return {
+      result: null,
+      entry: null,
+      matchSnapshot: null,
+      replayDigest: null
+    };
+  }
+
+  const result = relationshipType === 'what-imports'
+    ? await analyzer.whatImports(target)
+    : relationshipType === 'export-usage'
+      ? await analyzer.exportUsage(target)
+      : null;
+
+  if (!result) {
+    return {
+      result: null,
+      entry: null,
+      matchSnapshot: null,
+      replayDigest: null
+    };
+  }
+
+  const entryIndex = typeof parameters.entry_index === 'number'
+    ? parameters.entry_index
+    : parseInt(parameters.entry_index || '0', 10) || 0;
+  const entryKind = parameters.entry_kind;
+  let entry = null;
+  let snapshot = null;
+
+  if (relationshipType === 'what-imports' && Array.isArray(result.importers)) {
+    entry = result.importers[entryIndex] || null;
+    snapshot = captureImporterSnapshot(entry, scopeDir);
+  } else if (relationshipType === 'export-usage' && result.usage) {
+    if (entryKind === 'usage-direct' && Array.isArray(result.usage.directImports)) {
+      entry = result.usage.directImports[entryIndex] || null;
+      snapshot = captureImporterSnapshot(entry, scopeDir);
+    } else if (entryKind === 'usage-call' && Array.isArray(result.usage.functionCalls)) {
+      entry = result.usage.functionCalls[entryIndex] || null;
+      snapshot = captureUsageCallSnapshot(entry, scopeDir);
+    } else if (entryKind === 'usage-reexport' && Array.isArray(result.usage.reexports)) {
+      const filePath = result.usage.reexports[entryIndex];
+      if (filePath) {
+        entry = { file: filePath };
+        snapshot = captureReexportSnapshot(filePath, scopeDir);
+      }
+    }
+  }
+
+  return {
+    result,
+    entry,
+    matchSnapshot: snapshot,
+    replayDigest: TokenCodec.computeDigest(result)
+  };
+}
+
+function parseMatchIndex(actionId) {
+  if (!actionId || typeof actionId !== 'string') {
+    return 0;
+  }
+  const [, suffix] = actionId.split(':');
+  if (typeof suffix === 'undefined') {
+    return 0;
+  }
+  const index = parseInt(suffix, 10);
+  return Number.isNaN(index) ? 0 : index;
+}
+
+function captureMatchSnapshot(match, scopeDir) {
+  if (!match) {
+    return null;
+  }
+  const absoluteFile = path.isAbsolute(match.file)
+    ? match.file
+    : path.resolve(scopeDir, match.file);
+  return {
+    file: absoluteFile,
+    relativeFile: path.relative(scopeDir, absoluteFile),
+    displayFile: match.file,
+    hash: match.function && match.function.hash ? match.function.hash : null,
+    name: match.function && match.function.name ? match.function.name : null,
+    canonicalName: match.function && match.function.canonicalName ? match.function.canonicalName : null,
+    kind: match.function && match.function.kind ? match.function.kind : null,
+    line: match.function && typeof match.function.line === 'number' ? match.function.line : null,
+    column: match.function && typeof match.function.column === 'number' ? match.function.column : null,
+    traits: match.function
+      ? {
+          exported: !!match.function.exported,
+          isAsync: !!match.function.isAsync,
+          isGenerator: !!match.function.isGenerator
+        }
+      : null,
+    jsEditHint: match.jsEditHint || null
+  };
+}
+
+function normalizeMatchSnapshot(match, scopeDir) {
+  if (!match) {
+    return null;
+  }
+  const absoluteFile = path.isAbsolute(match.file)
+    ? match.file
+    : path.resolve(scopeDir, match.file);
+  return {
+    ...match,
+    file: absoluteFile,
+    relativeFile: match.relativeFile || path.relative(scopeDir, absoluteFile)
+  };
+}
+
+function replaySearchForContinuation(parameters, scopeDir) {
+  if (parameters.match && parameters.match.file) {
+    return {
+      matchSnapshot: normalizeMatchSnapshot(parameters.match, scopeDir),
+      replay: null,
+      replayDigest: null
+    };
+  }
+
+  const searchTerms = parameters.search_terms || normalizeSearchTerms(parameters.search);
+  if (!searchTerms.length) {
+    return { matchSnapshot: null, replay: null };
+  }
+
+  const replayScan = parameters.scanContext || {};
+  const scanResult = scanWorkspace({
+    dir: replayScan.dir || scopeDir,
+    rootDir: replayScan.dir || scopeDir,
+    exclude: replayScan.exclude || [],
+    includeDeprecated: !!replayScan.includeDeprecated,
+    deprecatedOnly: !!replayScan.deprecatedOnly,
+    followDependencies: !!replayScan.followDependencies,
+    dependencyDepth: typeof replayScan.dependencyDepth === 'number' ? replayScan.dependencyDepth : undefined,
+    language: replayScan.language || 'auto'
+  });
+
+  const searchOptions = parameters.searchOptions || {};
+  const filters = searchOptions.filters || {};
+  const replayResult = runSearch(scanResult.files, searchTerms, {
+    exportedOnly: !!filters.exportedOnly,
+    internalOnly: !!filters.internalOnly,
+    asyncOnly: !!filters.asyncOnly,
+    generatorOnly: !!filters.generatorOnly,
+    kinds: filters.kinds || [],
+    includePaths: filters.includePaths || [],
+    excludePaths: filters.excludePaths || [],
+    limit: typeof searchOptions.limit === 'number' ? searchOptions.limit : parameters.limit,
+    maxLines: searchOptions.maxLines,
+    noSnippets: !!searchOptions.noSnippets,
+    noGuidance: !!searchOptions.noGuidance
+  });
+
+  const idx = typeof parameters.match_index === 'number'
+    ? parameters.match_index
+    : parseInt(parameters.match_index || '0', 10) || 0;
+
+  return {
+    matchSnapshot: captureMatchSnapshot(replayResult.matches && replayResult.matches[idx], scopeDir),
+    replay: replayResult,
+    replayDigest: TokenCodec.computeDigest(replayResult)
+  };
+}
+
 /**
  * Generate continuation tokens for each available action.
  * @param {string} command - CLI command (js-scan, js-edit, etc.)
@@ -1308,9 +1819,19 @@ function generateNextActions(searchResult, options) {
 function generateTokens(command, action, searchTerms, result, nextActions, resultsDigest, options) {
   const tokens = {};
   const requestId = TokenCodec.generateRequestId(command);
+  const scopeDir = options.dir ? path.resolve(options.dir) : process.cwd();
+  const normalizedTerms = normalizeSearchTerms(searchTerms);
+  const searchOptionsSnapshot = snapshotSearchOptions(options);
+  const scanContextSnapshot = snapshotScanContext(options);
 
   nextActions.forEach(nextAction => {
     try {
+      const matchIndex = parseMatchIndex(nextAction.id);
+      const matchSnapshot = captureMatchSnapshot(
+        result.matches && result.matches[matchIndex],
+        scopeDir
+      );
+
       const tokenPayload = {
         command,
         action: nextAction.id.split(':')[0], // e.g., 'analyze' from 'analyze:0'
@@ -1321,9 +1842,13 @@ function generateTokens(command, action, searchTerms, result, nextActions, resul
         },
         parameters: {
           search: Array.isArray(searchTerms) ? searchTerms.join(' ') : searchTerms,
-          scope: options.dir,
+          search_terms: normalizedTerms,
+          scope: scopeDir,
           limit: options.limit,
-          match_index: parseInt(nextAction.id.split(':')[1] || '0', 10)
+          match_index: matchIndex,
+          searchOptions: searchOptionsSnapshot,
+          scanContext: scanContextSnapshot,
+          match: matchSnapshot
         },
         next_actions: nextActions.map(a => ({
           id: a.id,
@@ -1333,8 +1858,7 @@ function generateTokens(command, action, searchTerms, result, nextActions, resul
         }))
       };
 
-      // Derive secret key from repo root (not search dir) for consistency across invocations
-      const repoRoot = findRepositoryRoot(options.dir);
+      const repoRoot = findRepositoryRoot(scopeDir);
       const token = TokenCodec.encode(tokenPayload, {
         secret_key: TokenCodec.deriveSecretKey({ repo_root: repoRoot }),
         ttl_seconds: 3600
@@ -1357,11 +1881,9 @@ function generateTokens(command, action, searchTerms, result, nextActions, resul
  * @returns {Object} Result of the resumed action
  * @throws {Error} If token is invalid or action fails
  */
-function handleContinuationToken(token, options) {
+async function handleContinuationToken(token, options) {
   try {
-    // Decode and validate token
     const decoded = TokenCodec.decode(token);
-    // Derive secret key from repo root (not search dir) for consistency
     const repoRoot = findRepositoryRoot(options.dir || process.cwd());
     const secretKey = TokenCodec.deriveSecretKey({ repo_root: repoRoot });
     const validation = TokenCodec.validate(decoded, {
@@ -1373,20 +1895,134 @@ function handleContinuationToken(token, options) {
     }
 
     const payload = decoded.payload;
-    const { action, parameters } = payload;
+    const parameters = payload.parameters || {};
+    const action = payload.action;
+    const scopeDir = parameters.scope ? path.resolve(parameters.scope) : path.resolve(options.dir || process.cwd());
+    const expectedDigest = payload.context ? payload.context.results_digest : null;
 
-    // For now, we'll return a stub response indicating what action would be taken
-    // In full implementation, this would execute the actual action
-    return {
+    const warnings = [];
+    let effectiveMatch = null;
+    let replayDigest = null;
+    let searchReplayResult = null;
+    let relationshipReplay = null;
+    const isRelationshipToken = Boolean(parameters.relationship);
+
+    if (isRelationshipToken) {
+      relationshipReplay = await replayRelationshipContinuation(parameters, scopeDir);
+      effectiveMatch = relationshipReplay.matchSnapshot;
+      replayDigest = relationshipReplay.replayDigest;
+    } else {
+      searchReplayResult = replaySearchForContinuation(parameters, scopeDir);
+      effectiveMatch = searchReplayResult.matchSnapshot;
+      replayDigest = searchReplayResult.replayDigest;
+    }
+
+    if (expectedDigest && replayDigest && expectedDigest !== replayDigest) {
+      warnings.push({
+        code: 'RESULTS_DIGEST_MISMATCH',
+        message: 'Search results changed since this token was issued. Re-run js-scan with --ai-mode to refresh selectors and tokens.',
+        expected_digest: expectedDigest,
+        actual_digest: replayDigest
+      });
+    }
+
+    const response = {
       status: 'token_accepted',
       action,
-      parameters,
-      _note: 'Continuation token successfully validated. Action handlers to be implemented in Phase 2.',
-      next_tokens: payload.next_actions.map(a => ({
-        id: a.id,
-        label: a.label
-      }))
+      scope: scopeDir,
+      parameters: {
+        search: parameters.search || null,
+        search_terms: parameters.search_terms || normalizeSearchTerms(parameters.search),
+        match_index: typeof parameters.match_index === 'number'
+          ? parameters.match_index
+          : parseInt(parameters.match_index || '0', 10) || 0,
+        limit: parameters.limit || null
+      },
+      match: effectiveMatch || null,
+      continuation: {
+        source_token: token,
+        issued_at: payload.issued_at || null,
+        expires_at: payload.expires_at || null,
+        available_actions: payload.next_actions || []
+      },
+      next_tokens: (payload.next_actions || []).map((a) => ({ id: a.id, label: a.label })),
+      warnings: warnings.length ? warnings : undefined
     };
+
+    if (!isRelationshipToken && action === 'analyze') {
+      if (!effectiveMatch) {
+        throw new Error('Match metadata unavailable; rerun js-scan with --ai-mode to refresh this token.');
+      }
+      response.analysis = {
+        file: effectiveMatch.file,
+        hash: effectiveMatch.hash,
+        name: effectiveMatch.name || effectiveMatch.canonicalName,
+        line: effectiveMatch.line,
+        jsEditHint: effectiveMatch.jsEditHint || null
+      };
+      return response;
+    }
+
+    if (!isRelationshipToken && action === 'trace') {
+      if (!effectiveMatch || !(effectiveMatch.name || effectiveMatch.canonicalName)) {
+        throw new Error('Trace continuation requires a function name; rerun the originating search.');
+      }
+      const analyzer = new RelationshipAnalyzer(scopeDir, { verbose: false });
+      response.trace = await analyzer.whatCalls(effectiveMatch.name || effectiveMatch.canonicalName);
+      return response;
+    }
+
+    if (!isRelationshipToken && action === 'ripple') {
+      if (!effectiveMatch || !effectiveMatch.file) {
+        throw new Error('Ripple continuation requires file metadata; rerun the originating search.');
+      }
+      response.ripple = await analyzeRipple(effectiveMatch.file, {
+        workspaceRoot: scopeDir,
+        depth: (parameters.searchOptions && parameters.searchOptions.rippleDepth) || 4
+      });
+      return response;
+    }
+
+    if (isRelationshipToken) {
+      const relationshipEntry = relationshipReplay ? relationshipReplay.entry : null;
+      if (!relationshipEntry) {
+        throw new Error('Relationship entry unavailable; rerun js-scan with --ai-mode to refresh tokens.');
+      }
+      if (action === 'importer-analyze' || action === 'usage-import' || action === 'usage-call' || action === 'usage-reexport') {
+        response.relationship = {
+          type: parameters.relationship,
+          target: parameters.target || parameters.search || null,
+          entryKind: parameters.entry_kind || null,
+          entryIndex: typeof parameters.entry_index === 'number'
+            ? parameters.entry_index
+            : parseInt(parameters.entry_index || '0', 10) || 0,
+          entry: sanitizeRelationshipEntry(parameters.entry_kind, relationshipEntry)
+        };
+        return response;
+      }
+      if (action === 'importer-ripple') {
+        if (!relationshipEntry.file) {
+          throw new Error('Ripple continuation requires file metadata.');
+        }
+        response.relationship = {
+          type: parameters.relationship,
+          target: parameters.target || parameters.search || null,
+          entryKind: parameters.entry_kind || null,
+          entryIndex: typeof parameters.entry_index === 'number'
+            ? parameters.entry_index
+            : parseInt(parameters.entry_index || '0', 10) || 0,
+          entry: sanitizeRelationshipEntry(parameters.entry_kind, relationshipEntry)
+        };
+        response.ripple = await analyzeRipple(relationshipEntry.file, {
+          workspaceRoot: scopeDir,
+          depth: 4
+        });
+        return response;
+      }
+    }
+
+    response.warning = `No handler implemented for action "${action}"`;
+    return response;
   } catch (err) {
     throw new Error(`Token processing failed: ${err.message}`);
   }
@@ -1595,7 +2231,7 @@ async function main() {
         token = token.trim();
       }
       
-      const continuationResult = handleContinuationToken(token, options);
+      const continuationResult = await handleContinuationToken(token, options);
       if (options.json) {
         console.log(JSON.stringify(continuationResult, null, 2));
       } else {
@@ -1634,6 +2270,9 @@ async function main() {
   }
   options.view = resolvedView;
   options.terseFields = parseTerseFields(options.fields);
+  options.sourceLanguage = typeof options.sourceLanguage === 'string'
+    ? options.sourceLanguage.trim().toLowerCase()
+    : 'auto';
 
   const langOption = typeof options.lang === 'string' ? options.lang.trim().toLowerCase() : 'auto';
   let languageMode = 'en';
@@ -1663,7 +2302,8 @@ async function main() {
       includeDeprecated: options.includeDeprecated,
       deprecatedOnly: options.deprecatedOnly,
       followDependencies: options.followDeps,
-      dependencyDepth: options.depDepth
+      dependencyDepth: options.depDepth,
+      language: options.sourceLanguage
     });
   } catch (error) {
     fmt.error(error.message || String(error));
@@ -1711,23 +2351,16 @@ async function main() {
         if (options.aiMode) {
           const resultsDigest = TokenCodec.computeDigest(result);
           const nextActions = generateNextActions(result, options);
-          const augmentedResult = {
-            ...result,
-            continuation_tokens: generateTokens(
-              'js-scan',
-              'search',
-              options.search,
-              result,
-              nextActions,
-              resultsDigest,
-              options
-            ),
-            _ai_native_cli: {
-              mode: 'ai-native',
-              version: 1,
-              available_actions: nextActions.map(a => a.id)
-            }
-          };
+          const continuationTokens = generateTokens(
+            'js-scan',
+            'search',
+            options.search,
+            result,
+            nextActions,
+            resultsDigest,
+            options
+          );
+          const augmentedResult = createAiNativeEnvelope(result, continuationTokens);
           console.log(JSON.stringify(augmentedResult, null, 2));
         } else {
           console.log(JSON.stringify(result, null, 2));
@@ -1863,7 +2496,12 @@ async function main() {
       const analyzer = new RelationshipAnalyzer(options.dir, { verbose: false });
       const result = await analyzer.whatImports(options.whatImports);
       if (options.json) {
-        console.log(JSON.stringify(result, null, 2));
+        if (options.aiMode) {
+          const { tokens } = generateRelationshipTokens('what-imports', result, options);
+          console.log(JSON.stringify(createAiNativeEnvelope(result, tokens), null, 2));
+        } else {
+          console.log(JSON.stringify(result, null, 2));
+        }
       } else {
         printWhatImports(result, options);
       }
@@ -1885,7 +2523,12 @@ async function main() {
       const analyzer = new RelationshipAnalyzer(options.dir, { verbose: false });
       const result = await analyzer.exportUsage(options.exportUsage);
       if (options.json) {
-        console.log(JSON.stringify(result, null, 2));
+        if (options.aiMode) {
+          const { tokens } = generateRelationshipTokens('export-usage', result, options);
+          console.log(JSON.stringify(createAiNativeEnvelope(result, tokens), null, 2));
+        } else {
+          console.log(JSON.stringify(result, null, 2));
+        }
       } else {
         printExportUsage(result, options);
       }

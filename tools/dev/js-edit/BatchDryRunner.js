@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createDigest, HASH_PRIMARY_ENCODING } = require('../lib/swcAst');
 
 /**
  * BatchDryRunner: Batch operation preview and dry-run with recovery
@@ -24,6 +25,7 @@ class BatchDryRunner {
     this.conflicts = [];
     this.verbose = options.verbose || false;
     this.sortByOffset = options.sortByOffset !== false;
+    this.filePath = options.filePath || null;
   }
 
   /**
@@ -53,12 +55,63 @@ class BatchDryRunner {
       guards: change.guards || {}
     };
 
-    if (normalized.startLine >= normalized.endLine) {
-      throw new Error(`Invalid range: startLine (${normalized.startLine}) must be < endLine (${normalized.endLine})`);
+    // Allow exact replacement (start < end) or insertion (start == end + 1)
+    // For typical replacement we expect startLine < endLine. For an insertion
+    // we allow startLine === endLine + 1 which represents inserting before
+    // the target line index.
+    if (!(normalized.startLine <= normalized.endLine || normalized.startLine === normalized.endLine + 1)) {
+      throw new Error(`Invalid range: startLine (${normalized.startLine}) must be <= endLine (${normalized.endLine}) or be an insertion point where startLine === endLine + 1`);
     }
 
     this.changes.push(normalized);
     return normalized;
+  }
+
+  /**
+   * Load a batch changes JSON payload from disk and normalize file paths
+   * Supports single-file change sets (multi-file planned via orchestrator)
+   */
+  loadChanges(changeEntries, options = {}) {
+    if (!Array.isArray(changeEntries)) {
+      throw new Error('Batch change file must contain an array of entries');
+    }
+
+    const entries = changeEntries.filter(Boolean);
+    if (entries.length === 0) {
+      this.changes = [];
+      return { file: null, changeCount: 0 };
+    }
+
+    const baseDir = options.baseDir || process.cwd();
+    const resolved = entries.map((entry, index) => {
+      const fileRef = entry.file || entry.filePath;
+      if (!fileRef) {
+        throw new Error(`Change entry at index ${index} is missing a file path`);
+      }
+      const absolute = path.isAbsolute(fileRef) ? fileRef : path.resolve(baseDir, fileRef);
+      if (!fs.existsSync(absolute)) {
+        throw new Error(`Target file not found: ${absolute}`);
+      }
+      return { ...entry, file: absolute };
+    });
+
+    const uniqueFiles = [...new Set(resolved.map((entry) => entry.file))];
+    if (uniqueFiles.length > 1) {
+      throw new Error('BatchDryRunner currently supports single-file change sets. Split changes per target file.');
+    }
+
+    const targetFile = uniqueFiles[0];
+    this.source = fs.readFileSync(targetFile, 'utf8');
+    this.lines = this.source.split('\n');
+    this.filePath = targetFile;
+    this.changes = [];
+
+    resolved.forEach((entry) => this.addChange(entry));
+
+    return {
+      file: targetFile,
+      changeCount: this.changes.length
+    };
   }
 
   /**
@@ -363,7 +416,8 @@ class BatchDryRunner {
   _previewChange(change, currentSource) {
     const lines = currentSource.split('\n');
     
-    if (change.startLine < 0 || change.endLine > lines.length) {
+    // For insertion the endLine can be one less than startLine; compare accordingly
+    if (change.startLine < 0 || change.endLine > lines.length || change.startLine > change.endLine + 1) {
       return {
         id: change.id,
         error: `Line range ${change.startLine}-${change.endLine} out of bounds (file has ${lines.length} lines)`,
@@ -386,7 +440,8 @@ class BatchDryRunner {
       removedLines: removed.length,
       addedLines: replacementLines.length,
       description: change.description,
-      estimatedResult
+      estimatedResult,
+      file: change.file || this.filePath
     };
   }
 
@@ -426,8 +481,8 @@ class BatchDryRunner {
 
   _applyChange(change, source) {
     const lines = source.split('\n');
-
-    if (change.startLine < 0 || change.endLine > lines.length) {
+    // Allow insertion semantics where endLine can be one less than startLine
+    if (change.startLine < 0 || change.endLine > lines.length || change.startLine > change.endLine + 1) {
       throw new Error(`Line range out of bounds: ${change.startLine}-${change.endLine}`);
     }
 
@@ -492,6 +547,22 @@ class BatchDryRunner {
         valid: true,
         message: 'Hash guard present (not verified in dry-run)'
       });
+    }
+
+    // Support copy-specific guard: sourceHash verifies the replacement snippet's digest
+    if (change.guards && change.guards.sourceHash) {
+      const encoding = change.guards.encoding || HASH_PRIMARY_ENCODING;
+      const digest = createDigest(change.replacement || '', encoding);
+      const match = digest === change.guards.sourceHash;
+      result.checks.push({
+        type: 'sourceHash',
+        valid: match,
+        expected: change.guards.sourceHash,
+        actual: digest
+      });
+      if (!match) {
+        result.valid = false;
+      }
     }
 
     // Check span guard if present

@@ -33,6 +33,25 @@
 				]
 			],
 			"customInstructions": "When reviewing docs:\n- Read relevant code files first to understand current functionality.\n- Scan docs for outdated info, missing features, or inconsistencies.\n- Update docs incrementally: fix one issue at a time.\n- Cross-check with code comments and recent commits.\n- If code purpose is ambiguous, ask user before updating docs.\n\nNote: This project runs on Windows. File paths should use backslashes."
+		},
+		{
+			"slug": "kilo-agent-fabricator",
+			"name": "Kilo Agent Fabricator",
+			"description": "Designs repo-specific Kilo modes and instruction files on demand.",
+			"roleDefinition": "You are a workflow architect who specializes in writing new Kilo agents for this repository. Always consult docs/workflows/kilo-agent-handbook.md, AGENTS.md, and the active docs/sessions folder before editing. Maintain the Plan → Improve → Document loop and cite the repo tooling (js-scan/js-edit, npm run test:by-path).",
+			"groups": [
+				"read",
+				[
+					"edit",
+					{
+						"fileRegex": "^(AGENTS\\.md|docs/.*|\\.kilo/.*|\\.github/agents/.*)$",
+						"description": "Docs + agent instruction files only"
+					}
+				],
+				"command",
+				"browser"
+			],
+			"customInstructions": "Before drafting a new mode, load .kilo/rules-shared/00-plan-loop.md, review docs/sessions/SESSIONS_HUB.md for open threads, and sketch a one-screen plan inside docs/sessions/<date>-<slug>/PLAN.md. Update .kilo/rules-<slug>/ files plus .kilocodemodes, refresh docs/workflows/kilo-agent-handbook.md when conventions change, and note all work in AGENTS.md + the current session summary."
 		}
 	]
 }

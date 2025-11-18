@@ -1223,6 +1223,32 @@ describe('swcAst helpers', () => {
       }
     });
 
+    test('--dry-run ingests change specs and previews results', () => {
+      const changesPath = path.join(tempDir, 'alpha.changes.json');
+      const changeSpec = [
+        {
+          file: path.basename(targetFile),
+          startLine: 0,
+          endLine: 0,
+          replacement: "const sentinel = 'alpha-patched';"
+        }
+      ];
+      fs.writeFileSync(changesPath, JSON.stringify(changeSpec, null, 2), 'utf8');
+
+      const result = runJsEdit([
+        '--dry-run',
+        '--changes',
+        changesPath,
+        '--json'
+      ], { cwd: tempDir });
+
+      expect(result.status).toBe(0);
+      const payload = JSON.parse(result.stdout);
+      expect(payload.changeCount).toBe(1);
+      expect(payload.preview).toHaveLength(1);
+      expect(payload.preview[0].file).toBe(targetFile);
+    });
+
 
     test('js-edit replaces variable-assigned arrow functions with guardrails', () => {
       const gammaRecord = functions.find((fn) => fn.canonicalName === 'gamma');
@@ -1434,6 +1460,57 @@ describe('swcAst helpers', () => {
       });
     })
 ;
+
+    test('copy-batch plan can preview and apply copy operations', () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'js-edit-copy-batch-'));
+      try {
+        // Prepare source and target files
+        const sourceFixture = fixturePath; // from earlier (js-edit-sample)
+        const sourceFile = path.join(tempDir, 'source.js');
+        const targetFile = path.join(tempDir, 'target.js');
+        fs.copyFileSync(sourceFixture, sourceFile);
+        fs.copyFileSync(fixturePath, targetFile);
+
+        const plan = {
+          version: 1,
+          generatedAt: new Date().toISOString(),
+          operations: [
+            {
+              id: 'copy-alpha',
+              type: 'copy',
+              source: { file: sourceFile, selector: 'exports.alpha' },
+              target: { file: targetFile, position: 'after-last-import' },
+              description: 'copy alpha to target'
+            }
+          ]
+        };
+
+        const planPath = path.join(tempDir, 'copy-plan.json');
+        fs.writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf8');
+
+        // Dry-run preview
+        const preview = runJsEdit(['--copy-batch', planPath, '--json']);
+        if (preview.status !== 0) {
+          throw new Error(`copy-batch (preview) failed: ${preview.stderr || preview.stdout}`);
+        }
+        const previewPayload = JSON.parse(preview.stdout);
+        expect(previewPayload.changeCount).toBeGreaterThan(0);
+
+        // Apply changes
+        const apply = runJsEdit(['--copy-batch', planPath, '--fix', '--json']);
+        if (apply.status !== 0) {
+          throw new Error(`copy-batch (apply) failed: ${apply.stderr || apply.stdout}`);
+        }
+        const applyPayload = JSON.parse(apply.stdout);
+        expect(applyPayload.applied).toBeGreaterThan(0);
+
+        // Verify target now contains the function name from source
+        const updatedTarget = fs.readFileSync(targetFile, 'utf8');
+        expect(updatedTarget).toContain('function alpha');
+      } finally {
+        if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
 
     test('context-function emits enhanced plan with summary metadata', () => {
       const planPath = path.join(tempDir, 'context-plan.json');

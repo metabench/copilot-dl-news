@@ -94,6 +94,16 @@ function createServer(seedFn) {
   return { ...payload, app: server.app, shutdown: () => server.close() };
 }
 
+function createBrokenServer() {
+  const dbAccess = {
+    db: null,
+    close: jest.fn()
+  };
+  openNewsDb.mockReturnValueOnce(dbAccess);
+  const server = createDataExplorerServer({ dbPath: ":memory:", pageSize: 20 });
+  return { app: server.app, shutdown: () => server.close() };
+}
+
 describe("dataExplorerServer /urls/:id routes", () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -170,6 +180,40 @@ describe("dataExplorerServer /urls/:id routes", () => {
 
     expect(response.status).toBe(404);
     expect(response.text).toContain("Host not found");
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer /api/urls diagnostics", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("includes diagnostics metadata and headers on success", async () => {
+    const { app, shutdown } = createServer((db) => ({ urlId: seedUrlWithFetches(db) }));
+    const response = await request(app).get("/api/urls");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.diagnostics).toBeDefined();
+    expect(response.body.diagnostics.requestId).toBeTruthy();
+    expect(response.headers["x-copilot-request-id"]).toBe(response.body.diagnostics.requestId);
+    expect(response.headers["x-copilot-duration-ms"]).toBeDefined();
+
+    shutdown();
+  });
+
+  test("returns JSON envelope with diagnostics on failure", async () => {
+    const { app, shutdown } = createBrokenServer();
+    const response = await request(app).get("/api/urls");
+
+    expect(response.status).toBe(500);
+    expect(response.type).toMatch(/json/);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.error.code).toBe("ERR_UI_SERVER");
+    expect(response.body.diagnostics.requestId).toBeTruthy();
+    expect(response.headers["x-copilot-error"]).toBe("1");
 
     shutdown();
   });

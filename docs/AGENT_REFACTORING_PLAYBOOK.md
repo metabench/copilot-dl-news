@@ -197,6 +197,8 @@ node js-edit.js --changes changes.json --dry-run --show-conflicts --json
 }
 ```
 
+> **2025-11-16 Update**: `js-edit` now routes `--changes` payloads through `BatchDryRunner.loadChanges`, so dry-run, `--recalculate-offsets`, and future `--from-plan` workflows all share the same file-aware metadata. Each preview entry now lists the `filePath`, line span, and truncated snippet, and single-line replacements (`startLine === endLine`) no longer trigger validation errors.
+
 ### Step 3: Fix Conflicts (if any)
 
 ```bash
@@ -394,6 +396,13 @@ done
 - [ ] Check what's exported and where it's used
 - [ ] Estimate ripple effects before changing something
 - [ ] Find circular dependencies
+- [ ] Include `.ts/.tsx` files by passing `--source-language typescript` (or `--码 ts` via Chinese aliases)
+- [ ] Force terse payloads to carry selectors via `--view terse --fields location,name,selector,hash`
+
+#### TypeScript scanning + selector-ready outputs
+
+- **Parse TS explicitly**: `node tools/dev/js-scan.js --dir src --search alpha --source-language typescript` ensures `.ts/.tsx` files are parsed without relying on `TSNJS_SCAN_LANGUAGE`; switch back to extension-driven detection with `--source-language auto` when needed.
+- **Emit canonical selectors**: append `--view terse --fields location,name,selector,hash --ai-mode --json` so every match carries a js-edit compatible selector and guard hash alongside continuation tokens for downstream tooling.
 
 **Time Budget**: <2 minutes per query
 

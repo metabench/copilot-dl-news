@@ -118,6 +118,25 @@ function byteOffsetToCodeUnit(byteIndex, byteOffset) {
 
 
 
+function resolveCandidateByteOffset(candidate) {
+  if (!candidate || typeof candidate !== 'object') {
+    return 0;
+  }
+
+  if (typeof candidate.getByteOffset === 'function') {
+    const value = candidate.getByteOffset();
+    if (Number.isFinite(value) && value > 0) {
+      return value;
+    }
+  }
+
+  if (typeof candidate.byteOffset === 'number' && Number.isFinite(candidate.byteOffset)) {
+    return Math.max(0, candidate.byteOffset);
+  }
+
+  return 0;
+}
+
 function resolveByteContext(byteIndexCandidate) {
   if (!byteIndexCandidate) {
     return null;
@@ -126,6 +145,7 @@ function resolveByteContext(byteIndexCandidate) {
   if (Array.isArray(byteIndexCandidate)) {
     return {
       byteIndex: byteIndexCandidate,
+      byteOffset: 0,
       toCodeUnit(offset) {
         return byteOffsetToCodeUnit(byteIndexCandidate, offset);
       }
@@ -135,11 +155,13 @@ function resolveByteContext(byteIndexCandidate) {
   if (typeof byteIndexCandidate === 'object') {
     if (Array.isArray(byteIndexCandidate.byteIndex)) {
       const array = byteIndexCandidate.byteIndex;
+      const offset = resolveCandidateByteOffset(byteIndexCandidate);
       const toCodeUnitFn = typeof byteIndexCandidate.toCodeUnit === 'function'
-        ? (offset) => byteIndexCandidate.toCodeUnit(offset)
-        : (offset) => byteOffsetToCodeUnit(array, offset);
+        ? (value) => byteIndexCandidate.toCodeUnit(value)
+        : (value) => byteOffsetToCodeUnit(array, value);
       return {
         byteIndex: array,
+        byteOffset: offset,
         toCodeUnit: toCodeUnitFn
       };
     }
@@ -147,11 +169,13 @@ function resolveByteContext(byteIndexCandidate) {
     if (typeof byteIndexCandidate.getByteIndex === 'function') {
       const array = byteIndexCandidate.getByteIndex();
       if (Array.isArray(array)) {
+        const offset = resolveCandidateByteOffset(byteIndexCandidate);
         const toCodeUnitFn = typeof byteIndexCandidate.toCodeUnit === 'function'
-          ? (offset) => byteIndexCandidate.toCodeUnit(offset)
-          : (offset) => byteOffsetToCodeUnit(array, offset);
+          ? (value) => byteIndexCandidate.toCodeUnit(value)
+          : (value) => byteOffsetToCodeUnit(array, value);
         return {
           byteIndex: array,
+          byteOffset: offset,
           toCodeUnit: toCodeUnitFn
         };
       }
@@ -171,6 +195,7 @@ function normalizeSpan(span, byteIndex = null) {
   const isAlreadyNormalized = span.__normalized === true && hasNumbers;
   const context = resolveByteContext(byteIndex);
   const toCodeUnit = context ? context.toCodeUnit : null;
+  const baseOffset = context && Number.isFinite(context.byteOffset) ? Math.max(0, context.byteOffset) : 0;
 
   const resolveByteOffsets = (rawStartValue, rawEndValue) => {
     let rawStart = rawStartValue;
@@ -183,8 +208,11 @@ function normalizeSpan(span, byteIndex = null) {
       rawEnd = rawStart;
     }
 
-    const byteStart = rawStart > 0 ? rawStart - 1 : 0;
-    let byteEnd = rawEnd > 0 ? rawEnd : rawEnd;
+    let byteStart = rawStart > 0 ? rawStart - 1 - baseOffset : 0;
+    if (byteStart < 0) {
+      byteStart = 0;
+    }
+    let byteEnd = rawEnd > 0 ? rawEnd - baseOffset : rawEnd - baseOffset;
     if (byteEnd < byteStart) {
       byteEnd = byteStart;
     }
@@ -269,6 +297,8 @@ function createByteMapper(source) {
     buffer: null
   };
 
+  let mapperByteOffset = 0;
+
   const ensureByteIndex = () => {
     if (!state.byteIndex) {
       state.byteIndex = buildByteIndex(source);
@@ -285,7 +315,19 @@ function createByteMapper(source) {
 
   const mapper = {
     source,
+    byteOffset: mapperByteOffset,
     getByteIndex: ensureByteIndex,
+    getByteOffset() {
+      return mapperByteOffset;
+    },
+    setByteOffset(value) {
+      if (Number.isFinite(value) && value > 0) {
+        mapperByteOffset = value;
+      } else {
+        mapperByteOffset = 0;
+      }
+      mapper.byteOffset = mapperByteOffset;
+    },
     toCodeUnit(byteOffset) {
       return byteOffsetToCodeUnit(ensureByteIndex(), byteOffset);
     },
@@ -437,6 +479,27 @@ function computeHash(source, span, encoding = HASH_PRIMARY_ENCODING) {
     : '';
 
   return createDigest(snippet, encoding);
+}
+
+function resolveSpanBaseOffset(ast) {
+  if (!ast || typeof ast !== 'object') {
+    return 0;
+  }
+
+  const span = ast.span || null;
+  if (!span) {
+    return 0;
+  }
+
+  const start = typeof span.start === 'number'
+    ? span.start
+    : (typeof span.lo === 'number' ? span.lo : null);
+
+  if (!Number.isFinite(start) || start <= 1) {
+    return 0;
+  }
+
+  return Math.max(0, start - 1);
 }
 
 function getStaticPropertyName(node) {
@@ -749,6 +812,14 @@ function ensureIdentifierName(key) {
 
 function collectFunctions(ast, source, mapper = null) {
   const sourceMapper = resolveByteMapper(source, mapper) || createByteMapper(source);
+  const spanOffset = resolveSpanBaseOffset(ast);
+  if (spanOffset > 0 && sourceMapper) {
+    if (typeof sourceMapper.setByteOffset === 'function') {
+      sourceMapper.setByteOffset(spanOffset);
+    } else {
+      sourceMapper.byteOffset = spanOffset;
+    }
+  }
   const lineIndex = buildLineIndex(source);
   const byteIndex = sourceMapper.getByteIndex();
   const sourceBuffer = sourceMapper.getBuffer();
@@ -1608,6 +1679,14 @@ function collectFunctions(ast, source, mapper = null) {
 
 function collectVariables(ast, source, mapper = null) {
   const sourceMapper = resolveByteMapper(source, mapper) || createByteMapper(source);
+  const spanOffset = resolveSpanBaseOffset(ast);
+  if (spanOffset > 0 && sourceMapper) {
+    if (typeof sourceMapper.setByteOffset === 'function') {
+      sourceMapper.setByteOffset(spanOffset);
+    } else {
+      sourceMapper.byteOffset = spanOffset;
+    }
+  }
   const lineIndex = buildLineIndex(source);
   const byteIndex = sourceMapper.getByteIndex();
   const sourceBuffer = sourceMapper.getBuffer();

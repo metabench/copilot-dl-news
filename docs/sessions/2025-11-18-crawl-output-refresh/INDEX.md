@@ -26,3 +26,5 @@
 ## Links
 - [Plan](./PLAN.md) — scope, risks, and test strategy for this session.
 - [Working Notes](./WORKING_NOTES.md) — incremental findings + TODO tracking.
+- [Session Summary](./SESSION_SUMMARY.md) — results, metrics, and key decisions.
+- [Follow Ups](./FOLLOW_UPS.md) — monitoring and future improvements.

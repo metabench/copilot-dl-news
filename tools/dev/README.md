@@ -27,6 +27,12 @@ Tools promoted out of prototype stage can move into `tools/` once they stabilize
 - `node tools/dev/js-scan.js --dir src --search planner --view terse --fields location,name,hash` — stream ultra-compact match lines (perfect for agents capturing hashes/paths); tweak `--fields` to control which columns appear in the terse view.
 - `node tools/dev/js-scan.js --dir src --search planner --view summary` — collapse output to headline stats (match counts, limits, exported/async ratios) when you only need directional signal.
 
+### TypeScript + terse output quick tips
+
+- Use `--source-language typescript` (alias `--码 ts` in Chinese mode) when you want `.ts/.tsx` files parsed regardless of environment variables; `--source-language auto` keeps the default extension-based detection if you mix JS and TS.
+- Combine `--view terse --fields location,name,selector,hash` to guarantee every match emits a canonical selector plus guard hash even when snippets are empty; the `selector` column mirrors js-edit canonical names so agents can jump straight into guarded edits.
+- When piping results into automation, add `--ai-mode --json` so payloads include `continuation_tokens`, the field list you requested, and the new selector metadata.
+
 Use `--async`, `--generator`, `--kind`, `--include-path`, and `--exclude-path` to refine search results. Text output respects `--max-lines`, `--no-snippets`, and `--hashes-only` for concise listings, while JSON payloads include guidance hints when result sets overflow.
 
 ### Ripple Analysis — Dependency Impact Assessment

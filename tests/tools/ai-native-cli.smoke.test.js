@@ -15,7 +15,9 @@ const TokenCodec = require('../../src/codec/TokenCodec');
 
 const REPO_ROOT = path.resolve(__dirname, '../../');
 const SEARCH_DIR = path.join(REPO_ROOT, 'tools/dev');
+const RELATIONSHIP_TARGET = path.join(REPO_ROOT, 'tools/dev/js-scan/operations/search.js');
 const TMP_DIR = path.join(REPO_ROOT, 'testlogs');
+const JS_EDIT_CMD = path.join(REPO_ROOT, 'tools/dev/js-edit.js');
 
 // Ensure testlogs directory exists
 if (!fs.existsSync(TMP_DIR)) {
@@ -56,6 +58,21 @@ function runScanWithContinuationToken(token) {
     // Capture both stdout and stderr for better debugging
     const errorOutput = err.stdout || err.stderr || err.message;
     throw new Error(`js-scan continuation failed: ${errorOutput}`);
+  }
+}
+
+function runEditCommand(args, options = {}) {
+  const cmd = `node ${JS_EDIT_CMD} ${args}`;
+  try {
+    return execSync(cmd, {
+      cwd: REPO_ROOT,
+      encoding: 'utf-8',
+      timeout: 10000,
+      input: options.input || undefined
+    });
+  } catch (err) {
+    const errorOutput = err.stdout || err.stderr || err.message;
+    throw new Error(`js-edit failed: ${errorOutput}`);
   }
 }
 
@@ -124,7 +141,8 @@ describe('AI-Native CLI Token Flow', () => {
       // Decode token
       const decoded = TokenCodec.decode(firstToken);
       expect(decoded.payload).toBeDefined();
-      expect(decoded.signature).toBeDefined();
+      expect(decoded._is_compact).toBe(true);
+      expect(decoded.signature).toBeNull();
 
       // Verify signature using repo root (tokens are signed with repo root, not search dir)
       const REPO_ROOT = path.resolve(__dirname, '../../');
@@ -167,6 +185,24 @@ describe('AI-Native CLI Token Flow', () => {
       expect(parameters.search).toBe('scanWorkspace');
       expect(parameters.limit).toBe(1);
       expect(parameters.match_index).toBe(0);
+    });
+
+    test('should embed match snapshot metadata', () => {
+      const result = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      const { continuation_tokens } = result;
+      const analyzeToken = continuation_tokens['analyze:0'];
+
+      if (!analyzeToken) return; // Skip if no matches
+
+      const decoded = TokenCodec.decode(analyzeToken);
+      const { match } = decoded.payload.parameters;
+
+      expect(match).toBeDefined();
+      expect(match.file).toBeDefined();
+      expect(match.hash).toBeDefined();
     });
 
     test('should include results_digest in token context', () => {
@@ -281,6 +317,157 @@ describe('AI-Native CLI Token Flow', () => {
       expect(result.status).toBe('token_accepted');
       expect(result.parameters.search).toBe('scanWorkspace');
       expect(result.parameters.match_index).toBe(0);
+    });
+
+    test('analyze continuation should return match metadata', () => {
+      const searchResult = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      const analyzeToken = searchResult.continuation_tokens['analyze:0'];
+      if (!analyzeToken) return; // Skip if no matches
+
+      const result = runScanWithContinuationToken(analyzeToken);
+      expect(result.action).toBe('analyze');
+      expect(result.match).toBeDefined();
+      expect(result.analysis).toBeDefined();
+      expect(result.analysis.file).toContain('js-scan');
+    });
+
+    test('trace continuation should return call graph data', () => {
+      const searchResult = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      const traceToken = searchResult.continuation_tokens['trace:0'];
+      if (!traceToken) return; // Skip if no matches
+
+      const result = runScanWithContinuationToken(traceToken);
+      expect(result.action).toBe('trace');
+      expect(result.trace).toBeDefined();
+      expect(result.trace.targetFunction).toBeDefined();
+    });
+
+    test('ripple continuation should return ripple analysis', () => {
+      const searchResult = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      const rippleToken = searchResult.continuation_tokens['ripple:0'];
+      if (!rippleToken) return; // Skip if no matches
+
+      const result = runScanWithContinuationToken(rippleToken);
+      expect(result.action).toBe('ripple');
+      expect(result.ripple).toBeDefined();
+      expect(result.ripple.targetFile).toBeDefined();
+    });
+
+    test('continuation warns when search results digest changes', () => {
+      const searchResult = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      const analyzeToken = searchResult.continuation_tokens['analyze:0'];
+      if (!analyzeToken) return; // Skip if no matches
+
+      const decoded = TokenCodec.decode(analyzeToken);
+      const payloadClone = JSON.parse(JSON.stringify(decoded.payload));
+      payloadClone.context.results_digest = 'sha256:different';
+      payloadClone.parameters.match = null; // force replay
+
+      const mismatchedToken = TokenCodec.encode(payloadClone, {
+        secret_key: TokenCodec.deriveSecretKey({ repo_root: REPO_ROOT }),
+        ttl_seconds: 3600
+      });
+
+      const result = runScanWithContinuationToken(mismatchedToken);
+      expect(result.warnings).toBeDefined();
+      expect(Array.isArray(result.warnings)).toBe(true);
+      const warningCodes = result.warnings.map((w) => w.code);
+      expect(warningCodes).toContain('RESULTS_DIGEST_MISMATCH');
+    });
+  });
+
+  describe('Relationship Queries with --ai-mode', () => {
+    test('what-imports emits importer tokens and resumes via continuation', () => {
+      const result = runScan(
+        `--dir ${SEARCH_DIR} --what-imports ${RELATIONSHIP_TARGET} --ai-mode --json`
+      );
+
+      expect(result).toBeDefined();
+      expect(result._ai_native_cli).toBeDefined();
+      const importerActionId = result.available_actions.find((id) => id.startsWith('importer-analyze'));
+      if (!importerActionId) return;
+
+      const importerToken = result.continuation_tokens[importerActionId];
+      expect(importerToken).toBeDefined();
+
+      const continuation = runScanWithContinuationToken(importerToken);
+      expect(continuation.status).toBe('token_accepted');
+      expect(continuation.action).toBe('importer-analyze');
+      expect(continuation.relationship).toBeDefined();
+      expect(continuation.relationship.entryKind).toBe('importer');
+    });
+
+    test('export-usage emits usage tokens and continuation returns usage details', () => {
+      const result = runScan(
+        `--dir ${SEARCH_DIR} --export-usage ${RELATIONSHIP_TARGET} --ai-mode --json`
+      );
+
+      expect(result).toBeDefined();
+      const usageActionId = result.available_actions.find((id) => id.startsWith('usage-import') || id.startsWith('usage-call'));
+      if (!usageActionId) return;
+
+      const usageToken = result.continuation_tokens[usageActionId];
+      expect(usageToken).toBeDefined();
+
+      const continuation = runScanWithContinuationToken(usageToken);
+      expect(continuation.status).toBe('token_accepted');
+      expect(['usage-import', 'usage-call']).toContain(continuation.action);
+      expect(continuation.relationship).toBeDefined();
+      expect(continuation.relationship.entry).toBeDefined();
+    });
+  });
+
+  describe('js-edit ingestion workflow', () => {
+    test('match snapshot ingestion writes a guard plan', () => {
+      const searchResult = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      if (!searchResult.matches.length) return;
+      const analyzeToken = searchResult.continuation_tokens['analyze:0'];
+      if (!analyzeToken) return;
+
+      const continuation = runScanWithContinuationToken(analyzeToken);
+      if (!continuation.match) return;
+
+      const snapshotPath = path.join(TMP_DIR, `match-snapshot-${Date.now()}.json`);
+      const planPath = path.join(TMP_DIR, `match-plan-${Date.now()}.json`);
+      fs.writeFileSync(snapshotPath, JSON.stringify({ match: continuation.match }, null, 2));
+
+      const output = runEditCommand(`--match-snapshot ${snapshotPath} --emit-plan ${planPath} --json`);
+      const parsed = JSON.parse(output);
+      expect(parsed.operation).toBe('match-snapshot');
+      expect(parsed.matchCount).toBeGreaterThan(0);
+      expect(fs.existsSync(planPath)).toBe(true);
+    });
+
+    test('from-token stdin ingestion hydrates js-edit without selectors', () => {
+      const searchResult = runScan(
+        `--search scanWorkspace --ai-mode --json --limit 1 --dir ${SEARCH_DIR}`
+      );
+
+      if (!searchResult.matches.length) return;
+      const analyzeToken = searchResult.continuation_tokens['analyze:0'];
+      if (!analyzeToken) return;
+
+      const planPath = path.join(TMP_DIR, `token-plan-${Date.now()}.json`);
+      const output = runEditCommand(`--from-token - --emit-plan ${planPath} --json`, { input: analyzeToken });
+      const parsed = JSON.parse(output);
+      expect(parsed.operation).toBe('match-snapshot');
+      expect(parsed.token).toBeDefined();
+      expect(fs.existsSync(planPath)).toBe(true);
     });
   });
 

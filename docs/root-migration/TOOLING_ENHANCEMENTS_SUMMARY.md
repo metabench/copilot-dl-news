@@ -42,7 +42,7 @@
 
 ## Two New Documents Created
 
-### 1. **AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md** (550+ lines)
+### 1. **[AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md)** (550+ lines)
 
 **Contents**:
 - Executive summary of current strengths
@@ -207,7 +207,7 @@ Total: 2s + 2s + 1.5s + 1.5s = 7 seconds (6-7 CLI invocations, but parallel-frie
    └─ Test Runner Requirement notice
 
 📁 docs/
-   ├─ AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md ⭐ NEW
+   ├─ [AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) ⭐ NEW
    │  └─ Strategic roadmap for improvements
    │
    ├─ AGENT_CODE_EDITING_PATTERNS.md ⭐ NEW
@@ -231,7 +231,7 @@ Total: 2s + 2s + 1.5s + 1.5s = 7 seconds (6-7 CLI invocations, but parallel-frie
 ## How to Use These Recommendations
 
 ### For Project Managers
-1. Review `AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md` (10 min read)
+1. Review `[AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md)` (10 min read)
 2. Check "Implementation Priority Matrix" (table on page 9)
 3. Decide: Do phases 1 & 2a together? (8-9 hours total effort, massive ROI)
 4. Assign to developer with js-edit familiarity
@@ -272,7 +272,7 @@ After implementing recommended enhancements:
 ## Files This Session
 
 ### Strategy & Proposals
-- **AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md** (550 lines)
+- **[AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md)** (550 lines)
   - Complete roadmap with priority matrix
   - 10 feature proposals with effort estimates
   - Phase-based implementation plan
@@ -306,13 +306,13 @@ After implementing recommended enhancements:
 
 | Need | Document | Section |
 |------|----------|---------|
-| Strategic roadmap | AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md | Priority matrix + Phase plan |
+| Strategic roadmap | [AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) | Priority matrix + Phase plan |
 | Code patterns to copy | AGENT_CODE_EDITING_PATTERNS.md | 6 ready-to-use workflows |
 | Test runners | CLI_TOOL_TESTING_GUIDE.md | All npm test:* commands |
 | Selector help | AGENT_CODE_EDITING_PATTERNS.md | Selector Patterns section |
 | Safety checklist | AGENT_CODE_EDITING_PATTERNS.md | Pre-change checklist |
 | Error recovery | AGENT_CODE_EDITING_PATTERNS.md | Debugging workflows |
-| Implementation guide | AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md | Each feature section |
+| Implementation guide | [AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) | Each feature section |
 
 ---
 
@@ -322,7 +322,7 @@ After implementing recommended enhancements:
 → See `AGENT_CODE_EDITING_PATTERNS.md` (6 complete workflows)
 
 ✅ **"How can we make agents faster?"**  
-→ See `AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md` (Hash index, batch mode)
+→ See `[AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md)` (Hash index, batch mode)
 
 ✅ **"What if agents make mistakes?"**  
 → See `AGENT_CODE_EDITING_PATTERNS.md` (Safety patterns, guards, validation)
@@ -372,10 +372,11 @@ After implementing recommended enhancements:
 3. **Low-hanging fruit** - Most improvements are output formatting, not parsing
 4. **High ROI** - 8-10 hours of work → 50% speed improvement + 100% safer
 5. **Immediate value** - AGENT_CODE_EDITING_PATTERNS.md ready for agent use today
-6. **Clear roadmap** - AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md provides prioritized plan
+6. **Clear roadmap** - [AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](../AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) provides prioritized plan
 
 ---
 
 **Status**: Analysis complete, ready for review and prioritization  
 **Next Review**: After Phase 1 implementation  
 **Questions?** Contact with specific feature questions for detailed scope
+

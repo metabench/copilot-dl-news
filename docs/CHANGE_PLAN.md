@@ -264,6 +264,40 @@
 | 14.3 Adaptive retry/backoff improvements | completed | 2025-11-18: Added adaptive jittered retries plus host-scoped retry budgets with telemetry events; validated with `npx jest --config jest.careful.config.js --runTestsByPath src/crawler/__tests__/FetchPipeline.test.js src/crawler/__tests__/ErrorTracker.test.js --bail=1 --maxWorkers=50%`. |
 | 14.4 Puppeteer fallback feasibility plan | completed | 2025-11-18: Feasibility outline recorded below; tracker synced with CLI_REFACTORING_TASKS.md. |
 
+## 🔄 Active Initiative (Nov 17, 2025): jsgui-forward UI Hardening
+
+### Goal / Non-Goals
+- **Goal:** Stabilize the jsgui UI stack (control registry, Diagram Atlas telemetry, Data Explorer state store) so SSR + hydration paths stay aligned without manual DOM fallbacks.
+- **Non-Goals:** Avoid sweeping Diagram Atlas redesigns or background task integrations until telemetry/state plumbing proves reliable; defer CLI architectural changes outside Diagram Atlas data service.
+
+### Current Behavior (Baseline)
+- SSR pages did not consistently seed the control registry, forcing client bundles to rely on a brittle manual fallback that scanned the DOM for controls.
+- Diagram Atlas refreshes invoked the CLI with no intermediate status, leaving operators with a binary spinner and no visibility into CLI progress or failures.
+- Data Explorer filter toggles, listings, and diagnostics each held their own state, so `/api/urls` refreshes often left controls out of sync.
+
+### Refactor & Modularization Plan
+1. **Registry hardening** *(✅ complete)* — Introduce a shared control manifest, embed expected control types in SSR markup, and remove manual activation fallbacks.
+2. **Diagram Atlas telemetry upgrade** *(γ implementation — in progress)* — Teach `DiagramDataService` to expose ready/refreshing/error status plus `/api/diagram-data/status`, and update the client bundle to poll during refreshes with progress detail.
+3. **Data Explorer shared state store** *(β planning)* — Build a lightweight store so UrlFilterToggle, UrlListingTable, pagers, and diagnostics subscribe to the same payload source after `/api/urls` fetches.
+4. **Client entry modularization (jobs + SSE)** *(α discovery — active)* — Continue executing `docs/CLIENT_MODULARIZATION_PLAN.md` by extracting the job list renderer and SSE wiring out of `src/ui/client/index.js`, mirroring the pattern used for Diagram Atlas and the listing store. Done when the bundle entry only coordinates control seeding + module bootstraps, with new factories owning DOM references, injection points, and initial fetch/SSE hand-offs. Tests: `npm run test:by-path tests/ui/client/listingStateStore.test.js` (regression for shared store interactions) plus manual `node src/ui/server/checks/diagramAtlas.check.js`/`dataExplorer.check.js` to ensure bootstraps still hydrate.
+
+### Risks & Mitigations
+- **Blocking CLI refresh UI:** Status endpoint must remain responsive while the CLI runs. *Mitigation:* Track refresh metadata in memory and serve it via a non-blocking GET handler separate from the POST refresh call.
+- **State drift between SSR and client:** Shared stores risk diverging from SSR output. *Mitigation:* Rehydrate state from API payloads only, and reset derived values after each fetch.
+- **Telemetry noise:** Aggressive polling could spam logs. *Mitigation:* Default to ~1.5s polling with graceful degradation when fetches fail.
+
+### Focused Validation Plan
+- `node src/ui/server/checks/diagramAtlas.check.js` once telemetry plumbing is wired.
+- `node src/ui/server/checks/dataExplorer.check.js` after the shared state store lands.
+- Targeted Jest (e.g., `tests/ui/server/dataExplorerServer.test.js`) for server changes touching adapters.
+
+### Task Ledger (mirrors session tracker)
+| Task | Status | Notes |
+|------|--------|-------|
+| Registry hardening (shared manifest, SSR metadata) | completed | 2025-11-18: Added `controlManifest`, injected expected control types, removed manual fallback, documented in session notes. |
+| Diagram Atlas telemetry upgrade | completed | 2025-11-19: `DiagramDataService` now tracks ready/refreshing/error status, `/api/diagram-data/status` route added, client polling/watcher logic implemented, and 2025-11-19: Diagram Atlas DOM/controller logic extracted into `src/ui/client/diagramAtlas.js` so the bundle entry just boots the module. |
+| Data Explorer shared state store | completed | 2025-11-19: Shared listing store seeded via `window.__COPILOT_URL_LISTING_STATE__`, client bootstraps a global store that updates tables/meta/pagers, and `UrlFilterToggleControl` now publishes `/api/urls` responses into the store. 2025-11-17 follow-up: reran `node src/ui/server/checks/diagramAtlas.check.js`, `node src/ui/server/checks/dataExplorer.check.js`, `npm run test:by-path tests/ui/server/dataExplorerServer.test.js`, and `npm run test:by-path tests/ui/server/dataExplorerServer.production.test.js` after the Diagram Atlas bootstrap extraction to confirm the shared state wiring. |
+
 ## 🔄 Active Initiative (Nov 6, 2025): js-scan CLI Implementation
 
 ### Goal / Non-Goals

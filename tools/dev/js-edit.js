@@ -6,11 +6,19 @@ const { setupPowerShellEncoding } = require('./shared/powershellEncoding');
 setupPowerShellEncoding();
 
 const path = require('path');
+const fs = require('fs');
 const { CliFormatter } = require('../../src/utils/CliFormatter');
 const { CliArgumentParser } = require('../../src/utils/CliArgumentParser');
 const { translateCliArgs } = require('./i18n/dialect');
 const { extractLangOption, deriveLanguageModeHint } = require('./i18n/language');
 const { getPrimaryAlias } = require('./i18n/lexicon');
+const TokenCodec = require('../../src/codec/TokenCodec');
+
+// TypeScript support via environment variables (similar to external repo)
+const EDIT_LANGUAGE = process.env.TSNJS_EDIT_LANGUAGE === 'typescript' ? 'typescript' : 'javascript';
+const EDIT_COMMAND_NAME = process.env.TSNJS_EDIT_COMMAND || 'js-edit';
+const swcRuntime = EDIT_LANGUAGE === 'typescript' ? require('./lib/swcTs') : require('./lib/swcAst');
+
 const {
   parseModule,
   collectFunctions,
@@ -22,7 +30,7 @@ const {
   HASH_PRIMARY_ENCODING,
   HASH_FALLBACK_ENCODING,
   HASH_LENGTH_BY_ENCODING
-} = require('./lib/swcAst');
+} = swcRuntime;
 const { HASH_CHARSETS } = require('./shared/hashConfig');
 const contextOperations = require('./js-edit/operations/context');
 const mutationOperations = require('./js-edit/operations/mutation');
@@ -93,6 +101,7 @@ const CHINESE_HELP_ROWS = Object.freeze([
   { flag: '--list-variables', lexKey: 'list_variables', note: '变列: 变量清单' },
   { flag: '--search-text', lexKey: 'search_text', note: '文搜: 片段检索' },
   { flag: '--context-function', lexKey: 'context_function', note: '函邻: 上下文' },
+  { flag: '--match-snapshot', lexKey: 'match_snapshot', note: '摄取: 载入 js-scan 匹配' },
   { flag: '--replace', lexKey: 'replace', note: '替: 结合 --以档/--以码' },
   { flag: '--emit-plan', lexKey: 'emit_plan', note: '出计: 审核计划' },
   { flag: '--lang', lexKey: 'lang', note: '语: en/zh/bi' }
@@ -177,6 +186,274 @@ function printHelpOutput(languageMode, parser) {
       '  Use Chinese aliases (如 --函列, --文) for terse output; --lang zh forces Chinese'
     ].join('\n');
     console.log(helpSections);
+  }
+}
+
+let cachedStdinData = null;
+
+function readAllStdin() {
+  if (cachedStdinData !== null) {
+    return Promise.resolve(cachedStdinData);
+  }
+  return new Promise((resolve, reject) => {
+    if (!process.stdin) {
+      cachedStdinData = '';
+      resolve('');
+      return;
+    }
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on('error', (error) => {
+      reject(error);
+    });
+    process.stdin.on('end', () => {
+      cachedStdinData = data;
+      resolve(data);
+    });
+    try {
+      process.stdin.resume();
+    } catch (err) {
+      cachedStdinData = '';
+      resolve('');
+    }
+  });
+}
+
+async function readSnapshotJsonInput(ref) {
+  if (!ref) {
+    throw new Error('Provide a snapshot file path or "-" to read from stdin.');
+  }
+  if (ref === '-') {
+    const stdinPayload = await readAllStdin();
+    if (!stdinPayload || !stdinPayload.trim()) {
+      throw new Error('No match snapshot data received from stdin. Pipe js-scan JSON output into --match-snapshot -.');
+    }
+    try {
+      return JSON.parse(stdinPayload);
+    } catch (error) {
+      throw new Error(`Failed to parse match snapshot JSON from stdin: ${error.message}`);
+    }
+  }
+  const absolute = path.isAbsolute(ref) ? ref : path.resolve(process.cwd(), ref);
+  if (!fs.existsSync(absolute)) {
+    throw new Error(`Match snapshot file not found: ${absolute}`);
+  }
+  const raw = fs.readFileSync(absolute, 'utf8');
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Failed to parse match snapshot JSON from ${absolute}: ${error.message}`);
+  }
+}
+
+async function readTokenInput(ref) {
+  if (!ref) {
+    throw new Error('Provide a continuation token reference or "-" to read from stdin.');
+  }
+  if (ref === '-') {
+    const stdinPayload = await readAllStdin();
+    const token = typeof stdinPayload === 'string' ? stdinPayload.trim() : '';
+    if (!token) {
+      throw new Error('No continuation token provided via stdin. Pipe the js-scan token into --from-token -.');
+    }
+    return token;
+  }
+  const absolute = path.isAbsolute(ref) ? ref : path.resolve(process.cwd(), ref);
+  if (fs.existsSync(absolute) && fs.statSync(absolute).isFile()) {
+    const tokenFromFile = fs.readFileSync(absolute, 'utf8').trim();
+    if (!tokenFromFile) {
+      throw new Error(`Continuation token file ${absolute} is empty.`);
+    }
+    return tokenFromFile;
+  }
+  return ref.trim();
+}
+
+function extractMatchSnapshotPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  if (payload.match && typeof payload.match === 'object') {
+    return payload.match;
+  }
+  if (payload.snapshot && typeof payload.snapshot === 'object') {
+    return payload.snapshot;
+  }
+  if (payload.relationship && payload.relationship.entry && payload.relationship.entry.match) {
+    return payload.relationship.entry.match;
+  }
+  if (payload.file && typeof payload.file === 'string') {
+    return payload;
+  }
+  return null;
+}
+
+function normalizeMatchSnapshotForIngestion(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return null;
+  }
+  const clone = { ...snapshot };
+  const candidateFile = typeof clone.file === 'string' && clone.file.length > 0
+    ? clone.file
+    : (typeof clone.relativeFile === 'string' ? path.resolve(process.cwd(), clone.relativeFile) : null);
+  if (candidateFile) {
+    clone.file = path.isAbsolute(candidateFile) ? candidateFile : path.resolve(process.cwd(), candidateFile);
+    clone.relativeFile = clone.relativeFile || path.relative(process.cwd(), clone.file);
+  }
+  return clone;
+}
+
+function deriveSnapshotHints(snapshot) {
+  const hints = {
+    selector: null,
+    selectHash: null,
+    selectIndex: null,
+    selectPath: null,
+    expectHash: null
+  };
+  if (!snapshot || typeof snapshot !== 'object') {
+    return hints;
+  }
+  const plan = snapshot.jsEditHint && snapshot.jsEditHint.plan ? snapshot.jsEditHint.plan : null;
+  if (plan) {
+    if (plan.selector && typeof plan.selector === 'string') {
+      hints.selector = plan.selector;
+    }
+    if (plan.select && typeof plan.select === 'string') {
+      const selectValue = plan.select.trim();
+      const lower = selectValue.toLowerCase();
+      if (lower.startsWith('hash:')) {
+        hints.selectHash = selectValue.slice(selectValue.indexOf(':') + 1).trim();
+      } else if (/^\d+$/.test(selectValue)) {
+        hints.selectIndex = parseInt(selectValue, 10);
+      } else if (lower.startsWith('path:')) {
+        hints.selectPath = selectValue;
+      }
+    }
+    if (plan.expectHash && typeof plan.expectHash === 'string') {
+      hints.expectHash = plan.expectHash;
+    }
+  }
+
+  if (!hints.selector) {
+    if (snapshot.canonicalName) {
+      hints.selector = snapshot.canonicalName;
+    } else if (snapshot.name) {
+      hints.selector = snapshot.name;
+    } else if (snapshot.hash) {
+      hints.selector = `hash:${snapshot.hash}`;
+    }
+  }
+
+  if (!hints.selectHash && snapshot.hash) {
+    hints.selectHash = snapshot.hash;
+  }
+
+  if (!hints.expectHash && snapshot.hash) {
+    hints.expectHash = snapshot.hash;
+  }
+
+  return hints;
+}
+
+function findRepositoryRoot(startDir) {
+  let currentDir = path.resolve(startDir);
+  while (currentDir !== path.dirname(currentDir)) {
+    if (fs.existsSync(path.join(currentDir, 'package.json')) || fs.existsSync(path.join(currentDir, '.git'))) {
+      return currentDir;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  return startDir;
+}
+
+async function hydrateMatchSnapshotContext(options) {
+  if (!options.matchSnapshotInput && !options.fromTokenInput) {
+    return;
+  }
+
+  let rawPayload;
+  let ingestSource = 'snapshot';
+  let tokenMetadata = null;
+
+  if (options.matchSnapshotInput) {
+    rawPayload = await readSnapshotJsonInput(options.matchSnapshotInput);
+  } else {
+    ingestSource = 'token';
+    const tokenString = await readTokenInput(options.fromTokenInput);
+    let decoded;
+    try {
+      decoded = TokenCodec.decode(tokenString);
+    } catch (error) {
+      throw new Error(`Failed to decode continuation token: ${error.message}`);
+    }
+    const repoRoot = findRepositoryRoot(process.cwd());
+    const secretKey = TokenCodec.deriveSecretKey({ repo_root: repoRoot });
+    const validation = TokenCodec.validate(decoded, { secret_key: secretKey });
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Continuation token validation failed.');
+    }
+    rawPayload = decoded.payload && decoded.payload.parameters
+      ? { match: decoded.payload.parameters.match }
+      : null;
+    tokenMetadata = {
+      tokenId: decoded._token_id || null,
+      action: decoded.payload ? decoded.payload.action : null,
+      requestId: decoded.payload && decoded.payload.context ? decoded.payload.context.request_id : null
+    };
+  }
+
+  const snapshot = normalizeMatchSnapshotForIngestion(extractMatchSnapshotPayload(rawPayload));
+  if (!snapshot || !snapshot.file) {
+    throw new Error('Match snapshot payload is missing file metadata. Re-run js-scan --continuation --json to refresh tokens.');
+  }
+
+  if (!fs.existsSync(snapshot.file)) {
+    throw new Error(`Snapshot target file not found: ${snapshot.file}`);
+  }
+
+  const hints = deriveSnapshotHints(snapshot);
+  if (!hints.selector) {
+    throw new Error('Snapshot missing selector hints; rerun js-scan with --ai-mode to capture canonical selectors.');
+  }
+
+  if (options.filePath) {
+    const normalizedFile = path.isAbsolute(options.filePath)
+      ? options.filePath
+      : path.resolve(process.cwd(), options.filePath);
+    if (path.normalize(normalizedFile) !== path.normalize(snapshot.file)) {
+      throw new Error(`Snapshot points to ${snapshot.file}, but --file was set to ${options.filePath}. Run the command without --file or provide the matching path.`);
+    }
+    options.filePath = normalizedFile;
+  } else {
+    options.filePath = snapshot.file;
+  }
+  options.matchSnapshotContext = {
+    snapshot,
+    selector: hints.selector,
+    selectHash: hints.selectHash,
+    selectIndex: hints.selectIndex,
+    selectPath: hints.selectPath,
+    expectHash: hints.expectHash,
+    source: ingestSource,
+    tokenMetadata,
+    warnings: []
+  };
+
+  if (!options.selectHash && hints.selectHash) {
+    options.selectHash = hints.selectHash;
+  }
+  if (!options.selectIndex && typeof hints.selectIndex === 'number') {
+    options.selectIndex = hints.selectIndex;
+  }
+  if (!options.selectPath && hints.selectPath) {
+    options.selectPath = hints.selectPath;
+  }
+  if (!options.expectHash && hints.expectHash) {
+    options.expectHash = hints.expectHash;
   }
 }
 
@@ -657,10 +934,27 @@ function buildVariableRecords(variables) {
 function normalizeOptions(raw) {
   const resolved = { ...raw };
 
+  const hasSnapshotArg = resolved.matchSnapshot !== undefined && resolved.matchSnapshot !== null;
+  const hasTokenArg = resolved.fromToken !== undefined && resolved.fromToken !== null;
+
+  if (hasSnapshotArg && hasTokenArg) {
+    throw new Error('Use either --match-snapshot or --from-token, not both in the same invocation.');
+  }
+
+  const matchSnapshotInput = hasSnapshotArg ? String(resolved.matchSnapshot).trim() : null;
+  if (matchSnapshotInput !== null && matchSnapshotInput.length === 0) {
+    throw new Error('--match-snapshot requires a file path or "-" for stdin.');
+  }
+  const fromTokenInput = hasTokenArg ? String(resolved.fromToken).trim() : null;
+  if (fromTokenInput !== null && fromTokenInput.length === 0) {
+    throw new Error('--from-token requires a compact token id, file path, or "-" for stdin.');
+  }
+
   // Recipe mode and batch operations don't require --file
   let filePath = null;
-  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan);
-  if (!resolved.recipe && !isBatchOperation) {
+  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan || resolved.copyBatch);
+  const isSnapshotIngest = Boolean(matchSnapshotInput || fromTokenInput);
+  if (!resolved.recipe && !isBatchOperation && !isSnapshotIngest) {
     const fileInput = resolved.file ? String(resolved.file).trim() : '';
     if (!fileInput) {
       throw new Error('Missing required option: --file <path>');
@@ -767,6 +1061,9 @@ function normalizeOptions(raw) {
     extractHashes = unique;
   }
 
+  const hasMatchSnapshotOperation = Boolean(matchSnapshotInput);
+  const hasTokenIngestOperation = Boolean(fromTokenInput);
+
   const operationMatrix = [
     ['--recipe', resolved.recipe !== undefined && resolved.recipe !== null],
     ['--list-functions', Boolean(resolved.listFunctions)],
@@ -783,6 +1080,7 @@ function normalizeOptions(raw) {
     ['--search-text', Boolean(searchText)],
     ['--scan-targets', resolved.scanTargets !== undefined && resolved.scanTargets !== null],
     ['--extract', resolved.extract !== undefined && resolved.extract !== null],
+    ['--copy', resolved.copy !== undefined && resolved.copy !== null],
     ['--replace', resolved.replace !== undefined && resolved.replace !== null],
     ['--locate', resolved.locate !== undefined && resolved.locate !== null],
     ['--locate-variable', resolved.locateVariable !== undefined && resolved.locateVariable !== null],
@@ -790,12 +1088,15 @@ function normalizeOptions(raw) {
     ['--replace-variable', resolved.replaceVariable !== undefined && resolved.replaceVariable !== null],
     ['--dry-run', Boolean(resolved.dryRun)],
     ['--recalculate-offsets', Boolean(resolved.recalculateOffsets)],
-    ['--from-plan', resolved.fromPlan !== undefined && resolved.fromPlan !== null]
+    ['--from-plan', resolved.fromPlan !== undefined && resolved.fromPlan !== null],
+    ['--match-snapshot', hasMatchSnapshotOperation],
+    ['--from-token', hasTokenIngestOperation]
+    ,['--copy-batch', resolved.copyBatch !== undefined && resolved.copyBatch !== null]
   ];
 
   const enabledOperations = operationMatrix.filter(([, flag]) => Boolean(flag));
   if (enabledOperations.length === 0) {
-    throw new Error('Provide one of --recipe <path>, --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, --replace-variable <selector>, --dry-run, --recalculate-offsets, or --from-plan.');
+    throw new Error('Provide one of --list-functions, --list-constructors, --function-summary, --extract-hashes <hashes>, --list-variables, --outline, --context-function <selector>, --context-variable <selector>, --preview <selector>, --preview-variable <selector>, --snipe <position>, --search-text <substring>, --scan-targets <selector>, --extract <selector>, --replace <selector>, --locate <selector>, --locate-variable <selector>, --extract-variable <selector>, --replace-variable <selector>, --dry-run, --recalculate-offsets, --from-plan, --match-snapshot <path>, --from-token <ref>, or --recipe <path>.');
   }
   if (enabledOperations.length > 1) {
     const flags = enabledOperations.map(([flag]) => flag).join(', ');
@@ -912,6 +1213,7 @@ function normalizeOptions(raw) {
   const locateVariableSelector = parseSelector(resolved.locateVariable, '--locate-variable');
   const extractVariableSelector = parseSelector(resolved.extractVariable, '--extract-variable');
   const replaceVariableSelector = parseSelector(resolved.replaceVariable, '--replace-variable');
+  const copySelector = parseSelector(resolved.copy, '--copy');
   const previewSelector = parseSelector(resolved.preview, '--preview');
   const previewVariableSelector = parseSelector(resolved.previewVariable, '--preview-variable');
   const scanTargetsSelector = parseSelector(resolved.scanTargets, '--scan-targets');
@@ -1075,6 +1377,7 @@ function normalizeOptions(raw) {
 
   const hasFunctionReplace = Boolean(replaceSelector);
   const hasVariableReplace = Boolean(replaceVariableSelector);
+  const hasCopy = Boolean(copySelector);
 
   if ((replacementPath || replacementCode) && !hasFunctionReplace && !hasVariableReplace) {
     throw new Error('--with/--with-file and --with-code can only be used with --replace or --replace-variable.');
@@ -1100,6 +1403,48 @@ function normalizeOptions(raw) {
   }
   if (hasVariableReplace && replaceRange) {
     throw new Error('--replace-range is not supported with --replace-variable.');
+  }
+
+  if (hasCopy && !resolved.copyToFile) {
+    throw new Error('--copy requires --copy-to-file option.');
+  }
+
+  let copyToFile = null;
+  let copyToPosition = null;
+  if (resolved.copyToFile !== undefined && resolved.copyToFile !== null) {
+    const raw = String(resolved.copyToFile).trim();
+    if (!raw) {
+      throw new Error('--copy-to-file requires a file path.');
+    }
+    copyToFile = path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  }
+
+  if (resolved.copyToPosition !== undefined && resolved.copyToPosition !== null) {
+    const posValue = String(resolved.copyToPosition).trim();
+    if (!posValue) {
+      throw new Error('--copy-to-position requires a non-empty value.');
+    }
+
+    // allow numeric position or descriptive tokens
+    const numeric = Number(posValue);
+    if (Number.isFinite(numeric) && Number.isInteger(numeric) && numeric >= 0) {
+      copyToPosition = numeric;
+    } else {
+      const allowed = ['after-last-import', 'before-first-function'];
+      if (!allowed.includes(posValue)) {
+        throw new Error(`--copy-to-position must be one of: ${allowed.join(', ')} or a non-negative integer.`);
+      }
+      copyToPosition = posValue;
+    }
+  }
+
+  let copyBatch = null;
+  if (resolved.copyBatch !== undefined && resolved.copyBatch !== null) {
+    const batchPath = String(resolved.copyBatch).trim();
+    if (!batchPath) {
+      throw new Error('--copy-batch requires a file path');
+    }
+    copyBatch = path.isAbsolute(batchPath) ? batchPath : path.resolve(process.cwd(), batchPath);
   }
 
   const rawEmitDigests = Boolean(resolved.emitDigests);
@@ -1207,6 +1552,10 @@ function normalizeOptions(raw) {
     renameTo,
     extractVariableSelector,
     replaceVariableSelector,
+    copySelector,
+    copyToFile,
+    copyToPosition,
+    copyBatch,
     previewChars,
     scanTargetKind,
     variableTarget,
@@ -1226,7 +1575,9 @@ function normalizeOptions(raw) {
     dryRun: Boolean(resolved.dryRun),
     recalculateOffsets: Boolean(resolved.recalculateOffsets),
     changes: resolved.changes,
-    fromPlan: resolved.fromPlan  // Keep as string (file path), not boolean
+    fromPlan: resolved.fromPlan, // Keep as string (file path), not boolean
+    matchSnapshotInput,
+    fromTokenInput
   };
 }
 
@@ -1280,6 +1631,9 @@ function parseCliArgs(argv) {
     .add('--extract-hashes <hashes...>', 'Extract functions by one or more hashes (comma or space-separated)')
     .add('--replace <selector>', 'Replace a function with a new implementation')
     .add('--replace-variable <selector>', 'Replace a variable declarator with a new snippet')
+    .add('--copy <selector>', 'Copy a function from one file to another')
+    .add('--copy-to-file <path>', 'Target file to copy the function to')
+    .add('--copy-to-position <position>', 'Position to insert the function: number, "after-last-import", "before-first-function" (default: end of file)')
     .add('--with <path>', 'Path to the file containing the replacement code snippet (absolute)')
     .add('--with-file <path>', 'Path to the replacement code snippet (relative to the target file)')
     .add('--with-code <code>', 'Inline code snippet for replacement')
@@ -1293,6 +1647,8 @@ function parseCliArgs(argv) {
     .add('--quiet', 'Suppress summary and progress messages (implies --json)', false, 'boolean')
     .add('--emit-diff', 'Emit a diff of the proposed change (dry-run only)', false, 'boolean')
     .add('--emit-plan <path>', 'Emit a plan file for guarded edits or context')
+    .add('--match-snapshot <path>', 'Load a js-scan match snapshot JSON payload (use "-" for stdin)')
+    .add('--from-token <ref>', 'Decode a js-scan continuation token (file path, literal id, or "-" for stdin)')
     .add('--emit-digests', 'Emit cryptographic digests of changes for verification', false, 'boolean')
     .add('--emit-digest-dir <path>', 'Directory to store digest files (implies --emit-digests)')
     .add('--digest-include-snippets', 'Include code snippets in digest files', false, 'boolean')
@@ -1318,6 +1674,7 @@ function parseCliArgs(argv) {
     .add('--dry-run', 'Preview batch changes without modifying files (requires --changes)', false, 'boolean')
     .add('--recalculate-offsets', 'Recompute line/column offsets after batch changes (Gap 3)', false, 'boolean')
     .add('--changes <path>', 'JSON file containing batch changes: [{ file, startLine, endLine, replacement }]')
+    .add('--copy-batch <path>', 'JSON plan file containing copy operations for batch insertion')
     .add('--from-plan <path>', 'Load and apply a saved operation plan with guard verification (Gap 4)');
 
   const helpSections = [
@@ -1337,6 +1694,8 @@ function parseCliArgs(argv) {
     '  --emit-plan (出计)         Write a guarded plan for review',
     '  --expect-hash (预哈)       Enforce content integrity before replace',
     '  --expect-span (预段)       Enforce span alignment during replace',
+    '  --match-snapshot <path>    Ingest js-scan match snapshots ("-" for stdin)',
+    '  --from-token <ref>         Decode js-scan continuation tokens to plans',
     '  --allow-multiple (多)      Opt into multi-target operations',
     '',
     'Selector hints:',
@@ -1646,13 +2005,21 @@ async function main() {
   options.languageMode = fmt.getLanguageMode();
   options._i18n = translation;
 
+  try {
+    await hydrateMatchSnapshotContext(options);
+  } catch (error) {
+    fmt.error(error.message || String(error));
+    process.exitCode = 1;
+    return;
+  }
+
   // Handle recipe mode first (doesn't need file processing)
   if (options.recipe) {
     return handleRecipeMode(options);
   }
 
   // Handle batch operations (Gap 3)
-  if (options.dryRun || options.recalculateOffsets || options.fromPlan) {
+  if (options.dryRun || options.recalculateOffsets || options.fromPlan || options.copyBatch) {
     try {
       const batchRunner = new BatchDryRunner();
       
@@ -1664,7 +2031,8 @@ async function main() {
           : path.resolve(process.cwd(), options.changes);
         
         const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
-        const result = batchRunner.dryRun(changesData);
+        batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
+        const result = batchRunner.dryRun();
         printDryRunResult(result, options);
         return;
       }
@@ -1677,8 +2045,132 @@ async function main() {
           : path.resolve(process.cwd(), options.changes);
         
         const changesData = JSON.parse(fs.readFileSync(changesPath, 'utf8'));
-        const result = batchRunner.recalculateOffsets(changesData);
+        batchRunner.loadChanges(changesData, { baseDir: path.dirname(changesPath) });
+        const result = batchRunner.recalculateOffsets();
         printRecalculateOffsetsResult(result, options);
+        return;
+      }
+
+      // New: handle copy-batch plan (prototype)
+      if (options.copyBatch) {
+        const fs = require('fs');
+        const planPath = path.isAbsolute(options.copyBatch) ? options.copyBatch : path.resolve(process.cwd(), options.copyBatch);
+        const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+
+        // Validate plan structure
+        if (!Array.isArray(planData.operations)) {
+          throw new Error('--copy-batch plan must contain an "operations" array');
+        }
+
+        // Build file-scoped batch runners so each target file is processed
+        // with its own source snapshot (BatchDryRunner is single-file aware).
+        const runnersByFile = Object.create(null);
+
+        for (const op of planData.operations) {
+          if (!op || op.type !== 'copy') continue;
+
+          // Required: op.source.file and op.source.selector
+          const sourceFile = op.source && op.source.file ? (path.isAbsolute(op.source.file) ? op.source.file : path.resolve(path.dirname(planPath), op.source.file)) : null;
+          const sourceSelector = op.source && op.source.selector ? op.source.selector : null;
+          if (!sourceFile || !sourceSelector) {
+            throw new Error('copy-batch operations require source.file and source.selector values');
+          }
+
+          const sourceText = fs.readFileSync(sourceFile, 'utf8');
+          const sourceAst = parseModule(sourceText, sourceFile);
+          const { functions: sourceFunctions } = collectFunctions(sourceAst, sourceText);
+          const sourceRecords = buildFunctionRecords(sourceFunctions);
+          const [matchedRecord] = resolveMatches(sourceRecords, sourceSelector, options, { operation: 'copy-batch' });
+          if (!matchedRecord) throw new Error(`No function matches selector ${sourceSelector} in ${sourceFile}`);
+
+          const snippet = extractCode(sourceText, matchedRecord.span);
+
+          // Determine target insertion line value
+          const targetFile = op.target && op.target.file ? (path.isAbsolute(op.target.file) ? op.target.file : path.resolve(path.dirname(planPath), op.target.file)) : null;
+          const targetPosition = op.target && op.target.position ? op.target.position : 'end-of-file';
+          if (!targetFile) throw new Error('copy-batch target.file is required');
+
+          const targetText = fs.readFileSync(targetFile, 'utf8');
+          const targetLineOffsets = buildLineIndex(targetText);
+
+          let insertChar = targetText.length; // default end-of-file
+          if (typeof targetPosition === 'number') {
+            insertChar = targetPosition;
+          } else if (targetPosition === 'after-last-import') {
+            const importRegex = /^(?:import\s+.*?\s+from\s+['"`][^'"`]*['"`];?\s*$|const\s+.*?=\s*require\(['"`][^'"`]*['"`]\)\s*;?\s*$)/gm;
+            let last = null;
+            let m;
+            while ((m = importRegex.exec(targetText))) last = m;
+            if (last) insertChar = last.index + last[0].length;
+          } else if (targetPosition === 'before-first-function') {
+            const functionRegex = /^(?:function\s+\w+|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function))/gm;
+            const m = functionRegex.exec(targetText);
+            if (m) insertChar = m.index;
+          }
+
+          // Compute insertion line index from char offset
+          const lineIndex = (function findLineIndex(offset) {
+            let idx = 0;
+            for (; idx < targetLineOffsets.length; idx++) {
+              if (targetLineOffsets[idx] > offset) break;
+            }
+            return Math.max(0, idx - 1);
+          }(insertChar));
+
+          // Normalize snippet newline to target file style
+          const newlineStats = computeNewlineStats(targetText);
+          const normalized = prepareNormalizedSnippet(snippet, newlineStats.style, { ensureTrailingNewline: true });
+
+          const change = {
+            file: targetFile,
+            startLine: lineIndex,
+            endLine: lineIndex - 1, // insertion
+            replacement: normalized.text,
+            id: op.id || `copy-${matchedRecord.name}-${Date.now()}`,
+            description: op.description || `copy ${matchedRecord.canonicalName || matchedRecord.name} -> ${path.basename(targetFile)}`,
+            guards: {
+              sourceHash: matchedRecord.hash,
+              sourceFile: sourceFile
+            }
+          };
+
+          if (!runnersByFile[change.file]) {
+            const fileSource = fs.readFileSync(change.file, 'utf8');
+            runnersByFile[change.file] = new BatchDryRunner(fileSource, { verbose: options.verbose });
+          }
+          runnersByFile[change.file].addChange(change);
+        }
+
+        // Dry-run or apply (process each file runner independently)
+        const aggregated = {
+          success: true,
+          changeCount: 0,
+          applied: 0,
+          failed: 0,
+          preview: [],
+          conflicts: []
+        };
+
+        for (const file of Object.keys(runnersByFile)) {
+          const runner = runnersByFile[file];
+          if (options.fix) {
+            const result = await runner.apply({ force: options.force, continueOnError: options.continueOnError || false, emitPlan: options.emitPlan });
+            aggregated.applied += result.applied || 0;
+            aggregated.failed += result.failed || 0;
+            aggregated.changeCount += result.changes ? result.changes.length : 0;
+          } else {
+            const result = runner.dryRun();
+            aggregated.preview = aggregated.preview.concat(result.preview || []);
+            aggregated.conflicts = aggregated.conflicts.concat(result.conflicts || []);
+            aggregated.changeCount += result.changeCount || 0;
+          }
+        }
+
+        if (options.fix) {
+          printPlanResult({ success: aggregated.failed === 0, applied: aggregated.applied, failed: aggregated.failed, changes: [] }, options);
+        } else {
+          printDryRunResult({ success: aggregated.conflicts.length === 0, changeCount: aggregated.changeCount, preview: aggregated.preview, conflicts: aggregated.conflicts }, options);
+        }
         return;
       }
 
@@ -1711,6 +2203,101 @@ async function main() {
           process.exitCode = 1;
           return;
         }
+
+          // New: handle copy-batch plan
+          if (options.copyBatch) {
+            const fs = require('fs');
+            const planPath = path.isAbsolute(options.copyBatch) ? options.copyBatch : path.resolve(process.cwd(), options.copyBatch);
+            const planData = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+
+            // Validate plan structure
+            if (!Array.isArray(planData.operations)) {
+              throw new Error('--copy-batch plan must contain an "operations" array');
+            }
+
+            const batchRunner = new BatchDryRunner('', { verbose: options.verbose });
+
+            for (const op of planData.operations) {
+              if (!op || op.type !== 'copy') continue;
+
+              // Required: op.source.file and op.source.selector
+              const sourceFile = op.source && op.source.file ? (path.isAbsolute(op.source.file) ? op.source.file : path.resolve(path.dirname(planPath), op.source.file)) : null;
+              const sourceSelector = op.source && op.source.selector ? op.source.selector : null;
+              if (!sourceFile || !sourceSelector) {
+                throw new Error('copy-batch operations require source.file and source.selector values');
+              }
+
+              const sourceText = fs.readFileSync(sourceFile, 'utf8');
+              const sourceAst = parseModule(sourceText, sourceFile);
+              const { functions: sourceFunctions } = collectFunctions(sourceAst, sourceText);
+              const sourceRecords = buildFunctionRecords(sourceFunctions);
+              const [matchedRecord] = resolveMatches(sourceRecords, sourceSelector, options, { operation: 'copy-batch' });
+              if (!matchedRecord) throw new Error(`No function matches selector ${sourceSelector} in ${sourceFile}`);
+
+              const snippet = extractCode(sourceText, matchedRecord.span);
+
+              // Determine target insertion line value
+              const targetFile = op.target && op.target.file ? (path.isAbsolute(op.target.file) ? op.target.file : path.resolve(path.dirname(planPath), op.target.file)) : null;
+              const targetPosition = op.target && op.target.position ? op.target.position : 'end-of-file';
+              if (!targetFile) throw new Error('copy-batch target.file is required');
+
+              const targetText = fs.readFileSync(targetFile, 'utf8');
+              const targetLineOffsets = buildLineIndex(targetText);
+
+              let insertChar = targetText.length; // default end-of-file
+              if (typeof targetPosition === 'number') {
+                insertChar = targetPosition;
+              } else if (targetPosition === 'after-last-import') {
+                const importRegex = /^(?:import\s+.*?\s+from\s+['"`][^'"`]*['"`];?\s*$|const\s+.*?=\s*require\(['"`][^'"`]*['"`]\)\s*;?\s*$)/gm;
+                let last = null;
+                let m;
+                while ((m = importRegex.exec(targetText))) last = m;
+                if (last) insertChar = last.index + last[0].length;
+              } else if (targetPosition === 'before-first-function') {
+                const functionRegex = /^(?:function\s+\w+|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function))/gm;
+                const m = functionRegex.exec(targetText);
+                if (m) insertChar = m.index;
+              }
+
+              // Compute insertion line index from char offset
+              const lineIndex = (function findLineIndex(offset) {
+                let idx = 0;
+                for (; idx < targetLineOffsets.length; idx++) {
+                  if (targetLineOffsets[idx] > offset) break;
+                }
+                return Math.max(0, idx - 1);
+              }(insertChar));
+
+              // Normalize snippet newline to target file style
+              const newlineStats = computeNewlineStats(targetText);
+              const normalized = prepareNormalizedSnippet(snippet, newlineStats.style, { ensureTrailingNewline: true });
+
+              const change = {
+                file: targetFile,
+                startLine: lineIndex,
+                endLine: lineIndex - 1, // insertion
+                replacement: normalized.text,
+                id: op.id || `copy-${matchedRecord.name}-${Date.now()}`,
+                description: op.description || `copy ${matchedRecord.canonicalName || matchedRecord.name} -> ${path.basename(targetFile)}`,
+                guards: {
+                  sourceHash: matchedRecord.hash,
+                  sourceFile: sourceFile
+                }
+              };
+
+              batchRunner.addChange(change);
+            }
+
+            // Dry-run or apply
+            if (options.fix) {
+              const result = await batchRunner.apply({ force: options.force, continueOnError: options.continueOnError || false, emitPlan: options.emitPlan });
+              printPlanResult(result, options);
+            } else {
+              const result = batchRunner.dryRun();
+              printDryRunResult(result, options);
+            }
+            return;
+          }
         
         // Apply changes if --fix flag is provided
         if (options.fix) {
@@ -1733,7 +2320,7 @@ async function main() {
           }
         } else {
           // Dry-run mode: show what would happen
-          const result = batchRunnerFromPlan.dryRun(planData);
+          const result = batchRunnerFromPlan.dryRun();
           printDryRunResult(result, options);
         }
         return;
@@ -1834,6 +2421,10 @@ async function main() {
   mutationOperations.init(deps);
   discoveryOperations.init(deps);
 
+  if (options.matchSnapshotContext) {
+    return mutationOperations.ingestMatchSnapshot(options, functionRecords);
+  }
+
   if (options.listFunctions) {
     return discoveryOperations.listFunctions(options, source, functionRecords);
   }
@@ -1915,6 +2506,11 @@ async function main() {
   if (options.replaceVariableSelector) {
     const [record] = resolveVariableMatches(variableRecords, options.replaceVariableSelector, options, { operation: 'replace-variable' });
     return mutationOperations.replaceVariable(options, source, record, options.replacementPath, options.replaceVariableSelector);
+  }
+
+  if (options.copySelector) {
+    const [record] = resolveMatches(functionRecords, options.copySelector, options, { operation: 'copy-function' });
+    return mutationOperations.copyFunction(options, source, record, options.copySelector);
   }
 }
 

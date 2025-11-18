@@ -454,6 +454,52 @@ it('emits progress to HTTP endpoint', async () => {
 
 ---
 
+## Improvement 6: `--changes` Dry-Run Ingestion (1 Hour Hotfix)
+
+### Problem
+
+`node tools/dev/js-edit.js --changes <file> --dry-run` currently returns `"No changes to preview"` even when the JSON file contains dozens of operations. The CLI parses the JSON, but it never feeds those change objects into `BatchDryRunner` unless they originate from `--from-plan`. As seen in `docs/sessions/2025-11-20-ui-home-card-cli/WORKING_NOTES.md`, this blocks UI agents from exercising the mandated Gap 3 workflow and forces manual edits whenever the dry-run path is required.
+
+**Root cause**:
+- `BatchDryRunner.dryRun()` operates on `this.changes`, but the CLI call (`batchRunner.dryRun(changesData)`) ignores its argument.
+- No helper exists to normalize `changesData` (array vs `{ changes: [...] }`) and push entries into the runner, so the collection stays empty and the runner exits early with a warning.
+
+### Solution: Load changes before invoking the batch runner
+
+**Implementation approach**:
+1. Add a `loadChanges(changeList = [])` helper on `BatchDryRunner` that accepts an array or a `{ changes: [...] }` wrapper, validates each entry, and internally calls `addChange` so guard metadata remains intact.
+2. Update the CLI branches for `--dry-run` and `--recalculate-offsets` to invoke `loadChanges` immediately after parsing the JSON file, then call `dryRun()` / `recalculateOffsets()` without arguments. This keeps the API consistent with `--from-plan`, which already populates `batchRunner.changes` before applying.
+3. Emit a descriptive error (`"No changes supplied via --changes"`) when the JSON is empty so agents know the issue is the payload, not the CLI.
+4. Preserve the pass-through of `--json`, `--verbose`, and bilingual output so the fix is invisible to downstream tooling.
+
+**Tests needed**:
+```javascript
+it('loads changes from a plain array during --dry-run', () => {
+  const runner = new BatchDryRunner();
+  runner.loadChanges([
+    { file: 'a.js', startLine: 10, endLine: 12, replacement: 'const a = 1;' }
+  ]);
+  const result = runner.dryRun();
+  expect(result.totalChanges).toBe(1);
+  expect(result.preview[0]).toMatchObject({ id: 'change-0' });
+});
+
+it('accepts { changes: [...] } payloads from plan files', () => {
+  const runner = new BatchDryRunner();
+  runner.loadChanges({ changes: [/* ... */] });
+  expect(runner.changes.length).toBeGreaterThan(0);
+});
+
+it('js-edit --dry-run returns previews when --changes is provided', async () => {
+  const output = await runCli('node tools/dev/js-edit.js --changes fixtures/batch.json --dry-run --json');
+  expect(output.preview).toHaveLength(2);
+});
+```
+
+**Workflow improvement**: Restores Gap 3 usability in under an hour, eliminating the manual fallback documented in the 2025-11-20 UI session. Agents can once again rely on `--changes` for safe previews, keeping UI work compliant with repository mandates.
+
+---
+
 ## Relative Priority & Implementation Roadmap
 
 ### Priority Matrix

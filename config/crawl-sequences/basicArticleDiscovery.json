@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "host": "www.theguardian.com",
+  "startUrl": "https://www.theguardian.com",
+  "sharedOverrides": {
+    "maxDepth": 3,
+    "respectRobots": true,
+    "priority": "frontpage"
+  },
+  "steps": [
+    {
+      "id": "frontpage",
+      "label": "Fetch front page",
+      "operation": "downloadFrontpage",
+      "startUrl": "@playbook.primarySeed",
+      "overrides": {
+        "maxDownloads": 50,
+        "priority": "frontpage"
+      },
+      "continueOnError": true
+    },
+    {
+      "id": "discover-links",
+      "label": "Discover hub links",
+      "operation": "discoverLinks",
+      "overrides": {
+        "limit": 120,
+        "respectRobots": true
+      }
+    },
+    {
+      "id": "fetch-articles",
+      "label": "Fetch new articles",
+      "operation": "downloadArticles",
+      "overrides": {
+        "maxDownloads": 300,
+        "priority": "article"
+      }
+    }
+  ]
+}

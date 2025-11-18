@@ -30,6 +30,7 @@ let deprecatedOnlyScan;
 let dependencyScanNoFollow;
 let dependencyScanFollow;
 let circularScan;
+let typescriptScan;
 
 beforeAll(() => {
   defaultScan = scanWorkspace({
@@ -66,6 +67,12 @@ beforeAll(() => {
     exclude: [],
     followDependencies: true,
     dependencyDepth: 5
+  });
+
+  typescriptScan = scanWorkspace({
+    dir: fixtureDir,
+    exclude: [],
+    language: 'typescript'
   });
 });
 
@@ -343,13 +350,14 @@ describe('js-scan deprecated filtering', () => {
 
 describe('js-scan dependency traversal', () => {
   test('follows relative dependencies outside the initial directory', () => {
-    const withoutDeps = runSearch(dependencyScanNoFollow.files, ['helperOne'], { limit: 5 });
-    expect(withoutDeps.matches.length).toBe(0);
+    const withoutDepsPaths = dependencyScanNoFollow.files.map((record) => record.relativePath);
+    expect(withoutDepsPaths.some((file) => file.includes('dep-linked/helper.js'))).toBe(false);
+
+    const withDepsPaths = dependencyScanFollow.files.map((record) => record.relativePath);
+    expect(withDepsPaths.some((file) => file.includes('dep-linked/helper.js'))).toBe(true);
 
     const withDeps = runSearch(dependencyScanFollow.files, ['helperOne'], { limit: 5 });
-    expect(withDeps.matches.length).toBeGreaterThan(0);
-    const files = withDeps.matches.map((match) => match.file);
-    expect(files.some((file) => file.includes('dep-linked/helper.js'))).toBe(true);
+    expect(withDeps.matches.some((match) => match.function.name === 'helperOne')).toBe(true);
   });
 
   test('respects dependency depth limit', () => {
@@ -360,11 +368,11 @@ describe('js-scan dependency traversal', () => {
       dependencyDepth: 1
     });
 
-    const limitedResult = runSearch(depthLimitedScan.files, ['circleA'], { limit: 5 });
-    expect(limitedResult.matches.length).toBe(0);
+    const limitedPaths = depthLimitedScan.files.map((record) => record.relativePath);
+    expect(limitedPaths.some((file) => file.includes('dep-circular/a.js'))).toBe(false);
 
-    const fullResult = runSearch(dependencyScanFollow.files, ['circleA'], { limit: 5 });
-    expect(fullResult.matches.some((match) => match.file.includes('dep-circular/a.js'))).toBe(true);
+    const fullPaths = dependencyScanFollow.files.map((record) => record.relativePath);
+    expect(fullPaths.some((file) => file.includes('dep-circular/a.js'))).toBe(true);
   });
 
   test('handles circular dependencies without duplication', () => {
@@ -416,6 +424,7 @@ describe('js-scan output helpers', () => {
     expect(parseTerseFields('')).toEqual(['location', 'name', 'hash', 'exported']);
     expect(parseTerseFields('loc name hash extra')).toEqual(['location', 'name', 'hash']);
     expect(parseTerseFields('default')).toEqual(['location', 'name', 'hash', 'exported']);
+    expect(parseTerseFields('selector')).toEqual(['selector']);
   });
 
   test('formatTerseMatch renders compact segments', () => {
@@ -443,6 +452,37 @@ describe('js-scan output helpers', () => {
       { isChinese: true },
       stubFormatter
     );
-    expect(segments).toEqual(['success(出)', 'cyan(异)']);
+    expect(segments).toEqual([
+      'cyan(src/example.js):muted(12):muted(3)',
+      'success(出)',
+      'cyan(异)',
+      'accent(#abcd1234)'
+    ]);
+  });
+
+  test('formatTerseMatch renders selector field', () => {
+    const segments = formatTerseMatch(
+      sampleMatch,
+      ['selector', 'terms'],
+      { isChinese: false },
+      stubFormatter
+    );
+    expect(segments).toEqual([
+      'cyan(src/example.js):muted(12):muted(3)',
+      'muted(exports.alpha)',
+      'muted(~alpha)',
+      'accent(#abcd1234)'
+    ]);
+  });
+});
+
+describe('js-scan source language handling', () => {
+  test('parses TypeScript fixtures when language is typescript', () => {
+    const tsRecord = typescriptScan.files.find((file) => file.relativePath.endsWith('language-sample.ts'));
+    expect(tsRecord).toBeDefined();
+    expect(tsRecord.functions.length).toBeGreaterThan(0);
+    const fn = tsRecord.functions[0];
+    expect(fn.snippet && fn.snippet.length).toBeGreaterThan(0);
+    expect(fn.name).toBe('lookupLanguageUser');
   });
 });

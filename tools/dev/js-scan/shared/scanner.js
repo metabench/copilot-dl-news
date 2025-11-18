@@ -2,13 +2,25 @@
 
 const fs = require('fs');
 const path = require('path');
-const {
-  parseModule,
-  collectFunctions
-} = require('../../lib/swcAst');
+
+const LANGUAGE_ENV = (process.env.TSNJS_SCAN_LANGUAGE || '').trim().toLowerCase();
+const DEFAULT_LANGUAGE = LANGUAGE_ENV === 'typescript' ? 'typescript' : 'javascript';
+const LANGUAGE_ALIASES = Object.freeze({
+  javascript: 'javascript',
+  js: 'javascript',
+  typescript: 'typescript',
+  ts: 'typescript'
+});
+
+const languageRuntimes = {
+  javascript: require('../../lib/swcAst'),
+  typescript: require('../../lib/swcTs')
+};
+
 const { createFileRecord } = require('../lib/fileContext');
 
 const DEFAULT_EXTENSIONS = Object.freeze(['.js', '.cjs', '.mjs', '.jsx']);
+const DEFAULT_TS_EXTENSIONS = Object.freeze(['.ts', '.tsx', '.js', '.cjs', '.mjs', '.jsx']);
 const DEFAULT_EXCLUDES = Object.freeze([
   'node_modules',
   '.git',
@@ -30,6 +42,42 @@ const GENERATED_PATH_FRAGMENTS = Object.freeze([
   'public/assets',
   'screenshots'
 ]);
+
+function normalizeLanguageOption(value) {
+  if (typeof value !== 'string') {
+    return DEFAULT_LANGUAGE;
+  }
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === 'auto') {
+    return DEFAULT_LANGUAGE;
+  }
+  return LANGUAGE_ALIASES[normalized] || DEFAULT_LANGUAGE;
+}
+
+function resolveExtensionsForLanguage(language, overrides) {
+  if (Array.isArray(overrides) && overrides.length > 0) {
+    const seen = new Set();
+    const normalized = [];
+    overrides.forEach((ext) => {
+      if (typeof ext !== 'string') {
+        return;
+      }
+      const trimmed = ext.trim();
+      if (!trimmed) {
+        return;
+      }
+      const value = trimmed.startsWith('.') ? trimmed.toLowerCase() : `.${trimmed.toLowerCase()}`;
+      if (!seen.has(value)) {
+        seen.add(value);
+        normalized.push(value);
+      }
+    });
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+  return language === 'typescript' ? DEFAULT_TS_EXTENSIONS : DEFAULT_EXTENSIONS;
+}
 
 function isJavaScriptFile(filePath, extensions = DEFAULT_EXTENSIONS) {
   const ext = path.extname(filePath).toLowerCase();
@@ -98,6 +146,9 @@ function walkDirectory(rootDir, options, results) {
 }
 
 function scanWorkspace(options = {}) {
+  const language = normalizeLanguageOption(options.language);
+  const runtime = language === 'typescript' ? languageRuntimes.typescript : languageRuntimes.javascript;
+  const { parseModule, collectFunctions } = runtime;
   const rootDir = path.resolve(options.rootDir || options.dir || process.cwd());
   const includeDeprecated = options.includeDeprecated === true || options.deprecatedOnly === true;
   const deprecatedOnly = options.deprecatedOnly === true;
@@ -114,9 +165,7 @@ function scanWorkspace(options = {}) {
     DEPRECATED_PATH_FRAGMENTS.forEach((fragment) => excludePatterns.add(fragment));
   }
   const excludes = Array.from(excludePatterns);
-  const extensions = Array.isArray(options.extensions) && options.extensions.length > 0
-    ? options.extensions.map((ext) => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`)
-    : DEFAULT_EXTENSIONS;
+  const extensions = resolveExtensionsForLanguage(language, options.extensions);
 
   const followSymlinks = Boolean(options.followSymlinks);
 
@@ -278,6 +327,7 @@ function scanWorkspace(options = {}) {
 
   return {
     rootDir,
+    language,
     files: fileRecords,
     stats,
     errors: parseErrors
@@ -380,7 +430,9 @@ module.exports = {
   scanWorkspace,
   isJavaScriptFile,
   DEFAULT_EXTENSIONS,
+  DEFAULT_TS_EXTENSIONS,
   DEFAULT_EXCLUDES,
   DEPRECATED_PATH_FRAGMENTS,
-  GENERATED_PATH_FRAGMENTS
+  GENERATED_PATH_FRAGMENTS,
+  normalizeLanguageOption
 };

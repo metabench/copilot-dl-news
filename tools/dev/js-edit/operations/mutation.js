@@ -2,6 +2,7 @@
 
 const path = require('path');
 const { resolveLanguageContext } = require('../../i18n/helpers');
+const { toSpanPayload } = require('./discovery');
 
 let deps = null;
 
@@ -1356,26 +1357,177 @@ function replaceFunction(options, source, record, replacementPath, selector) {
 
 
 
-function toSpanPayload(span) {
-  if (!span || typeof span !== 'object') {
-    return {
-      start: null,
-      end: null,
-      length: null,
-      byteStart: null,
-      byteEnd: null,
-      byteLength: null
-    };
+function copyFunction(options, source, record, selector) {
+  const {
+    extractCode,
+    parseModule,
+    collectFunctions,
+    maybeEmitPlan,
+    createNewlineGuard,
+    prepareNormalizedSnippet,
+    writeOutputFile,
+    computeNewlineStats,
+    outputJson,
+    fmt,
+    renderGuardrailSummary
+  } = requireDeps();
+
+  const { filePath, copyToFile, copyToPosition, json, quiet, fix } = options;
+
+  if (!copyToFile) {
+    throw new Error('copyFunction requires --copy-to-file option');
   }
 
-  const start = typeof span.start === 'number' ? span.start : null;
-  const end = typeof span.end === 'number' ? span.end : null;
-  const length = start !== null && end !== null ? Math.max(0, end - start) : null;
-  const byteStart = typeof span.byteStart === 'number' ? span.byteStart : null;
-  const byteEnd = typeof span.byteEnd === 'number' ? span.byteEnd : null;
-  const byteLength = byteStart !== null && byteEnd !== null ? Math.max(0, byteEnd - byteStart) : null;
+  // Extract the function code
+  const functionCode = extractCode(source, record.span, options.sourceMapper);
 
-  return { start, end, length, byteStart, byteEnd, byteLength };
+  // Read the target file
+  let targetSource;
+  try {
+    targetSource = require('fs').readFileSync(copyToFile, 'utf8');
+  } catch (error) {
+    throw new Error(`Cannot read target file ${copyToFile}: ${error.message}`);
+  }
+
+  // Parse target file to find insertion point
+  let targetAst;
+  try {
+    targetAst = parseModule(targetSource, copyToFile);
+  } catch (error) {
+    throw new Error(`Cannot parse target file ${copyToFile}: ${error.message}`);
+  }
+
+  // Determine insertion position
+  let insertPosition = targetSource.length; // Default to end of file
+  let insertDescription = 'end of file';
+
+  if (copyToPosition) {
+    if (typeof copyToPosition === 'number') {
+      insertPosition = copyToPosition;
+      insertDescription = `position ${copyToPosition}`;
+    } else if (copyToPosition === 'after-last-import') {
+      // Find the last import statement
+      const importRegex = /^(?:import\s+.*?\s+from\s+['"`][^'"`]*['"`];?\s*$|const\s+.*?\s*=\s*require\s*\(['"`][^'"`]*['"`]\)\s*;?\s*$)/gm;
+      let lastImportMatch;
+      let match;
+      while ((match = importRegex.exec(targetSource)) !== null) {
+        lastImportMatch = match;
+      }
+      if (lastImportMatch) {
+        insertPosition = lastImportMatch.index + lastImportMatch[0].length;
+        insertDescription = 'after last import';
+      }
+    } else if (copyToPosition === 'before-first-function') {
+      // Find the first function declaration
+      const functionRegex = /^(?:function\s+\w+|const\s+\w+\s*=\s*(?:\([^)]*\)\s*=>|function))/gm;
+      const match = functionRegex.exec(targetSource);
+      if (match) {
+        insertPosition = match.index;
+        insertDescription = 'before first function';
+      }
+    }
+  }
+
+  // Prepare the function code for insertion
+  const fileNewlineStats = computeNewlineStats(targetSource);
+  const normalizedFunction = prepareNormalizedSnippet(
+    functionCode,
+    fileNewlineStats.style,
+    { ensureTrailingNewline: true }
+  );
+
+  // Insert the function
+  const beforeInsert = targetSource.slice(0, insertPosition);
+  const afterInsert = targetSource.slice(insertPosition);
+  const newTargetSource = beforeInsert + normalizedFunction.text + afterInsert;
+
+  // Validate the result
+  let parsedNewAst;
+  try {
+    parsedNewAst = parseModule(newTargetSource, copyToFile);
+  } catch (error) {
+    throw new Error(`Insertion produced invalid code: ${error.message}`);
+  }
+
+  // Check if the function was successfully added
+  const { functions: newFunctions } = collectFunctions(parsedNewAst, newTargetSource);
+  const addedFunction = newFunctions.find(fn => fn.name === record.name || fn.canonicalName === record.canonicalName);
+
+  const guard = {
+    syntax: { status: 'ok' },
+    insertion: {
+      status: addedFunction ? 'ok' : 'warning',
+      position: insertPosition,
+      description: insertDescription,
+      functionFound: Boolean(addedFunction)
+    },
+    result: { status: 'changed' }
+  };
+
+  const plan = maybeEmitPlan('copy-function', options, selector, [record]);
+
+  const payload = {
+    operation: 'copy-function',
+    source: {
+      file: filePath,
+      function: {
+        name: record.name,
+        canonicalName: record.canonicalName,
+        kind: record.kind,
+        line: record.line,
+        column: record.column,
+        exportKind: record.exportKind,
+        pathSignature: record.pathSignature,
+        hash: record.hash
+      }
+    },
+    target: {
+      file: copyToFile,
+      insertionPoint: insertPosition,
+      description: insertDescription
+    },
+    applied: Boolean(fix),
+    guard
+  };
+
+  if (plan) {
+    payload.plan = plan;
+  }
+
+  if (fix) {
+    writeOutputFile(copyToFile, newTargetSource);
+  }
+
+  if (json) {
+    outputJson(payload);
+    return;
+  }
+
+  if (quiet) {
+    return;
+  }
+
+  const language = resolveLanguageContext(fmt);
+  const headerTitle = `${fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst })} ${fmt.translateLabel('copy', 'Copy', { englishFirst: language.englishFirst })}`.trim();
+  fmt.header(headerTitle);
+
+  const functionLabel = fmt.translateLabel('function', 'Function', { englishFirst: language.englishFirst });
+  fmt.section(`${functionLabel}: ${record.canonicalName || record.name}`);
+  fmt.stat(fmt.translateLabel('from', 'From', { englishFirst: language.englishFirst }), filePath);
+  fmt.stat(fmt.translateLabel('to', 'To', { englishFirst: language.englishFirst }), copyToFile);
+  fmt.stat(fmt.translateLabel('insertion_point', 'Insertion Point', { englishFirst: language.englishFirst }), insertDescription);
+  fmt.stat(fmt.translateLabel('mode', 'Mode', { englishFirst: language.englishFirst }), formatModeValue(Boolean(fix), language));
+
+  if (guard.insertion.status === 'warning') {
+    fmt.warn('Function may not have been properly detected after insertion');
+  }
+
+  if (!fix) {
+    fmt.warn(formatDryRunWarning(language));
+  } else {
+    fmt.success(`Function copied to ${copyToFile}`);
+  }
+  fmt.footer();
 }
 
 function scanVariableTargets(options, variableRecords, selector) {
@@ -1505,6 +1657,172 @@ function scanVariableTargets(options, variableRecords, selector) {
   fmt.footer();
 }
 
+function sanitizeSnapshotForOutput(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return null;
+  }
+  const allowedKeys = [
+    'type',
+    'file',
+    'relativeFile',
+    'displayFile',
+    'hash',
+    'name',
+    'canonicalName',
+    'kind',
+    'line',
+    'column',
+    'count',
+    'traits'
+  ];
+  const sanitized = {};
+  allowedKeys.forEach((key) => {
+    if (snapshot[key] !== undefined) {
+      sanitized[key] = snapshot[key];
+    }
+  });
+  if (Array.isArray(snapshot.importSpecifiers)) {
+    sanitized.importSpecifiers = snapshot.importSpecifiers.slice(0, 10);
+  }
+  if (Array.isArray(snapshot.calls)) {
+    sanitized.calls = snapshot.calls.slice(0, 10);
+  }
+  if (snapshot.jsEditHint) {
+    sanitized.jsEditHint = {
+      description: snapshot.jsEditHint.description || null,
+      command: snapshot.jsEditHint.command || null,
+      args: Array.isArray(snapshot.jsEditHint.args) ? snapshot.jsEditHint.args : null
+    };
+  }
+  return sanitized;
+}
+
+function ingestMatchSnapshot(options, functionRecords) {
+  const {
+    resolveMatches,
+    maybeEmitPlan,
+    outputJson,
+    fmt,
+    computeAggregateSpan,
+    formatAggregateSpan
+  } = requireDeps();
+
+  const context = options.matchSnapshotContext;
+  if (!context || !context.selector) {
+    throw new Error('Match snapshot context unavailable. Provide --match-snapshot <path> or --from-token <ref>.');
+  }
+
+  if (context.selectHash && !options.selectHash) {
+    options.selectHash = context.selectHash;
+  }
+  if (context.selectIndex && !options.selectIndex) {
+    options.selectIndex = context.selectIndex;
+  }
+  if (context.selectPath && !options.selectPath) {
+    options.selectPath = context.selectPath;
+  }
+  if (context.expectHash && !options.expectHash) {
+    options.expectHash = context.expectHash;
+  }
+
+  const resolved = resolveMatches(functionRecords, context.selector, options, { operation: 'match-snapshot' });
+  if (!resolved || resolved.length === 0) {
+    throw new Error(`Match snapshot selectors did not resolve any symbols in ${options.filePath}. Re-run js-scan to refresh tokens.`);
+  }
+
+  const expectedHashes = resolved.map((record) => record.hash || null);
+  const expectedSpans = resolved.map((record) => record.span || null);
+  const plan = maybeEmitPlan('match-snapshot', options, context.selector, resolved, expectedHashes, expectedSpans, {
+    snapshot: sanitizeSnapshotForOutput(context.snapshot),
+    source: context.source,
+    token: context.tokenMetadata || null
+  });
+
+  const matches = resolved.map((record, index) => ({
+    index: index + 1,
+    name: record.canonicalName || record.name,
+    kind: record.kind,
+    line: record.line,
+    column: record.column,
+    hash: record.hash,
+    pathSignature: record.pathSignature,
+    span: toSpanPayload(record.span || null)
+  }));
+
+  const spanRange = computeAggregateSpan(resolved.map((record) => (record?.span ? record.span : null)));
+
+  const payload = {
+    operation: 'match-snapshot',
+    file: options.filePath,
+    selector: context.selector,
+    source: context.source,
+    snapshot: sanitizeSnapshotForOutput(context.snapshot),
+    matchCount: matches.length,
+    matches
+  };
+
+  const warnings = [];
+  if (Array.isArray(context.warnings)) {
+    warnings.push(...context.warnings);
+  }
+  if (context.snapshot && context.snapshot.hash && resolved[0].hash && context.snapshot.hash !== resolved[0].hash) {
+    warnings.push({
+      code: 'HASH_MISMATCH',
+      message: 'Snapshot hash differs from current source; rerun js-scan if code changed.',
+      snapshot_hash: context.snapshot.hash,
+      current_hash: resolved[0].hash
+    });
+  }
+
+  if (warnings.length > 0) {
+    payload.warnings = warnings;
+  }
+  if (plan) {
+    payload.plan = plan;
+  }
+  if (spanRange) {
+    payload.spanRange = spanRange;
+  }
+  if (context.tokenMetadata) {
+    payload.token = context.tokenMetadata;
+  }
+
+  if (options.json) {
+    outputJson(payload);
+    return payload;
+  }
+
+  if (!options.quiet) {
+    const language = resolveLanguageContext(fmt);
+    const selectorLabel = fmt.translateLabel('selector', 'Selector', { englishFirst: language.englishFirst });
+    const headerTitle = `${fmt.translateLabel('snapshot', 'Snapshot', { englishFirst: language.englishFirst })} ${fmt.translateLabel('ingest', 'Ingest', { englishFirst: language.englishFirst })}`;
+    fmt.header(headerTitle);
+    fmt.section(`${selectorLabel}: ${context.selector}`);
+    fmt.stat(fmt.translateLabel('file', 'File', { englishFirst: language.englishFirst }), context.snapshot?.displayFile || options.filePath);
+    fmt.stat(fmt.translateLabel('matches', 'Matches', { englishFirst: language.englishFirst }), matches.length, 'number');
+    if (matches[0]?.hash) {
+      fmt.stat(fmt.translateLabel('hash', 'Hash', { englishFirst: language.englishFirst }), matches[0].hash);
+    }
+    if (spanRange) {
+      const formattedRange = formatAggregateSpan(spanRange);
+      if (formattedRange) {
+        fmt.stat(fmt.translateLabel('span', 'Span', { englishFirst: language.englishFirst }), formattedRange);
+      }
+    }
+    if (warnings.length) {
+      warnings.forEach((warning) => {
+        fmt.warn(warning.message || warning.code);
+      });
+    }
+    if (options.emitPlanPath) {
+      fmt.info(formatPlanOutput(fmt, options.emitPlanPath, language.englishFirst));
+    }
+    fmt.footer();
+  }
+
+  return payload;
+}
+
 module.exports = {
   init,
   locateFunctions,
@@ -1513,5 +1831,7 @@ module.exports = {
   extractVariable,
   replaceVariable,
   replaceFunction,
-  scanVariableTargets
+  copyFunction,
+  scanVariableTargets,
+  ingestMatchSnapshot
 };

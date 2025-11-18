@@ -3,6 +3,9 @@
 
 const path = require('path');
 const BatchDryRunner = require(path.join(__dirname, '../../../tools/dev/js-edit/BatchDryRunner'));
+const { createDigest } = require(path.join(__dirname, '../../../tools/dev/lib/swcAst'));
+
+const sampleFixturePath = path.join(__dirname, '../../fixtures/tools/js-edit-sample.js');
 
 describe('BatchDryRunner - Batch Operation Dry-Run', () => {
   const sampleSource = `function add(a, b) {
@@ -21,6 +24,25 @@ function multiply(a, b) {
 
   beforeEach(() => {
     runner = new BatchDryRunner(sampleSource);
+  });
+
+  test('loadChanges ingests change entries and normalizes file paths', () => {
+    const diskRunner = new BatchDryRunner();
+    const change = { file: sampleFixturePath, startLine: 0, endLine: 1, replacement: '// inserted\n// inserted 2' };
+    const loadResult = diskRunner.loadChanges([change]);
+    expect(loadResult.file).toBe(sampleFixturePath);
+    expect(loadResult.changeCount).toBe(1);
+    expect(diskRunner.changes.length).toBe(1);
+    expect(diskRunner.filePath).toBe(sampleFixturePath);
+  });
+
+  test('loadChanges rejects multi-file change sets', () => {
+    const diskRunner = new BatchDryRunner();
+    const changeSet = [
+      { file: sampleFixturePath, startLine: 0, endLine: 1, replacement: '// inserted\n// inserted 2' },
+      { file: path.join(__dirname, '../../fixtures/tools/js-edit-nested-classes.js'), startLine: 0, endLine: 1, replacement: '// other\n// other 2' }
+    ];
+    expect(() => diskRunner.loadChanges(changeSet)).toThrow(/single-file change sets/i);
   });
 
   test('should add and track changes', () => {
@@ -64,11 +86,28 @@ function multiply(a, b) {
     expect(result.valid).toBe(true);
   });
 
+  test('should verify copy sourceHash guard', () => {
+    const snippet = 'function newFn() { return true; }\n';
+    const hash = createDigest(snippet);
+    runner.addChange({ file: 'test.js', startLine: 3, endLine: 2, replacement: snippet, guards: { sourceHash: hash } });
+    const result = runner.verifyGuards();
+    expect(result.valid).toBe(true);
+  });
+
   test('should handle non-overlapping changes', async () => {
     runner.addChange({ file: 'test.js', startLine: 0, endLine: 2, replacement: 'new1' });
     runner.addChange({ file: 'test.js', startLine: 5, endLine: 7, replacement: 'new2' });
     const result = await runner.apply();
     expect(result.applied).toBeGreaterThan(0);
+  });
+
+  test('should support insertion changes (startLine == endLine + 1)', async () => {
+    const insertChange = { file: 'test.js', startLine: 3, endLine: 2, replacement: '/* inserted */' };
+    runner.addChange(insertChange);
+    const result = runner.dryRun();
+    expect(result.success).toBe(true);
+    expect(result.preview.length).toBe(1);
+    expect(result.preview[0].addedLines).toBeGreaterThan(0);
   });
 
   test('should emit result plan', async () => {

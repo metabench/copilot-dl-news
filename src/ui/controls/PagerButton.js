@@ -2,14 +2,18 @@
 
 const jsgui = require("jsgui3-html");
 const { installBindingPlugin } = require("../jsgui/bindingPlugin");
+const { registerControlType } = require("./controlRegistry");
 
 installBindingPlugin(jsgui);
 
 const StringControl = jsgui.String_Control;
 
+const CONTROL_TYPE = "pager_button";
+
 class PagerButtonControl extends jsgui.Control {
   constructor(spec = {}) {
-    super({ ...spec, tagName: "a" });
+    const normalized = { ...spec, tagName: "a", __type_name: CONTROL_TYPE };
+    super(normalized);
     this.dom.attributes.role = "button";
     this.dom.attributes.title = spec.title || spec.text || "";
     this.add_class("pager-button");
@@ -79,6 +83,8 @@ class PagerButtonControl extends jsgui.Control {
     viewModel.set("kind", kind || "default");
   }
 }
+
+registerControlType(CONTROL_TYPE, PagerButtonControl);
 
 module.exports = {
   PagerButtonControl

@@ -403,6 +403,29 @@ Our codebase already follows jsgui3's core principles:
 
 ---
 
+## 2025-11-17 Addendum — Client Entry Modularization Patterns
+
+To keep the UI bundle maintainable, split the legacy `src/ui/client/index.js` responsibilities into focused modules:
+
+1. **Control Manifest & Registry Checks**
+  - Use `src/ui/controls/controlManifest.js` to seed the vendor jsgui registry on both SSR and client activation.
+  - Expose `window.__COPILOT_EXPECTED_CONTROLS__` and `window.__COPILOT_REGISTERED_CONTROLS__` for diagnostics instead of relying on manual DOM scans.
+
+2. **Diagram Atlas Bootstrap Extraction**
+  - Move DOM/render helpers plus refresh polling into `src/ui/client/diagramAtlas.js` via a `createDiagramAtlasBootstrap()` factory that accepts `{ jsguiClient, registerControls }`.
+  - Keep `index.js` limited to invoking `bootstrapDiagramAtlas()` so future Atlas changes stay isolated.
+
+3. **Shared Listing State Store**
+  - Seed `window.__COPILOT_URL_LISTING_STATE__` during SSR (`render-url-table.js`), then hydrate a singleton store via `ensureGlobalListingStateStore()` in `src/ui/client/listingStateStore.js`.
+  - Mirror DOM updates through `attachListingDomBindings()` so UrlFilterToggle, diagnostics, pagers, and tables stay in sync after `/api/urls` calls.
+
+4. **Validation Loop**
+  - After each extraction, run `node src/ui/server/checks/diagramAtlas.check.js`, `node src/ui/server/checks/dataExplorer.check.js`, and the production/dev Data Explorer Jest suites to guard against regressions.
+
+This pattern keeps the client entry as a small composition script (control registry + bootstrap calls) while larger features live in dedicated modules that can be tested and reasoned about independently.
+
+---
+
 ## Cross-References
 
 - **Current Architecture**: `docs/HTML_COMPOSITION_ARCHITECTURE.md`

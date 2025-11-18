@@ -1617,5 +1617,6 @@ module.exports = {
   outlineSymbols,
   buildSearchSuggestions,
   buildSearchSuggestionsForMatch,
-  escapeSuggestionValue
+  escapeSuggestionValue,
+  toSpanPayload
 };

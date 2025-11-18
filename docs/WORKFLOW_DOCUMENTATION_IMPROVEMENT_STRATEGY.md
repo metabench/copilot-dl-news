@@ -29,10 +29,7 @@ Your documentation ecosystem has **strong foundations** (INDEX.md, AGENTS.md, sp
 ```
 Root (loose):
   - AGENTS.md (hub)
-  - AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md (strategy)
-  - TOOLING_ENHANCEMENTS_SUMMARY.md (summary)
-  - SESSION_SUMMARY_2025-11-13.md (session notes)
-  - CLI_REFACTORING_TASKS.md (tasks)
+  - (Legacy planning/report docs formerly stored here were relocated to `docs/` on 2025-11-16 — see `docs/AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md` plus the `docs/root-migration/` folder for archival copies such as TOOLING_ENHANCEMENTS_SUMMARY.md, SESSION_SUMMARY_2025-11-13.md, and CLI_REFACTORING_TASKS.md.)
 
 /docs/ (categorized):
   - /agents/ (11 agent guides)
@@ -84,7 +81,7 @@ When an agent needs to do a task, it reads AGENTS.md → checks INDEX.md → rea
 ## Recent Work Summary (November 2025)
 
 ### Phase 1: Tooling Assessment ✅
-- **AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md** (550 lines)
+- **[AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](./AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md)** (550 lines)
   - Strategic roadmap for js-scan/js-edit improvements
   - 10 feature proposals with effort estimates
   - Priority matrix + Phase plan
@@ -94,10 +91,10 @@ When an agent needs to do a task, it reads AGENTS.md → checks INDEX.md → rea
   - Selector patterns + safety guidelines
   - Ready for immediate agent use
 
-- **TOOLING_ENHANCEMENTS_SUMMARY.md**
+- **TOOLING_ENHANCEMENTS_SUMMARY.md** (now at `docs/root-migration/TOOLING_ENHANCEMENTS_SUMMARY.md`)
   - High-level overview + next steps
 
-**Gap**: These are in root, not indexed in docs/INDEX.md or linked from AGENTS.md
+**Gap**: These live under `docs/` now, but still are not indexed in `docs/INDEX.md` or linked from AGENTS.md
 
 ### Phase 2: Test Runner Documentation ✅
 - **CLI_TOOL_TESTING_GUIDE.md** (300 lines)
@@ -150,8 +147,8 @@ When an agent needs to do a task, it reads AGENTS.md → checks INDEX.md → rea
 | ... |
 
 ## Emerging Workflows (Session-Based)
-- Code pattern discovery (SESSION_SUMMARY_2025-11-13.md)
-- Dependency graph analysis (TOOLING_ENHANCEMENTS_PROPOSAL.md)
+- Code pattern discovery (`docs/root-migration/SESSION_SUMMARY_2025-11-13.md`)
+- Dependency graph analysis (`docs/root-migration/TOOLING_ENHANCEMENTS_SUMMARY.md` + [AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md](./AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md))
 
 ## Retired Workflows (Archive)
 - Old crawl patterns (deprecated 2025-09-01) → see CRAWL_REFACTORING_TASKS.md
@@ -344,10 +341,10 @@ Result: ✅ Workflow discovered, documented, tested, registered, and linked. Oth
 
 #### 2.1 Consolidate Tooling Docs
 **Current**: 
-- AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md (root)
-- AGENT_CODE_EDITING_PATTERNS.md (root)
-- TOOLING_ENHANCEMENTS_SUMMARY.md (root)
-- CLI_TOOL_TESTING_GUIDE.md (/docs)
+- AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md (`docs/` root)
+- AGENT_CODE_EDITING_PATTERNS.md (`docs/` root)
+- TOOLING_ENHANCEMENTS_SUMMARY.md (`docs/root-migration/`)
+- CLI_TOOL_TESTING_GUIDE.md (`/docs`)
 
 **Action**: Move to `/docs/reference/cli-tools-for-agents.md`
 ```markdown

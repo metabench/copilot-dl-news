@@ -242,7 +242,7 @@ Project Root
 ├── WORKFLOW_DOCUMENTATION_IMPROVEMENT_STRATEGY.md ← Strategic doc
 ├── TIER_1_IMPLEMENTATION_GUIDE.md ← Implementation steps
 ├── WORKFLOW_DOCUMENTATION_EXECUTIVE_SUMMARY.md ← This summary
-└── TOOLING_ENHANCEMENTS_SUMMARY.md (existing)
+└── TOOLING_ENHANCEMENTS_SUMMARY.md (existing → now under `docs/root-migration/`)
 ```
 
 ---

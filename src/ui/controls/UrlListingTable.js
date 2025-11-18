@@ -1,6 +1,7 @@
 "use strict";
 
 const { TableControl } = require("./Table");
+const { registerControlType } = require("./controlRegistry");
 
 const URL_LISTING_COLUMNS = Object.freeze([
   { key: "index", label: "#", align: "right", cellClass: "is-index" },
@@ -75,11 +76,13 @@ function buildDisplayRows(rows, options = {}) {
   }));
 }
 
+const CONTROL_TYPE = "url_listing_table";
+
 class UrlListingTableControl extends TableControl {
   constructor(spec = {}) {
     const { columns, records, rows, startIndex, rowOptions, ...rest } = spec || {};
     const resolvedColumns = Array.isArray(columns) && columns.length ? columns : buildColumns();
-    super({ ...rest, columns: resolvedColumns });
+    super({ ...rest, columns: resolvedColumns, __type_name: CONTROL_TYPE });
     if (spec && spec.el) {
       return;
     }
@@ -103,6 +106,8 @@ class UrlListingTableControl extends TableControl {
     return buildDisplayRows(records, options);
   }
 }
+
+registerControlType(CONTROL_TYPE, UrlListingTableControl);
 
 module.exports = {
   UrlListingTableControl,

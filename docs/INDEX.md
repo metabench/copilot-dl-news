@@ -18,6 +18,9 @@ _Last updated: 2025-11-04_
 ## Workflows
 - [Documentation Extraction Playbook](workflows/doc_extraction_playbook.md)
 - [Planning & Review Loop](workflows/planning_review_loop.md)
+- [Kilo Agent Handbook](workflows/kilo-agent-handbook.md) - Directory layout + workflow for running Kilo Code in this repo.
+- [Session Bootstrap Workflow](workflows/session_bootstrap_workflow.md) - Step-by-step guide for creating session folders, plans, and hub links.
+- [Tier 1 Tooling Loop](workflows/tier1_tooling_loop.md) - js-scan/js-edit discovery, dry-run, apply, and verification loop for JS changes.
 
 ## Standards
 - [Commit & PR Standards](standards/commit_pr_standards.md)
@@ -34,6 +37,7 @@ _Last updated: 2025-11-04_
 - [Build Process](reference/build_process.md)
 - [CLI Tooling](reference/cli_tooling.md)
 - [CLI Tool Testing Guide](CLI_TOOL_TESTING_GUIDE.md) - Test runners for js-scan, js-edit, md-scan, md-edit
+- [Agent Tooling Enhancements Proposal](AGENT_TOOLING_ENHANCEMENTS_PROPOSAL.md) - js-scan/js-edit roadmap + priority matrix
 - [Database Schemas](reference/db_schemas.md)
 - [Enhanced Database Adapter](reference/enhanced_database_adapter.md)
 - [Project Overview](reference/project_overview.md)
@@ -46,3 +50,7 @@ _Last updated: 2025-11-04_
 ## Sessions
 - [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
 - [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.
+
+## Legacy Collections
+- [Root Migration Collection](root-migration/README.md) - Former root-level docs awaiting categorization.
+- [AGENTS Archives](archives/agents/) - Historical copies of AGENTS.md variants for reference.

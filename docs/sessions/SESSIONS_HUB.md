@@ -31,6 +31,113 @@
 
 ## Current Session
 
+### Session 2025-11-17: jsgui3 Isomorphic Screenshots
+
+**Duration**: Active
+**Type**: UI screenshot tooling
+**Completion**: ✅ Completed
+
+**Focus**:
+- Capture Puppeteer snapshots for every server-rendered Data Explorer route (URLs, Domains, Crawls, Errors, detail views)
+- Provide reusable helpers so agents can refresh documentation-quality screenshots on demand
+- Log verification commands + artifacts under the session folder for future reference
+
+**Location**: `docs/sessions/2025-11-17-jsgui3-isomorphic-screenshots/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-17-jsgui3-isomorphic-screenshots/PLAN.md)
+- 📝 [Working Notes](./2025-11-17-jsgui3-isomorphic-screenshots/WORKING_NOTES.md)
+
+### Session 2025-11-17: AGI Agent Alignment
+
+**Duration**: Active
+**Type**: Agent documentation alignment
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Sync AGI-Orchestrator, AGI-Scout, and the implementation/tooling agents with Singularity + AGI doc rules
+- Ensure session/todo requirements, plan templates, and handoff expectations are explicit in each `.agent.md`
+- Capture links into `/docs/agi` and the session folder so downstream agents inherit the updated workflow
+
+**Location**: `docs/sessions/2025-11-17-agi-agents/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-17-agi-agents/PLAN.md)
+- 📝 [Working Notes](./2025-11-17-agi-agents/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-17-agi-agents/SESSION_SUMMARY.md)
+
+### Session 2025-11-17: jsgui Forward
+
+**Duration**: Active
+**Type**: UI remediation (jsgui3)
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Eliminate manual control activation fallbacks by seeding the registry from every SSR entry point.
+- Add telemetry-aware refresh UX to the Diagram Atlas shell so CLI progress is surfaced to users.
+- Introduce a shared listing state module for the Data Explorer so toggles, tables, diagnostics, and pagers stay synchronized.
+- Capture the new workflow in `/docs/agi` plus this session folder for future agents.
+
+**Location**: `docs/sessions/2025-11-17-jsgui-forward/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-17-jsgui-forward/PLAN.md)
+- 📝 [Working Notes](./2025-11-17-jsgui-forward/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-17-jsgui-forward/SESSION_SUMMARY.md)
+
+### Session 2025-11-17: UI Dashboard Routing
+
+**Duration**: Active
+**Type**: UI navigation & layout
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Split the heavy `/urls` landing experience into a lightweight dashboard home plus a dedicated URLs listing screen.
+- Keep Diagram Atlas, jobs feed, and metrics on the home page without interfering with URL pagination UX.
+- Improve responsive layout for jobs/URL cards so monitors under 1400px wide still render cleanly.
+
+**Location**: `docs/sessions/2025-11-17-ui-dashboard-routing/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-17-ui-dashboard-routing/PLAN.md)
+- 📝 [Working Notes](./2025-11-17-ui-dashboard-routing/WORKING_NOTES.md)
+
+### Session 2025-11-17: UI Home Cleanup
+
+**Duration**: Active
+**Type**: UI layout polish
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure the dashboard landing page renders only cards/status panels while the URL table lives exclusively on `/urls`.
+- Remove legacy renderer paths that force the listing shell to appear even when hidden.
+- Capture smoke-test commands plus future follow-ups in the session docs for downstream agents.
+
+**Location**: `docs/sessions/2025-11-17-ui-home-cleanup/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-17-ui-home-cleanup/PLAN.md)
+- 📝 [Working Notes](./2025-11-17-ui-home-cleanup/WORKING_NOTES.md)
+
+### Session 2025-11-20: Crawl Config Workspace
+
+**Duration**: Active
+**Type**: UI controls & config surfacing
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement the property grid workspace, crawl profile drawer, behavior timeline, and diff mini-map for crawl config review
+- Extend `ConfigMatrixControl` and `CrawlBehaviorPanelControl` with richer config data sourced from `config/crawl-runner.json`
+- Update controls tests/checks so agents can verify the new panels quickly
+
+**Location**: `docs/sessions/2025-11-20-crawl-config-workspace/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-20-crawl-config-workspace/PLAN.md)
+- 📝 [Working Notes](./2025-11-20-crawl-config-workspace/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-20-crawl-config-workspace/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-20-crawl-config-workspace/FOLLOW_UPS.md)
+
 ### Session 2025-11-20: UI Data Explorer Production Tests
 
 **Duration**: Active
@@ -51,7 +158,345 @@
 - 📘 [Session Summary](./2025-11-20-ui-data-explorer-tests/SESSION_SUMMARY.md)
 - ✅ [Follow Ups](./2025-11-20-ui-data-explorer-tests/FOLLOW_UPS.md)
 
+### Session 2025-11-20: Client Activation
+
+**Duration**: Active
+**Type**: UI activation & hydration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure the `/urls` bundle hydrates UrlListingTable, UrlFilterToggle, and PagerButton controls client-side
+- Patch `src/ui/client/index.js` so the custom controls register via `Client_Page_Context`
+- Capture manual verification notes for the toggle + table refresh flow
+
+**Location**: `docs/sessions/2025-11-20-client-activation/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-20-client-activation/PLAN.md)
+- 📝 [Working Notes](./2025-11-20-client-activation/WORKING_NOTES.md)
+
+### Session 2025-11-20: UI Home Card CLI
+
+**Duration**: Active
+**Type**: UI home grid parity
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Wire `src/ui/render-url-table.js` to shared `homeCards` loaders so the CLI output matches the server home page badges and diagnostics.
+- Capture js-scan/js-edit commands plus verification logs (Jest + control checks) inside the session directory.
+- Brainstorm additional quick wins for UI reliability and documentation.
+
+**Location**: `docs/sessions/2025-11-20-ui-home-card-cli/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-20-ui-home-card-cli/PLAN.md)
+- 📝 [Working Notes](./2025-11-20-ui-home-card-cli/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-20-ui-home-card-cli/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-20-ui-home-card-cli/FOLLOW_UPS.md)
+
+### Session 2025-11-20: UI E2E Testing
+
+**Duration**: Active
+**Type**: UI automation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Validate the Puppeteer `/urls` toggle coverage, document run instructions, and capture gaps for expanding UI e2e reach.
+- Outline additional high-value flows (home cards, pagination diagnostics) plus shared server/fixture helpers for new suites.
+- Ensure session docs + `src/ui/README.md` call out the runner commands so agents can reliably exercise UI pathways.
+
+**Location**: `docs/sessions/2025-11-20-ui-e2e-testing/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-20-ui-e2e-testing/PLAN.md)
+- 📝 [Working Notes](./2025-11-20-ui-e2e-testing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-20-ui-e2e-testing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-20-ui-e2e-testing/FOLLOW_UPS.md)
+
+### Session 2025-11-20: js-scan Continuation Loop
+
+**Duration**: Active
+**Type**: Tooling upgrade
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Wire js-scan continuation tokens (analyze/trace/ripple) to concrete action handlers so agents can resume workflows without manual reseeding.
+- Extend token payloads with match snapshots (file, selector, hash) plus guardrails that detect stale results gracefully.
+- Update AI-native smoke tests + AGI docs so downstream agents know how to capture, store, and replay tokens safely.
+
+**Location**: `docs/sessions/2025-11-20-js-scan-continuation/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-20-js-scan-continuation/PLAN.md)
+- 📝 [Working Notes](./2025-11-20-js-scan-continuation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-20-js-scan-continuation/SESSION_SUMMARY.md)
+
+### Session 2025-11-21: js-scan Relationship Tokens
+
+**Duration**: Active
+**Type**: Tooling upgrade
+**Completion**: ✅ Completed
+
+**Focus**:
+- Extend `--what-imports`/`--export-usage` to emit `_ai_native_cli` payloads and continuation tokens.
+- Replay relationship queries from tokens (importer/usage snapshots, digest warnings) so agents can resume workflows immediately.
+- Capture session docs plus expanded smoke coverage for the new flows.
+
+**Location**: `docs/sessions/2025-11-21-js-scan-relationship-tokens/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-21-js-scan-relationship-tokens/PLAN.md)
+- 📝 [Working Notes](./2025-11-21-js-scan-relationship-tokens/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-21-js-scan-relationship-tokens/SESSION_SUMMARY.md)
+
+### Session 2025-11-21: js-edit Ingestion
+
+**Duration**: Closed
+**Type**: Tooling upgrade
+**Completion**: ✅ Completed
+
+**Focus**:
+- Teach js-edit to ingest js-scan match snapshots directly via `--match-snapshot` / `--from-token` so guard plans no longer require a second locate run.
+- Validate snapshot hashes/spans against on-disk sources before wiring BatchDryRunner to emit guard plans or previews.
+- Extend AI-native smoke coverage to prove a js-scan continuation token can hydrate js-edit without manual selector steps.
+
+**Location**: `docs/sessions/2025-11-21-js-edit-ingestion/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-21-js-edit-ingestion/PLAN.md)
+- 📝 [Working Notes](./2025-11-21-js-edit-ingestion/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-21-js-edit-ingestion/SESSION_SUMMARY.md)
+
+### Session 2025-11-21: jsgui3 Isomorphic Diagram Polish
+
+**Duration**: Active
+**Type**: UI polish & data surfacing
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extend the diagram data CLI/service so code tiles carry real byte sizes for accurate area scaling
+- Refresh the diagram atlas presentation (header, diagnostics, refresh affordance) while preserving SSR/hydration
+- Capture verification steps (diagram check + e2e) plus any follow-up findings inside the session folder
+
+**Location**: `docs/sessions/2025-11-21-jsgui3-isomorphic-diagram-polish/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-21-jsgui3-isomorphic-diagram-polish/PLAN.md)
+
+### Session 2025-11-22: jsgui3 Isomorphic Data Explorer
+
+**Duration**: Active
+**Type**: UI polish & responsiveness
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Refresh Data Explorer headers, stats, and tables so they match the recent Diagram Atlas makeover polish
+- Ensure typography + layout remain tidy from laptop widths up through ultra-wide monitors
+- Capture SSR/hydration verification steps (checks + server tests) and wide-layout screenshots in the session folder
+
+**Location**: `docs/sessions/2025-11-22-jsgui3-isomorphic-data-explorer/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-22-jsgui3-isomorphic-data-explorer/PLAN.md)
+
+### Session 2025-11-21: URL Filter Toggle Fix
+
+**Duration**: Closed
+**Type**: UI hydration & diagnostics
+**Completion**: ✅ Completed
+
+**Focus**:
+- Diagnose why the “Show fetched URLs only” toggle fails after hydration and repair the `/api/urls` + client sync path.
+- Ensure UrlListingTable, meta cards, pagination, and history update atomically when the toggle switches states.
+- Capture js-scan usage, code changes, and verification steps (Puppeteer + server tests) inside the session folder.
+
+**Location**: `docs/sessions/2025-11-21-url-filter-toggle/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-21-url-filter-toggle/PLAN.md)
+- 📝 [Working Notes](./2025-11-21-url-filter-toggle/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-21-url-filter-toggle/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: Singularity Agent Refresh
+
+**Duration**: Active
+**Type**: Agent documentation refresh
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Study vibebible.org methodology patterns and extract actionable storytelling + workflow cues
+- Apply those cues to `.github/agents/💡Singularity Engineer💡.agent.md` so the agent brief stays concise but more actionable
+- Capture the research + deltas inside this session folder for future reference
+
+**Location**: `docs/sessions/2025-11-16-singularity-agent-refresh/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-singularity-agent-refresh/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-singularity-agent-refresh/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-singularity-agent-refresh/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: Doc Migration Cleanup
+
+**Duration**: Active
+**Type**: Documentation structure
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Relocate root-level documentation files into `docs/`.
+- Update indexes and references so agents can still find the content quickly.
+- Capture the relocation workflow (commands, follow-ups) inside this session folder.
+
+**Location**: `docs/sessions/2025-11-16-doc-migration/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-doc-migration/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-doc-migration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-doc-migration/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: Workflow Docs
+
+**Duration**: Active
+**Type**: Documentation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Capture the session bootstrap and Tier 1 tooling loops as standalone workflow guides under `docs/workflows/`
+- Ensure the new docs inherit guidance from AGENTS.md + Singularity Engineer instructions without duplicating them verbatim
+- Update the documentation index and session records so agents can find the workflows easily
+
+**Location**: `docs/sessions/2025-11-16-workflow-docs/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-workflow-docs/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-workflow-docs/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-workflow-docs/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: Diagram UI
+
+**Duration**: Active
+**Type**: Express + jsgui3 visualization
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build a new Express server that renders jsgui3 diagrams for code/database structures
+- Consume CLI tool outputs (js-scan, md-scan, etc.) to drive file/feature size visuals
+- Document the workflow so agents can refresh the data and extend the diagrams
+
+**Location**: `docs/sessions/2025-11-16-diagram-ui/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-diagram-ui/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-diagram-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-diagram-ui/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: Diagram Atlas E2E
+
+**Duration**: Active
+**Type**: Express + Jest e2e validation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Diagnose the Diagram Atlas server startup failure and document prerequisites (diagram data generation, UI build assets, etc.)
+- Add an end-to-end Jest test that boots the server on a random port, hits `/diagram-atlas`, and asserts jsgui output renders
+- Capture Tier 1 tooling usage + smoke instructions in this session folder
+
+**Location**: `docs/sessions/2025-11-16-diagram-atlas-e2e/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-diagram-atlas-e2e/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-diagram-atlas-e2e/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-diagram-atlas-e2e/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: Diagram Atlas Async Loading
+
+**Duration**: Active
+**Type**: Express + client hydration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Serve a lightweight Diagram Atlas shell while deferring data fetch to the client.
+- Build a pulsing jsgui3 progress control that reflects loading/error states.
+- Integrate client activation + `/api/diagram-data` fetch logic with updated e2e coverage.
+
+**Location**: `docs/sessions/2025-11-16-diagram-atlas-async-loading/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-diagram-atlas-async-loading/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-diagram-atlas-async-loading/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-diagram-atlas-async-loading/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: jsgui3 Isomorphic Diagram Atlas
+
+**Duration**: Active
+**Type**: UI hydration (jsgui3)
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Share diagram atlas controls between server (jsgui3-html) and client (jsgui3-client)
+- Fetch `/api/diagram-data` on the client and render diagnostics/sections via jsgui controls
+- Verify SSR snapshots, hydration, and docs/check coverage for the atlas shell
+
+**Location**: `docs/sessions/2025-11-16-jsgui3-isomorphic-diagram-atlas/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-jsgui3-isomorphic-diagram-atlas/PLAN.md)
+- 📓 [Working Notes](./2025-11-16-jsgui3-isomorphic-diagram-atlas/WORKING_NOTES.md)
+
+### Session 2025-11-16: Scan/Edit Remnants
+
+**Duration**: Active
+**Type**: Tooling backlog inventory
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reconcile prior js-scan/js-edit sessions and extract all unfinished improvements
+- Capture required Tier 1 follow-ups (plans integration, guard tooling, doc gaps)
+- Produce a summary for next implementation pass
+
+**Location**: `docs/sessions/2025-11-16-scan-edit-remnants/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-scan-edit-remnants/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-scan-edit-remnants/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-scan-edit-remnants/SESSION_SUMMARY.md)
+
 ### Session 2025-11-14: Binding Plugin Stabilization
+
+### Session 2025-11-16: JS Improvements
+
+**Duration**: Active
+**Type**: Tooling implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Fix the Gap 3 regression blocking `js-edit --changes --dry-run`
+- Sequence the remaining js-scan/js-edit backlog (TypeScript enablement, structured plans, advanced batching)
+- Document progress + next steps for each improvement
+
+**Location**: `docs/sessions/2025-11-16-js-improvements/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-js-improvements/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-js-improvements/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-js-improvements/SESSION_SUMMARY.md)
+
+### Session 2025-11-16: JS-scan Terse Output
+
+**Duration**: Active
+**Type**: Tooling implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate js-scan’s current TypeScript parsing gaps using Tier 1 discovery commands
+- Implement parser/output enhancements so TypeScript sources can be inspected with concise, targeted payloads
+- Capture updated CLI behavior plus verification steps for future agents
+
+**Location**: `docs/sessions/2025-11-16-js-scan-terse-output/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-16-js-scan-terse-output/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-js-scan-terse-output/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-16-js-scan-terse-output/SESSION_SUMMARY.md)
 
 **Duration**: Active
 **Type**: UI bindings
@@ -122,6 +567,197 @@
 - 📝 [Working Notes](./2025-11-14-ui-data-explorer/WORKING_NOTES.md)
 - 📘 [Session Summary](./2025-11-14-ui-data-explorer/SESSION_SUMMARY.md)
 - ✅ [Follow Ups](./2025-11-14-ui-data-explorer/FOLLOW_UPS.md)
+
+### Session 2025-11-14: URL Fetch Filter
+
+**Duration**: Active
+**Type**: UI/DB enhancement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Surface a `hasFetches` filter for the URLs view backed by a dedicated SQLite view
+- Add `/api/urls` JSON endpoint plus server pagination aware of the new filter
+- Refresh the client-side table via an in-place toggle that calls the API and rehydrates the DOM
+
+**Location**: `docs/sessions/2025-11-14-url-fetch-filter/`
+### Session 2025-11-15: URL Filter Client
+
+**Duration**: Active
+**Type**: UI binding + activation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Wire the `UrlFilterToggleControl` into the client activation lifecycle
+- Refresh the `/urls` table via `/api/urls` when the toggle switches without a full page reload
+- Document the toggle lifecycle for future agents
+
+**Location**: `docs/sessions/2025-11-15-url-filter-client/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-url-filter-client/PLAN.md)
+
+### Session 2025-11-15: URL Filter Debug
+
+**Duration**: Active
+**Type**: UI runtime + bindings
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Eliminate the `each_source_dest_pixels_resized_limited_further_info` reference error in the bundled client.
+- Verify the `UrlFilterToggle` control refreshes `/urls` data via `/api/urls`.
+- Capture manual smoke steps until Playwright coverage exists.
+
+**Location**: `docs/sessions/2025-11-15-url-filter-debug/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-url-filter-debug/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-url-filter-debug/WORKING_NOTES.md)
+
+### Session 2025-11-15: UI Reliability Improvements
+
+**Duration**: Active
+**Type**: UI reliability & diagnostics
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Assess `/urls` UI pain points impacting reliability or debuggability.
+- Ship targeted control/binding fixes plus diagnostic hooks.
+- Capture tooling/test updates so regressions are easier to track.
+
+**Location**: `docs/sessions/2025-11-15-ui-reliability/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-ui-reliability/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-ui-reliability/WORKING_NOTES.md)
+
+### Session 2025-11-15: Front Page Home Grid
+
+**Duration**: Active
+**Type**: UI surfacing & summary cards
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Surface URLs/domains/crawls/errors directly on the `/urls` landing page via a card grid.
+- Wire server-side counts + cached metrics into the new home cards without breaking pagination.
+- Document the Tier 1 CLI workflow (js-edit) used to refresh CSS + server helpers.
+
+**Location**: `docs/sessions/2025-11-15-front-page-home-grid/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-front-page-home-grid/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-front-page-home-grid/WORKING_NOTES.md)
+
+### Session 2025-11-15: UI Home Grid Refresh
+
+**Duration**: Active
+**Type**: UI polish & documentation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Enrich the `/urls` home cards with deep links + diagnostics context without breaking layout.
+- Add lightweight `checks/` scripts for table/pager controls so agents can preview markup quickly.
+- Update `src/ui/README.md` and session docs to reflect the shipped data explorer + client bundle wiring.
+
+**Location**: `docs/sessions/2025-11-15-ui-home-grid-refresh/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-ui-home-grid-refresh/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-ui-home-grid-refresh/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-15-ui-home-grid-refresh/SESSION_SUMMARY.md)
+
+### Session 2025-11-15: Control Map Registration
+
+**Duration**: Active
+**Type**: Client control hydration
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Trace how vendor `update_standard_Controls` and `page_context.update_Controls` seed `map_Controls`.
+- Align `src/ui/client/index.js` so custom controls register through the same pathway.
+- Document the lifecycle for Puppeteer tests and future binding work.
+
+**Location**: `docs/sessions/2025-11-15-control-map-registration/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-control-map-registration/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-control-map-registration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-15-control-map-registration/SESSION_SUMMARY.md)
+
+### Session 2025-11-15: Puppeteer E2E Coverage
+
+**Duration**: Active
+**Type**: UI automation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Replace the stalled Playwright work with Puppeteer coverage for the `/urls` toggle.
+- Boot the Express data explorer inside the test harness and drive the filter toggle end-to-end.
+- Document fixtures, commands, and next steps inside the session folder for future agents.
+
+**Location**: `docs/sessions/2025-11-15-puppeteer-e2e/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-15-puppeteer-e2e/INDEX.md)
+- 🗺️ [Plan](./2025-11-15-puppeteer-e2e/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-puppeteer-e2e/WORKING_NOTES.md)
+- 🛣️ [Roadmap](./2025-11-15-puppeteer-e2e/ROADMAP.md)
+- ✅ [Follow Ups](./2025-11-15-puppeteer-e2e/FOLLOW_UPS.md)
+- 📘 [Session Summary](./2025-11-15-puppeteer-e2e/SESSION_SUMMARY.md)
+
+### Session 2025-11-15: Kilo Agent Readiness
+
+**Duration**: Active
+**Type**: Tooling & documentation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Stand up `.kilo/` rules directories plus documentation so Kilo Code can follow repo-specific guardrails
+- Define a custom "Kilo Agent Fabricator" mode that can draft new Kilo agents per workflow request
+- Document how these instructions plug into the existing AGENTS.md improvement loop
+
+**Location**: `docs/sessions/2025-11-15-kilo-agent-readiness/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-kilo-agent-readiness/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-kilo-agent-readiness/WORKING_NOTES.md)
+
+### Session 2025-11-15: URL Filter e2e Improvements
+
+**Duration**: Active
+**Type**: UI e2e hardening
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extend the Puppeteer toggle test so it covers switching back to "all URLs"
+- Assert row count, subtitle, and toggle metadata across both states
+- Keep session docs updated for future UI filter validation work
+
+**Location**: `docs/sessions/2025-11-15-url-filter-e2e-improvements/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-url-filter-e2e-improvements/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-url-filter-e2e-improvements/WORKING_NOTES.md)
+
+### Session 2025-11-15: Client Controls Bundle Investigation
+
+**Duration**: Active
+**Type**: UI bundling analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Trace how `scripts/build-ui-client.js` and the esbuild entry gather controls for the browser bundle.
+- Compare the approach with `jsgui3-server` examples to ensure every control used at runtime is explicitly imported.
+- Capture recommendations for keeping the bundle aligned with the binding/plugin expectations.
+
+**Location**: `docs/sessions/2025-11-15-client-controls-bundle/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-15-client-controls-bundle/PLAN.md)
+- 📝 [Working Notes](./2025-11-15-client-controls-bundle/WORKING_NOTES.md)
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-14-url-fetch-filter/PLAN.md)
+- 📝 [Working Notes](./2025-11-14-url-fetch-filter/WORKING_NOTES.md)
 
 
 ### Session 2025-11-14: Db View Implementation
@@ -240,6 +876,23 @@
 - 📝 [Working Notes](./2025-11-19-jsgui-binding-report/WORKING_NOTES.md)
 - 📘 [Session Summary](./2025-11-19-jsgui-binding-report/SESSION_SUMMARY.md)
 - ✅ [Follow Ups](./2025-11-19-jsgui-binding-report/FOLLOW_UPS.md)
+
+### Session 2025-11-19: Client Control Hydration
+
+**Duration**: Active
+**Type**: UI activation & bundling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Populate browser `context.map_Controls` with UrlListingTable, UrlFilterToggle, and PagerButton constructors.
+- Patch pre-activation hooks so server-rendered markup hydrates into live controls.
+- Stabilize the Puppeteer `/urls` toggle test by ensuring the client bundle loads custom controls.
+
+**Location**: `docs/sessions/2025-11-19-client-control-hydration/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-19-client-control-hydration/PLAN.md)
+- 📝 [Working Notes](./2025-11-19-client-control-hydration/WORKING_NOTES.md)
 
 ### Session 2025-11-17: Hub Eligibility Refresh
 
@@ -524,23 +1177,24 @@
 **Quick Links**:
 - 📝 [Session Notes](./2025-11-15-intelligent-crawl-defaults/notes.md)
 
-### Session 2025-11-16: Intelligent Crawl Behavior Persistence
+### Session 2025-11-16: JS/TS Scan and Edit Tooling Brainstorm
 
 **Duration**: Active
-**Type**: Crawl behavior analysis
+**Type**: Tooling analysis & brainstorming
 **Completion**: 🔄 In progress
 
 **Focus**:
-- Capture the current intelligent crawl flow after the 404 resilience fixes
-- Explain why capped runs terminate early despite healthy downloaders
-- Propose planner/persistence tweaks that keep the crawl going without a new start URL
+- Review js-scan and js-edit tools for current capabilities and limitations
+- Brainstorm improvements for better AI agent code editing, including potential TypeScript support
+- Implement `--copy-batch` and batch plan generation + guard verification (planned)
+- Document findings and prioritized enhancement ideas
 
-**Location**: `docs/sessions/2025-11-16-intelligent-crawl-behavior/`
+**Location**: `docs/sessions/2025-11-16-js-ts-scan-edit-brainstorm/`
 
 **Quick Links**:
-- 📝 [Session Notes](./2025-11-16-intelligent-crawl-behavior/notes.md)
-- 🧪 [Exit Diagnostics](./2025-11-16-intelligent-crawl-behavior/diagnostic.md)
-- 🛠️ [Persistence Fix Plan](./2025-11-16-intelligent-crawl-behavior/fix-plan.md)
+- 🗺️ [Plan](./2025-11-16-js-ts-scan-edit-brainstorm/PLAN.md)
+- 📝 [Working Notes](./2025-11-16-js-ts-scan-edit-brainstorm/WORKING_NOTES.md)
+- 📘 [Batch Improvements](./2025-11-16-typescript-support-copy-functions/BATCH_IMPROVEMENTS.md)
 
 
 ---
@@ -883,8 +1537,8 @@ const matches = searchIndex.find(item => item.keywords.includes('refactor'));
 
 ---
 
-**Last Updated**: November 15, 2025  
-**Current Session**: 2025-11-15-intelligent-crawl-defaults  
+**Last Updated**: November 21, 2025  
+**Current Session**: 2025-11-21-js-scan-relationship-tokens  
 **Maintenance**: Add new sessions as they complete  
 **For Agents**: This is your memory system. Use it!
 

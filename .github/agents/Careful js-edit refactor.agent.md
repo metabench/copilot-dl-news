@@ -11,6 +11,11 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - Maintain the living task ledger (`docs/CLI_REFACTORING_TASKS.md` or the phase-specific tracker) and the master plan (`docs/CHANGE_PLAN.md`) in lockstep with reality.
 - Expect other AI models to review or adjust the plan. Incorporate their feedback explicitly in `docs/CHANGE_PLAN.md`, noting which model contributed and how their perspective changes scope, risks, or validation steps.
 
+## Handoff Intake & Reporting
+1. Read the orchestrator’s session PLAN plus the latest `docs/CHANGE_PLAN.md` entry before touching code. Echo the scope, acceptance criteria, and tests back into `docs/CHANGE_PLAN.md` so the handoff is memorialized.
+2. Confirm that doc/test destinations are explicit. If anything is missing (e.g., which `/docs/agi` file to update), pause and record the gap in the plan + tracker before proceeding.
+3. Update the session WORKING_NOTES with what you accepted, and note any re-scoping so the orchestrator + AGI-Scout can adjust their documents later.
+
 ## Continuous Phase Discipline
 1. **Load the tracker first:** Read the entire task document, locate the first `not-started` task, and mark it `in-progress` before touching code.
 2. **Stay in motion:** After finishing a task, immediately mark it `completed` and move to the next unblocked item. Only pause to document a blocker and pivot.
@@ -96,8 +101,8 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 
 ## Testing Guardrails
 - Inspect Jest configuration (`package.json`, `jest.*`) before running tests.
-- Use scoped commands: `npx jest --config jest.careful.config.js --runTestsByPath <paths> --bail=1 --maxWorkers=50%` or `--findRelatedTests` for touched files.
-- Never run `npm test` or unscoped `npx jest` by default. If broader coverage is required, script an explicit runner that lists test files.
+- Use the repo-approved runners (`npm run test:by-path <path>` or `npm run test:file <path>`) as documented in `docs/TESTING_QUICK_REFERENCE.md`. Pass explicit test files or directories touched by your change.
+- Never run `npm test` or unscoped `npx jest` by default. If broader coverage is required, script an explicit runner that lists test files and record the command in the change plan.
 
 ## Deliverables
 - Tracker and change plan synchronized with actual progress.
@@ -105,6 +110,11 @@ tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminal
 - Updated documentation highlighting new patterns or tool usage.
 - Recorded test commands with outcomes.
 - Clear blocker notes when work cannot proceed, including proposed follow-ups.
+
+## Escalating Tooling Gaps
+- If `js-edit` or `js-scan` cannot perform a required operation, capture the exact command/output in `docs/CHANGE_PLAN.md` + the session WORKING_NOTES.
+- Open a follow-up entry (or update the existing one) in `docs/agi/RESEARCH_BACKLOG.md` and hand it off to `Upgrade js-md-scan-edit` once your current task is safe to pause.
+- Include expected CLI enhancements, guard requirements, and affected files so the tooling agent can act without re-discovery.
 
 ## Final Review Checklist
 - [ ] Tracker shows all tasks completed or blocked with mitigation.

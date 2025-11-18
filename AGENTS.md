@@ -12,6 +12,7 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 - **Session folders are mandatory.** Every session (analysis, implementation, validation) gets a dedicated directory under `docs/sessions/<yyyy-mm-dd>-<short-slug>/`. Park your summaries, roadmaps, follow-ups, and guidance there—never in `tmp/`—and add the folder to `docs/sessions/SESSIONS_HUB.md` as soon as it exists.
 - **Think in memory layers.** Consider the current session directory your short/medium-term memory; older session directories are your long-term memory. Review them before starting new work so you inherit open threads instead of re-discovering them.
 - **Search the archive first.** Use the CLI tooling (`node tools/dev/md-scan.js --dir docs/sessions --search <term> --json`, `node tools/dev/js-scan.js --dir docs --find-pattern <pattern>`) to sweep current and past sessions quickly. Bring the hits into your immediate context before drafting new plans or documents.
+- **Kilo instructions live under `.kilo/rules-<slug>/`.** Pair them with [`docs/workflows/kilo-agent-handbook.md`](docs/workflows/kilo-agent-handbook.md) so Kilo Code knows where to find repo-specific guidance. Add a slugged rules directory + `.kilocodemodes` entry whenever you author a new Kilo mode.
 
 /docs/INDEX.md – the table of contents the agents consult first.
 
@@ -24,7 +25,7 @@ AGENTS.md should link to these pages and assign follow-ups (“If X arises, cons
 
 Core directives (always-on)
 
-Plan-first. Before edits, create/refresh a one-screen Plan (see template below). State scope, risks, success criteria, test/benchmark intent, and docs you’ll touch.
+Plan-first. Before edits, create/refresh a one-screen Plan (see template below). State scope, risks, success criteria, test/benchmark intent, and docs you’ll touch. When the work is truly a one-liner (e.g., running `Stop-Process -Name node -Force` to kill stray tasks), skip the formal plan/todo overhead—execute the command, capture the result, and move on.
 
 Prefer small, reversible steps. Sequence work into short, verifiable changes; keep deltas narrow across /src/modules ↔ /src/db ↔ /src/models.
 
@@ -137,8 +138,6 @@ Open AGENTS.md and skim Core directives.
 Create/refresh your Plan (template above).
 
 Check /docs/INDEX.md; if your path lacks a workflow, add a stub and link it here.
-
-For crawl-output refinements, review `docs/sessions/2025-11-18-crawl-output-refresh/PLAN.md` and WORKING_NOTES before touching code.
 
 Implement in short hops; keep adapters clean and measured.
 

@@ -1,0 +1,41 @@
+{
+  "version": "1.1.0",
+  "host": "guardian-uk",
+  "startUrl": "https://www.theguardian.com/uk",
+  "sharedOverrides": {
+    "maxDepth": 2,
+    "priority": "frontpage",
+    "respectRobots": true,
+    "cadenceMinutes": 45
+  },
+  "steps": [
+    {
+      "id": "frontpage",
+      "label": "Fetch UK front page",
+      "operation": "downloadFrontpage",
+      "overrides": {
+        "maxDownloads": 40,
+        "priority": "frontpage"
+      }
+    },
+    {
+      "id": "queue-hubs",
+      "label": "Queue hubs",
+      "operation": "discoverLinks",
+      "overrides": {
+        "limit": 90,
+        "respectRobots": true
+      }
+    },
+    {
+      "id": "uk-articles",
+      "label": "Fetch UK articles",
+      "operation": "downloadArticles",
+      "overrides": {
+        "maxDownloads": 260,
+        "priority": "article",
+        "cadenceMinutes": 45
+      }
+    }
+  ]
+}
