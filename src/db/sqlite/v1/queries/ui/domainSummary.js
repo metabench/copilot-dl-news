@@ -10,9 +10,11 @@ function prepareStatements(db) {
       try {
         return handle.prepare(`
           SELECT COUNT(*) AS c
-          FROM fetches f
-          JOIN urls u ON u.id = f.url_id
-          WHERE LOWER(u.host) = ? AND f.classification = 'article'
+          FROM http_responses hr
+          JOIN urls u ON u.id = hr.url_id
+          JOIN content_storage cs ON cs.http_response_id = hr.id
+          JOIN content_analysis ca ON ca.content_id = cs.id
+          WHERE LOWER(u.host) = ? AND ca.classification = 'article'
         `);
       } catch (_) {
         // Fall back to legacy articles table if it exists
@@ -26,7 +28,12 @@ function prepareStatements(db) {
     })(),
     fetchesDirect: (() => {
       try {
-        return handle.prepare('SELECT COUNT(*) AS c FROM fetches WHERE LOWER(host) = ?');
+        return handle.prepare(`
+          SELECT COUNT(*) AS c
+          FROM http_responses hr
+          JOIN urls u ON u.id = hr.url_id
+          WHERE LOWER(u.host) = ?
+        `);
       } catch (_) {
         return null;
       }
@@ -35,8 +42,8 @@ function prepareStatements(db) {
       try {
         return handle.prepare(`
           SELECT COUNT(*) AS c
-          FROM fetches f
-          JOIN urls u ON u.id = f.url_id
+          FROM http_responses hr
+          JOIN urls u ON u.id = hr.url_id
           WHERE LOWER(u.host) = ?
         `);
       } catch (_) {

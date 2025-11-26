@@ -32,6 +32,12 @@ _Last updated: 2025-11-04_
 - [Add a New Agent](how_tos/add_new_agent.md)
 - [Update the Index](how_tos/update_index.md)
 
+## Guides
+
+**Comprehensive AI-generated references** for complex subsystems. These in-depth documents (500–1000+ lines) capture architecture, patterns, gotchas, and working examples discovered through hands-on implementation. Consult before working on an unfamiliar subsystem.
+
+- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, and verification scripts for jsgui3-html UIs.
+
 ## Reference
 - [Adapters Overview](reference/adapters_overview.md)
 - [Build Process](reference/build_process.md)

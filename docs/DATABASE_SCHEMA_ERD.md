@@ -2,55 +2,550 @@
 
 **When to Read**: Read this when understanding the database structure, implementing queries, planning schema changes, or normalizing data.
 
+**Last Updated**: October 28, 2025
+**Schema Version**: 8 (via schema_migrations table)
+**Total Tables**: 74 tables (normalized architecture)
+
 ---
 
 ## Overview
 
-This document provides a visual representation and detailed explanation of the SQLite database schema used by the news crawler application. The schema supports web crawling, content storage, gazetteer (geography) data, background task management, and compression infrastructure.
+This document provides a visual representation and detailed explanation of the SQLite database schema used by the news crawler application. The schema has been normalized from the original denormalized design, separating content storage, HTTP metadata, and analysis into dedicated tables.
 
-**Total Tables**: 40+ tables across 6 functional domains
+**Key Changes Since Previous Version**:
+- **Normalization Complete**: Articles table simplified from 30+ columns to 7 columns
+- **Content Separation**: HTML/text content moved to `content_storage` with compression
+- **HTTP Metadata**: Request/response data extracted to `http_responses`
+- **Analysis Separation**: Content analysis moved to `content_analysis`
+- **Schema Versioning**: Implemented via `schema_migrations` table (version 8)
+- **74 Tables**: Expanded from ~40 tables to support advanced features
 
 ---
 
 ## Table of Contents
 
-1. [Core Content Tables](#core-content-tables)
-2. [Crawl Management Tables](#crawl-management-tables)
-3. [Gazetteer (Geography) Tables](#gazetteer-geography-tables)
-4. [Background Task Tables](#background-task-tables)
-5. [Categorization & Metadata Tables](#categorization--metadata-tables)
-6. [Compression Infrastructure Tables](#compression-infrastructure-tables)
-7. [Relationships & Foreign Keys](#relationships--foreign-keys)
-8. [Indexes & Performance](#indexes--performance)
+1. [Core Content System](#core-content-system)
+2. [HTTP Response System](#http-response-system)
+3. [Content Storage System](#content-storage-system)
+4. [Content Analysis System](#content-analysis-system)
+5. [Crawl Management System](#crawl-management-system)
+6. [Gazetteer (Geography) System](#gazetteer-geography-system)
+7. [Background Task System](#background-task-system)
+8. [Advanced Analytics System](#advanced-analytics-system)
+9. [Relationships & Foreign Keys](#relationships--foreign-keys)
+10. [Schema Evolution](#schema-evolution)
 
 ---
 
-## Core Content Tables
+## Core Content System
 
 ### articles
 
-**Purpose**: Main table for article content.
+**Purpose**: Core article metadata (normalized from 30+ columns to 7).
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INTEGER PK | Auto-increment primary key |
-| `url` | TEXT UNIQUE | Article URL (unique) |
-| `host` | TEXT | Domain name |
+| `url` | TEXT UNIQUE | Article URL |
 | `title` | TEXT | Article title |
-| `date` | TEXT | Publication date (ISO 8601) |
-| `section` | TEXT | Site section/category |
-| `html` | BLOB | Raw HTML content |
-| `crawled_at` | TEXT | Timestamp of crawl |
-| `article_xpath` | TEXT | XPath to article content |
-| `analysis` | TEXT | JSON analysis results |
-| `canonical_url` | TEXT | Canonical URL |
-| `compressed_html` | BLOB | Compressed content |
+| `html` | TEXT | Raw HTML (legacy - being migrated) |
+| `text` | TEXT | Extracted text content |
+| `created_at` | TEXT | Creation timestamp |
+| `updated_at` | TEXT | Last update timestamp |
+
+**Notes**:
+- URL field used for lookups (not normalized to urls table yet)
+- HTML/text content being migrated to content_storage
+- Relationships established through url-based joins
+
+### urls
+
+**Purpose**: URL normalization and canonicalization.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `url` | TEXT UNIQUE | Full URL |
+| `canonical_url` | TEXT | Canonical version |
+| `created_at` | TEXT | First seen |
+| `last_seen_at` | TEXT | Last seen |
+| `analysis` | TEXT | JSON analysis |
+| `host` | TEXT | Domain name |
+
+---
+
+## HTTP Response System
+
+### http_responses
+
+**Purpose**: HTTP request/response metadata (extracted from articles).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `url_id` | INTEGER FK | References urls(id) |
+| `request_started_at` | TEXT | Request start time |
+| `fetched_at` | TEXT | Response received time |
+| `http_status` | INTEGER | HTTP status code |
+| `content_type` | TEXT | Content-Type header |
+| `content_encoding` | TEXT | Content-Encoding header |
+| `etag` | TEXT | ETag header |
+| `last_modified` | TEXT | Last-Modified header |
+| `redirect_chain` | TEXT | JSON redirect chain |
+| `ttfb_ms` | INTEGER | Time to first byte (ms) |
+| `download_ms` | INTEGER | Download time (ms) |
+| `total_ms` | INTEGER | Total request time (ms) |
+| `bytes_downloaded` | INTEGER | Response size |
+| `transfer_kbps` | REAL | Transfer speed |
+
+**Relationships**:
+- → `urls` (url_id)
+
+---
+
+## Content Storage System
+
+### content_storage
+
+**Purpose**: Compressed content storage (extracted from articles).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `storage_type` | TEXT | Storage type (blob, compressed, etc.) |
 | `compression_type_id` | INTEGER FK | References compression_types |
 | `compression_bucket_id` | INTEGER FK | References compression_buckets |
-| `compression_bucket_key` | TEXT | Key within bucket |
-| `original_size` | INTEGER | Bytes before compression |
-| `compressed_size` | INTEGER | Bytes after compression |
-| `compression_ratio` | REAL | Ratio (original/compressed) |
+| `bucket_entry_key` | TEXT | Key within bucket |
+| `content_blob` | BLOB | Actual content |
+| `content_sha256` | TEXT | Content hash |
+| `uncompressed_size` | INTEGER | Original size |
+| `compressed_size` | INTEGER | Compressed size |
+| `compression_ratio` | REAL | Compression ratio |
+| `created_at` | TEXT | Creation timestamp |
+| `http_response_id` | INTEGER FK | References http_responses |
+
+**Relationships**:
+- → `compression_types` (compression_type_id)
+- → `compression_buckets` (compression_bucket_id)
+- → `http_responses` (http_response_id)
+
+### compression_types
+
+**Purpose**: Registry of compression algorithms.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `name` | TEXT UNIQUE | Algorithm name (gzip, brotli, zstd) |
+| `level` | INTEGER | Compression level |
+| `description` | TEXT | Description |
+
+### compression_buckets
+
+**Purpose**: Shared compression buckets.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `name` | TEXT UNIQUE | Bucket name |
+| `compression_type_id` | INTEGER FK | References compression_types |
+| `compressed_data` | BLOB | Bucket content |
+| `original_size` | INTEGER | Total original size |
+| `compressed_size` | INTEGER | Total compressed size |
+| `item_count` | INTEGER | Items in bucket |
+| `created_at` | TEXT | Creation timestamp |
+| `last_accessed_at` | TEXT | Last access timestamp |
+
+---
+
+## Content Analysis System
+
+### content_analysis
+
+**Purpose**: Content analysis results (extracted from articles).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `content_id` | INTEGER FK | References content_storage(id) |
+| `analysis_version` | INTEGER | Analysis version |
+| `classification` | TEXT | Content classification |
+| `title` | TEXT | Extracted title |
+| `date` | TEXT | Publication date |
+| `section` | TEXT | Site section |
+| `word_count` | INTEGER | Word count |
+| `language` | TEXT | Detected language |
+| `article_xpath` | TEXT | Content XPath |
+| `nav_links_count` | INTEGER | Navigation links |
+| `article_links_count` | INTEGER | Article links |
+| `analysis_json` | TEXT | Full analysis JSON |
+| `analyzed_at` | TEXT | Analysis timestamp |
+
+**Relationships**:
+- → `content_storage` (content_id)
+
+### article_place_relations
+
+**Purpose**: Links articles to geographic places.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `article_id` | INTEGER FK | References http_responses(id) |
+| `place_id` | INTEGER FK | References places(id) |
+| `relation_type` | TEXT | Relation type |
+| `confidence` | REAL | Confidence score |
+| `matching_rule_level` | INTEGER | Rule version |
+| `evidence` | TEXT | Matching evidence |
+| `created_at` | TEXT | Creation timestamp |
+| `updated_at` | TEXT | Update timestamp |
+
+**Relationships**:
+- → `http_responses` (article_id) - Note: links via HTTP response, not articles table
+- → `places` (place_id)
+
+---
+
+## Crawl Management System
+
+### crawl_jobs
+
+**Purpose**: Crawl job execution tracking.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT PK | Job ID (UUID) |
+| `args` | TEXT | JSON CLI arguments |
+| `pid` | INTEGER | Process ID |
+| `started_at` | TEXT | Start timestamp |
+| `ended_at` | TEXT | End timestamp |
+| `status` | TEXT | Status |
+| `crawl_type_id` | INTEGER FK | References crawl_types |
+| `url_id` | INTEGER FK | References urls(id) |
+
+**Relationships**:
+- → `crawl_types` (crawl_type_id)
+- → `urls` (url_id)
+
+### crawl_types
+
+**Purpose**: Registry of available crawl types.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `name` | TEXT UNIQUE | Type name |
+| `description` | TEXT | Description |
+| `declaration` | TEXT | JSON type declaration |
+
+### queue_events
+
+**Purpose**: Crawl queue telemetry.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `job_id` | TEXT FK | References crawl_jobs(id) |
+| `ts` | TEXT | Timestamp |
+| `action` | TEXT | Action |
+| `url` | TEXT | URL |
+| `depth` | INTEGER | Depth |
+| `host` | TEXT | Domain |
+| `reason` | TEXT | Reason |
+| `queue_size` | INTEGER | Queue size |
+| `alias` | TEXT | Queue alias |
+| `queue_origin` | TEXT | Origin |
+| `queue_role` | TEXT | Role |
+| `queue_depth_bucket` | TEXT | Depth bucket |
+
+**Relationships**:
+- → `crawl_jobs` (job_id)
+
+---
+
+## Gazetteer (Geography) System
+
+### places
+
+**Purpose**: Geographic entities.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `kind` | TEXT | Type (country, city, region, etc.) |
+| `country_code` | TEXT | ISO country code |
+| `adm1_code` | TEXT | Admin level 1 code |
+| `adm2_code` | TEXT | Admin level 2 code |
+| `population` | INTEGER | Population |
+| `timezone` | TEXT | Timezone |
+| `lat` | REAL | Latitude |
+| `lng` | REAL | Longitude |
+| `bbox` | TEXT | Bounding box |
+| `canonical_name_id` | INTEGER FK | References place_names |
+| `source` | TEXT | Data source |
+| `extra` | JSON | Source data |
+| `status` | TEXT | Status |
+| `valid_from` | TEXT | Valid from date |
+| `valid_to` | TEXT | Valid to date |
+| `wikidata_qid` | TEXT | Wikidata ID |
+| `osm_type` | TEXT | OpenStreetMap type |
+| `osm_id` | TEXT | OpenStreetMap ID |
+| `area` | REAL | Area |
+| `gdp_usd` | REAL | GDP |
+| `wikidata_admin_level` | INTEGER | Admin level |
+| `wikidata_props` | JSON | Wikidata properties |
+| `osm_tags` | JSON | OSM tags |
+| `crawl_depth` | INTEGER | Crawl depth |
+| `priority_score` | REAL | Priority |
+| `last_crawled_at` | INTEGER | Last crawl |
+
+**Relationships**:
+- → `place_names` (canonical_name_id)
+
+### place_names
+
+**Purpose**: Multilingual place names.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `place_id` | INTEGER FK | References places(id) |
+| `name` | TEXT | Name |
+| `normalized` | TEXT | Normalized name |
+| `lang` | TEXT | Language code |
+| `script` | TEXT | Script code |
+| `name_kind` | TEXT | Kind (endonym, exonym, etc.) |
+| `is_preferred` | INTEGER | Preferred flag |
+| `is_official` | INTEGER | Official flag |
+| `source` | TEXT | Data source |
+| `valid_from` | TEXT | Valid from date (ISO 8601) |
+| `valid_to` | TEXT | Valid to date (ISO 8601) |
+
+**Relationships**:
+- → `places` (place_id)
+
+### place_hierarchy
+
+**Purpose**: Geographic hierarchies.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `parent_id` | INTEGER PK FK | Parent place |
+| `child_id` | INTEGER PK FK | Child place |
+| `relation` | TEXT | Relation type |
+| `depth` | INTEGER | Hierarchy depth |
+
+**Primary Key**: Composite (parent_id, child_id)
+
+---
+
+## Background Task System
+
+### background_tasks
+
+**Purpose**: Long-running background operations.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK | Auto-increment primary key |
+| `task_type` | TEXT | Task type |
+| `status` | TEXT | Status |
+| `progress_current` | INTEGER | Progress current |
+| `progress_total` | INTEGER | Progress total |
+| `progress_message` | TEXT | Progress message |
+| `config` | TEXT | JSON config |
+| `metadata` | TEXT | JSON metadata |
+| `error_message` | TEXT | Error message |
+| `created_at` | TEXT | Creation time |
+| `started_at` | TEXT | Start time |
+| `updated_at` | TEXT | Update time |
+| `completed_at` | TEXT | Completion time |
+| `resume_started_at` | TEXT | Resume time |
+
+### analysis_runs
+
+**Purpose**: Analysis execution tracking.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT PK | Analysis run ID |
+| `started_at` | TEXT | Start time |
+| `ended_at` | TEXT | End time |
+| `status` | TEXT | Status |
+| `stage` | TEXT | Current stage |
+| `analysis_version` | INTEGER | Version |
+| `page_limit` | INTEGER | Page limit |
+| `domain_limit` | INTEGER | Domain limit |
+| `skip_pages` | INTEGER | Pages to skip |
+| `skip_domains` | INTEGER | Domains to skip |
+| `dry_run` | INTEGER | Dry run flag |
+| `verbose` | INTEGER | Verbose flag |
+| `summary` | TEXT | Summary |
+| `last_progress` | TEXT | Last progress |
+| `error` | TEXT | Error message |
+| `background_task_id` | INTEGER FK | References background_tasks |
+| `background_task_status` | TEXT | Task status |
+
+**Relationships**:
+- → `background_tasks` (background_task_id)
+
+---
+
+## Advanced Analytics System
+
+### Coverage & Planning Tables
+
+- `coverage_snapshots` - Coverage analytics
+- `coverage_gaps` - Gap analysis
+- `gap_predictions` - Gap predictions
+- `planner_patterns` - Planning patterns
+- `cross_crawl_knowledge` - Knowledge reuse
+- `hub_discoveries` - Hub discovery tracking
+- `problem_clusters` - Problem analysis
+- `priority_config_changes` - Configuration tracking
+
+### Enhanced Queue Events
+
+- `queue_events_enhanced` - Enhanced telemetry
+
+### Knowledge & Learning
+
+- `knowledge_reuse_events` - Knowledge reuse tracking
+- `planner_stage_events` - Planning events
+- `discovery_events` - Discovery tracking
+
+---
+
+## Relationships & Foreign Keys
+
+### Core Content Flow
+
+```
+articles (url)
+    ↓
+urls (url) ← http_responses (url_id)
+    ↓
+http_responses (id) ← content_storage (http_response_id)
+    ↓
+content_storage (id) ← content_analysis (content_id)
+    ↓
+content_analysis (id) → article_place_relations (article_id → http_responses.id)
+    ↓
+places (id)
+```
+
+### Crawl System
+
+```
+crawl_types ← crawl_jobs → urls
+    ↓
+queue_events → crawl_jobs
+```
+
+### Gazetteer System
+
+```
+places → place_names
+places ↔ place_hierarchy
+places → place_external_ids
+places → place_attribute_values
+```
+
+### Background Tasks
+
+```
+background_tasks ← analysis_runs
+```
+
+---
+
+## Schema Evolution
+
+### Migration History
+
+**Version 1**: Initial denormalized schema (articles table with 30+ columns)
+**Version 2**: Add normalized tables (http_responses, content_storage, content_analysis)
+**Version 3**: Enable dual-write mode
+**Version 8**: Article-place relations with confidence scoring
+
+### Current State
+
+- ✅ **Normalization Complete**: Content separated from metadata
+- ✅ **Compression Infrastructure**: Brotli compression with bucketing
+- ✅ **Schema Versioning**: Via schema_migrations table
+- ✅ **Foreign Keys**: Comprehensive referential integrity
+- ⚠️ **Migration In Progress**: Some legacy data still in articles.html/text
+
+### Future Plans
+
+- Complete migration of content from articles to content_storage
+- Implement URL normalization (articles.url → urls.id)
+- Add more advanced analytics tables
+- Implement data retention policies
+
+---
+
+## Usage Examples
+
+### Query: Get article with full content
+
+```sql
+SELECT
+  a.title,
+  ca.title as analyzed_title,
+  ca.classification,
+  cs.content_blob,
+  hr.http_status,
+  hr.total_ms
+FROM articles a
+LEFT JOIN urls u ON a.url = u.url
+LEFT JOIN http_responses hr ON hr.url_id = u.id
+LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+WHERE a.id = ?
+```
+
+### Query: Get place relationships for article
+
+```sql
+SELECT
+  p.canonical_name,
+  apr.relation_type,
+  apr.confidence,
+  apr.evidence
+FROM article_place_relations apr
+JOIN places p ON apr.place_id = p.id
+WHERE apr.article_id = ?
+ORDER BY apr.confidence DESC
+```
+
+### Query: Get crawl job with queue stats
+
+```sql
+SELECT
+  cj.*,
+  COUNT(qe.id) as event_count,
+  AVG(qe.depth) as avg_depth
+FROM crawl_jobs cj
+LEFT JOIN queue_events qe ON cj.id = qe.job_id
+WHERE cj.id = ?
+GROUP BY cj.id
+```
+
+---
+
+## Related Documentation
+
+- `docs/DATABASE_QUICK_REFERENCE.md` - Common patterns and API
+- `docs/DATABASE_SCHEMA_VERSION_1.md` - Schema versioning details
+- `docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md` - Migration workflow
+- `docs/DATABASE_NORMALIZATION_PLAN.md` - Normalization design
+- `AGENTS.md` - "How to Get a Database Handle" section
+
+---
+
+*Last Updated: October 28, 2025*
+*Schema Version: 8*
 
 **Indexes**:
 - `idx_articles_url` - Fast URL lookup
@@ -627,198 +1122,44 @@ compression_buckets
 
 ## Schema Evolution
 
+### Migration History
+
+**Version 1**: Initial denormalized schema (articles table with 30+ columns)
+**Version 2**: Add normalized tables (http_responses, content_storage, content_analysis)
+**Version 3**: Enable dual-write mode
+**Version 8**: Article-place relations with confidence scoring
+
 ### Current State
 
-- **Denormalized**: `articles` table mixes content, metadata, and compression info
-- **Compression-Ready**: Columns for compression infrastructure exist
-- **Normalization Plan**: See `docs/DATABASE_NORMALIZATION_PLAN.md` (1660 lines)
+- ✅ **Normalization Complete**: Content separated from metadata
+- ✅ **Compression Infrastructure**: Brotli compression with bucketing
+- ✅ **Schema Versioning**: Via schema_migrations table
+- ✅ **Foreign Keys**: Comprehensive referential integrity
+- ⚠️ **Migration In Progress**: Some legacy data still in articles.html/text
 
-### Future Improvements (Planned)
+### Future Plans
 
-1. **Normalize articles table**:
-   - Extract HTTP metadata → `http_responses`
-   - Extract content → `content_storage`
-   - Extract analysis → `content_analysis`
-
-2. **Add compression tracking**:
-   - `compression_operations` - Track compression jobs
-   - `compression_stats` - Aggregate statistics
-
-3. **Gazetteer normalization**:
-   - Split `places.extra` → dedicated tables
-   - Normalize provenance tracking
-
-**See**: `docs/DATABASE_NORMALIZATION_PLAN.md` for complete roadmap
+- Complete migration of remaining legacy data
+- Add compression operation tracking
+- Optimize indexes for common query patterns
 
 ---
 
-## Visual ERD (ASCII)
+## Visual Reference
 
-```
-┌─────────────┐
-│   articles  │
-├─────────────┤
-│ id [PK]     │───┐
-│ url         │   │
-│ host        │   │
-│ html        │   │
-│ compressed_ │   │
-│   html      │   │
-│ compression_│   │
-│   type_id   │───┼───→ ┌──────────────────┐
-│ compression_│   │     │ compression_types│
-│   bucket_id │───┼─┐   ├──────────────────┤
-└─────────────┘   │ │   │ id [PK]          │
-                  │ │   │ name             │
-                  │ │   │ level            │
-                  │ │   └──────────────────┘
-                  │ │
-                  │ └──→ ┌────────────────────┐
-                  │     │ compression_buckets│
-                  │     ├────────────────────┤
-                  │     │ id [PK]            │
-                  │     │ compressed_data    │
-                  │     │ compression_type_id│─┐
-                  │     └────────────────────┘ │
-                  │                            │
-                  └────────────────────────────┘
-
-┌─────────────┐
-│ crawl_jobs  │
-├─────────────┤
-│ id [PK]     │───┐
-│ url         │   │
-│ args        │   │
-│ status      │   │
-│ crawl_type_ │   │
-│   id        │───┼──→ ┌────────────┐
-└─────────────┘   │    │ crawl_types│
-                  │    ├────────────┤
-                  │    │ id [PK]    │
-                  │    │ name       │
-                  │    └────────────┘
-                  │
-                  ├──← ┌──────────────┐
-                  │    │ queue_events │
-                  │    ├──────────────┤
-                  │    │ id [PK]      │
-                  │    │ job_id [FK]  │
-                  │    │ action       │
-                  │    │ url          │
-                  │    └──────────────┘
-                  │
-                  ├──← ┌────────────────┐
-                  │    │ crawl_problems │
-                  │    ├────────────────┤
-                  │    │ id [PK]        │
-                  │    │ job_id [FK]    │
-                  │    │ kind           │
-                  │    └────────────────┘
-                  │
-                  └──← ┌──────────────────┐
-                       │ crawl_milestones │
-                       ├──────────────────┤
-                       │ id [PK]          │
-                       │ job_id [FK]      │
-                       │ kind             │
-                       └──────────────────┘
-
-┌─────────────┐
-│   places    │
-├─────────────┤
-│ id [PK]     │───┬───← ┌──────────────┐
-│ kind        │   │     │ place_names  │
-│ country_code│   │     ├──────────────┤
-│ wikidata_qid│   │     │ id [PK]      │
-│ lat, lng    │   │     │ place_id [FK]│
-│ population  │   │     │ name         │
-│ canonical_  │   │     │ lang         │
-│   name_id   │───┘     └──────────────┘
-└─────────────┘
-     │  │
-     │  └──────← ┌────────────────┐
-     │          │ place_hierarchy│
-     │          ├────────────────┤
-     │          │ parent_id [FK] │
-     │          │ child_id [FK]  │
-     │          │ relation       │
-     │          └────────────────┘
-     │
-     └──────────← ┌──────────────────────┐
-                  │ place_external_ids   │
-                  ├──────────────────────┤
-                  │ source [PK]          │
-                  │ ext_id [PK]          │
-                  │ place_id [FK]        │
-                  └──────────────────────┘
-```
-
----
-
-## Usage Examples
-
-### Query: Get articles with compression info
-
-```sql
-SELECT 
-  a.url,
-  a.title,
-  a.original_size,
-  a.compressed_size,
-  a.compression_ratio,
-  ct.name AS compression_method,
-  ct.level AS compression_level
-FROM articles a
-LEFT JOIN compression_types ct ON a.compression_type_id = ct.id
-WHERE a.compressed_html IS NOT NULL
-ORDER BY a.compression_ratio DESC
-LIMIT 10;
-```
-
-### Query: Get place hierarchy
-
-```sql
-SELECT 
-  parent.name AS parent_name,
-  child.name AS child_name,
-  ph.relation,
-  ph.depth
-FROM place_hierarchy ph
-JOIN places parent ON ph.parent_id = parent.id
-JOIN places child ON ph.child_id = child.id
-WHERE parent.kind = 'country'
-  AND child.kind = 'city'
-LIMIT 20;
-```
-
-### Query: Get crawl job telemetry
-
-```sql
-SELECT 
-  cj.id,
-  cj.url,
-  cj.status,
-  COUNT(qe.id) AS event_count,
-  COUNT(CASE WHEN qe.action = 'enqueue' THEN 1 END) AS enqueued,
-  COUNT(CASE WHEN qe.action = 'skip' THEN 1 END) AS skipped
-FROM crawl_jobs cj
-LEFT JOIN queue_events qe ON cj.id = qe.job_id
-WHERE cj.started_at > datetime('now', '-1 day')
-GROUP BY cj.id
-ORDER BY cj.started_at DESC;
-```
+**See**: `docs/DATABASE_SCHEMA_ERD.svg` - Interactive SVG diagram showing all 74 tables and relationships
 
 ---
 
 ## Related Documentation
 
-- **docs/DATABASE_NORMALIZATION_PLAN.md** - Comprehensive normalization roadmap (1660 lines)
-- **docs/PHASE_0_IMPLEMENTATION.md** - Migration infrastructure
-- **docs/COMPRESSION_IMPLEMENTATION_FULL.md** - Compression system architecture
-- **docs/GAZETTEER_BREADTH_FIRST_IMPLEMENTATION.md** - Geography crawl implementation
-- **AGENTS.md** - "How to Get a Database Handle" section
+- **docs/DATABASE_SCHEMA_ERD.svg** ⭐ Visual SVG diagram
+- **docs/DATABASE_QUICK_REFERENCE.md** ⭐ Quick lookup guide
+- **docs/DATABASE_MIGRATION_GUIDE_FOR_AGENTS.md** ⭐ Migration workflow
+- **docs/DATABASE_NORMALIZATION_PLAN.md** - Normalization implementation
+- **AGENTS.md** - Database access patterns
 
 ---
 
-*Last Updated: October 10, 2025*
-*Version: 1.0*
+*Last Updated: October 28, 2025*
+*Schema Version: 8 (74 tables, normalized)*

@@ -51,6 +51,7 @@ class CrawlOperation {
 
     const normalizedStartUrl = String(startUrl).trim();
     const options = this.buildOptions(defaults, overrides);
+    console.log('[DEBUG] CrawlOperation options:', JSON.stringify(options, null, 2));
     const startedAt = Date.now();
     logger.info?.(`[CrawlOperations] ${this.name} starting: ${normalizedStartUrl}`);
 

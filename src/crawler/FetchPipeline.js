@@ -337,7 +337,7 @@ class FetchPipeline {
     if (hostBudgetStatus?.locked) {
       const retryAfterMs = hostBudgetStatus.retryAfterMs;
       const lockMessage = `Host retry budget exhausted for ${host}; delaying fetch`;
-      this.logger.warn(`[network] host-budget-exhausted: ${host} locked for ${retryAfterMs}ms (url=${normalizedUrl})`);
+      this.logger.warn(`[network] host-budget-exhausted: ${host} locked for ${retryAfterMs}ms (url=${normalizedUrl})`, { type: 'NETWORK' });
       const budgetError = new Error(lockMessage);
       this.recordError({
         kind: 'exception',
@@ -389,7 +389,7 @@ class FetchPipeline {
         retryMeta.delayMs != null ? `delay=${retryMeta.delayMs}ms` : null,
         retryMeta.errorCode ? `code=${retryMeta.errorCode}` : null
       ].filter(Boolean);
-      this.logger.warn(`[network] Resuming ${normalizedUrl}${resumeParts.length ? ` (${resumeParts.join(' | ')})` : ''}`);
+      this.logger.warn(`[network] Resuming ${normalizedUrl}${resumeParts.length ? ` (${resumeParts.join(' | ')})` : ''}`, { type: 'NETWORK' });
     }
     const buildFallbackResult = ({ fallbackReason, httpStatus = null }) => {
       if (!cachedFallback) {
@@ -452,7 +452,7 @@ class FetchPipeline {
 
     try {
       const attemptSuffix = totalAttempts > 1 ? ` (attempt ${attempt}/${totalAttempts})` : '';
-      this.logger.info(`Fetching: ${normalizedUrl}${attemptSuffix}`);
+      this.logger.info(`Fetching: ${normalizedUrl}${attemptSuffix}`, { type: 'FETCHING' });
       const headers = {
         'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
       };
@@ -732,7 +732,7 @@ class FetchPipeline {
           ? Math.round(boundedBase * retryOptions.jitterRatio * (retryOptions.randomFn ? retryOptions.randomFn() : Math.random()))
           : 0;
         const delayMs = Math.max(0, Math.min(retryOptions.maxDelayMs, boundedBase + jitterAmount));
-        this.logger.warn(`[network] ${strategy}: retrying ${normalizedUrl} (attempt ${attempt + 1}/${totalAttempts}) in ${delayMs}ms [code=${errorCode || 'unknown'} message="${errorMessage}"]`);
+        this.logger.warn(`[network] ${strategy}: retrying ${normalizedUrl} (attempt ${attempt + 1}/${totalAttempts}) in ${delayMs}ms [code=${errorCode || 'unknown'} message="${errorMessage}"]`, { type: 'NETWORK' });
         const retryUrl = originalUrl || normalizedUrl;
         const nextContext = { ...(context || {}), __networkRetry: { attempt, strategy, delayMs, errorCode, errorMessage } };
         await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -740,11 +740,11 @@ class FetchPipeline {
       }
 
       if (isRetryableNetworkError && retryCount >= maxRetries) {
-        this.logger.warn(`[network] Exhausted retries for ${normalizedUrl} after ${totalAttempts} attempts${errorCode ? ` [code=${errorCode}]` : ''}`);
+        this.logger.warn(`[network] Exhausted retries for ${normalizedUrl} after ${totalAttempts} attempts${errorCode ? ` [code=${errorCode}]` : ''}`, { type: 'NETWORK' });
       }
 
       const strategy = isTimeout ? 'timeout' : (isConnectionReset ? 'connection-reset' : (isRetryableCode ? 'network-code' : 'network'));
-      this.logger.error(`[network] Failed ${normalizedUrl} after ${attempt}/${totalAttempts} attempts${errorCode ? ` (code=${errorCode})` : ''}: ${errorMessage}`);
+      this.logger.error(`[network] Failed ${normalizedUrl} after ${attempt}/${totalAttempts} attempts${errorCode ? ` (code=${errorCode})` : ''}: ${errorMessage}`, { type: 'NETWORK' });
       this.recordError({
         kind: 'exception',
         classification: strategy,
@@ -994,7 +994,7 @@ class FetchPipeline {
     if (state.failures >= this.hostRetryBudget.maxErrors) {
       if (!state.lockExpiresAt || state.lockExpiresAt <= now) {
         state.lockExpiresAt = now + this.hostRetryBudget.lockoutMs;
-        this.logger.warn(`[network] host retry budget exhausted for ${host}; lockout until ${new Date(state.lockExpiresAt).toISOString()}`);
+        this.logger.warn(`[network] host retry budget exhausted for ${host}; lockout until ${new Date(state.lockExpiresAt).toISOString()}`, { type: 'NETWORK' });
         this._emitHostBudgetTelemetry('exhausted', host, state, meta);
       }
     }

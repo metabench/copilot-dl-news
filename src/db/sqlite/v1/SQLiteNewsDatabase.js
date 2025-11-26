@@ -144,7 +144,26 @@ class NewsDatabase {
   }
 
   insertFetch(fetchRow) {
-    return this.articleOperations.insertFetch(fetchRow);
+    // Map legacy fetchRow to upsertArticle
+    // Note: This only stores metadata if content is missing
+    return this.upsertArticle({
+      url: fetchRow.url,
+      fetched_at: fetchRow.fetched_at,
+      request_started_at: fetchRow.request_started_at,
+      http_status: fetchRow.http_status,
+      content_type: fetchRow.content_type,
+      content_length: fetchRow.content_length,
+      bytes_downloaded: fetchRow.bytes_downloaded,
+      ttfb_ms: fetchRow.ttfb_ms,
+      download_ms: fetchRow.download_ms,
+      total_ms: fetchRow.total_ms,
+      classification: fetchRow.classification,
+      word_count: fetchRow.word_count,
+      nav_links_count: fetchRow.nav_links_count,
+      article_links_count: fetchRow.article_links_count,
+      analysis: fetchRow.analysis,
+      host: fetchRow.host
+    }, { compress: false });
   }
 
   _ensureUrlRow(url) {

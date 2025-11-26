@@ -6,6 +6,7 @@ const { Readability } = require('@mozilla/readability');
 const { extractSchemaSignals } = require('./schemaSignals');
 const { createJsdom } = require('../utils/jsdomUtils');
 const { countWords } = require('../utils/textMetrics');
+const zlib = require('zlib');
 
 class ArticleProcessor {
   constructor(options = {}) {
@@ -387,6 +388,16 @@ class ArticleProcessor {
       }
       if (normalizedArticleUrl && this.knownArticlesCache) {
         this.knownArticlesCache.set(normalizedArticleUrl, true);
+      }
+
+      const bytes = Buffer.byteLength(html, 'utf8');
+      let compressedBytes = 0;
+      try {
+        compressedBytes = zlib.gzipSync(html).length;
+      } catch (_) {}
+
+      if (this.events && typeof this.events.incrementBytesSaved === 'function') {
+        this.events.incrementBytesSaved(bytes, compressedBytes);
       }
 
       this._log('log', `Saved article: ${metadata.title}`);

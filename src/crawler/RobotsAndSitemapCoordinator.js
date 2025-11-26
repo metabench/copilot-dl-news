@@ -104,15 +104,19 @@ class RobotsAndSitemapCoordinator {
     const db = dbAdapter?.db || dbAdapter; // Handle both CrawlerDb wrapper and direct SQLiteNewsDatabase
     
     // Try cache first
-    if (db && typeof db.getFetchesByUrl === 'function') {
+    if (db && typeof db.getArticleByUrl === 'function') {
       try {
-        const cached = db.getFetchesByUrl(robotsUrl, 1)[0];
-        if (cached && cached.http_status === 200 && cached.file_path) {
-          const fs = require('fs').promises;
-          const robotsTxt = await fs.readFile(cached.file_path, 'utf8');
+        const cached = db.getArticleByUrl(robotsUrl);
+        // Check if cached and fresh enough (e.g. 24 hours)
+        const now = Date.now();
+        const fetchedAt = cached?.fetched_at ? new Date(cached.fetched_at).getTime() : 0;
+        const ageSeconds = Math.floor((now - fetchedAt) / 1000);
+        
+        if (cached && cached.http_status === 200 && cached.html && ageSeconds < 86400) {
+          const robotsTxt = Buffer.isBuffer(cached.html) ? cached.html.toString('utf8') : String(cached.html);
           this.robotsRules = this.robotsParser(robotsUrl, robotsTxt);
           this.robotsTxtLoaded = true;
-          this.logger.log(`robots.txt loaded from cache (age: ${Math.floor((Date.now() - new Date(cached.fetched_at).getTime()) / 1000)}s)`);
+          this.logger.log(`robots.txt loaded from DB cache (age: ${ageSeconds}s)`);
           this._harvestSitemaps(robotsTxt);
           return;
         }
@@ -134,32 +138,19 @@ class RobotsAndSitemapCoordinator {
           this.logger.log('robots.txt loaded successfully');
           this._harvestSitemaps(robotsTxt);
           
-          // Cache the successful fetch
-          if (db && typeof db.insertFetch === 'function' && robotsTxt) {
+          // Cache the successful fetch to DB
+          if (db && typeof db.upsertArticle === 'function' && robotsTxt) {
             try {
-              const fs = require('fs').promises;
-              const path = require('path');
-              const dataDir = dbAdapter.dataDir || db.dataDir || './data';
-              const robotsDir = path.join(dataDir, 'robots');
-              await fs.mkdir(robotsDir, { recursive: true });
-              const filePath = path.join(robotsDir, `${this.domain}_robots.txt`);
-              await fs.writeFile(filePath, robotsTxt, 'utf8');
-              
               const now = new Date().toISOString();
-              db.insertFetch({
+              db.upsertArticle({
                 url: robotsUrl,
-                request_started_at: now,
                 fetched_at: now,
                 http_status: 200,
                 content_type: 'text/plain',
-                content_length: robotsTxt.length,
-                bytes_downloaded: robotsTxt.length,
-                saved_to_file: 1,
-                file_path: filePath,
-                file_size: robotsTxt.length,
-                classification: 'robots',
-                host: this.domain
-              });
+                html: robotsTxt,
+                title: 'robots.txt',
+                classification: 'robots'
+              }, { compress: false });
             } catch (_) {
               // Cache write failure is non-critical
             }

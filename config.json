@@ -9,7 +9,8 @@
     "outputVerbosity": "extra-terse",
     "sharedOverrides": {
       "concurrency": 2,
-      "maxDownloads": 2000
+      "maxDownloads": 40,
+      "loggingQueue": false
     }
   }
 }

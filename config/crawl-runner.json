@@ -4,6 +4,9 @@
   "startUrl": "https://www.theguardian.com",
   "sharedOverrides": {
     "concurrency": 2,
-    "maxDownloads": 2000
+    "maxDownloads": 2000,
+    "logging": {
+      "queue": false
+    }
   }
 }

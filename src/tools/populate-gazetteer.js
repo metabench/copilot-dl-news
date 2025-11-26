@@ -21,6 +21,7 @@ const {
 } = require('../db/sqlite/v1/queries/gazetteer.attributes');
 const {
   createDeduplicationStatements,
+  findExistingPlace,
   checkIngestionRun,
   startIngestionRun,
   completeIngestionRun,
@@ -33,8 +34,7 @@ const { findProjectRoot } = require('../utils/project-root');
 const { CliFormatter } = require('../utils/CliFormatter');
 const { CliArgumentParser } = require('../utils/CliArgumentParser');
 const { HttpRequestResponseFacade } = require('../utils/HttpRequestResponseFacade');
-
-const fmt = new CliFormatter();
+const { GazetteerTelemetry } = require('./gazetteer/GazetteerTelemetry');
 
 // Multi-capital countries with correct coordinates per capital
 // REST Countries API only provides one latlng - use this map for accuracy
@@ -86,16 +86,18 @@ function parseCliArgs(argv) {
     .add('--cities-per-country <number>', 'Max cities per country when importing', 50, 'number')
     .add('--adm1-limit <number>', 'Maximum ADM1 rows to fetch per country', 200, 'number')
     .add('--adm2-limit <number>', 'Maximum ADM2 rows to fetch per country', 400, 'number')
+    .add('--cleanup', 'Run duplicate cleanup after ingestion', false, 'boolean')
+    .add('--cleanup-only', 'Run cleanup without ingesting new data', false, 'boolean')
     .add('--offline', 'Use cached REST Countries payload (avoid network)', offlineDefault, 'boolean')
     .add('--rest-retries <number>', 'Retry attempts for REST Countries fetch', 2, 'number')
     .add('--rest-timeout-ms <number>', 'Timeout for REST Countries requests (ms)', 12000, 'number')
-    .add('--cache-dir <path>', 'Directory for cached API responses', 'data/cache')
     .add('--wikidata-timeout-ms <number>', 'Timeout for Wikidata requests (ms)', 20000, 'number')
     .add('--wikidata-sleep-ms <number>', 'Sleep between Wikidata requests (ms)', 250, 'number')
     .add('--wikidata-cache', 'Cache Wikidata responses to disk', true, 'boolean')
     .add('--force', 'Force re-ingestion even if already completed', false, 'boolean')
     .add('--verbose', 'Enable verbose logging', true, 'boolean')
     .add('--quiet', 'Suppress formatted logs (JSON summary still emitted)', false, 'boolean')
+    .add('--json-events', 'Output structured JSON events (NDJSON) for UI integration', false, 'boolean')
     .add('--summary-format <mode>', 'Summary output format: json | ascii', 'json');
 
   return parser.parse(argv);
@@ -134,7 +136,6 @@ function normalizeOptions(rawArgs) {
     quiet: Boolean(rawArgs.quiet),
     verbose: Boolean(rawArgs.verbose),
     dbPath: resolvePath(projectRoot, rawArgs.db, 'data/news.db'),
-    cacheDir: resolvePath(projectRoot, rawArgs.cacheDir, 'data/cache'),
     countriesFilter,
     regionFilter: String(rawArgs.region || '').trim(),
     subregionFilter: String(rawArgs.subregion || '').trim(),
@@ -151,87 +152,11 @@ function normalizeOptions(rawArgs) {
     wikidataTimeoutMs: Number.isFinite(rawArgs.wikidataTimeoutMs) ? rawArgs.wikidataTimeoutMs : 20000,
     wikidataSleepMs: Number.isFinite(rawArgs.wikidataSleepMs) ? rawArgs.wikidataSleepMs : 250,
     wikidataCache: Boolean(rawArgs.wikidataCache),
-    force: Boolean(rawArgs.force)
+    force: Boolean(rawArgs.force),
+    cleanup: Boolean(rawArgs.cleanup),
+    cleanupOnly: Boolean(rawArgs.cleanupOnly),
+    jsonEvents: Boolean(rawArgs.jsonEvents)
   };
-}
-
-function createLogger(options) {
-  const { quiet, verbose } = options;
-  const formatLine = (colorFn, icon, label, message) => {
-    const iconStr = fmt.useEmojis && icon ? `${icon} ` : '';
-    return `${colorFn(`[${iconStr}${label}]`)} ${message}`;
-  };
-
-  return {
-    info(message) {
-      if (!verbose || quiet) return;
-      process.stderr.write(`${formatLine(fmt.COLORS.info, fmt.ICONS.info, 'INFO', message)}\n`);
-    },
-    warn(message) {
-      if (quiet) return;
-      process.stderr.write(`${formatLine(fmt.COLORS.warning, fmt.ICONS.warning, 'WARN', message)}\n`);
-    },
-    error(message) {
-      process.stderr.write(`${formatLine(fmt.COLORS.error, fmt.ICONS.error, 'ERROR', message)}\n`);
-    },
-    success(message) {
-      if (quiet) return;
-      process.stderr.write(`${formatLine(fmt.COLORS.success, fmt.ICONS.complete, 'OK', message)}\n`);
-    }
-  };
-}
-
-function emitSummary(summary, { format, quiet }) {
-  const normalizedFormat = format === 'ascii' ? 'ascii' : 'json';
-
-  if (quiet) {
-    console.log(JSON.stringify(summary));
-    return;
-  }
-
-  if (normalizedFormat === 'json') {
-    console.log(JSON.stringify(summary, null, 2));
-    return;
-  }
-
-  fmt.header('Gazetteer Population');
-
-  if (summary.message) {
-    fmt.info(summary.message);
-  }
-
-  const records = [
-    ['Countries processed', summary.countries],
-    ['Capitals processed', summary.capitals],
-    ['Names added', summary.names],
-    ['ADM1 regions imported', summary.adm1],
-    ['ADM2 regions imported', summary.adm2],
-    ['Cities imported', summary.cities]
-  ];
-
-  const hasCounts = records.some(([, value]) => Number.isFinite(value));
-
-  if (hasCounts) {
-    fmt.section('Records');
-    for (const [label, value] of records) {
-      if (!Number.isFinite(value)) continue;
-      fmt.stat(label, value, 'number');
-    }
-  }
-
-  if (summary.skipped) {
-    fmt.warn(`Skipped: ${summary.skipped}`);
-  }
-
-  if (summary.source) {
-    fmt.dataPair('Source', summary.source, 'info');
-  }
-
-  if (summary.rest_all_url) {
-    fmt.dataPair('REST Countries URL', summary.rest_all_url, 'info');
-  }
-
-  fmt.footer();
 }
 
 (async () => {
@@ -240,16 +165,20 @@ function emitSummary(summary, { format, quiet }) {
     const rawArgs = parseCliArgs(process.argv);
     options = normalizeOptions(rawArgs);
   } catch (error) {
-    fmt.error(error instanceof Error ? error.message : String(error));
+    console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
     return;
   }
 
-  const logger = createLogger(options);
+  const telemetry = new GazetteerTelemetry({
+    jsonMode: options.jsonEvents,
+    verbose: options.verbose,
+    quiet: options.quiet
+  });
+
   const {
     projectRoot,
     dbPath,
-    cacheDir,
     countriesFilter,
     regionFilter,
     subregionFilter,
@@ -309,7 +238,7 @@ function emitSummary(summary, { format, quiet }) {
     const citiesNow = populateQueries.countTotalByKind('city');
     const adm1Now = populateQueries.countTotalRegionsAdm1();
     const adm2Now = populateQueries.countTotalRegionsAdm2();
-    logger.info(`[gazetteer] ${stageLabel} DB summary: countries=${countriesNow}, adm1=${adm1Now}, adm2=${adm2Now}, cities=${citiesNow}`);
+    telemetry.info(`[gazetteer] ${stageLabel} DB summary: countries=${countriesNow}, adm1=${adm1Now}, adm2=${adm2Now}, cities=${citiesNow}`);
     const rows = getCountryRows();
     const citiesPer = getCounts('city');
     const adm1Per = getCountsRegionByCode('adm1_code');
@@ -330,17 +259,17 @@ function emitSummary(summary, { format, quiet }) {
       });
     }
     if (!quiet && tableRows.length) {
-      fmt.section(`${stageLabel} Snapshot`);
-      fmt.table(tableRows, {
+      telemetry.section(`${stageLabel} Snapshot`);
+      telemetry.table(tableRows, {
         columns: ['CC', 'Country', 'ADM1', 'ADM2', 'Cities'],
         format: {
-          ADM1: (value) => fmt.COLORS.cyan(String(value)),
-          ADM2: (value) => fmt.COLORS.cyan(String(value)),
-          Cities: (value) => fmt.COLORS.cyan(String(value))
+          ADM1: (value) => `\x1b[36m${value}\x1b[0m`,
+          ADM2: (value) => `\x1b[36m${value}\x1b[0m`,
+          Cities: (value) => `\x1b[36m${value}\x1b[0m`
         }
       });
     } else {
-      logger.info(lines.join('\n'));
+      telemetry.info(lines.join('\n'));
     }
   }
 
@@ -369,8 +298,8 @@ function emitSummary(summary, { format, quiet }) {
         lastRun: runDate,
         message: `REST Countries v3.1 already ingested at ${runDate}. Use --force=1 to re-ingest.`
       };
-      logger.info(`[gazetteer] Skipping: already ingested on ${runDate}`);
-      emitSummary(summary, { format: summaryFormat, quiet });
+      telemetry.info(`[gazetteer] Skipping: already ingested on ${runDate}`);
+      telemetry.summary(summary);
       try { raw.close(); } catch (_) {}
       return;
     }
@@ -383,7 +312,7 @@ function emitSummary(summary, { format, quiet }) {
     const populatedEnough = offline ? (existingCountries > 0) : (existingCountries >= 200);
     if (!force && noFilters && populatedEnough) {
       const summary = { countries: 0, capitals: 0, names: 0, source: 'restcountries@v3.1', skipped: 'already-populated' };
-      emitSummary(summary, { format: summaryFormat, quiet });
+      telemetry.summary(summary);
       try { raw.close(); } catch (_) {}
       return;
     }
@@ -397,11 +326,10 @@ function emitSummary(summary, { format, quiet }) {
       countriesFilter,
       retries: restRetries,
       timeoutMs: restTimeoutMs,
-      cacheDir,
       offline
-    });
+    }, { db: raw, log: (msg) => telemetry.info(msg) });
   } catch (e) {
-    logger.error(`Failed to fetch REST Countries: ${e.message}`);
+    telemetry.error(`Failed to fetch REST Countries: ${e.message}`);
     process.exit(1);
   }
   
@@ -412,7 +340,7 @@ function emitSummary(summary, { format, quiet }) {
     importCities,
     offline
   });
-  logger.info(`[gazetteer] Started ingestion run #${runId}`);
+  telemetry.info(`[gazetteer] Started ingestion run #${runId}`);
 
 
   function normalizeName(s){
@@ -491,7 +419,7 @@ function emitSummary(summary, { format, quiet }) {
       if (!includeCountry(c)) continue;
       const cc2 = (c.cca2 || '').toUpperCase();
       if (!cc2) continue;
-      logger.info(`[gazetteer] Upserting country ${cc2} ${c.name?.common ? `(${c.name.common})` : ''}`);
+      telemetry.info(`[gazetteer] Upserting country ${cc2} ${c.name?.common ? `(${c.name.common})` : ''}`);
 
       let pid = null;
       try {
@@ -666,9 +594,8 @@ function emitSummary(summary, { format, quiet }) {
       for (const cap of capList) {
         const normCap = normalizeName(cap);
         const externalId = generateCapitalExternalId('restcountries', cc2, normCap);
-        const existing = populateQueries.findExternalId('restcountries', externalId);
-        let cid = existing?.id || null;
-
+        
+        // Determine coordinates first (needed for deduplication)
         let capLat = null;
         let capLng = null;
         const multiCapCoords = MULTI_CAPITAL_COORDS[cc2];
@@ -678,6 +605,35 @@ function emitSummary(summary, { format, quiet }) {
         } else if (capInfo) {
           capLat = capInfo[0];
           capLng = capInfo[1];
+        }
+        
+        // Strategy 1: Check if we already have this capital via restcountries external ID
+        const existingByExtId = populateQueries.findExternalId('restcountries', externalId);
+        let cid = existingByExtId?.id || null;
+        
+        // Strategy 2: Use multi-strategy deduplication to find existing place
+        // This catches Wikidata-imported cities, coordinate proximity matches, etc.
+        if (!cid) {
+          const existingPlace = findExistingPlace(dedupStmts, {
+            normalizedName: normCap,
+            countryCode: cc2,
+            kind: 'city',
+            lat: capLat,
+            lng: capLng,
+            coordinateThreshold: 0.1  // ~11km - capitals are usually well-defined
+          });
+          
+          if (existingPlace) {
+            cid = existingPlace.id;
+            // Log the match for debugging
+            if (opt.verbose) {
+              console.log(`  [dedup] Found existing capital "${cap}" (${cc2}) via ${existingPlace.matchStrategy} → ID ${cid}`);
+            }
+            // Register the restcountries external ID on the existing place
+            try {
+              populateQueries.insertExternalId('restcountries', externalId, cid);
+            } catch (_) {}
+          }
         }
 
         if (!cid) {
@@ -767,18 +723,7 @@ function emitSummary(summary, { format, quiet }) {
 
   tx();
 
-  // Save cache after load when running full dataset
-  try {
-    if (!countriesFilter.length) {
-      if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
-      const cachePath = path.join(cacheDir, 'restcountries.v3.1.all.json');
-      // We only cache raw source payload when it originated from network; skip if we used local minimal dataset
-      // Heuristic: if more than, say, 50 names were added, assume real dataset
-      if (names > 50) {
-        // Not storing raw payload here (we’d need it captured); this is a placeholder for future enhancement.
-      }
-    }
-  } catch (_) {}
+  // (Removed file-system cache saving in favor of DB cache in restcountries.js)
 
   // Optional: import ADM1 regions and top cities from Wikidata
   // Summary computed later (after optional Wikidata imports) so counts are accurate
@@ -809,17 +754,17 @@ function emitSummary(summary, { format, quiet }) {
           query
         });
         if (cached) {
-          logger.info(`[gazetteer] SPARQL cache hit: ${qurl}`);
+          telemetry.info(`[gazetteer] SPARQL cache hit: ${qurl}`);
           return cached;
         }
       } catch (e) {
-        logger.warn(`[gazetteer] SPARQL cache read failed: ${e.message}`);
+        telemetry.warn(`[gazetteer] SPARQL cache read failed: ${e.message}`);
       }
     }
 
     // Fetch from Wikidata
     const headers = { 'User-Agent': 'copilot-dl-news/1.0 (Wikidata importer)', 'Accept': 'application/sparql-results+json' };
-    logger.info(`[gazetteer] SPARQL fetch: ${qurl}`);
+    telemetry.info(`[gazetteer] SPARQL fetch: ${qurl}`);
     const jr = await fetchJson(qurl, headers, wikidataTimeoutMs);
 
     // Cache the result
@@ -834,7 +779,7 @@ function emitSummary(summary, { format, quiet }) {
           query
         }, jr);
       } catch (e) {
-        logger.warn(`[gazetteer] SPARQL cache write failed: ${e.message}`);
+        telemetry.warn(`[gazetteer] SPARQL cache write failed: ${e.message}`);
       }
     }
 
@@ -913,7 +858,7 @@ function emitSummary(summary, { format, quiet }) {
       return jr;
     } catch (e) {
       const idsStr = set.join(',');
-      logger.warn(`[gazetteer] Wikidata entity fetch failed: ${e.message} ids: ${idsStr} url: ${url}`);
+      telemetry.warn(`[gazetteer] Wikidata entity fetch failed: ${e.message} ids: ${idsStr} url: ${url}`);
       return {};
     }
   }
@@ -934,7 +879,7 @@ function emitSummary(summary, { format, quiet }) {
   const countryRows = populateQueries.fetchCountries();
     for (const crow of countryRows) {
       if (countriesFilter.length && !countriesFilter.includes((crow.country_code||'').toUpperCase())) continue;
-  logger.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''} from Wikidata (SPARQL)`);
+  telemetry.info(`[gazetteer] Country ${crow.country_code}: importing${importAdm1?' ADM1':''}${importAdm2?' ADM2':''}${importCities?' cities':''} from Wikidata (SPARQL)`);
       // Find Wikidata QID for the country via restcountries cca2→ Wikidata is not reliable here without mapping; skip if not available.
       // As a pragmatic fallback, import top cities via GeoNames-like heuristic from Wikipedia/Wikidata SPARQL is too heavy; keep constrained:
     if (importCities) {
@@ -949,7 +894,7 @@ function emitSummary(summary, { format, quiet }) {
           } ORDER BY DESC(?pop) LIMIT ${Math.max(1, Math.min(maxCitiesPerCountry, 200))}`;
       const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          logger.info(`[gazetteer] Cities query for ${crow.country_code} returned ${rows.length}`);
+          telemetry.info(`[gazetteer] Cities query for ${crow.country_code} returned ${rows.length}`);
           const ids = rows.map(r => (r.city?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
@@ -965,7 +910,7 @@ function emitSummary(summary, { format, quiet }) {
             try { populateQueries.insertHierarchyRelation(crow.id, cid, 'admin_parent', 1); } catch (_) {}
           }
         } catch (e) {
-          logger.warn(`[gazetteer] Cities import failed for ${crow.country_code}: ${e.message}`);
+          telemetry.warn(`[gazetteer] Cities import failed for ${crow.country_code}: ${e.message}`);
         }
       }
       if (importAdm1) {
@@ -980,7 +925,7 @@ function emitSummary(summary, { format, quiet }) {
           } LIMIT ${Math.max(1, Math.min(adm1Limit, 500))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          logger.info(`[gazetteer] ADM1 query for ${crow.country_code} returned ${rows.length}`);
+          telemetry.info(`[gazetteer] ADM1 query for ${crow.country_code} returned ${rows.length}`);
           const ids = rows.map(r => (r.adm?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
@@ -999,7 +944,7 @@ function emitSummary(summary, { format, quiet }) {
             try { populateQueries.insertHierarchyRelation(crow.id, rid, 'admin_parent', 1); } catch (_) {}
           }
         } catch (e) {
-          logger.warn(`[gazetteer] ADM1 import failed for ${crow.country_code}: ${e.message}`);
+          telemetry.warn(`[gazetteer] ADM1 import failed for ${crow.country_code}: ${e.message}`);
         }
       }
       if (importAdm2) {
@@ -1016,7 +961,7 @@ function emitSummary(summary, { format, quiet }) {
           } LIMIT ${Math.max(1, Math.min(adm2Limit, 1000))}`;
           const jr = await fetchSparql(sparql);
           const rows = (jr.results && jr.results.bindings) || [];
-          logger.info(`[gazetteer] ADM2 query for ${crow.country_code} returned ${rows.length}`);
+          telemetry.info(`[gazetteer] ADM2 query for ${crow.country_code} returned ${rows.length}`);
           const ids = rows.map(r => (r.adm2?.value||'').split('/').pop()).filter(Boolean);
           const entities = await wikidataGet(ids);
           for (const r of rows) {
@@ -1049,7 +994,7 @@ function emitSummary(summary, { format, quiet }) {
             } catch (_) {}
           }
         } catch (e) {
-          logger.warn(`[gazetteer] ADM2 import failed for ${crow.country_code}: ${e.message}`);
+          telemetry.warn(`[gazetteer] ADM2 import failed for ${crow.country_code}: ${e.message}`);
         }
       }
     }
@@ -1121,20 +1066,20 @@ function emitSummary(summary, { format, quiet }) {
         });
       }
       if (!quiet && deltaRows.length) {
-        fmt.section('Per-country delta');
-        fmt.table(deltaRows, {
+        telemetry.section('Per-country delta');
+        telemetry.table(deltaRows, {
           columns: ['CC', 'Country', 'ADM1 (existing)', 'ADM1 added', 'ADM2 (existing)', 'ADM2 added', 'Cities (existing)', 'Cities added'],
           format: {
-            'ADM1 (existing)': (value) => fmt.COLORS.cyan(String(value)),
-            'ADM1 added': (value) => fmt.COLORS.cyan(String(value)),
-            'ADM2 (existing)': (value) => fmt.COLORS.cyan(String(value)),
-            'ADM2 added': (value) => fmt.COLORS.cyan(String(value)),
-            'Cities (existing)': (value) => fmt.COLORS.cyan(String(value)),
-            'Cities added': (value) => fmt.COLORS.cyan(String(value))
+            'ADM1 (existing)': (value) => `\x1b[36m${value}\x1b[0m`,
+            'ADM1 added': (value) => `\x1b[36m${value}\x1b[0m`,
+            'ADM2 (existing)': (value) => `\x1b[36m${value}\x1b[0m`,
+            'ADM2 added': (value) => `\x1b[36m${value}\x1b[0m`,
+            'Cities (existing)': (value) => `\x1b[36m${value}\x1b[0m`,
+            'Cities added': (value) => `\x1b[36m${value}\x1b[0m`
           }
         });
       } else {
-        logger.info(lines.join('\n'));
+        telemetry.info(lines.join('\n'));
       }
     } catch (_) {}
   }
@@ -1146,11 +1091,152 @@ function emitSummary(summary, { format, quiet }) {
       places_updated: 0,
       names_added: finalSummary.names
     });
-    logger.info(`[gazetteer] Completed ingestion run #${runId}`);
+    telemetry.info(`[gazetteer] Completed ingestion run #${runId}`);
   } catch (e) {
-    logger.warn(`[gazetteer] Failed to complete ingestion run: ${e.message}`);
+    telemetry.warn(`[gazetteer] Failed to complete ingestion run: ${e.message}`);
   }
   
-  emitSummary(finalSummary, { format: summaryFormat, quiet });
+  // Run cleanup if requested
+  if (options.cleanup || options.cleanupOnly) {
+    telemetry.section('Duplicate Cleanup');
+    
+    // 1. Backfill wikidata_qid from place_external_ids
+    try {
+      const backfillResult = raw.prepare(`
+        UPDATE places
+        SET wikidata_qid = (
+          SELECT ext_id FROM place_external_ids
+          WHERE source = 'wikidata' AND place_id = places.id
+        )
+        WHERE wikidata_qid IS NULL
+          AND EXISTS (
+            SELECT 1 FROM place_external_ids
+            WHERE source = 'wikidata' AND place_id = places.id
+          )
+      `).run();
+      if (backfillResult.changes > 0) {
+        telemetry.info(`[cleanup] Backfilled wikidata_qid for ${backfillResult.changes} places`);
+      }
+    } catch (e) {
+      telemetry.warn(`[cleanup] Failed to backfill wikidata_qid: ${e.message}`);
+    }
+    
+    // 2. Find and merge duplicates
+    try {
+      // Find duplicate groups by normalized name + country + kind
+      const duplicateGroups = raw.prepare(`
+        SELECT
+          p.country_code,
+          p.kind,
+          pn.normalized,
+          MIN(pn.name) as example_name,
+          GROUP_CONCAT(DISTINCT p.id) as ids,
+          COUNT(DISTINCT p.id) as count
+        FROM places p
+        JOIN place_names pn ON p.id = pn.place_id
+        WHERE p.kind IS NOT NULL
+        GROUP BY p.country_code, p.kind, pn.normalized
+        HAVING count > 1
+        ORDER BY count DESC
+      `).all();
+      
+      let mergedCount = 0;
+      let deletedCount = 0;
+      
+      for (const group of duplicateGroups) {
+        const ids = group.ids.split(',').map(id => parseInt(id, 10));
+        
+        // Get place details and score them
+        const places = raw.prepare(`
+          SELECT
+            p.id, p.lat, p.lng, p.wikidata_qid, p.population, p.source,
+            (SELECT COUNT(*) FROM place_names WHERE place_id = p.id) as name_count
+          FROM places p
+          WHERE p.id IN (${ids.join(',')})
+        `).all();
+        
+        // Check coordinate proximity (skip if places are far apart)
+        const withCoords = places.filter(p => p.lat !== null && p.lng !== null);
+        if (withCoords.length >= 2) {
+          let tooFar = false;
+          for (let i = 0; i < withCoords.length && !tooFar; i++) {
+            for (let j = i + 1; j < withCoords.length && !tooFar; j++) {
+              const dist = Math.sqrt(
+                Math.pow(withCoords[i].lat - withCoords[j].lat, 2) +
+                Math.pow(withCoords[i].lng - withCoords[j].lng, 2)
+              );
+              if (dist > 0.1) tooFar = true; // ~11km threshold
+            }
+          }
+          if (tooFar) continue; // Skip this group, places are too far apart
+        }
+        
+        // Score places: prefer Wikidata, population, more names
+        const scored = places.map(p => ({
+          ...p,
+          score: (p.wikidata_qid ? 1000 : 0) + (p.population ? 500 : 0) + (p.name_count * 10) - (p.source === 'restcountries@v3.1' ? 100 : 0)
+        })).sort((a, b) => b.score - a.score);
+        
+        const keepId = scored[0].id;
+        const deleteIds = ids.filter(id => id !== keepId);
+        
+        if (deleteIds.length === 0) continue;
+        
+        // Merge in transaction
+        raw.transaction(() => {
+          for (const dupId of deleteIds) {
+            // Transfer unique names
+            const uniqueNames = raw.prepare(`
+              SELECT id FROM place_names n
+              WHERE n.place_id = ?
+              AND NOT EXISTS (
+                SELECT 1 FROM place_names n2
+                WHERE n2.place_id = ? AND n2.normalized = n.normalized AND n2.lang = n.lang AND n2.name_kind = n.name_kind
+              )
+            `).all(dupId, keepId);
+            
+            if (uniqueNames.length > 0) {
+              raw.prepare(`UPDATE place_names SET place_id = ? WHERE id IN (${uniqueNames.map(n => n.id).join(',')})`).run(keepId);
+            }
+            raw.prepare(`DELETE FROM place_names WHERE place_id = ?`).run(dupId);
+          }
+          
+          // Transfer/clean hierarchy
+          raw.prepare(`UPDATE OR IGNORE place_hierarchy SET child_id = ? WHERE child_id IN (${deleteIds.join(',')})`).run(keepId);
+          raw.prepare(`UPDATE OR IGNORE place_hierarchy SET parent_id = ? WHERE parent_id IN (${deleteIds.join(',')})`).run(keepId);
+          raw.prepare(`DELETE FROM place_hierarchy WHERE child_id IN (${deleteIds.join(',')}) OR parent_id IN (${deleteIds.join(',')})`).run();
+          
+          // Transfer/clean attributes
+          raw.prepare(`UPDATE OR IGNORE place_attribute_values SET place_id = ? WHERE place_id IN (${deleteIds.join(',')})`).run(keepId);
+          raw.prepare(`DELETE FROM place_attribute_values WHERE place_id IN (${deleteIds.join(',')})`).run();
+          
+          // Transfer/clean external IDs
+          raw.prepare(`UPDATE OR IGNORE place_external_ids SET place_id = ? WHERE place_id IN (${deleteIds.join(',')})`).run(keepId);
+          raw.prepare(`DELETE FROM place_external_ids WHERE place_id IN (${deleteIds.join(',')})`).run();
+          
+          // Delete duplicate places
+          raw.prepare(`DELETE FROM places WHERE id IN (${deleteIds.join(',')})`).run();
+          
+          mergedCount++;
+          deletedCount += deleteIds.length;
+        })();
+        
+        if (verbose) {
+          telemetry.info(`[cleanup] Merged "${group.example_name}" (${group.kind}, ${group.country_code}): kept ID ${keepId}, deleted ${deleteIds.length}`);
+        }
+      }
+      
+      if (mergedCount > 0) {
+        telemetry.info(`[cleanup] Merged ${mergedCount} duplicate sets, deleted ${deletedCount} records`);
+        finalSummary.cleanup = { merged: mergedCount, deleted: deletedCount };
+      } else {
+        telemetry.info(`[cleanup] No duplicates found to merge`);
+      }
+    } catch (e) {
+      telemetry.warn(`[cleanup] Failed to merge duplicates: ${e.message}`);
+    }
+  }
+  
+  telemetry.summary(finalSummary);
   try { raw.close(); } catch (_) {}
 })();

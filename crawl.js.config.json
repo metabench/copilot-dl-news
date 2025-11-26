@@ -2,5 +2,8 @@
   "startUrl": "https://www.theguardian.com/",
   "depth": 3,
   "concurrency": 2,
-  "maxPages": 5000
+  "maxPages": 5000,
+  "logging": {
+    "queue": false
+  }
 }

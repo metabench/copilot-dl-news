@@ -1,4 +1,5 @@
 const cheerio = require('cheerio');
+const chalk = require('chalk');
 const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
 const {
   normalizeOutputVerbosity,
@@ -412,6 +413,11 @@ class PageExecutionService {
           linkSummary: discovery?.linkSummary || null,
           cheerioRoot: discovery?.$ || null
         });
+
+        if (processorResult) {
+          const analysisType = this._analyzePageType(resolvedUrl, processorResult);
+          console.log(chalk.blue(`ANALYSIS: ${resolvedUrl} -> ${analysisType}`));
+        }
       } catch (error) {
         if (this.recordError) {
           this.recordError({
@@ -831,6 +837,53 @@ class PageExecutionService {
     }
     const value = stats.pagesDownloaded;
     return Number.isFinite(value) ? value : null;
+  }
+
+  _analyzePageType(url, processorResult) {
+    let path = '';
+    let segments = [];
+    try {
+      const u = new URL(url);
+      path = u.pathname;
+      segments = path.split('/').filter(Boolean);
+    } catch (e) {
+      return 'Unknown';
+    }
+
+    // Heuristic: If it has a date (numeric or text month), it's likely an Article.
+    // Matches /YYYY/MM/DD/ or /YYYY/MMM/DD/
+    const hasDate = /\/\d{4}\/\w{3,}\/\d{1,2}\//.test(path) || /\/\d{4}\/\d{2}\/\d{2}\//.test(path);
+
+    if (hasDate) {
+      return 'Article';
+    }
+
+    // If no date, check for Hub structure
+    if (segments.length === 0) return 'Homepage';
+
+    if (segments.length === 1) {
+      // e.g. /politics, /sport
+      return 'Section Hub';
+    }
+
+    if (segments.length === 2) {
+      // e.g. /sport/football
+      return 'Sub-section Hub';
+    }
+
+    if (processorResult.isArticle) {
+      return 'Article';
+    }
+
+    if (this._isCountryHubPage(url)) {
+      return 'Country Hub';
+    }
+
+    if (segments.length >= 3) {
+      return 'Deep Hub';
+    }
+
+    return 'Nav Page';
   }
 }
 

@@ -27,6 +27,44 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - **Ensure clean exits.** All scripts (especially verification tools, one-off checks, and CLI tools) must exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block.
 - **No hanging processes.** Hanging processes block CI and confuse users. If a script doesn't exit, it's a bug.
 
+## Server Management & Detached Mode
+
+**Critical Problem**: When you start a server in a terminal and then run another command, the server process often terminates due to signal propagation. Symptoms:
+- Server starts successfully, shows "listening on port 4600"
+- Agent runs another command (e.g., `npm run build`)
+- Subsequent requests fail with connection refused
+- Agent wastes time debugging when the server simply died
+
+**Solution**: Use **detached mode** for servers:
+
+```bash
+# Always stop existing server first (suppress errors if none running)
+node src/ui/server/dataExplorerServer.js --stop 2>$null
+
+# Start in detached mode - survives subsequent terminal commands
+node src/ui/server/dataExplorerServer.js --detached --port 4600
+
+# Check status when debugging issues
+node src/ui/server/dataExplorerServer.js --status
+
+# Stop when done or before restarting with new code
+node src/ui/server/dataExplorerServer.js --stop
+```
+
+**Agent Workflow**:
+1. **Before starting**: Always `--stop` first to clean up stale detached processes
+2. **During development**: Use `--detached` so builds/tests don't kill the server
+3. **After code changes**: `--stop` then `--detached` to pick up new code
+4. **Debugging connectivity**: `--status` tells you if it's actually running
+
+**When NOT to use detached mode**: For debugging with `console.log` or watching stack traces, run in foreground in a dedicated terminal.
+
+See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` → "Development Server & Detached Mode" for the full pattern and how to add detached mode to other servers.
+
+## jsgui3 Terminology
+
+**Activation vs Hydration**: jsgui3 calls the process of binding a control to existing server-rendered DOM "**activation**" (via the `activate()` method). Other frameworks (React, Vue, Svelte) call the equivalent process "**hydration**". These terms are interchangeable when discussing the concept, but use "activation" when writing jsgui3 code or documentation.
+
 ## JavaScript Code Refactoring & Analysis Workflow
 
 **CRITICAL: Before making any changes to JavaScript code, use the CLI tools below for discovery and safe application. Treat `js-scan` and `js-edit` as the default interface for understanding and editing code—open files manually only after the tools have mapped out the terrain.**

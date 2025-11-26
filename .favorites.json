@@ -1,0 +1,29 @@
+[
+    {
+        "type": "Directory",
+        "name": "c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\.github\\agents",
+        "parent_id": null,
+        "fsPath": "c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\.github\\agents",
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "Smy6JiZ8j4vuRtpb"
+    },
+    {
+        "type": "File",
+        "name": "c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\ui\\server\\dataExplorerServer.js",
+        "parent_id": null,
+        "fsPath": "c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\ui\\server\\dataExplorerServer.js",
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "EKDdOu1gzQPZefpG"
+    },
+    {
+        "type": "File",
+        "name": "c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\crawl.js",
+        "parent_id": null,
+        "fsPath": "c:\\Users\\james\\Documents\\repos\\copilot-dl-news\\src\\crawl.js",
+        "workspaceRoot": null,
+        "workspacePath": null,
+        "id": "EfMKw62QesO9kdcz"
+    }
+]

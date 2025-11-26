@@ -39,6 +39,7 @@ async function main() {
     };
     if (resolvedArgs.configPath) {
       cliMetadata.configPath = resolvedArgs.configPath;
+      console.log(`\x1b[32mLoaded configuration from: ${resolvedArgs.configPath}\x1b[0m`);
     }
   } catch (error) {
     renderCliError(error, {

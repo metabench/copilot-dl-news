@@ -18,10 +18,15 @@ Doc topology. Keep this file focused and actionable. Heavier guidance lives in /
 
 /docs/agents/ – one page per agent persona or recurring task (Refactorer, DB-Perf, Tests, Docs).
 
-/docs/workflows/ – durable how-to playbooks (e.g., “Modularising a DB adapter,” “Extracting a service from a module”).
+/docs/guides/ – **comprehensive AI-generated guides** for complex subsystems. These are in-depth references (500–1000+ lines) that document architecture, patterns, gotchas, and working examples discovered through hands-on implementation. Consult before working on an unfamiliar subsystem; **write a new guide after completing difficult work** in an undocumented area.
+
+/docs/workflows/ – durable how-to playbooks (e.g., "Modularising a DB adapter," "Extracting a service from a module").
 
 /docs/decisions/ – ADR-lite notes: date, context, options, decision, consequences.
-AGENTS.md should link to these pages and assign follow-ups (“If X arises, consult and improve Y.md”). Each time you learn something, push it down into the right doc and tighten the index.
+
+**Guide authorship rule**: After accomplishing a difficult task in a part of the system that lacks a guide, write one in `/docs/guides/`. Include details you did not know when you started but discovered during implementation—these hard-won insights are the most valuable for future agents. Add the new guide to `/docs/INDEX.md`.
+
+AGENTS.md should link to these pages and assign follow-ups ("If X arises, consult and improve Y.md"). Each time you learn something, push it down into the right doc and tighten the index.
 
 Core directives (always-on)
 
@@ -38,6 +43,10 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
 Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
+
+Server Restart After Changes. When modifying server-side code (Express routes, jsgui3 controls, renderers, utilities), always restart the relevant server after applying changes. For the docs viewer: `node src/ui/server/docsViewer/server.js --stop; node src/ui/server/docsViewer/server.js --detached`. For other UI servers, use `Stop-Process -Name node -Force` followed by the appropriate start command. The user cannot see your changes until the server picks up the new code.
+
+Diagrams over walls of text. When explaining architecture, data flow, module relationships, state machines, or any multi-step process, generate an SVG diagram rather than (or in addition to) prose. Place diagrams in `/docs/` alongside related markdown, or in the relevant session folder under `/docs/sessions/`. Use clear labels, directional arrows, and logical groupings. The docs viewer renders SVGs at full width—take advantage of it. A well-crafted diagram communicates structure faster than paragraphs of description. **Note**: SVG diagrams are optimised for human readers. For complex topics that both humans and AI agents need to understand, consider producing two artifacts: an SVG for humans and a structured text/markdown companion (with lists, tables, or labeled sections) that AI agents can parse more reliably.
 
 Checking scripts ride alongside tests. Every UI control, renderer, or service that emits HTML should ship a bite-sized Node script under a local `checks/` folder (e.g., `src/ui/controls/checks/ConfigMatrixControl.check.js`). These scripts render representative data, assert structural expectations, and print the generated markup so diffs stay obvious. Keep them under 60 lines, drop fixtures in the same subtree, and reference them in your plan/tests so future agents can run `node <feature>/checks/<name>.check.js` to sanity-check jsgui3 output without touching the global test runner.
 
@@ -362,6 +371,7 @@ Start here for comprehensive guidance:
 - **`.github/instructions/GitHub Copilot.instructions.md`** — Copilot tool guidance
 - **`docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md`** — Gap 4 implementation details (NEW!)
 - **`/docs/AGENT_REFACTORING_PLAYBOOK.md`** — How agents use the tools (with examples)
+- **`/docs/GAZETTEER_DEDUPLICATION_SUMMARY.md`** — Guide for the Gazetteer Deduplication Tool (v2 Algorithm)
 - **`/tools/dev/README.md`** — CLI reference for both tools
 
 ### Key Metrics

@@ -23,6 +23,8 @@ class CrawlerState {
       articlesSaved: 0,
       errors: 0,
       bytesDownloaded: 0,
+      bytesSaved: 0,
+      bytesSavedCompressed: 0,
       depth2PagesProcessed: 0,
       cacheRateLimitedServed: 0,
       cacheRateLimitedDeferred: 0
@@ -71,6 +73,15 @@ class CrawlerState {
   incrementBytesDownloaded(bytes = 0) {
     if (tof(bytes) === 'number' && Number.isFinite(bytes) && bytes > 0) {
       this.stats.bytesDownloaded += bytes;
+    }
+  }
+
+  incrementBytesSaved(bytes = 0, compressedBytes = 0) {
+    if (tof(bytes) === 'number' && Number.isFinite(bytes) && bytes > 0) {
+      this.stats.bytesSaved += bytes;
+    }
+    if (tof(compressedBytes) === 'number' && Number.isFinite(compressedBytes) && compressedBytes > 0) {
+      this.stats.bytesSavedCompressed += compressedBytes;
     }
   }
 

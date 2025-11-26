@@ -49,3 +49,11 @@ Each workflow follows the Sense → Plan → Act → Test/Verify → Document �
 	- `npm run test:by-path tests/ui/server/dataExplorerServer.production.test.js`
 5. **Document**: Log results in the session WORKING_NOTES and SESSION_SUMMARY, mark progress in `docs/CHANGE_PLAN.md`, and refresh `docs/JSGUI3_PATTERNS_ANALYSIS.md` with the new modularization guidance.
 6. **Reflect**: File remaining UI modularization tasks (e.g., SSE handlers, crawl controls) back into the plan and flag follow-ups in `/docs/agi/journal/` for the next agent.
+
+## 7. Knowledge Ingestion (Gazetteer)
+1. **Sense**: Identify gaps in the gazetteer (e.g., missing historical names, missing major cities) using world knowledge or user requests.
+2. **Plan**: Create a candidate list in `data/knowledge/` (JSON format).
+3. **Act**: Run `node tools/gazetteer/ingest-historical-names.js` to fetch official data from Wikidata and populate the DB.
+4. **Verify**: Check `place_names` and `places` tables for new entries and correct source attribution (`wikidata`, `knowledge-base`).
+5. **Document**: Update `docs/DATABASE_SCHEMA_ERD.md` if schema changed; log ingestion summary in journal.
+6. **Reflect**: Add new patterns (e.g., "Wikidata fetcher") to `TOOLS.md`.

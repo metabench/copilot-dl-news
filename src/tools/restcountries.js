@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { is_array } = require('lang-tools');
+const { HttpRequestResponseFacade } = require('../utils/HttpRequestResponseFacade');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 const { findProjectRoot } = require('../utils/project-root');
 
@@ -32,6 +33,7 @@ async function fetchCountries(options = {}, deps = {}) {
     offline = false,
   } = options;
   const log = deps.log || ((...a) => console.warn(...a));
+  const { db } = deps;
   const headers = { 'User-Agent': 'copilot-dl-news/1.0', 'Accept': 'application/json' };
   // Per docs: for /all you MUST specify fields and up to 10 fields only.
   // Keep requests within 10 fields to avoid 400 responses.
@@ -41,12 +43,41 @@ async function fetchCountries(options = {}, deps = {}) {
   async function tryFetch(endpoint, fields) {
     const u = new URL(endpoint);
     if (fields) u.searchParams.set('fields', fields);
+    const urlStr = u.toString();
+
+    if (db) {
+      try {
+        const cached = await HttpRequestResponseFacade.getCachedHttpResponse(db, urlStr, { category: 'api-restcountries' });
+        if (cached) {
+          log(`restcountries: using DB cache for ${urlStr}`);
+          return cached.body;
+        }
+      } catch (e) {
+        log(`restcountries: DB cache read failed: ${e.message}`);
+      }
+    }
+
+    if (offline) return null;
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        if (attempt === 0) log(`restcountries: GET ${u.toString()}`);
-        return await fetchJson(u.toString(), { headers, timeoutMs });
+        if (attempt === 0) log(`restcountries: GET ${urlStr}`);
+        const json = await fetchJson(urlStr, { headers, timeoutMs });
+        
+        if (db && json) {
+          try {
+            await HttpRequestResponseFacade.cacheHttpResponse(db, {
+              url: urlStr,
+              response: { status: 200, body: json },
+              metadata: { category: 'api-restcountries' }
+            });
+          } catch (e) {
+            log(`restcountries: DB cache write failed: ${e.message}`);
+          }
+        }
+        return json;
       } catch (err) {
-        log(`restcountries: ${err.message} on ${u.toString()} (attempt ${attempt+1}/${retries+1})`);
+        log(`restcountries: ${err.message} on ${urlStr} (attempt ${attempt+1}/${retries+1})`);
         await sleep(200 * (attempt + 1));
       }
     }
@@ -72,47 +103,8 @@ async function fetchCountries(options = {}, deps = {}) {
   }
 
   // Offline short-circuit: use local minimal or cache without networking
-  if (offline) {
-    try {
-      const p = path.join(__dirname, 'restcountries.min.json');
-      if (fs.existsSync(p)) {
-        const txt = fs.readFileSync(p, 'utf8');
-        let parsed = JSON.parse(txt);
-        if (countriesFilter.length) {
-          const set = new Set(countriesFilter.map(c => String(c).toUpperCase()));
-          parsed = parsed.filter(c => set.has(String(c.cca2 || '').toUpperCase()));
-        }
-        log('restcountries: offline mode using local minimal fallback');
-        return parsed;
-      }
-    } catch (_) {}
-    const cachePathOnly = path.join(cacheDir, 'restcountries.v3.1.all.json');
-    try {
-      if (fs.existsSync(cachePathOnly)) {
-        const txt = fs.readFileSync(cachePathOnly, 'utf8');
-        let parsed = JSON.parse(txt);
-        if (countriesFilter.length) {
-          const set = new Set(countriesFilter.map(c => String(c).toUpperCase()));
-          parsed = parsed.filter(c => set.has(String(c.cca2 || '').toUpperCase()));
-        }
-        log('restcountries: offline mode using cached dataset');
-        return parsed;
-      }
-    } catch (_) {}
-    // As a last offline resort, return empty list
-    return [];
-  }
+  // (Removed file-system cache checks in favor of DB cache in tryFetch)
 
-  // Cache path
-  const cachePath = path.join(cacheDir, 'restcountries.v3.1.all.json');
-  if (fs.existsSync(cachePath) && countriesFilter.length === 0) {
-    try {
-      const txt = fs.readFileSync(cachePath, 'utf8');
-      const parsed = JSON.parse(txt);
-      log('restcountries: using cached dataset');
-      return parsed;
-    } catch (_) {}
-  }
 
   const codes = countriesFilter.length ? countriesFilter.join(',') : null;
   if (codes) {

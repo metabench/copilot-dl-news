@@ -36,14 +36,10 @@ function tableHasColumn(db, tableName, columnName) {
 }
 
 function buildFetchFileInfoSql(db) {
-  const hasContentEncoding = tableHasColumn(db, "fetches", "content_encoding");
-  const contentEncodingSelect = hasContentEncoding
-    ? "content_encoding AS contentEncoding"
-    : "NULL AS contentEncoding";
   return `
-    SELECT id, file_path AS filePath, content_type AS contentType,
-           ${contentEncodingSelect}
-    FROM fetches
+    SELECT id, NULL AS filePath, content_type AS contentType,
+           content_encoding AS contentEncoding
+    FROM http_responses
     WHERE id = ?
   `;
 }
@@ -74,12 +70,22 @@ function selectFetchHistory(db, urlId, options = {}) {
   const limit = Number(options.limit || 200);
   const offset = Number(options.offset || 0);
   const stmt = db.prepare(`
-    SELECT id, fetched_at AS fetchedAt, http_status AS httpStatus, content_type AS contentType,
-           content_length AS contentLength, bytes_downloaded AS bytesDownloaded, file_path AS filePath,
-           file_size AS fileSize, classification, word_count AS wordCount
-    FROM fetches
-    WHERE url_id = ?
-    ORDER BY COALESCE(fetched_at, request_started_at) DESC, id DESC
+    SELECT 
+      hr.id, 
+      COALESCE(hr.fetched_at, hr.request_started_at) AS fetchedAt, 
+      hr.http_status AS httpStatus, 
+      hr.content_type AS contentType,
+      hr.bytes_downloaded AS contentLength, 
+      hr.bytes_downloaded AS bytesDownloaded, 
+      NULL AS filePath,
+      cs.uncompressed_size AS fileSize, 
+      ca.classification, 
+      ca.word_count AS wordCount
+    FROM http_responses hr
+    LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+    LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+    WHERE hr.url_id = ?
+    ORDER BY COALESCE(hr.fetched_at, hr.request_started_at) DESC, hr.id DESC
     LIMIT ? OFFSET ?
   `);
   return stmt.all(urlId, limit, offset).map((r) => ({

@@ -28,6 +28,39 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - Binding hacks that bypass plugin hooks or drift from upstream compatibility.
 - Long-form notes outside session folders (`tmp/` is off-limits for durable guidance).
 - Doc updates that contradict AGENTS.md or repo-wide mandates.
+- Start servers in foreground when subsequent commands are needed (use detached mode).
+
+## Server Management & Detached Mode
+
+**Critical Problem**: Starting a server in a terminal and running another command often kills the server due to signal propagation. This wastes debugging time when the real issue is that the server simply died.
+
+**Solution**: Use **detached mode** for servers that must survive subsequent terminal commands:
+
+```bash
+# Always stop existing server first, then start detached
+node src/ui/server/dataExplorerServer.js --stop 2>$null
+node src/ui/server/dataExplorerServer.js --detached --port 4600
+
+# Check status when debugging connectivity issues
+node src/ui/server/dataExplorerServer.js --status
+
+# Stop when done or before restarting with new code
+node src/ui/server/dataExplorerServer.js --stop
+```
+
+**Workflow**:
+1. **Before starting**: `--stop` first to clean up stale detached processes
+2. **During development**: `--detached` so builds/tests don't kill it
+3. **After code changes**: `--stop` then `--detached` to restart
+4. **Debugging**: `--status` confirms if server is actually running
+
+**When NOT to use**: For debugging with `console.log`—run foreground in a dedicated terminal instead.
+
+See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` → "Development Server & Detached Mode" for implementation details.
+
+## jsgui3 Terminology
+
+**Activation vs Hydration**: jsgui3 uses "**activation**" (`activate()` method) for what other frameworks call "**hydration**" - binding controls to existing server-rendered DOM. Use "activation" in jsgui3 code/docs, but understand both terms refer to the same concept.
 
 ## Lifecycle — Spark → Spec City → Scaffold → Thicken → Polish → Steward
 

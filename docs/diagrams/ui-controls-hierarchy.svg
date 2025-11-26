@@ -1,0 +1,371 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1100">
+  <defs>
+    <!-- Gradient backgrounds -->
+    <linearGradient id="jsgui-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="base-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="app-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="table-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#43e97b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38f9d7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="component-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fa709a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fee140;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="client-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a8edea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fed6e3;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555" />
+    </marker>
+    <marker id="arrowhead-inherit" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="none" stroke="#555" stroke-width="1" />
+    </marker>
+    
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="1100" fill="#f8fafc"/>
+  
+  <!-- Title -->
+  <text x="700" y="40" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    UI Controls Hierarchy
+  </text>
+  <text x="700" y="65" font-family="system-ui, -apple-system, sans-serif" font-size="14" text-anchor="middle" fill="#64748b">
+    jsgui3-based control architecture for Data Explorer, Gazetteer, Diagram Atlas, and Docs Viewer
+  </text>
+
+  <!-- Legend -->
+  <g transform="translate(1100, 90)">
+    <rect x="0" y="0" width="260" height="140" rx="8" fill="white" stroke="#e2e8f0" filter="url(#shadow)"/>
+    <text x="130" y="25" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#475569">LEGEND</text>
+    
+    <rect x="15" y="40" width="16" height="16" rx="3" fill="url(#jsgui-gradient)"/>
+    <text x="40" y="52" font-family="system-ui, sans-serif" font-size="11" fill="#475569">jsgui3 Base</text>
+    
+    <rect x="130" y="40" width="16" height="16" rx="3" fill="url(#base-gradient)"/>
+    <text x="155" y="52" font-family="system-ui, sans-serif" font-size="11" fill="#475569">Shared Base</text>
+    
+    <rect x="15" y="65" width="16" height="16" rx="3" fill="url(#app-gradient)"/>
+    <text x="40" y="77" font-family="system-ui, sans-serif" font-size="11" fill="#475569">App Controls</text>
+    
+    <rect x="130" y="65" width="16" height="16" rx="3" fill="url(#table-gradient)"/>
+    <text x="155" y="77" font-family="system-ui, sans-serif" font-size="11" fill="#475569">Table Controls</text>
+    
+    <rect x="15" y="90" width="16" height="16" rx="3" fill="url(#component-gradient)"/>
+    <text x="40" y="102" font-family="system-ui, sans-serif" font-size="11" fill="#475569">UI Components</text>
+    
+    <rect x="130" y="90" width="16" height="16" rx="3" fill="url(#client-gradient)"/>
+    <text x="155" y="102" font-family="system-ui, sans-serif" font-size="11" fill="#475569">Client-Only</text>
+    
+    <line x1="15" y1="120" x2="55" y2="120" stroke="#555" stroke-width="2" marker-end="url(#arrowhead-inherit)"/>
+    <text x="65" y="124" font-family="system-ui, sans-serif" font-size="11" fill="#475569">extends</text>
+    
+    <line x1="130" y1="120" x2="170" y2="120" stroke="#555" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowhead)"/>
+    <text x="180" y="124" font-family="system-ui, sans-serif" font-size="11" fill="#475569">uses</text>
+  </g>
+
+  <!-- =========== LAYER 1: jsgui3 Core =========== -->
+  <g transform="translate(580, 100)">
+    <rect x="0" y="0" width="240" height="60" rx="10" fill="url(#jsgui-gradient)" filter="url(#shadow)"/>
+    <text x="120" y="28" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="white">jsgui.Control</text>
+    <text x="120" y="45" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle" fill="rgba(255,255,255,0.8)">jsgui3-html (isomorphic base)</text>
+  </g>
+  
+  <!-- Inheritance lines from jsgui.Control -->
+  <path d="M 700 160 L 700 195" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  
+  <!-- =========== LAYER 2: BaseAppControl + TableControl =========== -->
+  
+  <!-- BaseAppControl -->
+  <g transform="translate(480, 200)">
+    <rect x="0" y="0" width="200" height="55" rx="8" fill="url(#base-gradient)" filter="url(#shadow)"/>
+    <text x="100" y="25" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="white">BaseAppControl</text>
+    <text x="100" y="42" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="rgba(255,255,255,0.85)">shared/ — header, nav, footer</text>
+  </g>
+  
+  <!-- TableControl -->
+  <g transform="translate(720, 200)">
+    <rect x="0" y="0" width="200" height="55" rx="8" fill="url(#table-gradient)" filter="url(#shadow)"/>
+    <text x="100" y="25" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#1a4a3a">TableControl</text>
+    <text x="100" y="42" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#1a4a3a">controls/ — rows, columns, pagination</text>
+  </g>
+  
+  <!-- Branch lines from jsgui to both -->
+  <path d="M 700 160 L 580 195" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 700 160 L 820 195" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  
+  <!-- =========== LAYER 3: App Controls (from BaseAppControl) =========== -->
+  
+  <!-- Lines from BaseAppControl to App Controls -->
+  <path d="M 580 255 L 580 285 L 175 285 L 175 310" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 580 255 L 580 285 L 470 285 L 470 310" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 580 255 L 580 285 L 765 285 L 765 310" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 580 255 L 580 285 L 1060 285 L 1060 310" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  
+  <!-- ExplorerAppControl -->
+  <g transform="translate(65, 315)">
+    <rect x="0" y="0" width="220" height="55" rx="8" fill="url(#app-gradient)" filter="url(#shadow)"/>
+    <text x="110" y="25" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#0c4a6e">ExplorerAppControl</text>
+    <text x="110" y="42" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#0c4a6e">dataExplorer/ — Data Explorer shell</text>
+  </g>
+  
+  <!-- GazetteerAppControl -->
+  <g transform="translate(355, 315)">
+    <rect x="0" y="0" width="220" height="55" rx="8" fill="url(#app-gradient)" filter="url(#shadow)"/>
+    <text x="110" y="25" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#0c4a6e">GazetteerAppControl</text>
+    <text x="110" y="42" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#0c4a6e">gazetteer/ — Place search shell</text>
+  </g>
+  
+  <!-- DiagramAtlasAppControl -->
+  <g transform="translate(655, 315)">
+    <rect x="0" y="0" width="220" height="55" rx="8" fill="url(#app-gradient)" filter="url(#shadow)"/>
+    <text x="110" y="25" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#0c4a6e">DiagramAtlasAppControl</text>
+    <text x="110" y="42" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#0c4a6e">diagramAtlas/ — SVG atlas shell</text>
+  </g>
+  
+  <!-- DocAppControl -->
+  <g transform="translate(950, 315)">
+    <rect x="0" y="0" width="220" height="55" rx="8" fill="url(#app-gradient)" filter="url(#shadow)"/>
+    <text x="110" y="25" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#0c4a6e">DocAppControl</text>
+    <text x="110" y="42" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#0c4a6e">docsViewer/ — Docs viewer shell</text>
+  </g>
+  
+  <!-- =========== LAYER 4: Table Derivatives (from TableControl) =========== -->
+  
+  <!-- Lines from TableControl to specialized tables -->
+  <path d="M 820 255 L 820 410 L 155 410 L 155 440" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 820 255 L 820 410 L 395 410 L 395 440" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 820 255 L 820 410 L 635 410 L 635 440" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 820 255 L 820 410 L 875 410 L 875 440" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  <path d="M 820 255 L 820 410 L 1115 410 L 1115 440" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrowhead-inherit)"/>
+  
+  <!-- UrlListingTableControl -->
+  <g transform="translate(40, 445)">
+    <rect x="0" y="0" width="230" height="50" rx="6" fill="url(#table-gradient)" filter="url(#shadow)"/>
+    <text x="115" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1a4a3a">UrlListingTableControl</text>
+    <text x="115" y="38" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#1a4a3a">URL listings with status, dates</text>
+  </g>
+  
+  <!-- DomainSummaryTableControl -->
+  <g transform="translate(280, 445)">
+    <rect x="0" y="0" width="230" height="50" rx="6" fill="url(#table-gradient)" filter="url(#shadow)"/>
+    <text x="115" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1a4a3a">DomainSummaryTableControl</text>
+    <text x="115" y="38" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#1a4a3a">Domain stats + sparklines</text>
+  </g>
+  
+  <!-- DomainDownloadsTableControl -->
+  <g transform="translate(520, 445)">
+    <rect x="0" y="0" width="230" height="50" rx="6" fill="url(#table-gradient)" filter="url(#shadow)"/>
+    <text x="115" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1a4a3a">DomainDownloadsTableControl</text>
+    <text x="115" y="38" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#1a4a3a">Download history per domain</text>
+  </g>
+  
+  <!-- CrawlJobsTableControl -->
+  <g transform="translate(760, 445)">
+    <rect x="0" y="0" width="230" height="50" rx="6" fill="url(#table-gradient)" filter="url(#shadow)"/>
+    <text x="115" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1a4a3a">CrawlJobsTableControl</text>
+    <text x="115" y="38" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#1a4a3a">Crawl jobs + progress</text>
+  </g>
+  
+  <!-- ErrorLogTableControl -->
+  <g transform="translate(1000, 445)">
+    <rect x="0" y="0" width="230" height="50" rx="6" fill="url(#table-gradient)" filter="url(#shadow)"/>
+    <text x="115" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1a4a3a">ErrorLogTableControl</text>
+    <text x="115" y="38" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#1a4a3a">Error logs + timestamps</text>
+  </g>
+  
+  <!-- =========== LAYER 5: Standalone Components (extends jsgui.Control directly) =========== -->
+  
+  <!-- Section label -->
+  <text x="50" y="540" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#475569">
+    Standalone Components (extend jsgui.Control)
+  </text>
+  
+  <!-- Lines from jsgui.Control to standalone components (conceptual, dashed) -->
+  <path d="M 700 160 L 700 180 L 50 180 L 50 525 L 150 535" stroke="#888" stroke-width="1" stroke-dasharray="3,3" fill="none"/>
+  
+  <!-- Row 1 of standalone components -->
+  
+  <!-- SparklineControl -->
+  <g transform="translate(50, 555)">
+    <rect x="0" y="0" width="180" height="45" rx="6" fill="url(#component-gradient)" filter="url(#shadow)"/>
+    <text x="90" y="20" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#7c2d12">SparklineControl</text>
+    <text x="90" y="35" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">Mini trend charts</text>
+  </g>
+  
+  <!-- PagerButtonControl -->
+  <g transform="translate(245, 555)">
+    <rect x="0" y="0" width="180" height="45" rx="6" fill="url(#component-gradient)" filter="url(#shadow)"/>
+    <text x="90" y="20" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#7c2d12">PagerButtonControl</text>
+    <text x="90" y="35" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">Pagination nav buttons</text>
+  </g>
+  
+  <!-- ConfigMatrixControl -->
+  <g transform="translate(440, 555)">
+    <rect x="0" y="0" width="180" height="45" rx="6" fill="url(#component-gradient)" filter="url(#shadow)"/>
+    <text x="90" y="20" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#7c2d12">ConfigMatrixControl</text>
+    <text x="90" y="35" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">Config grid display</text>
+  </g>
+  
+  <!-- UrlFilterToggleControl -->
+  <g transform="translate(635, 555)">
+    <rect x="0" y="0" width="180" height="45" rx="6" fill="url(#component-gradient)" filter="url(#shadow)"/>
+    <text x="90" y="20" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#7c2d12">UrlFilterToggleControl</text>
+    <text x="90" y="35" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">Filter on/off toggle</text>
+  </g>
+  
+  <!-- CrawlBehaviorPanelControl -->
+  <g transform="translate(830, 555)">
+    <rect x="0" y="0" width="190" height="45" rx="6" fill="url(#component-gradient)" filter="url(#shadow)"/>
+    <text x="95" y="20" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#7c2d12">CrawlBehaviorPanelControl</text>
+    <text x="95" y="35" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">Crawl config panel</text>
+  </g>
+  
+  <!-- CrawlConfigWorkspaceControl -->
+  <g transform="translate(1035, 555)">
+    <rect x="0" y="0" width="200" height="45" rx="6" fill="url(#component-gradient)" filter="url(#shadow)"/>
+    <text x="100" y="20" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#7c2d12">CrawlConfigWorkspaceControl</text>
+    <text x="100" y="35" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">Full workspace UI</text>
+  </g>
+  
+  <!-- =========== App-specific Controls Section =========== -->
+  
+  <!-- Section label -->
+  <text x="50" y="645" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#475569">
+    App-Specific Controls
+  </text>
+  
+  <!-- Data Explorer controls -->
+  <g transform="translate(50, 665)">
+    <rect x="0" y="0" width="300" height="100" rx="8" fill="white" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <text x="150" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">Data Explorer</text>
+    <rect x="15" y="35" width="125" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="77" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">ExplorerHomeCardControl</text>
+    <rect x="155" y="35" width="130" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="220" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">ExplorerPaginationControl</text>
+  </g>
+  
+  <!-- Gazetteer controls -->
+  <g transform="translate(370, 665)">
+    <rect x="0" y="0" width="320" height="130" rx="8" fill="white" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <text x="160" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">Gazetteer</text>
+    <rect x="15" y="35" width="135" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="82" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">GazetteerSearchFormControl</text>
+    <rect x="165" y="35" width="140" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="235" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">GazetteerBreadcrumbControl</text>
+    <rect x="15" y="70" width="135" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="82" y="87" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">GazetteerResultItemControl</text>
+    <rect x="165" y="70" width="100" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="215" y="87" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">PlaceBadgeControl</text>
+  </g>
+  
+  <!-- Diagram Atlas controls -->
+  <g transform="translate(710, 665)">
+    <rect x="0" y="0" width="290" height="100" rx="8" fill="white" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <text x="145" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">Diagram Atlas</text>
+    <rect x="15" y="35" width="125" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="77" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">DiagramToolbarControl</text>
+    <rect x="155" y="35" width="125" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="217" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">DiagramDiagnosticsControl</text>
+    <rect x="15" y="70" width="125" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="77" y="87" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">DiagramProgressControl</text>
+  </g>
+  
+  <!-- Docs Viewer controls -->
+  <g transform="translate(1020, 665)">
+    <rect x="0" y="0" width="270" height="100" rx="8" fill="white" stroke="#4facfe" stroke-width="2" filter="url(#shadow)"/>
+    <text x="135" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#0c4a6e">Docs Viewer</text>
+    <rect x="15" y="35" width="110" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="70" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">DocNavControl</text>
+    <rect x="140" y="35" width="115" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="197" y="52" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">DocViewerControl</text>
+    <rect x="15" y="70" width="115" height="26" rx="4" fill="url(#component-gradient)"/>
+    <text x="72" y="87" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#7c2d12">DocContentControl</text>
+  </g>
+  
+  <!-- =========== Client-Only Controls Section =========== -->
+  
+  <!-- Section label -->
+  <text x="50" y="830" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#475569">
+    Client-Only Controls (activate existing DOM)
+  </text>
+  
+  <!-- Client controls box -->
+  <g transform="translate(50, 850)">
+    <rect x="0" y="0" width="700" height="90" rx="8" fill="white" stroke="#a8edea" stroke-width="2" filter="url(#shadow)"/>
+    <text x="350" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#0d9488">
+      Docs Viewer Client Controls (jsgui3-client with activate())
+    </text>
+    
+    <rect x="15" y="40" width="140" height="35" rx="4" fill="url(#client-gradient)"/>
+    <text x="85" y="55" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#0d9488">DocsThemeToggleControl</text>
+    <text x="85" y="68" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#0d9488">Light/dark toggle</text>
+    
+    <rect x="170" y="40" width="140" height="35" rx="4" fill="url(#client-gradient)"/>
+    <text x="240" y="55" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#0d9488">DocsNavToggleControl</text>
+    <text x="240" y="68" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#0d9488">Sidebar toggle</text>
+    
+    <rect x="325" y="40" width="140" height="35" rx="4" fill="url(#client-gradient)"/>
+    <text x="395" y="55" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#0d9488">DocsSearchControl</text>
+    <text x="395" y="68" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#0d9488">Search input</text>
+    
+    <rect x="480" y="40" width="150" height="35" rx="4" fill="url(#client-gradient)"/>
+    <text x="555" y="55" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#0d9488">DocsFileFilterControl</text>
+    <text x="555" y="68" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#0d9488">File type filtering</text>
+  </g>
+  
+  <!-- =========== Table Helper Classes =========== -->
+  
+  <g transform="translate(800, 850)">
+    <rect x="0" y="0" width="340" height="90" rx="8" fill="white" stroke="#43e97b" stroke-width="2" filter="url(#shadow)"/>
+    <text x="170" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1a4a3a">
+      Table Helper Controls
+    </text>
+    
+    <rect x="15" y="40" width="145" height="35" rx="4" fill="url(#table-gradient)"/>
+    <text x="87" y="55" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#1a4a3a">TableRowControl</text>
+    <text x="87" y="68" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#1a4a3a">&lt;tr&gt; wrapper</text>
+    
+    <rect x="175" y="40" width="145" height="35" rx="4" fill="url(#table-gradient)"/>
+    <text x="247" y="55" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" text-anchor="middle" fill="#1a4a3a">TableCellControl</text>
+    <text x="247" y="68" font-family="system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#1a4a3a">&lt;td&gt;/&lt;th&gt; wrapper</text>
+  </g>
+  
+  <!-- =========== Composition Arrows =========== -->
+  
+  <!-- DomainSummaryTable uses Sparkline -->
+  <path d="M 395 495 L 395 530 L 140 530 L 140 550" stroke="#888" stroke-width="1" stroke-dasharray="4,3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Tables use PagerButton -->
+  <path d="M 155 495 L 155 530 L 335 530 L 335 550" stroke="#888" stroke-width="1" stroke-dasharray="4,3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Footer notes -->
+  <text x="700" y="1000" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle" fill="#94a3b8">
+    File locations: src/ui/controls/ (shared), src/ui/server/*/controls/ (app-specific), src/ui/server/*/client/controls/ (client-only)
+  </text>
+  <text x="700" y="1020" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle" fill="#94a3b8">
+    Activation vs Hydration: jsgui3 uses "activation" (activate() method) — equivalent to "hydration" in React/Vue/Svelte
+  </text>
+  
+  <!-- Control count -->
+  <text x="700" y="1060" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#64748b">
+    ~35 Custom Controls across 4 UI Applications
+  </text>
+</svg>

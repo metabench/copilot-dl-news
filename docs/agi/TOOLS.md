@@ -11,6 +11,7 @@ _All commands run from repository root unless noted. Categories: `static_analysi
 | `md-scan` | doc_ops | `tools/dev/md-scan.js` | Markdown search/indexing across `docs/`; perfect for dependency-aware doc updates. | `node tools/dev/md-scan.js --dir docs --search "AGI" --json`
 | `npm run test:by-path` | runtime_experiment | `package.json` scripts | Official runner for targeted suites; required verification step after edits. | `npm run test:by-path tests/services/news.test.js`
 | `docs/sessions` conventions | planning_support | `docs/sessions/` | Stores per-session plans; AGI work should reference or create these before acting. | `docs/sessions/2025-11-16-plan.md` (manual)
+| `ingest-historical-names` | knowledge_ingestion | `tools/gazetteer/ingest-historical-names.js` | Fetches place data from Wikidata and populates historical names from a candidate list. | `node tools/gazetteer/ingest-historical-names.js`
 
 ## Proposed Tooling Extensions
 

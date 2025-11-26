@@ -38,20 +38,22 @@ function selectHostDownloads(db, host, options = {}) {
   const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Math.trunc(Number(options.offset))) : 0;
   const stmt = db.prepare(`
     SELECT
-      f.id,
-      f.url_id AS urlId,
+      hr.id,
+      hr.url_id AS urlId,
       u.url,
-      f.fetched_at AS fetchedAt,
-      f.request_started_at AS requestedAt,
-      f.http_status AS httpStatus,
-      f.content_length AS contentLength,
-      f.bytes_downloaded AS bytesDownloaded,
-      f.word_count AS wordCount,
-      f.classification
-    FROM fetches f
-    JOIN urls u ON u.id = f.url_id
+      hr.fetched_at AS fetchedAt,
+      hr.request_started_at AS requestedAt,
+      hr.http_status AS httpStatus,
+      cs.uncompressed_size AS contentLength,
+      hr.bytes_downloaded AS bytesDownloaded,
+      ca.word_count AS wordCount,
+      ca.classification
+    FROM http_responses hr
+    JOIN urls u ON u.id = hr.url_id
+    LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+    LEFT JOIN content_analysis ca ON ca.content_id = cs.id
     WHERE LOWER(u.host) = ?
-    ORDER BY COALESCE(f.fetched_at, f.request_started_at) DESC, f.id DESC
+    ORDER BY COALESCE(hr.fetched_at, hr.request_started_at) DESC, hr.id DESC
     LIMIT ? OFFSET ?
   `);
   return stmt.all(host, limit, offset).map((row) => ({

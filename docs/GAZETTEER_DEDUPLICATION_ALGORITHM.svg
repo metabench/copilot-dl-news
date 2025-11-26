@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" style="background-color: #f8f9fa;">
+  <!-- Definitions -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#495057"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#dc3545"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="2" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.15"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Header -->
+  <rect width="1200" height="80" fill="url(#headerGrad)"/>
+  <text x="600" y="50" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="32" font-weight="bold" fill="#ecf0f1">Gazetteer Deduplication Protocol v2</text>
+  
+  <!-- Swimlanes / Zones -->
+  <g transform="translate(0, 80)">
+    <!-- Zone 1: Identification -->
+    <rect x="20" y="20" width="340" height="780" rx="8" fill="#ffffff" stroke="#dee2e6" stroke-width="2"/>
+    <rect x="20" y="20" width="340" height="50" rx="8" fill="#e9ecef" clip-path="inset(0 0 40 0)"/>
+    <text x="190" y="55" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="#495057">1. Safe Identification</text>
+
+    <!-- Zone 2: Arbitration -->
+    <rect x="380" y="20" width="400" height="780" rx="8" fill="#ffffff" stroke="#dee2e6" stroke-width="2"/>
+    <rect x="380" y="20" width="400" height="50" rx="8" fill="#e9ecef" clip-path="inset(0 0 40 0)"/>
+    <text x="580" y="55" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="#495057">2. Tiered Arbitration</text>
+
+    <!-- Zone 3: Merge Execution -->
+    <rect x="800" y="20" width="380" height="780" rx="8" fill="#ffffff" stroke="#dee2e6" stroke-width="2"/>
+    <rect x="800" y="20" width="380" height="50" rx="8" fill="#e9ecef" clip-path="inset(0 0 40 0)"/>
+    <text x="990" y="55" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="18" font-weight="bold" fill="#495057">3. Merge Execution</text>
+  </g>
+
+  <!-- Phase 1 Content -->
+  <g transform="translate(40, 160)">
+    <text x="0" y="0" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#333">Step A: Group Candidates</text>
+    <rect x="0" y="15" width="300" height="80" rx="4" fill="#f8f9fa" stroke="#ced4da"/>
+    <text x="10" y="35" font-family="Consolas, monospace" font-size="12" fill="#d63384">GROUP BY country, name</text>
+    <text x="10" y="55" font-family="Segoe UI, sans-serif" font-size="11" fill="#666">Finds "Springfield" (US), "Vaduz" (LI)</text>
+    
+    <text x="0" y="120" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#dc3545">Step B: Safety Guards</text>
+    <rect x="0" y="135" width="300" height="160" rx="4" fill="#fff5f5" stroke="#ffc9c9" filter="url(#shadow)"/>
+    
+    <text x="10" y="155" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#c62828">1. Spatial Check:</text>
+    <text x="10" y="175" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">Are candidates > 50km apart?</text>
+
+    <text x="10" y="200" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#c62828">2. Hierarchy Check:</text>
+    <text x="10" y="220" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">Do candidates have DIFFERENT parents?</text>
+    
+    <text x="10" y="250" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#c62828">Result: ABORT MERGE (Distinct Entities)</text>
+
+    <text x="0" y="310" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#198754">Step C: Valid Cluster</text>
+    <g transform="translate(0, 325)">
+      <rect x="0" y="0" width="300" height="100" rx="4" fill="#e3f2fd" stroke="#90caf9" filter="url(#shadow)"/>
+      <text x="10" y="25" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#0d47a1">Cluster: "Alcazar" (ES)</text>
+      <text x="10" y="45" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">ID 7344 (Parent: 123)</text>
+      <text x="10" y="65" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">ID 7368 (Parent: 123)</text>
+      <text x="10" y="85" font-family="Segoe UI, sans-serif" font-size="11" fill="#198754">Parents Match &#8594; Safe to Merge</text>
+    </g>
+  </g>
+
+  <!-- Connector 1 -->
+  <line x1="340" y1="400" x2="400" y2="400" stroke="#495057" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Phase 2 Content -->
+  <g transform="translate(400, 160)">
+    <text x="20" y="0" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#333">Tiered Scoring Matrix:</text>
+    
+    <g transform="translate(20, 20)">
+      <!-- Scorecard A -->
+      <rect x="0" y="0" width="170" height="220" rx="4" fill="#fff3cd" stroke="#ffecb5" filter="url(#shadow)"/>
+      <text x="10" y="25" font-family="Consolas, monospace" font-size="12" font-weight="bold">ID: 7368</text>
+      <line x1="10" y1="35" x2="160" y2="35" stroke="#dee2e6"/>
+      
+      <text x="10" y="55" font-family="Segoe UI, sans-serif" font-size="11" font-weight="bold">1. Ext IDs: 1</text>
+      <text x="10" y="75" font-family="Segoe UI, sans-serif" font-size="11">2. Hierarchy: 2</text>
+      <text x="10" y="95" font-family="Segoe UI, sans-serif" font-size="11">3. Attributes: 0</text>
+      <text x="10" y="115" font-family="Segoe UI, sans-serif" font-size="11">4. Source: Wiki</text>
+      <text x="10" y="135" font-family="Segoe UI, sans-serif" font-size="11">5. ID: 7368</text>
+      
+      <line x1="10" y1="150" x2="160" y2="150" stroke="#dee2e6"/>
+      <text x="10" y="170" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#856404">Score: 150</text>
+      <text x="10" y="190" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">(Base + 1 ExtID)</text>
+
+      <!-- Scorecard B -->
+      <rect x="190" y="0" width="170" height="220" rx="4" fill="#d1e7dd" stroke="#badbcc" filter="url(#shadow)"/>
+      <text x="200" y="25" font-family="Consolas, monospace" font-size="12" font-weight="bold">ID: 7344</text>
+      <line x1="200" y1="35" x2="350" y2="35" stroke="#dee2e6"/>
+      
+      <text x="200" y="55" font-family="Segoe UI, sans-serif" font-size="11" font-weight="bold">1. Ext IDs: 2</text>
+      <text x="200" y="75" font-family="Segoe UI, sans-serif" font-size="11">2. Hierarchy: 1</text>
+      <text x="200" y="95" font-family="Segoe UI, sans-serif" font-size="11">3. Attributes: 0</text>
+      <text x="200" y="115" font-family="Segoe UI, sans-serif" font-size="11">4. Source: Wiki</text>
+      <text x="200" y="135" font-family="Segoe UI, sans-serif" font-size="11">5. ID: 7344</text>
+      
+      <line x1="200" y1="150" x2="350" y2="150" stroke="#dee2e6"/>
+      <text x="200" y="170" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#0f5132">Score: 250</text>
+      <text x="200" y="190" font-family="Segoe UI, sans-serif" font-size="10" fill="#666">(Base + 2 ExtIDs)</text>
+    </g>
+
+    <g transform="translate(20, 260)">
+      <text x="0" y="0" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#333">Decision Logic:</text>
+      <rect x="0" y="15" width="360" height="120" rx="4" fill="#f8f9fa" stroke="#ced4da"/>
+      
+      <text x="15" y="35" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">1. Max(ExtIDs) wins. (7344 wins)</text>
+      <text x="15" y="55" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">2. If Tie: Max(Hierarchy) wins.</text>
+      <text x="15" y="75" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">3. If Tie: Max(Attributes) wins.</text>
+      <text x="15" y="95" font-family="Segoe UI, sans-serif" font-size="11" fill="#333">4. If Tie: Lowest ID wins.</text>
+      
+      <text x="15" y="115" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#198754">SURVIVOR: ID 7344</text>
+    </g>
+  </g>
+
+  <!-- Connector 2 -->
+  <line x1="760" y1="400" x2="820" y2="400" stroke="#495057" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Phase 3 Content -->
+  <g transform="translate(820, 160)">
+    <text x="20" y="0" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#333">Transaction Steps:</text>
+
+    <!-- Step 1: Ext IDs -->
+    <g transform="translate(20, 20)">
+      <rect x="0" y="0" width="340" height="50" rx="4" fill="#fff" stroke="#6c757d"/>
+      <text x="10" y="20" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#0d6efd">1. Migrate External IDs</text>
+      <text x="10" y="38" font-family="Consolas, monospace" font-size="10" fill="#555">UPDATE... ON CONFLICT IGNORE</text>
+    </g>
+
+    <!-- Step 2: Names -->
+    <g transform="translate(20, 80)">
+      <rect x="0" y="0" width="340" height="50" rx="4" fill="#fff" stroke="#6c757d"/>
+      <text x="10" y="20" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#0d6efd">2. Migrate Names</text>
+      <text x="10" y="38" font-family="Consolas, monospace" font-size="10" fill="#555">UPDATE... ON CONFLICT IGNORE</text>
+    </g>
+
+    <!-- Step 3: Hierarchy -->
+    <g transform="translate(20, 140)">
+      <rect x="0" y="0" width="340" height="50" rx="4" fill="#fff" stroke="#6c757d"/>
+      <text x="10" y="20" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#0d6efd">3. Migrate Hierarchy</text>
+      <text x="10" y="38" font-family="Consolas, monospace" font-size="10" fill="#555">Reparent Children to Survivor</text>
+    </g>
+
+    <!-- Step 4: Attributes -->
+    <g transform="translate(20, 200)">
+      <rect x="0" y="0" width="340" height="50" rx="4" fill="#fff" stroke="#6c757d"/>
+      <text x="10" y="20" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#0d6efd">4. Migrate Attributes</text>
+      <text x="10" y="38" font-family="Consolas, monospace" font-size="10" fill="#555">UPDATE... ON CONFLICT IGNORE</text>
+    </g>
+
+    <!-- Step 5: Delete -->
+    <g transform="translate(20, 260)">
+      <rect x="0" y="0" width="340" height="50" rx="4" fill="#ffebee" stroke="#dc3545" stroke-width="2"/>
+      <text x="10" y="20" font-family="Segoe UI, sans-serif" font-size="12" font-weight="bold" fill="#dc3545">5. Delete Victim</text>
+      <text x="10" y="38" font-family="Consolas, monospace" font-size="10" fill="#555">DELETE FROM places WHERE id = VICTIM</text>
+    </g>
+    
+    <!-- Result -->
+    <g transform="translate(20, 340)">
+      <rect x="0" y="0" width="340" height="80" rx="4" fill="#d1e7dd" stroke="#198754" stroke-width="2" filter="url(#shadow)"/>
+      <text x="170" y="25" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="14" font-weight="bold" fill="#198754">Final State</text>
+      <text x="170" y="50" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#333">Survivor has merged data.</text>
+      <text x="170" y="65" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#333">Victim is removed.</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="600" y="880" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#6c757d">Generated by Copilot • 2025-11-24 • Logic: Safe Guard + Tiered Scoring</text>
+
+</svg>

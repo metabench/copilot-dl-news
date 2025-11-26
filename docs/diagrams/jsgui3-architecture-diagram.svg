@@ -1,0 +1,260 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="serverGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a90d9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#357abd;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="clientGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#50c878;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3da65c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="sharedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="controlGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e0e0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="flowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffa502;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.2"/>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+    <marker id="arrowheadBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4a90d9"/>
+    </marker>
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#50c878"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#fafafa"/>
+  
+  <!-- Title -->
+  <text x="600" y="45" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="bold" fill="#2c3e50">jsgui3 Isomorphic Architecture</text>
+  <text x="600" y="72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#7f8c8d">Same controls render on server (SSR) and activate on client</text>
+  
+  <!-- ============ SHARED CORE SECTION ============ -->
+  <g transform="translate(400, 95)">
+    <!-- Main box -->
+    <rect x="0" y="0" width="400" height="120" rx="12" fill="url(#sharedGrad)" filter="url(#shadow)"/>
+    <text x="200" y="30" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="bold" fill="white">jsgui3-html</text>
+    <text x="200" y="50" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">Core Isomorphic Library</text>
+    
+    <!-- Features -->
+    <rect x="20" y="65" width="110" height="40" rx="6" fill="rgba(255,255,255,0.2)"/>
+    <text x="75" y="82" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="white">Control</text>
+    <text x="75" y="96" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">Base Class</text>
+    
+    <rect x="145" y="65" width="110" height="40" rx="6" fill="rgba(255,255,255,0.2)"/>
+    <text x="200" y="82" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="white">Page_Context</text>
+    <text x="200" y="96" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">Render State</text>
+    
+    <rect x="270" y="65" width="110" height="40" rx="6" fill="rgba(255,255,255,0.2)"/>
+    <text x="325" y="82" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="white">String_Control</text>
+    <text x="325" y="96" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">Text Wrapper</text>
+  </g>
+  
+  <!-- Fork arrows from shared -->
+  <path d="M 600 215 L 600 245 L 300 245 L 300 280" stroke="#9b59b6" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 600 215 L 600 245 L 900 245 L 900 280" stroke="#9b59b6" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- ============ SERVER SIDE ============ -->
+  <g transform="translate(50, 290)">
+    <!-- Server environment box -->
+    <rect x="0" y="0" width="500" height="380" rx="15" fill="#e8f4fc" stroke="#4a90d9" stroke-width="2"/>
+    <rect x="0" y="0" width="500" height="45" rx="15" fill="url(#serverGrad)"/>
+    <rect x="0" y="30" width="500" height="15" fill="url(#serverGrad)"/>
+    
+    <!-- Server icon -->
+    <rect x="20" y="12" width="20" height="22" rx="2" fill="white" opacity="0.9"/>
+    <rect x="23" y="15" width="14" height="3" fill="#4a90d9"/>
+    <rect x="23" y="20" width="14" height="3" fill="#4a90d9"/>
+    <rect x="23" y="25" width="14" height="3" fill="#4a90d9"/>
+    
+    <text x="55" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" fill="white">Server (Node.js)</text>
+    <text x="420" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.8)">SSR Rendering</text>
+    
+    <!-- Express Server -->
+    <rect x="20" y="60" width="220" height="90" rx="8" fill="url(#controlGrad)" filter="url(#shadow)"/>
+    <text x="130" y="85" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Express Server</text>
+    <text x="130" y="105" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="#666">dataExplorerServer.js</text>
+    <text x="130" y="125" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">Routes • API • Static files</text>
+    <text x="130" y="140" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#4a90d9">--detached • --status • --stop</text>
+    
+    <!-- Controls box -->
+    <rect x="260" y="60" width="220" height="90" rx="8" fill="url(#controlGrad)" filter="url(#shadow)"/>
+    <text x="370" y="85" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Server Controls</text>
+    <text x="370" y="105" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="#666">require("jsgui3-html")</text>
+    <text x="370" y="125" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">Build DOM structure</text>
+    <text x="370" y="140" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">as JavaScript objects</text>
+    
+    <!-- Control hierarchy -->
+    <rect x="20" y="165" width="460" height="120" rx="8" fill="white" stroke="#ccc" stroke-dasharray="4"/>
+    <text x="250" y="185" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#666">Control Hierarchy</text>
+    
+    <!-- Hierarchy boxes -->
+    <rect x="180" y="195" width="140" height="28" rx="5" fill="#9b59b6"/>
+    <text x="250" y="214" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="white">jsgui.Control</text>
+    
+    <path d="M 250 223 L 250 235 L 100 235 L 100 245" stroke="#666" stroke-width="1.5" fill="none"/>
+    <path d="M 250 223 L 250 235 L 250 245" stroke="#666" stroke-width="1.5" fill="none"/>
+    <path d="M 250 223 L 250 235 L 400 235 L 400 245" stroke="#666" stroke-width="1.5" fill="none"/>
+    
+    <rect x="40" y="245" width="120" height="28" rx="5" fill="#4a90d9"/>
+    <text x="100" y="264" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="white">BaseAppControl</text>
+    
+    <rect x="190" y="245" width="120" height="28" rx="5" fill="#4a90d9"/>
+    <text x="250" y="264" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="white">TableControl</text>
+    
+    <rect x="340" y="245" width="120" height="28" rx="5" fill="#4a90d9"/>
+    <text x="400" y="264" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="white">FormControl</text>
+    
+    <!-- Render output -->
+    <rect x="20" y="300" width="460" height="65" rx="8" fill="white" filter="url(#shadow)"/>
+    <text x="40" y="322" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#2c3e50">Output: HTML String</text>
+    <text x="40" y="345" font-family="Courier New, monospace" font-size="11" fill="#666">control.all_html_render()</text>
+    <text x="295" y="345" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#888">→ "&lt;div class="my-control"&gt;...&lt;/div&gt;"</text>
+  </g>
+  
+  <!-- ============ CLIENT SIDE ============ -->
+  <g transform="translate(650, 290)">
+    <!-- Client environment box -->
+    <rect x="0" y="0" width="500" height="380" rx="15" fill="#e8f8ee" stroke="#50c878" stroke-width="2"/>
+    <rect x="0" y="0" width="500" height="45" rx="15" fill="url(#clientGrad)"/>
+    <rect x="0" y="30" width="500" height="15" fill="url(#clientGrad)"/>
+    
+    <!-- Browser icon -->
+    <circle cx="30" cy="22" r="12" fill="white" opacity="0.9"/>
+    <circle cx="30" cy="22" r="8" fill="none" stroke="#50c878" stroke-width="2"/>
+    <line x1="30" y1="14" x2="30" y2="30" stroke="#50c878" stroke-width="1.5"/>
+    <line x1="22" y1="22" x2="38" y2="22" stroke="#50c878" stroke-width="1.5"/>
+    
+    <text x="55" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" fill="white">Client (Browser)</text>
+    <text x="420" y="30" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.8)">Activation</text>
+    
+    <!-- Bundle -->
+    <rect x="20" y="60" width="220" height="90" rx="8" fill="url(#controlGrad)" filter="url(#shadow)"/>
+    <text x="130" y="85" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Client Bundle</text>
+    <text x="130" y="105" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="#666">ui-client.js</text>
+    <text x="130" y="125" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">Built with esbuild</text>
+    <text x="130" y="140" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#50c878">npm run ui:client-build</text>
+    
+    <!-- Client Controls -->
+    <rect x="260" y="60" width="220" height="90" rx="8" fill="url(#controlGrad)" filter="url(#shadow)"/>
+    <text x="370" y="85" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Client Controls</text>
+    <text x="370" y="105" text-anchor="middle" font-family="Courier New, monospace" font-size="11" fill="#666">require("jsgui3-client")</text>
+    <text x="370" y="125" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">Extends jsgui3-html</text>
+    <text x="370" y="140" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">+ activate() lifecycle</text>
+    
+    <!-- Activation flow -->
+    <rect x="20" y="165" width="460" height="120" rx="8" fill="white" stroke="#ccc" stroke-dasharray="4"/>
+    <text x="250" y="185" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#666">Activation Flow</text>
+    
+    <!-- Step boxes -->
+    <rect x="30" y="200" width="130" height="70" rx="6" fill="#e8f8ee" stroke="#50c878"/>
+    <text x="95" y="220" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold" fill="#2c3e50">1. Find Elements</text>
+    <text x="95" y="238" text-anchor="middle" font-family="Courier New, monospace" font-size="8" fill="#666">[data-control=</text>
+    <text x="95" y="250" text-anchor="middle" font-family="Courier New, monospace" font-size="8" fill="#666">"my_control"]</text>
+    
+    <path d="M 165 235 L 185 235" stroke="#50c878" stroke-width="2" marker-end="url(#arrowheadGreen)"/>
+    
+    <rect x="190" y="200" width="130" height="70" rx="6" fill="#e8f8ee" stroke="#50c878"/>
+    <text x="255" y="220" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold" fill="#2c3e50">2. Create Control</text>
+    <text x="255" y="238" text-anchor="middle" font-family="Courier New, monospace" font-size="8" fill="#666">new Control({</text>
+    <text x="255" y="250" text-anchor="middle" font-family="Courier New, monospace" font-size="8" fill="#666">context, el })</text>
+    
+    <path d="M 325 235 L 345 235" stroke="#50c878" stroke-width="2" marker-end="url(#arrowheadGreen)"/>
+    
+    <rect x="350" y="200" width="120" height="70" rx="6" fill="#e8f8ee" stroke="#50c878"/>
+    <text x="410" y="220" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="bold" fill="#2c3e50">3. Activate</text>
+    <text x="410" y="238" text-anchor="middle" font-family="Courier New, monospace" font-size="8" fill="#666">control</text>
+    <text x="410" y="250" text-anchor="middle" font-family="Courier New, monospace" font-size="8" fill="#666">.activate()</text>
+    
+    <!-- Event binding -->
+    <rect x="20" y="300" width="460" height="65" rx="8" fill="white" filter="url(#shadow)"/>
+    <text x="40" y="322" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="bold" fill="#2c3e50">Result: Interactive DOM</text>
+    <text x="40" y="345" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#888">Events bound • State managed • API calls enabled</text>
+  </g>
+  
+  <!-- ============ DATA FLOW ARROW ============ -->
+  <g transform="translate(550, 460)">
+    <rect x="0" y="0" width="100" height="50" rx="8" fill="url(#flowGrad)" filter="url(#shadow)"/>
+    <text x="50" y="22" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="white">HTML</text>
+    <text x="50" y="38" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="bold" fill="white">Response</text>
+    
+    <path d="M -10 25 L 0 25" stroke="#ff6b6b" stroke-width="3" marker-end="url(#arrowhead)"/>
+    <path d="M 100 25 L 110 25" stroke="#ffa502" stroke-width="3" marker-end="url(#arrowhead)"/>
+  </g>
+  
+  <!-- ============ KEY CONCEPTS SECTION ============ -->
+  <g transform="translate(50, 700)">
+    <rect x="0" y="0" width="1100" height="180" rx="12" fill="white" stroke="#ddd" filter="url(#shadow)"/>
+    <text x="550" y="28" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold" fill="#2c3e50">Key Concepts</text>
+    
+    <!-- Concept 1 -->
+    <rect x="20" y="45" width="200" height="120" rx="8" fill="#f8f9fa"/>
+    <circle cx="45" cy="70" r="15" fill="#9b59b6"/>
+    <text x="45" y="75" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold" fill="white">1</text>
+    <text x="70" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Context Flow</text>
+    <text x="30" y="95" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Create once per page</text>
+    <text x="30" y="110" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Pass to all children</text>
+    <text x="30" y="130" font-family="Courier New, monospace" font-size="9" fill="#888">this.context → child</text>
+    <text x="30" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="9" fill="#e74c3c">⚠ Never forget context!</text>
+    
+    <!-- Concept 2 -->
+    <rect x="240" y="45" width="200" height="120" rx="8" fill="#f8f9fa"/>
+    <circle cx="265" cy="70" r="15" fill="#4a90d9"/>
+    <text x="265" y="75" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold" fill="white">2</text>
+    <text x="290" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Compose Timing</text>
+    <text x="250" y="95" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Set properties first</text>
+    <text x="250" y="110" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Then call compose()</text>
+    <text x="250" y="130" font-family="Courier New, monospace" font-size="9" fill="#888">if (!spec.el)</text>
+    <text x="250" y="145" font-family="Courier New, monospace" font-size="9" fill="#888">  this.compose()</text>
+    
+    <!-- Concept 3 -->
+    <rect x="460" y="45" width="200" height="120" rx="8" fill="#f8f9fa"/>
+    <circle cx="485" cy="70" r="15" fill="#50c878"/>
+    <text x="485" y="75" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold" fill="white">3</text>
+    <text x="510" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Adding Text</text>
+    <text x="470" y="95" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Strings auto-wrap!</text>
+    <text x="470" y="115" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#27ae60">✓ el.add("text")</text>
+    <text x="470" y="135" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#27ae60">✓ el.add(new</text>
+    <text x="480" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">  String_Control(...))</text>
+    
+    <!-- Concept 4 -->
+    <rect x="680" y="45" width="200" height="120" rx="8" fill="#f8f9fa"/>
+    <circle cx="705" cy="70" r="15" fill="#e74c3c"/>
+    <text x="705" y="75" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold" fill="white">4</text>
+    <text x="730" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">Activation</text>
+    <text x="690" y="95" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Pass existing DOM</text>
+    <text x="690" y="110" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">to skip compose()</text>
+    <text x="690" y="130" font-family="Courier New, monospace" font-size="9" fill="#888">{ context, el }</text>
+    <text x="690" y="145" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#666">Then activate()</text>
+    
+    <!-- Concept 5 -->
+    <rect x="900" y="45" width="180" height="120" rx="8" fill="#f8f9fa"/>
+    <circle cx="925" cy="70" r="15" fill="#f39c12"/>
+    <text x="925" y="75" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold" fill="white">5</text>
+    <text x="950" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="bold" fill="#2c3e50">BEM Classes</text>
+    <text x="910" y="95" font-family="Courier New, monospace" font-size="9" fill="#666">.block</text>
+    <text x="910" y="110" font-family="Courier New, monospace" font-size="9" fill="#666">.block__element</text>
+    <text x="910" y="125" font-family="Courier New, monospace" font-size="9" fill="#666">.block--modifier</text>
+    <text x="910" y="145" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#888">Consistent naming</text>
+  </g>
+  
+  <!-- Version info -->
+  <text x="1150" y="885" text-anchor="end" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#bbb">jsgui3-html Architecture Guide • November 2025</text>
+</svg>

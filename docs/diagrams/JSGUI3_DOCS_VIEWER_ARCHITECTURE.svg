@@ -1,0 +1,516 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 2200">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="serverGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="clientGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="controlGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#db2777;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="featureGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#14b8a6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d9488;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="dataGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="panelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadows -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+    
+    <!-- Arrows -->
+    <marker id="arrowEnd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowEndGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrowEndBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1600" height="2200" fill="#0f172a"/>
+  
+  <!-- Title -->
+  <rect x="30" y="20" width="1540" height="80" rx="12" fill="url(#headerGrad)" filter="url(#dropShadow)"/>
+  <text x="800" y="55" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="700" fill="white" text-anchor="middle">
+    Jsgui3 in the Documentation Viewer Server
+  </text>
+  <text x="800" y="78" font-family="JetBrains Mono, monospace" font-size="13" fill="#e0e7ff" text-anchor="middle">
+    src/ui/server/docsViewer/ • Isomorphic Server-Side Rendering + Client Activation
+  </text>
+
+  <!-- SECTION 1: High-Level Architecture -->
+  <g transform="translate(30, 120)">
+    <rect width="1540" height="340" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#60a5fa">
+      1. High-Level Architecture: Request → jsgui3 → HTML
+    </text>
+    
+    <!-- Browser Request -->
+    <g transform="translate(60, 70)">
+      <rect width="160" height="100" rx="10" fill="#334155" filter="url(#softShadow)"/>
+      <text x="80" y="30" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc" text-anchor="middle">🌐 Browser</text>
+      <text x="80" y="55" font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8" text-anchor="middle">GET /?doc=FILE.md</text>
+      <text x="80" y="75" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b" text-anchor="middle">HTTP Request</text>
+    </g>
+    
+    <!-- Arrow 1 -->
+    <line x1="230" y1="120" x2="300" y2="120" stroke="#64748b" stroke-width="2" marker-end="url(#arrowEnd)"/>
+    
+    <!-- Express Server -->
+    <g transform="translate(310, 70)">
+      <rect width="180" height="100" rx="10" fill="url(#serverGrad)" filter="url(#softShadow)"/>
+      <text x="90" y="30" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">Express Server</text>
+      <text x="90" y="52" font-family="JetBrains Mono, monospace" font-size="10" fill="#d1fae5" text-anchor="middle">server.js</text>
+      <text x="90" y="70" font-family="JetBrains Mono, monospace" font-size="9" fill="#a7f3d0" text-anchor="middle">• Route handling</text>
+      <text x="90" y="85" font-family="JetBrains Mono, monospace" font-size="9" fill="#a7f3d0" text-anchor="middle">• jsgui.Page_Context()</text>
+    </g>
+    
+    <!-- Arrow 2 -->
+    <line x1="500" y1="120" x2="570" y2="120" stroke="#64748b" stroke-width="2" marker-end="url(#arrowEnd)"/>
+    
+    <!-- jsgui3 Controls -->
+    <g transform="translate(580, 55)">
+      <rect width="240" height="130" rx="10" fill="url(#controlGrad)" filter="url(#softShadow)"/>
+      <text x="120" y="28" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">jsgui3 Control Tree</text>
+      <text x="120" y="50" font-family="JetBrains Mono, monospace" font-size="10" fill="#fef3c7" text-anchor="middle">DocAppControl</text>
+      <text x="70" y="72" font-family="JetBrains Mono, monospace" font-size="9" fill="#fde68a" text-anchor="start">├─ DocNavControl</text>
+      <text x="70" y="88" font-family="JetBrains Mono, monospace" font-size="9" fill="#fde68a" text-anchor="start">├─ DocViewerControl</text>
+      <text x="70" y="104" font-family="JetBrains Mono, monospace" font-size="9" fill="#fde68a" text-anchor="start">└─ SVG Controls (parsed)</text>
+      <text x="120" y="120" font-family="JetBrains Mono, monospace" font-size="8" fill="#fcd34d" text-anchor="middle">class ... extends jsgui.Control</text>
+    </g>
+    
+    <!-- Arrow 3 -->
+    <line x1="830" y1="120" x2="900" y2="120" stroke="#64748b" stroke-width="2" marker-end="url(#arrowEnd)"/>
+    
+    <!-- all_html_render -->
+    <g transform="translate(910, 70)">
+      <rect width="200" height="100" rx="10" fill="url(#coreGrad)" filter="url(#softShadow)"/>
+      <text x="100" y="28" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="white" text-anchor="middle">all_html_render()</text>
+      <text x="100" y="50" font-family="JetBrains Mono, monospace" font-size="10" fill="#fbcfe8" text-anchor="middle">jsgui3-html core</text>
+      <text x="100" y="70" font-family="JetBrains Mono, monospace" font-size="9" fill="#f9a8d4" text-anchor="middle">Recursive tree walk</text>
+      <text x="100" y="85" font-family="JetBrains Mono, monospace" font-size="9" fill="#f9a8d4" text-anchor="middle">→ Full HTML string</text>
+    </g>
+    
+    <!-- Arrow 4 -->
+    <line x1="1120" y1="120" x2="1190" y2="120" stroke="#64748b" stroke-width="2" marker-end="url(#arrowEnd)"/>
+    
+    <!-- HTML Response -->
+    <g transform="translate(1200, 70)">
+      <rect width="160" height="100" rx="10" fill="#334155" filter="url(#softShadow)"/>
+      <text x="80" y="28" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc" text-anchor="middle">HTML Response</text>
+      <text x="80" y="50" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8" text-anchor="middle">&lt;!DOCTYPE html&gt;</text>
+      <text x="80" y="68" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="middle">Complete page</text>
+      <text x="80" y="83" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="middle">with jsgui markers</text>
+    </g>
+    
+    <!-- Summary text -->
+    <g transform="translate(60, 200)">
+      <rect width="1420" height="110" rx="8" fill="#1e293b" opacity="0.6"/>
+      <text x="20" y="28" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0">How It Works:</text>
+      <text x="20" y="50" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">1. Express route receives request → creates jsgui.Page_Context() for the render</text>
+      <text x="20" y="68" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">2. Instantiates DocAppControl with { context, docTree, selectedPath, docContent, filters }</text>
+      <text x="20" y="86" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">3. Control.compose() builds nested controls: nav tree, viewer, SVG elements, buttons, inputs</text>
+      <text x="20" y="104" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">4. all_html_render() walks the tree, serializes dom.attributes + children → complete HTML string</text>
+    </g>
+  </g>
+
+  <!-- SECTION 2: jsgui3 Control Hierarchy -->
+  <g transform="translate(30, 480)">
+    <rect width="760" height="480" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#f59e0b">
+      2. Control Hierarchy &amp; Composition
+    </text>
+    
+    <!-- DocAppControl -->
+    <g transform="translate(40, 60)">
+      <rect width="680" height="70" rx="8" fill="url(#controlGrad)" filter="url(#softShadow)"/>
+      <text x="20" y="28" font-family="JetBrains Mono, monospace" font-size="14" font-weight="600" fill="white">DocAppControl</text>
+      <text x="20" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#fef3c7">Main layout control • 2-column responsive layout</text>
+      <text x="20" y="62" font-family="JetBrains Mono, monospace" font-size="9" fill="#fcd34d">tagName: "div" • class: "doc-app" • data-jsgui-id="doc-app"</text>
+    </g>
+    
+    <!-- Header branch -->
+    <line x1="100" y1="130" x2="100" y2="155" stroke="#64748b" stroke-width="2"/>
+    <line x1="100" y1="155" x2="140" y2="155" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(140, 140)">
+      <rect width="300" height="50" rx="6" fill="#475569" filter="url(#softShadow)"/>
+      <text x="15" y="22" font-family="JetBrains Mono, monospace" font-size="12" fill="#f8fafc">header (doc-app__header)</text>
+      <text x="15" y="38" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Logo, title, theme toggle button</text>
+    </g>
+    
+    <!-- Layout branch -->
+    <line x1="100" y1="155" x2="100" y2="210" stroke="#64748b" stroke-width="2"/>
+    <line x1="100" y1="210" x2="140" y2="210" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(140, 195)">
+      <rect width="580" height="50" rx="6" fill="#475569" filter="url(#softShadow)"/>
+      <text x="15" y="22" font-family="JetBrains Mono, monospace" font-size="12" fill="#f8fafc">div (doc-app__layout)</text>
+      <text x="15" y="38" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Flex container for 2-column layout</text>
+    </g>
+    
+    <!-- Nav Column -->
+    <line x1="180" y1="245" x2="180" y2="270" stroke="#64748b" stroke-width="2"/>
+    <line x1="180" y1="270" x2="220" y2="270" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(220, 255)">
+      <rect width="260" height="80" rx="6" fill="url(#featureGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="20" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600" fill="white">DocNavControl</text>
+      <text x="15" y="38" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#ccfbf1">Collapsible folder tree</text>
+      <text x="15" y="52" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#ccfbf1">Search input, file type filters</text>
+      <text x="15" y="66" font-family="JetBrains Mono, monospace" font-size="9" fill="#99f6e4">&lt;details&gt;/&lt;summary&gt; for folders</text>
+    </g>
+    
+    <!-- Content Column -->
+    <line x1="180" y1="270" x2="180" y2="355" stroke="#64748b" stroke-width="2"/>
+    <line x1="180" y1="355" x2="220" y2="355" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(220, 340)">
+      <rect width="260" height="80" rx="6" fill="url(#dataGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="20" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600" fill="white">DocViewerControl</text>
+      <text x="15" y="38" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#e9d5ff">Breadcrumb nav, toolbar</text>
+      <text x="15" y="52" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#e9d5ff">Markdown content OR SVG</text>
+      <text x="15" y="66" font-family="JetBrains Mono, monospace" font-size="9" fill="#d8b4fe">DocContentControl for raw HTML</text>
+    </g>
+    
+    <!-- SVG Rendering branch -->
+    <line x1="360" y1="420" x2="360" y2="445" stroke="#64748b" stroke-width="2"/>
+    <line x1="360" y1="445" x2="400" y2="445" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(400, 430)">
+      <rect width="300" height="40" rx="6" fill="#7c3aed" filter="url(#softShadow)"/>
+      <text x="15" y="18" font-family="JetBrains Mono, monospace" font-size="11" fill="white">parseSvgToControls(context, svg)</text>
+      <text x="15" y="32" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#e9d5ff">XML parser → jsgui.Control tree for SVG</text>
+    </g>
+  </g>
+
+  <!-- SECTION 3: jsgui3 Core Features Used -->
+  <g transform="translate(810, 480)">
+    <rect width="760" height="480" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#ec4899">
+      3. Jsgui3 Platform Features Used
+    </text>
+    
+    <!-- Feature 1: Control Class -->
+    <g transform="translate(30, 55)">
+      <rect width="340" height="90" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">jsgui.Control (Base Class)</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• constructor({ context, tagName })</text>
+      <text x="15" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• add(childControl) - tree composition</text>
+      <text x="15" y="72" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• add_class(className) - CSS classes</text>
+      <text x="15" y="86" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• dom.attributes[key] = value</text>
+    </g>
+    
+    <!-- Feature 2: Page Context -->
+    <g transform="translate(390, 55)">
+      <rect width="340" height="90" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">jsgui.Page_Context</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Shared state for render pass</text>
+      <text x="15" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Control ID generation</text>
+      <text x="15" y="72" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• map_Controls registry</text>
+      <text x="15" y="86" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Passed to every child control</text>
+    </g>
+    
+    <!-- Feature 3: String Control -->
+    <g transform="translate(30, 155)">
+      <rect width="340" height="70" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">jsgui.String_Control</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Wraps text content in controls</text>
+      <text x="15" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• new StringControl({ text: "Hello" })</text>
+    </g>
+    
+    <!-- Feature 4: all_html_render -->
+    <g transform="translate(390, 155)">
+      <rect width="340" height="70" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">control.all_html_render()</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Recursively renders tree to HTML</text>
+      <text x="15" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Override for custom output</text>
+    </g>
+    
+    <!-- Feature 5: DOM Model -->
+    <g transform="translate(30, 235)">
+      <rect width="700" height="80" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">control.dom (Virtual DOM Model)</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• dom.attributes = { "data-jsgui-control": "docs_search", type: "text", ... }</text>
+      <text x="15" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Attributes serialized during render: &lt;input type="text" data-jsgui-control="docs_search"&gt;</text>
+      <text x="15" y="72" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• data-jsgui-id="..." markers enable client-side activation</text>
+    </g>
+    
+    <!-- Feature 6: Composition Pattern -->
+    <g transform="translate(30, 325)">
+      <rect width="700" height="100" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">Composition Pattern (compose method)</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// In constructor: if (!spec.el) { this.compose(); }</text>
+      <text x="15" y="60" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">compose() {</text>
+      <text x="15" y="74" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  const child = new jsgui.Control({ context: this.context, tagName: "div" });</text>
+      <text x="15" y="88" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  this.add(child); // Builds tree declaratively</text>
+    </g>
+    
+    <!-- How jsgui3 implements -->
+    <g transform="translate(30, 435)">
+      <rect width="700" height="35" rx="6" fill="#1e40af" opacity="0.4"/>
+      <text x="15" y="23" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#93c5fd">
+        jsgui3-html implements SSR via prototype methods on Control that walk the child tree and serialize
+      </text>
+    </g>
+  </g>
+
+  <!-- SECTION 4: SVG Rendering Pipeline -->
+  <g transform="translate(30, 980)">
+    <rect width="760" height="360" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#14b8a6">
+      4. SVG Rendering Pipeline (jsgui3 Integration)
+    </text>
+    
+    <!-- Step 1 -->
+    <g transform="translate(40, 60)">
+      <rect width="200" height="70" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="100" y="24" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#f8fafc" text-anchor="middle">1. Raw SVG File</text>
+      <text x="100" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8" text-anchor="middle">&lt;svg viewBox="..."&gt;</text>
+      <text x="100" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8" text-anchor="middle">  &lt;rect ...&gt;</text>
+    </g>
+    
+    <line x1="250" y1="95" x2="290" y2="95" stroke="#14b8a6" stroke-width="2" marker-end="url(#arrowEnd)"/>
+    
+    <!-- Step 2 -->
+    <g transform="translate(300, 60)">
+      <rect width="200" height="70" rx="8" fill="url(#featureGrad)" filter="url(#softShadow)"/>
+      <text x="100" y="24" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="white" text-anchor="middle">2. XML Parser</text>
+      <text x="100" y="44" font-family="JetBrains Mono, monospace" font-size="10" fill="#ccfbf1" text-anchor="middle">fast-xml-parser</text>
+      <text x="100" y="58" font-family="JetBrains Mono, monospace" font-size="10" fill="#ccfbf1" text-anchor="middle">→ JS object tree</text>
+    </g>
+    
+    <line x1="510" y1="95" x2="550" y2="95" stroke="#14b8a6" stroke-width="2" marker-end="url(#arrowEnd)"/>
+    
+    <!-- Step 3 -->
+    <g transform="translate(560, 60)">
+      <rect width="170" height="70" rx="8" fill="url(#controlGrad)" filter="url(#softShadow)"/>
+      <text x="85" y="24" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="white" text-anchor="middle">3. Convert</text>
+      <text x="85" y="44" font-family="JetBrains Mono, monospace" font-size="9" fill="#fef3c7" text-anchor="middle">convertNodeToControl()</text>
+      <text x="85" y="58" font-family="JetBrains Mono, monospace" font-size="9" fill="#fef3c7" text-anchor="middle">→ jsgui.Control tree</text>
+    </g>
+    
+    <!-- Code example -->
+    <g transform="translate(40, 145)">
+      <rect width="690" height="195" rx="8" fill="#1e293b"/>
+      <text x="15" y="24" font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8">// svgRenderer.js - convertNodeToControl()</text>
+      <text x="15" y="44" font-family="JetBrains Mono, monospace" font-size="11" fill="#f8fafc">function convertNodeToControl(context, tagName, nodeData) {</text>
+      <text x="15" y="62" font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8">  // Create jsgui Control for each SVG element</text>
+      <text x="15" y="80" font-family="JetBrains Mono, monospace" font-size="11" fill="#10b981">  const control = new jsgui.Control({ context, tagName });</text>
+      <text x="15" y="98" font-family="JetBrains Mono, monospace" font-size="11" fill="#f8fafc">  </text>
+      <text x="15" y="116" font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8">  // Copy attributes from parsed XML to jsgui dom.attributes</text>
+      <text x="15" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#3b82f6">  control.dom.attributes[attrName] = String(value);</text>
+      <text x="15" y="152" font-family="JetBrains Mono, monospace" font-size="11" fill="#f8fafc">  </text>
+      <text x="15" y="170" font-family="JetBrains Mono, monospace" font-size="11" fill="#94a3b8">  // Recursively process children → control.add(childControl)</text>
+      <text x="15" y="188" font-family="JetBrains Mono, monospace" font-size="11" fill="#f8fafc">  return control; // Full SVG as jsgui Control tree</text>
+    </g>
+  </g>
+
+  <!-- SECTION 5: Client-Side Activation -->
+  <g transform="translate(810, 980)">
+    <rect width="760" height="360" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#3b82f6">
+      5. Client-Side Activation (AKA Hydration)
+    </text>
+    
+    <!-- Server marker -->
+    <g transform="translate(40, 60)">
+      <rect width="320" height="90" rx="8" fill="url(#serverGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="white">Server: Embed Markers</text>
+      <text x="15" y="46" font-family="JetBrains Mono, monospace" font-size="10" fill="#d1fae5">data-jsgui-control="docs_search"</text>
+      <text x="15" y="62" font-family="JetBrains Mono, monospace" font-size="10" fill="#d1fae5">data-jsgui-control="docs_theme_toggle"</text>
+      <text x="15" y="78" font-family="JetBrains Mono, monospace" font-size="10" fill="#d1fae5">data-jsgui-control="docs_file_filter"</text>
+    </g>
+    
+    <!-- Arrow -->
+    <path d="M370,105 Q420,105 420,155 Q420,205 370,205" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrowEnd)"/>
+    
+    <!-- Client activation -->
+    <g transform="translate(40, 165)">
+      <rect width="320" height="90" rx="8" fill="url(#clientGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="white">Client: Activate Controls</text>
+      <text x="15" y="46" font-family="JetBrains Mono, monospace" font-size="10" fill="#bfdbfe">window.onload → activate()</text>
+      <text x="15" y="62" font-family="JetBrains Mono, monospace" font-size="10" fill="#bfdbfe">DOM walk with data-jsgui-id</text>
+      <text x="15" y="78" font-family="JetBrains Mono, monospace" font-size="10" fill="#bfdbfe">→ ctrl.activate(dom.el)</text>
+    </g>
+    
+    <!-- Binding Plugin -->
+    <g transform="translate(380, 60)">
+      <rect width="350" height="195" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">Activation Process Detail</text>
+      <text x="15" y="48" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// 1. window.load triggers activate()</text>
+      <text x="15" y="66" font-family="JetBrains Mono, monospace" font-size="10" fill="#a78bfa">ctx = new Client_Page_Context({ document })</text>
+      <text x="15" y="84" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// 2. Recursive DOM walk (depth-first)</text>
+      <text x="15" y="102" font-family="JetBrains Mono, monospace" font-size="10" fill="#a78bfa">recursive_dom_iterate_depth2(document, el =&gt; {</text>
+      <text x="15" y="120" font-family="JetBrains Mono, monospace" font-size="10" fill="#a78bfa">  jsgui_id = el.getAttribute("data-jsgui-id")</text>
+      <text x="15" y="138" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// 3. Lookup control in map_controls registry</text>
+      <text x="15" y="156" font-family="JetBrains Mono, monospace" font-size="10" fill="#a78bfa">  ctrl = map_controls[jsgui_id]</text>
+      <text x="15" y="174" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">  ctrl.activate(ctrl.dom.el) // Live!</text>
+      <text x="15" y="190" font-family="JetBrains Mono, monospace" font-size="10" fill="#a78bfa">})</text>
+    </g>
+    
+    <!-- Note -->
+    <g transform="translate(40, 270)">
+      <rect width="690" height="70" rx="6" fill="#1e40af" opacity="0.3"/>
+      <text x="15" y="22" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#93c5fd">Isomorphic Pattern:</text>
+      <text x="15" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">• Server: jsgui3-html renders complete HTML (fast first paint, SEO-friendly)</text>
+      <text x="15" y="58" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">• Client: jsgui3-client activates interactive controls via data-jsgui-id markers</text>
+    </g>
+  </g>
+
+  <!-- SECTION 6: Implementation Details -->
+  <g transform="translate(30, 1360)">
+    <rect width="1540" height="420" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#a78bfa">
+      6. How Jsgui3 Implements These Features (Under the Hood)
+    </text>
+    
+    <!-- Control Class Internals -->
+    <g transform="translate(30, 55)">
+      <rect width="480" height="175" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc">jsgui.Control Internals</text>
+      <text x="15" y="48" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">class Control {</text>
+      <text x="15" y="64" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  constructor(spec) {</text>
+      <text x="15" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">    this.context = spec.context;        // Page_Context</text>
+      <text x="15" y="96" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">    this.dom = { tagName, attributes }; // Virtual DOM</text>
+      <text x="15" y="112" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">    this.__children = [];               // Child controls</text>
+      <text x="15" y="128" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  }</text>
+      <text x="15" y="144" font-family="JetBrains Mono, monospace" font-size="10" fill="#3b82f6">  add(child) { this.__children.push(child); }</text>
+      <text x="15" y="160" font-family="JetBrains Mono, monospace" font-size="10" fill="#3b82f6">  add_class(c) { /* manipulates dom.className */ }</text>
+    </g>
+    
+    <!-- all_html_render Internals -->
+    <g transform="translate(530, 55)">
+      <rect width="480" height="175" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc">all_html_render() Implementation</text>
+      <text x="15" y="48" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">all_html_render() {</text>
+      <text x="15" y="64" font-family="JetBrains Mono, monospace" font-size="10" fill="#f59e0b">  // 1. Serialize attributes to string</text>
+      <text x="15" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">  let attrs = this.renderDomAttributes();</text>
+      <text x="15" y="96" font-family="JetBrains Mono, monospace" font-size="10" fill="#f59e0b">  // 2. Recursively render children</text>
+      <text x="15" y="112" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">  let inner = this.__children.map(c =&gt;</text>
+      <text x="15" y="128" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">    c.all_html_render()).join('');</text>
+      <text x="15" y="144" font-family="JetBrains Mono, monospace" font-size="10" fill="#f59e0b">  // 3. Wrap in opening/closing tags</text>
+      <text x="15" y="160" font-family="JetBrains Mono, monospace" font-size="10" fill="#3b82f6">  return `&lt;${tag}${attrs}&gt;${inner}&lt;/${tag}&gt;`;</text>
+    </g>
+    
+    <!-- Page Context Internals -->
+    <g transform="translate(1030, 55)">
+      <rect width="480" height="175" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc">Client-Side Activation Internals</text>
+      <text x="15" y="48" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">class Client_Page_Context {</text>
+      <text x="15" y="64" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">  map_els = {};         // jsgui_id → DOM element</text>
+      <text x="15" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">  map_controls = {};    // jsgui_id → Control</text>
+      <text x="15" y="96" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">}</text>
+      <text x="15" y="120" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">• register_el(el) reads data-jsgui-id</text>
+      <text x="15" y="138" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">• Maps DOM element to existing Control</text>
+      <text x="15" y="156" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">• ctrl.activate(el) wires up events</text>
+    </g>
+    
+    <!-- Activation flow diagram -->
+    <g transform="translate(30, 245)">
+      <rect width="730" height="150" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc">Full Activation Flow (window.load)</text>
+      <text x="15" y="50" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// 1. Create client context with document ref</text>
+      <text x="15" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">const page_context = new jsgui.Client_Page_Context({ document });</text>
+      <text x="15" y="86" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// 2. Register custom controls before activation</text>
+      <text x="15" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">jsgui.pre_activate(page_context); // Hook for custom setup</text>
+      <text x="15" y="122" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// 3. Core activation: DOM walk → Control.activate()</text>
+      <text x="15" y="140" font-family="JetBrains Mono, monospace" font-size="10" fill="#3b82f6">jsgui.activate(page_context); // Raises 'activate' event</text>
+    </g>
+    
+    <!-- Composition pattern / Binding Plugin -->
+    <g transform="translate(780, 245)">
+      <rect width="730" height="150" rx="8" fill="#334155" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f8fafc">Binding Plugin (Optional, for Reactive UI)</text>
+      <text x="15" y="50" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// bindingPlugin.js adds reactive data binding to controls</text>
+      <text x="15" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#ec4899">control.ensureBindingDataModel()  // Create Data_Object</text>
+      <text x="15" y="86" font-family="JetBrains Mono, monospace" font-size="10" fill="#ec4899">control.bindDataToView(bindings)  // Wire data → view</text>
+      <text x="15" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// Model changes auto-update DOM attributes/classes</text>
+      <text x="15" y="122" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">model.set('expanded', true); // Triggers DOM update</text>
+      <text x="15" y="140" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">// Uses lang-tools Data_Object for reactivity</text>
+    </g>
+  </g>
+
+  <!-- SECTION 7: File Summary -->
+  <g transform="translate(30, 1800)">
+    <rect width="1540" height="380" rx="12" fill="url(#panelGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#fbbf24">
+      7. File Structure &amp; Module Summary
+    </text>
+    
+    <!-- File list -->
+    <g transform="translate(30, 55)">
+      <rect width="740" height="300" rx="8" fill="#1e293b"/>
+      <text x="15" y="24" font-family="JetBrains Mono, monospace" font-size="12" font-weight="600" fill="#f8fafc">src/ui/server/docsViewer/</text>
+      <text x="15" y="48" font-family="JetBrains Mono, monospace" font-size="11" fill="#10b981">├── server.js</text>
+      <text x="200" y="48" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Express + jsgui.Page_Context + renderPage()</text>
+      <text x="15" y="68" font-family="JetBrains Mono, monospace" font-size="11" fill="#f59e0b">├── controls/</text>
+      <text x="15" y="88" font-family="JetBrains Mono, monospace" font-size="11" fill="#f59e0b">│   ├── DocAppControl.js</text>
+      <text x="240" y="88" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Main layout (extends jsgui.Control)</text>
+      <text x="15" y="108" font-family="JetBrains Mono, monospace" font-size="11" fill="#f59e0b">│   ├── DocNavControl.js</text>
+      <text x="240" y="108" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Navigation tree (extends jsgui.Control)</text>
+      <text x="15" y="128" font-family="JetBrains Mono, monospace" font-size="11" fill="#f59e0b">│   └── DocViewerControl.js</text>
+      <text x="240" y="128" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Content area (extends jsgui.Control)</text>
+      <text x="15" y="148" font-family="JetBrains Mono, monospace" font-size="11" fill="#3b82f6">├── utils/</text>
+      <text x="15" y="168" font-family="JetBrains Mono, monospace" font-size="11" fill="#3b82f6">│   ├── svgRenderer.js</text>
+      <text x="240" y="168" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">XML → jsgui.Control tree conversion</text>
+      <text x="15" y="188" font-family="JetBrains Mono, monospace" font-size="11" fill="#3b82f6">│   ├── markdownRenderer.js</text>
+      <text x="240" y="188" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Markdown → HTML (for DocContentControl)</text>
+      <text x="15" y="208" font-family="JetBrains Mono, monospace" font-size="11" fill="#3b82f6">│   └── docTree.js</text>
+      <text x="240" y="208" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">File system scan for nav tree data</text>
+      <text x="15" y="228" font-family="JetBrains Mono, monospace" font-size="11" fill="#a78bfa">└── public/</text>
+      <text x="15" y="248" font-family="JetBrains Mono, monospace" font-size="11" fill="#a78bfa">    ├── docs-viewer.css</text>
+      <text x="240" y="248" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Styles for jsgui3 class names</text>
+      <text x="15" y="268" font-family="JetBrains Mono, monospace" font-size="11" fill="#a78bfa">    ├── docs-viewer.js</text>
+      <text x="240" y="268" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">Vanilla JS fallback</text>
+      <text x="15" y="288" font-family="JetBrains Mono, monospace" font-size="11" fill="#a78bfa">    └── docs-viewer-client.js</text>
+      <text x="240" y="288" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#94a3b8">jsgui3-client bundle for activation</text>
+    </g>
+    
+    <!-- jsgui3 APIs used summary -->
+    <g transform="translate(790, 55)">
+      <rect width="720" height="300" rx="8" fill="#1e293b"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f8fafc">Jsgui3 APIs Used in This Project</text>
+      
+      <text x="15" y="52" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#10b981">Server (jsgui3-html):</text>
+      <text x="15" y="72" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• jsgui.Page_Context() - Create render context</text>
+      <text x="15" y="88" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• jsgui.Control({ context, tagName }) - Create elements</text>
+      <text x="15" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• jsgui.String_Control({ text }) - Text nodes</text>
+      <text x="15" y="120" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• control.add(child) - Build tree</text>
+      <text x="15" y="136" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• control.add_class(cls) - CSS classes</text>
+      <text x="15" y="152" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• control.dom.attributes[key] = val - HTML attributes</text>
+      <text x="15" y="168" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• control.all_html_render() - Serialize to HTML</text>
+      
+      <text x="15" y="196" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#3b82f6">Client (jsgui3-client):</text>
+      <text x="15" y="216" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• activate() - Walk DOM, activate controls</text>
+      <text x="15" y="232" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• Client_Page_Context - Browser context + map_els</text>
+      <text x="15" y="248" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">• installBindingPlugin() - Data/view binding</text>
+      
+      <text x="15" y="276" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600" fill="#ec4899">Dependencies:</text>
+      <text x="15" y="296" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">jsgui3-html, jsgui3-client (vendor), lang-tools, fast-xml-parser</text>
+    </g>
+  </g>
+</svg>

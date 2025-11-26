@@ -99,8 +99,8 @@ function createDeduplicationStatements(db) {
     
     // Capital city multi-parent support
     addCapitalRelation: db.prepare(`
-      INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth, metadata)
-      VALUES (?, ?, 'capital_of', 1, ?)
+      INSERT OR IGNORE INTO place_hierarchy(parent_id, child_id, relation, depth)
+      VALUES (?, ?, 'capital_of', 1)
     `),
     
     getCapitalRelations: db.prepare(`
@@ -309,8 +309,7 @@ function addCapitalRelationship(statements, countryId, cityId, metadata = {}) {
   try {
     statements.addCapitalRelation.run(
       countryId,
-      cityId,
-      metadata ? JSON.stringify(metadata) : null
+      cityId
     );
   } catch (err) {
     // Ignore duplicate relation errors

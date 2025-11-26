@@ -138,6 +138,7 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   const listingState = options.listingState || null;
   const layoutMode = typeof options.layoutMode === "string" && options.layoutMode.trim() ? options.layoutMode : "listing";
   const hideListingPanel = options.hideListingPanel === true || layoutMode === "dashboard";
+  const mainControl = options.mainControl;
   const dashboardSections = Array.isArray(options.dashboardSections) ? options.dashboardSections.slice() : [];
   const includeDashboardScaffold = options.includeDashboardScaffold === true || dashboardSections.length > 0;
   const safeMeta = {
@@ -234,6 +235,9 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   if (homeGrid) shell.add(homeGrid);
   const dashboardGrid = includeDashboardScaffold ? createDashboardSections(context, dashboardSections) : null;
   if (dashboardGrid) shell.add(dashboardGrid);
+  if (mainControl) {
+    shell.add(mainControl);
+  }
   if (panel) {
     shell.add(panel);
   }

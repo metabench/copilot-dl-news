@@ -5,19 +5,21 @@
  * This script shows how the crawler would work with a real news website
  */
 
-const NewsCrawler = require('./src/crawl.js');
+const { CrawlerFactory } = require('../../src/crawler/CrawlerFactory');
+
 
 async function runExample() {
     console.log('News Crawler Example');
     console.log('===================\n');
     
     // Create a crawler instance
-    const crawler = new NewsCrawler('https://www.theguardian.com', {
+    const crawler = CrawlerFactory.create({
+        startUrl: 'https://www.theguardian.com',
         rateLimitMs: 2000,  // 2 second delay between requests
         maxDepth: 1,        // Limit to 1 level deep for demo
-    dataDir: './data'   // Base directory (includes SQLite DB)
+        dataDir: './data'   // Base directory (includes SQLite DB)
     });
-    
+
     console.log('Configuration:');
     console.log(`- Start URL: ${crawler.startUrl}`);
     console.log(`- Domain: ${crawler.domain}`);

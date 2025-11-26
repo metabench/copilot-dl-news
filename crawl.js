@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
 const {
   createCrawlService,
   buildAvailabilityPayload
@@ -12,12 +10,18 @@ const {
   normalizeOutputVerbosity,
   OUTPUT_VERBOSITY_LEVELS
 } = require('./src/utils/outputVerbosity');
+const {
+  ConfigurationService,
+  CliContext,
+  DEFAULT_SEQUENCE_PRESET,
+  DEFAULT_START_URL
+} = require('./src/config/ConfigurationService');
 
 
 function printHelp() {
   console.log(`crawl.js — minimal crawl playground\n\n` +
 `Usage:\n` +
-`  node crawl.js [--config <path>] [--start-url <url>] [--concurrency <n>] [--max-downloads <n>] [--output-verbosity <level>]\n` +
+`  node crawl.js [--config <path>] [--start-url <url>] [--concurrency <n>] [--max-downloads <n>|--limit <n>] [--output-verbosity <level>]\n` +
 `      Run the config-driven crawl using config/crawl-runner.(json|yaml) or config.json defaults.\n` +
 `  node crawl.js availability [--all|--operations|--sequences]\n` +
 `  node crawl.js run-operation <operationName> <startUrl> [--overrides <json>] [--output-verbosity <level>]\n` +
@@ -30,20 +34,30 @@ function printHelp() {
 }
 
 
-function readFlag(args, flag) {
-  const index = args.indexOf(flag);
+function isCliContext(value) {
+  return value instanceof CliContext;
+}
+
+function readFlag(argsOrContext, flag) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.getFlag(flag);
+  }
+  const index = argsOrContext.indexOf(flag);
   if (index === -1) {
     return undefined;
   }
-  const value = args[index + 1];
+  const value = argsOrContext[index + 1];
   if (value === undefined) {
     throw new Error(`Missing value for ${flag}`);
   }
   return value;
 }
 
-function readJsonFlag(args, flag) {
-  const value = readFlag(args, flag);
+function readJsonFlag(argsOrContext, flag) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.getJsonFlag(flag);
+  }
+  const value = readFlag(argsOrContext, flag);
   if (value === undefined) {
     return undefined;
   }
@@ -54,20 +68,13 @@ function readJsonFlag(args, flag) {
   }
 }
 
-function hasFlag(args, flag) {
-  return args.includes(flag);
+function hasFlag(argsOrContext, flag) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.hasFlag(flag);
+  }
+  return argsOrContext.includes(flag);
 }
 
-const DEFAULT_SEQUENCE_PRESET = 'basicArticleDiscovery';
-const DEFAULT_START_URL = 'https://www.theguardian.com';
-const DEFAULT_CONCURRENCY = 2;
-const DEFAULT_MAX_DOWNLOADS = 2000;
-const DEFAULT_BASIC_OUTPUT_VERBOSITY = 'extra-terse';
-const DEFAULT_RUNNER_CONFIG_FILES = [
-  path.resolve(__dirname, 'config', 'crawl-runner.json'),
-  path.resolve(__dirname, 'config', 'crawl-runner.yaml'),
-  path.resolve(__dirname, 'config', 'crawl-runner.yml')
-];
 
 function parsePositiveInteger(value) {
   if (value === undefined || value === null) {
@@ -81,8 +88,11 @@ function parsePositiveInteger(value) {
 }
 
 
-function readIntegerFlag(args, flag) {
-  const value = readFlag(args, flag);
+function readIntegerFlag(argsOrContext, flag) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.getIntegerFlag(flag);
+  }
+  const value = readFlag(argsOrContext, flag);
   if (value === undefined) {
     return undefined;
   }
@@ -93,8 +103,11 @@ function readIntegerFlag(args, flag) {
   return parsed;
 }
 
-function readOutputVerbosityFlag(args, flag) {
-  const rawValue = readFlag(args, flag);
+function readOutputVerbosityFlag(argsOrContext, flag) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.getFlag(flag);
+  }
+  const rawValue = readFlag(argsOrContext, flag);
   if (rawValue === undefined) {
     return undefined;
   }
@@ -103,6 +116,25 @@ function readOutputVerbosityFlag(args, flag) {
     throw new Error(`Invalid output verbosity for ${flag}: ${rawValue}. Expected one of: ${OUTPUT_VERBOSITY_LEVELS.join(', ')}`);
   }
   return normalized;
+}
+
+function readBooleanFlag(argsOrContext, flag) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.getBooleanFlag(flag);
+  }
+  const value = readFlag(argsOrContext, flag);
+  if (value === undefined) {
+    return undefined;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
+}
+
+function readPositional(argsOrContext, index) {
+  if (isCliContext(argsOrContext)) {
+    return argsOrContext.getPositional(index);
+  }
+  return argsOrContext[index];
 }
 
 function parseCommaSeparated(value) {
@@ -280,78 +312,6 @@ function printExploreSummary(response) {
 
 
 
-function loadDefaultCrawlConfig() {
-  const configPath = path.resolve(__dirname, 'config.json');
-  const fallback = {
-    sequence: DEFAULT_SEQUENCE_PRESET,
-    startUrl: DEFAULT_START_URL,
-    sharedOverrides: {
-      concurrency: DEFAULT_CONCURRENCY,
-      maxDownloads: DEFAULT_MAX_DOWNLOADS,
-      outputVerbosity: DEFAULT_BASIC_OUTPUT_VERBOSITY
-    }
-  };
-
-  try {
-    const raw = fs.readFileSync(configPath, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') {
-      return { config: fallback, sourcePath: null };
-    }
-
-    const crawlDefaults = parsed.crawlDefaults && typeof parsed.crawlDefaults === 'object'
-      ? parsed.crawlDefaults
-      : null;
-
-    const sequence = typeof crawlDefaults?.sequence === 'string' && crawlDefaults.sequence.trim()
-      ? crawlDefaults.sequence.trim()
-      : fallback.sequence;
-
-    const candidateStartUrl = typeof crawlDefaults?.startUrl === 'string' && crawlDefaults.startUrl.trim()
-      ? crawlDefaults.startUrl.trim()
-      : null;
-
-    const fallbackStartUrl = typeof parsed.url === 'string' && parsed.url.trim()
-      ? parsed.url.trim()
-      : fallback.startUrl;
-
-    const sharedOverridesConfig = crawlDefaults?.sharedOverrides && typeof crawlDefaults.sharedOverrides === 'object'
-      ? crawlDefaults.sharedOverrides
-      : {};
-
-    const resolvedConcurrency = parsePositiveInteger(sharedOverridesConfig.concurrency)
-      ?? fallback.sharedOverrides.concurrency;
-    const resolvedMaxDownloads = parsePositiveInteger(sharedOverridesConfig.maxDownloads)
-      ?? fallback.sharedOverrides.maxDownloads;
-    const sharedOverridesVerbosity = normalizeOutputVerbosity(sharedOverridesConfig.outputVerbosity, null);
-    const defaultVerbosity = sharedOverridesVerbosity
-      ?? normalizeOutputVerbosity(crawlDefaults?.outputVerbosity, null)
-      ?? fallback.sharedOverrides.outputVerbosity;
-
-    const sharedOverrides = {};
-    if (resolvedConcurrency !== undefined) {
-      sharedOverrides.concurrency = resolvedConcurrency;
-    }
-    if (resolvedMaxDownloads !== undefined) {
-      sharedOverrides.maxDownloads = resolvedMaxDownloads;
-    }
-    if (defaultVerbosity) {
-      sharedOverrides.outputVerbosity = defaultVerbosity;
-    }
-
-    return {
-      config: {
-        sequence,
-        startUrl: candidateStartUrl || fallbackStartUrl,
-        sharedOverrides
-      },
-      sourcePath: crawlDefaults ? configPath : null
-    };
-  } catch (_) {
-    return { config: fallback, sourcePath: null };
-  }
-}
-
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -387,69 +347,6 @@ function resolveRunnerPath(targetPath, baseDir) {
   return path.resolve(baseDir || process.cwd(), trimmed);
 }
 
-function parseRunnerConfigFile(configPath) {
-  const raw = fs.readFileSync(configPath, 'utf8');
-  const extension = path.extname(configPath).toLowerCase();
-  let parsed;
-  if (extension === '.yaml' || extension === '.yml') {
-    parsed = yaml.load(raw);
-  } else {
-    parsed = JSON.parse(raw);
-  }
-  if (!isPlainObject(parsed)) {
-    throw new Error('Runner config must be a JSON or YAML object.');
-  }
-  return parsed;
-}
-
-function tryLoadRunnerConfig(configPath, { required } = {}) {
-  if (!configPath) {
-    return null;
-  }
-  try {
-    if (!fs.existsSync(configPath)) {
-      if (required) {
-        throw new Error('File not found');
-      }
-      return null;
-    }
-    return {
-      config: parseRunnerConfigFile(configPath),
-      sourcePath: configPath,
-      baseDir: path.dirname(configPath)
-    };
-  } catch (error) {
-    if (required) {
-      throw new Error(`Failed to load crawl runner config (${configPath}): ${error.message}`);
-    }
-    return null;
-  }
-}
-
-function loadRunnerConfig({ explicitPath, envPath } = {}) {
-  const candidates = [];
-  if (explicitPath) {
-    candidates.push({ path: path.resolve(process.cwd(), explicitPath), required: true });
-  }
-  if (envPath) {
-    const resolvedEnv = path.resolve(process.cwd(), envPath);
-    const alreadyQueued = candidates.some((candidate) => candidate.path === resolvedEnv);
-    if (!alreadyQueued) {
-      candidates.push({ path: resolvedEnv, required: true });
-    }
-  }
-  DEFAULT_RUNNER_CONFIG_FILES.forEach((filePath) => {
-    candidates.push({ path: filePath, required: false });
-  });
-
-  for (const candidate of candidates) {
-    const loaded = tryLoadRunnerConfig(candidate.path, { required: candidate.required });
-    if (loaded) {
-      return loaded;
-    }
-  }
-  return null;
-}
 
 function determineRunnerMode(config) {
   const declared = [config.mode, config.command, config.type]
@@ -477,10 +374,10 @@ function determineRunnerMode(config) {
   return 'sequence';
 }
 
-async function runRunnerSequence(service, args, config, metadata) {
+async function runRunnerSequence(service, argsOrContext, config, metadata) {
   const sequenceName = pickString(
-    readFlag(args, '--sequence'),
-    readFlag(args, '--sequence-name'),
+    readFlag(argsOrContext, '--sequence'),
+    readFlag(argsOrContext, '--sequence-name'),
     config.sequence,
     config.sequenceName
   );
@@ -488,28 +385,32 @@ async function runRunnerSequence(service, args, config, metadata) {
     throw new Error('Runner config must specify "sequence" or pass --sequence <name>.');
   }
 
-  const startUrl = pickString(readFlag(args, '--start-url'), config.startUrl);
+  const startUrl = pickString(readFlag(argsOrContext, '--start-url'), config.startUrl);
   if (!startUrl) {
     throw new Error('Runner config must specify a startUrl or pass --start-url <url>.');
   }
 
   const sharedOverrides = mergeOverrideObjects(
     config.sharedOverrides,
-    readJsonFlag(args, '--shared-overrides')
+    readJsonFlag(argsOrContext, '--shared-overrides')
   );
   const stepOverrides = mergeOverrideObjects(
     config.stepOverrides,
-    readJsonFlag(args, '--step-overrides')
+    readJsonFlag(argsOrContext, '--step-overrides')
   );
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+  const overrideMaxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (overrideMaxDownloads !== undefined) {
     sharedOverrides.maxDownloads = overrideMaxDownloads;
   }
-  const overrideOutputVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
+  const overrideLoggingQueue = readBooleanFlag(argsOrContext, '--logging-queue');
+  if (overrideLoggingQueue !== undefined) {
+    sharedOverrides.loggingQueue = overrideLoggingQueue;
+  }
+  const overrideOutputVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (overrideOutputVerbosity) {
     sharedOverrides.outputVerbosity = overrideOutputVerbosity;
   }
-  const continueOnError = hasFlag(args, '--continue-on-error') || Boolean(config.continueOnError);
+  const continueOnError = hasFlag(argsOrContext, '--continue-on-error') || Boolean(config.continueOnError);
 
   console.log(`Using crawl runner config from ${metadata.sourcePath} (sequence=${sequenceName}, startUrl=${startUrl})`);
 
@@ -527,10 +428,10 @@ async function runRunnerSequence(service, args, config, metadata) {
   await runSequencePreset(service, sequenceArgs);
 }
 
-async function runRunnerSequenceConfig(service, args, config, metadata) {
+async function runRunnerSequenceConfig(service, argsOrContext, config, metadata) {
   const sequenceConfigName = pickString(
-    readFlag(args, '--sequence-config'),
-    readFlag(args, '--sequence-config-name'),
+    readFlag(argsOrContext, '--sequence-config'),
+    readFlag(argsOrContext, '--sequence-config-name'),
     config.sequenceConfig,
     config.sequenceConfigName
   );
@@ -538,31 +439,35 @@ async function runRunnerSequenceConfig(service, args, config, metadata) {
     throw new Error('Runner config must specify "sequenceConfig" or pass --sequence-config <name>.');
   }
 
-  const configDirFlag = readFlag(args, '--config-dir');
+  const configDirFlag = readFlag(argsOrContext, '--config-dir');
   const configDir = resolveRunnerPath(configDirFlag || config.configDir, metadata.baseDir);
-  const configHost = pickString(readFlag(args, '--config-host'), config.configHost);
-  const startUrl = pickString(readFlag(args, '--start-url'), config.startUrl);
+  const configHost = pickString(readFlag(argsOrContext, '--config-host'), config.configHost);
+  const startUrl = pickString(readFlag(argsOrContext, '--start-url'), config.startUrl);
   const sharedOverrides = mergeOverrideObjects(
     config.sharedOverrides,
-    readJsonFlag(args, '--shared-overrides')
+    readJsonFlag(argsOrContext, '--shared-overrides')
   );
   const stepOverrides = mergeOverrideObjects(
     config.stepOverrides,
-    readJsonFlag(args, '--step-overrides')
+    readJsonFlag(argsOrContext, '--step-overrides')
   );
   const configCliOverrides = mergeOverrideObjects(
     config.configCliOverrides,
-    readJsonFlag(args, '--config-cli-overrides')
+    readJsonFlag(argsOrContext, '--config-cli-overrides')
   );
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+  const overrideMaxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (overrideMaxDownloads !== undefined) {
     sharedOverrides.maxDownloads = overrideMaxDownloads;
   }
-  const overrideOutputVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
+  const overrideLoggingQueue = readBooleanFlag(argsOrContext, '--logging-queue');
+  if (overrideLoggingQueue !== undefined) {
+    sharedOverrides.loggingQueue = overrideLoggingQueue;
+  }
+  const overrideOutputVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (overrideOutputVerbosity) {
     sharedOverrides.outputVerbosity = overrideOutputVerbosity;
   }
-  const continueOnError = hasFlag(args, '--continue-on-error') || Boolean(config.continueOnError);
+  const continueOnError = hasFlag(argsOrContext, '--continue-on-error') || Boolean(config.continueOnError);
 
   console.log(
     `Using crawl runner config from ${metadata.sourcePath} (sequence-config=${sequenceConfigName}` +
@@ -595,10 +500,10 @@ async function runRunnerSequenceConfig(service, args, config, metadata) {
   await runSequenceConfig(service, runArgs);
 }
 
-async function runRunnerOperation(service, args, config, metadata) {
+async function runRunnerOperation(service, argsOrContext, config, metadata) {
   const operationName = pickString(
-    readFlag(args, '--operation'),
-    readFlag(args, '--operation-name'),
+    readFlag(argsOrContext, '--operation'),
+    readFlag(argsOrContext, '--operation-name'),
     config.operation,
     config.operationName
   );
@@ -606,17 +511,21 @@ async function runRunnerOperation(service, args, config, metadata) {
     throw new Error('Runner config must specify "operation" or pass --operation <name>.');
   }
 
-  const startUrl = pickString(readFlag(args, '--start-url'), config.startUrl);
+  const startUrl = pickString(readFlag(argsOrContext, '--start-url'), config.startUrl);
   if (!startUrl) {
     throw new Error('Runner config must specify a startUrl or pass --start-url <url>.');
   }
 
-  const overrides = mergeOverrideObjects(config.overrides, readJsonFlag(args, '--overrides'));
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+  const overrides = mergeOverrideObjects(config.overrides, readJsonFlag(argsOrContext, '--overrides'));
+  const overrideMaxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (overrideMaxDownloads !== undefined) {
     overrides.maxDownloads = overrideMaxDownloads;
   }
-  const overrideOutputVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
+  const overrideLoggingQueue = readBooleanFlag(argsOrContext, '--logging-queue');
+  if (overrideLoggingQueue !== undefined) {
+    overrides.loggingQueue = overrideLoggingQueue;
+  }
+  const overrideOutputVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (overrideOutputVerbosity) {
     overrides.outputVerbosity = overrideOutputVerbosity;
   }
@@ -631,67 +540,59 @@ async function runRunnerOperation(service, args, config, metadata) {
   await runOperation(service, opArgs);
 }
 
-async function runConfiguredCrawl(service, args, runnerConfig) {
+async function runConfiguredCrawl(service, argsOrContext, runnerConfig) {
   const mode = determineRunnerMode(runnerConfig.config);
   if (mode === 'sequence-config') {
-    await runRunnerSequenceConfig(service, args, runnerConfig.config, runnerConfig);
+    await runRunnerSequenceConfig(service, argsOrContext, runnerConfig.config, runnerConfig);
     return true;
   }
   if (mode === 'operation') {
-    await runRunnerOperation(service, args, runnerConfig.config, runnerConfig);
+    await runRunnerOperation(service, argsOrContext, runnerConfig.config, runnerConfig);
     return true;
   }
-  await runRunnerSequence(service, args, runnerConfig.config, runnerConfig);
+  await runRunnerSequence(service, argsOrContext, runnerConfig.config, runnerConfig);
   return true;
 }
 
-async function runDefaultGuardianCrawl(service, args) {
-  const configFlag = readFlag(args, '--config') || readFlag(args, '--config-path');
-  const runnerConfig = loadRunnerConfig({
-    explicitPath: configFlag,
-    envPath: process.env.CRAWL_CONFIG_PATH
-  });
+async function runDefaultGuardianCrawl(service, context) {
+  const runnerConfig = context.getRunnerConfig();
   if (runnerConfig) {
-    await runConfiguredCrawl(service, args, runnerConfig);
+    await runConfiguredCrawl(service, context, runnerConfig);
     return;
   }
 
-  const { config, sourcePath } = loadDefaultCrawlConfig();
+  const defaultRunConfig = context.getDefaultRunConfig();
+  if (!defaultRunConfig) {
+    throw new Error('Configuration service did not provide default crawl settings.');
+  }
 
-  const overrideStartUrl = readFlag(args, '--start-url');
-  const overrideConcurrency = readIntegerFlag(args, '--concurrency');
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
-  const overrideOutputVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
-
-  const startUrl = (overrideStartUrl && overrideStartUrl.trim()) || config.startUrl;
+  const sequenceName = defaultRunConfig.sequenceName || DEFAULT_SEQUENCE_PRESET;
+  const startUrl = defaultRunConfig.startUrl || DEFAULT_START_URL;
   if (!startUrl) {
     throw new Error('Unable to determine start URL for default crawl. Set crawlDefaults.startUrl in config.json or pass --start-url <url>.');
   }
 
-  const sharedOverrides = {};
-  const resolvedConcurrency = overrideConcurrency ?? config.sharedOverrides.concurrency;
-  const resolvedMaxDownloads = overrideMaxDownloads ?? config.sharedOverrides.maxDownloads;
-  const resolvedOutputVerbosity = overrideOutputVerbosity ?? config.sharedOverrides.outputVerbosity;
+  const sharedOverrides = defaultRunConfig.sharedOverrides || {};
+  const stepOverrides = defaultRunConfig.stepOverrides || {};
+  const continueOnError = Boolean(defaultRunConfig.continueOnError);
 
-  if (resolvedConcurrency !== undefined) {
-    sharedOverrides.concurrency = resolvedConcurrency;
-  }
-  if (resolvedMaxDownloads !== undefined) {
-    sharedOverrides.maxDownloads = resolvedMaxDownloads;
-  }
-  if (resolvedOutputVerbosity) {
-    sharedOverrides.outputVerbosity = resolvedOutputVerbosity;
-  }
-
-  const sequenceName = config.sequence || DEFAULT_SEQUENCE_PRESET;
+  const sourcePath = defaultRunConfig.metadata?.defaultConfigPath;
   const originLabel = sourcePath ? `config.json at ${sourcePath}` : 'built-in defaults';
 
-  console.log(`Using crawl defaults from ${originLabel} (sequence=${sequenceName}, startUrl=${startUrl}, concurrency=${sharedOverrides.concurrency ?? 'default'}, maxDownloads=${sharedOverrides.maxDownloads ?? 'default'}, outputVerbosity=${sharedOverrides.outputVerbosity ?? 'default'})`);
+  console.log(
+    `Using crawl defaults from ${originLabel} (sequence=${sequenceName}, startUrl=${startUrl}, concurrency=${sharedOverrides.concurrency ?? 'default'}, maxDownloads=${sharedOverrides.maxDownloads ?? 'default'}, outputVerbosity=${sharedOverrides.outputVerbosity ?? 'default'})`
+  );
 
   const sequenceArgs = ['run-sequence', sequenceName, startUrl];
 
   if (Object.keys(sharedOverrides).length > 0) {
     sequenceArgs.push('--shared-overrides', JSON.stringify(sharedOverrides));
+  }
+  if (Object.keys(stepOverrides).length > 0) {
+    sequenceArgs.push('--step-overrides', JSON.stringify(stepOverrides));
+  }
+  if (continueOnError) {
+    sequenceArgs.push('--continue-on-error');
   }
 
   await runSequencePreset(service, sequenceArgs);
@@ -719,18 +620,22 @@ function printAvailabilitySummary(availability, includeOperations, includeSequen
   }
 }
 
-async function runOperation(service, args) {
-  const operationName = args[1];
-  const startUrl = args[2];
+async function runOperation(service, argsOrContext) {
+  const operationName = readPositional(argsOrContext, 0);
+  const startUrl = readPositional(argsOrContext, 1);
   if (!operationName || !startUrl) {
     throw new Error('run-operation requires <operationName> and <startUrl>.');
   }
-  const overrides = readJsonFlag(args, '--overrides') || {};
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+  const overrides = readJsonFlag(argsOrContext, '--overrides') || {};
+  const overrideMaxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (overrideMaxDownloads !== undefined) {
     overrides.maxDownloads = overrideMaxDownloads;
   }
-  const operationVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
+  const overrideLoggingQueue = readBooleanFlag(argsOrContext, '--logging-queue');
+  if (overrideLoggingQueue !== undefined) {
+    overrides.loggingQueue = overrideLoggingQueue;
+  }
+  const operationVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (operationVerbosity) {
     overrides.outputVerbosity = operationVerbosity;
   }
@@ -752,20 +657,24 @@ async function runOperation(service, args) {
   }
 }
 
-async function runSequencePreset(service, args) {
-  const sequenceName = args[1];
-  const startUrl = args[2];
+async function runSequencePreset(service, argsOrContext) {
+  const sequenceName = readPositional(argsOrContext, 0);
+  const startUrl = readPositional(argsOrContext, 1);
   if (!sequenceName || !startUrl) {
     throw new Error('run-sequence requires <sequenceName> and <startUrl>.');
   }
-  const sharedOverrides = readJsonFlag(args, '--shared-overrides') || {};
-  const stepOverrides = readJsonFlag(args, '--step-overrides') || {};
-  const continueOnError = hasFlag(args, '--continue-on-error');
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+  const sharedOverrides = readJsonFlag(argsOrContext, '--shared-overrides') || {};
+  const stepOverrides = readJsonFlag(argsOrContext, '--step-overrides') || {};
+  const continueOnError = hasFlag(argsOrContext, '--continue-on-error');
+  const overrideMaxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (overrideMaxDownloads !== undefined) {
     sharedOverrides.maxDownloads = overrideMaxDownloads;
   }
-  const sequenceVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
+  const overrideLoggingQueue = readBooleanFlag(argsOrContext, '--logging-queue');
+  if (overrideLoggingQueue !== undefined) {
+    sharedOverrides.loggingQueue = overrideLoggingQueue;
+  }
+  const sequenceVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (sequenceVerbosity) {
     sharedOverrides.outputVerbosity = sequenceVerbosity;
   }
@@ -790,23 +699,27 @@ async function runSequencePreset(service, args) {
   return result;
 }
 
-async function runSequenceConfig(service, args) {
-  const sequenceConfigName = args[1];
+async function runSequenceConfig(service, argsOrContext) {
+  const sequenceConfigName = readPositional(argsOrContext, 0);
   if (!sequenceConfigName) {
     throw new Error('run-sequence-config requires <configName>.');
   }
-  const configDir = readFlag(args, '--config-dir');
-  const configHost = readFlag(args, '--config-host');
-  const startUrl = readFlag(args, '--start-url');
-  const sharedOverrides = readJsonFlag(args, '--shared-overrides') || {};
-  const stepOverrides = readJsonFlag(args, '--step-overrides') || {};
-  const configCliOverrides = readJsonFlag(args, '--config-cli-overrides') || {};
-  const continueOnError = hasFlag(args, '--continue-on-error');
-  const overrideMaxDownloads = readIntegerFlag(args, '--max-downloads');
+  const configDir = readFlag(argsOrContext, '--config-dir');
+  const configHost = readFlag(argsOrContext, '--config-host');
+  const startUrl = readFlag(argsOrContext, '--start-url');
+  const sharedOverrides = readJsonFlag(argsOrContext, '--shared-overrides') || {};
+  const stepOverrides = readJsonFlag(argsOrContext, '--step-overrides') || {};
+  const configCliOverrides = readJsonFlag(argsOrContext, '--config-cli-overrides') || {};
+  const continueOnError = hasFlag(argsOrContext, '--continue-on-error');
+  const overrideMaxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (overrideMaxDownloads !== undefined) {
     sharedOverrides.maxDownloads = overrideMaxDownloads;
   }
-  const sequenceVerbosity = readOutputVerbosityFlag(args, '--output-verbosity');
+  const overrideLoggingQueue = readBooleanFlag(argsOrContext, '--logging-queue');
+  if (overrideLoggingQueue !== undefined) {
+    sharedOverrides.loggingQueue = overrideLoggingQueue;
+  }
+  const sequenceVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (sequenceVerbosity) {
     sharedOverrides.outputVerbosity = sequenceVerbosity;
   }
@@ -830,36 +743,32 @@ async function runSequenceConfig(service, args) {
   }
 }
 
-async function runPlaceCommand(service, args) {
-  const subcommand = args[1];
+async function runPlaceCommand(service, argsOrContext) {
+  const subcommand = readPositional(argsOrContext, 0);
   if (!subcommand || subcommand === '--help' || subcommand === '-h') {
     printPlaceHelp();
     return;
   }
-
-  const rest = args.slice(2);
-
   if (subcommand === 'guess') {
-    await runPlaceGuess(service, rest);
+    await runPlaceGuess(service, argsOrContext);
     return;
   }
 
   if (subcommand === 'explore') {
-    await runPlaceExplore(service, rest);
+    await runPlaceExplore(service, argsOrContext);
     return;
   }
 
   throw new Error(`Unknown place subcommand: ${subcommand}`);
 }
 
-async function runPlaceGuess(service, args) {
-  const target = args[0];
+async function runPlaceGuess(service, argsOrContext) {
+  const target = readPositional(argsOrContext, 1);
   if (!target || target.startsWith('--')) {
     throw new Error('place guess requires <domain|url>.');
   }
 
-  const flagArgs = args.slice(1);
-  const schemeFlag = readFlag(flagArgs, '--scheme');
+  const schemeFlag = readFlag(argsOrContext, '--scheme');
   const startUrl = ensureAbsoluteUrl(target, schemeFlag || 'https');
   if (!startUrl) {
     throw new Error('Unable to determine start URL for place guess command.');
@@ -870,82 +779,82 @@ async function runPlaceGuess(service, args) {
     overrides.scheme = schemeFlag;
   }
 
-  const kindsFlag = readFlag(flagArgs, '--kinds');
+  const kindsFlag = readFlag(argsOrContext, '--kinds');
   if (kindsFlag) {
     overrides.kinds = parseCommaSeparated(kindsFlag);
   }
 
-  const limitValue = readIntegerFlag(flagArgs, '--limit');
+  const limitValue = readIntegerFlag(argsOrContext, '--limit');
   if (limitValue !== undefined) {
     overrides.limit = limitValue;
   }
 
-  const patternsValue = readIntegerFlag(flagArgs, '--patterns-per-place');
+  const patternsValue = readIntegerFlag(argsOrContext, '--patterns-per-place');
   if (patternsValue !== undefined) {
     overrides.patternsPerPlace = patternsValue;
   }
 
-  const topicsFlag = readFlag(flagArgs, '--topics');
+  const topicsFlag = readFlag(argsOrContext, '--topics');
   if (topicsFlag) {
     overrides.topics = parseCommaSeparated(topicsFlag);
   }
 
-  const domainOverride = readFlag(flagArgs, '--domain');
+  const domainOverride = readFlag(argsOrContext, '--domain');
   if (domainOverride) {
     overrides.domain = domainOverride;
   }
 
-  if (hasFlag(flagArgs, '--apply')) {
+  if (hasFlag(argsOrContext, '--apply')) {
     overrides.apply = true;
   }
 
-  if (hasFlag(flagArgs, '--enable-topic-discovery')) {
+  if (hasFlag(argsOrContext, '--enable-topic-discovery')) {
     overrides.enableTopicDiscovery = true;
   }
 
-  if (hasFlag(flagArgs, '--enable-combination-discovery')) {
+  if (hasFlag(argsOrContext, '--enable-combination-discovery')) {
     overrides.enableCombinationDiscovery = true;
   }
 
-  if (hasFlag(flagArgs, '--enable-hierarchical-discovery')) {
+  if (hasFlag(argsOrContext, '--enable-hierarchical-discovery')) {
     overrides.enableHierarchicalDiscovery = true;
   }
 
-  const maxAge = readIntegerFlag(flagArgs, '--max-age-days');
+  const maxAge = readIntegerFlag(argsOrContext, '--max-age-days');
   if (maxAge !== undefined) {
     overrides.maxAgeDays = maxAge;
   }
 
-  const refresh404 = readIntegerFlag(flagArgs, '--refresh-404-days');
+  const refresh404 = readIntegerFlag(argsOrContext, '--refresh-404-days');
   if (refresh404 !== undefined) {
     overrides.refresh404Days = refresh404;
   }
 
-  const retry4xx = readIntegerFlag(flagArgs, '--retry-4xx-days');
+  const retry4xx = readIntegerFlag(argsOrContext, '--retry-4xx-days');
   if (retry4xx !== undefined) {
     overrides.retry4xxDays = retry4xx;
   }
 
-  const dataDir = readFlag(flagArgs, '--data-dir');
+  const dataDir = readFlag(argsOrContext, '--data-dir');
   if (dataDir) {
     overrides.dataDir = dataDir;
   }
 
-  const dbPath = readFlag(flagArgs, '--db-path');
+  const dbPath = readFlag(argsOrContext, '--db-path');
   if (dbPath) {
     overrides.dbPath = dbPath;
   }
 
-  const runId = readFlag(flagArgs, '--run-id');
+  const runId = readFlag(argsOrContext, '--run-id');
   if (runId) {
     overrides.runId = runId;
   }
 
-  if (hasFlag(flagArgs, '--verbose')) {
+  if (hasFlag(argsOrContext, '--verbose')) {
     overrides.verbose = true;
   }
 
-  const jsonOutput = hasFlag(flagArgs, '--json');
+  const jsonOutput = hasFlag(argsOrContext, '--json');
 
   const response = await service.runOperation({
     logger: console,
@@ -961,59 +870,58 @@ async function runPlaceGuess(service, args) {
   }
 }
 
-async function runPlaceExplore(service, args) {
-  const target = args[0];
+async function runPlaceExplore(service, argsOrContext) {
+  const target = readPositional(argsOrContext, 1);
   if (!target || target.startsWith('--')) {
     throw new Error('place explore requires <domain|url>.');
   }
 
-  const flagArgs = args.slice(1);
-  const schemeFlag = readFlag(flagArgs, '--scheme');
+  const schemeFlag = readFlag(argsOrContext, '--scheme');
   const startUrl = ensureAbsoluteUrl(target, schemeFlag || 'https');
   if (!startUrl) {
     throw new Error('Unable to determine start URL for place explore command.');
   }
 
-  const overrides = readJsonFlag(flagArgs, '--overrides') || {};
+  const overrides = readJsonFlag(argsOrContext, '--overrides') || {};
 
   if (schemeFlag) {
     overrides.scheme = schemeFlag;
   }
 
-  const concurrency = readIntegerFlag(flagArgs, '--concurrency');
+  const concurrency = readIntegerFlag(argsOrContext, '--concurrency');
   if (concurrency !== undefined) {
     overrides.concurrency = concurrency;
   }
 
-  const maxDownloads = readIntegerFlag(flagArgs, '--max-downloads');
+  const maxDownloads = readIntegerFlag(argsOrContext, '--max-downloads') ?? readIntegerFlag(argsOrContext, '--limit');
   if (maxDownloads !== undefined) {
     overrides.maxDownloads = maxDownloads;
   }
 
-  const plannerVerbosity = readIntegerFlag(flagArgs, '--planner-verbosity');
+  const plannerVerbosity = readIntegerFlag(argsOrContext, '--planner-verbosity');
   if (plannerVerbosity !== undefined) {
     overrides.plannerVerbosity = plannerVerbosity;
   }
 
-  const outputVerbosity = readOutputVerbosityFlag(flagArgs, '--output-verbosity');
+  const outputVerbosity = readOutputVerbosityFlag(argsOrContext, '--output-verbosity');
   if (outputVerbosity) {
     overrides.outputVerbosity = outputVerbosity;
   }
 
-  if (hasFlag(flagArgs, '--structure-only')) {
+  if (hasFlag(argsOrContext, '--structure-only')) {
     overrides.structureOnly = true;
   }
 
-  if (hasFlag(flagArgs, '--no-structure-only')) {
+  if (hasFlag(argsOrContext, '--no-structure-only')) {
     overrides.structureOnly = false;
   }
 
-  const intTargets = readFlag(flagArgs, '--int-target-hosts');
+  const intTargets = readFlag(argsOrContext, '--int-target-hosts');
   if (intTargets) {
     overrides.intTargetHosts = parseCommaSeparated(intTargets);
   }
 
-  const jsonOutput = hasFlag(flagArgs, '--json');
+  const jsonOutput = hasFlag(argsOrContext, '--json');
 
   const response = await service.runOperation({
     logger: console,
@@ -1030,25 +938,26 @@ async function runPlaceExplore(service, args) {
 }
 
 async function main(argv) {
-  const args = argv.slice();
-  const command = args[0];
-
-  if (command === '--help' || command === '-h') {
+  const [firstArg] = argv;
+  if (firstArg === '--help' || firstArg === '-h') {
     printHelp();
     return;
   }
 
+  const configService = new ConfigurationService();
+  const context = configService.createContext(argv);
+  const command = context.getCommand();
   const service = createCrawlService();
 
-  if (!command || command.startsWith('--')) {
-    await runDefaultGuardianCrawl(service, args);
+  if (!command) {
+    await runDefaultGuardianCrawl(service, context);
     return;
   }
 
   if (command === 'availability') {
-    const includeAll = hasFlag(args, '--all');
-    const includeOperations = includeAll || hasFlag(args, '--operations') || (!hasFlag(args, '--operations') && !hasFlag(args, '--sequences'));
-    const includeSequences = includeAll || hasFlag(args, '--sequences') || (!hasFlag(args, '--operations') && !hasFlag(args, '--sequences'));
+    const includeAll = hasFlag(context, '--all');
+    const includeOperations = includeAll || hasFlag(context, '--operations') || (!hasFlag(context, '--operations') && !hasFlag(context, '--sequences'));
+    const includeSequences = includeAll || hasFlag(context, '--sequences') || (!hasFlag(context, '--operations') && !hasFlag(context, '--sequences'));
     const availability = service.getAvailability({ logger: console });
     const payload =
       buildAvailabilityPayload(
@@ -1065,22 +974,22 @@ async function main(argv) {
   }
 
   if (command === 'run-operation') {
-    await runOperation(service, args);
+    await runOperation(service, context);
     return;
   }
 
   if (command === 'run-sequence') {
-    await runSequencePreset(service, args);
+    await runSequencePreset(service, context);
     return;
   }
 
   if (command === 'run-sequence-config') {
-    await runSequenceConfig(service, args);
+    await runSequenceConfig(service, context);
     return;
   }
 
   if (command === 'place') {
-    await runPlaceCommand(service, args);
+    await runPlaceCommand(service, context);
     return;
   }
 

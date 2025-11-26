@@ -2,12 +2,12 @@
 
 const path = require('path');
 
-let CachedNewsCrawler = null;
-const loadNewsCrawler = () => {
-  if (!CachedNewsCrawler) {
-    CachedNewsCrawler = require('../NewsCrawler');
+let CachedCrawlerFactory = null;
+const loadCrawlerFactory = () => {
+  if (!CachedCrawlerFactory) {
+    CachedCrawlerFactory = require('../CrawlerFactory');
   }
-  return CachedNewsCrawler;
+  return CachedCrawlerFactory;
 };
 
 const buildFacadeDefaults = (defaults = {}) => {
@@ -32,8 +32,9 @@ const createCrawlerFactory = (crawlerFactory) => {
   }
 
   return (startUrl, options) => {
-    const NewsCrawler = loadNewsCrawler();
-    return new NewsCrawler(startUrl, options);
+    const { CrawlerFactory } = loadCrawlerFactory();
+    const config = { ...(options || {}), startUrl };
+    return CrawlerFactory.create(config);
   };
 };
 

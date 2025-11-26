@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 720">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadow-sm" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M 0 0 L 10 3.5 L 0 7 L 2 3.5 Z" fill="#94a3b8"/>
+    </marker>
+    <linearGradient id="country" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f87171"/><stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="adm1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c"/><stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="adm2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="city" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/><stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="capital" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1000" height="720" fill="#f8fafc"/>
+  
+  <!-- Header -->
+  <rect width="1000" height="75" fill="#0f172a"/>
+  <text x="500" y="35" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#ffffff">Gazetteer Place Hierarchy</text>
+  <text x="500" y="58" font-family="Inter, system-ui, sans-serif" font-size="13" text-anchor="middle" fill="#94a3b8">Country → ADM1 → ADM2 → City Tree Structure</text>
+  
+  <!-- Level Labels -->
+  <rect x="30" y="100" width="130" height="30" rx="6" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="95" y="120" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#dc2626">Level 0: Country</text>
+  
+  <rect x="30" y="215" width="150" height="30" rx="6" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="105" y="235" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#ea580c">Level 1: ADM1 (Region)</text>
+  
+  <rect x="30" y="315" width="155" height="26" rx="6" fill="#fefce8" stroke="#fde047"/>
+  <text x="107" y="333" font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#ca8a04">Level 2: ADM2 (District)</text>
+  
+  <rect x="30" y="505" width="130" height="30" rx="6" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="95" y="525" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#16a34a">Level 3: City</text>
+  
+  <!-- Country Level -->
+  <g filter="url(#shadow)">
+    <rect x="380" y="95" width="220" height="80" rx="12" fill="url(#country)"/>
+    <text x="490" y="130" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#ffffff">United Kingdom</text>
+    <text x="490" y="150" font-family="Inter, system-ui, sans-serif" font-size="11" text-anchor="middle" fill="#fecaca">kind: country • Q145 • pop: 67M</text>
+  </g>
+  
+  <!-- Capital -->
+  <g filter="url(#shadow-sm)">
+    <rect x="680" y="95" width="150" height="80" rx="12" fill="url(#capital)"/>
+    <text x="755" y="125" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">London</text>
+    <text x="755" y="145" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#bfdbfe">kind: capital</text>
+    <text x="755" y="162" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#93c5fd">Q84 • pop: 8.9M</text>
+  </g>
+  <line x1="600" y1="135" x2="680" y2="135" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="640" y="125" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">capital_of</text>
+  
+  <!-- ADM1 Connectors -->
+  <line x1="490" y1="175" x2="490" y2="200" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="200" y1="200" x2="800" y2="200" stroke="#94a3b8" stroke-width="1.5"/>
+  
+  <!-- England -->
+  <line x1="200" y1="200" x2="200" y2="220" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="110" y="225" width="180" height="70" rx="10" fill="url(#adm1)"/>
+    <text x="200" y="253" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">England</text>
+    <text x="200" y="273" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#ffedd5">region (ADM1) • Q21 • 56M</text>
+  </g>
+  
+  <!-- Scotland -->
+  <line x1="490" y1="200" x2="490" y2="220" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="400" y="225" width="180" height="70" rx="10" fill="url(#adm1)"/>
+    <text x="490" y="253" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">Scotland</text>
+    <text x="490" y="273" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#ffedd5">region (ADM1) • Q22 • 5.5M</text>
+  </g>
+  
+  <!-- Wales -->
+  <line x1="800" y1="200" x2="800" y2="220" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="710" y="225" width="180" height="70" rx="10" fill="url(#adm1)"/>
+    <text x="800" y="253" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#ffffff">Wales</text>
+    <text x="800" y="273" font-family="Inter, system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#ffedd5">region (ADM1) • Q25 • 3.1M</text>
+  </g>
+  
+  <!-- ADM2 under England -->
+  <line x1="200" y1="295" x2="200" y2="320" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="120" y1="320" x2="280" y2="320" stroke="#94a3b8" stroke-width="1.5"/>
+  
+  <!-- Greater London -->
+  <line x1="120" y1="320" x2="120" y2="340" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="40" y="350" width="160" height="60" rx="8" fill="url(#adm2)"/>
+    <text x="120" y="375" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">Greater London</text>
+    <text x="120" y="393" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#fef3c7">district (ADM2) • Q23306</text>
+  </g>
+  
+  <!-- West Midlands -->
+  <line x1="280" y1="320" x2="280" y2="340" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="200" y="350" width="160" height="60" rx="8" fill="url(#adm2)"/>
+    <text x="280" y="375" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">West Midlands</text>
+    <text x="280" y="393" font-family="Inter, system-ui, sans-serif" font-size="9" text-anchor="middle" fill="#fef3c7">district (ADM2) • Q23124</text>
+  </g>
+  
+  <!-- Cities under Greater London -->
+  <line x1="120" y1="410" x2="120" y2="440" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="60" y1="440" x2="180" y2="440" stroke="#94a3b8" stroke-width="1.5"/>
+  
+  <line x1="60" y1="440" x2="60" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="15" y="470" width="110" height="55" rx="8" fill="url(#city)"/>
+    <text x="70" y="493" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">Westminster</text>
+    <text x="70" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#dcfce7">city • Q208191</text>
+  </g>
+  
+  <line x1="180" y1="440" x2="180" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="135" y="470" width="90" height="55" rx="8" fill="url(#city)"/>
+    <text x="180" y="493" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">Camden</text>
+    <text x="180" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#dcfce7">Q208195</text>
+  </g>
+  
+  <!-- Cities under West Midlands -->
+  <line x1="280" y1="410" x2="280" y2="440" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="280" y1="440" x2="400" y2="440" stroke="#94a3b8" stroke-width="1.5"/>
+  
+  <line x1="280" y1="440" x2="280" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="235" y="470" width="90" height="55" rx="8" fill="url(#city)"/>
+    <text x="280" y="493" font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="700" text-anchor="middle" fill="#ffffff">Birmingham</text>
+    <text x="280" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#dcfce7">Q2256</text>
+  </g>
+  
+  <line x1="400" y1="440" x2="400" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="355" y="470" width="90" height="55" rx="8" fill="url(#city)"/>
+    <text x="400" y="493" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">Coventry</text>
+    <text x="400" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#dcfce7">Q6539</text>
+  </g>
+  
+  <!-- Scotland cities -->
+  <line x1="490" y1="295" x2="490" y2="440" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="440" y1="440" x2="540" y2="440" stroke="#94a3b8" stroke-width="1.5"/>
+  
+  <line x1="440" y1="440" x2="440" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="395" y="470" width="110" height="55" rx="8" fill="url(#capital)"/>
+    <text x="450" y="493" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">Edinburgh</text>
+    <text x="450" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#bfdbfe">capital • Q23436</text>
+  </g>
+  
+  <line x1="540" y1="440" x2="540" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="495" y="470" width="110" height="55" rx="8" fill="url(#city)"/>
+    <text x="550" y="493" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">Glasgow</text>
+    <text x="550" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#dcfce7">city • Q4093</text>
+  </g>
+  
+  <!-- Wales city -->
+  <line x1="800" y1="295" x2="800" y2="460" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow-sm)">
+    <rect x="745" y="470" width="110" height="55" rx="8" fill="url(#capital)"/>
+    <text x="800" y="493" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#ffffff">Cardiff</text>
+    <text x="800" y="510" font-family="Inter, system-ui, sans-serif" font-size="8" text-anchor="middle" fill="#bfdbfe">capital • Q10690</text>
+  </g>
+  
+  <!-- Legend -->
+  <rect x="30" y="560" width="940" height="130" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <text x="50" y="588" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Hierarchy Relationships (place_hierarchy table)</text>
+  
+  <text x="50" y="615" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#475569">
+    <tspan font-weight="600" fill="#334155">admin_parent:</tspan> City → ADM2 → ADM1 → Country (e.g., Birmingham → West Midlands → England → UK)
+  </text>
+  <text x="50" y="638" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#475569">
+    <tspan font-weight="600" fill="#334155">capital_of:</tspan> Capital city → Country/Region (e.g., London → UK, Edinburgh → Scotland, Cardiff → Wales)
+  </text>
+  <text x="50" y="661" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#475569">
+    <tspan font-weight="600" fill="#334155">Attributes:</tspan> Each place has Wikidata QID, population, coordinates, ISO codes, multiple names (place_names table)
+  </text>
+  
+  <!-- Kind legend -->
+  <rect x="700" y="575" width="255" height="100" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="720" y="598" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="600" fill="#475569">Place Kinds:</text>
+  <rect x="720" y="610" width="12" height="12" rx="3" fill="#ef4444"/>
+  <text x="738" y="620" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">country</text>
+  <rect x="800" y="610" width="12" height="12" rx="3" fill="#f97316"/>
+  <text x="818" y="620" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">region (ADM1)</text>
+  <rect x="720" y="632" width="12" height="12" rx="3" fill="#f59e0b"/>
+  <text x="738" y="642" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">district (ADM2)</text>
+  <rect x="840" y="632" width="12" height="12" rx="3" fill="#22c55e"/>
+  <text x="858" y="642" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">city</text>
+  <rect x="720" y="654" width="12" height="12" rx="3" fill="#3b82f6"/>
+  <text x="738" y="664" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">capital</text>
+  <text x="800" y="664" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#94a3b8">+ town, village</text>
+</svg>

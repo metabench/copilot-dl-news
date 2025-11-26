@@ -37,6 +37,38 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - Client bundle: run `npm run ui:client-build` (or the relevant task) when client code changes. Record the command + success status in `WORKING_NOTES.md`.
 - Manual spot checks: capture screenshots or CLI output inside the session folder when verifying visual tweaks.
 
+## Server Management & Detached Mode
+
+**Critical Problem**: When you start a UI server in a terminal and then run another command (build, test, etc.), the server process often terminates. This wastes time debugging "why isn't the server working" when the real cause is process signal propagation.
+
+**Solution**: Use **detached mode** for servers that need to survive subsequent terminal commands:
+
+```bash
+# Always stop existing server first, then start fresh in detached mode
+node src/ui/server/dataExplorerServer.js --stop 2>$null
+node src/ui/server/dataExplorerServer.js --detached --port 4600
+
+# Check if server is running
+node src/ui/server/dataExplorerServer.js --status
+
+# Stop when done
+node src/ui/server/dataExplorerServer.js --stop
+```
+
+**Agent Workflow**:
+1. Before starting any server: run `--stop` to clean up stale processes
+2. Start with `--detached` so subsequent commands don't kill it
+3. After server-side code changes: `--stop` then `--detached` to restart
+4. Use `--status` when debugging connection issues
+
+**When NOT to use detached mode**: When debugging with `console.log` or watching for stack traces—use foreground mode in a dedicated terminal instead.
+
+See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` → "Development Server & Detached Mode" for implementation details.
+
+## jsgui3 Terminology
+
+**Activation vs Hydration**: jsgui3 calls the process of binding a control to existing server-rendered DOM "**activation**" (via the `activate()` method). Other frameworks (React, Vue, Svelte) call the equivalent process "**hydration**". When reading external documentation or discussing with developers from other frameworks, these terms refer to the same concept.
+
 ## js-scan/js-edit Enforcement
 
 - **Before editing**: `js-scan` for dependencies/imports/callers. Store JSON output or continuation tokens in the session directory for replay.

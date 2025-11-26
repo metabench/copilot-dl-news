@@ -10,6 +10,7 @@ class CrawlerEvents {
     const {
       domain,
       getStats,
+      incrementBytesSaved,
       getQueueSize,
       getCurrentDownloads,
       getDomainLimits,
@@ -27,7 +28,8 @@ class CrawlerEvents {
       getQueueHeatmap,
       getCoverageSummary,
       logger,
-      outputVerbosity = DEFAULT_OUTPUT_VERBOSITY
+      outputVerbosity = DEFAULT_OUTPUT_VERBOSITY,
+      loggingQueue = true
     } = options;
 
     if (!domain) throw new Error('CrawlerEvents requires domain');
@@ -37,6 +39,7 @@ class CrawlerEvents {
     if (typeof getDomainLimits !== 'function') throw new Error('CrawlerEvents requires getDomainLimits function');
     this.domain = domain;
     this.getStats = getStats;
+    this.incrementBytesSavedFn = typeof incrementBytesSaved === 'function' ? incrementBytesSaved : () => {};
     this.getQueueSize = getQueueSize;
     this.getCurrentDownloads = getCurrentDownloads;
     this.getDomainLimits = getDomainLimits;
@@ -55,6 +58,7 @@ class CrawlerEvents {
     this.logger = logger || console;
     this.isPausedFn = typeof isPaused === 'function' ? isPaused : () => false;
     this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
+    this.loggingQueue = loggingQueue;
 
     this._lastProgressEmitAt = 0;
     this.problemCounters = new Map();
@@ -124,6 +128,8 @@ class CrawlerEvents {
       saved: stats.articlesSaved || 0,
       errors: stats.errors || 0,
       bytes: stats.bytesDownloaded || 0,
+      bytesSaved: stats.bytesSaved || 0,
+      bytesSavedCompressed: stats.bytesSavedCompressed || 0,
       queueSize,
       currentDownloadsCount: typeof currentDownloadsMap.size === 'number' ? currentDownloadsMap.size : Array.isArray(currentDownloadsMap) ? currentDownloadsMap.length : 0,
       currentDownloads: inflight,
@@ -334,8 +340,13 @@ class CrawlerEvents {
 
   _log(level, ...args) {
     if (!this.logger) return;
+    
+    const first = args[0];
+    if (this.loggingQueue === false && this._isQueueLogLine(first)) {
+      return;
+    }
+
     if (level === 'log') {
-      const first = args[0];
       if (this.outputVerbosity === 'extra-terse' && this._shouldSuppressLogLine(first)) {
         return;
       }
@@ -537,6 +548,10 @@ class CrawlerEvents {
     } catch (_) {
       return null;
     }
+  }
+
+  incrementBytesSaved(bytes, compressedBytes) {
+    this.incrementBytesSavedFn(bytes, compressedBytes);
   }
 }
 

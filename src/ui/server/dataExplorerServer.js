@@ -7,6 +7,10 @@ const crypto = require("crypto");
 const express = require("express");
 const compression = require("compression");
 const jsgui = require("jsgui3-html");
+const { spawn } = require("child_process");
+
+// PID file for detached mode management
+const PID_FILE = path.join(process.cwd(), "tmp", ".data-explorer.pid");
 
 const { openNewsDb } = require("../../db/dbAccess");
 const { findProjectRoot } = require("../../utils/project-root");
@@ -25,6 +29,7 @@ const { listRecentCrawls } = require("../../db/sqlite/v1/queries/ui/crawls");
 const { listRecentErrors } = require("../../db/sqlite/v1/queries/ui/errors");
 const { selectUrlById, selectFetchHistory } = require("../../db/sqlite/v1/queries/ui/urlDetails");
 const { selectHostSummary, selectHostDownloads } = require("../../db/sqlite/v1/queries/ui/domainDetails");
+const { listConfiguration } = require("../../db/sqlite/v1/queries/ui/configuration");
 const { getCachedMetric } = require("./services/metricsService");
 const { renderHtml, resolveDbPath } = require("../render-url-table");
 const { buildDomainSnapshot, createHomeCardLoaders } = require("../homeCardData");
@@ -52,6 +57,7 @@ const {
   buildErrorLogColumns,
   buildErrorLogRows
 } = require("../controls/ErrorLogTable");
+const { ConfigMatrixControl } = require("../controls/ConfigMatrixControl");
 const {
   buildNavLinks,
   buildBackLinkTarget,
@@ -358,6 +364,43 @@ function toLowerHost(host) {
 
 const URL_COLUMNS = buildColumns();
 
+function renderConfigView({ db, relativeDb, now }) {
+  const settings = listConfiguration(db);
+  const properties = settings.map((row) => ({
+    key: row.key,
+    value: row.value,
+    source: "crawler_settings",
+    description: `Last updated: ${formatDateTime(row.updatedAt, true)}`
+  }));
+
+  const control = new ConfigMatrixControl({
+    sections: [
+      {
+        title: "Crawler Settings",
+        description: "Configuration values stored in the database.",
+        properties
+      }
+    ]
+  });
+
+  return {
+    title: "Configuration",
+    columns: [],
+    rows: [],
+    meta: {
+      rowCount: settings.length,
+      limit: settings.length,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle: `${settings.length} settings loaded from ${relativeDb}`
+    },
+    renderOptions: {
+      layoutMode: "single-control",
+      mainControl: control
+    }
+  };
+}
+
 const DATA_VIEWS = [
   {
     key: "home",
@@ -393,6 +436,13 @@ const DATA_VIEWS = [
     navLabel: "Errors",
     title: "Recent Crawl Errors",
     render: renderErrorLogView
+  },
+  {
+    key: "config",
+    path: "/config",
+    navLabel: "Config",
+    title: "Configuration",
+    render: renderConfigView
   }
 ];
 
@@ -665,13 +715,15 @@ function buildUrlSummarySubtitle({ startRow, endRow, totalRows, currentPage, tot
 
 function renderDomainSummaryView({ req, db, relativeDb, now }) {
   const snapshot = buildDomainSnapshot(db, { windowSize: DOMAIN_WINDOW_SIZE, limit: DOMAIN_LIMIT });
+  // Skip slow per-host queries (getArticleCount, getFetchCountForHost) on initial render.
+  // These would cause N+1 queries that take several seconds. Instead, render placeholders
+  // and let the client load these counts asynchronously in the future.
   const entries = snapshot.hosts.map((domain) => {
-    const normalizedHost = domain.host ? toLowerHost(domain.host) : null;
     return {
       host: domain.host || null,
       windowArticles: domain.articleCount || 0,
-      allArticles: normalizedHost ? getArticleCount(db, normalizedHost) : 0,
-      fetches: normalizedHost ? getFetchCountForHost(db, normalizedHost) : 0,
+      allArticles: null,  // Deferred: would be getArticleCount(db, host)
+      fetches: null,      // Deferred: would be getFetchCountForHost(db, host)
       lastSavedAt: domain.lastSavedAt
     };
   });
@@ -879,6 +931,66 @@ function createDataExplorerServer(options = {}) {
     }
   });
 
+  // SSE events endpoint - stub for client compatibility
+  // The client-side sseHandlers.js connects to this endpoint for real-time updates.
+  // Currently this is a stub that keeps the connection alive without sending events.
+  app.get("/api/events", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+    res.flushHeaders();
+
+    // Send initial comment to establish connection
+    res.write(": connected\n\n");
+
+    // Send periodic heartbeat to keep connection alive
+    const heartbeatInterval = setInterval(() => {
+      res.write(": heartbeat\n\n");
+    }, 30000);
+
+    // Clean up on client disconnect
+    req.on("close", () => {
+      clearInterval(heartbeatInterval);
+    });
+  });
+
+  // Stub /api/crawls endpoint - data explorer doesn't manage crawls
+  // The client-side jobsManager.js polls this endpoint for active crawl jobs.
+  // Return empty jobs list since this server doesn't have crawl management.
+  app.get("/api/crawls", (req, res) => {
+    res.json({ items: [] });
+  });
+
+  // API endpoint for deferred domain counts (allArticles, fetches)
+  // Called by client-side code after initial page render to populate [loading] cells.
+  app.get("/api/domains/counts", (req, res, next) => {
+    try {
+      const hostsParam = req.query.hosts;
+      if (!hostsParam) {
+        return res.json({ counts: {} });
+      }
+      const hosts = hostsParam.split(",").map((h) => h.trim()).filter(Boolean);
+      if (hosts.length === 0) {
+        return res.json({ counts: {} });
+      }
+      // Limit to prevent abuse
+      const limitedHosts = hosts.slice(0, 50);
+      const counts = {};
+      for (const host of limitedHosts) {
+        const normalizedHost = toLowerHost(host);
+        if (!normalizedHost) continue;
+        counts[host] = {
+          allArticles: getArticleCount(dbAccess.db, normalizedHost),
+          fetches: getFetchCountForHost(dbAccess.db, normalizedHost)
+        };
+      }
+      res.json({ counts });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // URL detail + downloads view
   app.get("/urls/:id", (req, res, next) => {
     try {
@@ -1058,6 +1170,15 @@ function parseServerArgs(argv) {
       case "--title":
         args.title = tokens[++i];
         break;
+      case "--detached":
+        args.detached = true;
+        break;
+      case "--stop":
+        args.stop = true;
+        break;
+      case "--status":
+        args.status = true;
+        break;
       default:
         if (token.startsWith("--")) {
           const [key, value] = token.split("=");
@@ -1073,8 +1194,113 @@ function parseServerArgs(argv) {
   return args;
 }
 
+/**
+ * Spawn server as detached background process
+ */
+function spawnDetached(args) {
+  const scriptPath = __filename;
+  const childArgs = [scriptPath, "--port", String(args.port || DEFAULT_PORT)];
+  if (args.host) childArgs.push("--host", args.host);
+  if (args.db) childArgs.push("--db", args.db);
+  if (args.pageSize) childArgs.push("--page-size", String(args.pageSize));
+  if (args.title) childArgs.push("--title", args.title);
+
+  // Ensure tmp directory exists
+  const tmpDir = path.dirname(PID_FILE);
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir, { recursive: true });
+  }
+
+  const child = spawn(process.execPath, childArgs, {
+    detached: true,
+    stdio: "ignore",
+    cwd: process.cwd(),
+    env: { ...process.env, DATA_EXPLORER_DETACHED: "1" }
+  });
+
+  fs.writeFileSync(PID_FILE, String(child.pid), "utf-8");
+  child.unref();
+
+  const port = args.port || DEFAULT_PORT;
+  const host = args.host || "127.0.0.1";
+  console.log(`🔍 Data Explorer started in background (PID: ${child.pid})`);
+  console.log(`   URL: http://${host}:${port}/domains`);
+  console.log(`   Stop with: node ${path.relative(process.cwd(), scriptPath)} --stop`);
+}
+
+/**
+ * Stop a running detached server
+ */
+function stopDetached() {
+  if (!fs.existsSync(PID_FILE)) {
+    console.log("No detached server found (no PID file)");
+    return false;
+  }
+
+  const pid = parseInt(fs.readFileSync(PID_FILE, "utf-8").trim(), 10);
+
+  try {
+    process.kill(pid, 0); // Check if process exists
+    process.kill(pid, "SIGTERM");
+    fs.unlinkSync(PID_FILE);
+    console.log(`🔍 Data Explorer stopped (PID: ${pid})`);
+    return true;
+  } catch (err) {
+    if (err.code === "ESRCH") {
+      fs.unlinkSync(PID_FILE);
+      console.log("Server was not running (stale PID file removed)");
+      return false;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Check status of detached server
+ */
+function checkStatus() {
+  if (!fs.existsSync(PID_FILE)) {
+    console.log("🔍 Data Explorer: not running (no PID file)");
+    return false;
+  }
+
+  const pid = parseInt(fs.readFileSync(PID_FILE, "utf-8").trim(), 10);
+
+  try {
+    process.kill(pid, 0);
+    console.log(`🔍 Data Explorer: running (PID: ${pid})`);
+    return true;
+  } catch (err) {
+    if (err.code === "ESRCH") {
+      console.log("🔍 Data Explorer: not running (stale PID file)");
+      return false;
+    }
+    throw err;
+  }
+}
+
 if (require.main === module) {
   const args = parseServerArgs(process.argv.slice(2));
+  
+  // Handle --stop flag
+  if (args.stop) {
+    stopDetached();
+    process.exit(0);
+  }
+  
+  // Handle --status flag
+  if (args.status) {
+    checkStatus();
+    process.exit(0);
+  }
+  
+  // Handle --detached flag
+  if (args.detached) {
+    spawnDetached(args);
+    process.exit(0);
+  }
+  
+  console.log("Server args:", args);
   const pageSize = sanitizePageSize(args.pageSize);
   const { app, close } = createDataExplorerServer({
     dbPath: args.db,
@@ -1105,6 +1331,9 @@ if (require.main === module) {
 module.exports = {
   createDataExplorerServer,
   parseServerArgs,
+  spawnDetached,
+  stopDetached,
+  checkStatus,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   DATA_VIEWS,

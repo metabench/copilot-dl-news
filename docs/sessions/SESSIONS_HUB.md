@@ -31,6 +31,81 @@
 
 ## Current Session
 
+### Session 2025-06-20: Gazetteer Ingestion Robustness
+
+**Duration**: Closed
+**Type**: Data Quality / Tooling
+**Completion**: ✅ Completed
+
+**Focus**:
+- Fixed duplicate place records (5 Londons → 1)
+- Created `gazetteer-cleanup.js` for manual and automatic duplicate cleanup
+- Integrated multi-strategy deduplication into capital city creation
+- Added `--cleanup` and `--cleanup-only` options to `populate-gazetteer.js`
+- Backfilled `wikidata_qid` column from `place_external_ids`
+
+**Results**:
+- 252 places got `wikidata_qid` backfilled
+- 8 duplicate records merged/deleted
+- 0 duplicates remaining
+
+**Location**: `docs/sessions/2025-06-20-gazetteer-ingestion-robustness/`
+
+**Quick Links**:
+- 📘 [Implementation Plan](./2025-06-20-gazetteer-ingestion-robustness/PLAN.md)
+
+---
+
+### Session 2025-10-24: Gazetteer Tooling
+
+**Duration**: Closed
+**Type**: Tooling
+**Completion**: ✅ Completed
+
+**Focus**:
+- Create CLI tooling (`gazetteer-scan.js`) for navigating and querying gazetteer data.
+- Implement `gazetteer.search.js` query module.
+- Document tools in `GAZETTEER_TOOLS.md`.
+
+**Location**: `docs/sessions/2025-10-24-gazetteer-tooling/`
+
+**Quick Links**:
+- 📘 [Session Summary](./2025-10-24-gazetteer-tooling/SESSION_SUMMARY.md)
+- 🗺️ [Plan](./2025-10-24-gazetteer-tooling/PLAN.md)
+
+### Session 2025-11-21: Crawler Refactor
+
+**Duration**: Active
+**Type**: Backend architecture
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Centralize CLI + runner config merging via `ConfigurationService`.
+- Introduce `CrawlerFactory` so `NewsCrawler` focuses on orchestration only.
+- Update entry points (`crawl.js`, crawl API) to use the factory + new config pipeline.
+
+**Location**: `docs/sessions/2025-11-21-crawler-refactor/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-21-crawler-refactor/PLAN.md)
+- 📝 [Working Notes](./2025-11-21-crawler-refactor/WORKING_NOTES.md)
+
+### Session 2025-11-21: Crawler Factory DI
+
+**Duration**: Active
+**Type**: Backend architecture
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Teach `NewsCrawler` to accept injected service bundles and expose reusable wiring helpers.
+- Route `CrawlerFactory` and facade helpers through the DI pathway so future entry points can swap implementations safely.
+- Document the plan + validation steps as the factory work continues.
+
+**Location**: `docs/sessions/2025-11-21-crawler-factory-di/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-21-crawler-factory-di/PLAN.md)
+
 ### Session 2025-11-17: jsgui3 Isomorphic Screenshots
 
 **Duration**: Active
@@ -118,6 +193,22 @@
 **Quick Links**:
 - 🗺️ [Plan](./2025-11-17-ui-home-cleanup/PLAN.md)
 - 📝 [Working Notes](./2025-11-17-ui-home-cleanup/WORKING_NOTES.md)
+
+### Session 2025-11-18: UI URL Details Fetch History Fix
+
+**Duration**: Closed
+**Type**: Bug Fix
+**Completion**: ✅ Completed
+
+**Focus**:
+- Fix the "Fetched URLs" list on the URL details page which was showing 0 items.
+- Update `src/db/sqlite/v1/queries/ui/urlDetails.js` to query `http_responses` instead of stale `fetches`.
+- Verify the fix with a script.
+
+**Location**: `docs/sessions/2025-11-18-ui-url-details-fetch-history-fix/`
+
+**Quick Links**:
+- 📘 [Session Summary](./2025-11-18-ui-url-details-fetch-history-fix/SESSION_SUMMARY.md)
 
 ### Session 2025-11-20: Crawl Config Workspace
 
@@ -371,6 +462,23 @@
 **Quick Links**:
 - 🗺️ [Plan](./2025-11-22-ui-dashboard-completion/PLAN.md)
 - 📘 [Session Summary](./2025-11-22-ui-dashboard-completion/SESSION_SUMMARY.md)
+
+### Session 2025-11-22: UI Config Viewer
+
+**Duration**: Closed
+**Type**: UI Feature
+**Completion**: ✅ Completed
+
+**Focus**:
+- Implement read-only configuration viewer in Data Explorer.
+- Create DB query for `crawler_settings`.
+- Add `/config` route to server.
+- Update `render-url-table.js` to support arbitrary controls.
+
+**Location**: `docs/sessions/2025-11-22-ui-config-viewer/`
+
+**Quick Links**:
+- 📘 [Session Summary](./2025-11-22-ui-config-viewer/SESSION_SUMMARY.md)
 
 ---
 

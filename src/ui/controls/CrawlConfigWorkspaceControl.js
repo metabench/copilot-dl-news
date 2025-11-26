@@ -224,7 +224,17 @@ class CrawlConfigWorkspaceControl extends jsgui.Control {
         const item = new jsgui.Control({ context: this.context, tagName: "li" });
         item.add_class("crawl-config-workspace__override");
         const label = createTextControl(this.context, "span", key, "crawl-config-workspace__override-key");
-        const val = createTextControl(this.context, "span", value, "crawl-config-workspace__override-value");
+        
+        let displayValue = value;
+        if (typeof value === "object" && value !== null) {
+          try {
+            displayValue = JSON.stringify(value);
+          } catch (_) {
+            displayValue = String(value);
+          }
+        }
+        
+        const val = createTextControl(this.context, "span", displayValue, "crawl-config-workspace__override-value");
         item.add(label);
         item.add(val);
         overridesList.add(item);

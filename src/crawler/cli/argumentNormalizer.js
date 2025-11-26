@@ -261,10 +261,13 @@ function parseMaxAgeToMs(value) {
 }
 
 function findArgValue(args, prefixes) {
+  // Search from the end to support "last match wins" override behavior
   for (const prefix of prefixes) {
-    const match = args.find(arg => typeof arg === 'string' && arg.startsWith(prefix));
-    if (match) {
-      return match.substring(prefix.length);
+    for (let i = args.length - 1; i >= 0; i--) {
+      const arg = args[i];
+      if (typeof arg === 'string' && arg.startsWith(prefix)) {
+        return arg.substring(prefix.length);
+      }
     }
   }
   return undefined;
@@ -276,13 +279,18 @@ function findOptionValue(args, name) {
     return eqValue;
   }
   const flag = `--${name}`;
-  for (let i = 0; i < args.length - 1; i += 1) {
+  // Search from the end to support "last match wins" override behavior
+  for (let i = args.length - 1; i >= 0; i--) {
     if (args[i] === flag) {
       const next = args[i + 1];
       if (typeof next === 'string' && !next.startsWith('--')) {
         return next;
       }
-      break;
+      // If we found the flag but no value follows (or next is a flag), 
+      // and we are looking for a value, this might be a boolean flag usage 
+      // but this function is for values. 
+      // However, existing logic stopped at first match.
+      // If we search backwards, we find the last instance.
     }
   }
   return undefined;
@@ -592,6 +600,10 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
   const seedFromCache = hasFlag('--seed-from-cache');
   const cachedSeedUrls = collectCachedSeeds(args);
 
+  const loggingQueueToggle = resolveToggleFlag('--logging-queue', '--no-logging-queue', true);
+  const loggingNetworkToggle = resolveToggleFlag('--logging-network', '--no-logging-network', true);
+  const loggingFetchingToggle = resolveToggleFlag('--logging-fetching', '--no-logging-fetching', true);
+
   const sharedOverridesRaw = getRawOption('shared-overrides');
   const stepOverridesRaw = getRawOption('step-overrides');
   const configCliRaw = getRawOption('config-cli');
@@ -680,6 +692,16 @@ function normalizeLegacyArguments(argv = [], { log = console } = {}) {
   }
   if (Array.isArray(cachedSeedUrls) && cachedSeedUrls.length) {
     options.cachedSeedUrls = cachedSeedUrls;
+  }
+
+  if (loggingQueueToggle.explicit) {
+    options.loggingQueue = loggingQueueToggle.value;
+  }
+  if (loggingNetworkToggle.explicit) {
+    options.loggingNetwork = loggingNetworkToggle.value;
+  }
+  if (loggingFetchingToggle.explicit) {
+    options.loggingFetching = loggingFetchingToggle.value;
   }
 
   if (dataDir) {

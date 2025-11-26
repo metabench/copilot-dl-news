@@ -1,0 +1,501 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1600">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="implementedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="missingGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="partialGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="categoryGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="1600" fill="#0f172a"/>
+  
+  <!-- Title -->
+  <rect x="30" y="20" width="1340" height="70" rx="12" fill="url(#headerGrad)" filter="url(#dropShadow)"/>
+  <text x="700" y="62" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="700" fill="white" text-anchor="middle">
+    UI Feature Comparison: Current vs. Comprehensive
+  </text>
+  
+  <!-- Legend -->
+  <g transform="translate(30, 110)">
+    <rect width="1340" height="50" rx="8" fill="#1e293b" opacity="0.6"/>
+    <circle cx="40" cy="25" r="10" fill="url(#implementedGrad)"/>
+    <text x="58" y="31" font-family="Inter, system-ui, sans-serif" font-size="14" fill="#e2e8f0">Implemented</text>
+    
+    <circle cx="200" cy="25" r="10" fill="url(#partialGrad)"/>
+    <text x="218" y="31" font-family="Inter, system-ui, sans-serif" font-size="14" fill="#e2e8f0">Partial / Deprecated</text>
+    
+    <circle cx="410" cy="25" r="10" fill="url(#missingGrad)"/>
+    <text x="428" y="31" font-family="Inter, system-ui, sans-serif" font-size="14" fill="#e2e8f0">Missing / Needed</text>
+    
+    <text x="1300" y="31" font-family="JetBrains Mono, monospace" font-size="12" fill="#94a3b8" text-anchor="end">copilot-dl-news UI</text>
+  </g>
+
+  <!-- ROW 1: Core Navigation & Views -->
+  <g transform="translate(30, 180)">
+    <rect width="660" height="420" rx="12" fill="url(#categoryGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#60a5fa">
+      🧭 Navigation &amp; Core Views
+    </text>
+    
+    <!-- Implemented features -->
+    <g transform="translate(20, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Home Dashboard</text>
+    </g>
+    <g transform="translate(20, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ URLs Listing Page</text>
+    </g>
+    <g transform="translate(20, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Domains Summary Page</text>
+    </g>
+    <g transform="translate(20, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Crawl Jobs Page</text>
+    </g>
+    <g transform="translate(20, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Error Log Page</text>
+    </g>
+    <g transform="translate(20, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Config Matrix View</text>
+    </g>
+    <g transform="translate(20, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ URL Detail + Fetch History</text>
+    </g>
+    <g transform="translate(20, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Domain Detail + Downloads</text>
+    </g>
+    
+    <!-- Missing features -->
+    <g transform="translate(340, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Global Search Bar</text>
+    </g>
+    <g transform="translate(340, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Saved Filters / Bookmarks</text>
+    </g>
+    <g transform="translate(340, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Quick Jump / Command Palette</text>
+    </g>
+    <g transform="translate(340, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ User Preferences / Settings</text>
+    </g>
+    <g transform="translate(340, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Keyboard Navigation</text>
+    </g>
+    <g transform="translate(340, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Multi-Tab / Split Views</text>
+    </g>
+    <g transform="translate(340, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Customizable Dashboard</text>
+    </g>
+    <g transform="translate(340, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Recent Items / History</text>
+    </g>
+  </g>
+
+  <!-- ROW 1: Real-Time & Monitoring -->
+  <g transform="translate(710, 180)">
+    <rect width="660" height="420" rx="12" fill="url(#categoryGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#f472b6">
+      📡 Real-Time &amp; Monitoring
+    </text>
+    
+    <!-- Implemented/Partial features -->
+    <g transform="translate(20, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ SSE Event Stream (Dashboard)</text>
+    </g>
+    <g transform="translate(20, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Crawl Stage Badges</text>
+    </g>
+    <g transform="translate(20, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Active Jobs Panel</text>
+    </g>
+    <g transform="translate(20, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Hourly Sparkline Charts</text>
+    </g>
+    <g transform="translate(20, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Metrics Service (cached stats)</text>
+    </g>
+    <g transform="translate(20, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Request Diagnostics Headers</text>
+    </g>
+    
+    <!-- Missing features -->
+    <g transform="translate(340, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Live URL Discovery Feed</text>
+    </g>
+    <g transform="translate(340, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Throughput Graphs (req/s)</text>
+    </g>
+    <g transform="translate(340, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Error Rate Alerts</text>
+    </g>
+    <g transform="translate(340, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Queue Depth Monitoring</text>
+    </g>
+    <g transform="translate(340, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Resource Usage (CPU/Mem)</text>
+    </g>
+    <g transform="translate(340, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ WebSocket Live Updates</text>
+    </g>
+    <g transform="translate(340, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Timeline / Gantt View</text>
+    </g>
+    <g transform="translate(340, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Notification Center</text>
+    </g>
+  </g>
+
+  <!-- ROW 2: Data Management -->
+  <g transform="translate(30, 620)">
+    <rect width="660" height="420" rx="12" fill="url(#categoryGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#34d399">
+      📊 Data Management
+    </text>
+    
+    <!-- Implemented features -->
+    <g transform="translate(20, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Paginated URL Tables</text>
+    </g>
+    <g transform="translate(20, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ URL Filter Toggle (fetched)</text>
+    </g>
+    <g transform="translate(20, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Domain Aggregation</text>
+    </g>
+    <g transform="translate(20, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Back Link Navigation</text>
+    </g>
+    <g transform="translate(20, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Breadcrumb Trails</text>
+    </g>
+    <g transform="translate(20, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Gazetteer Browser (deprecated)</text>
+    </g>
+    <g transform="translate(20, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Analysis Runs History</text>
+    </g>
+    
+    <!-- Missing features -->
+    <g transform="translate(340, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Advanced Column Sorting</text>
+    </g>
+    <g transform="translate(340, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Multi-Column Filtering</text>
+    </g>
+    <g transform="translate(340, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Bulk Selection / Actions</text>
+    </g>
+    <g transform="translate(340, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Data Export (CSV/JSON)</text>
+    </g>
+    <g transform="translate(340, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Inline Editing</text>
+    </g>
+    <g transform="translate(340, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Virtual Scrolling (infinite)</text>
+    </g>
+    <g transform="translate(340, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Column Visibility Toggle</text>
+    </g>
+    <g transform="translate(340, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Resizable Columns</text>
+    </g>
+  </g>
+
+  <!-- ROW 2: Crawl Operations -->
+  <g transform="translate(710, 620)">
+    <rect width="660" height="420" rx="12" fill="url(#categoryGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#fbbf24">
+      🕷️ Crawl Operations
+    </text>
+    
+    <!-- Implemented/Partial features -->
+    <g transform="translate(20, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Start Crawl (deprecated UI)</text>
+    </g>
+    <g transform="translate(20, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Crawl Progress (deprecated)</text>
+    </g>
+    <g transform="translate(20, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Queue Management (deprecated)</text>
+    </g>
+    <g transform="translate(20, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Priority Config (deprecated)</text>
+    </g>
+    <g transform="translate(20, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Coverage Dashboard (deprecated)</text>
+    </g>
+    
+    <!-- Missing features -->
+    <g transform="translate(340, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Crawl Wizard / Guided Setup</text>
+    </g>
+    <g transform="translate(340, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Pause / Resume Controls</text>
+    </g>
+    <g transform="translate(340, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Scheduled Crawls</text>
+    </g>
+    <g transform="translate(340, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Crawl Templates / Presets</text>
+    </g>
+    <g transform="translate(340, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Rate Limit Dashboard</text>
+    </g>
+    <g transform="translate(340, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ robots.txt / Sitemap Viewer</text>
+    </g>
+    <g transform="translate(340, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Crawl Comparison Tool</text>
+    </g>
+    <g transform="translate(340, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Seed URL Management</text>
+    </g>
+  </g>
+
+  <!-- ROW 3: Analytics & Visualization -->
+  <g transform="translate(30, 1060)">
+    <rect width="660" height="420" rx="12" fill="url(#categoryGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#a78bfa">
+      📈 Analytics &amp; Visualization
+    </text>
+    
+    <!-- Implemented/Partial features -->
+    <g transform="translate(20, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Home Cards (counts/badges)</text>
+    </g>
+    <g transform="translate(20, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Diagram Atlas Viewer</text>
+    </g>
+    <g transform="translate(20, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Docs Viewer (Markdown)</text>
+    </g>
+    <g transform="translate(20, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Benchmark Charts (Chart.js)</text>
+    </g>
+    <g transform="translate(20, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ SVG Pipeline Flowcharts</text>
+    </g>
+    
+    <!-- Missing features -->
+    <g transform="translate(340, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Interactive Data Viz</text>
+    </g>
+    <g transform="translate(340, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Trend Analysis / Forecasting</text>
+    </g>
+    <g transform="translate(340, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Geographic Heat Maps</text>
+    </g>
+    <g transform="translate(340, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Network Topology Graphs</text>
+    </g>
+    <g transform="translate(340, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Custom Report Builder</text>
+    </g>
+    <g transform="translate(340, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Data Drill-Down Charts</text>
+    </g>
+    <g transform="translate(340, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Anomaly Detection Viz</text>
+    </g>
+    <g transform="translate(340, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Comparison Dashboard</text>
+    </g>
+  </g>
+
+  <!-- ROW 3: Developer & Advanced -->
+  <g transform="translate(710, 1060)">
+    <rect width="660" height="420" rx="12" fill="url(#categoryGrad)" filter="url(#dropShadow)"/>
+    <text x="20" y="35" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#38bdf8">
+      🔧 Developer &amp; Advanced
+    </text>
+    
+    <!-- Implemented features -->
+    <g transform="translate(20, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Dark Mode Theme</text>
+    </g>
+    <g transform="translate(20, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Responsive Layout</text>
+    </g>
+    <g transform="translate(20, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ jsgui3 Control System</text>
+    </g>
+    <g transform="translate(20, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Server-Side Rendering</text>
+    </g>
+    <g transform="translate(20, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#implementedGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✓ Control Check Scripts</text>
+    </g>
+    <g transform="translate(20, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#partialGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">◐ Background Tasks API</text>
+    </g>
+    
+    <!-- Missing features -->
+    <g transform="translate(340, 55)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ API Documentation UI</text>
+    </g>
+    <g transform="translate(340, 97)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ GraphQL Playground</text>
+    </g>
+    <g transform="translate(340, 139)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ SQL Query Console</text>
+    </g>
+    <g transform="translate(340, 181)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Webhook Management</text>
+    </g>
+    <g transform="translate(340, 223)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Plugin / Extension System</text>
+    </g>
+    <g transform="translate(340, 265)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Audit Log / Activity Feed</text>
+    </g>
+    <g transform="translate(340, 307)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Multi-User Auth</text>
+    </g>
+    <g transform="translate(340, 349)">
+      <rect width="300" height="36" rx="6" fill="url(#missingGrad)" filter="url(#softShadow)"/>
+      <text x="15" y="24" font-family="Inter, system-ui, sans-serif" font-size="13" fill="white">✗ Role-Based Access Control</text>
+    </g>
+  </g>
+
+  <!-- Summary Stats -->
+  <g transform="translate(30, 1510)">
+    <rect width="1340" height="70" rx="10" fill="#1e293b" filter="url(#softShadow)"/>
+    
+    <g transform="translate(80, 35)">
+      <rect x="-60" y="-22" width="180" height="44" rx="6" fill="#10b981" opacity="0.2"/>
+      <text font-family="JetBrains Mono, monospace" font-size="32" font-weight="700" fill="#10b981" text-anchor="middle">22</text>
+      <text x="60" y="5" font-family="Inter, system-ui, sans-serif" font-size="13" fill="#94a3b8">Implemented</text>
+    </g>
+    
+    <g transform="translate(320, 35)">
+      <rect x="-60" y="-22" width="180" height="44" rx="6" fill="#f59e0b" opacity="0.2"/>
+      <text font-family="JetBrains Mono, monospace" font-size="32" font-weight="700" fill="#f59e0b" text-anchor="middle">12</text>
+      <text x="60" y="5" font-family="Inter, system-ui, sans-serif" font-size="13" fill="#94a3b8">Partial / Deprecated</text>
+    </g>
+    
+    <g transform="translate(560, 35)">
+      <rect x="-60" y="-22" width="180" height="44" rx="6" fill="#ef4444" opacity="0.2"/>
+      <text font-family="JetBrains Mono, monospace" font-size="32" font-weight="700" fill="#ef4444" text-anchor="middle">48</text>
+      <text x="60" y="5" font-family="Inter, system-ui, sans-serif" font-size="13" fill="#94a3b8">Missing Features</text>
+    </g>
+    
+    <g transform="translate(900, 35)">
+      <text font-family="Inter, system-ui, sans-serif" font-size="14" fill="#e2e8f0" text-anchor="start">
+        Current coverage: ~27% of a comprehensive crawler management UI
+      </text>
+      <text x="0" y="20" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#64748b" text-anchor="start">
+        Active UI: src/ui/server/dataExplorerServer.js | Deprecated: src/deprecated-ui/
+      </text>
+    </g>
+  </g>
+</svg>

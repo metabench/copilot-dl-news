@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <!-- Definitions for arrowheads -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" fill="#f8f9fa" />
+
+  <!-- External Data Sources -->
+  <g transform="translate(50, 50)">
+    <rect x="0" y="0" width="180" height="120" rx="10" fill="#e3f2fd" stroke="#2196f3" stroke-width="2" />
+    <text x="90" y="30" text-anchor="middle" font-weight="bold" fill="#1565c0">External Sources</text>
+    
+    <rect x="20" y="45" width="140" height="30" rx="5" fill="#fff" stroke="#90caf9" />
+    <text x="90" y="65" text-anchor="middle" font-size="12">REST Countries API</text>
+    
+    <rect x="20" y="80" width="140" height="30" rx="5" fill="#fff" stroke="#90caf9" />
+    <text x="90" y="100" text-anchor="middle" font-size="12">Wikidata (SPARQL)</text>
+  </g>
+
+  <!-- Ingestion Tool -->
+  <g transform="translate(300, 50)">
+    <rect x="0" y="0" width="200" height="120" rx="10" fill="#fff3e0" stroke="#ff9800" stroke-width="2" />
+    <text x="100" y="30" text-anchor="middle" font-weight="bold" fill="#e65100">Ingestion Tool</text>
+    <text x="100" y="50" text-anchor="middle" font-size="12" font-family="monospace">populate-gazetteer.js</text>
+    
+    <rect x="20" y="70" width="160" height="30" rx="5" fill="#fff" stroke="#ffcc80" />
+    <text x="100" y="90" text-anchor="middle" font-size="12">restcountries.js</text>
+  </g>
+
+  <!-- File Cache -->
+  <g transform="translate(300, 220)">
+    <rect x="0" y="0" width="200" height="80" rx="10" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2" />
+    <text x="100" y="30" text-anchor="middle" font-weight="bold" fill="#7b1fa2">File Cache</text>
+    <text x="100" y="50" text-anchor="middle" font-size="12" font-family="monospace">data/cache/*.json</text>
+    <text x="100" y="65" text-anchor="middle" font-size="10" fill="#666">(Safe to Delete)</text>
+  </g>
+
+  <!-- Database -->
+  <g transform="translate(550, 50)">
+    <path d="M0,20 C0,10 180,10 180,20 L180,380 C180,390 0,390 0,380 Z" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" />
+    <path d="M0,20 C0,30 180,30 180,20" fill="none" stroke="#4caf50" stroke-width="2" />
+    <text x="90" y="50" text-anchor="middle" font-weight="bold" fill="#2e7d32">SQLite Database</text>
+    
+    <!-- Tables -->
+    <g transform="translate(20, 70)">
+      <rect x="0" y="0" width="140" height="30" fill="#fff" stroke="#a5d6a7" />
+      <text x="70" y="20" text-anchor="middle" font-size="12">places</text>
+      
+      <rect x="0" y="35" width="140" height="30" fill="#fff" stroke="#a5d6a7" />
+      <text x="70" y="55" text-anchor="middle" font-size="12">place_names</text>
+      
+      <rect x="0" y="70" width="140" height="30" fill="#fff" stroke="#a5d6a7" />
+      <text x="70" y="90" text-anchor="middle" font-size="12">place_hierarchy</text>
+      
+      <rect x="0" y="105" width="140" height="30" fill="#fff" stroke="#a5d6a7" />
+      <text x="70" y="125" text-anchor="middle" font-size="12">place_sources</text>
+      
+      <rect x="0" y="140" width="140" height="30" fill="#fff" stroke="#a5d6a7" />
+      <text x="70" y="160" text-anchor="middle" font-size="12">place_attributes</text>
+    </g>
+  </g>
+
+  <!-- Application Layer -->
+  <g transform="translate(50, 400)">
+    <rect x="0" y="0" width="450" height="150" rx="10" fill="#fff8e1" stroke="#ffc107" stroke-width="2" />
+    <text x="225" y="30" text-anchor="middle" font-weight="bold" fill="#ff6f00">Application Layer</text>
+    
+    <!-- Query Modules -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="180" height="80" rx="5" fill="#fff" stroke="#ffe082" />
+      <text x="90" y="25" text-anchor="middle" font-weight="bold" font-size="12">Query Modules</text>
+      <text x="90" y="45" text-anchor="middle" font-size="10" font-family="monospace">src/db/sqlite/v1/queries/</text>
+      <text x="90" y="60" text-anchor="middle" font-size="10">gazetteer.*.js</text>
+    </g>
+    
+    <!-- Consumers -->
+    <g transform="translate(230, 50)">
+      <rect x="0" y="0" width="200" height="80" rx="5" fill="#fff" stroke="#ffe082" />
+      <text x="100" y="25" text-anchor="middle" font-weight="bold" font-size="12">Consumers</text>
+      <text x="100" y="45" text-anchor="middle" font-size="11">Crawler (Location Extraction)</text>
+      <text x="100" y="65" text-anchor="middle" font-size="11">UI (Filtering/Search)</text>
+    </g>
+  </g>
+
+  <!-- Connections -->
+  <!-- External -> Ingestion -->
+  <line x1="230" y1="110" x2="300" y2="110" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  
+  <!-- Ingestion -> Cache -->
+  <line x1="400" y1="170" x2="400" y2="220" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="5,5" />
+  <text x="410" y="200" font-size="10" fill="#666">Reads/Writes</text>
+  
+  <!-- Ingestion -> DB -->
+  <line x1="500" y1="110" x2="550" y2="110" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="510" y="100" font-size="10" fill="#666">Seeds</text>
+  
+  <!-- App -> DB -->
+  <line x1="500" y1="475" x2="640" y2="475" stroke="#333" stroke-width="2" />
+  <line x1="640" y1="475" x2="640" y2="440" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" />
+  <text x="560" y="465" font-size="10" fill="#666">Queries</text>
+
+</svg>

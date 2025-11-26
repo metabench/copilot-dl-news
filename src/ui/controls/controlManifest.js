@@ -12,6 +12,10 @@ const manifest = [
   {
     type: "pager_button",
     loader: () => require("./PagerButton").PagerButtonControl
+  },
+  {
+    type: "domain_summary_table",
+    loader: () => require("./DomainSummaryTable").DomainSummaryTableControl
   }
 ];
 

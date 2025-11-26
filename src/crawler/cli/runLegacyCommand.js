@@ -4,7 +4,9 @@ const { createPauseResumeControls } = require('./pauseControls');
 
 const chalk = require('chalk');
 const path = require('path');
+const { CrawlerFactory } = require('../CrawlerFactory');
 let NewsCrawler;
+
 const { ensureDatabase } = require('../../db/sqlite');
 const { createCliLogger } = require('./progressReporter');
 const { setupLegacyCliEnvironment } = require('./bootstrap');
@@ -363,7 +365,15 @@ async function runLegacyCommand({
 
   const interactiveToggle = interactiveControls || { enabled: true, explicit: false };
 
-  const crawler = new NewsCrawler(startUrl, crawlerOptions);
+  const crawler = CrawlerFactory.create({
+    ...(crawlerOptions || {}),
+    startUrl
+  });
+
+  if (crawlerOptions.loggingQueue === false) {
+    log.info('Queue logging explicitly disabled');
+  }
+
   let pauseController;
 
   try {

@@ -411,6 +411,39 @@ function bootstrapJobsAndSse() {
   window.CopilotSseHandlers = sseHandlers;
 }
 
+/**
+ * Bootstrap deferred-loading controls by finding marked DOM elements
+ * and activating the corresponding control's deferred data loading.
+ */
+function bootstrapDeferredControls() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  // Find domain summary tables and load their deferred counts
+  const domainTables = document.querySelectorAll('[data-control="domain-summary-table"]');
+  domainTables.forEach((tableEl) => {
+    // Load the control class and call its static method for deferred loading
+    const { DomainSummaryTableControl } = require("../controls/DomainSummaryTable");
+    
+    // Create a lightweight instance for activation (with existing DOM element)
+    const control = new DomainSummaryTableControl({
+      context: new jsguiClient.Client_Page_Context(),
+      el: tableEl
+    });
+    
+    // Manually set the dom.el reference for activation
+    if (control.dom) {
+      control.dom.el = tableEl;
+    }
+    
+    // Activate to load deferred data
+    if (typeof control.activate === "function") {
+      control.activate();
+    }
+  });
+}
+
 (function bootstrap() {
   ensureClientControlsRegistered();
   const { enabled } = resolveBindingPluginConfig();
@@ -430,4 +463,5 @@ function bootstrapJobsAndSse() {
   bootstrapDiagramAtlas();
   bootstrapUrlListingStore();
   bootstrapJobsAndSse();
+  bootstrapDeferredControls();
 })();

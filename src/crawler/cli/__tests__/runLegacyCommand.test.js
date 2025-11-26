@@ -13,6 +13,7 @@ const mockLoadAndRunSequence = jest.fn().mockResolvedValue({
   sequenceStartUrl: 'https://example.com',
   metadata: { config: { startUrl: 'https://example.com' } }
 });
+const mockCreateCrawler = jest.fn();
 
 jest.mock('../../NewsCrawler', () => {
   class MockNewsCrawler {
@@ -26,6 +27,12 @@ jest.mock('../../NewsCrawler', () => {
   MockNewsCrawler.loadAndRunSequence = mockLoadAndRunSequence;
   return MockNewsCrawler;
 });
+
+jest.mock('../../CrawlerFactory', () => ({
+  CrawlerFactory: {
+    create: jest.fn((config) => mockCreateCrawler(config))
+  }
+}));
 
 // Mock database module
 jest.mock('../../../db/sqlite', () => ({
@@ -95,7 +102,7 @@ jest.mock('../argumentNormalizer', () => ({
 }));
 
 const { runLegacyCommand, HELP_TEXT } = require('../runLegacyCommand');
-const NewsCrawler = require('../../NewsCrawler');
+const { CrawlerFactory } = require('../../CrawlerFactory');
 const { createCliLogger } = require('../progressReporter');
 const { createPauseResumeControls } = require('../pauseControls');
 const { setupLegacyCliEnvironment } = require('../bootstrap');
@@ -111,6 +118,12 @@ describe('runLegacyCommand.js', () => {
     mockStderr = jest.fn();
     mockCrawl.mockClear();
     mockLoadAndRunSequence.mockClear();
+    mockCreateCrawler.mockReset();
+    mockCreateCrawler.mockImplementation((config = {}) => ({
+      crawl: mockCrawl,
+      dbPath: config?.dbPath || 'data/news.db',
+      config
+    }));
     mockPauseControls.attach.mockReset();
     mockPauseControls.teardown.mockReset();
     mockPauseControls.isAttached.mockReset();
@@ -267,7 +280,7 @@ describe('runLegacyCommand.js', () => {
       expect(mockRestore).toHaveBeenCalled();
     });
 
-    it('instantiates NewsCrawler with normalized arguments', async () => {
+    it('creates crawler through CrawlerFactory with normalized arguments', async () => {
       normalizeLegacyArguments.mockReturnValueOnce({
         startUrl: 'https://news.example.com',
         options: { maxPages: 50, crawlType: 'intelligent' },
@@ -280,7 +293,11 @@ describe('runLegacyCommand.js', () => {
         argv: ['https://news.example.com', '--max-pages=50']
       });
 
-      // Verify crawl was called (NewsCrawler was instantiated)
+      expect(CrawlerFactory.create).toHaveBeenCalledWith({
+        maxPages: 50,
+        crawlType: 'intelligent',
+        startUrl: 'https://news.example.com'
+      });
       expect(mockCrawl).toHaveBeenCalled();
     });
 
@@ -345,7 +362,8 @@ describe('runLegacyCommand.js', () => {
       expect(createPauseResumeControls).toHaveBeenCalledTimes(1);
       const pauseArgs = createPauseResumeControls.mock.calls[0][0];
       expect(pauseArgs.stdin).toBe(fakeStdin);
-      expect(pauseArgs.crawler).toBeInstanceOf(NewsCrawler);
+      const createdCrawler = mockCreateCrawler.mock.results[0]?.value;
+      expect(pauseArgs.crawler).toBe(createdCrawler);
       expect(pauseArgs.logger).toBeTruthy();
 
       expect(mockPauseControls.attach).toHaveBeenCalledWith({

@@ -125,6 +125,13 @@ function normalizeConfigShape(parsed) {
     });
   }
 
+  if (parsed.logging && typeof parsed.logging === 'object') {
+    config.logging = {};
+    if (typeof parsed.logging.queue === 'boolean') config.logging.queue = parsed.logging.queue;
+    if (typeof parsed.logging.network === 'boolean') config.logging.network = parsed.logging.network;
+    if (typeof parsed.logging.fetching === 'boolean') config.logging.fetching = parsed.logging.fetching;
+  }
+
   if (Array.isArray(parsed.additionalArgs)) {
     config.additionalArgs = parsed.additionalArgs
       .filter((value) => typeof value === 'string')
@@ -148,6 +155,17 @@ function createArgvFromConfig(config) {
 
   if (typeof config.maxPages === 'number') {
     argv.push(`--max-pages=${config.maxPages}`);
+  }
+
+  if (config.logging) {
+    if (config.logging.queue === true) argv.push('--logging-queue');
+    else if (config.logging.queue === false) argv.push('--no-logging-queue');
+
+    if (config.logging.network === true) argv.push('--logging-network');
+    else if (config.logging.network === false) argv.push('--no-logging-network');
+
+    if (config.logging.fetching === true) argv.push('--logging-fetching');
+    else if (config.logging.fetching === false) argv.push('--no-logging-fetching');
   }
 
   if (Array.isArray(config.additionalArgs) && config.additionalArgs.length > 0) {
@@ -177,24 +195,53 @@ async function resolveCliArguments({
   configPath,
   cwd
 } = {}) {
-  if (Array.isArray(directArgv) && directArgv.length > 0) {
+  let config = null;
+  let resolvedConfigPath = null;
+
+  try {
+    const loaded = await loadCliConfig({
+      fsModule,
+      configPath,
+      cwd
+    });
+    config = loaded.config;
+    resolvedConfigPath = loaded.configPath;
+  } catch (error) {
+    // If direct args are provided, we can ignore missing config
+    if (!Array.isArray(directArgv) || directArgv.length === 0) {
+      throw error;
+    }
+  }
+
+  if (!config) {
     return {
       argv: directArgv,
       origin: 'direct'
     };
   }
 
-  const { config, configPath: resolvedConfigPath } = await loadCliConfig({
-    fsModule,
-    configPath,
-    cwd
-  });
+  const configArgv = createArgvFromConfig(config);
+
+  if (!Array.isArray(directArgv) || directArgv.length === 0) {
+    return {
+      argv: configArgv,
+      config,
+      configPath: resolvedConfigPath,
+      origin: 'config'
+    };
+  }
+
+  // Merge config args with direct args
+  // Direct args override config args because argumentNormalizer now respects "last match wins"
+  // We need to handle startUrl carefully. configArgv[0] is startUrl.
+  
+  const mergedArgv = [...configArgv, ...directArgv];
 
   return {
-    argv: createArgvFromConfig(config),
+    argv: mergedArgv,
     config,
     configPath: resolvedConfigPath,
-    origin: 'config'
+    origin: 'merged'
   };
 }
 
