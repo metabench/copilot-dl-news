@@ -1,6 +1,11 @@
 const express = require('express');
 const path = require('path');
 
+/**
+ * @server Gazetteer Info
+ * @description Provides a web interface for searching and viewing place details from the gazetteer database.
+ */
+
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
 });
@@ -32,6 +37,8 @@ const placeService = new PlaceService(db);
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
+
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // Routes
 

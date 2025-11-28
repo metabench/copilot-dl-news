@@ -1,5 +1,10 @@
 "use strict";
 
+/**
+ * @server Data Explorer
+ * @description Provides a web interface for exploring crawled URLs, domains, and errors.
+ */
+
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
@@ -27,9 +32,16 @@ const {
 } = require("../../db/sqlite/v1/queries/ui/domainSummary");
 const { listRecentCrawls } = require("../../db/sqlite/v1/queries/ui/crawls");
 const { listRecentErrors } = require("../../db/sqlite/v1/queries/ui/errors");
-const { selectUrlById, selectFetchHistory } = require("../../db/sqlite/v1/queries/ui/urlDetails");
+const { selectUrlById, selectFetchHistory, selectFetchById } = require("../../db/sqlite/v1/queries/ui/urlDetails");
 const { selectHostSummary, selectHostDownloads } = require("../../db/sqlite/v1/queries/ui/domainDetails");
 const { listConfiguration } = require("../../db/sqlite/v1/queries/ui/configuration");
+const { 
+  listClassificationsWithCounts,
+  getClassificationByName,
+  getDocumentsForClassification,
+  countDocumentsForClassification,
+  getRandomDocumentsForClassification
+} = require("../../db/sqlite/v1/queries/ui/classificationTypes");
 const { getCachedMetric } = require("./services/metricsService");
 const { renderHtml, resolveDbPath } = require("../render-url-table");
 const { buildDomainSnapshot, createHomeCardLoaders } = require("../homeCardData");
@@ -66,6 +78,7 @@ const {
   buildBreadcrumbs
 } = require("./navigation");
 const { ensureClientBundle } = require("./utils/ensureClientBundle");
+const { getClassificationDisplay } = require("../utils/classificationEmoji");
 
 const StringControl = jsgui.String_Control;
 
@@ -285,6 +298,97 @@ function buildHourlySparkline(fetches, { bucketCount = 24, bucketMs = 60 * 60 * 
   return series;
 }
 
+/**
+ * Build jsgui controls for classification filter (limit dropdown + random checkbox)
+ * These are native form elements that work without JavaScript (server-side form submission)
+ * and can be progressively enhanced on the client.
+ * 
+ * @param {Object} options
+ * @param {Object} options.context - jsgui Page_Context
+ * @param {string} options.basePath - Form action URL
+ * @param {number} options.currentLimit - Currently selected limit
+ * @param {boolean} options.isRandom - Whether random sampling is enabled
+ * @param {number[]} options.validLimits - Array of valid limit values
+ * @returns {jsgui.Control} - A form control with filter inputs
+ */
+function buildClassificationFilterControls({ context, basePath, currentLimit, isRandom, validLimits }) {
+  const jsgui = require("jsgui3-html");
+  
+  // Create the form
+  const form = new jsgui.form({ context });
+  form.dom.attributes.method = "get";
+  form.dom.attributes.action = basePath;
+  form.add_class("filter-controls");
+  form.dom.attributes["data-jsgui-control"] = "classification_filter";
+  
+  // Limit selector group
+  const limitGroup = new jsgui.Control({ context, tagName: "div" });
+  limitGroup.add_class("filter-controls__group");
+  
+  const limitLabel = new jsgui.label({ context });
+  limitLabel.add_class("filter-controls__label");
+  limitLabel.dom.attributes["for"] = "limit-select";
+  limitLabel.add(new jsgui.String_Control({ context, text: "Show" }));
+  limitGroup.add(limitLabel);
+  
+  const limitSelect = new jsgui.select({ context });
+  limitSelect.dom.attributes.name = "limit";
+  limitSelect.dom.attributes.id = "limit-select";
+  limitSelect.add_class("filter-controls__select");
+  
+  validLimits.forEach(limit => {
+    const opt = new jsgui.option({ context });
+    opt.dom.attributes.value = String(limit);
+    if (limit === currentLimit) {
+      opt.dom.attributes.selected = "selected";
+    }
+    opt.add(new jsgui.String_Control({ context, text: String(limit) }));
+    limitSelect.add(opt);
+  });
+  limitGroup.add(limitSelect);
+  
+  const docsLabel = new jsgui.span({ context });
+  docsLabel.add_class("filter-controls__label");
+  docsLabel.add(new jsgui.String_Control({ context, text: "documents" }));
+  limitGroup.add(docsLabel);
+  
+  form.add(limitGroup);
+  
+  // Random checkbox group
+  const randomGroup = new jsgui.Control({ context, tagName: "div" });
+  randomGroup.add_class("filter-controls__group");
+  
+  const checkboxLabel = new jsgui.label({ context });
+  checkboxLabel.add_class("filter-controls__checkbox-label");
+  
+  const checkbox = new jsgui.input({ context });
+  checkbox.dom.attributes.type = "checkbox";
+  checkbox.dom.attributes.name = "random";
+  checkbox.dom.attributes.value = "1";
+  checkbox.add_class("filter-controls__checkbox");
+  if (isRandom) {
+    checkbox.dom.attributes.checked = "checked";
+  }
+  checkboxLabel.add(checkbox);
+  
+  const checkboxText = new jsgui.span({ context });
+  checkboxText.add_class("filter-controls__checkbox-text");
+  checkboxText.add(new jsgui.String_Control({ context, text: "Random sample" }));
+  checkboxLabel.add(checkboxText);
+  
+  randomGroup.add(checkboxLabel);
+  form.add(randomGroup);
+  
+  // Submit button
+  const submitBtn = new jsgui.button({ context });
+  submitBtn.dom.attributes.type = "submit";
+  submitBtn.add_class("filter-controls__submit");
+  submitBtn.add(new jsgui.String_Control({ context, text: "Apply" }));
+  form.add(submitBtn);
+  
+  return form;
+}
+
 function generateRequestId() {
   if (typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -401,6 +505,61 @@ function renderConfigView({ db, relativeDb, now }) {
   };
 }
 
+/**
+ * Build table columns for classification types listing
+ */
+function buildClassificationColumns() {
+  return [
+    { key: "emoji", label: "Type", width: "80px", align: "center" },
+    { key: "display_name", label: "Classification", sortable: true },
+    { key: "category", label: "Category", width: "120px" },
+    { key: "document_count", label: "Documents", width: "120px", align: "right", sortable: true },
+    { key: "description", label: "Description" }
+  ];
+}
+
+/**
+ * Build display rows for classification types
+ */
+function buildClassificationRows(classifications) {
+  return classifications.map((c) => ({
+    emoji: c.emoji || "❓",
+    display_name: {
+      text: c.display_name || c.name,
+      href: `/classifications/${encodeURIComponent(c.name)}`
+    },
+    category: c.category || "—",
+    document_count: formatCount(c.document_count || 0),
+    description: c.description || "—"
+  }));
+}
+
+/**
+ * Render the classification types listing view
+ */
+function renderClassificationsView({ db, relativeDb, now }) {
+  const classifications = listClassificationsWithCounts(db);
+  const totalDocs = classifications.reduce((sum, c) => sum + (c.document_count || 0), 0);
+  const usedCount = classifications.filter(c => c.document_count > 0).length;
+  
+  const subtitle = classifications.length === 0
+    ? `No classification types defined in ${relativeDb}`
+    : `${classifications.length} classification types (${usedCount} in use) covering ${formatCount(totalDocs)} documents`;
+  
+  return {
+    title: "Document Classifications",
+    columns: buildClassificationColumns(),
+    rows: buildClassificationRows(classifications),
+    meta: {
+      rowCount: classifications.length,
+      limit: classifications.length,
+      dbLabel: relativeDb,
+      generatedAt: formatDateTime(now, true),
+      subtitle
+    }
+  };
+}
+
 const DATA_VIEWS = [
   {
     key: "home",
@@ -436,6 +595,13 @@ const DATA_VIEWS = [
     navLabel: "Errors",
     title: "Recent Crawl Errors",
     render: renderErrorLogView
+  },
+  {
+    key: "classifications",
+    path: "/classifications",
+    navLabel: "Classifications",
+    title: "Document Classifications",
+    render: renderClassificationsView
   },
   {
     key: "config",
@@ -1009,16 +1175,18 @@ function createDataExplorerServer(options = {}) {
         { key: "httpStatus", label: "HTTP", align: "center" },
         { key: "classification", label: "Classification" },
         { key: "contentLength", label: "Bytes", align: "right", cellClass: "is-metric" },
-        { key: "wordCount", label: "Words", align: "right", cellClass: "is-metric" }
+        { key: "wordCount", label: "Words", align: "right", cellClass: "is-metric" },
+        { key: "details", label: "Details", align: "center" }
       ];
 
       const rows = fetches.map((f, i) => ({
         index: { text: String(i + 1), classNames: "is-index" },
-        fetchedAt: { text: formatDateTime(f.fetchedAt, true) },
+        fetchedAt: { text: formatDateTime(f.fetchedAt, true), href: `/fetches/${f.id}` },
         httpStatus: { text: f.httpStatus != null ? String(f.httpStatus) : "—" },
         classification: f.classification || "—",
         contentLength: f.contentLength != null ? String(f.contentLength) : "—",
-        wordCount: f.wordCount != null ? String(f.wordCount) : "—"
+        wordCount: f.wordCount != null ? String(f.wordCount) : "—",
+        details: { text: "View", href: `/fetches/${f.id}` }
       }));
 
       const meta = {
@@ -1106,6 +1274,308 @@ function createDataExplorerServer(options = {}) {
 
   app.get("/urls/:id/downloads", (req, res) => {
     res.redirect(`/urls/${req.params.id}`);
+  });
+
+  // Fetch detail view - shows full details for a single HTTP response/fetch
+  app.get("/fetches/:id", (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).send("Invalid fetch id");
+      const now = new Date();
+      const fetch = selectFetchById(dbAccess.db, id);
+      if (!fetch) return res.status(404).send("Fetch not found");
+
+      // Build detail cards for the fetch metadata
+      // Classification emoji display (first card, large emoji)
+      const classificationInfo = getClassificationDisplay(fetch.analysis.classification);
+      const extraCards = [
+        { 
+          label: "Classification", 
+          value: classificationInfo.emoji,
+          subtitle: classificationInfo.label,
+          isEmoji: true
+        },
+        { label: "HTTP Status", value: fetch.httpStatus != null ? String(fetch.httpStatus) : "—" },
+        { label: "Content Type", value: fetch.contentType || "—" },
+        { label: "Bytes Downloaded", value: fetch.bytesDownloaded != null ? formatCount(fetch.bytesDownloaded) : "—" }
+      ];
+
+      // Add timing info if available
+      if (fetch.timing.totalMs != null) {
+        extraCards.push({ label: "Total Time", value: `${fetch.timing.totalMs}ms` });
+      }
+      if (fetch.timing.ttfbMs != null) {
+        extraCards.push({ label: "TTFB", value: `${fetch.timing.ttfbMs}ms` });
+      }
+      if (fetch.transferKbps != null) {
+        extraCards.push({ label: "Transfer Rate", value: `${fetch.transferKbps.toFixed(1)} KB/s` });
+      }
+
+      // Build property rows for detailed view
+      const FETCH_DETAIL_COLUMNS = [
+        { key: "property", label: "Property" },
+        { key: "value", label: "Value" }
+      ];
+
+      const detailRows = [
+        { property: "Fetch ID", value: String(fetch.id) },
+        { property: "URL", value: { text: fetch.url, href: `/urls/${fetch.urlId}` } },
+        { property: "Host", value: { text: fetch.host, href: `/domains/${fetch.host}` } },
+        { property: "Request Method", value: fetch.requestMethod || "GET" },
+        { property: "Request Started", value: formatDateTime(fetch.requestStartedAt, true) },
+        { property: "Fetched At", value: formatDateTime(fetch.fetchedAt, true) },
+        { property: "HTTP Status", value: fetch.httpStatus != null ? String(fetch.httpStatus) : "—" },
+        { property: "Content Type", value: fetch.contentType || "—" },
+        { property: "Content Encoding", value: fetch.contentEncoding || "—" },
+        { property: "Bytes Downloaded", value: fetch.bytesDownloaded != null ? formatCount(fetch.bytesDownloaded) : "—" },
+        { property: "ETag", value: fetch.etag || "—" },
+        { property: "Last-Modified", value: fetch.lastModified || "—" }
+      ];
+
+      // Add timing details
+      if (fetch.timing.ttfbMs != null || fetch.timing.downloadMs != null || fetch.timing.totalMs != null) {
+        detailRows.push({ property: "—", value: "— Timing —" });
+        if (fetch.timing.ttfbMs != null) {
+          detailRows.push({ property: "Time to First Byte (TTFB)", value: `${fetch.timing.ttfbMs}ms` });
+        }
+        if (fetch.timing.downloadMs != null) {
+          detailRows.push({ property: "Download Time", value: `${fetch.timing.downloadMs}ms` });
+        }
+        if (fetch.timing.totalMs != null) {
+          detailRows.push({ property: "Total Time", value: `${fetch.timing.totalMs}ms` });
+        }
+        if (fetch.transferKbps != null) {
+          detailRows.push({ property: "Transfer Rate", value: `${fetch.transferKbps.toFixed(2)} KB/s` });
+        }
+      }
+
+      // Add cache info if present
+      if (fetch.cache.category || fetch.cache.key || fetch.cache.createdAt) {
+        detailRows.push({ property: "—", value: "— Cache —" });
+        if (fetch.cache.category) {
+          detailRows.push({ property: "Cache Category", value: fetch.cache.category });
+        }
+        if (fetch.cache.key) {
+          detailRows.push({ property: "Cache Key", value: fetch.cache.key });
+        }
+        if (fetch.cache.createdAt) {
+          detailRows.push({ property: "Cache Created", value: formatDateTime(fetch.cache.createdAt, true) });
+        }
+        if (fetch.cache.expiresAt) {
+          detailRows.push({ property: "Cache Expires", value: formatDateTime(fetch.cache.expiresAt, true) });
+        }
+      }
+
+      // Add storage info if present
+      if (fetch.storage.id || fetch.storage.fileSize != null) {
+        detailRows.push({ property: "—", value: "— Storage —" });
+        if (fetch.storage.id) {
+          detailRows.push({ property: "Storage ID", value: String(fetch.storage.id) });
+        }
+        if (fetch.storage.fileSize != null) {
+          detailRows.push({ property: "Stored Size", value: formatCount(fetch.storage.fileSize) + " bytes" });
+        }
+        if (fetch.storage.compressionTypeId) {
+          detailRows.push({ property: "Compression Type ID", value: String(fetch.storage.compressionTypeId) });
+        }
+      }
+
+      // Add analysis info if present
+      if (fetch.analysis.classification || fetch.analysis.wordCount != null) {
+        detailRows.push({ property: "—", value: "— Analysis —" });
+        if (fetch.analysis.classification) {
+          detailRows.push({ property: "Classification", value: fetch.analysis.classification });
+        }
+        if (fetch.analysis.contentCategory) {
+          detailRows.push({ property: "Content Category", value: fetch.analysis.contentCategory });
+        }
+        if (fetch.analysis.contentSubtype) {
+          detailRows.push({ property: "Content Subtype", value: fetch.analysis.contentSubtype });
+        }
+        if (fetch.analysis.wordCount != null) {
+          detailRows.push({ property: "Word Count", value: formatCount(fetch.analysis.wordCount) });
+        }
+      }
+
+      // Add redirect chain if present
+      if (fetch.redirectChain && (Array.isArray(fetch.redirectChain) ? fetch.redirectChain.length > 0 : true)) {
+        detailRows.push({ property: "—", value: "— Redirects —" });
+        const chainDisplay = Array.isArray(fetch.redirectChain)
+          ? fetch.redirectChain.join(" → ")
+          : String(fetch.redirectChain);
+        detailRows.push({ property: "Redirect Chain", value: chainDisplay });
+      }
+
+      const meta = {
+        rowCount: detailRows.length,
+        limit: detailRows.length,
+        dbLabel: relativeDb,
+        generatedAt: formatDateTime(now, true),
+        subtitle: `Fetch #${fetch.id} from ${fetch.host} at ${formatDateTime(fetch.fetchedAt, true)}`,
+        extraCards
+      };
+
+      const breadcrumbTrail = [
+        { label: "URLs", href: "/urls" },
+        { label: fetch.url, href: `/urls/${fetch.urlId}` }
+      ];
+      const backLink = deriveBackLink(req, breadcrumbTrail[1]);
+      const breadcrumbs = buildBreadcrumbs({ trail: breadcrumbTrail, backLink, current: { label: `Fetch #${fetch.id}` } });
+
+      const html = renderHtml(
+        { columns: FETCH_DETAIL_COLUMNS, rows: detailRows, meta, title: `Fetch #${fetch.id}` },
+        {
+          clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
+          bindingPlugin: bindingPluginEnabled,
+          navLinks: buildNavLinks("urls", DATA_VIEWS),
+          breadcrumbs
+        }
+      );
+      res.type("html").send(html);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Classification detail view - shows documents for a specific classification type
+  // Supports query params: ?limit=10|100|1000|10000 &random=1 &page=N
+  app.get("/classifications/:name", (req, res, next) => {
+    try {
+      const name = (req.params.name || "").trim();
+      if (!name) return res.status(400).send("Classification name is required");
+      
+      const classification = getClassificationByName(dbAccess.db, name);
+      if (!classification) return res.status(404).send("Classification not found");
+      
+      // Parse query parameters
+      const query = req.query || {};
+      const VALID_LIMITS = [10, 100, 1000, 10000];
+      const DEFAULT_LIMIT = 10;
+      const requestedLimit = Number(query.limit) || DEFAULT_LIMIT;
+      const effectiveLimit = VALID_LIMITS.includes(requestedLimit) ? requestedLimit : DEFAULT_LIMIT;
+      // Random sampling is the DEFAULT on initial load.
+      // Form submission detected by presence of 'limit' param; if random checkbox unchecked, random param is absent
+      const randomParam = query.random;
+      const formWasSubmitted = query.limit !== undefined;
+      // If form submitted: random only if checkbox was checked (random=1)
+      // If no form submission (initial load): default to random
+      const isRandom = formWasSubmitted 
+        ? (randomParam === "1" || randomParam === "true")
+        : true;
+      const requestedPage = Math.max(1, Math.trunc(Number(query.page) || 1));
+      
+      const now = new Date();
+      const totalDocs = countDocumentsForClassification(dbAccess.db, name);
+      
+      // Fetch documents based on mode
+      let documents;
+      let pagination = null;
+      
+      if (isRandom) {
+        // Random sampling - no pagination
+        documents = getRandomDocumentsForClassification(dbAccess.db, name, { limit: effectiveLimit });
+      } else {
+        // Sequential with pagination
+        const totalPages = Math.max(1, Math.ceil(totalDocs / effectiveLimit));
+        const safePage = Math.min(requestedPage, totalPages);
+        const offset = (safePage - 1) * effectiveLimit;
+        documents = getDocumentsForClassification(dbAccess.db, name, { limit: effectiveLimit, offset });
+        
+        // Build pagination info
+        const buildPageHref = (page) => {
+          const params = new URLSearchParams();
+          params.set("limit", String(effectiveLimit));
+          if (page > 1) params.set("page", String(page));
+          return `/classifications/${encodeURIComponent(name)}?${params.toString()}`;
+        };
+        
+        pagination = {
+          currentPage: safePage,
+          totalPages,
+          totalRows: totalDocs,
+          pageSize: effectiveLimit,
+          startRow: totalDocs === 0 ? 0 : offset + 1,
+          endRow: totalDocs === 0 ? 0 : Math.min(offset + effectiveLimit, totalDocs),
+          prevHref: safePage > 1 ? buildPageHref(safePage - 1) : null,
+          nextHref: safePage < totalPages ? buildPageHref(safePage + 1) : null,
+          firstHref: safePage > 1 ? buildPageHref(1) : null,
+          lastHref: safePage < totalPages ? buildPageHref(totalPages) : null
+        };
+      }
+      
+      // Build columns for documents table
+      const DOC_COLUMNS = [
+        { key: "url", label: "URL" },
+        { key: "host", label: "Host", width: "150px" },
+        { key: "word_count", label: "Words", width: "100px", align: "right" },
+        { key: "analyzed_at", label: "Analyzed", width: "180px" }
+      ];
+      
+      // Build rows
+      const rows = documents.map(doc => ({
+        url: { text: doc.url, href: `/urls/${doc.url_id}` },
+        host: { text: doc.host, href: `/domains/${doc.host}` },
+        word_count: doc.word_count != null ? formatCount(doc.word_count) : "—",
+        analyzed_at: formatDateTime(doc.analyzed_at, true)
+      }));
+      
+      // Build subtitle based on mode
+      let subtitle;
+      if (totalDocs === 0) {
+        subtitle = `No documents with classification "${name}"`;
+      } else if (isRandom) {
+        subtitle = `Random sample of ${rows.length} from ${formatCount(totalDocs)} ${classification.display_name} documents`;
+      } else if (pagination) {
+        subtitle = `Showing ${pagination.startRow}–${pagination.endRow} of ${formatCount(totalDocs)} ${classification.display_name} documents`;
+      } else {
+        subtitle = `${formatCount(totalDocs)} documents classified as ${classification.display_name}`;
+      }
+      
+      // Build filter controls factory (will be called with context inside renderHtml)
+      const filterControlsFactory = (context) => buildClassificationFilterControls({
+        context,
+        basePath: `/classifications/${encodeURIComponent(name)}`,
+        currentLimit: effectiveLimit,
+        isRandom,
+        validLimits: VALID_LIMITS
+      });
+      
+      const meta = {
+        rowCount: rows.length,
+        limit: effectiveLimit,
+        dbLabel: relativeDb,
+        generatedAt: formatDateTime(now, true),
+        subtitle,
+        pagination,
+        extraCards: [
+          { label: "Type", value: classification.emoji || "❓", subtitle: classification.display_name, isEmoji: true },
+          { label: "Category", value: classification.category || "—" },
+          { label: "Total Documents", value: formatCount(totalDocs) }
+        ],
+        filterControlsFactory
+      };
+      
+      const breadcrumbTrail = [{ label: "Classifications", href: "/classifications" }];
+      const backLink = deriveBackLink(req, breadcrumbTrail[0]);
+      const breadcrumbs = buildBreadcrumbs({ 
+        trail: breadcrumbTrail, 
+        backLink, 
+        current: { label: `${classification.emoji || ""} ${classification.display_name}` } 
+      });
+      
+      const html = renderHtml(
+        { columns: DOC_COLUMNS, rows, meta, title: `Classification: ${classification.display_name}` },
+        {
+          clientScriptPath: hasClientBundle ? normalizedScriptPath : undefined,
+          bindingPlugin: bindingPluginEnabled,
+          navLinks: buildNavLinks("classifications", DATA_VIEWS),
+          breadcrumbs
+        }
+      );
+      res.type("html").send(html);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.use((err, req, res, _next) => {

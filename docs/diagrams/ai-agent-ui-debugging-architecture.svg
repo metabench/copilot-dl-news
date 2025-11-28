@@ -1,0 +1,260 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0d14"/>
+      <stop offset="100%" style="stop-color:#050508"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#8b7500"/>
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#50c878"/>
+      <stop offset="100%" style="stop-color:#2e8b57"/>
+    </linearGradient>
+    <linearGradient id="amethystGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#da70d6"/>
+      <stop offset="100%" style="stop-color:#9966cc"/>
+    </linearGradient>
+    <linearGradient id="sapphireGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6fa8dc"/>
+      <stop offset="100%" style="stop-color:#0f52ba"/>
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowGold" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c9a227"/>
+    </marker>
+    <marker id="arrowEmerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#50c878"/>
+    </marker>
+    <marker id="arrowAmethyst" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#da70d6"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#bgGrad)"/>
+  
+  <!-- Grid overlay -->
+  <g opacity="0.05">
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="1"/>
+    </pattern>
+    <rect width="1200" height="800" fill="url(#grid)"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="600" y="50" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="#c9a227" filter="url(#glow)">
+    AI Agent UI Debugging Architecture
+  </text>
+  <text x="600" y="80" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" fill="#94a3b8">
+    Automated Console Capture for Electron &amp; Web Applications
+  </text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 1: AI Agent (Top) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(80, 120)">
+    <!-- Box -->
+    <rect x="0" y="0" width="200" height="100" rx="8" fill="#141824" stroke="url(#goldGrad)" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">🤖 AI Agent</text>
+    <text x="100" y="55" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">GitHub Copilot</text>
+    <text x="100" y="72" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748b">VS Code Terminal</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 2: CLI Tools -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- electron-console-capture.js -->
+  <g transform="translate(80, 280)">
+    <rect x="0" y="0" width="200" height="120" rx="8" fill="#141824" stroke="url(#emeraldGrad)" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#50c878">📟 CLI Tool</text>
+    <text x="100" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#f0f4f8">electron-console-capture.js</text>
+    <text x="100" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">• Spawns Electron</text>
+    <text x="100" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">• Connects via CDP</text>
+    <text x="100" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">• Captures console</text>
+  </g>
+  
+  <!-- ui-console-capture.js -->
+  <g transform="translate(320, 280)">
+    <rect x="0" y="0" width="200" height="120" rx="8" fill="#141824" stroke="url(#emeraldGrad)" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#50c878">📟 CLI Tool</text>
+    <text x="100" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#f0f4f8">ui-console-capture.js</text>
+    <text x="100" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">• Spawns Express</text>
+    <text x="100" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">• Launches Puppeteer</text>
+    <text x="100" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">• Captures console</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 3: Runtime Environments -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Electron App -->
+  <g transform="translate(80, 460)">
+    <rect x="0" y="0" width="200" height="140" rx="8" fill="#141824" stroke="url(#amethystGrad)" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#da70d6">⚡ Electron App</text>
+    <text x="100" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#f0f4f8">z-server</text>
+    
+    <!-- Inner box: Main Process -->
+    <rect x="15" y="65" width="80" height="55" rx="4" fill="#0a0d14" stroke="#9966cc" stroke-width="1"/>
+    <text x="55" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#da70d6">Main</text>
+    <text x="55" y="100" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">main.js</text>
+    <text x="55" y="112" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">IPC</text>
+    
+    <!-- Inner box: Renderer Process -->
+    <rect x="105" y="65" width="80" height="55" rx="4" fill="#0a0d14" stroke="#9966cc" stroke-width="1"/>
+    <text x="145" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#da70d6">Renderer</text>
+    <text x="145" y="100" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">jsgui3</text>
+    <text x="145" y="112" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">console.*</text>
+  </g>
+  
+  <!-- Express Server -->
+  <g transform="translate(320, 460)">
+    <rect x="0" y="0" width="200" height="140" rx="8" fill="#141824" stroke="url(#sapphireGrad)" stroke-width="2"/>
+    <text x="100" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6fa8dc">🌐 Express Server</text>
+    <text x="100" y="50" text-anchor="middle" font-family="monospace" font-size="10" fill="#f0f4f8">dataExplorerServer.js</text>
+    
+    <!-- Inner box: Server -->
+    <rect x="15" y="65" width="80" height="55" rx="4" fill="#0a0d14" stroke="#0f52ba" stroke-width="1"/>
+    <text x="55" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6fa8dc">Server</text>
+    <text x="55" y="100" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">Express</text>
+    <text x="55" y="112" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">Routes</text>
+    
+    <!-- Inner box: Client -->
+    <rect x="105" y="65" width="80" height="55" rx="4" fill="#0a0d14" stroke="#0f52ba" stroke-width="1"/>
+    <text x="145" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#6fa8dc">Client</text>
+    <text x="145" y="100" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">jsgui3</text>
+    <text x="145" y="112" text-anchor="middle" font-family="monospace" font-size="8" fill="#64748b">console.*</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- LAYER 4: Debug Protocols -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- CDP Box -->
+  <g transform="translate(80, 660)">
+    <rect x="0" y="0" width="200" height="60" rx="8" fill="#1a1f2e" stroke="#8b7500" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="100" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a227">Chrome DevTools Protocol</text>
+    <text x="100" y="45" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748b">--remote-debugging-port</text>
+  </g>
+  
+  <!-- Puppeteer Box -->
+  <g transform="translate(320, 660)">
+    <rect x="0" y="0" width="200" height="60" rx="8" fill="#1a1f2e" stroke="#8b7500" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="100" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="#c9a227">Puppeteer Connection</text>
+    <text x="100" y="45" text-anchor="middle" font-family="monospace" font-size="10" fill="#64748b">page.on('console', ...)</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- RIGHT SIDE: Data Flow Diagram -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(600, 120)">
+    <rect x="0" y="0" width="520" height="580" rx="12" fill="#0a0d14" stroke="#8b7500" stroke-width="1"/>
+    <text x="260" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#c9a227">Data Flow: Console Capture Pipeline</text>
+    
+    <!-- Step 1 -->
+    <g transform="translate(30, 60)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">1</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">AI Agent runs CLI command</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#50c878">node electron-console-capture.js --app=z-server</text>
+    </g>
+    
+    <!-- Step 2 -->
+    <g transform="translate(30, 120)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">2</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">CLI spawns Electron with debug port</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#da70d6">npx electron . --remote-debugging-port=9222</text>
+    </g>
+    
+    <!-- Step 3 -->
+    <g transform="translate(30, 180)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">3</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">CLI connects via CDP WebSocket</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#6fa8dc">puppeteer.connect({ browserWSEndpoint })</text>
+    </g>
+    
+    <!-- Step 4 -->
+    <g transform="translate(30, 240)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">4</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">Renderer executes jsgui3 code</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#da70d6">console.log("[ZServerApp] Scan complete...")</text>
+    </g>
+    
+    <!-- Step 5 -->
+    <g transform="translate(30, 300)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">5</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">CDP streams console events to CLI</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#50c878">page.on('console', msg => logs.push(...))</text>
+    </g>
+    
+    <!-- Step 6 -->
+    <g transform="translate(30, 360)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">6</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">CLI outputs logs to terminal</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#f0f4f8">📝 [Console log]: Found 15 servers</text>
+    </g>
+    
+    <!-- Step 7 -->
+    <g transform="translate(30, 420)">
+      <circle cx="20" cy="20" r="18" fill="#141824" stroke="#c9a227" stroke-width="2"/>
+      <text x="20" y="26" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#c9a227">7</text>
+      <text x="50" y="20" font-family="Inter, sans-serif" font-size="12" fill="#f0f4f8">AI Agent reads output, diagnoses issues</text>
+      <text x="50" y="36" font-family="monospace" font-size="10" fill="#ff6b6b">❌ [Console error]: ReferenceError: page_context</text>
+    </g>
+    
+    <!-- Benefits Box -->
+    <g transform="translate(30, 480)">
+      <rect x="0" y="0" width="460" height="80" rx="6" fill="#141824" stroke="#50c878" stroke-width="1"/>
+      <text x="230" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#50c878">✓ Benefits</text>
+      <text x="20" y="45" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• No manual DevTools inspection required</text>
+      <text x="20" y="62" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• AI agent can see client-side errors immediately</text>
+      <text x="255" y="45" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• JSON output for automated parsing</text>
+      <text x="255" y="62" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Works with both Electron and web apps</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ARROWS (Connections) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- AI Agent to CLI Tools -->
+  <path d="M 180 220 L 180 275" fill="none" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+  <path d="M 180 220 L 420 275" fill="none" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+  
+  <!-- CLI to Apps -->
+  <path d="M 180 400 L 180 455" fill="none" stroke="#50c878" stroke-width="2" marker-end="url(#arrowEmerald)"/>
+  <path d="M 420 400 L 420 455" fill="none" stroke="#50c878" stroke-width="2" marker-end="url(#arrowEmerald)"/>
+  
+  <!-- Apps to Protocols -->
+  <path d="M 180 600 L 180 655" fill="none" stroke="#da70d6" stroke-width="2" marker-end="url(#arrowAmethyst)"/>
+  <path d="M 420 600 L 420 655" fill="none" stroke="#da70d6" stroke-width="2" marker-end="url(#arrowAmethyst)"/>
+  
+  <!-- Protocols back to CLI (feedback loop) -->
+  <path d="M 85 690 C 40 690 40 340 85 340" fill="none" stroke="#c9a227" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrowGold)"/>
+  <path d="M 515 690 C 560 690 560 340 515 340" fill="none" stroke="#c9a227" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrowGold)"/>
+  
+  <!-- Footer -->
+  <text x="600" y="780" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#64748b">
+    tools/dev/electron-console-capture.js | tools/dev/ui-console-capture.js
+  </text>
+</svg>

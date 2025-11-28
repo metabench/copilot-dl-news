@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" style="background: #0a0a0f;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#ffaa00"/>
+      <stop offset="100%" style="stop-color:#ff8c00"/>
+    </linearGradient>
+    
+    <linearGradient id="errorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff4444"/>
+      <stop offset="100%" style="stop-color:#cc0000"/>
+    </linearGradient>
+    
+    <linearGradient id="fixedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#44ff88"/>
+      <stop offset="100%" style="stop-color:#00cc44"/>
+    </linearGradient>
+    
+    <linearGradient id="warningGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffcc00"/>
+      <stop offset="100%" style="stop-color:#ff9900"/>
+    </linearGradient>
+    
+    <linearGradient id="packageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a4a"/>
+      <stop offset="100%" style="stop-color:#1a1a2e"/>
+    </linearGradient>
+    
+    <!-- Glow filters -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="errorGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+    
+    <marker id="arrowheadGold" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="url(#goldAccent)"/>
+    </marker>
+  </defs>
+  
+  <!-- Background pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1a2e" stroke-width="0.5"/>
+  </pattern>
+  <rect width="100%" height="100%" fill="url(#grid)" opacity="0.5"/>
+  
+  <!-- Title -->
+  <text x="600" y="50" text-anchor="middle" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="32" font-weight="bold" filter="url(#goldGlow)">
+    jsgui3 Stack — Browser Compatibility Issues
+  </text>
+  <text x="600" y="80" text-anchor="middle" fill="#888" font-family="monospace" font-size="14">
+    Strict Mode + esbuild Bundling Incompatibilities Discovered &amp; Patched
+  </text>
+  
+  <!-- Legend -->
+  <g transform="translate(950, 100)">
+    <rect x="0" y="0" width="220" height="140" rx="8" fill="#1a1a2e" stroke="#333" stroke-width="1"/>
+    <text x="110" y="25" text-anchor="middle" fill="#aaa" font-family="Arial" font-size="14" font-weight="bold">Legend</text>
+    
+    <circle cx="25" cy="50" r="8" fill="url(#errorGrad)"/>
+    <text x="45" y="55" fill="#ff6666" font-family="Arial" font-size="12">Bug Found (Patched)</text>
+    
+    <circle cx="25" cy="80" r="8" fill="url(#warningGrad)"/>
+    <text x="45" y="85" fill="#ffcc00" font-family="Arial" font-size="12">Potential Issue</text>
+    
+    <circle cx="25" cy="110" r="8" fill="url(#fixedGrad)"/>
+    <text x="45" y="115" fill="#44ff88" font-family="Arial" font-size="12">Working Correctly</text>
+  </g>
+  
+  <!-- ============================================ -->
+  <!-- APPLICATION LAYER -->
+  <!-- ============================================ -->
+  <g transform="translate(80, 120)">
+    <rect x="0" y="0" width="280" height="100" rx="12" fill="url(#packageGrad)" stroke="url(#goldAccent)" stroke-width="2"/>
+    <text x="140" y="30" text-anchor="middle" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="18" font-weight="bold">Z-Server App</text>
+    <text x="140" y="55" text-anchor="middle" fill="#888" font-family="monospace" font-size="11">renderer.src.js</text>
+    <text x="140" y="75" text-anchor="middle" fill="#666" font-family="Arial" font-size="10">Electron + esbuild bundle</text>
+    <circle cx="260" cy="20" r="10" fill="url(#fixedGrad)"/>
+    <text x="260" y="24" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="bold">✓</text>
+  </g>
+  
+  <!-- Arrow down to jsgui3-client -->
+  <path d="M 220 220 L 220 260" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="230" y="245" fill="#666" font-family="monospace" font-size="10">require()</text>
+  
+  <!-- ============================================ -->
+  <!-- JSGUI3-CLIENT LAYER -->
+  <!-- ============================================ -->
+  <g transform="translate(80, 270)">
+    <rect x="0" y="0" width="280" height="140" rx="12" fill="url(#packageGrad)" stroke="url(#errorGrad)" stroke-width="3" filter="url(#errorGlow)"/>
+    <text x="140" y="30" text-anchor="middle" fill="#ff6666" font-family="Georgia, serif" font-size="18" font-weight="bold">jsgui3-client</text>
+    <text x="140" y="50" text-anchor="middle" fill="#888" font-family="monospace" font-size="11">^0.0.120</text>
+    
+    <!-- Bug indicator -->
+    <circle cx="260" cy="20" r="10" fill="url(#errorGrad)" filter="url(#errorGlow)"/>
+    <text x="260" y="24" text-anchor="middle" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">!</text>
+    
+    <!-- Bug details -->
+    <rect x="15" y="65" width="250" height="60" rx="6" fill="#2a1515" stroke="#ff4444" stroke-width="1"/>
+    <text x="25" y="82" fill="#ff8888" font-family="monospace" font-size="10" font-weight="bold">BUG: client.js line 2</text>
+    <text x="25" y="97" fill="#ff6666" font-family="monospace" font-size="9">jsgui = require('jsgui3-html');</text>
+    <text x="25" y="112" fill="#88ff88" font-family="monospace" font-size="9">FIX: var jsgui = require(...);</text>
+  </g>
+  
+  <!-- Arrow down to jsgui3-html -->
+  <path d="M 220 410 L 220 450" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- ============================================ -->
+  <!-- JSGUI3-HTML LAYER -->
+  <!-- ============================================ -->
+  <g transform="translate(80, 460)">
+    <rect x="0" y="0" width="280" height="100" rx="12" fill="url(#packageGrad)" stroke="url(#warningGrad)" stroke-width="2"/>
+    <text x="140" y="30" text-anchor="middle" fill="#ffcc00" font-family="Georgia, serif" font-size="18" font-weight="bold">jsgui3-html</text>
+    <text x="140" y="50" text-anchor="middle" fill="#888" font-family="monospace" font-size="11">^0.0.166</text>
+    <text x="140" y="75" text-anchor="middle" fill="#666" font-family="Arial" font-size="10">Core HTML generation &amp; Controls</text>
+    
+    <circle cx="260" cy="20" r="10" fill="url(#warningGrad)"/>
+    <text x="260" y="24" text-anchor="middle" fill="#000" font-family="Arial" font-size="12" font-weight="bold">~</text>
+  </g>
+  
+  <!-- Dependency arrows from jsgui3-html -->
+  <path d="M 360 510 L 450 510 L 450 340 L 520 340" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 360 510 L 450 510 L 450 680 L 520 680" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- ============================================ -->
+  <!-- HTMLPARSER DEPENDENCY -->
+  <!-- ============================================ -->
+  <g transform="translate(530, 270)">
+    <rect x="0" y="0" width="300" height="160" rx="12" fill="url(#packageGrad)" stroke="url(#errorGrad)" stroke-width="3" filter="url(#errorGlow)"/>
+    <text x="150" y="30" text-anchor="middle" fill="#ff6666" font-family="Georgia, serif" font-size="18" font-weight="bold">htmlparser</text>
+    <text x="150" y="50" text-anchor="middle" fill="#888" font-family="monospace" font-size="11">^1.7.7 (3rd party)</text>
+    
+    <!-- Bug indicator -->
+    <circle cx="280" cy="20" r="10" fill="url(#errorGrad)" filter="url(#errorGlow)"/>
+    <text x="280" y="24" text-anchor="middle" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">!</text>
+    
+    <!-- Bug details -->
+    <rect x="15" y="65" width="270" height="80" rx="6" fill="#2a1515" stroke="#ff4444" stroke-width="1"/>
+    <text x="25" y="82" fill="#ff8888" font-family="monospace" font-size="10" font-weight="bold">BUG: htmlparser.js lines 37-44</text>
+    <text x="25" y="97" fill="#ff6666" font-family="monospace" font-size="9">this.Tautologistics = {};</text>
+    <text x="25" y="112" fill="#aaa" font-family="monospace" font-size="8">'this' is undefined in strict mode</text>
+    <text x="25" y="127" fill="#88ff88" font-family="monospace" font-size="9">FIX: Use globalThis || window</text>
+  </g>
+  
+  <!-- ============================================ -->
+  <!-- JSGUI3-GFX-CORE DEPENDENCY -->
+  <!-- ============================================ -->
+  <g transform="translate(530, 600)">
+    <rect x="0" y="0" width="300" height="180" rx="12" fill="url(#packageGrad)" stroke="url(#errorGrad)" stroke-width="3" filter="url(#errorGlow)"/>
+    <text x="150" y="30" text-anchor="middle" fill="#ff6666" font-family="Georgia, serif" font-size="18" font-weight="bold">jsgui3-gfx-core</text>
+    <text x="150" y="50" text-anchor="middle" fill="#888" font-family="monospace" font-size="11">^0.0.22</text>
+    
+    <!-- Bug indicator -->
+    <circle cx="280" cy="20" r="10" fill="url(#errorGrad)" filter="url(#errorGlow)"/>
+    <text x="280" y="24" text-anchor="middle" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">!</text>
+    
+    <!-- Bug details -->
+    <rect x="15" y="65" width="270" height="100" rx="6" fill="#2a1515" stroke="#ff4444" stroke-width="1"/>
+    <text x="25" y="82" fill="#ff8888" font-family="monospace" font-size="10" font-weight="bold">BUG: ta-math/transform.js</text>
+    <text x="25" y="97" fill="#ff6666" font-family="monospace" font-size="8">Line 107: each_source_dest_pixels_resized = ...</text>
+    <text x="25" y="112" fill="#ff6666" font-family="monospace" font-size="8">Line 244: each_source_dest_..._further_info = ...</text>
+    <text x="25" y="127" fill="#aaa" font-family="monospace" font-size="8">Implicit global assignment (no let/const)</text>
+    <text x="25" y="145" fill="#88ff88" font-family="monospace" font-size="9">FIX: Add let declarations</text>
+  </g>
+  
+  <!-- ============================================ -->
+  <!-- OTHER DEPENDENCIES (OK) -->
+  <!-- ============================================ -->
+  <g transform="translate(880, 460)">
+    <rect x="0" y="0" width="240" height="220" rx="12" fill="url(#packageGrad)" stroke="#444" stroke-width="1"/>
+    <text x="120" y="30" text-anchor="middle" fill="#888" font-family="Georgia, serif" font-size="16">Other Dependencies</text>
+    
+    <!-- fnl -->
+    <rect x="20" y="50" width="200" height="35" rx="6" fill="#1a2a1a" stroke="#44ff88" stroke-width="1"/>
+    <text x="30" y="72" fill="#44ff88" font-family="monospace" font-size="11">fnl ^0.0.36</text>
+    <circle cx="200" cy="67" r="8" fill="url(#fixedGrad)"/>
+    <text x="200" y="71" text-anchor="middle" fill="#000" font-family="Arial" font-size="10">✓</text>
+    
+    <!-- lang-mini -->
+    <rect x="20" y="95" width="200" height="35" rx="6" fill="#1a2a1a" stroke="#44ff88" stroke-width="1"/>
+    <text x="30" y="117" fill="#44ff88" font-family="monospace" font-size="11">lang-mini (bundled)</text>
+    <circle cx="200" cy="112" r="8" fill="url(#fixedGrad)"/>
+    <text x="200" y="116" text-anchor="middle" fill="#000" font-family="Arial" font-size="10">✓</text>
+    
+    <!-- url-parse -->
+    <rect x="20" y="140" width="200" height="35" rx="6" fill="#1a2a1a" stroke="#44ff88" stroke-width="1"/>
+    <text x="30" y="162" fill="#44ff88" font-family="monospace" font-size="11">url-parse ^1.5.10</text>
+    <circle cx="200" cy="157" r="8" fill="url(#fixedGrad)"/>
+    <text x="200" y="161" text-anchor="middle" fill="#000" font-family="Arial" font-size="10">✓</text>
+    
+    <!-- obext -->
+    <rect x="20" y="185" width="200" height="35" rx="6" fill="#1a2a1a" stroke="#44ff88" stroke-width="1"/>
+    <text x="30" y="207" fill="#44ff88" font-family="monospace" font-size="11">obext ^0.0.31</text>
+    <circle cx="200" cy="202" r="8" fill="url(#fixedGrad)"/>
+    <text x="200" y="206" text-anchor="middle" fill="#000" font-family="Arial" font-size="10">✓</text>
+  </g>
+  
+  <!-- ============================================ -->
+  <!-- ROOT CAUSE ANALYSIS BOX -->
+  <!-- ============================================ -->
+  <g transform="translate(80, 600)">
+    <rect x="0" y="0" width="400" height="180" rx="12" fill="#1a1a2e" stroke="url(#goldAccent)" stroke-width="2"/>
+    <text x="200" y="30" text-anchor="middle" fill="url(#goldAccent)" font-family="Georgia, serif" font-size="16" font-weight="bold">Root Cause Analysis</text>
+    
+    <text x="20" y="60" fill="#ccc" font-family="Arial" font-size="12" font-weight="bold">Why these bugs exist:</text>
+    <text x="30" y="80" fill="#aaa" font-family="Arial" font-size="11">• Packages written for Node.js (non-strict mode)</text>
+    <text x="30" y="98" fill="#aaa" font-family="Arial" font-size="11">• Implicit global variable assignment worked in Node</text>
+    <text x="30" y="116" fill="#aaa" font-family="Arial" font-size="11">• esbuild bundles with "use strict" by default</text>
+    <text x="30" y="134" fill="#aaa" font-family="Arial" font-size="11">• Browser strict mode prohibits undeclared variables</text>
+    <text x="30" y="152" fill="#aaa" font-family="Arial" font-size="11">• Old IIFE patterns expect 'this' to be globalThis</text>
+    
+    <text x="20" y="175" fill="#ffcc00" font-family="Arial" font-size="10" font-style="italic">All 3 bugs are declaration/scope issues from legacy JS patterns</text>
+  </g>
+  
+  <!-- ============================================ -->
+  <!-- RECOMMENDED FIXES BOX -->
+  <!-- ============================================ -->
+  <g transform="translate(80, 800)">
+    <rect x="0" y="0" width="1040" height="80" rx="12" fill="#1a2a1a" stroke="url(#fixedGrad)" stroke-width="2"/>
+    <text x="520" y="25" text-anchor="middle" fill="url(#fixedGrad)" font-family="Georgia, serif" font-size="16" font-weight="bold">Recommended Permanent Fixes</text>
+    
+    <text x="30" y="50" fill="#88ff88" font-family="monospace" font-size="11">1. jsgui3-client: Add "var" to line 2</text>
+    <text x="30" y="68" fill="#888" font-family="monospace" font-size="10">   npm publish patch → 0.0.121</text>
+    
+    <text x="380" y="50" fill="#88ff88" font-family="monospace" font-size="11">2. jsgui3-gfx-core: Add "let" declarations</text>
+    <text x="380" y="68" fill="#888" font-family="monospace" font-size="10">   npm publish patch → 0.0.23</text>
+    
+    <text x="730" y="50" fill="#88ff88" font-family="monospace" font-size="11">3. Fork htmlparser or use htmlparser2</text>
+    <text x="730" y="68" fill="#888" font-family="monospace" font-size="10">   Package is abandoned (2015)</text>
+  </g>
+  
+  <!-- Decorative corner elements -->
+  <path d="M 20 20 L 60 20 L 60 25 L 25 25 L 25 60 L 20 60 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  <path d="M 1180 20 L 1140 20 L 1140 25 L 1175 25 L 1175 60 L 1180 60 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  <path d="M 20 880 L 60 880 L 60 875 L 25 875 L 25 840 L 20 840 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  <path d="M 1180 880 L 1140 880 L 1140 875 L 1175 875 L 1175 840 L 1180 840 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  
+  <!-- Version info -->
+  <text x="600" y="895" text-anchor="middle" fill="#444" font-family="monospace" font-size="10">
+    Generated 2025-11-28 | copilot-dl-news/docs/diagrams/jsgui3-stack-browser-compatibility-issues.svg
+  </text>
+</svg>

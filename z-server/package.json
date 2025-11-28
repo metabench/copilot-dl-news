@@ -1,0 +1,23 @@
+{
+  "name": "z-server",
+  "version": "1.0.0",
+  "description": "Industrial Luxury Obsidian Server Manager",
+  "main": "main.js",
+  "scripts": {
+    "build": "esbuild renderer.src.js --bundle --outfile=renderer.js --platform=browser --format=iife --define:global=window",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "esbuild": "^0.27.0"
+  },
+  "dependencies": {
+    "jsgui3-client": "^0.0.121",
+    "ps-list": "^8.1.1",
+    "tree-kill": "^1.2.2"
+  }
+}

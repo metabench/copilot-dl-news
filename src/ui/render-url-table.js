@@ -20,6 +20,8 @@ const { UrlFilterToggleControl } = require("./controls/UrlFilterToggle");
 const { buildHomeCards } = require("./homeCards");
 const { createHomeCardLoaders } = require("./homeCardData");
 const { listControlTypes } = require("./controls/controlManifest");
+const { themeConfigToCss, DEFAULT_THEME_CONFIG } = require("./server/services/themeService");
+const { buildDataExplorerCss } = require("./styles/dataExplorerCss");
 
 const StringControl = jsgui.String_Control;
 
@@ -164,7 +166,29 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   const head = document.head;
   head.add(new jsgui.meta({ context, attrs: { charset: "utf-8" } }));
   head.add(new jsgui.meta({ context, attrs: { name: "viewport", content: "width=device-width, initial-scale=1" } }));
-  head.add(createStyleTag(context, buildCss()));
+  
+  // Theme system: inject Google Fonts and CSS variables
+  const themeConfig = options.themeConfig || DEFAULT_THEME_CONFIG;
+  
+  // Google Fonts preconnect + stylesheet links (as proper jsgui link controls)
+  const preconnectFonts = new jsgui.link({ context });
+  preconnectFonts.dom.attributes.rel = "preconnect";
+  preconnectFonts.dom.attributes.href = "https://fonts.googleapis.com";
+  head.add(preconnectFonts);
+  
+  const preconnectGstatic = new jsgui.link({ context });
+  preconnectGstatic.dom.attributes.rel = "preconnect";
+  preconnectGstatic.dom.attributes.href = "https://fonts.gstatic.com";
+  preconnectGstatic.dom.attributes.crossorigin = "";
+  head.add(preconnectGstatic);
+  
+  const fontsStylesheet = new jsgui.link({ context });
+  fontsStylesheet.dom.attributes.rel = "stylesheet";
+  fontsStylesheet.dom.attributes.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap";
+  head.add(fontsStylesheet);
+  
+  head.add(createStyleTag(context, themeConfigToCss(themeConfig)));
+  head.add(createStyleTag(context, buildDataExplorerCss()));
 
   const body = document.body;
   const shell = new jsgui.div({ context, class: "page-shell" });
@@ -203,26 +227,59 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
     panel = new jsgui.Control({ context, tagName: "section" });
     panel.add_class("panel");
     const metaGrid = new jsgui.div({ context, class: "panel__meta" });
-    metaGrid.add(createMetaCard(context, "Rows Rendered", rowCountDisplay.toLocaleString("en-US"), { field: "rowCount" }));
-    metaGrid.add(createMetaCard(context, "Requested Limit", limitDisplay.toLocaleString("en-US"), { field: "limit" }));
-    metaGrid.add(createMetaCard(context, "Database", dbLabelDisplay, { field: "dbLabel" }));
-    metaGrid.add(createMetaCard(context, "Generated", generatedAtDisplay, { field: "generatedAt" }));
+    
+    // Render extraCards first (allows classification emoji to be top-left)
     if (Array.isArray(safeMeta.extraCards)) {
       safeMeta.extraCards.forEach((card) => {
         if (card && card.label) {
           const content = card.control || card.value || (Array.isArray(card.series)
             ? new SparklineControl({ context, series: card.series, width: card.width || 240, height: card.height || 36 })
             : "—");
-          metaGrid.add(createMetaCard(context, card.label, content));
+          metaGrid.add(createMetaCard(context, card.label, content, {
+            isEmoji: card.isEmoji,
+            subtitle: card.subtitle
+          }));
         }
       });
     }
+    
+    // Then render standard meta cards
+    metaGrid.add(createMetaCard(context, "Rows Rendered", rowCountDisplay.toLocaleString("en-US"), { field: "rowCount" }));
+    metaGrid.add(createMetaCard(context, "Requested Limit", limitDisplay.toLocaleString("en-US"), { field: "limit" }));
+    metaGrid.add(createMetaCard(context, "Database", dbLabelDisplay, { field: "dbLabel" }));
+    metaGrid.add(createMetaCard(context, "Generated", generatedAtDisplay, { field: "generatedAt" }));
+    
+    // Render filter controls if provided (for classification detail pages, etc.)
+    // Supports:
+    // 1. filterControlsFactory: function(context) => jsgui.Control (preferred - lazy creation with context)
+    // 2. filterControls: jsgui.Control (if caller has access to same context)
+    // 3. filterControlsHtml: string (legacy - uses Text_Node to inject raw HTML)
+    let filterControlsContainer = null;
+    if (typeof safeMeta.filterControlsFactory === "function") {
+      // Factory function - call it with our context to build the control
+      filterControlsContainer = new jsgui.div({ context, class: "panel__filters" });
+      const filterControl = safeMeta.filterControlsFactory(context);
+      if (filterControl) {
+        filterControlsContainer.add(filterControl);
+      }
+    } else if (safeMeta.filterControls && typeof safeMeta.filterControls === "object" && safeMeta.filterControls.all_html_render) {
+      // Pre-built jsgui Control
+      filterControlsContainer = new jsgui.div({ context, class: "panel__filters" });
+      filterControlsContainer.add(safeMeta.filterControls);
+    } else if (safeMeta.filterControlsHtml && typeof safeMeta.filterControlsHtml === "string") {
+      // Legacy HTML string - use Text_Node to inject raw HTML
+      filterControlsContainer = new jsgui.div({ context, class: "panel__filters" });
+      const textNode = new jsgui.Text_Node({ context, text: safeMeta.filterControlsHtml });
+      filterControlsContainer.add(textNode);
+    }
+    
     const table = new UrlListingTableControl({ context, columns: normalizedColumns, rows: normalizedRows });
     const tableWrapper = new jsgui.div({ context, class: "table-wrapper" });
     tableWrapper.add(table);
     const paginationNavTop = safeMeta.pagination ? createPaginationNav(context, safeMeta.pagination, "top") : null;
     const paginationNavBottom = safeMeta.pagination ? createPaginationNav(context, safeMeta.pagination, "bottom") : null;
     panel.add(metaGrid);
+    if (filterControlsContainer) panel.add(filterControlsContainer);
     if (paginationNavTop) panel.add(paginationNavTop);
     panel.add(tableWrapper);
     if (paginationNavBottom) panel.add(paginationNavBottom);
@@ -264,720 +321,18 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   return `<!DOCTYPE html>${document.all_html_render()}`;
 }
 
-function buildCss() {
-  return `
-.page-shell {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 20px 16px 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.page-shell.page-shell--offset {
-  padding-top: 28px;
-}
-@media (min-width: 1200px) {
-  .page-shell {
-    max-width: 1480px;
-    padding: 32px 32px 40px;
-    gap: 28px;
-  }
-}
-@media (min-width: 1600px) {
-  .page-shell {
-    max-width: 1760px;
-    padding-left: 48px;
-    padding-right: 48px;
-  }
-}
-@media (max-width: 1100px) {
-  .page-shell {
-    padding: 18px 14px 28px;
-    gap: 16px;
-  }
-}
-.page-shell__header {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 4px;
-}
-.page-shell__hero {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-@media (min-width: 768px) {
-  .page-shell__hero {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 24px;
-  }
-}
-.page-shell__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 960px;
-  flex: 1;
-}
-.page-shell__header h1 {
-  margin: 0;
-  font-size: clamp(1.9rem, 3vw, 2.75rem);
-  letter-spacing: -0.01em;
-  color: #0f172a;
-  line-height: 1.1;
-}
-.page-shell__subtitle {
-  margin: 0;
-  color: #4b5563;
-  font-size: 1rem;
-  line-height: 1.6;
-  text-wrap: balance;
-  font-feature-settings: "tnum" 1;
-  overflow-wrap: anywhere;
-  max-width: 80ch;
-}
-@media (min-width: 1400px) {
-  .page-shell__subtitle {
-    font-size: 1.05rem;
-  }
-}
-.page-shell__actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-.primary-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0;
-  margin-bottom: 8px;
-  padding: 0;
-}
-@media (min-width: 1400px) {
-  .primary-nav {
-    gap: 12px 16px;
-  }
-}
-.primary-nav__link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.45rem 1rem;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #334155;
-  background: #e2e8f0;
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.primary-nav__link:hover {
-  background: #cbd5f5;
-}
-.primary-nav__link--active {
-  background: #4338ca;
-  color: #fff;
-  border-color: #312e81;
-}
-.primary-nav__link[aria-disabled="true"] {
-  opacity: 0.6;
-  cursor: default;
-}
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0 8px;
-  font-size: 0.85rem;
-  color: #475569;
-}
-.breadcrumbs__link {
-  color: #4338ca;
-  text-decoration: none;
-  font-weight: 600;
-}
-.breadcrumbs__link:hover {
-  text-decoration: underline;
-}
-.breadcrumbs__sep {
-  color: #94a3b8;
-}
-.breadcrumbs__current {
-  font-weight: 600;
-  color: #0f172a;
-}
-.home-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px;
-  margin: 8px 0 12px;
-}
-@media (min-width: 1500px) {
-  .home-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  }
-}
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px;
-  margin: 4px 0 28px;
-}
-@media (max-width: 1100px) {
-  .dashboard-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-.dashboard-panel {
-  background: #ffffff;
-  border: 1px solid #d2d7e3;
-  border-radius: 14px;
-  padding: 20px 22px;
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 220px;
-}
-.dashboard-panel__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.dashboard-panel__head h2 {
-  margin: 0;
-  font-size: 1.15rem;
-  color: #0f172a;
-}
-.dashboard-panel__meta {
-  font-size: 0.85rem;
-  color: #64748b;
-}
-.dashboard-panel__body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.dashboard-panel__footer {
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: #475569;
-}
-.status-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background: #eef2ff;
-  color: #312e81;
-}
-.status-pill--paused {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-.status-pill--meta {
-  background: #ecfeff;
-  color: #0f766e;
-}
-.startup-status {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.startup-status__text {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #1e293b;
-}
-.startup-progress {
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  overflow: hidden;
-}
-.startup-progress__fill {
-  width: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #4338ca, #6366f1);
-  transition: width 0.25s ease;
-}
-.startup-stage-list {
-  margin: 0;
-  padding-left: 18px;
-  color: #475569;
-  font-size: 0.85rem;
-}
-.jobs-panel .dashboard-panel__head {
-  align-items: flex-start;
-}
-.jobs-panel .dashboard-panel__meta {
-  text-align: right;
-}
-.jobs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.jobs-empty-state {
-  border: 1px dashed #cbd5f5;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  color: #475569;
-  background: #f8fafc;
-}
-.jobs-empty-state__icon {
-  font-size: 1.75rem;
-  display: block;
-  margin-bottom: 6px;
-}
-.jobs-empty-state__text {
-  margin: 0;
-  font-size: 0.9rem;
-}
-.job-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 18px;
-  background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-}
-.job-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.job-card-status {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: #475569;
-}
-.job-card-stage {
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
-  font-weight: 600;
-}
-.job-card-paused-indicator {
-  padding: 0.15rem 0.65rem;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  font-weight: 600;
-}
-.job-card-pid {
-  font-size: 0.8rem;
-  color: #94a3b8;
-}
-.job-card-url {
-  margin: 10px 0;
-  font-size: 0.95rem;
-  word-break: break-all;
-}
-.job-card-link {
-  color: #1d4ed8;
-  text-decoration: none;
-  font-weight: 600;
-}
-.job-card-link:hover {
-  text-decoration: underline;
-}
-.job-card-status-text {
-  font-size: 0.9rem;
-  color: #0f172a;
-  margin-top: 4px;
-}
-.job-card-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 10px;
-}
-.job-card-metric {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.78rem;
-  color: #475569;
-}
-.job-card-metric-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-}
-.home-card {
-  background: #ffffff;
-  border: 1px solid #d0d7de;
-  border-radius: 12px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
-}
-.home-card__headline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.home-card__title {
-  margin: 0;
-  font-size: 1.05rem;
-  color: #0f172a;
-}
-.home-card__badge {
-  margin-left: auto;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.home-card__description {
-  margin: 0;
-  color: #475569;
-  line-height: 1.4;
-}
-.home-card__stat {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  color: #64748b;
-  letter-spacing: 0.08em;
-}
-.home-card__stat-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #111827;
-  letter-spacing: normal;
-}
-.home-card__action {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background: #111827;
-  color: #ffffff;
-  font-weight: 600;
-  text-decoration: none;
-  font-size: 0.85rem;
-}
-.home-card__action:hover {
-  background: #1f2937;
-}
-.home-card__stat-link {
-  color: inherit;
-  text-decoration: none;
-}
-.home-card__stat-link:hover {
-  text-decoration: underline;
-}
-.home-card__hints {
-  margin: 0;
-  margin-top: 4px;
-  padding-left: 18px;
-  font-size: 0.78rem;
-  color: #475569;
-}
-.home-card__hint {
-  margin: 2px 0;
-}
-.home-card__hint-link {
-  color: #4338ca;
-  text-decoration: none;
-  font-weight: 600;
-}
-.home-card__hint-link:hover {
-  text-decoration: underline;
-}
-.filter-toggle {
-  margin-top: 0;
-  display: inline-flex;
-  align-items: center;
-}
-.filter-toggle__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #0f172a;
-}
-.filter-toggle__switch {
-  position: relative;
-  width: 44px;
-  height: 22px;
-}
-.filter-toggle__checkbox {
-  opacity: 0;
-  width: 0;
-  height: 0;
-  position: absolute;
-}
-.filter-toggle__slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #d1d5db;
-  border-radius: 22px;
-  transition: background 0.2s ease;
-}
-.filter-toggle__slider::before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 2px;
-  bottom: 2px;
-  background-color: #fff;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-.filter-toggle__checkbox:checked + .filter-toggle__slider {
-  background-color: #22c55e;
-}
-.filter-toggle__checkbox:checked + .filter-toggle__slider::before {
-  transform: translateX(22px);
-}
-.filter-toggle.is-loading .filter-toggle__slider::before {
-  animation: filter-toggle-pulse 1s infinite ease-in-out;
-}
-@keyframes filter-toggle-pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
-  100% { opacity: 1; }
-}
-.panel {
-  background: #ffffff;
-  border: 1px solid #d2d7e3;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-}
-@media (min-width: 1500px) {
-  .panel {
-    padding: 32px;
-  }
-}
-@media (max-width: 1100px) {
-  .panel {
-    padding: 20px;
-  }
-}
-.panel__meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-@media (min-width: 1600px) {
-  .panel__meta {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  }
-}
-.meta-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 100px;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
-}
-.meta-card__label {
-  margin: 0;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #5f6c7b;
-}
-.meta-card__value {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #0f172a;
-  font-feature-settings: "tnum" 1;
-  word-break: break-word;
-}
-.sparkline { width: 160px; height: 32px; display: block; }
-.sparkline polyline { stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.ui-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-radius: 12px;
-  overflow: hidden;
-  font-size: 0.95rem;
-}
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-.table-wrapper::-webkit-scrollbar {
-  height: 10px;
-}
-.table-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5f5;
-  border-radius: 999px;
-}
-.table-wrapper table {
-  min-width: 960px;
-}
-.ui-table thead th {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.75rem;
-  text-align: left;
-  padding: 0.75rem;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  color: #475569;
-}
-.ui-table tbody td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
-  color: #0f172a;
-  vertical-align: top;
-}
-.ui-table tbody tr:nth-child(even) {
-  background: #fbfdff;
-}
-.ui-table tbody tr:last-child td {
-  border-bottom: none;
-}
-@media (max-width: 1100px) {
-  .ui-table thead th,
-  .ui-table tbody td {
-    padding: 0.6rem;
-    font-size: 0.85rem;
-  }
-  .table-wrapper table {
-    min-width: 760px;
-  }
-}
-.pager {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 16px 0;
-}
-@media (min-width: 768px) {
-  .pager {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-.pager__info {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #475569;
-  font-feature-settings: "tnum" 1;
-}
-.pager__buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pager-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid #cbd5f5;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background: #f8fafc;
-  color: #312e81;
-  text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.pager-button:hover {
-  background: #e0e7ff;
-}
-.pager-button--kind-first,
-.pager-button--kind-last {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #3730a3;
-}
-.pager-button--kind-prev,
-.pager-button--kind-next {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
-}
-.pager-button--disabled,
-.pager-button[aria-disabled="true"] {
-  color: #94a3b8;
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-  cursor: not-allowed;
-}
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 48px;
-  padding: 0.15rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.badge--muted { background: #e5e7eb; color: #4b5563; }
-.badge--info { background: #dbeafe; color: #1d4ed8; }
-.badge--success { background: #d1fae5; color: #065f46; }
-.badge--accent { background: #ede9fe; color: #5b21b6; }
-.badge--warn { background: #fef3c7; color: #92400e; }
-.badge--danger { background: #fee2e2; color: #991b1b; }
-.table-link {
-  color: #2563eb;
-  text-decoration: none;
-}
-.table-link:hover {
-  text-decoration: underline;
-}
-`;
-}
+// Note: CSS generation moved to src/ui/styles/dataExplorerCss.js
+// Uses CSS variables for theming support - see themeService.js for token definitions
 
 
 function createMetaCard(context, label, value, options = {}) {
-  const card = new jsgui.div({ context, class: "meta-card" });
+  const isEmoji = options.isEmoji === true;
+  const cardClass = isEmoji ? "meta-card meta-card--emoji" : "meta-card";
+  const card = new jsgui.div({ context, class: cardClass });
   const labelCtrl = new jsgui.p({ context, class: "meta-card__label" });
   labelCtrl.add(new StringControl({ context, text: label }));
-  const valueCtrl = new jsgui.p({ context, class: "meta-card__value" });
+  const valueClass = isEmoji ? "meta-card__value meta-card__value--emoji" : "meta-card__value";
+  const valueCtrl = new jsgui.p({ context, class: valueClass });
   if (options.field) {
     valueCtrl.dom.attributes["data-meta-field"] = options.field;
   }
@@ -988,6 +343,14 @@ function createMetaCard(context, label, value, options = {}) {
   }
   card.add(labelCtrl);
   card.add(valueCtrl);
+  
+  // Add subtitle if provided (used for emoji cards to show classification name)
+  if (options.subtitle) {
+    const subtitleCtrl = new jsgui.p({ context, class: "meta-card__subtitle" });
+    subtitleCtrl.add(new StringControl({ context, text: options.subtitle }));
+    card.add(subtitleCtrl);
+  }
+  
   return card;
 }
 

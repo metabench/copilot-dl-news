@@ -16,6 +16,33 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - **Use the docs hub.** Update `docs/sessions/SESSIONS_HUB.md` with links to the new folder and consult it before starting work so you inherit outstanding follow-ups.
 - **Search before you write.** Prefer the repo tooling (`node tools/dev/md-scan.js --dir docs/sessions --search <term> --json`, `node tools/dev/js-scan.js --dir docs --find-pattern <pattern>`) to sweep current + past sessions. Aim to surface relevant context into your working window instead of rewriting it from scratch.
 
+## ⚠️ Knowledge-First Protocol (MANDATORY)
+
+**Before attempting anything where methodology isn't totally clear, STOP and gather knowledge.**
+
+Trigger conditions:
+- Exact approach/API/pattern is unclear
+- Haven't worked with this part of the codebase before
+- About to experiment to see what works
+
+Sequence:
+1. **Output to console**: `[KNOWLEDGE GAP] Topic: <what you need>` with specific questions
+2. **Scan docs**:
+   ```bash
+   node tools/dev/md-scan.js --dir docs --search "<topic>" --json
+   node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json
+   ```
+3. **Read** relevant docs thoroughly—look for working examples
+4. **Proceed OR improve docs**: If you had to figure it out, **update docs first** before continuing
+
+Knowledge sources:
+- `AGENTS.md` — core workflows
+- `docs/guides/` — in-depth explanations
+- `docs/sessions/` — prior solutions
+- `tools/dev/README.md` — CLI tools
+
+**Rule**: Knowledge discovered = knowledge documented.
+
 ## Checking scripts live next to the feature
 
 - Every time you introduce or modify a jsgui3 control, router view, or HTML helper, add a tiny Node-based "checking" script under a sibling `checks/` folder (e.g., `src/ui/controls/checks/ConfigMatrixControl.check.js`).
@@ -26,6 +53,47 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 
 - **Ensure clean exits.** All scripts (especially verification tools, one-off checks, and CLI tools) must exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block.
 - **No hanging processes.** Hanging processes block CI and confuse users. If a script doesn't exit, it's a bug.
+
+## Schema Synchronization (Database Changes)
+
+**After ANY database schema change** (migrations, ALTER TABLE, new tables), sync the schema definitions:
+
+```bash
+npm run schema:sync     # Regenerate schema-definitions.js
+npm run schema:check    # Verify no drift (use in CI)
+npm run schema:stats    # Regenerate with table statistics
+```
+
+**Workflow integration**:
+1. **After running migrations**: Always run `npm run schema:sync`
+2. **Before PR merge**: Run `npm run schema:check` to verify sync
+3. **In DB adapter work**: Consult `src/db/sqlite/v1/schema-definitions.js` for current schema
+4. **Documentation updates**: Run `npm run schema:stats` to refresh table counts in docs
+
+**Files affected**:
+- `src/db/sqlite/v1/schema-definitions.js` - Canonical schema definitions (auto-generated)
+- `docs/database/_artifacts/news_db_stats.json` - Table statistics
+- `docs/database/schema/main.md` - Human-readable schema docs (manual update)
+
+## Facts vs Classifications (Critical Distinction)
+
+**When working on classification, article detection, or URL analysis:**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Nature** | Objective observations | Subjective judgments |
+| **Question** | "Does it have X?" | "What is it?" |
+| **Neutrality** | Always neutral | Interprets facts |
+
+**Key Principles:**
+1. **Facts are NEUTRAL** — Observe structure without judging it as good/bad
+2. **Facts are OBJECTIVE** — Verifiable, reproducible, same input = same output
+3. **No weighted signals** — Pure boolean TRUE/FALSE, no scores
+4. **Classifications CONSUME facts** — Rules combine facts with AND/OR/NOT
+
+**Example**: `url.hasPaginationPattern: true` is a neutral observation. Whether pagination matters depends on what you're classifying—it's not inherently "negative."
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` and `src/facts/`.
 
 ## Server Management & Detached Mode
 

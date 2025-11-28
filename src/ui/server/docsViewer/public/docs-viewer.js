@@ -6,6 +6,8 @@
  * - Search filtering
  * - Copy link
  * - Keyboard navigation
+ * - Column header sorting
+ * - Column selection context menu
  * 
  * Note: Theme toggle is handled by jsgui3 client controls
  * (see client/controls/DocsThemeToggleControl.js)
@@ -85,6 +87,179 @@
       } else {
         item.style.display = "none";
       }
+    });
+  }
+
+  // ========================================
+  // Column Header Sorting & Context Menu
+  // ========================================
+  // NOTE: Column header sorting and context menu are now handled by
+  // jsgui3 controls: ColumnHeaderControl and ColumnContextMenuControl
+  // These controls are activated via data-jsgui-control attributes.
+  // The code below is kept as fallback only if jsgui3 activation fails.
+  
+  /**
+   * Get the ColumnContextMenuControl instance (activated by jsgui3-client)
+   * @returns {Object|null} The control instance or null
+   */
+  function getColumnMenuControl() {
+    const menuEl = document.querySelector("[data-context-menu='columns']");
+    if (!menuEl) return null;
+    return menuEl.__jsgui_control || null;
+  }
+  
+  /**
+   * Check if ColumnHeaderControl is active (jsgui3 handles interactions)
+   * @returns {boolean}
+   */
+  function isColumnHeaderControlActive() {
+    const headerEl = document.querySelector("[data-column-header]");
+    return !!(headerEl && headerEl.__jsgui_control);
+  }
+  
+  function initColumnHeader() {
+    // Skip if jsgui3 ColumnHeaderControl is active
+    if (isColumnHeaderControlActive()) {
+      console.log("[docs-viewer] Column header handled by jsgui3 control");
+      return;
+    }
+    
+    console.log("[docs-viewer] Using fallback column header handlers");
+    
+    const columnHeader = document.querySelector("[data-column-header]");
+    if (!columnHeader) return;
+    
+    // Click on sortable headers to sort
+    columnHeader.addEventListener("click", function(e) {
+      // Don't handle if clicking on options button
+      if (e.target.closest(".doc-nav__col-options-btn, [data-action='show-column-menu']")) {
+        return;
+      }
+      
+      const header = e.target.closest(".doc-nav__col-header--sortable");
+      if (!header) return;
+      
+      const sortBy = header.getAttribute("data-sort-by");
+      const currentOrder = header.getAttribute("data-sort-order") || 'asc';
+      
+      // Toggle order if clicking same column, else use default
+      let newOrder;
+      if (header.classList.contains("doc-nav__col-header--active")) {
+        newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        newOrder = sortBy === 'mtime' ? 'desc' : 'asc'; // Default desc for date, asc for name
+      }
+      
+      // Build new URL with sort params
+      const url = new URL(window.location.href);
+      url.searchParams.set("sort_by", sortBy);
+      url.searchParams.set("sort_order", newOrder);
+      
+      window.location.href = url.toString();
+    });
+    
+    // Right-click on column header to show context menu
+    columnHeader.addEventListener("contextmenu", function(e) {
+      e.preventDefault();
+      const control = getColumnMenuControl();
+      if (control && typeof control.show === "function") {
+        control.show(e.clientX, e.clientY);
+      } else {
+        // Fallback for when control isn't activated yet
+        showColumnContextMenu(e.clientX, e.clientY);
+      }
+    });
+    
+    // Click on options button to show context menu
+    const optionsBtn = columnHeader.querySelector(".doc-nav__col-options-btn");
+    if (optionsBtn) {
+      optionsBtn.addEventListener("click", function(e) {
+        e.stopPropagation();
+        const rect = optionsBtn.getBoundingClientRect();
+        const control = getColumnMenuControl();
+        if (control && typeof control.show === "function") {
+          control.show(rect.left, rect.bottom + 4);
+        } else {
+          // Fallback for when control isn't activated yet
+          showColumnContextMenu(rect.left, rect.bottom + 4);
+        }
+      });
+    }
+  }
+  
+  // Fallback functions for when jsgui3-client control isn't activated
+  function showColumnContextMenu(x, y) {
+    const menu = document.querySelector("[data-context-menu='columns']");
+    if (!menu) return;
+    
+    // Position the menu
+    menu.style.display = "block";
+    menu.style.left = x + "px";
+    menu.style.top = y + "px";
+    
+    // Ensure menu stays within viewport
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      menu.style.left = (x - rect.width) + "px";
+    }
+    if (rect.bottom > window.innerHeight) {
+      menu.style.top = (y - rect.height) + "px";
+    }
+    
+    // Close on click outside
+    function closeOnClickOutside(e) {
+      if (!menu.contains(e.target)) {
+        hideColumnContextMenu();
+        document.removeEventListener("click", closeOnClickOutside);
+      }
+    }
+    
+    // Delay adding listener to avoid immediate close
+    setTimeout(function() {
+      document.addEventListener("click", closeOnClickOutside);
+    }, 10);
+    
+    // Close on escape
+    function closeOnEscape(e) {
+      if (e.key === "Escape") {
+        hideColumnContextMenu();
+        document.removeEventListener("keydown", closeOnEscape);
+      }
+    }
+    document.addEventListener("keydown", closeOnEscape);
+  }
+  
+  function hideColumnContextMenu() {
+    const menu = document.querySelector("[data-context-menu='columns']");
+    if (menu) {
+      menu.style.display = "none";
+    }
+  }
+  
+  // initColumnToggle only needed as fallback - ColumnContextMenuControl handles this
+  function initColumnToggle() {
+    const menu = document.querySelector("[data-context-menu='columns']");
+    if (!menu) return;
+    
+    // Skip if control is activated (it handles its own events)
+    if (menu.__jsgui_control) return;
+    
+    menu.addEventListener("change", function(e) {
+      const toggle = e.target.closest("[data-column-toggle]");
+      if (!toggle) return;
+      
+      const column = toggle.getAttribute("data-column-toggle");
+      const isChecked = toggle.checked;
+      
+      // Build new URL with column visibility
+      const url = new URL(window.location.href);
+      if (isChecked) {
+        url.searchParams.set("col_" + column, "1");
+      } else {
+        url.searchParams.delete("col_" + column);
+      }
+      
+      window.location.href = url.toString();
     });
   }
 
@@ -176,6 +351,7 @@
           break;
         case "Escape":
           closeNav();
+          hideColumnContextMenu();
           break;
       }
     });
@@ -244,6 +420,8 @@
     initKeyboardNav();
     initEventDelegation();
     initSmoothScroll();
+    initColumnHeader();
+    initColumnToggle();
   }
 
   // Run on DOM ready, but with a slight delay to let jsgui3 activate first

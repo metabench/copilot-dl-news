@@ -114,9 +114,113 @@ function selectFetchFileInfo(db, id) {
   };
 }
 
+/**
+ * Select a single fetch (http_response) by ID with full details
+ * @param {Object} db - better-sqlite3 database handle
+ * @param {number} id - http_responses.id
+ * @returns {Object|null} Fetch details or null if not found
+ */
+function selectFetchById(db, id) {
+  if (!db || typeof db.prepare !== "function") {
+    throw new TypeError("selectFetchById requires a better-sqlite3 handle");
+  }
+  const stmt = db.prepare(`
+    SELECT 
+      hr.id,
+      hr.url_id AS urlId,
+      hr.request_started_at AS requestStartedAt,
+      hr.fetched_at AS fetchedAt,
+      hr.http_status AS httpStatus,
+      hr.content_type AS contentType,
+      hr.content_encoding AS contentEncoding,
+      hr.etag,
+      hr.last_modified AS lastModified,
+      hr.redirect_chain AS redirectChain,
+      hr.ttfb_ms AS ttfbMs,
+      hr.download_ms AS downloadMs,
+      hr.total_ms AS totalMs,
+      hr.bytes_downloaded AS bytesDownloaded,
+      hr.transfer_kbps AS transferKbps,
+      hr.cache_category AS cacheCategory,
+      hr.cache_key AS cacheKey,
+      hr.cache_created_at AS cacheCreatedAt,
+      hr.cache_expires_at AS cacheExpiresAt,
+      hr.request_method AS requestMethod,
+      u.url,
+      u.host,
+      cs.id AS contentStorageId,
+      cs.uncompressed_size AS fileSize,
+      cs.compression_type_id AS compressionTypeId,
+      cs.content_category AS contentCategory,
+      cs.content_subtype AS contentSubtype,
+      ca.classification,
+      ca.word_count AS wordCount,
+      ca.title AS articleTitle,
+      ca.language AS articleLanguage
+    FROM http_responses hr
+    JOIN urls u ON u.id = hr.url_id
+    LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+    LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+    WHERE hr.id = ?
+  `);
+  const row = stmt.get(id);
+  if (!row) return null;
+  
+  // Parse redirect chain if present
+  let redirectChain = null;
+  if (row.redirectChain) {
+    try {
+      redirectChain = JSON.parse(row.redirectChain);
+    } catch (_) {
+      redirectChain = row.redirectChain;
+    }
+  }
+  
+  return {
+    id: row.id,
+    urlId: row.urlId,
+    url: row.url,
+    host: row.host,
+    requestStartedAt: row.requestStartedAt || null,
+    fetchedAt: row.fetchedAt || null,
+    httpStatus: row.httpStatus != null ? Number(row.httpStatus) : null,
+    contentType: row.contentType || null,
+    contentEncoding: row.contentEncoding || null,
+    etag: row.etag || null,
+    lastModified: row.lastModified || null,
+    redirectChain,
+    timing: {
+      ttfbMs: row.ttfbMs != null ? Number(row.ttfbMs) : null,
+      downloadMs: row.downloadMs != null ? Number(row.downloadMs) : null,
+      totalMs: row.totalMs != null ? Number(row.totalMs) : null
+    },
+    bytesDownloaded: row.bytesDownloaded != null ? Number(row.bytesDownloaded) : null,
+    transferKbps: row.transferKbps != null ? Number(row.transferKbps) : null,
+    cache: {
+      category: row.cacheCategory || null,
+      key: row.cacheKey || null,
+      createdAt: row.cacheCreatedAt || null,
+      expiresAt: row.cacheExpiresAt || null
+    },
+    requestMethod: row.requestMethod || "GET",
+    storage: {
+      id: row.contentStorageId || null,
+      fileSize: row.fileSize != null ? Number(row.fileSize) : null,
+      compressionTypeId: row.compressionTypeId || null
+    },
+    analysis: {
+      classification: row.classification || null,
+      wordCount: row.wordCount != null ? Number(row.wordCount) : null,
+      contentCategory: row.contentCategory || null,
+      contentSubtype: row.contentSubtype || null
+    }
+  };
+}
+
 module.exports = {
   selectUrlRecord,
   selectUrlById,
   selectFetchHistory,
-  selectFetchFileInfo
+  selectFetchFileInfo,
+  selectFetchById
 };

@@ -1,0 +1,450 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="Inter, Segoe UI, system-ui, sans-serif">
+  <defs>
+    <!-- Gradients for depth -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="urlDiscoveryGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#dbeafe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bfdbfe;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="predictionGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fde68a;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="fetchGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d1fae5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a7f3d0;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="verifyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ede9fe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ddd6fe;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="learnGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fce7f3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fbcfe8;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="dbGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e0e7ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c7d2fe;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#1e293b" flood-opacity="0.1"/>
+    </filter>
+    
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    
+    <marker id="arrowheadPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
+    </marker>
+    
+    <!-- Pattern for emphasis -->
+    <pattern id="diagonalHatch" patternUnits="userSpaceOnUse" width="8" height="8">
+      <path d="M-1,1 l2,-2 M0,8 l8,-8 M7,9 l2,-2" stroke="#f59e0b" stroke-width="1" opacity="0.3"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#f8fafc"/>
+  
+  <!-- Subtle grid pattern -->
+  <g opacity="0.3">
+    <line x1="0" y1="100" x2="1200" y2="100" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="200" x2="1200" y2="200" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="300" x2="1200" y2="300" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="400" x2="1200" y2="400" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="500" x2="1200" y2="500" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="600" x2="1200" y2="600" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="700" x2="1200" y2="700" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="800" x2="1200" y2="800" stroke="#e2e8f0" stroke-width="1"/>
+  </g>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="1200" height="70" fill="url(#headerGrad)"/>
+  <text x="600" y="42" text-anchor="middle" fill="white" font-size="28" font-weight="700">
+    Improved Ingestion System (IIS)
+  </text>
+  <text x="600" y="60" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="12">
+    URL Classification with Pattern Learning &amp; Verification Feedback Loop
+  </text>
+  
+  <!-- Legend -->
+  <g transform="translate(900, 85)">
+    <rect x="0" y="0" width="280" height="100" rx="8" fill="white" stroke="#e2e8f0" filter="url(#dropShadow)"/>
+    <text x="140" y="20" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">LEGEND</text>
+    
+    <circle cx="20" cy="40" r="6" fill="#3b82f6"/>
+    <text x="35" y="44" fill="#64748b" font-size="10">URL Discovery</text>
+    
+    <circle cx="140" cy="40" r="6" fill="#f59e0b"/>
+    <text x="155" y="44" fill="#64748b" font-size="10">Prediction</text>
+    
+    <circle cx="20" cy="60" r="6" fill="#10b981"/>
+    <text x="35" y="64" fill="#64748b" font-size="10">Content Fetch</text>
+    
+    <circle cx="140" cy="60" r="6" fill="#8b5cf6"/>
+    <text x="155" y="64" fill="#64748b" font-size="10">Verification</text>
+    
+    <circle cx="20" cy="80" r="6" fill="#ec4899"/>
+    <text x="35" y="84" fill="#64748b" font-size="10">Pattern Learning</text>
+    
+    <circle cx="140" cy="80" r="6" fill="#6366f1"/>
+    <text x="155" y="84" fill="#64748b" font-size="10">Database</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 1: URL DISCOVERY -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(40, 200)">
+    <!-- Phase label -->
+    <rect x="0" y="-25" width="120" height="24" rx="12" fill="#3b82f6"/>
+    <text x="60" y="-8" text-anchor="middle" fill="white" font-size="11" font-weight="600">PHASE 1</text>
+    
+    <!-- Main box -->
+    <rect x="0" y="0" width="220" height="140" rx="12" fill="url(#urlDiscoveryGrad)" stroke="#3b82f6" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- Icon -->
+    <circle cx="35" cy="35" r="20" fill="#3b82f6" opacity="0.15"/>
+    <text x="35" y="42" text-anchor="middle" font-size="20">🔍</text>
+    
+    <!-- Title -->
+    <text x="65" y="40" fill="#1e40af" font-size="16" font-weight="700">URL Discovery</text>
+    
+    <!-- Description -->
+    <text x="15" y="70" fill="#1e40af" font-size="11">New URL encountered from:</text>
+    <text x="25" y="88" fill="#3b82f6" font-size="10">• Crawl link extraction</text>
+    <text x="25" y="102" fill="#3b82f6" font-size="10">• Hub navigation discovery</text>
+    <text x="25" y="116" fill="#3b82f6" font-size="10">• External URL submission</text>
+    <text x="25" y="130" fill="#3b82f6" font-size="10">• Sitemap parsing</text>
+  </g>
+  
+  <!-- Arrow 1→2 -->
+  <path d="M 270 270 Q 320 270 320 220 Q 320 200 370 200" 
+        stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrowhead)"
+        stroke-dasharray="none"/>
+  <rect x="285" y="225" width="70" height="20" rx="4" fill="white" stroke="#e2e8f0"/>
+  <text x="320" y="239" text-anchor="middle" fill="#64748b" font-size="9">store URL</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DATABASE: URLs Table -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(380, 160)">
+    <rect x="0" y="0" width="160" height="80" rx="8" fill="url(#dbGrad)" stroke="#6366f1" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- Database icon -->
+    <ellipse cx="25" cy="20" rx="12" ry="6" fill="#6366f1" opacity="0.3"/>
+    <rect x="13" y="20" width="24" height="15" fill="#6366f1" opacity="0.2"/>
+    <ellipse cx="25" cy="35" rx="12" ry="6" fill="#6366f1" opacity="0.3"/>
+    
+    <text x="50" y="32" fill="#4338ca" font-size="13" font-weight="700">urls</text>
+    <text x="15" y="55" fill="#6366f1" font-size="9">id, url, host</text>
+    <text x="15" y="68" fill="#6366f1" font-size="9">created_at, last_seen_at</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 2: PREDICTION -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow URL→Prediction -->
+  <path d="M 460 250 L 460 300" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <g transform="translate(340, 310)">
+    <!-- Phase label -->
+    <rect x="0" y="-25" width="120" height="24" rx="12" fill="#f59e0b"/>
+    <text x="60" y="-8" text-anchor="middle" fill="white" font-size="11" font-weight="600">PHASE 2</text>
+    
+    <!-- EMPHASIS: This is the NEW component -->
+    <rect x="-5" y="-5" width="250" height="180" rx="14" fill="url(#diagonalHatch)" stroke="#f59e0b" stroke-width="3" stroke-dasharray="8,4"/>
+    
+    <!-- Main box -->
+    <rect x="0" y="0" width="240" height="170" rx="12" fill="url(#predictionGrad)" stroke="#f59e0b" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- NEW badge -->
+    <rect x="180" y="-12" width="50" height="20" rx="10" fill="#ef4444" filter="url(#softGlow)"/>
+    <text x="205" y="3" text-anchor="middle" fill="white" font-size="10" font-weight="700">NEW</text>
+    
+    <!-- Icon -->
+    <circle cx="35" cy="35" r="20" fill="#f59e0b" opacity="0.2"/>
+    <text x="35" y="42" text-anchor="middle" font-size="20">🎯</text>
+    
+    <!-- Title -->
+    <text x="65" y="35" fill="#92400e" font-size="14" font-weight="700">URL Classification</text>
+    <text x="65" y="50" fill="#92400e" font-size="14" font-weight="700">Service</text>
+    
+    <!-- Strategies -->
+    <text x="15" y="75" fill="#b45309" font-size="10" font-weight="600">Prediction Strategies:</text>
+    
+    <rect x="15" y="85" width="210" height="18" rx="4" fill="rgba(251,191,36,0.3)"/>
+    <text x="20" y="98" fill="#92400e" font-size="9">1. Learned Patterns</text>
+    <text x="180" y="98" fill="#059669" font-size="9" font-weight="700">95%</text>
+    
+    <rect x="15" y="106" width="180" height="18" rx="4" fill="rgba(251,191,36,0.2)"/>
+    <text x="20" y="119" fill="#92400e" font-size="9">2. Similar URL Match</text>
+    <text x="155" y="119" fill="#0891b2" font-size="9" font-weight="700">70%</text>
+    
+    <rect x="15" y="127" width="150" height="18" rx="4" fill="rgba(251,191,36,0.15)"/>
+    <text x="20" y="140" fill="#92400e" font-size="9">3. Domain Profile</text>
+    <text x="125" y="140" fill="#7c3aed" font-size="9" font-weight="700">50%</text>
+    
+    <rect x="15" y="148" width="120" height="18" rx="4" fill="rgba(251,191,36,0.1)"/>
+    <text x="20" y="161" fill="#92400e" font-size="9">4. URL Signals</text>
+    <text x="95" y="161" fill="#94a3b8" font-size="9" font-weight="700">40%</text>
+  </g>
+  
+  <!-- Arrow to url_classifications DB -->
+  <path d="M 590 395 L 680 395" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="635" y="388" text-anchor="middle" fill="#64748b" font-size="9">store</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DATABASE: url_classifications -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(690, 340)">
+    <!-- EMPHASIS border -->
+    <rect x="-5" y="-5" width="200" height="120" rx="10" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5"/>
+    
+    <rect x="0" y="0" width="190" height="110" rx="8" fill="url(#dbGrad)" stroke="#6366f1" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- NEW badge -->
+    <rect x="130" y="-12" width="50" height="20" rx="10" fill="#ef4444"/>
+    <text x="155" y="3" text-anchor="middle" fill="white" font-size="10" font-weight="700">NEW</text>
+    
+    <!-- Database icon -->
+    <ellipse cx="25" cy="20" rx="12" ry="6" fill="#f59e0b" opacity="0.4"/>
+    <rect x="13" y="20" width="24" height="15" fill="#f59e0b" opacity="0.3"/>
+    <ellipse cx="25" cy="35" rx="12" ry="6" fill="#f59e0b" opacity="0.4"/>
+    
+    <text x="50" y="28" fill="#4338ca" font-size="12" font-weight="700">url_classifications</text>
+    <text x="15" y="50" fill="#6366f1" font-size="8">url_id, predicted_classification</text>
+    <text x="15" y="62" fill="#6366f1" font-size="8">confidence, prediction_source</text>
+    <text x="15" y="74" fill="#6366f1" font-size="8">pattern_matched, similar_url_id</text>
+    <text x="15" y="86" fill="#10b981" font-size="8" font-weight="600">verified_at, verified_classification</text>
+    <text x="15" y="98" fill="#10b981" font-size="8" font-weight="600">verification_match ✓</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 3: FETCH -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow Prediction→Fetch -->
+  <path d="M 460 490 L 460 530" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowheadGreen)"/>
+  <rect x="420" y="500" width="80" height="20" rx="4" fill="white" stroke="#e2e8f0"/>
+  <text x="460" y="514" text-anchor="middle" fill="#64748b" font-size="9">prioritize</text>
+  
+  <g transform="translate(340, 540)">
+    <!-- Phase label -->
+    <rect x="0" y="-25" width="120" height="24" rx="12" fill="#10b981"/>
+    <text x="60" y="-8" text-anchor="middle" fill="white" font-size="11" font-weight="600">PHASE 3</text>
+    
+    <!-- Main box -->
+    <rect x="0" y="0" width="240" height="120" rx="12" fill="url(#fetchGrad)" stroke="#10b981" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- Icon -->
+    <circle cx="35" cy="35" r="20" fill="#10b981" opacity="0.2"/>
+    <text x="35" y="42" text-anchor="middle" font-size="20">📥</text>
+    
+    <!-- Title -->
+    <text x="65" y="40" fill="#065f46" font-size="15" font-weight="700">Content Fetch</text>
+    
+    <!-- Description -->
+    <text x="15" y="65" fill="#047857" font-size="10">ArticleProcessor analyzes:</text>
+    <text x="25" y="80" fill="#10b981" font-size="9">• HTML structure &amp; readability</text>
+    <text x="25" y="93" fill="#10b981" font-size="9">• Schema.org signals</text>
+    <text x="25" y="106" fill="#10b981" font-size="9">• Navigation vs article links</text>
+  </g>
+  
+  <!-- Arrow to content_analysis DB -->
+  <path d="M 590 600 L 680 600" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowheadGreen)"/>
+  <text x="635" y="593" text-anchor="middle" fill="#64748b" font-size="9">classify</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DATABASE: content_analysis -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(690, 550)">
+    <rect x="0" y="0" width="190" height="100" rx="8" fill="url(#dbGrad)" stroke="#6366f1" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- Database icon -->
+    <ellipse cx="25" cy="20" rx="12" ry="6" fill="#10b981" opacity="0.4"/>
+    <rect x="13" y="20" width="24" height="15" fill="#10b981" opacity="0.3"/>
+    <ellipse cx="25" cy="35" rx="12" ry="6" fill="#10b981" opacity="0.4"/>
+    
+    <text x="50" y="28" fill="#4338ca" font-size="12" font-weight="700">content_analysis</text>
+    <text x="15" y="50" fill="#6366f1" font-size="8">content_id, classification</text>
+    <text x="15" y="62" fill="#6366f1" font-size="8">title, word_count, language</text>
+    <text x="15" y="74" fill="#6366f1" font-size="8">nav_links_count, article_links_count</text>
+    <text x="15" y="86" fill="#10b981" font-size="8" font-weight="600">VERIFIED classification ✓</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 4: VERIFICATION -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow Fetch→Verify -->
+  <path d="M 890 600 L 980 600 Q 1020 600 1020 550 L 1020 470" 
+        stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrowheadPurple)"/>
+  
+  <g transform="translate(920, 340)">
+    <!-- Phase label -->
+    <rect x="0" y="-25" width="120" height="24" rx="12" fill="#8b5cf6"/>
+    <text x="60" y="-8" text-anchor="middle" fill="white" font-size="11" font-weight="600">PHASE 4</text>
+    
+    <!-- Main box -->
+    <rect x="0" y="0" width="220" height="120" rx="12" fill="url(#verifyGrad)" stroke="#8b5cf6" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- Icon -->
+    <circle cx="35" cy="35" r="20" fill="#8b5cf6" opacity="0.2"/>
+    <text x="35" y="42" text-anchor="middle" font-size="20">✅</text>
+    
+    <!-- Title -->
+    <text x="65" y="40" fill="#5b21b6" font-size="15" font-weight="700">Verification</text>
+    
+    <!-- Description -->
+    <text x="15" y="65" fill="#6d28d9" font-size="10">Compare prediction to actual:</text>
+    <text x="25" y="82" fill="#8b5cf6" font-size="9">• Update url_classifications</text>
+    <text x="25" y="95" fill="#8b5cf6" font-size="9">• Record verification_match</text>
+    <text x="25" y="108" fill="#8b5cf6" font-size="9">• Update pattern accuracy</text>
+  </g>
+  
+  <!-- Arrow Verify→url_classifications update -->
+  <path d="M 920 395 L 890 395" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrowheadPurple)"/>
+  <text x="905" y="385" text-anchor="middle" fill="#8b5cf6" font-size="8">update</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- PHASE 5: PATTERN LEARNING -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow to Pattern Learning -->
+  <path d="M 785 660 L 785 710" stroke="#ec4899" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <g transform="translate(40, 700)">
+    <!-- Phase label -->
+    <rect x="0" y="-25" width="160" height="24" rx="12" fill="#ec4899"/>
+    <text x="80" y="-8" text-anchor="middle" fill="white" font-size="11" font-weight="600">PHASE 5 (Background)</text>
+    
+    <!-- EMPHASIS: This is the NEW component -->
+    <rect x="-5" y="-5" width="360" height="150" rx="14" fill="url(#diagonalHatch)" stroke="#ec4899" stroke-width="3" stroke-dasharray="8,4"/>
+    
+    <!-- Main box -->
+    <rect x="0" y="0" width="350" height="140" rx="12" fill="url(#learnGrad)" stroke="#ec4899" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- NEW badge -->
+    <rect x="290" y="-12" width="50" height="20" rx="10" fill="#ef4444" filter="url(#softGlow)"/>
+    <text x="315" y="3" text-anchor="middle" fill="white" font-size="10" font-weight="700">NEW</text>
+    
+    <!-- Icon -->
+    <circle cx="35" cy="35" r="20" fill="#ec4899" opacity="0.2"/>
+    <text x="35" y="42" text-anchor="middle" font-size="20">🧠</text>
+    
+    <!-- Title -->
+    <text x="65" y="40" fill="#9d174d" font-size="15" font-weight="700">Pattern Learning Service</text>
+    
+    <!-- Process -->
+    <text x="15" y="65" fill="#be185d" font-size="10" font-weight="600">Learns from verified classifications:</text>
+    
+    <rect x="15" y="75" width="320" height="55" rx="6" fill="rgba(236,72,153,0.1)"/>
+    <text x="25" y="90" fill="#db2777" font-size="9">1. Extract patterns: /news/2024/11/27/slug → ^/news/\d{4}/\d{1,2}/\d{1,2}/</text>
+    <text x="25" y="105" fill="#db2777" font-size="9">2. Group by (pattern, classification) → track accuracy</text>
+    <text x="25" y="120" fill="#db2777" font-size="9">3. Build domain profiles: common sections, date formats</text>
+  </g>
+  
+  <!-- Arrow to url_classification_patterns DB -->
+  <path d="M 400 770 L 500 770" stroke="#ec4899" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DATABASE: url_classification_patterns -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(510, 710)">
+    <!-- EMPHASIS border -->
+    <rect x="-5" y="-5" width="220" height="130" rx="10" fill="none" stroke="#ec4899" stroke-width="2" stroke-dasharray="5,5"/>
+    
+    <rect x="0" y="0" width="210" height="120" rx="8" fill="url(#dbGrad)" stroke="#6366f1" stroke-width="2" filter="url(#dropShadow)"/>
+    
+    <!-- NEW badge -->
+    <rect x="150" y="-12" width="50" height="20" rx="10" fill="#ef4444"/>
+    <text x="175" y="3" text-anchor="middle" fill="white" font-size="10" font-weight="700">NEW</text>
+    
+    <!-- Database icon -->
+    <ellipse cx="25" cy="20" rx="12" ry="6" fill="#ec4899" opacity="0.4"/>
+    <rect x="13" y="20" width="24" height="15" fill="#ec4899" opacity="0.3"/>
+    <ellipse cx="25" cy="35" rx="12" ry="6" fill="#ec4899" opacity="0.4"/>
+    
+    <text x="50" y="24" fill="#4338ca" font-size="11" font-weight="700">url_classification_</text>
+    <text x="50" y="38" fill="#4338ca" font-size="11" font-weight="700">patterns</text>
+    <text x="15" y="58" fill="#6366f1" font-size="8">domain, pattern_regex</text>
+    <text x="15" y="70" fill="#6366f1" font-size="8">classification, sample_count</text>
+    <text x="15" y="82" fill="#6366f1" font-size="8">verified_count, correct_count</text>
+    <text x="15" y="94" fill="#ec4899" font-size="8" font-weight="600">accuracy (self-improving!)</text>
+    <text x="15" y="106" fill="#ec4899" font-size="8" font-weight="600">last_verified_at</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- FEEDBACK LOOP ARROW -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Big curved arrow back to prediction -->
+  <path d="M 730 770 Q 900 770 950 720 Q 1000 670 1000 620 Q 1000 520 950 480 Q 900 440 850 440 Q 800 440 750 440 Q 700 440 650 440 Q 600 440 550 440 Q 500 420 460 390" 
+        stroke="#10b981" stroke-width="3" fill="none" marker-end="url(#arrowheadGreen)" stroke-dasharray="10,5" opacity="0.7"/>
+  
+  <!-- Feedback loop label -->
+  <rect x="820" y="510" width="140" height="40" rx="8" fill="#10b981" filter="url(#dropShadow)"/>
+  <text x="890" y="528" text-anchor="middle" fill="white" font-size="10" font-weight="700">FEEDBACK LOOP</text>
+  <text x="890" y="542" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="9">Improves predictions</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- STATS PANEL -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(780, 710)">
+    <rect x="0" y="0" width="180" height="120" rx="8" fill="white" stroke="#e2e8f0" filter="url(#dropShadow)"/>
+    <text x="90" y="20" text-anchor="middle" fill="#475569" font-size="11" font-weight="700">Expected Outcomes</text>
+    
+    <rect x="10" y="30" width="160" height="22" rx="4" fill="#dcfce7"/>
+    <text x="20" y="45" fill="#166534" font-size="10">Prediction Accuracy</text>
+    <text x="150" y="45" fill="#166534" font-size="10" font-weight="700">80%+</text>
+    
+    <rect x="10" y="56" width="160" height="22" rx="4" fill="#dbeafe"/>
+    <text x="20" y="71" fill="#1e40af" font-size="10">Coverage (unfetched)</text>
+    <text x="150" y="71" fill="#1e40af" font-size="10" font-weight="700">90%+</text>
+    
+    <rect x="10" y="82" width="160" height="22" rx="4" fill="#fef3c7"/>
+    <text x="20" y="97" fill="#92400e" font-size="10">Queue Prioritization</text>
+    <text x="150" y="97" fill="#92400e" font-size="10" font-weight="700">↑3x</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Bottom annotation -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <rect x="40" y="860" width="1120" height="30" rx="6" fill="#f1f5f9"/>
+  <text x="600" y="880" text-anchor="middle" fill="#64748b" font-size="11">
+    🎯 Core Innovation: Self-improving classification via pattern learning from verified content • Every fetch improves future predictions
+  </text>
+</svg>

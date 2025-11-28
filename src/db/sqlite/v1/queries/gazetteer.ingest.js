@@ -12,6 +12,23 @@ const {
 } = require('./gazetteer.deduplication');
 
 /**
+ * Map kind values to standardized place_type values
+ */
+const KIND_TO_PLACE_TYPE = {
+  'country': 'country',
+  'city': 'city',
+  'island': 'locality',
+  'state': 'admin1',
+  'region': 'admin1',
+  'territory': 'admin1',
+  'province': 'admin1',
+  'planet': 'other',
+  'continent': 'continent',
+  'dependency': 'territory',
+  'autonomous': 'admin1',
+};
+
+/**
  * Gazetteer data ingestion queries
  * 
  * Handles upserts and lookups for places, names, external IDs, and per-source attributes during ingestion
@@ -83,11 +100,11 @@ function createIngestionStatements(db) {
     
     insertPlace: db.prepare(`
       INSERT INTO places (
-        kind, country_code, adm1_code, adm2_code, population, timezone, lat, lng, bbox,
+        kind, place_type, country_code, adm1_code, adm2_code, population, timezone, lat, lng, bbox,
         canonical_name_id, source, extra,
         wikidata_qid, osm_type, osm_id, area, gdp_usd, wikidata_admin_level, wikidata_props, osm_tags,
         crawl_depth, priority_score, last_crawled_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     
     updatePlace: db.prepare(`
@@ -245,8 +262,12 @@ function upsertPlace(db, statements, placeData) {
     }
   } else {
     // Create new place
+    // Derive place_type from kind
+    const placeType = KIND_TO_PLACE_TYPE[kind] || kind || 'unknown';
+    
     const insertResult = statements.insertPlace.run(
       kind,
+      placeType,
       countryCode,
       adm1Code,
       adm2Code,
@@ -368,6 +389,7 @@ module.exports = {
   insertExternalId,
   setCanonicalName,
   normalizeName,  // Re-export from utils for backward compatibility
+  KIND_TO_PLACE_TYPE, // Export for external use
   // Re-export deduplication utilities for convenience
   findExistingPlace,
   generateCapitalExternalId

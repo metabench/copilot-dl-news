@@ -61,6 +61,7 @@ const COMPRESSION_TARGETS = new Set([
   'compression_buckets',
   'compression_status',
   'compression_types',
+  'classification_types',
   'content_analysis',
   'content_storage',
   'bucket_entries'

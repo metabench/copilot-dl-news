@@ -1,0 +1,258 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "decision-tree.schema.json",
+  "title": "Decision Tree Configuration Schema",
+  "description": "JSON Schema for configurable decision trees used in page classification",
+  "type": "object",
+  "required": ["version", "name", "categories"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this schema file"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the configuration format"
+    },
+    "name": {
+      "type": "string",
+      "description": "Unique identifier for this decision tree"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this tree classifies"
+    },
+    "categories": {
+      "type": "object",
+      "description": "Map of category slugs to their decision trees",
+      "additionalProperties": {
+        "$ref": "#/definitions/CategoryDefinition"
+      }
+    },
+    "metadata": {
+      "$ref": "#/definitions/Metadata"
+    }
+  },
+  "definitions": {
+    "CategoryDefinition": {
+      "type": "object",
+      "required": ["displayName", "tree"],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable category name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what this category represents"
+        },
+        "tree": {
+          "$ref": "#/definitions/DecisionNode"
+        }
+      }
+    },
+    "DecisionNode": {
+      "oneOf": [
+        { "$ref": "#/definitions/BranchNode" },
+        { "$ref": "#/definitions/ResultNode" }
+      ]
+    },
+    "BranchNode": {
+      "type": "object",
+      "required": ["condition", "yes", "no"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this node (used in audit trails)"
+        },
+        "condition": {
+          "$ref": "#/definitions/Condition"
+        },
+        "yes": {
+          "$ref": "#/definitions/DecisionNode",
+          "description": "Path taken when condition is TRUE"
+        },
+        "no": {
+          "$ref": "#/definitions/DecisionNode",
+          "description": "Path taken when condition is FALSE"
+        }
+      }
+    },
+    "ResultNode": {
+      "type": "object",
+      "required": ["result", "reason"],
+      "properties": {
+        "result": {
+          "type": "string",
+          "enum": ["match", "no-match"],
+          "description": "Whether this path results in a category match"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence score for this result (0.0-1.0)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Compact reason code for this result (stored in database)"
+        }
+      }
+    },
+    "Condition": {
+      "oneOf": [
+        { "$ref": "#/definitions/UrlMatchesCondition" },
+        { "$ref": "#/definitions/TextContainsCondition" },
+        { "$ref": "#/definitions/CompareCondition" },
+        { "$ref": "#/definitions/CompoundCondition" },
+        { "$ref": "#/definitions/FlagCondition" }
+      ]
+    },
+    "UrlMatchesCondition": {
+      "type": "object",
+      "required": ["type", "patterns"],
+      "properties": {
+        "type": {
+          "const": "url_matches",
+          "description": "Check if URL path contains any of the patterns"
+        },
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "URL path patterns to match (case-insensitive)"
+        },
+        "matchType": {
+          "type": "string",
+          "enum": ["contains", "segment", "regex"],
+          "default": "segment",
+          "description": "How to match: 'contains' anywhere, 'segment' as path segment, 'regex' as pattern"
+        }
+      }
+    },
+    "TextContainsCondition": {
+      "type": "object",
+      "required": ["type", "field", "patterns"],
+      "properties": {
+        "type": {
+          "const": "text_contains",
+          "description": "Check if a text field contains any pattern"
+        },
+        "field": {
+          "type": "string",
+          "description": "Field name to check (e.g., 'title', 'description')"
+        },
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Text patterns to match (case-insensitive)"
+        }
+      }
+    },
+    "CompareCondition": {
+      "type": "object",
+      "required": ["type", "field", "operator", "value"],
+      "properties": {
+        "type": {
+          "const": "compare",
+          "description": "Compare a field value against a target"
+        },
+        "field": {
+          "type": "string",
+          "description": "Field name to compare"
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["eq", "ne", "gt", "gte", "lt", "lte"],
+          "description": "Comparison operator"
+        },
+        "value": {
+          "oneOf": [
+            { "type": "number" },
+            { "type": "string" },
+            { "type": "boolean" },
+            { "$ref": "#/definitions/FieldReference" }
+          ],
+          "description": "Value to compare against (literal or field reference)"
+        }
+      }
+    },
+    "FieldReference": {
+      "type": "object",
+      "required": ["field"],
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Name of field to reference"
+        },
+        "multiplier": {
+          "type": "number",
+          "description": "Optional multiplier for numeric fields"
+        }
+      }
+    },
+    "CompoundCondition": {
+      "type": "object",
+      "required": ["type", "operator", "conditions"],
+      "properties": {
+        "type": {
+          "const": "compound",
+          "description": "Combine multiple conditions"
+        },
+        "operator": {
+          "type": "string",
+          "enum": ["AND", "OR"],
+          "description": "Logical operator to combine conditions"
+        },
+        "conditions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Condition" },
+          "minItems": 2,
+          "description": "Conditions to combine"
+        }
+      }
+    },
+    "FlagCondition": {
+      "type": "object",
+      "required": ["type", "flag"],
+      "properties": {
+        "type": {
+          "const": "flag",
+          "description": "Check a boolean flag"
+        },
+        "flag": {
+          "type": "string",
+          "description": "Name of boolean flag to check"
+        },
+        "expected": {
+          "type": "boolean",
+          "default": true,
+          "description": "Expected value (default: true)"
+        }
+      }
+    },
+    "Metadata": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string",
+          "description": "Who created/modified this configuration"
+        },
+        "created": {
+          "type": "string",
+          "format": "date",
+          "description": "Creation date"
+        },
+        "lastModified": {
+          "type": "string",
+          "format": "date",
+          "description": "Last modification date"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about this configuration"
+        }
+      }
+    }
+  }
+}

@@ -88,10 +88,13 @@ function scanDirectory(currentPath, rootPath) {
     
     // Only include folders that have content
     if (children.length > 0) {
+      // Get folder mtime (latest file within)
+      const folderMtime = getLatestMtime(children);
       nodes.push({
         type: "folder",
         name: folder.name,
         path: path.relative(rootPath, folderPath),
+        mtime: folderMtime,
         children
       });
     }
@@ -102,15 +105,48 @@ function scanDirectory(currentPath, rootPath) {
     const filePath = path.join(currentPath, file.name);
     const relativePath = path.relative(rootPath, filePath);
     
+    // Get file modification time
+    let mtime = null;
+    try {
+      const stats = fs.statSync(filePath);
+      mtime = stats.mtime.toISOString();
+    } catch (e) {
+      // Ignore stat errors
+    }
+    
     nodes.push({
       type: "file",
       name: file.name,
       path: relativePath.replace(/\\/g, "/"), // Normalize path separators
-      extension: path.extname(file.name).toLowerCase()
+      extension: path.extname(file.name).toLowerCase(),
+      mtime
     });
   }
 
   return nodes;
+}
+
+/**
+ * Get the latest mtime from a list of nodes (for folder mtime calculation)
+ * @param {Array} nodes - Array of tree nodes
+ * @returns {string|null} ISO date string of latest mtime
+ */
+function getLatestMtime(nodes) {
+  let latest = null;
+  for (const node of nodes) {
+    if (node.mtime) {
+      if (!latest || node.mtime > latest) {
+        latest = node.mtime;
+      }
+    }
+    if (node.children) {
+      const childLatest = getLatestMtime(node.children);
+      if (childLatest && (!latest || childLatest > latest)) {
+        latest = childLatest;
+      }
+    }
+  }
+  return latest;
 }
 
 /**
@@ -178,11 +214,58 @@ function countFiles(tree) {
   return count;
 }
 
+/**
+ * Sort tree nodes by a given field
+ * @param {Array} tree - Documentation tree
+ * @param {string} sortBy - Field to sort by ('name' or 'mtime')
+ * @param {string} sortOrder - Sort order ('asc' or 'desc')
+ * @returns {Array} Sorted tree (mutates original)
+ */
+function sortTree(tree, sortBy = 'name', sortOrder = 'asc') {
+  const comparator = (a, b) => {
+    // Folders always come before files when sorting by name
+    if (sortBy === 'name') {
+      if (a.type !== b.type) {
+        return a.type === 'folder' ? -1 : 1;
+      }
+    }
+    
+    let valA, valB;
+    
+    if (sortBy === 'mtime') {
+      valA = a.mtime || '';
+      valB = b.mtime || '';
+    } else {
+      valA = (a.name || '').toLowerCase();
+      valB = (b.name || '').toLowerCase();
+    }
+    
+    let result;
+    if (valA < valB) result = -1;
+    else if (valA > valB) result = 1;
+    else result = 0;
+    
+    return sortOrder === 'desc' ? -result : result;
+  };
+  
+  tree.sort(comparator);
+  
+  // Recursively sort children
+  for (const node of tree) {
+    if (node.children && node.children.length > 0) {
+      sortTree(node.children, sortBy, sortOrder);
+    }
+  }
+  
+  return tree;
+}
+
 module.exports = {
   buildDocTree,
   findNodeByPath,
   getAllFilePaths,
   countFiles,
+  sortTree,
   INCLUDE_EXTENSIONS,
   EXCLUDE_DIRS
 };

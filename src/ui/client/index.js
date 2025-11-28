@@ -1,6 +1,7 @@
 "use strict";
 
-const jsguiClient = require("../../../vendor/jsgui3-client/client.js");
+// jsgui3-client from npm (v0.0.121+ has browser compatibility fixes)
+const jsguiClient = require("jsgui3-client");
 const { installBindingPlugin } = require("../jsgui/bindingPlugin");
 const { ensureControlsRegistered, listControlTypes } = require("../controls/controlManifest");
 const { ensureGlobalListingStateStore } = require("./listingStateStore");

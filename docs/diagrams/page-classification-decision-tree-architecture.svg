@@ -1,0 +1,394 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <defs>
+    <!-- Luxury Obsidian Gradients -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0f1a"/>
+      <stop offset="50%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1a1f2e"/>
+    </linearGradient>
+    
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#d4af37"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#b8931f"/>
+    </linearGradient>
+    
+    <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    
+    <linearGradient id="decisionNode" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#334155"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    
+    <linearGradient id="leafYes" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#166534"/>
+      <stop offset="100%" style="stop-color:#14532d"/>
+    </linearGradient>
+    
+    <linearGradient id="leafNo" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7f1d1d"/>
+      <stop offset="100%" style="stop-color:#450a0a"/>
+    </linearGradient>
+    
+    <linearGradient id="configPanel" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#283548"/>
+    </linearGradient>
+    
+    <!-- Glow Effects -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Diamond Shape for Decision Nodes -->
+    <symbol id="diamond" viewBox="0 0 100 60">
+      <polygon points="50,0 100,30 50,60 0,30" fill="url(#decisionNode)" stroke="url(#goldAccent)" stroke-width="2"/>
+    </symbol>
+    
+    <!-- Rounded Rectangle for Leaf Nodes -->
+    <symbol id="leafBox" viewBox="0 0 120 50">
+      <rect x="0" y="0" width="120" height="50" rx="8" ry="8"/>
+    </symbol>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="900" fill="url(#obsidianBg)"/>
+  
+  <!-- Subtle Grid Pattern -->
+  <g opacity="0.05">
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c9a227" stroke-width="0.5"/>
+    </pattern>
+    <rect width="1200" height="900" fill="url(#grid)"/>
+  </g>
+  
+  <!-- Title Section -->
+  <g filter="url(#goldGlow)">
+    <text x="600" y="45" text-anchor="middle" font-family="Georgia, serif" font-size="28" fill="url(#goldAccent)" font-weight="bold">
+      Page Classification Decision Tree Architecture
+    </text>
+  </g>
+  <text x="600" y="72" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" fill="#94a3b8">
+    Configurable Boolean Logic • Human &amp; AI Editable • Full Decision Audit Trail
+  </text>
+  
+  <!-- Left Panel: Configuration Schema -->
+  <g transform="translate(20, 100)">
+    <rect width="280" height="380" rx="12" fill="url(#configPanel)" filter="url(#softShadow)" stroke="#334155" stroke-width="1"/>
+    <text x="140" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="url(#goldAccent)" font-weight="bold">Configuration Schema</text>
+    <line x1="20" y1="45" x2="260" y2="45" stroke="#334155" stroke-width="1"/>
+    
+    <!-- JSON-like Config Display -->
+    <g font-family="JetBrains Mono, monospace" font-size="10" fill="#e2e8f0">
+      <text x="20" y="70" fill="#c9a227">{</text>
+      <text x="30" y="88" fill="#94a3b8">"category":</text>
+      <text x="105" y="88" fill="#22c55e">"in-depth"</text>
+      <text x="30" y="106" fill="#94a3b8">"rules":</text>
+      <text x="75" y="106" fill="#c9a227">[</text>
+      
+      <text x="40" y="124" fill="#c9a227">{</text>
+      <text x="50" y="142" fill="#94a3b8">"type":</text>
+      <text x="95" y="142" fill="#22c55e">"url_pattern"</text>
+      <text x="50" y="160" fill="#94a3b8">"pattern":</text>
+      <text x="105" y="160" fill="#22c55e">"/long-read/"</text>
+      <text x="50" y="178" fill="#94a3b8">"result":</text>
+      <text x="100" y="178" fill="#3b82f6">true</text>
+      <text x="40" y="196" fill="#c9a227">},</text>
+      
+      <text x="40" y="214" fill="#c9a227">{</text>
+      <text x="50" y="232" fill="#94a3b8">"type":</text>
+      <text x="95" y="232" fill="#22c55e">"compound"</text>
+      <text x="50" y="250" fill="#94a3b8">"op":</text>
+      <text x="80" y="250" fill="#22c55e">"AND"</text>
+      <text x="50" y="268" fill="#94a3b8">"conditions":</text>
+      <text x="130" y="268" fill="#c9a227">[</text>
+      <text x="60" y="286" fill="#64748b">// word_count > 2000</text>
+      <text x="60" y="304" fill="#64748b">// article_links >= 3</text>
+      <text x="50" y="322" fill="#c9a227">]</text>
+      <text x="40" y="340" fill="#c9a227">}</text>
+      
+      <text x="30" y="358" fill="#c9a227">]</text>
+      <text x="20" y="376" fill="#c9a227">}</text>
+    </g>
+  </g>
+  
+  <!-- Center: Decision Tree Visualization -->
+  <g transform="translate(320, 100)">
+    <rect width="540" height="500" rx="12" fill="url(#nodeGradient)" filter="url(#softShadow)" stroke="#334155" stroke-width="1"/>
+    <text x="270" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="url(#goldAccent)" font-weight="bold">Decision Tree: "In-Depth" Category</text>
+    <line x1="20" y1="45" x2="520" y2="45" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Root Node -->
+    <g transform="translate(220, 70)">
+      <use href="#diamond" width="100" height="60" filter="url(#softShadow)"/>
+      <text x="50" y="35" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">URL matches</text>
+      <text x="50" y="47" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">/long-read/?</text>
+    </g>
+    
+    <!-- Yes Branch from Root -->
+    <line x1="270" y1="130" x2="140" y2="180" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)"/>
+    <text x="190" y="150" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="bold">YES</text>
+    
+    <!-- No Branch from Root -->
+    <line x1="270" y1="130" x2="400" y2="180" stroke="#ef4444" stroke-width="2"/>
+    <text x="350" y="150" font-family="Inter, sans-serif" font-size="11" fill="#ef4444" font-weight="bold">NO</text>
+    
+    <!-- Left Leaf (Quick Yes) -->
+    <g transform="translate(70, 180)">
+      <rect width="140" height="50" rx="8" fill="url(#leafYes)" filter="url(#softShadow)" stroke="#22c55e" stroke-width="1"/>
+      <text x="70" y="22" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#f8fafc" font-weight="bold">✓ IN-DEPTH</text>
+      <text x="70" y="38" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#bbf7d0">confidence: 0.9</text>
+    </g>
+    
+    <!-- Second Decision Node -->
+    <g transform="translate(350, 180)">
+      <use href="#diamond" width="100" height="60" filter="url(#softShadow)"/>
+      <text x="50" y="28" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">URL matches</text>
+      <text x="50" y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">/series/ OR</text>
+      <text x="50" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">/feature/?</text>
+    </g>
+    
+    <!-- Yes from Second -->
+    <line x1="400" y1="240" x2="300" y2="290" stroke="#22c55e" stroke-width="2"/>
+    <text x="335" y="260" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="bold">YES</text>
+    
+    <!-- No from Second -->
+    <line x1="400" y1="240" x2="470" y2="290" stroke="#ef4444" stroke-width="2"/>
+    <text x="450" y="260" font-family="Inter, sans-serif" font-size="11" fill="#ef4444" font-weight="bold">NO</text>
+    
+    <!-- Third Decision (Word Count Check) -->
+    <g transform="translate(230, 290)">
+      <use href="#diamond" width="100" height="60" filter="url(#softShadow)"/>
+      <text x="50" y="28" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">avg_word_count</text>
+      <text x="50" y="42" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">&gt; domain_avg</text>
+      <text x="50" y="54" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">× 1.5?</text>
+    </g>
+    
+    <!-- Word Count Check -->
+    <g transform="translate(420, 290)">
+      <use href="#diamond" width="100" height="60" filter="url(#softShadow)"/>
+      <text x="50" y="28" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">article_links</text>
+      <text x="50" y="42" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">&gt;= 5 AND</text>
+      <text x="50" y="54" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f8fafc" font-weight="600">is_nav?</text>
+    </g>
+    
+    <!-- Branches from Third -->
+    <line x1="280" y1="350" x2="200" y2="400" stroke="#22c55e" stroke-width="2"/>
+    <line x1="280" y1="350" x2="340" y2="400" stroke="#ef4444" stroke-width="2"/>
+    
+    <!-- Branches from Fourth -->
+    <line x1="470" y1="350" x2="410" y2="400" stroke="#22c55e" stroke-width="2"/>
+    <line x1="470" y1="350" x2="500" y2="400" stroke="#ef4444" stroke-width="2"/>
+    
+    <!-- Final Leaf Nodes -->
+    <g transform="translate(130, 400)">
+      <rect width="100" height="40" rx="6" fill="url(#leafYes)" stroke="#22c55e" stroke-width="1"/>
+      <text x="50" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#f8fafc" font-weight="bold">✓ IN-DEPTH</text>
+      <text x="50" y="32" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#bbf7d0">conf: 0.85</text>
+    </g>
+    
+    <g transform="translate(280, 400)">
+      <rect width="100" height="40" rx="6" fill="url(#leafNo)" stroke="#ef4444" stroke-width="1"/>
+      <text x="50" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#f8fafc" font-weight="bold">✗ SKIP</text>
+      <text x="50" y="32" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#fecaca">→ next rule</text>
+    </g>
+    
+    <g transform="translate(350, 400)">
+      <rect width="100" height="40" rx="6" fill="url(#leafYes)" stroke="#22c55e" stroke-width="1"/>
+      <text x="50" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#f8fafc" font-weight="bold">✓ IN-DEPTH</text>
+      <text x="50" y="32" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#bbf7d0">conf: 0.7</text>
+    </g>
+    
+    <g transform="translate(450, 400)">
+      <rect width="80" height="40" rx="6" fill="url(#leafNo)" stroke="#ef4444" stroke-width="1"/>
+      <text x="40" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#f8fafc" font-weight="bold">✗ NOT</text>
+      <text x="40" y="32" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#fecaca">in-depth</text>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(20, 460)">
+      <text x="0" y="0" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8" font-weight="600">LEGEND:</text>
+      <rect x="0" y="10" width="14" height="14" rx="3" fill="url(#decisionNode)" stroke="url(#goldAccent)" stroke-width="1"/>
+      <text x="20" y="21" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">Decision Node (Boolean)</text>
+      <rect x="130" y="10" width="14" height="14" rx="3" fill="url(#leafYes)" stroke="#22c55e" stroke-width="1"/>
+      <text x="150" y="21" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">Match (Category Assigned)</text>
+      <rect x="280" y="10" width="14" height="14" rx="3" fill="url(#leafNo)" stroke="#ef4444" stroke-width="1"/>
+      <text x="300" y="21" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">No Match / Continue</text>
+    </g>
+  </g>
+  
+  <!-- Right Panel: Decision Audit Storage -->
+  <g transform="translate(880, 100)">
+    <rect width="300" height="280" rx="12" fill="url(#configPanel)" filter="url(#softShadow)" stroke="#334155" stroke-width="1"/>
+    <text x="150" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="url(#goldAccent)" font-weight="bold">Decision Audit Trail</text>
+    <line x1="20" y1="45" x2="280" y2="45" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Compact Storage Format -->
+    <g font-family="JetBrains Mono, monospace" font-size="9" fill="#e2e8f0">
+      <text x="20" y="65" fill="#64748b">// Normalized bit-packed path</text>
+      <text x="20" y="82" fill="#94a3b8">path:</text>
+      <text x="55" y="82" fill="#22c55e">"N-Y-Y"</text>
+      <text x="100" y="82" fill="#64748b">// 3 decisions</text>
+      
+      <text x="20" y="105" fill="#64748b">// Decision IDs (foreign keys)</text>
+      <text x="20" y="122" fill="#94a3b8">nodes:</text>
+      <text x="60" y="122" fill="#3b82f6">[1, 3, 7]</text>
+      
+      <text x="20" y="145" fill="#64748b">// Final outcome</text>
+      <text x="20" y="162" fill="#94a3b8">category_id:</text>
+      <text x="95" y="162" fill="#c9a227">1</text>
+      <text x="110" y="162" fill="#64748b">// "in-depth"</text>
+      
+      <text x="20" y="185" fill="#64748b">// Confidence from leaf</text>
+      <text x="20" y="202" fill="#94a3b8">confidence:</text>
+      <text x="90" y="202" fill="#22c55e">0.85</text>
+      
+      <text x="20" y="225" fill="#64748b">// Timestamp + content ref</text>
+      <text x="20" y="242" fill="#94a3b8">content_id:</text>
+      <text x="95" y="242" fill="#3b82f6">42891</text>
+      <text x="20" y="259" fill="#94a3b8">evaluated_at:</text>
+      <text x="100" y="259" fill="#22c55e">"2025-11-27"</text>
+    </g>
+  </g>
+  
+  <!-- Right Panel 2: Future UI Config -->
+  <g transform="translate(880, 400)">
+    <rect width="300" height="200" rx="12" fill="url(#configPanel)" filter="url(#softShadow)" stroke="#334155" stroke-width="1"/>
+    <text x="150" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="url(#goldAccent)" font-weight="bold">Future: UI Editor</text>
+    <line x1="20" y1="45" x2="280" y2="45" stroke="#334155" stroke-width="1"/>
+    
+    <!-- UI Mockup Elements -->
+    <g transform="translate(20, 60)">
+      <rect width="260" height="30" rx="4" fill="#0f172a" stroke="#334155"/>
+      <text x="10" y="20" font-family="Inter, sans-serif" font-size="10" fill="#64748b">+ Add Decision Node</text>
+      <rect x="200" y="5" width="50" height="20" rx="4" fill="url(#goldAccent)"/>
+      <text x="225" y="19" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#0f172a" font-weight="bold">ADD</text>
+    </g>
+    
+    <g transform="translate(20, 100)">
+      <rect width="260" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="10" y="17" font-family="Inter, sans-serif" font-size="10" fill="#cbd5e1">🔧 Human editable rules</text>
+    </g>
+    
+    <g transform="translate(20, 130)">
+      <rect width="260" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="10" y="17" font-family="Inter, sans-serif" font-size="10" fill="#cbd5e1">🤖 AI suggestion mode</text>
+    </g>
+    
+    <g transform="translate(20, 160)">
+      <rect width="260" height="25" rx="4" fill="#1e293b" stroke="#334155"/>
+      <text x="10" y="17" font-family="Inter, sans-serif" font-size="10" fill="#cbd5e1">📊 Performance metrics per rule</text>
+    </g>
+  </g>
+  
+  <!-- Bottom: Architecture Flow -->
+  <g transform="translate(20, 620)">
+    <rect width="1160" height="260" rx="12" fill="url(#nodeGradient)" filter="url(#softShadow)" stroke="#334155" stroke-width="1"/>
+    <text x="580" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="url(#goldAccent)" font-weight="bold">System Architecture: Decision Tree Engine</text>
+    <line x1="20" y1="45" x2="1140" y2="45" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Flow Boxes -->
+    <g transform="translate(40, 70)">
+      <rect width="140" height="70" rx="8" fill="#1e293b" stroke="url(#goldAccent)" stroke-width="1"/>
+      <text x="70" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#f8fafc" font-weight="bold">JSON Config</text>
+      <text x="70" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">decision_trees/</text>
+      <text x="70" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">*.json</text>
+    </g>
+    
+    <path d="M 185 105 L 220 105" stroke="url(#goldAccent)" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <g transform="translate(225, 70)">
+      <rect width="160" height="70" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1"/>
+      <text x="80" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#f8fafc" font-weight="bold">Tree Compiler</text>
+      <text x="80" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">validateTree()</text>
+      <text x="80" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">optimizeTree()</text>
+    </g>
+    
+    <path d="M 390 105 L 425 105" stroke="#3b82f6" stroke-width="2"/>
+    
+    <g transform="translate(430, 70)">
+      <rect width="180" height="70" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="1"/>
+      <text x="90" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#f8fafc" font-weight="bold">Decision Engine</text>
+      <text x="90" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">evaluate(page, tree)</text>
+      <text x="90" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">→ {category, path}</text>
+    </g>
+    
+    <path d="M 615 105 L 650 105" stroke="#22c55e" stroke-width="2"/>
+    
+    <g transform="translate(655, 70)">
+      <rect width="150" height="70" rx="8" fill="#1e293b" stroke="#c9a227" stroke-width="1"/>
+      <text x="75" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#f8fafc" font-weight="bold">Audit Storage</text>
+      <text x="75" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">decision_paths</text>
+      <text x="75" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">(normalized)</text>
+    </g>
+    
+    <path d="M 810 105 L 845 105" stroke="#c9a227" stroke-width="2"/>
+    
+    <g transform="translate(850, 70)">
+      <rect width="140" height="70" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1"/>
+      <text x="70" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#f8fafc" font-weight="bold">Review UI</text>
+      <text x="70" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">explain(path)</text>
+      <text x="70" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">visualize()</text>
+    </g>
+    
+    <!-- CLI Tool Box -->
+    <g transform="translate(1000, 70)">
+      <rect width="140" height="70" rx="8" fill="#0f172a" stroke="#64748b" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="70" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8" font-weight="bold">SVG CLI Tool</text>
+      <text x="70" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">tree-to-svg</text>
+      <text x="70" y="55" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">--tree config.json</text>
+    </g>
+    
+    <!-- Data Flow Labels -->
+    <g transform="translate(40, 170)">
+      <text x="0" y="0" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8" font-weight="600">DATA STORES:</text>
+      
+      <rect x="0" y="15" width="200" height="55" rx="6" fill="#0f172a" stroke="#334155"/>
+      <text x="10" y="35" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">decision_tree_nodes</text>
+      <text x="10" y="50" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">decision_tree_versions</text>
+      <text x="10" y="65" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">category_assignments</text>
+      
+      <rect x="220" y="15" width="200" height="55" rx="6" fill="#0f172a" stroke="#334155"/>
+      <text x="230" y="35" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">page_categories (lookup)</text>
+      <text x="230" y="50" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">decision_audit_log</text>
+      <text x="230" y="65" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">rule_performance_stats</text>
+    </g>
+    
+    <!-- Key Design Principles -->
+    <g transform="translate(500, 170)">
+      <text x="0" y="0" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8" font-weight="600">DESIGN PRINCIPLES:</text>
+      <text x="0" y="20" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Boolean decisions only (no weighted scores)</text>
+      <text x="0" y="35" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Full path stored for every classification</text>
+      <text x="0" y="50" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Trees versioned for reproducibility</text>
+      <text x="0" y="65" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Human &amp; AI can propose rule changes</text>
+    </g>
+    
+    <g transform="translate(800, 170)">
+      <text x="0" y="0" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8" font-weight="600">FUTURE ENHANCEMENTS:</text>
+      <text x="0" y="20" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Visual tree editor in Data Explorer</text>
+      <text x="0" y="35" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• A/B testing for rule changes</text>
+      <text x="0" y="50" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Auto-suggest rules from patterns</text>
+      <text x="0" y="65" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">• Export trees for other crawlers</text>
+    </g>
+  </g>
+  
+  <!-- Arrow Marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="url(#goldAccent)"/>
+    </marker>
+  </defs>
+</svg>

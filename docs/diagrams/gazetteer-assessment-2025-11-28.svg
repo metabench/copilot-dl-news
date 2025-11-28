@@ -1,0 +1,586 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 2400" width="1800" height="2400">
+  <defs>
+    <!-- Industrial Luxury Obsidian Gradients -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050508"/>
+      <stop offset="50%" style="stop-color:#0a0d14"/>
+      <stop offset="100%" style="stop-color:#0f1420"/>
+    </linearGradient>
+    
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b7500"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#8b7500"/>
+    </linearGradient>
+    
+    <linearGradient id="goldVertical" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#8b7500"/>
+    </linearGradient>
+    
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a5d38"/>
+      <stop offset="100%" style="stop-color:#2e8b57"/>
+    </linearGradient>
+    
+    <linearGradient id="rubyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b0000"/>
+      <stop offset="100%" style="stop-color:#e31837"/>
+    </linearGradient>
+    
+    <linearGradient id="sapphireGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#082567"/>
+      <stop offset="100%" style="stop-color:#0f52ba"/>
+    </linearGradient>
+    
+    <linearGradient id="amethystGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4b0082"/>
+      <stop offset="100%" style="stop-color:#9966cc"/>
+    </linearGradient>
+    
+    <linearGradient id="topazGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#cc7000"/>
+      <stop offset="100%" style="stop-color:#ff9f00"/>
+    </linearGradient>
+    
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f2e"/>
+      <stop offset="100%" style="stop-color:#141824"/>
+    </linearGradient>
+    
+    <linearGradient id="panelHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#141824"/>
+      <stop offset="50%" style="stop-color:#1a1f2e"/>
+      <stop offset="100%" style="stop-color:#141824"/>
+    </linearGradient>
+    
+    <!-- Glows -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="emeraldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#50c878" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="rubyGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#ff6b6b" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="sapphireGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#6fa8dc" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Patterns -->
+    <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1f2e" stroke-width="0.5"/>
+    </pattern>
+    
+    <pattern id="diagonalHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#334155" stroke-width="1"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1800" height="2400" fill="url(#obsidianBg)"/>
+  <rect width="1800" height="2400" fill="url(#gridPattern)" opacity="0.3"/>
+  
+  <!-- Corner Flourishes -->
+  <circle cx="0" cy="0" r="200" fill="url(#goldAccent)" opacity="0.08"/>
+  <circle cx="1800" cy="0" r="200" fill="url(#goldAccent)" opacity="0.08"/>
+  <circle cx="0" cy="2400" r="200" fill="url(#goldAccent)" opacity="0.08"/>
+  <circle cx="1800" cy="2400" r="200" fill="url(#goldAccent)" opacity="0.08"/>
+  
+  <!-- Title Section -->
+  <rect x="50" y="30" width="1700" height="120" rx="8" fill="url(#cardBg)" stroke="url(#goldAccent)" stroke-width="2"/>
+  <text x="900" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="42" font-weight="bold" fill="#fffacd" filter="url(#goldGlow)">◈ GAZETTEER ASSESSMENT ◈</text>
+  <text x="900" y="125" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" fill="#94a3b8">Current State Analysis · Strengths · Weaknesses · Restructuring Recommendations</text>
+  
+  <!-- Decorative line under title -->
+  <line x1="300" y1="165" x2="1500" y2="165" stroke="url(#goldAccent)" stroke-width="1" opacity="0.6"/>
+  <circle cx="900" cy="165" r="6" fill="#c9a227"/>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: CURRENT STATE OVERVIEW -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="100" y="220" font-family="Georgia, serif" font-size="28" font-weight="bold" fill="#c9a227">§1 CURRENT STATE</text>
+  <line x1="100" y1="235" x2="400" y2="235" stroke="#c9a227" stroke-width="2"/>
+  
+  <!-- Stats Panel -->
+  <rect x="50" y="260" width="500" height="320" rx="8" fill="url(#cardBg)" stroke="#334155" stroke-width="1"/>
+  <rect x="50" y="260" width="500" height="45" rx="8" fill="url(#panelHeader)"/>
+  <text x="300" y="290" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fffacd">Database Statistics</text>
+  
+  <!-- Stats Grid -->
+  <g transform="translate(70, 330)">
+    <!-- Places -->
+    <rect x="0" y="0" width="140" height="80" rx="6" fill="#0f1420" stroke="#c9a227" stroke-width="1"/>
+    <text x="70" y="35" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="32" font-weight="bold" fill="#c9a227">508</text>
+    <text x="70" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Total Places</text>
+    
+    <!-- Names -->
+    <rect x="160" y="0" width="140" height="80" rx="6" fill="#0f1420" stroke="#2e8b57" stroke-width="1"/>
+    <text x="230" y="35" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="28" font-weight="bold" fill="#50c878">14,855</text>
+    <text x="230" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Place Names</text>
+    
+    <!-- Unique Names -->
+    <rect x="320" y="0" width="140" height="80" rx="6" fill="#0f1420" stroke="#0f52ba" stroke-width="1"/>
+    <text x="390" y="35" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="28" font-weight="bold" fill="#6fa8dc">10,587</text>
+    <text x="390" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Unique Names</text>
+    
+    <!-- Second Row -->
+    <rect x="0" y="100" width="140" height="80" rx="6" fill="#0f1420" stroke="#9966cc" stroke-width="1"/>
+    <text x="70" y="135" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="32" font-weight="bold" fill="#da70d6">51</text>
+    <text x="70" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Ambiguous</text>
+    
+    <rect x="160" y="100" width="140" height="80" rx="6" fill="#0f1420" stroke="#ff9f00" stroke-width="1"/>
+    <text x="230" y="135" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="32" font-weight="bold" fill="#ffc87c">35ms</text>
+    <text x="230" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Load Time</text>
+    
+    <rect x="320" y="100" width="140" height="80" rx="6" fill="#0f1420" stroke="#e31837" stroke-width="1"/>
+    <text x="390" y="135" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="28" font-weight="bold" fill="#ff6b6b">~1.5MB</text>
+    <text x="390" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Memory</text>
+  </g>
+  
+  <!-- Place Type Breakdown -->
+  <rect x="580" y="260" width="400" height="320" rx="8" fill="url(#cardBg)" stroke="#334155" stroke-width="1"/>
+  <rect x="580" y="260" width="400" height="45" rx="8" fill="url(#panelHeader)"/>
+  <text x="780" y="290" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fffacd">Place Type Distribution</text>
+  
+  <!-- Pie Chart Representation (simplified bar) -->
+  <g transform="translate(610, 330)">
+    <!-- Countries bar -->
+    <rect x="0" y="0" width="340" height="40" rx="4" fill="#0f1420" stroke="#334155"/>
+    <rect x="0" y="0" width="280" height="40" rx="4" fill="url(#emeraldGrad)" opacity="0.8"/>
+    <text x="15" y="27" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#fff">Countries</text>
+    <text x="325" y="27" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="14" fill="#50c878">~250</text>
+    
+    <!-- Cities bar -->
+    <rect x="0" y="55" width="340" height="40" rx="4" fill="#0f1420" stroke="#334155"/>
+    <rect x="0" y="55" width="30" height="40" rx="4" fill="url(#sapphireGrad)" opacity="0.8"/>
+    <text x="15" y="82" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#fff">Cities</text>
+    <text x="325" y="82" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="14" fill="#6fa8dc">~10</text>
+    
+    <!-- Regions bar -->
+    <rect x="0" y="110" width="340" height="40" rx="4" fill="#0f1420" stroke="#334155"/>
+    <rect x="0" y="110" width="200" height="40" rx="4" fill="url(#amethystGrad)" opacity="0.8"/>
+    <text x="15" y="137" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#fff">Regions/Other</text>
+    <text x="325" y="137" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="14" fill="#da70d6">~248</text>
+    
+    <!-- Warning note -->
+    <rect x="0" y="170" width="340" height="70" rx="4" fill="#1a1f2e" stroke="#ff9f00" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="170" y="195" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" fill="#ffc87c">⚠ Coverage is heavily skewed</text>
+    <text x="170" y="215" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">Countries: Complete · Cities: Minimal</text>
+    <text x="170" y="232" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">US has only 1 city (DC?), 0 states</text>
+  </g>
+  
+  <!-- Data Sources Panel -->
+  <rect x="1010" y="260" width="740" height="320" rx="8" fill="url(#cardBg)" stroke="#334155" stroke-width="1"/>
+  <rect x="1010" y="260" width="740" height="45" rx="8" fill="url(#panelHeader)"/>
+  <text x="1380" y="290" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fffacd">Data Sources &amp; Coverage</text>
+  
+  <g transform="translate(1030, 320)">
+    <!-- Source 1: RestCountries -->
+    <rect x="0" y="0" width="220" height="100" rx="6" fill="#0f1420" stroke="#2e8b57" stroke-width="2"/>
+    <text x="110" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#50c878">restcountries@v3.1</text>
+    <text x="110" y="48" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="20" fill="#fff">~250 countries</text>
+    <text x="110" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">Multi-language names</text>
+    <text x="110" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">ISO codes, currencies, TLDs</text>
+    
+    <!-- Source 2: Wikidata -->
+    <rect x="240" y="0" width="220" height="100" rx="6" fill="#0f1420" stroke="#0f52ba" stroke-width="2"/>
+    <text x="350" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#6fa8dc">Wikidata (partial)</text>
+    <text x="350" y="48" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="20" fill="#fff">~10 major cities</text>
+    <text x="350" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">London, Dublin, Paris...</text>
+    <text x="350" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">Q-IDs, coordinates</text>
+    
+    <!-- Source 3: Missing -->
+    <rect x="480" y="0" width="220" height="100" rx="6" fill="#0f1420" stroke="#e31837" stroke-width="2" stroke-dasharray="6,3"/>
+    <text x="590" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#ff6b6b">NOT LOADED</text>
+    <text x="590" y="48" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="18" fill="#64748b">GeoNames</text>
+    <text x="590" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#64748b">11M+ places available</text>
+    <text x="590" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#64748b">Would fix city coverage</text>
+    
+    <!-- Language coverage -->
+    <rect x="0" y="120" width="700" height="120" rx="6" fill="#0f1420" stroke="#334155"/>
+    <text x="350" y="145" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#fffacd">Language Coverage (from RestCountries)</text>
+    
+    <g transform="translate(20, 160)">
+      <rect x="0" y="0" width="60" height="25" rx="3" fill="#2e8b57"/>
+      <text x="30" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">eng</text>
+      
+      <rect x="70" y="0" width="60" height="25" rx="3" fill="#0f52ba"/>
+      <text x="100" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">spa</text>
+      
+      <rect x="140" y="0" width="60" height="25" rx="3" fill="#9966cc"/>
+      <text x="170" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">fra</text>
+      
+      <rect x="210" y="0" width="60" height="25" rx="3" fill="#ff9f00"/>
+      <text x="240" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">deu</text>
+      
+      <rect x="280" y="0" width="60" height="25" rx="3" fill="#c9a227"/>
+      <text x="310" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">ara</text>
+      
+      <rect x="350" y="0" width="60" height="25" rx="3" fill="#2e8b57"/>
+      <text x="380" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">zho</text>
+      
+      <rect x="420" y="0" width="60" height="25" rx="3" fill="#0f52ba"/>
+      <text x="450" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#fff">rus</text>
+      
+      <rect x="490" y="0" width="120" height="25" rx="3" fill="#334155"/>
+      <text x="550" y="17" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">+90 more...</text>
+    </g>
+    
+    <text x="350" y="230" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">~30 names per country across all languages → explains 14,855 total names for 508 places</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: STRENGTHS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="100" y="640" font-family="Georgia, serif" font-size="28" font-weight="bold" fill="#50c878">§2 STRENGTHS</text>
+  <line x1="100" y1="655" x2="320" y2="655" stroke="#50c878" stroke-width="2"/>
+  
+  <!-- Strengths Grid -->
+  <g transform="translate(50, 680)">
+    <!-- Strength 1: Schema Design -->
+    <rect x="0" y="0" width="420" height="200" rx="8" fill="url(#cardBg)" stroke="#2e8b57" stroke-width="2" filter="url(#emeraldGlow)"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="url(#emeraldGrad)" opacity="0.3"/>
+    <text x="20" y="28" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#50c878">◆ Excellent Schema Design</text>
+    
+    <g transform="translate(20, 55)">
+      <text font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">
+        <tspan x="0" y="0">✓ Proper normalization (places ↔ place_names)</tspan>
+        <tspan x="0" y="22">✓ Multi-language support built-in</tspan>
+        <tspan x="0" y="44">✓ Canonical name references</tspan>
+        <tspan x="0" y="66">✓ place_hierarchy for containment</tspan>
+        <tspan x="0" y="88">✓ place_external_ids for linking</tspan>
+        <tspan x="0" y="110">✓ Temporal validity (valid_from/to)</tspan>
+        <tspan x="0" y="132">✓ Source provenance tracking</tspan>
+      </text>
+    </g>
+    
+    <!-- Strength 2: Memory Efficiency -->
+    <rect x="440" y="0" width="420" height="200" rx="8" fill="url(#cardBg)" stroke="#2e8b57" stroke-width="2" filter="url(#emeraldGlow)"/>
+    <rect x="440" y="0" width="420" height="40" rx="8" fill="url(#emeraldGrad)" opacity="0.3"/>
+    <text x="460" y="28" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#50c878">◆ Memory-Efficient Lookup</text>
+    
+    <g transform="translate(460, 55)">
+      <text font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">
+        <tspan x="0" y="0">✓ PlaceLookup loads in 35ms</tspan>
+        <tspan x="0" y="22">✓ ~1.5 MB for 10K+ names</tspan>
+        <tspan x="0" y="44">✓ O(1) lookup via Map</tspan>
+        <tspan x="0" y="66">✓ Singleton pattern for reuse</tspan>
+        <tspan x="0" y="88">✓ Handles ambiguity (name → Place[])</tspan>
+        <tspan x="0" y="110">✓ findBest() for disambiguation</tspan>
+        <tspan x="0" y="132">✓ Scales to 100K+ names easily</tspan>
+      </text>
+    </g>
+    
+    <!-- Strength 3: Integration Ready -->
+    <rect x="880" y="0" width="420" height="200" rx="8" fill="url(#cardBg)" stroke="#2e8b57" stroke-width="2" filter="url(#emeraldGlow)"/>
+    <rect x="880" y="0" width="420" height="40" rx="8" fill="url(#emeraldGrad)" opacity="0.3"/>
+    <text x="900" y="28" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#50c878">◆ Integration Architecture</text>
+    
+    <g transform="translate(900, 55)">
+      <text font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">
+        <tspan x="0" y="0">✓ Clean knowledge/ module boundary</tspan>
+        <tspan x="0" y="22">✓ Facts system ready for Layer 1</tspan>
+        <tspan x="0" y="44">✓ ContainsPlaceName fact working</tspan>
+        <tspan x="0" y="66">✓ Extensible for topic vocabulary</tspan>
+        <tspan x="0" y="88">✓ place_hubs table for hub detection</tspan>
+        <tspan x="0" y="110">✓ topic_keywords table exists</tspan>
+        <tspan x="0" y="132">✓ Wikidata Q-IDs for enrichment</tspan>
+      </text>
+    </g>
+    
+    <!-- Strength 4: Country Coverage -->
+    <rect x="0" y="220" width="420" height="160" rx="8" fill="url(#cardBg)" stroke="#2e8b57" stroke-width="2" filter="url(#emeraldGlow)"/>
+    <rect x="0" y="220" width="420" height="40" rx="8" fill="url(#emeraldGrad)" opacity="0.3"/>
+    <text x="20" y="248" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#50c878">◆ Complete Country Coverage</text>
+    
+    <g transform="translate(20, 275)">
+      <text font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">
+        <tspan x="0" y="0">✓ All 250 UN-recognized countries</tspan>
+        <tspan x="0" y="22">✓ ISO 3166 codes (alpha-2, alpha-3)</tspan>
+        <tspan x="0" y="44">✓ Population, timezone, coordinates</tspan>
+        <tspan x="0" y="66">✓ Multi-language official names</tspan>
+        <tspan x="0" y="88">✓ Alternative spellings indexed</tspan>
+      </text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: WEAKNESSES -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="100" y="1100" font-family="Georgia, serif" font-size="28" font-weight="bold" fill="#ff6b6b">§3 WEAKNESSES</text>
+  <line x1="100" y1="1115" x2="360" y2="1115" stroke="#ff6b6b" stroke-width="2"/>
+  
+  <!-- Weaknesses Grid -->
+  <g transform="translate(50, 1140)">
+    <!-- Critical: City Coverage -->
+    <rect x="0" y="0" width="560" height="240" rx="8" fill="url(#cardBg)" stroke="#e31837" stroke-width="3" filter="url(#rubyGlow)"/>
+    <rect x="0" y="0" width="560" height="45" rx="8" fill="url(#rubyGrad)" opacity="0.4"/>
+    <text x="20" y="30" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#ff6b6b">✖ CRITICAL: City Coverage Gap</text>
+    
+    <g transform="translate(20, 60)">
+      <!-- World Map Mini (simplified) -->
+      <rect x="0" y="0" width="520" height="160" rx="4" fill="#0a0d14" stroke="#334155"/>
+      
+      <!-- US - RED (bad coverage) -->
+      <ellipse cx="130" cy="70" rx="60" ry="35" fill="#e31837" opacity="0.3" stroke="#ff6b6b" stroke-width="1"/>
+      <text x="130" y="75" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#ff6b6b">USA: 1 city</text>
+      
+      <!-- UK - GREEN (has London) -->
+      <ellipse cx="260" cy="50" rx="25" ry="20" fill="#2e8b57" opacity="0.3" stroke="#50c878" stroke-width="1"/>
+      <text x="260" y="55" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#50c878">UK ✓</text>
+      
+      <!-- Europe - RED -->
+      <ellipse cx="300" cy="60" rx="40" ry="25" fill="#e31837" opacity="0.2" stroke="#ff6b6b" stroke-width="1"/>
+      <text x="300" y="90" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#ff6b6b">EU: Paris only</text>
+      
+      <!-- Asia - RED -->
+      <ellipse cx="420" cy="80" rx="70" ry="40" fill="#e31837" opacity="0.2" stroke="#ff6b6b" stroke-width="1"/>
+      <text x="420" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#ff6b6b">Asia: 0 cities</text>
+      
+      <!-- Legend -->
+      <rect x="350" y="130" width="15" height="15" fill="#2e8b57" opacity="0.5"/>
+      <text x="370" y="142" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">Has cities</text>
+      <rect x="430" y="130" width="15" height="15" fill="#e31837" opacity="0.5"/>
+      <text x="450" y="142" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">No cities</text>
+    </g>
+    
+    <!-- High: No US States -->
+    <rect x="580" y="0" width="560" height="240" rx="8" fill="url(#cardBg)" stroke="#e31837" stroke-width="2"/>
+    <rect x="580" y="0" width="560" height="45" rx="8" fill="url(#rubyGrad)" opacity="0.3"/>
+    <text x="600" y="30" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#ff6b6b">✖ HIGH: Missing Administrative Divisions</text>
+    
+    <g transform="translate(600, 60)">
+      <text font-family="Inter, sans-serif" font-size="13" fill="#cbd5e1">
+        <tspan x="0" y="0">Missing for URL matching:</tspan>
+        <tspan x="0" y="25" fill="#ff6b6b">• US states (california, texas, new-york...)</tspan>
+        <tspan x="0" y="47" fill="#ff6b6b">• UK regions (scotland, wales, england...)</tspan>
+        <tspan x="0" y="69" fill="#ff6b6b">• Canadian provinces (ontario, quebec...)</tspan>
+        <tspan x="0" y="91" fill="#ff6b6b">• Australian states (victoria, nsw...)</tspan>
+        <tspan x="0" y="120" fill="#94a3b8">Impact: URLs like /us/california/story fail to match</tspan>
+        <tspan x="0" y="142" fill="#94a3b8">These are common in news site URL structures</tspan>
+        <tspan x="0" y="170" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">/us-news/california/2025/jan/15/wildfire → ✖ no match</tspan>
+      </text>
+    </g>
+    
+    <!-- Medium: Name Normalization Issues -->
+    <rect x="0" y="260" width="560" height="200" rx="8" fill="url(#cardBg)" stroke="#ff9f00" stroke-width="2"/>
+    <rect x="0" y="260" width="560" height="45" rx="8" fill="url(#topazGrad)" opacity="0.3"/>
+    <text x="20" y="290" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#ffc87c">⚠ MEDIUM: Normalization Gaps</text>
+    
+    <g transform="translate(20, 320)">
+      <text font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">
+        <tspan x="0" y="0">Current: "new york" → not found (not in DB)</tspan>
+        <tspan x="0" y="22">Problem: Multi-word places need special handling</tspan>
+        <tspan x="0" y="50" fill="#ffc87c">URL segment: "new-york" → normalized: "new york"</tspan>
+        <tspan x="0" y="72" fill="#ffc87c">But gazetteer has: "New York" (if it existed)</tspan>
+        <tspan x="0" y="100">Missing normalizations:</tspan>
+        <tspan x="0" y="120" fill="#94a3b8">• "st-louis" → "saint louis" / "st. louis"</tspan>
+        <tspan x="0" y="140" fill="#94a3b8">• "los-angeles" → "los angeles" / "la"</tspan>
+      </text>
+    </g>
+    
+    <!-- Medium: Canonical Name Issues -->
+    <rect x="580" y="260" width="560" height="200" rx="8" fill="url(#cardBg)" stroke="#ff9f00" stroke-width="2"/>
+    <rect x="580" y="260" width="560" height="45" rx="8" fill="url(#topazGrad)" opacity="0.3"/>
+    <text x="600" y="290" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#ffc87c">⚠ MEDIUM: Incomplete Canonical Names</text>
+    
+    <g transform="translate(600, 320)">
+      <text font-family="Inter, sans-serif" font-size="12" fill="#cbd5e1">
+        <tspan x="0" y="0">Many places show "Place #21" instead of proper name</tspan>
+        <tspan x="0" y="25">Wikidata-sourced places missing canonical_name_id</tspan>
+        <tspan x="0" y="55" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">London: canonicalName = "Place #21" ← wrong</tspan>
+        <tspan x="0" y="77" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">Dublin: canonicalName = "Place #9" ← wrong</tspan>
+        <tspan x="0" y="105">Should be:</tspan>
+        <tspan x="0" y="125" font-family="JetBrains Mono, monospace" font-size="11" fill="#50c878">London: canonicalName = "London"</tspan>
+      </text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: RESTRUCTURING RECOMMENDATIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="100" y="1640" font-family="Georgia, serif" font-size="28" font-weight="bold" fill="#6fa8dc">§4 RESTRUCTURING RECOMMENDATIONS</text>
+  <line x1="100" y1="1655" x2="620" y2="1655" stroke="#6fa8dc" stroke-width="2"/>
+  
+  <!-- Priority 1: Data Population -->
+  <rect x="50" y="1680" width="850" height="320" rx="8" fill="url(#cardBg)" stroke="#0f52ba" stroke-width="2" filter="url(#sapphireGlow)"/>
+  <rect x="50" y="1680" width="850" height="50" rx="8" fill="url(#sapphireGrad)" opacity="0.4"/>
+  <text x="75" y="1715" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#6fa8dc">P1: DATA POPULATION (Highest Impact)</text>
+  
+  <g transform="translate(70, 1750)">
+    <!-- Phase boxes -->
+    <rect x="0" y="0" width="250" height="110" rx="6" fill="#0f1420" stroke="#2e8b57" stroke-width="1"/>
+    <text x="125" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#50c878">Phase 1: GeoNames Cities</text>
+    <text x="15" y="50" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Load cities15000.txt (~24K cities)</text>
+    <text x="15" y="68" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• All cities with pop > 15,000</text>
+    <text x="15" y="86" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Covers major news-relevant cities</text>
+    <text x="15" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Est: 2-3 hours to implement</text>
+    
+    <rect x="270" y="0" width="250" height="110" rx="6" fill="#0f1420" stroke="#0f52ba" stroke-width="1"/>
+    <text x="395" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#6fa8dc">Phase 2: Admin Divisions</text>
+    <text x="285" y="50" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• GeoNames admin1CodesASCII.txt</text>
+    <text x="285" y="68" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• US states, UK regions, etc.</text>
+    <text x="285" y="86" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• ~4K admin divisions globally</text>
+    <text x="285" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Est: 1-2 hours</text>
+    
+    <rect x="540" y="0" width="250" height="110" rx="6" fill="#0f1420" stroke="#9966cc" stroke-width="1"/>
+    <text x="665" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#da70d6">Phase 3: Alternate Names</text>
+    <text x="555" y="50" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• GeoNames alternateNames.txt</text>
+    <text x="555" y="68" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• NYC, LA, SF abbreviations</text>
+    <text x="555" y="86" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Colloquial names</text>
+    <text x="555" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Est: 3-4 hours (large file)</text>
+    
+    <!-- Impact projection -->
+    <rect x="0" y="130" width="790" height="100" rx="6" fill="#1a1f2e" stroke="#c9a227" stroke-width="1"/>
+    <text x="395" y="155" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#fffacd">Projected Impact After P1</text>
+    
+    <g transform="translate(30, 170)">
+      <text font-family="JetBrains Mono, monospace" font-size="12" fill="#94a3b8">
+        <tspan x="0" y="0">Places:     508 → ~25,000</tspan>
+        <tspan x="250" y="0">Names:  10,587 → ~150,000</tspan>
+        <tspan x="500" y="0">Memory: ~1.5MB → ~15MB</tspan>
+        <tspan x="0" y="25" fill="#50c878">US cities: 1 → ~4,000</tspan>
+        <tspan x="250" y="25" fill="#50c878">EU cities: ~5 → ~3,000</tspan>
+        <tspan x="500" y="25" fill="#50c878">Load time: 35ms → ~200ms</tspan>
+      </text>
+    </g>
+  </g>
+  
+  <!-- Priority 2: Schema Fixes -->
+  <rect x="920" y="1680" width="830" height="320" rx="8" fill="url(#cardBg)" stroke="#0f52ba" stroke-width="2"/>
+  <rect x="920" y="1680" width="830" height="50" rx="8" fill="url(#sapphireGrad)" opacity="0.3"/>
+  <text x="945" y="1715" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#6fa8dc">P2: SCHEMA REFINEMENTS</text>
+  
+  <g transform="translate(940, 1750)">
+    <text font-family="Inter, sans-serif" font-size="13" fill="#cbd5e1">
+      <tspan x="0" y="0" font-weight="600" fill="#ffc87c">2.1 Fix canonical_name_id population</tspan>
+      <tspan x="0" y="22" fill="#94a3b8">• Run migration to set canonical name for Wikidata places</tspan>
+      <tspan x="0" y="44" fill="#94a3b8">• Pick is_preferred=1, lang='eng' as canonical</tspan>
+      
+      <tspan x="0" y="80" font-weight="600" fill="#ffc87c" text-decoration="line-through">2.2 Add URL-friendly normalized column</tspan>
+      <tspan x="0" y="102" fill="#666" text-decoration="line-through">• New column: url_slug (lowercase, hyphenated)</tspan>
+      <tspan x="0" y="124" fill="#c62828" font-weight="600">↳ NOT IMPLEMENTED — computed at load time instead</tspan>
+      <tspan x="0" y="146" fill="#94a3b8">• toUrlSlug() used in PlaceLookup for runtime matching</tspan>
+      
+      <tspan x="0" y="182" font-weight="600" fill="#ffc87c">2.3 Add alias mappings table</tspan>
+      <tspan x="0" y="204" fill="#94a3b8">• Map common abbreviations: NYC → New York</tspan>
+      <tspan x="0" y="226" fill="#94a3b8">• Map demonyms: "american" → United States</tspan>
+    </text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: PROPOSED ARCHITECTURE -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="100" y="2050" font-family="Georgia, serif" font-size="28" font-weight="bold" fill="#da70d6">§5 PROPOSED LOOKUP ARCHITECTURE</text>
+  <line x1="100" y1="2065" x2="560" y2="2065" stroke="#da70d6" stroke-width="2"/>
+  
+  <!-- Architecture Diagram -->
+  <rect x="50" y="2090" width="1700" height="280" rx="8" fill="url(#cardBg)" stroke="#9966cc" stroke-width="2"/>
+  
+  <g transform="translate(100, 2120)">
+    <!-- URL Input -->
+    <rect x="0" y="80" width="180" height="60" rx="6" fill="#0f1420" stroke="#c9a227" stroke-width="2"/>
+    <text x="90" y="105" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#fffacd">URL Segment</text>
+    <text x="90" y="125" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#c9a227">"new-york"</text>
+    
+    <!-- Arrow 1 -->
+    <path d="M 190 110 L 240 110" stroke="#c9a227" stroke-width="2" fill="none" marker-end="url(#arrowGold)"/>
+    
+    <!-- Normalization -->
+    <rect x="250" y="60" width="200" height="100" rx="6" fill="#0f1420" stroke="#ff9f00" stroke-width="1"/>
+    <text x="350" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#ffc87c">Normalization</text>
+    <text x="350" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">hyphen → space</text>
+    <text x="350" y="125" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">lowercase</text>
+    <text x="350" y="145" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#ff9f00">→ "new york"</text>
+    
+    <!-- Arrow 2 -->
+    <path d="M 460 110 L 510 110" stroke="#ff9f00" stroke-width="2" fill="none"/>
+    
+    <!-- Lookup Tiers -->
+    <rect x="520" y="20" width="320" height="200" rx="6" fill="#0a0d14" stroke="#0f52ba" stroke-width="2"/>
+    <text x="680" y="45" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="600" fill="#6fa8dc">Multi-Tier Lookup</text>
+    
+    <!-- Tier 1 -->
+    <rect x="540" y="60" width="280" height="40" rx="4" fill="#1a1f2e" stroke="#2e8b57"/>
+    <text x="555" y="85" font-family="Inter, sans-serif" font-size="11" fill="#50c878">T1: Exact Match</text>
+    <text x="805" y="85" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">O(1)</text>
+    
+    <!-- Tier 2 -->
+    <rect x="540" y="110" width="280" height="40" rx="4" fill="#1a1f2e" stroke="#0f52ba"/>
+    <text x="555" y="135" font-family="Inter, sans-serif" font-size="11" fill="#6fa8dc">T2: URL Slug Match</text>
+    <text x="805" y="135" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">O(1)</text>
+    
+    <!-- Tier 3 -->
+    <rect x="540" y="160" width="280" height="40" rx="4" fill="#1a1f2e" stroke="#9966cc"/>
+    <text x="555" y="185" font-family="Inter, sans-serif" font-size="11" fill="#da70d6">T3: Alias Expansion</text>
+    <text x="805" y="185" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">O(1)</text>
+    
+    <!-- Arrow 3 -->
+    <path d="M 850 110 L 900 110" stroke="#0f52ba" stroke-width="2" fill="none"/>
+    
+    <!-- Disambiguation -->
+    <rect x="910" y="40" width="240" height="160" rx="6" fill="#0f1420" stroke="#9966cc" stroke-width="1"/>
+    <text x="1030" y="65" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#da70d6">Disambiguation</text>
+    <text x="930" y="90" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Sort by population</text>
+    <text x="930" y="110" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Prefer cities over countries</text>
+    <text x="930" y="130" font-family="Inter, sans-serif" font-size="11" fill="#94a3b8">• Context hints (domain locale)</text>
+    <text x="930" y="160" font-family="JetBrains Mono, monospace" font-size="10" fill="#da70d6">"new york" → NYC (8.3M)</text>
+    <text x="930" y="180" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">not: New York (state)</text>
+    
+    <!-- Arrow 4 -->
+    <path d="M 1160 110 L 1210 110" stroke="#9966cc" stroke-width="2" fill="none"/>
+    
+    <!-- Result -->
+    <rect x="1220" y="60" width="300" height="100" rx="6" fill="#0f1420" stroke="#2e8b57" stroke-width="2"/>
+    <text x="1370" y="85" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#50c878">PlaceMatch Result</text>
+    <text x="1235" y="108" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">{ placeId: 12345,</text>
+    <text x="1235" y="123" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  kind: "city",</text>
+    <text x="1235" y="138" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  countryCode: "US",</text>
+    <text x="1235" y="153" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">  canonicalName: "New York" }</text>
+  </g>
+  
+  <!-- Arrows marker -->
+  <defs>
+    <marker id="arrowGold" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#c9a227"/>
+    </marker>
+  </defs>
+  
+  <!-- Footer -->
+  <rect x="50" y="2380" width="1700" height="2" fill="url(#goldAccent)" opacity="0.5"/>
+  <text x="900" y="2395" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#64748b">Generated 2025-11-28 · Industrial Luxury Obsidian Theme · Gazetteer Assessment v1.0</text>
+</svg>

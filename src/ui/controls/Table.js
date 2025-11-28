@@ -31,9 +31,12 @@ class TableCellControl extends jsgui.Control {
       content: initialContent,
       control: initialControl,
       text: initialText,
+      html: initialHtml,
       ...rest
     } = spec;
-    super({ ...rest, tagName: header ? "th" : "td" });
+    const resolvedTagName = header ? "th" : "td";
+    super({ ...rest, tagName: resolvedTagName });
+    this._tagName = resolvedTagName;
     this.add_class("ui-table__cell");
     if (header) {
       this.add_class("ui-table__cell--header");
@@ -58,10 +61,28 @@ class TableCellControl extends jsgui.Control {
             appendText(this, child);
           }
         });
+      } else if (initialHtml != null) {
+        // Raw HTML content (for stacked timestamps, etc.)
+        this._rawHtml = initialHtml;
       } else if (initialText != null) {
         appendText(this, initialText);
       }
     }
+  }
+
+  all_html_render() {
+    // If raw HTML is set, inject it into the rendered output
+    if (this._rawHtml) {
+      const base = super.all_html_render();
+      const tagName = (this.dom && this.dom.tagName) || this._tagName || "td";
+      // Insert raw HTML before closing tag
+      const closeTag = `</${tagName}>`;
+      const idx = base.lastIndexOf(closeTag);
+      if (idx !== -1) {
+        return base.slice(0, idx) + this._rawHtml + closeTag;
+      }
+    }
+    return super.all_html_render();
   }
 }
 
@@ -155,9 +176,10 @@ class TableControl extends jsgui.Control {
       };
     }
     if (value && typeof value === "object" && !Array.isArray(value)) {
-      const { text, title, classNames, className, align, content } = value;
+      const { text, html, title, classNames, className, align, content } = value;
       return {
-        text: text != null ? text : "",
+        text: html ? undefined : (text != null ? text : ""),
+        html,
         title,
         classNames: columnClasses.concat(toArray(classNames || className)),
         align: align || column.align,

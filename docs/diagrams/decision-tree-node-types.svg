@@ -1,0 +1,548 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <!-- Industrial Obsidian Luxury Theme -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a"/>
+      <stop offset="100%" style="stop-color:#0d0d0d"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#daa520"/>
+    </linearGradient>
+    
+    <!-- Node type gradients -->
+    <linearGradient id="urlMatchGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d5a3d"/>
+      <stop offset="100%" style="stop-color:#1a3d28"/>
+    </linearGradient>
+    <linearGradient id="textContainsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d4a5a"/>
+      <stop offset="100%" style="stop-color:#1a3040"/>
+    </linearGradient>
+    <linearGradient id="compareGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a3d5a"/>
+      <stop offset="100%" style="stop-color:#3d2840"/>
+    </linearGradient>
+    <linearGradient id="compoundGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a4a2d"/>
+      <stop offset="100%" style="stop-color:#403518"/>
+    </linearGradient>
+    <linearGradient id="flagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a2d2d"/>
+      <stop offset="100%" style="stop-color:#401a1a"/>
+    </linearGradient>
+    <linearGradient id="leafMatchGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a4d1a"/>
+      <stop offset="100%" style="stop-color:#0d330d"/>
+    </linearGradient>
+    <linearGradient id="leafNoMatchGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4d1a1a"/>
+      <stop offset="100%" style="stop-color:#330d0d"/>
+    </linearGradient>
+    
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#obsidianBg)"/>
+  
+  <!-- Subtle grid -->
+  <g opacity="0.03">
+    <pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse">
+      <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#c9a227" stroke-width="0.5"/>
+    </pattern>
+    <rect width="1200" height="800" fill="url(#grid)"/>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- HEADER -->
+  <!-- ============================================== -->
+  <g id="header">
+    <rect x="0" y="0" width="1200" height="60" fill="#0f0f0f"/>
+    <rect x="0" y="0" width="1200" height="3" fill="url(#goldAccent)"/>
+    <text x="40" y="38" font-family="Segoe UI, system-ui, sans-serif" font-size="20" font-weight="600" fill="#c9a227">
+      Decision Tree Node Types
+    </text>
+    <text x="310" y="38" font-family="Segoe UI, system-ui, sans-serif" font-size="14" fill="#666">
+      5 Condition Types + 2 Leaf Types
+    </text>
+    
+    <!-- Legend badges -->
+    <g transform="translate(800, 18)">
+      <rect x="0" y="0" width="80" height="24" rx="4" fill="#2d5a3d" stroke="#50c878" stroke-width="1"/>
+      <text x="40" y="16" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#50c878">Condition</text>
+      
+      <rect x="90" y="0" width="80" height="24" rx="4" fill="#1a4d1a" stroke="#50c878" stroke-width="1"/>
+      <text x="130" y="16" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#50c878">Leaf</text>
+      
+      <rect x="180" y="0" width="80" height="24" rx="4" fill="#5a4a2d" stroke="#daa520" stroke-width="1"/>
+      <text x="220" y="16" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#daa520">Compound</text>
+    </g>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- ROW 1: CONDITION NODES -->
+  <!-- ============================================== -->
+  
+  <!-- url_matches Node -->
+  <g id="urlMatchesNode" transform="translate(40, 100)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="180" rx="8" fill="url(#urlMatchGrad)" stroke="#50c878" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#1a3d28"/>
+    <rect x="0" y="28" width="220" height="8" fill="#1a3d28"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="90" height="20" rx="4" fill="#50c878" opacity="0.2"/>
+    <text x="55" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#50c878" font-weight="600">url_matches</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#50c878">🔗</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Pattern matching on URL</text>
+    
+    <g transform="translate(15, 70)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Match modes:</text>
+      <rect x="0" y="8" width="55" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="27" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#50c878">contains</text>
+      <rect x="60" y="8" width="45" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="82" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#50c878">starts</text>
+      <rect x="110" y="8" width="40" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="130" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#50c878">ends</text>
+      <rect x="155" y="8" width="45" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="177" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#50c878">regex</text>
+    </g>
+    
+    <g transform="translate(15, 110)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Example:</text>
+      <rect x="0" y="8" width="190" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="10" y="23" font-family="Consolas, monospace" font-size="9" fill="#888">pattern: <tspan fill="#50c878">"/series/"</tspan></text>
+    </g>
+    
+    <g transform="translate(15, 145)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Output:</text>
+      <text x="50" y="0" font-family="Segoe UI" font-size="10" fill="#50c878">YES</text>
+      <text x="75" y="0" font-family="Segoe UI" font-size="10" fill="#666">/</text>
+      <text x="85" y="0" font-family="Segoe UI" font-size="10" fill="#dc143c">NO</text>
+      <text x="110" y="0" font-family="Segoe UI" font-size="10" fill="#666">branch</text>
+    </g>
+    
+    <!-- Connection points -->
+    <circle cx="110" cy="0" r="5" fill="#50c878" stroke="#1a3d28" stroke-width="2"/>
+    <circle cx="55" cy="180" r="5" fill="#50c878" stroke="#1a3d28" stroke-width="2"/>
+    <circle cx="165" cy="180" r="5" fill="#dc143c" stroke="#1a3d28" stroke-width="2"/>
+    <text x="45" y="195" font-family="Segoe UI" font-size="8" fill="#50c878">YES</text>
+    <text x="160" y="195" font-family="Segoe UI" font-size="8" fill="#dc143c">NO</text>
+  </g>
+
+  <!-- text_contains Node -->
+  <g id="textContainsNode" transform="translate(290, 100)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="180" rx="8" fill="url(#textContainsGrad)" stroke="#6ab0de" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#1a3040"/>
+    <rect x="0" y="28" width="220" height="8" fill="#1a3040"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="100" height="20" rx="4" fill="#6ab0de" opacity="0.2"/>
+    <text x="60" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#6ab0de" font-weight="600">text_contains</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#6ab0de">📝</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Search in text fields</text>
+    
+    <g transform="translate(15, 70)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Target fields:</text>
+      <rect x="0" y="8" width="40" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="20" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#6ab0de">title</text>
+      <rect x="45" y="8" width="60" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="75" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#6ab0de">description</text>
+      <rect x="110" y="8" width="40" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="130" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#6ab0de">body</text>
+      <rect x="155" y="8" width="45" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="177" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#6ab0de">any</text>
+    </g>
+    
+    <g transform="translate(15, 110)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Example:</text>
+      <rect x="0" y="8" width="190" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="10" y="23" font-family="Consolas, monospace" font-size="9" fill="#888">terms: <tspan fill="#6ab0de">["analysis", "deep"]</tspan></text>
+    </g>
+    
+    <g transform="translate(15, 145)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Case:</text>
+      <text x="35" y="0" font-family="Segoe UI" font-size="10" fill="#6ab0de">insensitive</text>
+      <text x="105" y="0" font-family="Segoe UI" font-size="10" fill="#666">| Regex:</text>
+      <text x="150" y="0" font-family="Segoe UI" font-size="10" fill="#6ab0de">supported</text>
+    </g>
+    
+    <!-- Connection points -->
+    <circle cx="110" cy="0" r="5" fill="#6ab0de" stroke="#1a3040" stroke-width="2"/>
+    <circle cx="55" cy="180" r="5" fill="#50c878" stroke="#1a3040" stroke-width="2"/>
+    <circle cx="165" cy="180" r="5" fill="#dc143c" stroke="#1a3040" stroke-width="2"/>
+    <text x="45" y="195" font-family="Segoe UI" font-size="8" fill="#50c878">YES</text>
+    <text x="160" y="195" font-family="Segoe UI" font-size="8" fill="#dc143c">NO</text>
+  </g>
+
+  <!-- compare Node -->
+  <g id="compareNode" transform="translate(540, 100)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="180" rx="8" fill="url(#compareGrad)" stroke="#b88dd8" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#3d2840"/>
+    <rect x="0" y="28" width="220" height="8" fill="#3d2840"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="70" height="20" rx="4" fill="#b88dd8" opacity="0.2"/>
+    <text x="45" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#b88dd8" font-weight="600">compare</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#b88dd8">⚖️</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Numeric comparisons</text>
+    
+    <g transform="translate(15, 70)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Operators:</text>
+      <rect x="0" y="8" width="28" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="14" y="21" text-anchor="middle" font-family="Consolas" font-size="10" fill="#b88dd8">&gt;</text>
+      <rect x="32" y="8" width="28" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="46" y="21" text-anchor="middle" font-family="Consolas" font-size="10" fill="#b88dd8">&lt;</text>
+      <rect x="64" y="8" width="28" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="78" y="21" text-anchor="middle" font-family="Consolas" font-size="10" fill="#b88dd8">=</text>
+      <rect x="96" y="8" width="32" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="112" y="21" text-anchor="middle" font-family="Consolas" font-size="10" fill="#b88dd8">≥</text>
+      <rect x="132" y="8" width="32" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="148" y="21" text-anchor="middle" font-family="Consolas" font-size="10" fill="#b88dd8">≤</text>
+      <rect x="168" y="8" width="32" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="184" y="21" text-anchor="middle" font-family="Consolas" font-size="10" fill="#b88dd8">≠</text>
+    </g>
+    
+    <g transform="translate(15, 110)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Example:</text>
+      <rect x="0" y="8" width="190" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="10" y="23" font-family="Consolas, monospace" font-size="9" fill="#888">word_count <tspan fill="#b88dd8">&gt;</tspan> <tspan fill="#daa520">2000</tspan></text>
+    </g>
+    
+    <g transform="translate(15, 145)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Fields:</text>
+      <text x="45" y="0" font-family="Consolas" font-size="9" fill="#b88dd8">word_count, link_density...</text>
+    </g>
+    
+    <!-- Connection points -->
+    <circle cx="110" cy="0" r="5" fill="#b88dd8" stroke="#3d2840" stroke-width="2"/>
+    <circle cx="55" cy="180" r="5" fill="#50c878" stroke="#3d2840" stroke-width="2"/>
+    <circle cx="165" cy="180" r="5" fill="#dc143c" stroke="#3d2840" stroke-width="2"/>
+    <text x="45" y="195" font-family="Segoe UI" font-size="8" fill="#50c878">YES</text>
+    <text x="160" y="195" font-family="Segoe UI" font-size="8" fill="#dc143c">NO</text>
+  </g>
+
+  <!-- compound Node -->
+  <g id="compoundNode" transform="translate(790, 100)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="180" rx="8" fill="url(#compoundGrad)" stroke="#daa520" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#403518"/>
+    <rect x="0" y="28" width="220" height="8" fill="#403518"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="80" height="20" rx="4" fill="#daa520" opacity="0.2"/>
+    <text x="50" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#daa520" font-weight="600">compound</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#daa520">🔀</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Combine multiple conditions</text>
+    
+    <g transform="translate(15, 70)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Logic operators:</text>
+      <rect x="0" y="8" width="50" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="25" y="23" text-anchor="middle" font-family="Consolas" font-size="11" fill="#daa520" font-weight="600">AND</text>
+      <rect x="55" y="8" width="45" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="77" y="23" text-anchor="middle" font-family="Consolas" font-size="11" fill="#daa520" font-weight="600">OR</text>
+      <rect x="105" y="8" width="45" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="127" y="23" text-anchor="middle" font-family="Consolas" font-size="11" fill="#daa520" font-weight="600">NOT</text>
+    </g>
+    
+    <g transform="translate(15, 110)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Children:</text>
+      <text x="55" y="0" font-family="Segoe UI" font-size="10" fill="#daa520">2+ sub-conditions</text>
+    </g>
+    
+    <g transform="translate(15, 130)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Example:</text>
+      <rect x="0" y="8" width="190" height="22" rx="3" fill="#0d0d0d"/>
+      <text x="10" y="23" font-family="Consolas, monospace" font-size="9" fill="#888">(<tspan fill="#6ab0de">url</tspan> <tspan fill="#daa520">AND</tspan> <tspan fill="#b88dd8">count</tspan>) <tspan fill="#daa520">OR</tspan> <tspan fill="#50c878">flag</tspan></text>
+    </g>
+    
+    <!-- Connection points (multiple children) -->
+    <circle cx="110" cy="0" r="5" fill="#daa520" stroke="#403518" stroke-width="2"/>
+    <circle cx="40" cy="180" r="5" fill="#daa520" stroke="#403518" stroke-width="2"/>
+    <circle cx="110" cy="180" r="5" fill="#daa520" stroke="#403518" stroke-width="2"/>
+    <circle cx="180" cy="180" r="5" fill="#daa520" stroke="#403518" stroke-width="2"/>
+    <text x="20" y="195" font-family="Segoe UI" font-size="8" fill="#daa520">child₁</text>
+    <text x="95" y="195" font-family="Segoe UI" font-size="8" fill="#daa520">child₂</text>
+    <text x="170" y="195" font-family="Segoe UI" font-size="8" fill="#daa520">...</text>
+  </g>
+
+  <!-- flag Node -->
+  <g id="flagNode" transform="translate(40, 340)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="160" rx="8" fill="url(#flagGrad)" stroke="#ff6b6b" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#401a1a"/>
+    <rect x="0" y="28" width="220" height="8" fill="#401a1a"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="50" height="20" rx="4" fill="#ff6b6b" opacity="0.2"/>
+    <text x="35" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#ff6b6b" font-weight="600">flag</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#ff6b6b">🚩</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Boolean field checks</text>
+    
+    <g transform="translate(15, 70)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Checkable flags:</text>
+      <rect x="0" y="8" width="65" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="32" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#ff6b6b">has_author</text>
+      <rect x="70" y="8" width="55" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="97" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#ff6b6b">has_date</text>
+      <rect x="130" y="8" width="70" height="18" rx="3" fill="#0d0d0d"/>
+      <text x="165" y="21" text-anchor="middle" font-family="Consolas" font-size="9" fill="#ff6b6b">is_premium</text>
+    </g>
+    
+    <g transform="translate(15, 110)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Values:</text>
+      <rect x="50" y="-10" width="50" height="18" rx="3" fill="#1a4d1a"/>
+      <text x="75" y="3" text-anchor="middle" font-family="Consolas" font-size="9" fill="#50c878">true</text>
+      <rect x="105" y="-10" width="50" height="18" rx="3" fill="#4d1a1a"/>
+      <text x="130" y="3" text-anchor="middle" font-family="Consolas" font-size="9" fill="#dc143c">false</text>
+    </g>
+    
+    <g transform="translate(15, 130)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Simplest condition type</text>
+    </g>
+    
+    <!-- Connection points -->
+    <circle cx="110" cy="0" r="5" fill="#ff6b6b" stroke="#401a1a" stroke-width="2"/>
+    <circle cx="55" cy="160" r="5" fill="#50c878" stroke="#401a1a" stroke-width="2"/>
+    <circle cx="165" cy="160" r="5" fill="#dc143c" stroke="#401a1a" stroke-width="2"/>
+    <text x="45" y="175" font-family="Segoe UI" font-size="8" fill="#50c878">YES</text>
+    <text x="160" y="175" font-family="Segoe UI" font-size="8" fill="#dc143c">NO</text>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- ROW 2: LEAF NODES &amp; SPECIAL -->
+  <!-- ============================================== -->
+
+  <!-- Leaf MATCH Node -->
+  <g id="leafMatchNode" transform="translate(290, 340)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="160" rx="8" fill="url(#leafMatchGrad)" stroke="#50c878" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#0d330d"/>
+    <rect x="0" y="28" width="220" height="8" fill="#0d330d"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="90" height="20" rx="4" fill="#50c878" opacity="0.2"/>
+    <text x="55" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#50c878" font-weight="600">leaf: MATCH</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#50c878">✓</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Terminal success node</text>
+    
+    <g transform="translate(15, 75)">
+      <rect x="0" y="0" width="190" height="50" rx="6" fill="#0a200a" stroke="#50c878" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="95" y="20" text-anchor="middle" font-family="Segoe UI" font-size="12" fill="#50c878" font-weight="600">Classification: MATCH</text>
+      <text x="95" y="38" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#888">Confidence: 0.90</text>
+    </g>
+    
+    <g transform="translate(15, 135)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">No children - evaluation ends</text>
+    </g>
+    
+    <!-- Connection point (input only) -->
+    <circle cx="110" cy="0" r="5" fill="#50c878" stroke="#0d330d" stroke-width="2"/>
+    <!-- Leaf indicator -->
+    <circle cx="110" cy="160" r="8" fill="#50c878" stroke="#0d330d" stroke-width="3"/>
+    <text x="110" y="164" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#0d330d" font-weight="600">✓</text>
+  </g>
+
+  <!-- Leaf NO-MATCH Node -->
+  <g id="leafNoMatchNode" transform="translate(540, 340)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="160" rx="8" fill="url(#leafNoMatchGrad)" stroke="#dc143c" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#330d0d"/>
+    <rect x="0" y="28" width="220" height="8" fill="#330d0d"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="8" width="110" height="20" rx="4" fill="#dc143c" opacity="0.2"/>
+    <text x="65" y="22" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#dc143c" font-weight="600">leaf: NO_MATCH</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#dc143c">✗</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Terminal failure node</text>
+    
+    <g transform="translate(15, 75)">
+      <rect x="0" y="0" width="190" height="50" rx="6" fill="#200a0a" stroke="#dc143c" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="95" y="20" text-anchor="middle" font-family="Segoe UI" font-size="12" fill="#dc143c" font-weight="600">Classification: NO_MATCH</text>
+      <text x="95" y="38" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#888">Default fallback result</text>
+    </g>
+    
+    <g transform="translate(15, 135)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">No children - evaluation ends</text>
+    </g>
+    
+    <!-- Connection point (input only) -->
+    <circle cx="110" cy="0" r="5" fill="#dc143c" stroke="#330d0d" stroke-width="2"/>
+    <!-- Leaf indicator -->
+    <circle cx="110" cy="160" r="8" fill="#dc143c" stroke="#330d0d" stroke-width="3"/>
+    <text x="110" y="164" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#330d0d" font-weight="600">✗</text>
+  </g>
+
+  <!-- Root Node (special) -->
+  <g id="rootNode" transform="translate(790, 340)" filter="url(#dropShadow)">
+    <rect x="0" y="0" width="220" height="160" rx="8" fill="#252525" stroke="#c9a227" stroke-width="2"/>
+    <rect x="0" y="0" width="220" height="36" rx="8" fill="#1a1a1a"/>
+    <rect x="0" y="28" width="220" height="8" fill="#1a1a1a"/>
+    <rect x="0" y="0" width="220" height="4" rx="8" fill="#c9a227"/>
+    
+    <!-- Type badge -->
+    <rect x="10" y="10" width="50" height="20" rx="4" fill="#c9a227" opacity="0.2"/>
+    <text x="35" y="24" text-anchor="middle" font-family="Consolas, monospace" font-size="11" fill="#c9a227" font-weight="600">ROOT</text>
+    
+    <!-- Icon -->
+    <text x="195" y="24" font-family="Segoe UI" font-size="16" fill="#c9a227">🌳</text>
+    
+    <!-- Content -->
+    <text x="15" y="58" font-family="Segoe UI" font-size="11" fill="#888">Entry point for category</text>
+    
+    <g transform="translate(15, 75)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Category name:</text>
+      <rect x="0" y="8" width="100" height="22" rx="3" fill="#0d0d0d" stroke="#c9a227" stroke-width="1"/>
+      <text x="50" y="23" text-anchor="middle" font-family="Consolas" font-size="10" fill="#c9a227">"in-depth"</text>
+    </g>
+    
+    <g transform="translate(15, 115)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Attributes:</text>
+      <text x="0" y="16" font-family="Segoe UI" font-size="9" fill="#888">• First node evaluated</text>
+      <text x="0" y="30" font-family="Segoe UI" font-size="9" fill="#888">• Usually a compound type</text>
+    </g>
+    
+    <!-- No input, only output -->
+    <rect x="95" y="-10" width="30" height="16" rx="3" fill="#c9a227"/>
+    <text x="110" y="2" text-anchor="middle" font-family="Segoe UI" font-size="8" fill="#1a1a1a" font-weight="600">IN</text>
+    <circle cx="55" cy="160" r="5" fill="#50c878" stroke="#1a1a1a" stroke-width="2"/>
+    <circle cx="165" cy="160" r="5" fill="#dc143c" stroke="#1a1a1a" stroke-width="2"/>
+    <text x="45" y="175" font-family="Segoe UI" font-size="8" fill="#50c878">YES</text>
+    <text x="160" y="175" font-family="Segoe UI" font-size="8" fill="#dc143c">NO</text>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- BOTTOM: FLOW EXAMPLE -->
+  <!-- ============================================== -->
+  <g id="flowExample" transform="translate(40, 550)">
+    <rect x="0" y="0" width="1120" height="210" rx="8" fill="#151515" stroke="#333" stroke-width="1"/>
+    <rect x="0" y="0" width="1120" height="32" rx="8" fill="#1a1a1a"/>
+    <rect x="0" y="24" width="1120" height="8" fill="#1a1a1a"/>
+    <text x="20" y="22" font-family="Segoe UI" font-size="12" font-weight="600" fill="#c9a227">Example Evaluation Flow</text>
+    <text x="220" y="22" font-family="Segoe UI" font-size="10" fill="#666">Category: in-depth | URL: /news/series/climate-analysis</text>
+    
+    <!-- Flow nodes -->
+    <g transform="translate(50, 60)">
+      <!-- Step 1: Root -->
+      <g>
+        <rect x="0" y="0" width="100" height="50" rx="6" fill="#252525" stroke="#c9a227" stroke-width="1.5"/>
+        <text x="50" y="18" text-anchor="middle" font-family="Consolas" font-size="9" fill="#c9a227">ROOT</text>
+        <text x="50" y="35" text-anchor="middle" font-family="Segoe UI" font-size="9" fill="#888">in-depth</text>
+        <circle cx="100" cy="25" r="4" fill="#c9a227"/>
+      </g>
+      
+      <!-- Arrow 1 -->
+      <path d="M104 25 L145 25" stroke="#50c878" stroke-width="2" marker-end="url(#arrowGreen)"/>
+      <text x="125" y="18" text-anchor="middle" font-family="Segoe UI" font-size="8" fill="#50c878">AND</text>
+      
+      <!-- Step 2: url_matches -->
+      <g transform="translate(150, 0)">
+        <rect x="0" y="0" width="120" height="50" rx="6" fill="url(#urlMatchGrad)" stroke="#50c878" stroke-width="1.5"/>
+        <text x="60" y="18" text-anchor="middle" font-family="Consolas" font-size="9" fill="#50c878">url_matches</text>
+        <text x="60" y="35" text-anchor="middle" font-family="Consolas" font-size="8" fill="#888">"/series/"</text>
+        <circle cx="0" cy="25" r="4" fill="#50c878"/>
+        <circle cx="120" cy="25" r="4" fill="#50c878"/>
+      </g>
+      
+      <!-- Arrow 2 -->
+      <path d="M274 25 L315 25" stroke="#50c878" stroke-width="2"/>
+      <text x="295" y="18" text-anchor="middle" font-family="Segoe UI" font-size="8" fill="#50c878">YES ✓</text>
+      
+      <!-- Step 3: text_contains -->
+      <g transform="translate(320, 0)">
+        <rect x="0" y="0" width="120" height="50" rx="6" fill="url(#textContainsGrad)" stroke="#6ab0de" stroke-width="1.5"/>
+        <text x="60" y="18" text-anchor="middle" font-family="Consolas" font-size="9" fill="#6ab0de">text_contains</text>
+        <text x="60" y="35" text-anchor="middle" font-family="Consolas" font-size="8" fill="#888">"analysis"</text>
+        <circle cx="0" cy="25" r="4" fill="#6ab0de"/>
+        <circle cx="120" cy="25" r="4" fill="#50c878"/>
+      </g>
+      
+      <!-- Arrow 3 -->
+      <path d="M444 25 L485 25" stroke="#50c878" stroke-width="2"/>
+      <text x="465" y="18" text-anchor="middle" font-family="Segoe UI" font-size="8" fill="#50c878">YES ✓</text>
+      
+      <!-- Step 4: compare -->
+      <g transform="translate(490, 0)">
+        <rect x="0" y="0" width="120" height="50" rx="6" fill="url(#compareGrad)" stroke="#b88dd8" stroke-width="1.5"/>
+        <text x="60" y="18" text-anchor="middle" font-family="Consolas" font-size="9" fill="#b88dd8">compare</text>
+        <text x="60" y="35" text-anchor="middle" font-family="Consolas" font-size="8" fill="#888">words &gt; 2000</text>
+        <circle cx="0" cy="25" r="4" fill="#b88dd8"/>
+        <circle cx="120" cy="25" r="4" fill="#50c878"/>
+      </g>
+      
+      <!-- Arrow 4 -->
+      <path d="M614 25 L655 25" stroke="#50c878" stroke-width="2"/>
+      <text x="635" y="18" text-anchor="middle" font-family="Segoe UI" font-size="8" fill="#50c878">YES ✓</text>
+      
+      <!-- Step 5: MATCH leaf -->
+      <g transform="translate(660, 0)">
+        <rect x="0" y="0" width="100" height="50" rx="6" fill="url(#leafMatchGrad)" stroke="#50c878" stroke-width="2"/>
+        <text x="50" y="18" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#50c878" font-weight="600">✓ MATCH</text>
+        <text x="50" y="35" text-anchor="middle" font-family="Segoe UI" font-size="9" fill="#888">conf: 0.95</text>
+        <circle cx="0" cy="25" r="4" fill="#50c878"/>
+        <circle cx="50" cy="50" r="6" fill="#50c878" stroke="#0d330d" stroke-width="2"/>
+      </g>
+    </g>
+    
+    <!-- Audit trail -->
+    <g transform="translate(50, 140)">
+      <text x="0" y="0" font-family="Segoe UI" font-size="10" fill="#666">Audit Trail:</text>
+      <rect x="80" y="-12" width="700" height="22" rx="4" fill="#0d0d0d"/>
+      <text x="90" y="5" font-family="Consolas, monospace" font-size="10" fill="#888">
+        root:<tspan fill="#50c878">Y</tspan> → series-check:<tspan fill="#50c878">Y</tspan> → content-check:<tspan fill="#50c878">Y</tspan> → length-check:<tspan fill="#50c878">Y</tspan> → <tspan fill="#50c878" font-weight="600">MATCH</tspan>
+      </text>
+    </g>
+    
+    <!-- Stats -->
+    <g transform="translate(50, 170)">
+      <rect x="0" y="0" width="120" height="24" rx="4" fill="#1a1a1a" stroke="#333"/>
+      <text x="60" y="16" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#888">Latency: <tspan fill="#50c878">&lt;1ms</tspan></text>
+      
+      <rect x="130" y="0" width="120" height="24" rx="4" fill="#1a1a1a" stroke="#333"/>
+      <text x="190" y="16" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#888">Nodes: <tspan fill="#c9a227">5</tspan></text>
+      
+      <rect x="260" y="0" width="140" height="24" rx="4" fill="#1a1a1a" stroke="#333"/>
+      <text x="330" y="16" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#888">Confidence: <tspan fill="#50c878">0.95</tspan></text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <g id="footer" transform="translate(0, 780)">
+    <text x="600" y="12" text-anchor="middle" font-family="Segoe UI" font-size="10" fill="#444">
+      Decision Tree Node Types Reference • DecisionTreeEngine v1.0 • 5 Conditions + 2 Leaves
+    </text>
+  </g>
+</svg>

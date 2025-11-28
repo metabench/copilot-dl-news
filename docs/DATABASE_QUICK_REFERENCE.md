@@ -4,7 +4,28 @@
 
 **Purpose**: Fast lookup for common database patterns and operations
 
-**Current Schema**: Version 8 (normalized architecture with 74 tables)
+**Current Schema**: Version 37 (normalized architecture with 75 tables)
+
+---
+
+## Schema Synchronization (CRITICAL)
+
+**After ANY schema change** (migrations, ALTER TABLE, new tables):
+
+```bash
+npm run schema:sync     # Regenerate schema-definitions.js
+npm run schema:check    # Verify no drift (CI gate) 
+npm run schema:stats    # Regenerate with table statistics
+```
+
+**Files updated**:
+- `src/db/sqlite/v1/schema-definitions.js` — Canonical schema (auto-generated)
+- `docs/database/_artifacts/news_db_stats.json` — Table row counts
+
+**In workflows**:
+1. **After running migrations**: Always run `npm run schema:sync`
+2. **Before PR merge**: Run `npm run schema:check` to verify sync
+3. **In DB adapter work**: Consult `schema-definitions.js` for current schema
 
 ---
 
@@ -228,6 +249,7 @@ CREATE INDEX idx_articles_host_created ON articles(host, created_at DESC);
 **Compression Infrastructure**:
 - `compression_types` - Algorithm registry
 - `compression_buckets` - Shared compression storage
+- `classification_types` - Content classification lookup table
 
 ---
 

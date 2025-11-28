@@ -1,0 +1,571 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100">
+  <defs>
+    <!-- Ultra-Luxury Automotive Gradients -->
+    <linearGradient id="obsidianBase" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f0f"/>
+      <stop offset="30%" style="stop-color:#080808"/>
+      <stop offset="70%" style="stop-color:#050505"/>
+      <stop offset="100%" style="stop-color:#020202"/>
+    </linearGradient>
+    <linearGradient id="steelAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a2a"/>
+      <stop offset="50%" style="stop-color:#1a1a1a"/>
+      <stop offset="100%" style="stop-color:#0f0f0f"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7a6235"/>
+      <stop offset="25%" style="stop-color:#d4af37"/>
+      <stop offset="50%" style="stop-color:#f5d678"/>
+      <stop offset="75%" style="stop-color:#d4af37"/>
+      <stop offset="100%" style="stop-color:#7a6235"/>
+    </linearGradient>
+    <linearGradient id="champagneGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5d678"/>
+      <stop offset="50%" style="stop-color:#d4af37"/>
+      <stop offset="100%" style="stop-color:#a08030"/>
+    </linearGradient>
+    <linearGradient id="trueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a3d2e"/>
+      <stop offset="100%" style="stop-color:#052e22"/>
+    </linearGradient>
+    <linearGradient id="falseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a1515"/>
+      <stop offset="100%" style="stop-color:#2d0a0a"/>
+    </linearGradient>
+    <linearGradient id="roseGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#b76e79"/>
+      <stop offset="50%" style="stop-color:#e8a4b0"/>
+      <stop offset="100%" style="stop-color:#b76e79"/>
+    </linearGradient>
+    <linearGradient id="platinumSheen" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#606060"/>
+      <stop offset="30%" style="stop-color:#a0a0a0"/>
+      <stop offset="50%" style="stop-color:#e8e8e8"/>
+      <stop offset="70%" style="stop-color:#a0a0a0"/>
+      <stop offset="100%" style="stop-color:#606060"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1f1f1f"/>
+      <stop offset="100%" style="stop-color:#0a0a0a"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="luxuryShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feOffset in="blur" dx="0" dy="1" result="offsetBlur"/>
+      <feFlood flood-color="#d4af37" flood-opacity="0.15" result="color"/>
+      <feComposite in="color" in2="offsetBlur" operator="in" result="shadow"/>
+      <feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowTrue" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#34d399" flood-opacity="0.25"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowFalse" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#f87171" flood-opacity="0.25"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="textEmboss">
+      <feOffset dx="0" dy="1" in="SourceAlpha" result="shadowOffset"/>
+      <feGaussianBlur in="shadowOffset" stdDeviation="0.5" result="shadowBlur"/>
+      <feFlood flood-color="#ffffff" flood-opacity="0.1" result="lightColor"/>
+      <feComposite in="lightColor" in2="shadowBlur" operator="in" result="light"/>
+      <feMerge><feMergeNode in="light"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    
+    <!-- Premium Patterns -->
+    <pattern id="carbonFiber" patternUnits="userSpaceOnUse" width="4" height="4">
+      <rect width="4" height="4" fill="#080808"/>
+      <path d="M0 0L2 2M2 0L4 2M0 2L2 4M2 2L4 4" stroke="#101010" stroke-width="0.3"/>
+    </pattern>
+    <pattern id="diamondPlate" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="20" height="20" fill="#0a0a0a"/>
+      <path d="M10 0L20 10L10 20L0 10Z" fill="none" stroke="#151515" stroke-width="0.3"/>
+    </pattern>
+    <pattern id="pinstripe" patternUnits="userSpaceOnUse" width="4" height="4">
+      <rect width="4" height="4" fill="transparent"/>
+      <line x1="0" y1="0" x2="0" y2="4" stroke="#d4af37" stroke-width="0.15" opacity="0.3"/>
+    </pattern>
+    
+    <!-- Arrows -->
+    <marker id="arrowGold" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0.5 L5,3 L0,5.5 Z" fill="url(#champagneGold)"/>
+    </marker>
+    <marker id="arrowPlatinum" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+      <path d="M0,0.5 L5,3 L0,5.5 Z" fill="#909090"/>
+    </marker>
+  </defs>
+  
+  <!-- Deep Background -->
+  <rect width="1600" height="1100" fill="url(#obsidianBase)"/>
+  <rect width="1600" height="1100" fill="url(#carbonFiber)" opacity="0.4"/>
+  <rect width="1600" height="1100" fill="url(#pinstripe)" opacity="0.5"/>
+  
+  <!-- Outer chrome bezel -->
+  <rect x="12" y="12" width="1576" height="1076" rx="8" fill="none" stroke="#303030" stroke-width="3"/>
+  <rect x="15" y="15" width="1570" height="1070" rx="7" fill="none" stroke="url(#platinumSheen)" stroke-width="1"/>
+  
+  <!-- Inner gold pinstripe -->
+  <rect x="30" y="30" width="1540" height="1040" rx="4" fill="none" stroke="url(#goldAccent)" stroke-width="0.5" opacity="0.6"/>
+  <rect x="35" y="35" width="1530" height="1030" rx="3" fill="none" stroke="#1a1a1a" stroke-width="1"/>
+  
+  <!-- Header Panel - Bentley Dashboard Style -->
+  <rect x="50" y="50" width="1500" height="95" rx="6" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="50" y="50" width="1500" height="95" rx="6" fill="none" stroke="#252525" stroke-width="1"/>
+  <rect x="50" y="50" width="1500" height="95" rx="6" fill="none" stroke="url(#goldAccent)" stroke-width="0.5" opacity="0.7"/>
+  
+  <!-- Header divider line - brushed metal effect -->
+  <line x1="50" y1="143" x2="1550" y2="143" stroke="#1a1a1a" stroke-width="2"/>
+  <line x1="50" y1="144" x2="1550" y2="144" stroke="url(#goldAccent)" stroke-width="0.3" opacity="0.8"/>
+  
+  <!-- Title with premium typography -->
+  <text x="800" y="88" text-anchor="middle" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="32" font-weight="300" letter-spacing="12" filter="url(#textEmboss)">BOOLEAN DECISIONS</text>
+  <text x="800" y="118" text-anchor="middle" fill="#606060" font-family="'Avenir Next', 'Helvetica Neue', sans-serif" font-size="11" font-weight="300" letter-spacing="6">SIGNAL EVALUATION · TRUE / FALSE</text>
+  
+  <!-- Legend - jewelry style pills -->
+  <g transform="translate(1280, 70)">
+    <rect x="0" y="0" width="70" height="28" rx="14" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.5" filter="url(#glowTrue)"/>
+    <text x="35" y="19" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', Monaco, monospace" font-size="10" font-weight="500">TRUE</text>
+    <rect x="80" y="0" width="70" height="28" rx="14" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.5" filter="url(#glowFalse)"/>
+    <text x="115" y="19" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', Monaco, monospace" font-size="10" font-weight="500">FALSE</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: URL Pattern Booleans -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="70" y="178" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="14" font-weight="400" letter-spacing="3">URL PATTERN SIGNALS</text>
+  <line x1="70" y1="188" x2="380" y2="188" stroke="url(#goldAccent)" stroke-width="0.4" opacity="0.6"/>
+  
+  <!-- hasDateSegment - Premium Card -->
+  <rect x="60" y="200" width="280" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="60" y="200" width="280" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="60" y="200" width="280" height="28" rx="4" fill="#151515"/>
+  <rect x="60" y="227" width="280" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="200" y="220" text-anchor="middle" fill="url(#roseGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasDateSegment</text>
+  <text x="78" y="248" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">URL contains /YYYY/MM/DD/ pattern</text>
+  <rect x="78" y="257" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="97" y="269" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+2</text>
+  <text x="124" y="269" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article signal</text>
+  
+  <!-- hasSlugPattern -->
+  <rect x="360" y="200" width="280" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="360" y="200" width="280" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="360" y="200" width="280" height="28" rx="4" fill="#151515"/>
+  <rect x="360" y="227" width="280" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="500" y="220" text-anchor="middle" fill="url(#roseGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasSlugPattern</text>
+  <text x="378" y="248" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">kebab-case-title-segment</text>
+  <rect x="378" y="257" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="397" y="269" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="424" y="269" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article signal</text>
+  
+  <!-- hasNumericId -->
+  <rect x="660" y="200" width="280" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="660" y="200" width="280" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="660" y="200" width="280" height="28" rx="4" fill="#151515"/>
+  <rect x="660" y="227" width="280" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="800" y="220" text-anchor="middle" fill="url(#roseGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasNumericId</text>
+  <text x="678" y="248" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">/p/12345 or /article-123</text>
+  <rect x="678" y="257" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="697" y="269" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="724" y="269" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article signal</text>
+  
+  <!-- hasPagination -->
+  <rect x="960" y="200" width="280" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="960" y="200" width="280" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="960" y="200" width="280" height="28" rx="4" fill="#151515"/>
+  <rect x="960" y="227" width="280" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1100" y="220" text-anchor="middle" fill="url(#roseGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasPagination</text>
+  <text x="978" y="248" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">?page=2 or /page/3</text>
+  <rect x="978" y="257" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="997" y="269" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+2</text>
+  <text x="1024" y="269" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">hub signal</text>
+  
+  <!-- hasCategoryPath -->
+  <rect x="1260" y="200" width="280" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1260" y="200" width="280" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1260" y="200" width="280" height="28" rx="4" fill="#151515"/>
+  <rect x="1260" y="227" width="280" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1400" y="220" text-anchor="middle" fill="url(#roseGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasCategoryPath</text>
+  <text x="1278" y="248" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">/category/, /tag/, /topic/</text>
+  <rect x="1278" y="257" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="1297" y="269" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+2</text>
+  <text x="1324" y="269" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">hub signal</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: Schema.org Booleans -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="70" y="315" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="14" font-weight="400" letter-spacing="3">SCHEMA.ORG SIGNALS</text>
+  <line x1="70" y1="325" x2="350" y2="325" stroke="url(#goldAccent)" stroke-width="0.4" opacity="0.6"/>
+  
+  <!-- hasArticleType -->
+  <rect x="60" y="340" width="240" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="60" y="340" width="240" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="60" y="340" width="240" height="28" rx="4" fill="#151515"/>
+  <rect x="60" y="367" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="180" y="360" text-anchor="middle" fill="url(#champagneGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasArticleType</text>
+  <text x="78" y="388" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">@type: Article, NewsArticle,</text>
+  <text x="78" y="402" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">BlogPosting</text>
+  <rect x="78" y="412" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.5" filter="url(#glowTrue)"/>
+  <text x="97" y="424" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+3</text>
+  <text x="124" y="424" fill="#34d399" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="500">STRONG article</text>
+  
+  <!-- hasArticleBody -->
+  <rect x="320" y="340" width="240" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="320" y="340" width="240" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="320" y="340" width="240" height="28" rx="4" fill="#151515"/>
+  <rect x="320" y="367" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="440" y="360" text-anchor="middle" fill="url(#champagneGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasArticleBody</text>
+  <text x="338" y="388" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">articleBody property with</text>
+  <text x="338" y="402" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">substantial content</text>
+  <rect x="338" y="412" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.5" filter="url(#glowTrue)"/>
+  <text x="357" y="424" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+2</text>
+  <text x="384" y="424" fill="#34d399" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="500">article</text>
+  
+  <!-- hasAuthorSchema -->
+  <rect x="580" y="340" width="240" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="580" y="340" width="240" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="580" y="340" width="240" height="28" rx="4" fill="#151515"/>
+  <rect x="580" y="367" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="700" y="360" text-anchor="middle" fill="url(#champagneGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasAuthorSchema</text>
+  <text x="598" y="388" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">author: Person or</text>
+  <text x="598" y="402" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Organization object</text>
+  <rect x="598" y="412" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="617" y="424" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="644" y="424" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article</text>
+  
+  <!-- hasDatePublished -->
+  <rect x="840" y="340" width="240" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="840" y="340" width="240" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="840" y="340" width="240" height="28" rx="4" fill="#151515"/>
+  <rect x="840" y="367" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="960" y="360" text-anchor="middle" fill="url(#champagneGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasDatePublished</text>
+  <text x="858" y="388" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">datePublished or</text>
+  <text x="858" y="402" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">dateCreated present</text>
+  <rect x="858" y="412" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="877" y="424" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="904" y="424" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article</text>
+  
+  <!-- ogTypeArticle -->
+  <rect x="1100" y="340" width="220" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1100" y="340" width="220" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1100" y="340" width="220" height="28" rx="4" fill="#151515"/>
+  <rect x="1100" y="367" width="220" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1210" y="360" text-anchor="middle" fill="url(#champagneGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">ogTypeArticle</text>
+  <text x="1118" y="388" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">og:type = "article"</text>
+  <text x="1118" y="402" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">(OpenGraph meta)</text>
+  <rect x="1118" y="412" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="1137" y="424" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+2</text>
+  <text x="1164" y="424" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article</text>
+  
+  <!-- ogTypeWebsite -->
+  <rect x="1340" y="340" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1340" y="340" width="200" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1340" y="340" width="200" height="28" rx="4" fill="#151515"/>
+  <rect x="1340" y="367" width="200" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1440" y="360" text-anchor="middle" fill="url(#champagneGold)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">ogTypeWebsite</text>
+  <text x="1358" y="395" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">og:type = "website"</text>
+  <rect x="1358" y="412" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="1377" y="424" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="1404" y="424" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">hub</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: Content Structure Booleans -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="70" y="470" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="14" font-weight="400" letter-spacing="3">CONTENT STRUCTURE SIGNALS</text>
+  <line x1="70" y1="480" x2="420" y2="480" stroke="url(#goldAccent)" stroke-width="0.4" opacity="0.6"/>
+  
+  <!-- hasHubStructure -->
+  <rect x="60" y="495" width="240" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="60" y="495" width="240" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="60" y="495" width="240" height="28" rx="4" fill="#151515"/>
+  <rect x="60" y="522" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="180" y="515" text-anchor="middle" fill="url(#platinumSheen)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasHubStructure</text>
+  <text x="78" y="543" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">&gt;10 article-pattern links</text>
+  <text x="78" y="557" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">in list/nav structure</text>
+  <rect x="78" y="567" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.5" filter="url(#glowTrue)"/>
+  <text x="97" y="579" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+3</text>
+  <text x="124" y="579" fill="#34d399" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="500">STRONG hub</text>
+  
+  <!-- hasProperHeadingHierarchy -->
+  <rect x="320" y="495" width="280" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="320" y="495" width="280" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="320" y="495" width="280" height="28" rx="4" fill="#151515"/>
+  <rect x="320" y="522" width="280" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="460" y="515" text-anchor="middle" fill="url(#platinumSheen)" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasProperHeadingHierarchy</text>
+  <text x="338" y="543" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Single H1, descending H2→H3→H4</text>
+  <text x="338" y="557" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">No skipped levels</text>
+  <rect x="338" y="567" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="357" y="579" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="384" y="579" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article (quality)</text>
+  
+  <!-- hasBlockquotes -->
+  <rect x="620" y="495" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="620" y="495" width="200" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="620" y="495" width="200" height="28" rx="4" fill="#151515"/>
+  <rect x="620" y="522" width="200" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="720" y="515" text-anchor="middle" fill="url(#platinumSheen)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasBlockquotes</text>
+  <text x="638" y="543" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">&lt;blockquote&gt; elements</text>
+  <text x="638" y="557" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">present in content</text>
+  <rect x="638" y="567" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="657" y="579" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="684" y="579" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article</text>
+  
+  <!-- hasHeroImage -->
+  <rect x="840" y="495" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="840" y="495" width="200" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="840" y="495" width="200" height="28" rx="4" fill="#151515"/>
+  <rect x="840" y="522" width="200" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="940" y="515" text-anchor="middle" fill="url(#platinumSheen)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasHeroImage</text>
+  <text x="858" y="543" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Large image at top</text>
+  <text x="858" y="557" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">of content area</text>
+  <rect x="858" y="567" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="877" y="579" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="904" y="579" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article</text>
+  
+  <!-- hasTableOfContents -->
+  <rect x="1060" y="495" width="220" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1060" y="495" width="220" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1060" y="495" width="220" height="28" rx="4" fill="#151515"/>
+  <rect x="1060" y="522" width="220" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1170" y="515" text-anchor="middle" fill="url(#platinumSheen)" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasTableOfContents</text>
+  <text x="1078" y="543" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">TOC-like navigation</text>
+  <text x="1078" y="557" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">with anchor links</text>
+  <rect x="1078" y="567" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="1097" y="579" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  <text x="1124" y="579" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article (long)</text>
+  
+  <!-- hasListDominance -->
+  <rect x="1300" y="495" width="240" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1300" y="495" width="240" height="90" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1300" y="495" width="240" height="28" rx="4" fill="#151515"/>
+  <rect x="1300" y="522" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1420" y="515" text-anchor="middle" fill="url(#platinumSheen)" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasListDominance</text>
+  <text x="1318" y="543" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">&gt;50% content is ul/ol</text>
+  <text x="1318" y="557" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">list elements</text>
+  <rect x="1318" y="567" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="1337" y="579" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+2</text>
+  <text x="1364" y="579" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">hub signal</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: Metadata Presence Booleans -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="70" y="625" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="14" font-weight="400" letter-spacing="3">METADATA PRESENCE SIGNALS</text>
+  <line x1="70" y1="635" x2="400" y2="635" stroke="url(#goldAccent)" stroke-width="0.4" opacity="0.6"/>
+  
+  <!-- hasAuthor -->
+  <rect x="60" y="650" width="180" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="60" y="650" width="180" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="60" y="650" width="180" height="26" rx="4" fill="#151515"/>
+  <rect x="60" y="675" width="180" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="150" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasAuthor</text>
+  <text x="78" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Any author field found</text>
+  <rect x="78" y="707" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="97" y="719" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  
+  <!-- hasPublishDate -->
+  <rect x="260" y="650" width="200" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="260" y="650" width="200" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="260" y="650" width="200" height="26" rx="4" fill="#151515"/>
+  <rect x="260" y="675" width="200" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="360" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasPublishDate</text>
+  <text x="278" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Published timestamp</text>
+  <rect x="278" y="707" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="297" y="719" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  
+  <!-- hasSection -->
+  <rect x="480" y="650" width="180" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="480" y="650" width="180" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="480" y="650" width="180" height="26" rx="4" fill="#151515"/>
+  <rect x="480" y="675" width="180" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="570" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasSection</text>
+  <text x="498" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Section/category meta</text>
+  <rect x="498" y="707" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="517" y="719" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  
+  <!-- hasKeywords -->
+  <rect x="680" y="650" width="180" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="680" y="650" width="180" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="680" y="650" width="180" height="26" rx="4" fill="#151515"/>
+  <rect x="680" y="675" width="180" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="770" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasKeywords</text>
+  <text x="698" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Keywords/tags present</text>
+  <rect x="698" y="707" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="717" y="719" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  
+  <!-- hasDescription -->
+  <rect x="880" y="650" width="200" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="880" y="650" width="200" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="880" y="650" width="200" height="26" rx="4" fill="#151515"/>
+  <rect x="880" y="675" width="200" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="980" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasDescription</text>
+  <text x="898" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Meta description set</text>
+  <rect x="898" y="707" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="917" y="719" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  
+  <!-- hasCanonical -->
+  <rect x="1100" y="650" width="180" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1100" y="650" width="180" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1100" y="650" width="180" height="26" rx="4" fill="#151515"/>
+  <rect x="1100" y="675" width="180" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1190" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">hasCanonical</text>
+  <text x="1118" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">rel=canonical link</text>
+  <rect x="1118" y="707" width="38" height="16" rx="8" fill="#0a0a0a" stroke="#404040" stroke-width="0.4"/>
+  <text x="1137" y="719" text-anchor="middle" fill="#505050" font-family="'SF Mono', monospace" font-size="9" font-weight="500">±0</text>
+  
+  <!-- isSelfCanonical -->
+  <rect x="1300" y="650" width="240" height="75" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1300" y="650" width="240" height="75" rx="4" fill="none" stroke="#202020" stroke-width="1"/>
+  <rect x="1300" y="650" width="240" height="26" rx="4" fill="#151515"/>
+  <rect x="1300" y="675" width="240" height="1" fill="url(#goldAccent)" opacity="0.3"/>
+  <text x="1420" y="669" text-anchor="middle" fill="#707070" font-family="'SF Mono', Monaco, monospace" font-size="11" font-weight="500">isSelfCanonical</text>
+  <text x="1318" y="695" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Canonical points to self</text>
+  <rect x="1318" y="707" width="38" height="16" rx="8" fill="url(#trueGrad)" stroke="#34d399" stroke-width="0.4"/>
+  <text x="1337" y="719" text-anchor="middle" fill="#6ee7b7" font-family="'SF Mono', monospace" font-size="9" font-weight="600">+1</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: Negative Signal Booleans -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="70" y="775" fill="#f87171" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="14" font-weight="400" letter-spacing="3">NEGATIVE SIGNALS</text>
+  <line x1="70" y1="785" x2="300" y2="785" stroke="#4a1515" stroke-width="0.5" opacity="0.8"/>
+  
+  <!-- isErrorPage -->
+  <rect x="60" y="800" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="60" y="800" width="200" height="90" rx="4" fill="none" stroke="#2d0a0a" stroke-width="1"/>
+  <rect x="60" y="800" width="200" height="28" rx="4" fill="#1a0808"/>
+  <rect x="60" y="827" width="200" height="1" fill="#f87171" opacity="0.2"/>
+  <text x="160" y="820" text-anchor="middle" fill="#f87171" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">isErrorPage</text>
+  <text x="78" y="848" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">404, 500, error title</text>
+  <text x="78" y="862" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">patterns detected</text>
+  <rect x="78" y="872" width="38" height="16" rx="8" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.5" filter="url(#glowFalse)"/>
+  <text x="97" y="884" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', monospace" font-size="9" font-weight="600">-∞</text>
+  <text x="124" y="884" fill="#f87171" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="500">SKIP</text>
+  
+  <!-- isLoginPage -->
+  <rect x="280" y="800" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="280" y="800" width="200" height="90" rx="4" fill="none" stroke="#2d0a0a" stroke-width="1"/>
+  <rect x="280" y="800" width="200" height="28" rx="4" fill="#1a0808"/>
+  <rect x="280" y="827" width="200" height="1" fill="#f87171" opacity="0.2"/>
+  <text x="380" y="820" text-anchor="middle" fill="#f87171" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">isLoginPage</text>
+  <text x="298" y="848" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">/login, /signin, login</text>
+  <text x="298" y="862" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">form detected</text>
+  <rect x="298" y="872" width="38" height="16" rx="8" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.5" filter="url(#glowFalse)"/>
+  <text x="317" y="884" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', monospace" font-size="9" font-weight="600">-∞</text>
+  <text x="344" y="884" fill="#f87171" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="500">SKIP</text>
+  
+  <!-- isSearchResults -->
+  <rect x="500" y="800" width="220" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="500" y="800" width="220" height="90" rx="4" fill="none" stroke="#2d0a0a" stroke-width="1"/>
+  <rect x="500" y="800" width="220" height="28" rx="4" fill="#1a0808"/>
+  <rect x="500" y="827" width="220" height="1" fill="#f87171" opacity="0.2"/>
+  <text x="610" y="820" text-anchor="middle" fill="#f87171" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">isSearchResults</text>
+  <text x="518" y="848" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">?q=, /search, search</text>
+  <text x="518" y="862" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">results page pattern</text>
+  <rect x="518" y="872" width="38" height="16" rx="8" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.4"/>
+  <text x="537" y="884" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', monospace" font-size="9" font-weight="600">-5</text>
+  <text x="564" y="884" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">nav/skip</text>
+  
+  <!-- hasPaywall -->
+  <rect x="740" y="800" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="740" y="800" width="200" height="90" rx="4" fill="none" stroke="#2d0a0a" stroke-width="1"/>
+  <rect x="740" y="800" width="200" height="28" rx="4" fill="#1a0808"/>
+  <rect x="740" y="827" width="200" height="1" fill="#f87171" opacity="0.2"/>
+  <text x="840" y="820" text-anchor="middle" fill="#f87171" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasPaywall</text>
+  <text x="758" y="848" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Paywall/subscription</text>
+  <text x="758" y="862" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">gate detected</text>
+  <rect x="758" y="872" width="38" height="16" rx="8" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.4"/>
+  <text x="777" y="884" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', monospace" font-size="9" font-weight="600">-3</text>
+  <text x="804" y="884" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">flag</text>
+  
+  <!-- isTruncated -->
+  <rect x="960" y="800" width="200" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="960" y="800" width="200" height="90" rx="4" fill="none" stroke="#2d0a0a" stroke-width="1"/>
+  <rect x="960" y="800" width="200" height="28" rx="4" fill="#1a0808"/>
+  <rect x="960" y="827" width="200" height="1" fill="#f87171" opacity="0.2"/>
+  <text x="1060" y="820" text-anchor="middle" fill="#f87171" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">isTruncated</text>
+  <text x="978" y="848" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">Content cut off mid-</text>
+  <text x="978" y="862" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">sentence/paragraph</text>
+  <rect x="978" y="872" width="38" height="16" rx="8" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.4"/>
+  <text x="997" y="884" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', monospace" font-size="9" font-weight="600">-2</text>
+  <text x="1024" y="884" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">quality</text>
+  
+  <!-- hasHighNavRatio -->
+  <rect x="1180" y="800" width="220" height="90" rx="4" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="1180" y="800" width="220" height="90" rx="4" fill="none" stroke="#2d0a0a" stroke-width="1"/>
+  <rect x="1180" y="800" width="220" height="28" rx="4" fill="#1a0808"/>
+  <rect x="1180" y="827" width="220" height="1" fill="#f87171" opacity="0.2"/>
+  <text x="1290" y="820" text-anchor="middle" fill="#f87171" font-family="'SF Mono', Monaco, monospace" font-size="12" font-weight="500">hasHighNavRatio</text>
+  <text x="1198" y="848" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">&gt;50% links are nav links</text>
+  <text x="1198" y="862" fill="#505050" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="300">(header/footer/sidebar)</text>
+  <rect x="1198" y="872" width="38" height="16" rx="8" fill="url(#falseGrad)" stroke="#f87171" stroke-width="0.4"/>
+  <text x="1217" y="884" text-anchor="middle" fill="#fca5a5" font-family="'SF Mono', monospace" font-size="9" font-weight="600">-2</text>
+  <text x="1244" y="884" fill="#404040" font-family="'Avenir Next', sans-serif" font-size="9" font-weight="300">article penalty</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- Footer: Boolean Aggregation Pipeline - Rolls Royce Dashboard Style -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <rect x="50" y="920" width="1500" height="115" rx="6" fill="url(#cardGradient)" filter="url(#luxuryShadow)"/>
+  <rect x="50" y="920" width="1500" height="115" rx="6" fill="none" stroke="#252525" stroke-width="1"/>
+  <rect x="50" y="920" width="1500" height="115" rx="6" fill="none" stroke="url(#goldAccent)" stroke-width="0.5" opacity="0.6"/>
+  
+  <!-- Subtle pinstripe overlay -->
+  <rect x="50" y="920" width="1500" height="115" rx="6" fill="url(#pinstripe)" opacity="0.4"/>
+  
+  <text x="800" y="950" text-anchor="middle" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="15" font-weight="300" letter-spacing="6">AGGREGATION PIPELINE</text>
+  
+  <!-- Premium pipeline steps -->
+  <rect x="90" y="970" width="130" height="40" rx="20" fill="#0a0a0a" stroke="#34d399" stroke-width="0.5"/>
+  <rect x="90" y="970" width="130" height="40" rx="20" fill="none" stroke="url(#goldAccent)" stroke-width="0.3" opacity="0.3"/>
+  <text x="155" y="995" text-anchor="middle" fill="#6ee7b7" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="400">Collect TRUE</text>
+  
+  <path d="M230 990 L270 990" stroke="#303030" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="280" y="970" width="130" height="40" rx="20" fill="#0a0a0a" stroke="#f87171" stroke-width="0.5"/>
+  <rect x="280" y="970" width="130" height="40" rx="20" fill="none" stroke="url(#goldAccent)" stroke-width="0.3" opacity="0.3"/>
+  <text x="345" y="995" text-anchor="middle" fill="#fca5a5" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="400">Collect FALSE</text>
+  
+  <path d="M420 990 L460 990" stroke="#303030" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="470" y="970" width="150" height="40" rx="20" fill="#0a0a0a" stroke="url(#roseGold)" stroke-width="0.5"/>
+  <rect x="470" y="970" width="150" height="40" rx="20" fill="none" stroke="url(#goldAccent)" stroke-width="0.3" opacity="0.3"/>
+  <text x="545" y="995" text-anchor="middle" fill="url(#roseGold)" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="400">Apply Weights</text>
+  
+  <path d="M630 990 L670 990" stroke="#303030" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="680" y="970" width="140" height="40" rx="20" fill="#0a0a0a" stroke="#707070" stroke-width="0.5"/>
+  <rect x="680" y="970" width="140" height="40" rx="20" fill="none" stroke="url(#goldAccent)" stroke-width="0.3" opacity="0.3"/>
+  <text x="750" y="995" text-anchor="middle" fill="#909090" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="400">Sum Scores</text>
+  
+  <path d="M830 990 L870 990" stroke="#303030" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="880" y="970" width="160" height="40" rx="20" fill="#0a0a0a" stroke="url(#champagneGold)" stroke-width="0.5"/>
+  <rect x="880" y="970" width="160" height="40" rx="20" fill="none" stroke="url(#goldAccent)" stroke-width="0.3" opacity="0.3"/>
+  <text x="960" y="995" text-anchor="middle" fill="url(#champagneGold)" font-family="'Avenir Next', sans-serif" font-size="10" font-weight="400">Apply Thresholds</text>
+  
+  <path d="M1050 990 L1090 990" stroke="#303030" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <!-- Final decision - premium jewel styling -->
+  <rect x="1100" y="965" width="180" height="50" rx="25" fill="#0a0a0a" stroke="url(#goldAccent)" stroke-width="1.5"/>
+  <rect x="1102" y="967" width="176" height="46" rx="23" fill="none" stroke="#1a1a1a" stroke-width="1"/>
+  <text x="1190" y="986" text-anchor="middle" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="11" font-weight="400" letter-spacing="2">CLASSIFICATION</text>
+  <text x="1190" y="1002" text-anchor="middle" fill="url(#champagneGold)" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="11" font-weight="400" letter-spacing="2">DECISION</text>
+  
+  <!-- Threshold reference -->
+  <rect x="1320" y="975" width="180" height="30" rx="15" fill="#0a0a0a" stroke="#303030" stroke-width="0.5"/>
+  <text x="1410" y="995" text-anchor="middle" fill="#404040" font-family="'SF Mono', Monaco, monospace" font-size="9">article ≥5 │ hub ≥3</text>
+  
+  <!-- Version - elegant branding -->
+  <text x="1520" y="1065" text-anchor="end" fill="#202020" font-family="Didot, 'Playfair Display', Georgia, serif" font-size="9" font-weight="300" letter-spacing="2">BOOLEAN DECISIONS v1.0</text>
+</svg>

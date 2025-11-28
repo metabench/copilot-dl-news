@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1221"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="accent-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="accent-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 L2,4 Z" fill="#a5b4fc"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <text x="700" y="56" fill="#e5e7eb" font-size="30" font-weight="700" text-anchor="middle">UI Dashboard Routing</text>
+  <text x="700" y="80" fill="#94a3b8" font-size="14" text-anchor="middle">Split home dashboard vs /urls listing, keep telemetry + activation clean</text>
+
+  <!-- Home -->
+  <rect x="70" y="130" width="380" height="660" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <text x="100" y="160" fill="#cbd5e1" font-size="16" font-weight="700">Home Dashboard</text>
+  <g transform="translate(90,180)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-blue)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Cards &amp; Metrics</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">jobs feed • crawler status • Diagram Atlas refresh</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">no listing controls rendered here</text>
+  </g>
+  <g transform="translate(90,340)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Navigation</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">Primary CTAs route to /urls (listing) and Diagram Atlas</text>
+    <text x="20" y="74" fill="#9ca3af" font-size="12">Avoid rendering listing store bundles here</text>
+  </g>
+  <g transform="translate(90,500)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Telemetry</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">Status from CLI hooks; diagram refresh indicator</text>
+    <text x="20" y="74" fill="#9ca3af" font-size="12">Lightweight; no table hydration</text>
+  </g>
+
+  <!-- Listing -->
+  <rect x="510" y="130" width="380" height="660" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <text x="540" y="160" fill="#cbd5e1" font-size="16" font-weight="700">/urls Listing</text>
+  <g transform="translate(530,180)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-green)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Registry + Store Active</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">control registry seeded server-side</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">listing state store hydrated</text>
+  </g>
+  <g transform="translate(530,340)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-amber)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Controls Rendered</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">UrlListingTable • UrlFilterToggle • PagerButton</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">classification badges + queue signals</text>
+  </g>
+  <g transform="translate(530,500)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Data Flow</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">/api/urls drives store → controls re-render</text>
+    <text x="20" y="74" fill="#9ca3af" font-size="12">Predicted vs verified badges sourced from `url_classifications`</text>
+  </g>
+
+  <!-- Routing -->
+  <rect x="950" y="130" width="380" height="660" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <text x="980" y="160" fill="#cbd5e1" font-size="16" font-weight="700">Routing &amp; Guards</text>
+  <g transform="translate(970,180)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Entry Points</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">Home → lightweight bundle (no listing)</text>
+    <text x="20" y="74" fill="#9ca3af" font-size="12">/urls → registry + store + controls bundle</text>
+  </g>
+  <g transform="translate(970,340)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-blue)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Guardrails</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">no listing store on home</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">no fallback activation path</text>
+  </g>
+  <g transform="translate(970,500)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-green)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Navigation UX</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">tabs/links highlight active route</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">preserve filters when returning to /urls</text>
+  </g>
+
+  <!-- Arrows -->
+  <g stroke="#a5b4fc" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M370 300 H510"/>
+    <path d="M370 360 H510" />
+    <path d="M370 540 H510"/>
+    <path d="M890 240 H970"/>
+    <path d="M890 400 H970"/>
+    <path d="M890 560 H970"/>
+  </g>
+
+  <!-- Labels -->
+  <g fill="#cbd5e1" font-size="12" font-weight="600">
+    <text x="440" y="290" text-anchor="middle">CTA to /urls</text>
+    <text x="440" y="350" text-anchor="middle">no store on home</text>
+    <text x="440" y="530" text-anchor="middle">status-only data</text>
+    <text x="930" y="230" text-anchor="middle">select bundle</text>
+    <text x="930" y="390" text-anchor="middle">guard check</text>
+    <text x="930" y="550" text-anchor="middle">active nav + state</text>
+  </g>
+</svg>

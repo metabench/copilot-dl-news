@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1221"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="accent-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="accent-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="accent-rose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 L2,4 Z" fill="#a5b4fc"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="820" fill="url(#bg)"/>
+  <text x="600" y="52" fill="#e5e7eb" font-size="30" font-weight="700" text-anchor="middle">URL Pattern Learning Loop</text>
+  <text x="600" y="76" fill="#94a3b8" font-size="14" text-anchor="middle">Verified content → pattern extraction → accuracy → decay/relearn → prediction feed</text>
+
+  <!-- Nodes -->
+  <g transform="translate(120,150)">
+    <rect width="220" height="110" rx="14" fill="url(#accent-blue)" filter="url(#shadow)"/>
+    <text x="110" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1221">Verified URLs</text>
+    <text x="110" y="56" text-anchor="middle" font-size="11" fill="#0b1221">urls + http_responses +</text>
+    <text x="110" y="74" text-anchor="middle" font-size="11" fill="#0b1221">content_analysis.classification</text>
+  </g>
+
+  <g transform="translate(450,150)">
+    <rect width="260" height="110" rx="14" fill="url(#accent-green)" filter="url(#shadow)"/>
+    <text x="130" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1221">Pattern Extraction</text>
+    <text x="130" y="54" text-anchor="middle" font-size="11" fill="#0b1221">UrlPatternLearningService</text>
+    <text x="130" y="74" text-anchor="middle" font-size="11" fill="#0b1221">year → \d{4}, slug → [a-z0-9-]+, hash → [a-f0-9]+</text>
+  </g>
+
+  <g transform="translate(820,150)">
+    <rect width="230" height="110" rx="14" fill="url(#accent-amber)" filter="url(#shadow)"/>
+    <text x="115" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1221">Pattern Store</text>
+    <text x="115" y="52" text-anchor="middle" font-size="11" fill="#0b1221">url_classification_patterns</text>
+    <text x="115" y="72" text-anchor="middle" font-size="11" fill="#0b1221">accuracy • sample_count • domain</text>
+  </g>
+
+  <g transform="translate(820,360)">
+    <rect width="230" height="110" rx="14" fill="url(#accent-blue)" filter="url(#shadow)"/>
+    <text x="115" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1221">Domain Profiles</text>
+    <text x="115" y="54" text-anchor="middle" font-size="11" fill="#0b1221">domain_classification_profiles</text>
+    <text x="115" y="74" text-anchor="middle" font-size="11" fill="#0b1221">common sections, depth, cadence</text>
+  </g>
+
+  <g transform="translate(450,570)">
+    <rect width="260" height="110" rx="14" fill="url(#accent-amber)" filter="url(#shadow)"/>
+    <text x="130" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1221">Prediction Feed</text>
+    <text x="130" y="54" text-anchor="middle" font-size="11" fill="#0b1221">UrlClassificationService consumes</text>
+    <text x="130" y="74" text-anchor="middle" font-size="11" fill="#0b1221">patterns + profiles for prefetch scoring</text>
+  </g>
+
+  <g transform="translate(120,360)">
+    <rect width="220" height="110" rx="14" fill="url(#accent-rose)" filter="url(#shadow)"/>
+    <text x="110" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1221">Accuracy Refresh</text>
+    <text x="110" y="54" text-anchor="middle" font-size="11" fill="#0b1221">verified_at updates → correctness</text>
+    <text x="110" y="74" text-anchor="middle" font-size="11" fill="#0b1221">decay stale patterns, re-learn nightly</text>
+  </g>
+
+  <!-- Arrows -->
+  <g stroke="#a5b4fc" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M340 205 H450"/>
+    <path d="M710 205 H820"/>
+    <path d="M930 260 V360"/>
+    <path d="M820 415 H340 V415"/>
+    <path d="M230 470 C230 540 360 610 450 625"/>
+    <path d="M710 625 C820 625 930 550 930 470"/>
+    <path d="M580 260 V570"/>
+  </g>
+
+  <!-- Labels -->
+  <g fill="#cbd5e1" font-size="12" font-weight="600">
+    <text x="395" y="190" text-anchor="middle">verified content</text>
+    <text x="685" y="190" text-anchor="middle">regex-like pattern</text>
+    <text x="930" y="330" text-anchor="middle">domain-level rollups</text>
+    <text x="230" y="330" text-anchor="middle">verification results</text>
+    <text x="580" y="550" text-anchor="middle">high-confidence patterns flow to predictions</text>
+  </g>
+</svg>

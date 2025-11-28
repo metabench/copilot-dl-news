@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1221"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accent-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="accent-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="accent-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 L2,4 Z" fill="#a5b4fc"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <text x="700" y="56" fill="#e5e7eb" font-size="30" font-weight="700" text-anchor="middle">jsgui3 Activation Flow</text>
+  <text x="700" y="80" fill="#94a3b8" font-size="14" text-anchor="middle">SSR seeds registry → client hydrate → shared listing state → controls activate</text>
+
+  <!-- SSR -->
+  <rect x="70" y="130" width="380" height="640" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <text x="100" y="160" fill="#cbd5e1" font-size="16" font-weight="700">Server-Side Rendering</text>
+  <g transform="translate(90,180)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#9ca3af" font-size="12">`dataExplorerServer.js`</text>
+    <text x="20" y="54" fill="#e5e7eb" font-size="13" font-weight="700">Seed Control Registry</text>
+    <text x="20" y="76" fill="#9ca3af" font-size="12">Page_Context registers UrlListingTable, UrlFilterToggle, PagerButton</text>
+  </g>
+  <g transform="translate(90,330)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Embed Listing State Snapshot</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">SSR injects initial listing store (filters, page, diagnostics) into HTML</text>
+  </g>
+  <g transform="translate(90,480)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Bundle Injection</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">`client/index.js` loaded with control maps + store snapshot</text>
+  </g>
+
+  <!-- Client -->
+  <rect x="510" y="130" width="380" height="640" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <text x="540" y="160" fill="#cbd5e1" font-size="16" font-weight="700">Client Hydration</text>
+  <g transform="translate(530,180)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-cyan)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Control Registry Activation</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">hydrate controls from seeded map</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">no manual fallback path</text>
+  </g>
+  <g transform="translate(530,330)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-amber)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">Shared Listing Store</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">toggles • tables • diagnostics • pagers</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">hydrates from SSR snapshot</text>
+  </g>
+  <g transform="translate(530,480)">
+    <rect width="320" height="120" rx="12" fill="url(#accent-green)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#0b1221">API Sync Loop</text>
+    <text x="160" y="54" text-anchor="middle" font-size="12" fill="#0b1221">/api/urls updates store → controls re-render</text>
+    <text x="160" y="74" text-anchor="middle" font-size="12" fill="#0b1221">emits diagnostics for Diagram Atlas/telemetry</text>
+  </g>
+  <g transform="translate(530,630)">
+    <rect width="320" height="120" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Controls</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">UrlListingTable • UrlFilterToggle • PagerButton • DiagnosticsPanel</text>
+    <text x="20" y="76" fill="#9ca3af" font-size="12">Activated via hydrated registry using Page_Context</text>
+  </g>
+
+  <!-- Navigation -->
+  <rect x="950" y="130" width="380" height="260" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <text x="980" y="160" fill="#cbd5e1" font-size="16" font-weight="700">Navigation &amp; Routing</text>
+  <g transform="translate(970,180)">
+    <rect width="320" height="90" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">Home Dashboard</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">cards + telemetry; no listing</text>
+  </g>
+  <g transform="translate(970,280)">
+    <rect width="320" height="90" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#e5e7eb" font-size="13" font-weight="700">/urls Listing</text>
+    <text x="20" y="54" fill="#9ca3af" font-size="12">registry + store + controls active</text>
+  </g>
+
+  <!-- Arrows -->
+  <g stroke="#a5b4fc" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M450 240 H530"/>
+    <path d="M450 390 H530"/>
+    <path d="M450 540 H530"/>
+    <path d="M850 240 H970"/>
+    <path d="M850 570 C950 570 990 640 990 680"/>
+  </g>
+
+  <!-- Labels -->
+  <g fill="#cbd5e1" font-size="12" font-weight="600">
+    <text x="490" y="220" text-anchor="middle">control registry hydration</text>
+    <text x="490" y="370" text-anchor="middle">store snapshot</text>
+    <text x="490" y="520" text-anchor="middle">bundle + data</text>
+    <text x="910" y="230" text-anchor="middle">navigation state</text>
+    <text x="930" y="650" text-anchor="middle">telemetry (Diagram Atlas)</text>
+  </g>
+</svg>

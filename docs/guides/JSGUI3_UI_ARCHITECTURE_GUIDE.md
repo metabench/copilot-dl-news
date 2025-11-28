@@ -20,6 +20,8 @@
 10. [Common Patterns](#common-patterns)
 11. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
 12. [Quick Reference](#quick-reference)
+13. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -139,9 +141,8 @@ await esbuild.build({
   bundle: true,
   platform: "browser",
   format: "iife",
-  alias: {
-    "jsgui3-client": vendorClientPath  // Maps to vendor/jsgui3-client/client.js
-  }
+  // jsgui3-client from npm (v0.0.121+) has browser compatibility fixes
+  // No special aliasing needed - just require("jsgui3-client")
 });
 ```
 
@@ -1375,6 +1376,140 @@ class EverythingControl extends jsgui.Control {
 
 **Good**: Every control has a check script that verifies rendering.
 
+### ❌ 7. Interactive Components as Plain JS/CSS (Context Menu Case Study)
+
+**Bad**: Building interactive components (context menus, tooltips, modals) as plain JavaScript functions with CSS.
+
+```javascript
+// ❌ Avoid: Context menu as plain JS
+function showColumnContextMenu(x, y) {
+  const menu = document.querySelector("[data-context-menu='columns']");
+  menu.style.display = "block";
+  menu.style.left = x + "px";
+  menu.style.top = y + "px";
+  
+  // 40 more lines of positioning, event handling, keyboard nav...
+  document.addEventListener("click", closeOnClickOutside);
+  document.addEventListener("keydown", closeOnEscape);
+}
+
+function hideColumnContextMenu() {
+  const menu = document.querySelector("[data-context-menu='columns']");
+  menu.style.display = "none";
+}
+```
+
+**Why this is wrong**:
+- Not testable with check scripts
+- Event handlers scattered across global scope
+- Can't reuse for other context menus (row actions, toolbar options)
+- No clear ownership of state (open/closed)
+- `js-scan` can't track dependencies
+
+**Good**: Extract to a dedicated `ContextMenuControl`.
+
+```javascript
+// ✅ Better: Dedicated control class
+// src/ui/controls/ContextMenuControl.js
+
+class ContextMenuControl extends jsgui.Control {
+  constructor(spec = {}) {
+    super({ ...spec, tagName: "div", __type_name: "context_menu" });
+    this.add_class("context-menu");
+    this.items = spec.items || [];
+    this.onSelect = spec.onSelect || (() => {});
+    if (!spec.el) this.compose();
+  }
+  
+  compose() {
+    for (const item of this.items) {
+      const menuItem = new ContextMenuItemControl({
+        context: this.context,
+        label: item.label,
+        icon: item.icon,      // 🔍 for search, ⚙️ for settings, etc.
+        checked: item.checked,
+        value: item.value
+      });
+      this.add(menuItem);
+    }
+  }
+  
+  activate() {
+    if (this.__active) return;
+    this.__active = true;
+    this._bindClickOutside();
+    this._bindKeyboardNav();
+    this._bindItemSelection();
+  }
+  
+  show(x, y) {
+    const el = this.dom?.el;
+    if (!el) return;
+    el.style.display = "block";
+    this._positionAt(x, y);
+  }
+  
+  hide() {
+    const el = this.dom?.el;
+    if (el) el.style.display = "none";
+  }
+}
+```
+
+**Benefits of extraction**:
+- ✅ Testable: Check script verifies menu renders with correct items
+- ✅ Reusable: Same control for column options, row actions, any dropdown
+- ✅ Maintainable: Event handlers live with the component
+- ✅ Discoverable: `js-scan --what-imports ContextMenuControl.js` shows all usages
+- ✅ Type-safe: Props documented in JSDoc
+
+### ❌ 8. Missing Visual Affordances (No Icons)
+
+**Bad**: Interactive elements with text-only labels that users can't quickly scan.
+
+```javascript
+// ❌ Avoid: No visual cue for action type
+const button = new jsgui.Control({ context: this.context, tagName: "button" });
+button.add("Options");  // User must read to understand
+```
+
+**Good**: Use emoji icons for instant visual recognition.
+
+```javascript
+// ✅ Better: Emoji provides instant recognition
+const button = new jsgui.Control({ context: this.context, tagName: "button" });
+button.add("⚙️ Options");  // Gear = settings, instantly clear
+
+// Or with dedicated icon element
+const icon = new jsgui.Control({ context: this.context, tagName: "span" });
+icon.add_class("btn__icon");
+icon.add("🔍");
+button.add(icon);
+button.add(" Search");
+```
+
+**Standard emoji vocabulary for UI**:
+
+| Action | Emoji | Notes |
+|--------|-------|-------|
+| Search | 🔍 | Magnifying glass - universal |
+| Settings/Options | ⚙️ | Gear - configuration |
+| Add/Create | ➕ | Plus sign |
+| Delete | 🗑️ | Trash can |
+| Edit | ✏️ | Pencil |
+| Refresh | 🔄 | Circular arrows |
+| Sort asc | ▲ | Triangle up |
+| Sort desc | ▼ | Triangle down |
+| Menu | ☰ | Hamburger |
+| More options | ⋮ | Kebab (vertical dots) |
+| Close | ✕ | X mark |
+| Success | ✅ | Check mark |
+| Error | ❌ | X in circle |
+| Warning | ⚠️ | Triangle alert |
+| Info | ℹ️ | Information |
+| Folder | 📁 | Directory |
+| File | 📄 | Document |
+
 ---
 
 ## Quick Reference
@@ -1485,3 +1620,205 @@ control.add_class("toolbar__button--active");
 8. **Extract reusable pieces** - prefer small, focused controls over inline compositions
 9. **Verify with check scripts** - every control should have a verification script
 10. **Use BEM naming** - consistent CSS class naming improves maintainability
+
+---
+
+## Client-Side Activation Flow (CRITICAL)
+
+> ⚠️ **This section documents hard-won knowledge from debugging jsgui3 activation issues. Future agents: READ THIS BEFORE working on client-side jsgui3 code.**
+
+### The Problem
+
+When rendering jsgui3 controls on the client side (e.g., in Electron or browser), calling `app.activate()` after `innerHTML = html` often **fails silently**. Event handlers don't bind, and `this.dom.el` is `null` in controls.
+
+### Root Cause
+
+jsgui3 requires a specific activation sequence:
+
+1. Controls must be **registered** in `context.map_controls`
+2. Control instances must be **linked** to their DOM elements (`this.dom.el`)
+3. Only then will `activate()` properly bind events
+
+The `all_html_render()` method generates HTML with `data-jsgui-id` attributes, but it does NOT automatically link controls to DOM elements.
+
+### The Solution: Proper Activation Sequence
+
+```javascript
+// ❌ WRONG - This will NOT work properly
+const html = app.all_html_render();
+rootEl.innerHTML = html;
+app.activate();  // DOM refs are null!
+
+// ✅ CORRECT - Proper activation sequence
+const html = app.all_html_render();
+rootEl.innerHTML = html;
+
+// Step 1: Register ALL controls in context.map_controls
+app.register_this_and_subcontrols();
+
+// Step 2: Find and link the root control's DOM element
+const appEl = rootEl.querySelector('[data-jsgui-id="' + app._id() + '"]');
+app.dom.el = appEl;
+
+// Step 3: Recursively link ALL child controls to their DOM elements
+app.rec_desc_ensure_ctrl_el_refs(appEl);
+
+// Step 4: NOW activate (event binding will work)
+app.activate();
+```
+
+### Key Methods Explained
+
+| Method | What it does | Why it's needed |
+|--------|-------------|------------------|
+| `register_this_and_subcontrols()` | Adds control + children to `context.map_controls` | Required for `activate()` to find controls |
+| `rec_desc_ensure_ctrl_el_refs(el)` | Recursively links `ctrl.dom.el` to DOM elements by `data-jsgui-id` | Without this, `this.dom.el` is null |
+| `_id()` | Returns the control's jsgui id (e.g., `"zserver_app_0"`) | Used to find DOM element |
+
+### Dynamic Control Updates
+
+When creating new controls after initial render (e.g., populating a list):
+
+```javascript
+setItems(items) {
+  this._items = items;
+  
+  if (this.dom.el) {
+    // Already rendered - must update DOM properly
+    this.dom.el.innerHTML = '';
+    
+    items.forEach(item => {
+      const ctrl = new ItemControl({ context: this.context, item });
+      
+      // Step 1: Register new control
+      ctrl.register_this_and_subcontrols();
+      
+      // Step 2: Render and insert HTML
+      const itemHtml = ctrl.all_html_render();
+      this.dom.el.insertAdjacentHTML('beforeend', itemHtml);
+      
+      // Step 3: Find and link DOM element
+      const itemEl = this.dom.el.querySelector('[data-jsgui-id="' + ctrl._id() + '"]');
+      ctrl.dom.el = itemEl;
+      this.context.map_els[ctrl._id()] = itemEl;
+      
+      // Step 4: Link children
+      if (ctrl.rec_desc_ensure_ctrl_el_refs) {
+        ctrl.rec_desc_ensure_ctrl_el_refs(itemEl);
+      }
+      
+      // Step 5: Activate
+      ctrl.activate();
+    });
+  }
+}
+```
+
+### How jsgui3 Finds DOM Elements (Internal Detail)
+
+Inside `activate()` and `pre_activate()`, jsgui3 tries to find DOM elements via:
+
+```javascript
+let found_el = this.context.get_ctrl_el(this) 
+  || this.context.map_els[this._id()] 
+  || document.querySelectorAll('[data-jsgui-id="' + this._id() + '"]')[0];
+```
+
+The DOM query fallback exists but is unreliable for nested controls. Always use `rec_desc_ensure_ctrl_el_refs()` for proper initialization.
+
+### Complete Working Example (Electron App)
+
+```javascript
+// renderer.src.js - Electron renderer process entry
+"use strict";
+
+// Fix for jsgui3-client bug
+if (typeof window !== 'undefined') {
+    window.page_context = null;
+}
+
+const jsgui = require("jsgui3-client");
+const { MyAppControl } = require("./controls");
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const context = new jsgui.Client_Page_Context();
+  
+  const app = new MyAppControl({
+    context,
+    api: window.electronAPI
+  });
+  
+  const rootEl = document.getElementById("app-root");
+  const html = app.all_html_render();
+  rootEl.innerHTML = html;
+  
+  // CRITICAL: Proper activation sequence
+  app.register_this_and_subcontrols();
+  console.log("Controls registered:", Object.keys(context.map_controls).length);
+  
+  const appEl = rootEl.querySelector('[data-jsgui-id="' + app._id() + '"]');
+  if (appEl) {
+    app.dom.el = appEl;
+    app.rec_desc_ensure_ctrl_el_refs(appEl);
+    console.log("DOM elements linked:", Object.keys(context.map_els).length);
+  }
+  
+  app.activate();
+  await app.init();
+});
+```
+
+### Debugging Checklist
+
+If controls aren't working after render:
+
+- [ ] Did you call `register_this_and_subcontrols()` before `activate()`?
+- [ ] Did you link the root element: `app.dom.el = appEl`?
+- [ ] Did you call `rec_desc_ensure_ctrl_el_refs(appEl)`?
+- [ ] Check `console.log(Object.keys(context.map_controls).length)` - should match control count
+- [ ] Check `console.log(Object.keys(context.map_els).length)` - should be close to control count
+- [ ] In your control's method, check `console.log("DOM el:", this.dom.el)` - should NOT be null
+
+---
+
+## Troubleshooting
+
+### Known Issues
+
+#### Controls don't respond to clicks / `this.dom.el` is null
+
+**Symptom**: Controls render visually but event handlers don't fire. `this.dom.el` is `null` or `undefined` inside control methods.
+
+**Cause**: Missing activation sequence steps. The `all_html_render()` method generates HTML but does NOT link Control instances to DOM elements.
+
+**Solution**: Follow the complete activation sequence in the [Client-Side Activation Flow](#client-side-activation-flow-critical) section above.
+
+```javascript
+// ALWAYS do all 4 steps:
+app.register_this_and_subcontrols();  // 1. Register
+app.dom.el = rootEl.querySelector('[data-jsgui-id="' + app._id() + '"]');  // 2. Link root
+app.rec_desc_ensure_ctrl_el_refs(app.dom.el);  // 3. Link children
+app.activate();  // 4. Activate
+```
+
+#### jsgui3-client: `page_context` ReferenceError
+
+**Symptom**: `ReferenceError: page_context is not defined` during client-side activation.
+**Cause**: A bug in `jsgui3-client` (v0.0.121+) where `page_context` is assigned without declaration in the `activate` function.
+**Workaround**: Define `page_context` globally before loading `jsgui3-client`.
+
+```javascript
+// In your client entry point (e.g., renderer.src.js)
+if (typeof window !== 'undefined') {
+    window.page_context = null; // Fix for jsgui3-client bug
+}
+const jsgui = require("jsgui3-client");
+```
+
+#### "Missing context.map_Controls for type X"
+
+**Symptom**: Console logs `"Missing context.map_Controls for type my_control, using generic Control"`
+
+**Cause**: jsgui3's internal activation tries to reconstruct controls from DOM but can't find the custom control types. This is informational - your controls are still registered via `register_this_and_subcontrols()`.
+
+**Solution**: This warning is harmless if you're using the proper activation sequence. The custom controls are already instantiated - jsgui3 is just warning that it can't re-instantiate them from DOM alone.

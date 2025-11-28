@@ -1,6 +1,11 @@
 "use strict";
 
 /**
+ * @server Docs Viewer
+ * @description A jsgui3 + Express web app to view markdown documentation with a 2-column layout.
+ */
+
+/**
  * Documentation Viewer Server
  * 
  * A jsgui3 + Express web app to view markdown documentation
@@ -17,8 +22,8 @@ const express = require("express");
 const jsgui = require("jsgui3-html");
 const { Command } = require("commander");
 
-const { DocAppControl } = require("./controls/DocAppControl");
-const { buildDocTree } = require("./utils/docTree");
+const { DocAppControl } = require("./isomorphic/controls");
+const { buildDocTree, sortTree } = require("./utils/docTree");
 const { renderMarkdown } = require("./utils/markdownRenderer");
 const { renderSvgContent } = require("./utils/svgRenderer");
 
@@ -180,6 +185,20 @@ function createDocsViewerServer(options = {}) {
         md: req.query.show_md !== "0",
         svg: req.query.show_svg !== "0"
       };
+      
+      // Parse column visibility from URL params
+      // ?col_mtime=1 means show the Last Modified column
+      const columns = {
+        mtime: req.query.col_mtime === "1"
+      };
+      
+      // Parse sorting from URL params
+      // ?sort_by=mtime&sort_order=desc
+      const sortBy = req.query.sort_by || 'name';
+      const sortOrder = req.query.sort_order || 'asc';
+      
+      // Clone and sort the tree based on params
+      const sortedTree = sortTree(JSON.parse(JSON.stringify(docTree)), sortBy, sortOrder);
 
       const context = new jsgui.Page_Context();
       
@@ -190,15 +209,21 @@ function createDocsViewerServer(options = {}) {
 
       const docApp = new DocAppControl({
         context,
-        docTree,
+        docTree: sortedTree,
         selectedPath,
         docContent,
-        filters
+        filters,
+        columns,
+        sortBy,
+        sortOrder
       });
 
       const html = renderPage(docApp, { 
         title: docContent?.title || "Documentation Viewer",
-        filters
+        filters,
+        columns,
+        sortBy,
+        sortOrder
       });
       res.type("html").send(html);
     } catch (err) {
@@ -314,6 +339,9 @@ function countDocs(tree) {
 function renderPage(control, options = {}) {
   const title = options.title || "Documentation Viewer";
   const filters = options.filters || { md: true, svg: true };
+  const columns = options.columns || { mtime: false };
+  const sortBy = options.sortBy || 'name';
+  const sortOrder = options.sortOrder || 'asc';
   const html = control.all_html_render();
   
   // Check if jsgui3 client bundle exists
@@ -324,8 +352,12 @@ function renderPage(control, options = {}) {
     ? '<!-- jsgui3 client bundle for control activation -->\n  <script src="/assets/docs-viewer-client.js"></script>'
     : '<!-- jsgui3 client bundle not built - run: npm run ui:docs:build -->';
   
-  // Embed filter state for client-side hydration
-  const filterStateScript = `<script>window.__DOCS_FILTERS__ = ${JSON.stringify(filters)};</script>`;
+  // Embed state for client-side hydration
+  const stateScript = `<script>
+    window.__DOCS_FILTERS__ = ${JSON.stringify(filters)};
+    window.__DOCS_COLUMNS__ = ${JSON.stringify(columns)};
+    window.__DOCS_SORT__ = { sortBy: ${JSON.stringify(sortBy)}, sortOrder: ${JSON.stringify(sortOrder)} };
+  </script>`;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -337,7 +369,7 @@ function renderPage(control, options = {}) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manufacturing+Consent&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/docs-viewer.css">
-  ${filterStateScript}
+  ${stateScript}
 </head>
 <body>
   ${html}

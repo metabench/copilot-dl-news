@@ -1,0 +1,387 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1200">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1E3A5F"/>
+      <stop offset="100%" style="stop-color:#2563EB"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1F2937"/>
+      <stop offset="100%" style="stop-color:#111827"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="1200" fill="#0D1117"/>
+  
+  <!-- Subtle grid -->
+  <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1F2937" stroke-width="0.3"/>
+  </pattern>
+  <rect width="1400" height="1200" fill="url(#grid)" opacity="0.5"/>
+  
+  <!-- Header -->
+  <rect x="40" y="30" width="1320" height="70" rx="10" fill="url(#headerGrad)" filter="url(#shadow)"/>
+  <text x="700" y="58" text-anchor="middle" fill="#F9FAFB" font-family="system-ui" font-size="24" font-weight="700">📊 Page Stats Display</text>
+  <text x="700" y="82" text-anchor="middle" fill="#93C5FD" font-family="system-ui" font-size="13">Comprehensive view of all extracted signals for a single page</text>
+  
+  <!-- URL Bar -->
+  <rect x="40" y="115" width="1320" height="45" rx="8" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <text x="60" y="143" fill="#6B7280" font-family="system-ui" font-size="12">URL:</text>
+  <text x="95" y="143" fill="#60A5FA" font-family="monospace" font-size="13">https://example-news.com/world/2025/11/climate-summit-breakthrough-agreement</text>
+  <rect x="1240" y="125" width="100" height="25" rx="4" fill="#065F46"/>
+  <text x="1290" y="142" text-anchor="middle" fill="#A7F3D0" font-family="system-ui" font-size="11" font-weight="600">✓ ARTICLE</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ROW 1: URL Stats + Content Stats -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- URL Stats Card -->
+  <rect x="40" y="175" width="440" height="320" rx="10" fill="url(#cardGrad)" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="175" width="440" height="40" rx="10" fill="#1E40AF"/>
+  <text x="260" y="202" text-anchor="middle" fill="#BFDBFE" font-family="system-ui" font-size="15" font-weight="600">🔗 URL Stats</text>
+  
+  <!-- URL stat rows -->
+  <text x="60" y="240" fill="#9CA3AF" font-family="system-ui" font-size="11">STRUCTURE</text>
+  <line x1="60" y1="248" x2="460" y2="248" stroke="#374151" stroke-width="1"/>
+  
+  <text x="60" y="270" fill="#D1D5DB" font-family="system-ui" font-size="12">Host</text>
+  <text x="460" y="270" text-anchor="end" fill="#60A5FA" font-family="monospace" font-size="12">example-news.com</text>
+  
+  <text x="60" y="292" fill="#D1D5DB" font-family="system-ui" font-size="12">Path Depth</text>
+  <text x="460" y="292" text-anchor="end" fill="#60A5FA" font-family="monospace" font-size="12">4</text>
+  
+  <text x="60" y="314" fill="#D1D5DB" font-family="system-ui" font-size="12">Path Segments</text>
+  <text x="460" y="314" text-anchor="end" fill="#60A5FA" font-family="monospace" font-size="11">world → 2025 → 11 → climate-summit...</text>
+  
+  <text x="60" y="336" fill="#D1D5DB" font-family="system-ui" font-size="12">Query Params</text>
+  <text x="460" y="336" text-anchor="end" fill="#6B7280" font-family="monospace" font-size="12">none</text>
+  
+  <text x="60" y="370" fill="#9CA3AF" font-family="system-ui" font-size="11">PATTERNS DETECTED</text>
+  <line x1="60" y1="378" x2="460" y2="378" stroke="#374151" stroke-width="1"/>
+  
+  <rect x="60" y="390" width="90" height="24" rx="4" fill="#065F46"/>
+  <text x="105" y="407" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="10">dateSegment</text>
+  
+  <rect x="158" y="390" width="75" height="24" rx="4" fill="#065F46"/>
+  <text x="196" y="407" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="10">slugPattern</text>
+  
+  <rect x="241" y="390" width="80" height="24" rx="4" fill="#065F46"/>
+  <text x="281" y="407" text-anchor="middle" fill="#6EE7B7" font-family="monospace" font-size="10">categoryPath</text>
+  
+  <rect x="60" y="420" width="70" height="24" rx="4" fill="#7F1D1D"/>
+  <text x="95" y="437" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">numericId</text>
+  
+  <rect x="138" y="420" width="75" height="24" rx="4" fill="#7F1D1D"/>
+  <text x="176" y="437" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">pagination</text>
+  
+  <rect x="221" y="420" width="65" height="24" rx="4" fill="#7F1D1D"/>
+  <text x="254" y="437" text-anchor="middle" fill="#FCA5A5" font-family="monospace" font-size="10">search</text>
+  
+  <text x="60" y="468" fill="#9CA3AF" font-family="system-ui" font-size="11">KEYWORDS</text>
+  <line x1="60" y1="476" x2="460" y2="476" stroke="#374151" stroke-width="1"/>
+  <text x="60" y="494" fill="#D1D5DB" font-family="system-ui" font-size="12">article:</text>
+  <text x="120" y="494" fill="#34D399" font-family="monospace" font-size="11">world</text>
+  <text x="200" y="494" fill="#D1D5DB" font-family="system-ui" font-size="12">hub:</text>
+  <text x="240" y="494" fill="#6B7280" font-family="monospace" font-size="11">—</text>
+  
+  <!-- Content Stats Card -->
+  <rect x="500" y="175" width="440" height="320" rx="10" fill="url(#cardGrad)" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="500" y="175" width="440" height="40" rx="10" fill="#065F46"/>
+  <text x="720" y="202" text-anchor="middle" fill="#A7F3D0" font-family="system-ui" font-size="15" font-weight="600">📄 Content Stats</text>
+  
+  <text x="520" y="240" fill="#9CA3AF" font-family="system-ui" font-size="11">TEXT METRICS</text>
+  <line x1="520" y1="248" x2="920" y2="248" stroke="#374151" stroke-width="1"/>
+  
+  <text x="520" y="270" fill="#D1D5DB" font-family="system-ui" font-size="12">Word Count</text>
+  <rect x="820" y="257" width="100" height="20" rx="4" fill="#065F46"/>
+  <text x="920" y="271" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="13" font-weight="600">2,847</text>
+  
+  <text x="520" y="295" fill="#D1D5DB" font-family="system-ui" font-size="12">Character Count</text>
+  <text x="920" y="295" text-anchor="end" fill="#34D399" font-family="monospace" font-size="12">18,432</text>
+  
+  <text x="520" y="317" fill="#D1D5DB" font-family="system-ui" font-size="12">Paragraph Count</text>
+  <text x="920" y="317" text-anchor="end" fill="#34D399" font-family="monospace" font-size="12">24</text>
+  
+  <text x="520" y="339" fill="#D1D5DB" font-family="system-ui" font-size="12">Sentence Count</text>
+  <text x="920" y="339" text-anchor="end" fill="#34D399" font-family="monospace" font-size="12">142</text>
+  
+  <text x="520" y="361" fill="#D1D5DB" font-family="system-ui" font-size="12">Avg Words/Paragraph</text>
+  <text x="920" y="361" text-anchor="end" fill="#34D399" font-family="monospace" font-size="12">118.6</text>
+  
+  <text x="520" y="395" fill="#9CA3AF" font-family="system-ui" font-size="11">RATIOS</text>
+  <line x1="520" y1="403" x2="920" y2="403" stroke="#374151" stroke-width="1"/>
+  
+  <text x="520" y="425" fill="#D1D5DB" font-family="system-ui" font-size="12">Link Density</text>
+  <rect x="700" y="412" width="220" height="20" rx="4" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <rect x="702" y="414" width="35" height="16" rx="2" fill="#10B981"/>
+  <text x="920" y="426" text-anchor="end" fill="#34D399" font-family="monospace" font-size="11">0.016 (low ✓)</text>
+  
+  <text x="520" y="450" fill="#D1D5DB" font-family="system-ui" font-size="12">Text/HTML Ratio</text>
+  <rect x="700" y="437" width="220" height="20" rx="4" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <rect x="702" y="439" width="84" height="16" rx="2" fill="#10B981"/>
+  <text x="920" y="451" text-anchor="end" fill="#34D399" font-family="monospace" font-size="11">0.38 (good)</text>
+  
+  <text x="520" y="475" fill="#D1D5DB" font-family="system-ui" font-size="12">Heading Density</text>
+  <rect x="700" y="462" width="220" height="20" rx="4" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <rect x="702" y="464" width="11" height="16" rx="2" fill="#10B981"/>
+  <text x="920" y="476" text-anchor="end" fill="#34D399" font-family="monospace" font-size="11">0.005</text>
+  
+  <!-- Metadata Stats Card -->
+  <rect x="960" y="175" width="400" height="320" rx="10" fill="url(#cardGrad)" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="960" y="175" width="400" height="40" rx="10" fill="#92400E"/>
+  <text x="1160" y="202" text-anchor="middle" fill="#FDE68A" font-family="system-ui" font-size="15" font-weight="600">🏷️ Metadata Stats</text>
+  
+  <text x="980" y="240" fill="#9CA3AF" font-family="system-ui" font-size="11">BASIC META</text>
+  <line x1="980" y1="248" x2="1340" y2="248" stroke="#374151" stroke-width="1"/>
+  
+  <text x="980" y="270" fill="#D1D5DB" font-family="system-ui" font-size="12">Title</text>
+  <text x="1340" y="270" text-anchor="end" fill="#FBBF24" font-family="monospace" font-size="10">Climate Summit Breakthrough...</text>
+  
+  <text x="980" y="292" fill="#D1D5DB" font-family="system-ui" font-size="12">Author</text>
+  <rect x="1230" y="279" width="110" height="20" rx="4" fill="#065F46"/>
+  <text x="1340" y="293" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="11">Sarah Chen ✓</text>
+  
+  <text x="980" y="314" fill="#D1D5DB" font-family="system-ui" font-size="12">Published</text>
+  <rect x="1180" y="301" width="160" height="20" rx="4" fill="#065F46"/>
+  <text x="1340" y="315" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="11">2025-11-27T08:30Z ✓</text>
+  
+  <text x="980" y="336" fill="#D1D5DB" font-family="system-ui" font-size="12">Section</text>
+  <text x="1340" y="336" text-anchor="end" fill="#FBBF24" font-family="monospace" font-size="11">World News</text>
+  
+  <text x="980" y="370" fill="#9CA3AF" font-family="system-ui" font-size="11">SCHEMA.ORG</text>
+  <line x1="980" y1="378" x2="1340" y2="378" stroke="#374151" stroke-width="1"/>
+  
+  <text x="980" y="400" fill="#D1D5DB" font-family="system-ui" font-size="12">Schema Score</text>
+  <rect x="1180" y="387" width="160" height="20" rx="4" fill="#065F46"/>
+  <text x="1240" y="401" fill="#6EE7B7" font-family="monospace" font-size="11" font-weight="700">8.5</text>
+  <text x="1340" y="401" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="10">/ 10 (strong)</text>
+  
+  <text x="980" y="425" fill="#D1D5DB" font-family="system-ui" font-size="12">hasArticleType</text>
+  <text x="1340" y="425" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="12">✓ NewsArticle</text>
+  
+  <text x="980" y="447" fill="#D1D5DB" font-family="system-ui" font-size="12">hasArticleBody</text>
+  <text x="1340" y="447" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="12">✓ true</text>
+  
+  <text x="980" y="469" fill="#D1D5DB" font-family="system-ui" font-size="12">OpenGraph Type</text>
+  <text x="1340" y="469" text-anchor="end" fill="#FBBF24" font-family="monospace" font-size="12">article</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ROW 2: Link Stats + Context Stats + HTTP Stats -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Link Stats Card -->
+  <rect x="40" y="510" width="440" height="300" rx="10" fill="url(#cardGrad)" stroke="#8B5CF6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="510" width="440" height="40" rx="10" fill="#5B21B6"/>
+  <text x="260" y="537" text-anchor="middle" fill="#DDD6FE" font-family="system-ui" font-size="15" font-weight="600">🔗 Link Stats</text>
+  
+  <text x="60" y="575" fill="#9CA3AF" font-family="system-ui" font-size="11">LINK COUNTS</text>
+  <line x1="60" y1="583" x2="460" y2="583" stroke="#374151" stroke-width="1"/>
+  
+  <text x="60" y="605" fill="#D1D5DB" font-family="system-ui" font-size="12">Total Links</text>
+  <text x="460" y="605" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="13" font-weight="600">87</text>
+  
+  <text x="60" y="627" fill="#D1D5DB" font-family="system-ui" font-size="12">Internal Links</text>
+  <text x="460" y="627" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="12">72</text>
+  
+  <text x="60" y="649" fill="#D1D5DB" font-family="system-ui" font-size="12">External Links</text>
+  <text x="460" y="649" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="12">15</text>
+  
+  <text x="60" y="683" fill="#9CA3AF" font-family="system-ui" font-size="11">LINK CLASSIFICATION</text>
+  <line x1="60" y1="691" x2="460" y2="691" stroke="#374151" stroke-width="1"/>
+  
+  <text x="60" y="713" fill="#D1D5DB" font-family="system-ui" font-size="12">Navigation Links</text>
+  <rect x="340" y="700" width="120" height="20" rx="4" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <rect x="342" y="702" width="48" height="16" rx="2" fill="#8B5CF6"/>
+  <text x="460" y="714" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="11">35 (40%)</text>
+  
+  <text x="60" y="738" fill="#D1D5DB" font-family="system-ui" font-size="12">Article Links</text>
+  <rect x="340" y="725" width="120" height="20" rx="4" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <rect x="342" y="727" width="14" height="16" rx="2" fill="#8B5CF6"/>
+  <text x="460" y="739" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="11">12 (14%)</text>
+  
+  <text x="60" y="763" fill="#D1D5DB" font-family="system-ui" font-size="12">Related/Tag Links</text>
+  <rect x="340" y="750" width="120" height="20" rx="4" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <rect x="342" y="752" width="29" height="16" rx="2" fill="#8B5CF6"/>
+  <text x="460" y="764" text-anchor="end" fill="#A78BFA" font-family="monospace" font-size="11">25 (29%)</text>
+  
+  <text x="60" y="788" fill="#D1D5DB" font-family="system-ui" font-size="12">Hub Structure</text>
+  <text x="460" y="788" text-anchor="end" fill="#6B7280" font-family="monospace" font-size="12">✗ No</text>
+  
+  <!-- Context Stats Card -->
+  <rect x="500" y="510" width="440" height="300" rx="10" fill="url(#cardGrad)" stroke="#EC4899" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="500" y="510" width="440" height="40" rx="10" fill="#9D174D"/>
+  <text x="720" y="537" text-anchor="middle" fill="#FBCFE8" font-family="system-ui" font-size="15" font-weight="600">📊 Context Stats</text>
+  
+  <text x="520" y="575" fill="#9CA3AF" font-family="system-ui" font-size="11">DOMAIN BASELINE</text>
+  <line x1="520" y1="583" x2="920" y2="583" stroke="#374151" stroke-width="1"/>
+  
+  <text x="520" y="605" fill="#D1D5DB" font-family="system-ui" font-size="12">Domain Avg Words</text>
+  <text x="920" y="605" text-anchor="end" fill="#F472B6" font-family="monospace" font-size="12">1,240</text>
+  
+  <text x="520" y="627" fill="#D1D5DB" font-family="system-ui" font-size="12">This Page vs Domain</text>
+  <rect x="820" y="614" width="100" height="20" rx="4" fill="#065F46"/>
+  <text x="920" y="628" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="11">+129% ▲</text>
+  
+  <text x="520" y="649" fill="#D1D5DB" font-family="system-ui" font-size="12">Section Avg Words</text>
+  <text x="920" y="649" text-anchor="end" fill="#F472B6" font-family="monospace" font-size="12">1,890 (World)</text>
+  
+  <text x="520" y="671" fill="#D1D5DB" font-family="system-ui" font-size="12">This Page vs Section</text>
+  <rect x="830" y="658" width="90" height="20" rx="4" fill="#065F46"/>
+  <text x="920" y="672" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="11">+51% ▲</text>
+  
+  <text x="520" y="705" fill="#9CA3AF" font-family="system-ui" font-size="11">HISTORY</text>
+  <line x1="520" y1="713" x2="920" y2="713" stroke="#374151" stroke-width="1"/>
+  
+  <text x="520" y="735" fill="#D1D5DB" font-family="system-ui" font-size="12">Previous Classification</text>
+  <text x="920" y="735" text-anchor="end" fill="#6B7280" font-family="monospace" font-size="12">— (new URL)</text>
+  
+  <text x="520" y="757" fill="#D1D5DB" font-family="system-ui" font-size="12">Fetch Count</text>
+  <text x="920" y="757" text-anchor="end" fill="#F472B6" font-family="monospace" font-size="12">1</text>
+  
+  <text x="520" y="779" fill="#D1D5DB" font-family="system-ui" font-size="12">Last Fetched</text>
+  <text x="920" y="779" text-anchor="end" fill="#F472B6" font-family="monospace" font-size="11">2025-11-27T10:15:32Z</text>
+  
+  <!-- HTTP Stats Card -->
+  <rect x="960" y="510" width="400" height="300" rx="10" fill="url(#cardGrad)" stroke="#06B6D4" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="960" y="510" width="400" height="40" rx="10" fill="#0E7490"/>
+  <text x="1160" y="537" text-anchor="middle" fill="#CFFAFE" font-family="system-ui" font-size="15" font-weight="600">📡 HTTP Stats</text>
+  
+  <text x="980" y="575" fill="#9CA3AF" font-family="system-ui" font-size="11">RESPONSE</text>
+  <line x1="980" y1="583" x2="1340" y2="583" stroke="#374151" stroke-width="1"/>
+  
+  <text x="980" y="605" fill="#D1D5DB" font-family="system-ui" font-size="12">Status Code</text>
+  <rect x="1270" y="592" width="70" height="20" rx="4" fill="#065F46"/>
+  <text x="1340" y="606" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="13" font-weight="600">200 OK</text>
+  
+  <text x="980" y="627" fill="#D1D5DB" font-family="system-ui" font-size="12">Content-Type</text>
+  <text x="1340" y="627" text-anchor="end" fill="#22D3EE" font-family="monospace" font-size="11">text/html; charset=utf-8</text>
+  
+  <text x="980" y="649" fill="#D1D5DB" font-family="system-ui" font-size="12">Content-Length</text>
+  <text x="1340" y="649" text-anchor="end" fill="#22D3EE" font-family="monospace" font-size="12">48,523 bytes</text>
+  
+  <text x="980" y="683" fill="#9CA3AF" font-family="system-ui" font-size="11">TIMING</text>
+  <line x1="980" y1="691" x2="1340" y2="691" stroke="#374151" stroke-width="1"/>
+  
+  <text x="980" y="713" fill="#D1D5DB" font-family="system-ui" font-size="12">TTFB (Time to First Byte)</text>
+  <rect x="1270" y="700" width="70" height="20" rx="4" fill="#065F46"/>
+  <text x="1340" y="714" text-anchor="end" fill="#6EE7B7" font-family="monospace" font-size="11">187 ms</text>
+  
+  <text x="980" y="738" fill="#D1D5DB" font-family="system-ui" font-size="12">Download Time</text>
+  <text x="1340" y="738" text-anchor="end" fill="#22D3EE" font-family="monospace" font-size="12">342 ms</text>
+  
+  <text x="980" y="760" fill="#D1D5DB" font-family="system-ui" font-size="12">Redirects</text>
+  <text x="1340" y="760" text-anchor="end" fill="#22D3EE" font-family="monospace" font-size="12">0</text>
+  
+  <text x="980" y="782" fill="#D1D5DB" font-family="system-ui" font-size="12">Cache-Control</text>
+  <text x="1340" y="782" text-anchor="end" fill="#22D3EE" font-family="monospace" font-size="11">max-age=300</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ROW 3: Structure Stats + Readability Extract -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Structure Stats Card -->
+  <rect x="40" y="825" width="660" height="200" rx="10" fill="url(#cardGrad)" stroke="#F97316" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="825" width="660" height="40" rx="10" fill="#C2410C"/>
+  <text x="370" y="852" text-anchor="middle" fill="#FED7AA" font-family="system-ui" font-size="15" font-weight="600">🏗️ Structure Stats</text>
+  
+  <!-- Structure grid -->
+  <text x="60" y="895" fill="#9CA3AF" font-family="system-ui" font-size="11">HEADINGS</text>
+  <rect x="60" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="85" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">1</text>
+  <text x="85" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">H1</text>
+  
+  <rect x="120" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="145" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">5</text>
+  <text x="145" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">H2</text>
+  
+  <rect x="180" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="205" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">8</text>
+  <text x="205" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">H3</text>
+  
+  <rect x="240" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="265" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">2</text>
+  <text x="265" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">H4</text>
+  
+  <text x="320" y="895" fill="#9CA3AF" font-family="system-ui" font-size="11">ELEMENTS</text>
+  <rect x="320" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="345" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">24</text>
+  <text x="345" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">P</text>
+  
+  <rect x="380" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="405" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">6</text>
+  <text x="405" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">IMG</text>
+  
+  <rect x="440" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="465" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">3</text>
+  <text x="465" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">UL</text>
+  
+  <rect x="500" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="525" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">2</text>
+  <text x="525" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">BQUOTE</text>
+  
+  <rect x="560" y="905" width="50" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="585" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">0</text>
+  <text x="585" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">TABLE</text>
+  
+  <rect x="620" y="905" width="60" height="50" rx="6" fill="#1F2937" stroke="#F97316" stroke-width="1"/>
+  <text x="650" y="930" text-anchor="middle" fill="#FB923C" font-family="monospace" font-size="18" font-weight="700">87</text>
+  <text x="650" y="948" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="10">A</text>
+  
+  <text x="60" y="1000" fill="#6B7280" font-family="monospace" font-size="10">Heading hierarchy: ✓ Proper (single H1, descending H2→H3→H4)</text>
+  
+  <!-- Readability Extract Card -->
+  <rect x="720" y="825" width="640" height="200" rx="10" fill="url(#cardGrad)" stroke="#84CC16" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="720" y="825" width="640" height="40" rx="10" fill="#3F6212"/>
+  <text x="1040" y="852" text-anchor="middle" fill="#D9F99D" font-family="system-ui" font-size="15" font-weight="600">📖 Readability Extract</text>
+  
+  <text x="740" y="890" fill="#D1D5DB" font-family="system-ui" font-size="12">Extracted Title</text>
+  <text x="740" y="910" fill="#A3E635" font-family="system-ui" font-size="13" font-weight="600">Climate Summit Reaches Breakthrough Agreement on Carbon Targets</text>
+  
+  <text x="740" y="940" fill="#D1D5DB" font-family="system-ui" font-size="12">Excerpt</text>
+  <text x="740" y="960" fill="#BEF264" font-family="system-ui" font-size="11">"World leaders announced a historic agreement at the UN Climate Summit,</text>
+  <text x="740" y="976" fill="#BEF264" font-family="system-ui" font-size="11">committing to a 60% reduction in carbon emissions by 2035..."</text>
+  
+  <text x="740" y="1005" fill="#D1D5DB" font-family="system-ui" font-size="12">Byline</text>
+  <text x="820" y="1005" fill="#A3E635" font-family="monospace" font-size="12">Sarah Chen, Environment Correspondent</text>
+  
+  <text x="1100" y="1005" fill="#D1D5DB" font-family="system-ui" font-size="12">Site</text>
+  <text x="1140" y="1005" fill="#A3E635" font-family="monospace" font-size="12">Example News</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- Footer: Classification Summary -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <rect x="40" y="1040" width="1320" height="140" rx="10" fill="#1F2937" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="700" y="1075" text-anchor="middle" fill="#F9FAFB" font-family="system-ui" font-size="16" font-weight="700">🎯 Classification Result</text>
+  
+  <!-- Result badges -->
+  <rect x="100" y="1095" width="180" height="60" rx="8" fill="#065F46" stroke="#10B981" stroke-width="2"/>
+  <text x="190" y="1120" text-anchor="middle" fill="#6EE7B7" font-family="system-ui" font-size="11">PRIMARY TYPE</text>
+  <text x="190" y="1142" text-anchor="middle" fill="#F9FAFB" font-family="system-ui" font-size="18" font-weight="700">ARTICLE</text>
+  
+  <rect x="310" y="1095" width="180" height="60" rx="8" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <text x="400" y="1120" text-anchor="middle" fill="#9CA3AF" font-family="system-ui" font-size="11">CONFIDENCE</text>
+  <text x="400" y="1142" text-anchor="middle" fill="#10B981" font-family="monospace" font-size="18" font-weight="700">94.2%</text>
+  
+  <rect x="520" y="1095" width="180" height="60" rx="8" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <text x="610" y="1120" text-anchor="middle" fill="#9CA3AF" font-family="system-ui" font-size="11">CATEGORY</text>
+  <text x="610" y="1142" text-anchor="middle" fill="#60A5FA" font-family="system-ui" font-size="14" font-weight="600">World News</text>
+  
+  <rect x="730" y="1095" width="180" height="60" rx="8" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <text x="820" y="1120" text-anchor="middle" fill="#9CA3AF" font-family="system-ui" font-size="11">ARTICLE SCORE</text>
+  <text x="820" y="1142" text-anchor="middle" fill="#FBBF24" font-family="monospace" font-size="18" font-weight="700">+8</text>
+  
+  <rect x="940" y="1095" width="180" height="60" rx="8" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <text x="1030" y="1120" text-anchor="middle" fill="#9CA3AF" font-family="system-ui" font-size="11">HUB SCORE</text>
+  <text x="1030" y="1142" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="18" font-weight="700">-3</text>
+  
+  <rect x="1150" y="1095" width="180" height="60" rx="8" fill="#1F2937" stroke="#374151" stroke-width="1"/>
+  <text x="1240" y="1120" text-anchor="middle" fill="#9CA3AF" font-family="system-ui" font-size="11">DECISION PATH</text>
+  <text x="1240" y="1142" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="10">schema→words→author</text>
+  
+  <!-- Version -->
+  <text x="1330" y="1190" text-anchor="end" fill="#4B5563" font-family="monospace" font-size="10">Page Stats v1.0</text>
+</svg>

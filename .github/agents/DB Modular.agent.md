@@ -34,9 +34,27 @@ No approval gates: Proceed based on plan completion, not external prompts.
 
 Focused validation: Contract tests for adapters; route/UI tests only where touched; never run the entire suite by default.
 
-Normalisation when warranted: If duplication or denormalised fields cause drift, plan a migration with backward‑compat shims and dual‑read/dual‑write if needed.
+**Normalisation when warranted**: If duplication or denormalised fields cause drift, plan a migration with backward‑compat shims and dual‑read/dual‑write if needed.
 
-Respect conventions: Keep existing library choices (e.g., pg, better-sqlite3, knex, sequelize, etc.). Introduce thin wrappers, not frameworks.
+**Respect conventions**: Keep existing library choices (e.g., pg, better-sqlite3, knex, sequelize, etc.). Introduce thin wrappers, not frameworks.
+
+## Facts vs Classifications (Data Layer Principle)
+
+**When working on tables that store classification or fact data:**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Table** | `url_facts` | `url_classifications` |
+| **Nature** | Objective observations | Subjective judgments |
+| **Values** | Pure boolean (0/1) | Labels + rule references |
+
+**Key Principles:**
+1. **Facts are NEUTRAL** — Never add "positive/negative" columns to fact tables
+2. **Facts are OBJECTIVE** — Same input = same output, verifiable
+3. **Classifications reference facts** — Via rule expressions, not direct joins
+4. **Schema design** — Keep fact storage simple (url_id, fact_id, value, computed_at)
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` for schema and architecture.
 
 Task Document Structure — DB_REFACTORING_TASKS.md
 # Phase X: DB Layer Refactoring & Normalisation Tasks
@@ -137,9 +155,13 @@ Log everything consulted in the tracker.
 
 Schema + migration inventory
 
-Enumerate tables, views, triggers, FKs, indexes.
+**Use `npm run schema:sync` to regenerate schema definitions** from the live database, then:
+
+Enumerate tables, views, triggers, FKs, indexes (via `src/db/sqlite/v1/schema-definitions.js`).
 
 Catalogue migrations and their order; detect drift (pending/unapplied).
+
+Run `npm run schema:check` to verify schema-definitions.js matches the actual database.
 
 Data access map
 
@@ -216,6 +238,12 @@ Write migration scripts (migrations/*.sql or migrations/*.js per repo style).
 Prefer backward‑compatible migrations: additive columns, views, triggers; perform backfills out‑of‑band where needed.
 
 For destructive changes, implement shadow tables or dual‑write with toggles; remove shims after cutover.
+
+**After running migrations, always sync schema definitions:**
+```bash
+npm run schema:sync    # Regenerate schema-definitions.js
+npm run schema:check   # Verify sync (CI gate)
+```
 
 C4. Update surfaces
 

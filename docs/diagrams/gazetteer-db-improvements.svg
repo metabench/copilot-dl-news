@@ -1,0 +1,407 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1800">
+  <defs>
+    <!-- Industrial Luxury Obsidian Gradients -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#0f0f1a"/>
+    </linearGradient>
+    
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#d4af37"/>
+      <stop offset="50%" style="stop-color:#f4d03f"/>
+      <stop offset="100%" style="stop-color:#c9a227"/>
+    </linearGradient>
+    
+    <linearGradient id="emeraldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d5a27"/>
+      <stop offset="50%" style="stop-color:#4a7c42"/>
+      <stop offset="100%" style="stop-color:#2d5a27"/>
+    </linearGradient>
+    
+    <linearGradient id="rubyAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7a1f1f"/>
+      <stop offset="50%" style="stop-color:#a83232"/>
+      <stop offset="100%" style="stop-color:#7a1f1f"/>
+    </linearGradient>
+    
+    <linearGradient id="sapphireAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a5c"/>
+      <stop offset="50%" style="stop-color:#2a5a8c"/>
+      <stop offset="100%" style="stop-color:#1a3a5c"/>
+    </linearGradient>
+    
+    <linearGradient id="amethystAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a1a6b"/>
+      <stop offset="50%" style="stop-color:#6a2a8b"/>
+      <stop offset="100%" style="stop-color:#4a1a6b"/>
+    </linearGradient>
+    
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a3e"/>
+      <stop offset="100%" style="stop-color:#1e1e2e"/>
+    </linearGradient>
+    
+    <linearGradient id="terminalBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="goldArrow" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="url(#goldAccent)"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#obsidianBg)"/>
+  
+  <!-- Decorative corner elements -->
+  <path d="M0,0 L80,0 L80,3 L3,3 L3,80 L0,80 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  <path d="M1400,0 L1320,0 L1320,3 L1397,3 L1397,80 L1400,80 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  <path d="M0,1800 L80,1800 L80,1797 L3,1797 L3,1720 L0,1720 Z" fill="url(#goldAccent)" opacity="0.6"/>
+  <path d="M1400,1800 L1320,1800 L1320,1797 L1397,1797 L1397,1720 L1400,1720 Z" fill="url(#goldAccent)" opacity="0.6"/>
+
+  <!-- Title -->
+  <text x="700" y="55" text-anchor="middle" font-family="Georgia, serif" font-size="32" font-weight="bold" fill="url(#goldAccent)" filter="url(#glow)">
+    Gazetteer Database Improvements
+  </text>
+  <text x="700" y="85" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#8a8aa0" font-style="italic">
+    Proposed Schema Changes &amp; Data Population Strategy
+  </text>
+  
+  <!-- Decorative line under title -->
+  <line x1="400" y1="100" x2="1000" y2="100" stroke="url(#goldAccent)" stroke-width="1" opacity="0.5"/>
+
+  <!-- Section 1: Current State Summary -->
+  <g transform="translate(50, 125)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="620" height="200" rx="8" fill="url(#cardBg)" stroke="#3a3a4e" stroke-width="1"/>
+    <rect x="0" y="0" width="620" height="40" rx="8" fill="url(#rubyAccent)" opacity="0.8"/>
+    <rect x="0" y="32" width="620" height="8" fill="url(#cardBg)"/>
+    <text x="310" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#fff">Current State</text>
+    
+    <text x="20" y="65" font-family="'Segoe UI', sans-serif" font-size="14" fill="#c4c4d4">• 508 places total</text>
+    <text x="20" y="90" font-family="'Segoe UI', sans-serif" font-size="14" fill="#c4c4d4">• 14,855 place_names (10,587 unique normalized)</text>
+    <text x="20" y="115" font-family="'Segoe UI', sans-serif" font-size="14" fill="#c4c4d4">• ~250 countries (RestCountries — complete)</text>
+    <text x="20" y="140" font-family="'Segoe UI', sans-serif" font-size="14" fill="#c4c4d4">• ~10 cities (London, Dublin, Paris...)</text>
+    <text x="20" y="165" font-family="'Segoe UI', sans-serif" font-size="14" fill="#c4c4d4">• 1 US city (Washington D.C.)</text>
+    <text x="20" y="190" font-family="'Segoe UI', sans-serif" font-size="14" fill="#e57373">• Missing: New York, California, Texas, Chicago...</text>
+  </g>
+
+  <!-- Arrow from Current to Target -->
+  <line x1="680" y1="225" x2="720" y2="225" stroke="url(#goldAccent)" stroke-width="3" marker-end="url(#goldArrow)"/>
+
+  <!-- Section 2: Target State -->
+  <g transform="translate(730, 125)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="620" height="200" rx="8" fill="url(#cardBg)" stroke="#3a3a4e" stroke-width="1"/>
+    <rect x="0" y="0" width="620" height="40" rx="8" fill="url(#emeraldAccent)" opacity="0.9"/>
+    <rect x="0" y="32" width="620" height="8" fill="url(#cardBg)"/>
+    <text x="310" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#fff">Target State</text>
+    
+    <text x="20" y="65" font-family="'Segoe UI', sans-serif" font-size="14" fill="#a5d6a7">• ~25,000 places</text>
+    <text x="20" y="90" font-family="'Segoe UI', sans-serif" font-size="14" fill="#a5d6a7">• ~150,000 place_names</text>
+    <text x="20" y="115" font-family="'Segoe UI', sans-serif" font-size="14" fill="#a5d6a7">• All countries + admin regions</text>
+    <text x="20" y="140" font-family="'Segoe UI', sans-serif" font-size="14" fill="#a5d6a7">• Cities with population &gt; 15,000</text>
+    <text x="20" y="165" font-family="'Segoe UI', sans-serif" font-size="14" fill="#a5d6a7">• US states, UK counties, major regions</text>
+    <text x="20" y="190" font-family="'Segoe UI', sans-serif" font-size="14" fill="#81c784">• Memory: ~1.5MB → ~15MB (acceptable)</text>
+  </g>
+
+  <!-- Section 3: Schema Changes -->
+  <g transform="translate(50, 355)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="1300" height="280" rx="8" fill="url(#cardBg)" stroke="#3a3a4e" stroke-width="1"/>
+    <rect x="0" y="0" width="1300" height="40" rx="8" fill="#6d4c1f" opacity="0.9"/>
+    <rect x="0" y="32" width="1300" height="8" fill="url(#cardBg)"/>
+    <text x="650" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#ffd54f">Schema Changes</text>
+    
+    <!-- Change 1: url_slug - NOT IMPLEMENTED (computed at runtime) -->
+    <g transform="translate(20, 55)" opacity="0.35">
+      <rect x="0" y="0" width="400" height="100" rx="6" fill="#2a2a2a" stroke="#555" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="200" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#888" text-decoration="line-through">1. Add url_slug column</text>
+      <text x="12" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#666" text-decoration="line-through">ALTER TABLE</text>
+      <text x="110" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#666" text-decoration="line-through">place_names</text>
+      <text x="12" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#666" text-decoration="line-through">ADD COLUMN url_slug TEXT</text>
+    </g>
+    <!-- NOT IMPLEMENTED label -->
+    <g transform="translate(20, 55)">
+      <rect x="100" y="75" width="200" height="20" rx="3" fill="#c62828"/>
+      <text x="200" y="89" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="bold" fill="#fff">NOT IMPLEMENTED — runtime computed</text>
+    </g>
+
+    <!-- Change 2: alias_mappings -->
+    <g transform="translate(450, 55)">
+      <rect x="0" y="0" width="400" height="100" rx="6" fill="url(#terminalBg)" stroke="#444" stroke-width="1"/>
+      <text x="200" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="url(#goldAccent)">2. Create alias_mappings table</text>
+      <text x="12" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">alias</text>
+      <text x="55" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#ff7b72">TEXT</text>
+      <text x="90" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">→</text>
+      <text x="105" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">place_id</text>
+      <text x="170" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#ff7b72">INT</text>
+      <text x="12" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">"nyc"</text>
+      <text x="55" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">→</text>
+      <text x="70" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">New York City</text>
+      <text x="12" y="90" font-family="'Segoe UI', sans-serif" font-size="10" fill="#8b949e">Purpose: Common abbreviations</text>
+    </g>
+
+    <!-- Change 3: canonical_name fix -->
+    <g transform="translate(880, 55)">
+      <rect x="0" y="0" width="400" height="100" rx="6" fill="url(#terminalBg)" stroke="#444" stroke-width="1"/>
+      <text x="200" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="url(#goldAccent)">3. Fix canonical_name_id</text>
+      <text x="12" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">UPDATE</text>
+      <text x="65" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">places</text>
+      <text x="110" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">SET</text>
+      <text x="140" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">canonical_name_id</text>
+      <text x="12" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">WHERE</text>
+      <text x="60" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">canonical_name_id</text>
+      <text x="185" y="68" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">IS NULL</text>
+      <text x="12" y="90" font-family="'Segoe UI', sans-serif" font-size="10" fill="#8b949e">Purpose: Fix "Place #21" names</text>
+    </g>
+
+    <!-- Change 4: Indexes -->
+    <g transform="translate(20, 170)">
+      <rect x="0" y="0" width="620" height="90" rx="6" fill="url(#terminalBg)" stroke="#444" stroke-width="1"/>
+      <text x="310" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="url(#goldAccent)">4. Add Indexes</text>
+      <text x="12" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#666" text-decoration="line-through">CREATE INDEX idx_place_names_url_slug ON place_names(url_slug)</text>
+      <text x="500" y="48" font-family="'Segoe UI', sans-serif" font-size="9" fill="#c62828">← skipped</text>
+      <text x="12" y="70" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">CREATE INDEX</text>
+      <text x="115" y="70" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">idx_place_names_normalized</text>
+      <text x="325" y="70" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">ON</text>
+      <text x="345" y="70" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">place_names(normalized)</text>
+    </g>
+
+    <!-- Change 5: place_type -->
+    <g transform="translate(660, 170)">
+      <rect x="0" y="0" width="620" height="90" rx="6" fill="url(#terminalBg)" stroke="#444" stroke-width="1"/>
+      <text x="310" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="url(#goldAccent)">5. Standardize place_type</text>
+      <text x="12" y="48" font-family="'Segoe UI', sans-serif" font-size="12" fill="#c4c4d4">Values:</text>
+      <text x="60" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">country</text>
+      <text x="115" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">|</text>
+      <text x="125" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">admin1</text>
+      <text x="175" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">|</text>
+      <text x="185" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">admin2</text>
+      <text x="235" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">|</text>
+      <text x="245" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">city</text>
+      <text x="275" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">|</text>
+      <text x="285" y="48" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787">locality</text>
+      <text x="12" y="70" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8b949e">Current: mixed (country, city, island, state, region...)</text>
+    </g>
+  </g>
+
+  <!-- Section 4: Data Population Strategy -->
+  <g transform="translate(50, 665)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="1300" height="400" rx="8" fill="url(#cardBg)" stroke="#3a3a4e" stroke-width="1"/>
+    <rect x="0" y="0" width="1300" height="40" rx="8" fill="url(#sapphireAccent)" opacity="0.9"/>
+    <rect x="0" y="32" width="1300" height="8" fill="url(#cardBg)"/>
+    <text x="650" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#90caf9">Data Population Strategy</text>
+
+    <!-- Phase 1 -->
+    <g transform="translate(20, 55)">
+      <rect x="0" y="0" width="400" height="165" rx="6" fill="#1e3a50" stroke="#2a5a8c" stroke-width="1"/>
+      <rect x="0" y="0" width="400" height="30" rx="6" fill="#2a5a8c"/>
+      <rect x="0" y="24" width="400" height="6" fill="#1e3a50"/>
+      <text x="200" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#fff">Phase 1: GeoNames Cities</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Source:</text>
+      <text x="60" y="50" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">cities15000.txt</text>
+      <text x="12" y="70" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Count:</text>
+      <text x="55" y="70" font-family="'Segoe UI', sans-serif" font-size="12" fill="#fff">~24,000 cities</text>
+      <text x="12" y="90" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Fields:</text>
+      <text x="55" y="90" font-family="'Fira Code', monospace" font-size="10" fill="#c4c4d4">geonameid, name, lat, lng, country</text>
+      <text x="55" y="107" font-family="'Fira Code', monospace" font-size="10" fill="#c4c4d4">admin1, population, timezone</text>
+      <text x="12" y="130" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8b949e">Impact: Covers all major news cities</text>
+      <rect x="12" y="142" width="80" height="18" rx="3" fill="#2e7d32"/>
+      <text x="52" y="155" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="bold" fill="#fff">HIGH</text>
+    </g>
+
+    <!-- Phase 2 -->
+    <g transform="translate(450, 55)">
+      <rect x="0" y="0" width="400" height="165" rx="6" fill="#1e3a50" stroke="#2a5a8c" stroke-width="1"/>
+      <rect x="0" y="0" width="400" height="30" rx="6" fill="#2a5a8c"/>
+      <rect x="0" y="24" width="400" height="6" fill="#1e3a50"/>
+      <text x="200" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#fff">Phase 2: Admin Regions</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Source:</text>
+      <text x="60" y="50" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">admin1CodesASCII.txt</text>
+      <text x="12" y="70" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Count:</text>
+      <text x="55" y="70" font-family="'Segoe UI', sans-serif" font-size="12" fill="#fff">~4,000 regions</text>
+      <text x="12" y="90" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Fields:</text>
+      <text x="55" y="90" font-family="'Fira Code', monospace" font-size="10" fill="#c4c4d4">code, name, ascii_name, geonameid</text>
+      <text x="12" y="110" font-family="'Segoe UI', sans-serif" font-size="11" fill="#c4c4d4">Examples: California, Texas, Scotland,</text>
+      <text x="12" y="127" font-family="'Segoe UI', sans-serif" font-size="11" fill="#c4c4d4">Bavaria, New South Wales</text>
+      <rect x="12" y="142" width="80" height="18" rx="3" fill="#2e7d32"/>
+      <text x="52" y="155" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="bold" fill="#fff">HIGH</text>
+    </g>
+
+    <!-- Phase 3 -->
+    <g transform="translate(880, 55)">
+      <rect x="0" y="0" width="400" height="165" rx="6" fill="#1e3a50" stroke="#2a5a8c" stroke-width="1"/>
+      <rect x="0" y="0" width="400" height="30" rx="6" fill="#2a5a8c"/>
+      <rect x="0" y="24" width="400" height="6" fill="#1e3a50"/>
+      <text x="200" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#fff">Phase 3: Alternate Names</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Source:</text>
+      <text x="60" y="50" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">alternateNames.txt</text>
+      <text x="12" y="70" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Count:</text>
+      <text x="55" y="70" font-family="'Segoe UI', sans-serif" font-size="12" fill="#fff">~15M (filter to en, abbrev)</text>
+      <text x="12" y="90" font-family="'Segoe UI', sans-serif" font-size="12" fill="#90caf9">Fields:</text>
+      <text x="55" y="90" font-family="'Fira Code', monospace" font-size="10" fill="#c4c4d4">geonameid, isolanguage, name</text>
+      <text x="55" y="107" font-family="'Fira Code', monospace" font-size="10" fill="#c4c4d4">isPreferredName, isShortName</text>
+      <text x="12" y="127" font-family="'Segoe UI', sans-serif" font-size="11" fill="#c4c4d4">Examples: NYC, LA, SF, Philly</text>
+      <rect x="12" y="142" width="80" height="18" rx="3" fill="#e65100"/>
+      <text x="52" y="155" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="bold" fill="#fff">MEDIUM</text>
+    </g>
+
+    <!-- Implementation Script -->
+    <g transform="translate(20, 235)">
+      <rect x="0" y="0" width="1260" height="150" rx="6" fill="url(#terminalBg)" stroke="#30363d" stroke-width="1"/>
+      <rect x="0" y="0" width="1260" height="28" rx="6" fill="#21262d"/>
+      <rect x="0" y="22" width="1260" height="6" fill="url(#terminalBg)"/>
+      <circle cx="20" cy="14" r="5" fill="#ff5f57"/>
+      <circle cx="40" cy="14" r="5" fill="#febc2e"/>
+      <circle cx="60" cy="14" r="5" fill="#28c840"/>
+      <text x="630" y="18" text-anchor="middle" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e">scripts/gazetteer/load-geonames.js</text>
+      
+      <text x="20" y="52" font-family="'Fira Code', monospace" font-size="11" fill="#8b949e"># Usage:</text>
+      <text x="20" y="74" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">node</text>
+      <text x="55" y="74" font-family="'Fira Code', monospace" font-size="11" fill="#c9d1d9">scripts/gazetteer/load-geonames.js</text>
+      <text x="290" y="74" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--source</text>
+      <text x="355" y="74" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">cities15000.txt</text>
+      <text x="475" y="74" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--phase</text>
+      <text x="530" y="74" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">1</text>
+      
+      <text x="20" y="96" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">node</text>
+      <text x="55" y="96" font-family="'Fira Code', monospace" font-size="11" fill="#c9d1d9">scripts/gazetteer/load-geonames.js</text>
+      <text x="290" y="96" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--source</text>
+      <text x="355" y="96" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">admin1CodesASCII.txt</text>
+      <text x="515" y="96" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--phase</text>
+      <text x="570" y="96" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">2</text>
+      
+      <text x="20" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#79c0ff">node</text>
+      <text x="55" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#c9d1d9">scripts/gazetteer/load-geonames.js</text>
+      <text x="290" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--source</text>
+      <text x="355" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">alternateNames.txt</text>
+      <text x="490" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--phase</text>
+      <text x="545" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">3</text>
+      <text x="560" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#ffa657">--lang</text>
+      <text x="605" y="118" font-family="'Fira Code', monospace" font-size="11" fill="#a5d6ff">en</text>
+      
+      <text x="20" y="142" font-family="'Fira Code', monospace" font-size="11" fill="#7ee787"># Estimated: Phase 1 (~30s), Phase 2 (~5s), Phase 3 (~2min filtered)</text>
+    </g>
+  </g>
+
+  <!-- Section 5: Memory & Performance -->
+  <g transform="translate(50, 1095)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="620" height="200" rx="8" fill="url(#cardBg)" stroke="#3a3a4e" stroke-width="1"/>
+    <rect x="0" y="0" width="620" height="40" rx="8" fill="#5d2f5d" opacity="0.9"/>
+    <rect x="0" y="32" width="620" height="8" fill="url(#cardBg)"/>
+    <text x="310" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#ce93d8">Memory &amp; Performance</text>
+    
+    <text x="20" y="65" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="bold" fill="#ce93d8">Current:</text>
+    <text x="100" y="65" font-family="'Segoe UI', sans-serif" font-size="13" fill="#c4c4d4">508 places, ~1.5MB, 35ms load</text>
+    
+    <text x="20" y="95" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="bold" fill="#ce93d8">After Phase 1:</text>
+    <text x="130" y="95" font-family="'Segoe UI', sans-serif" font-size="13" fill="#c4c4d4">~25,000 places, ~10MB, ~200ms</text>
+    
+    <text x="20" y="125" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="bold" fill="#ce93d8">After Phase 2:</text>
+    <text x="130" y="125" font-family="'Segoe UI', sans-serif" font-size="13" fill="#c4c4d4">~29,000 places, ~12MB, ~250ms</text>
+    
+    <text x="20" y="155" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="bold" fill="#ce93d8">After Phase 3:</text>
+    <text x="130" y="155" font-family="'Segoe UI', sans-serif" font-size="13" fill="#c4c4d4">~29,000 places, ~15MB, ~300ms</text>
+    
+    <text x="20" y="185" font-family="'Segoe UI', sans-serif" font-size="12" fill="#8b949e" font-style="italic">Note: One-time load on startup. Map lookups remain O(1).</text>
+  </g>
+
+  <!-- Section 6: Migration Script -->
+  <g transform="translate(730, 1095)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="620" height="200" rx="8" fill="url(#cardBg)" stroke="#3a3a4e" stroke-width="1"/>
+    <rect x="0" y="0" width="620" height="40" rx="8" fill="url(#amethystAccent)" opacity="0.9"/>
+    <rect x="0" y="32" width="620" height="8" fill="url(#cardBg)"/>
+    <text x="310" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#b39ddb">Migration Plan</text>
+    
+    <text x="20" y="65" font-family="'Fira Code', monospace" font-size="12" fill="#a5d6ff">1.</text>
+    <text x="40" y="65" font-family="'Fira Code', monospace" font-size="12" fill="#c4c4d4">cp data/gazetteer.db data/gazetteer.db.backup</text>
+    
+    <text x="20" y="90" font-family="'Fira Code', monospace" font-size="12" fill="#a5d6ff">2.</text>
+    <text x="40" y="90" font-family="'Fira Code', monospace" font-size="12" fill="#c4c4d4">node scripts/gazetteer/migrate-schema.js</text>
+    
+    <text x="20" y="115" font-family="'Fira Code', monospace" font-size="12" fill="#a5d6ff">3.</text>
+    <text x="40" y="115" font-family="'Fira Code', monospace" font-size="12" fill="#c4c4d4">node scripts/gazetteer/fix-canonical-names.js</text>
+    
+    <text x="20" y="140" font-family="'Fira Code', monospace" font-size="12" fill="#a5d6ff">4.</text>
+    <text x="40" y="140" font-family="'Fira Code', monospace" font-size="12" fill="#c4c4d4">node scripts/gazetteer/load-geonames.js --phase 1</text>
+    
+    <text x="20" y="165" font-family="'Fira Code', monospace" font-size="12" fill="#a5d6ff">5.</text>
+    <text x="40" y="165" font-family="'Fira Code', monospace" font-size="12" fill="#c4c4d4">node scripts/gazetteer/load-geonames.js --phase 2</text>
+    
+    <text x="20" y="190" font-family="'Fira Code', monospace" font-size="12" fill="#a5d6ff">6.</text>
+    <text x="40" y="190" font-family="'Fira Code', monospace" font-size="12" fill="#c4c4d4">node scripts/gazetteer/verify-coverage.js</text>
+  </g>
+
+  <!-- Section 7: Expected Coverage -->
+  <g transform="translate(50, 1325)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="1300" height="190" rx="8" fill="url(#cardBg)" stroke="url(#emeraldAccent)" stroke-width="2"/>
+    <rect x="0" y="0" width="1300" height="40" rx="8" fill="url(#emeraldAccent)" opacity="0.9"/>
+    <rect x="0" y="32" width="1300" height="8" fill="url(#cardBg)"/>
+    <text x="650" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#fff">Expected Coverage After Implementation</text>
+    
+    <!-- Coverage boxes -->
+    <g transform="translate(25, 55)">
+      <rect x="0" y="0" width="230" height="115" rx="6" fill="#1e3d28" stroke="#4caf50" stroke-width="1"/>
+      <text x="115" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#a5d6a7">US Coverage</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ 50 states</text>
+      <text x="12" y="72" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ ~1,500 cities (pop &gt; 15k)</text>
+      <text x="12" y="94" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ NYC, LA, Chicago, etc.</text>
+    </g>
+
+    <g transform="translate(275, 55)">
+      <rect x="0" y="0" width="230" height="115" rx="6" fill="#1e3d28" stroke="#4caf50" stroke-width="1"/>
+      <text x="115" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#a5d6a7">UK Coverage</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ England, Scotland, Wales, NI</text>
+      <text x="12" y="72" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ ~300 cities/towns</text>
+      <text x="12" y="94" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ Manchester, Birmingham</text>
+    </g>
+
+    <g transform="translate(525, 55)">
+      <rect x="0" y="0" width="230" height="115" rx="6" fill="#1e3d28" stroke="#4caf50" stroke-width="1"/>
+      <text x="115" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#a5d6a7">Europe Coverage</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ All EU countries + regions</text>
+      <text x="12" y="72" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ ~5,000 cities</text>
+      <text x="12" y="94" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ Berlin, Munich, Milan</text>
+    </g>
+
+    <g transform="translate(775, 55)">
+      <rect x="0" y="0" width="230" height="115" rx="6" fill="#1e3d28" stroke="#4caf50" stroke-width="1"/>
+      <text x="115" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#a5d6a7">Asia/Pacific</text>
+      <text x="12" y="50" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ ~8,000 cities</text>
+      <text x="12" y="72" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ Tokyo, Beijing, Sydney</text>
+      <text x="12" y="94" font-family="'Segoe UI', sans-serif" font-size="12" fill="#81c784">✓ Indian/Chinese provinces</text>
+    </g>
+
+    <g transform="translate(1025, 55)">
+      <rect x="0" y="0" width="250" height="115" rx="6" fill="#1a3d1a" stroke="url(#goldAccent)" stroke-width="2"/>
+      <text x="125" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="url(#goldAccent)">News URL Match Rate</text>
+      <text x="20" y="55" font-family="'Segoe UI', sans-serif" font-size="14" fill="#e57373">Before:</text>
+      <text x="80" y="55" font-family="'Segoe UI', sans-serif" font-size="14" fill="#e57373">~40%</text>
+      <text x="20" y="85" font-family="'Segoe UI', sans-serif" font-size="18" font-weight="bold" fill="#a5d6a7">After:</text>
+      <text x="80" y="85" font-family="'Segoe UI', sans-serif" font-size="18" font-weight="bold" fill="#a5d6a7">~95%</text>
+      <text x="20" y="105" font-family="'Segoe UI', sans-serif" font-size="11" fill="#8b949e" font-style="italic">(for location-containing URLs)</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="700" y="1545" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#5a5a6e" font-style="italic">
+    Generated: 2025-11-28 | Data Sources: GeoNames (CC BY 4.0), RestCountries
+  </text>
+  
+  <!-- Decorative bottom line -->
+  <line x1="400" y1="1560" x2="1000" y2="1560" stroke="url(#goldAccent)" stroke-width="1" opacity="0.3"/>
+</svg>

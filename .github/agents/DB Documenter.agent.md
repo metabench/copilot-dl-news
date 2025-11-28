@@ -126,6 +126,18 @@ tools: ['edit', 'search', 'runCommands', 'usages', 'fetch', 'todos']
 
 ### Phase 2 — Introspect (DBs)
 
+**Schema Sync Tool (SQLite - Primary)**
+
+* Always run schema-sync first to ensure definitions are current:
+  ```bash
+  npm run schema:sync          # Regenerate schema-definitions.js
+  npm run schema:check         # Verify no drift (CI gate)
+  npm run schema:stats         # Regenerate with table statistics
+  ```
+* Files updated:
+  * `src/db/sqlite/v1/schema-definitions.js` - Canonical schema definitions
+  * `docs/database/_artifacts/news_db_stats.json` - Table row counts and statistics
+
 **Postgres (read‑only)**
 
 * Schema only:
@@ -138,6 +150,7 @@ tools: ['edit', 'search', 'runCommands', 'usages', 'fetch', 'todos']
 
 * Schema only: `sqlite3 "$SQLITE_PATH" ".schema" > docs/database/_artifacts/sqlite_schema.sql`
 * PRAGMA metadata to `sqlite_metadata.json`.
+* **Prefer `npm run schema:sync`** over raw sqlite3 commands for consistency.
 
 ### Phase 3 — Diff
 

@@ -1,0 +1,198 @@
+{
+  "$schema": "./decision-tree.schema.json",
+  "version": "1.0.0",
+  "name": "page-category-classifier",
+  "description": "Decision tree for classifying page content categories",
+  "categories": {
+    "in-depth": {
+      "displayName": "In-Depth",
+      "description": "Hub pages linking to long-form articles, features, and investigative pieces",
+      "tree": {
+        "id": "in-depth-root",
+        "condition": {
+          "type": "url_matches",
+          "patterns": ["long-read", "long-form", "longform", "the-long-read"]
+        },
+        "yes": {
+          "result": "match",
+          "confidence": 0.9,
+          "reason": "url-pattern-long-read"
+        },
+        "no": {
+          "id": "in-depth-series-check",
+          "condition": {
+            "type": "url_matches",
+            "patterns": ["series", "feature", "features", "investigation", "special-report"]
+          },
+          "yes": {
+            "id": "in-depth-series-word-check",
+            "condition": {
+              "type": "compare",
+              "field": "section_avg_word_count",
+              "operator": "gt",
+              "value": { "field": "domain_avg_word_count", "multiplier": 1.3 }
+            },
+            "yes": {
+              "result": "match",
+              "confidence": 0.85,
+              "reason": "url-pattern-series+high-word-count"
+            },
+            "no": {
+              "result": "match",
+              "confidence": 0.7,
+              "reason": "url-pattern-series"
+            }
+          },
+          "no": {
+            "id": "in-depth-content-signals",
+            "condition": {
+              "type": "compound",
+              "operator": "AND",
+              "conditions": [
+                { "type": "compare", "field": "classification", "operator": "eq", "value": "nav" },
+                { "type": "compare", "field": "article_links_count", "operator": "gte", "value": 5 }
+              ]
+            },
+            "yes": {
+              "id": "in-depth-word-count-final",
+              "condition": {
+                "type": "compare",
+                "field": "max_linked_word_count",
+                "operator": "gte",
+                "value": 2500
+              },
+              "yes": {
+                "result": "match",
+                "confidence": 0.75,
+                "reason": "nav-hub+high-word-count-articles"
+              },
+              "no": {
+                "result": "no-match",
+                "reason": "insufficient-word-count-signals"
+              }
+            },
+            "no": {
+              "result": "no-match",
+              "reason": "not-hub-like"
+            }
+          }
+        }
+      }
+    },
+    "opinion": {
+      "displayName": "Opinion",
+      "description": "Editorial and opinion section hubs",
+      "tree": {
+        "id": "opinion-root",
+        "condition": {
+          "type": "url_matches",
+          "patterns": ["opinion", "opinions", "comment", "commentisfree", "editorial", "editorials", "op-ed", "oped", "columnist", "voices", "perspective", "viewpoint"]
+        },
+        "yes": {
+          "id": "opinion-confirm-hub",
+          "condition": {
+            "type": "compound",
+            "operator": "OR",
+            "conditions": [
+              { "type": "compare", "field": "classification", "operator": "eq", "value": "nav" },
+              { "type": "compare", "field": "article_links_count", "operator": "gte", "value": 3 }
+            ]
+          },
+          "yes": {
+            "result": "match",
+            "confidence": 0.85,
+            "reason": "url-pattern+hub-signals"
+          },
+          "no": {
+            "result": "match",
+            "confidence": 0.6,
+            "reason": "url-pattern-only"
+          }
+        },
+        "no": {
+          "result": "no-match",
+          "reason": "no-opinion-pattern"
+        }
+      }
+    },
+    "live": {
+      "displayName": "Live Coverage",
+      "description": "Live event coverage and live blogs",
+      "tree": {
+        "id": "live-root",
+        "condition": {
+          "type": "url_matches",
+          "patterns": ["live", "liveblog", "live-blog", "as-it-happened", "live-updates", "live-coverage", "breaking"]
+        },
+        "yes": {
+          "result": "match",
+          "confidence": 0.9,
+          "reason": "url-pattern-live"
+        },
+        "no": {
+          "id": "live-title-check",
+          "condition": {
+            "type": "text_contains",
+            "field": "title",
+            "patterns": ["live:", "live |", "- live", "live updates", "as it happened"]
+          },
+          "yes": {
+            "result": "match",
+            "confidence": 0.8,
+            "reason": "title-contains-live"
+          },
+          "no": {
+            "result": "no-match",
+            "reason": "no-live-indicators"
+          }
+        }
+      }
+    },
+    "explainer": {
+      "displayName": "Explainer",
+      "description": "Explainer and educational content hubs",
+      "tree": {
+        "id": "explainer-root",
+        "condition": {
+          "type": "url_matches",
+          "patterns": ["explainer", "explainers", "explained", "guide", "guides", "what-is", "how-to", "faq", "101", "understand"]
+        },
+        "yes": {
+          "result": "match",
+          "confidence": 0.85,
+          "reason": "url-pattern-explainer"
+        },
+        "no": {
+          "result": "no-match",
+          "reason": "no-explainer-pattern"
+        }
+      }
+    },
+    "multimedia": {
+      "displayName": "Multimedia",
+      "description": "Video, audio, and interactive content hubs",
+      "tree": {
+        "id": "multimedia-root",
+        "condition": {
+          "type": "url_matches",
+          "patterns": ["video", "videos", "audio", "podcast", "podcasts", "interactive", "interactives", "multimedia", "gallery", "galleries", "photos", "graphics", "visuals"]
+        },
+        "yes": {
+          "result": "match",
+          "confidence": 0.85,
+          "reason": "url-pattern-multimedia"
+        },
+        "no": {
+          "result": "no-match",
+          "reason": "no-multimedia-pattern"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "author": "system",
+    "created": "2025-11-27",
+    "lastModified": "2025-11-27",
+    "notes": "Initial decision tree configuration for page categorization. Boolean-only decisions with full audit trail."
+  }
+}

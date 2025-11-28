@@ -1,5 +1,10 @@
 "use strict";
 
+/**
+ * @server Diagram Atlas
+ * @description Visualizes code structure, database schema, and system features.
+ */
+
 const express = require("express");
 const compression = require("compression");
 const path = require("path");

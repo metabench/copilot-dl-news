@@ -1,13 +1,25 @@
 # Main SQLite Schema (`news.db`)
 
-_Last snapshot: 2025-11-04 (`docs/database/_artifacts/news_db_schema.sql`)_
+_Last snapshot: 2025-11-27 (`docs/database/_artifacts/news_db_stats.json`)_
 
 ## Quick Facts
 - **Engine:** SQLite 3 (better-sqlite3 bindings) in WAL mode.
 - **File size:** ~4.5 GB (`news_db_stats.json`).
-- **Tables:** 75 (no materialized views); 300+ indexes; 20+ triggers enforcing data integrity.
-- **Views:** 2 compatibility layers (`articles_view`, `place_hubs_with_urls`) bridging legacy consumers while Phase 4 normalization lands.
+- **Tables:** 75 (no materialized views); 210+ indexes; 25 triggers enforcing data integrity.
+- **Views:** 3 compatibility layers (`articles_view`, `place_hubs_with_urls`, `articles_view_no_html`) bridging legacy consumers while Phase 4 normalization lands.
 - **Dominant workloads:** crawler ingestion, URL normalization, place/gazetteer enrichment, coverage analytics, background task tracking.
+
+## Schema Synchronization
+
+**Always run after schema changes:**
+
+```bash
+npm run schema:sync     # Regenerate schema-definitions.js
+npm run schema:check    # CI gate - exits 1 if drift detected
+npm run schema:stats    # Regenerate with table statistics
+```
+
+**Canonical definitions:** `src/db/sqlite/v1/schema-definitions.js` (auto-generated)
 
 ### Row Count Highlights
 | Table | Rows | Notes |

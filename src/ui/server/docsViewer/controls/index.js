@@ -1,18 +1,12 @@
 "use strict";
 
 /**
- * Documentation Viewer Controls
+ * Controls Index - DEPRECATED
  * 
- * Exports all jsgui3 controls for the documentation viewer.
+ * All controls have been moved to isomorphic/controls/
+ * This file redirects for backwards compatibility.
+ * 
+ * @deprecated Use require("../isomorphic/controls") instead
  */
 
-const { DocAppControl } = require("./DocAppControl");
-const { DocNavControl } = require("./DocNavControl");
-const { DocViewerControl, DocContentControl } = require("./DocViewerControl");
-
-module.exports = {
-  DocAppControl,
-  DocNavControl,
-  DocViewerControl,
-  DocContentControl
-};
+module.exports = require("../isomorphic/controls");

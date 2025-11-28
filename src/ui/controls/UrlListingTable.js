@@ -33,9 +33,17 @@ function formatDateTime(value, includeSeconds = false) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   const pad = (n) => String(n).padStart(2, "0");
-  const base = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  // Compact format: MM-DD on first line, HH:MM on second
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  const year = String(date.getUTCFullYear()).slice(2); // 2-digit year
   const time = `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}${includeSeconds ? `:${pad(date.getUTCSeconds())}` : ""}`;
-  return `${base} ${time} UTC`;
+  // Return object with stacked HTML for compact display
+  return {
+    html: `<span class="timestamp-date">${month}-${day}-${year}</span><span class="timestamp-time">${time}</span>`,
+    text: `${date.getUTCFullYear()}-${month}-${day} ${time} UTC`,
+    classNames: "is-timestamp"
+  };
 }
 
 function formatStatus(code) {

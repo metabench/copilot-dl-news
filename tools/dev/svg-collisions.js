@@ -268,10 +268,34 @@ function classifyCollision(el1, el2, intersection, strict) {
     // Lines have very small area, so even small overlap has high ratio
     // Only report if line actually covers significant portion of text
     const textEl = isText1 ? el1 : el2;
+    const lineEl = isText1 ? el2 : el1;
     const textArea = getArea(textEl.bbox);
+    const lineArea = getArea(lineEl.bbox);
     const coverRatio = intersection.area / textArea;
     
-    if (coverRatio > 0.5) {
+    // Small text near lines = labels on connectors (YES/NO on decision trees)
+    // Typical label text is under 200 sq px
+    if (textArea < 200) {
+      return { report: false, reason: "Small label on connector line" };
+    }
+    
+    // If line area is very small compared to text, it's just crossing nearby
+    if (lineArea < textArea * 0.5) {
+      return { report: false, reason: "Line passes near text" };
+    }
+    
+    // Path shapes (like database cylinders) often contain descriptive text
+    // Check if text is mostly inside the path bounding box (icon with label)
+    if (lineEl.tagName.toLowerCase() === 'path') {
+      // If the text bbox is mostly inside the path bbox, it's a labeled icon
+      const textInsidePath = contains(lineEl.bbox, textEl.bbox, 20);
+      if (textInsidePath) {
+        return { report: false, reason: "Text label inside icon shape" };
+      }
+    }
+    
+    // Only report if line truly obscures the text (>80% coverage)
+    if (coverRatio > 0.8) {
       return {
         type: "line-over-text",
         severity: "medium", 
@@ -295,33 +319,38 @@ function classifyCollision(el1, el2, intersection, strict) {
     const largerArea = Math.max(area1, area2);
     const areaRatio = smallerArea / largerArea;
     
-    // If one rect is MUCH larger (>10x), it's likely a background/container panel
+    // If one rect is significantly larger (>3x), it's likely a background/container panel
     // and the smaller rect is meant to be inside it (common in card layouts)
-    if (areaRatio < 0.1) {
-      return { report: false, reason: "Background container vs small element" };
+    if (areaRatio < 0.33) {
+      return { report: false, reason: "Background container vs nested element" };
     }
     
     // Check for header/body pattern: small rect overlapping edge of larger rect
     // Common in card designs where a colored header sits on top of white body
     // If one rect is much smaller (header) and overlap is small, likely intentional
-    if (areaRatio < 0.3 && intersection.area / smallerArea < 0.5) {
+    if (areaRatio < 0.5 && intersection.area / smallerArea < 0.6) {
       return { report: false, reason: "Header/body card pattern" };
     }
     
     // Adjacent elements in doc order with small overlap = intentional layering
     const docOrderDistance = Math.abs(el1.docOrder - el2.docOrder);
-    if (docOrderDistance <= 3 && overlapRatio < 0.35) {
+    if (docOrderDistance <= 5 && overlapRatio < 0.4) {
       return { report: false, reason: "Adjacent layered containers" };
+    }
+    
+    // Small overlap areas (<10000 sq px) are often section edges or minor layout adjustments
+    if (intersection.area < 10000) {
+      return { report: false, reason: "Minor edge overlap" };
     }
     
     // Two independent rects overlapping significantly is a layout problem
     // This catches cases like a white panel overlapping a colored card
-    const minOverlap = strict ? 0.15 : 0.30;
+    const minOverlap = strict ? 0.15 : 0.35;
     
     if (overlapRatio > minOverlap) {
       return {
         type: "shape-overlap",
-        severity: overlapRatio > 0.5 ? "high" : "medium",
+        severity: overlapRatio > 0.6 ? "high" : "medium",
         reason: "Rectangles overlap - possible layout issue",
         report: true
       };

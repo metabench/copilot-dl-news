@@ -1,5 +1,37 @@
 ﻿Living Agent Workflow (Plan → Improve → Document)
 
+---
+
+## ⚠️ SESSION FIRST — NON-NEGOTIABLE
+
+**Before writing ANY code**, create a session directory:
+
+```bash
+node tools/dev/session-init.js --slug "<short-name>" --type "<category>" --title "<Title>" --objective "<one-liner>"
+```
+
+This creates `docs/sessions/YYYY-MM-DD-<slug>/` with:
+- `PLAN.md` — Your working plan (update as you go)
+- `WORKING_NOTES.md` — Notes, commands, discoveries
+- `SESSION_SUMMARY.md` — Fill in when complete
+- `FOLLOW_UPS.md` — What's left for next session
+
+**Why?**
+- Sessions are the **memory system** for AI agents
+- Future agents (and humans) can find and reuse your work
+- Prevents scattered docs in `tmp/` or random locations
+- Enables pattern recognition across sessions
+
+**Common mistakes to avoid:**
+- ❌ Creating plans in `docs/plans/` instead of session directory
+- ❌ Putting notes in `tmp/` (not searchable, not persistent)
+- ❌ Starting code before the session directory exists
+- ❌ Forgetting to update `SESSIONS_HUB.md` (done automatically by tool)
+
+See `docs/sessions/SESSIONS_HUB.md` for the full session system documentation.
+
+---
+
 **QUICK START for Tooling Improvements**: New 3-tier strategy document available!
 - **READ FIRST**: `/docs/TOOLING_RECOMMENDATIONS.md` (executive recommendation, 15 min)
 - **IMPLEMENT**: `/docs/IMPLEMENTATION_ROADMAP.md` (hour-by-hour plan, ready to start)
@@ -51,6 +83,8 @@ Diagrams over walls of text. When explaining architecture, data flow, module rel
 Checking scripts ride alongside tests. Every UI control, renderer, or service that emits HTML should ship a bite-sized Node script under a local `checks/` folder (e.g., `src/ui/controls/checks/ConfigMatrixControl.check.js`). These scripts render representative data, assert structural expectations, and print the generated markup so diffs stay obvious. Keep them under 60 lines, drop fixtures in the same subtree, and reference them in your plan/tests so future agents can run `node <feature>/checks/<name>.check.js` to sanity-check jsgui3 output without touching the global test runner.
 
 Tight feedback. After each change: self-review the diff; run tests; update JSDoc + docs; capture a decision note if you chose between viable options.
+
+Improve the improver. Instruction improvements happen two ways: (1) **During normal work**—when you discover something useful, add it to agent instructions as a side-effect of completing your task; (2) **As dedicated meta-tasks**—when explicitly asked to improve agent capabilities. Both modes compound—30 seconds of documentation saves 30 minutes on every future task.
 
 The improvement loop (run this every task)
 
@@ -115,6 +149,7 @@ Retrospective (append to PR)
 
 What worked: <1–3 bullets>
 What to change in our workflow/docs next time: <1–3 bullets + links you updated>
+Instruction improvements made: <agent files or AGENTS.md sections updated>
 
 DB adapter checklist (performance-focused)
 
@@ -131,6 +166,74 @@ Indexes: Query by indexed predicates; review plans (EXPLAIN) for hot paths.
 Throughput: Prefer bulk insert/update APIs. Avoid per-row loops; push work to the database where sane.
 
 Docs: For non-trivial queries/migrations, add a comment block with intent, complexity, and expected row counts; link any micro-benchmarks.
+
+## Schema Synchronization (MANDATORY)
+
+**When to run**: After ANY database schema change (migrations, direct ALTER TABLE, new tables).
+
+```bash
+# Regenerate schema definitions from current database
+npm run schema:sync
+
+# Check for drift (CI/pre-commit) - exits 1 if out of sync
+npm run schema:check
+
+# Verbose with stats regeneration
+npm run schema:stats
+```
+
+**What it does**:
+- Extracts all tables, indexes, triggers, views from `data/news.db`
+- Regenerates `src/db/sqlite/v1/schema-definitions.js`
+- Optionally regenerates `docs/database/_artifacts/news_db_stats.json`
+
+**Integration points**:
+1. **After running migrations**: Always run `npm run schema:sync`
+2. **Before PR merge**: Run `npm run schema:check` to verify sync
+3. **In DB adapter work**: Consult `schema-definitions.js` for current schema
+4. **Documentation updates**: Run `npm run schema:stats` to refresh table counts
+
+**Files affected**:
+- `src/db/sqlite/v1/schema-definitions.js` - Canonical schema definitions
+- `docs/database/_artifacts/news_db_stats.json` - Table statistics
+- `docs/database/schema/main.md` - Human-readable schema docs (manual update)
+
+See `tools/schema-sync.js --help` for all options.
+
+## Facts vs Classifications (Critical Distinction)
+
+**This is a foundational principle for all classification work in this repository.**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Nature** | Objective observations | Subjective judgments |
+| **Question** | "Does it have X?" | "What is it?" |
+| **Example** | "URL contains /2024/01/15/" | "This is a news article" |
+| **Mutability** | Fixed once computed | Can change with rule updates |
+| **Storage** | `url_facts` table | `url_classifications` table |
+
+**Key Principles:**
+
+1. **Facts are NEUTRAL** — They observe structure without judging it as good/bad, positive/negative
+2. **Facts are OBJECTIVE** — Verifiable, reproducible, same input = same output
+3. **Classifications CONSUME facts** — Rules combine facts with boolean logic to make decisions
+4. **No weighted signals** — Pure boolean TRUE/FALSE, no scores or confidence levels
+
+**Example: Pagination**
+- ✅ **Fact**: `url.hasPaginationPattern: true` — URL contains `?page=2`
+- ❌ **Wrong**: Treating pagination as a "negative signal"
+- ✅ **Right**: Pagination is neutral data; classification rules decide if it matters
+
+**Fact Categories** (all neutral observations):
+- `url.*` — URL string patterns (cheapest)
+- `document.*` — HTML/DOM structure
+- `schema.*` — JSON-LD/Microdata
+- `meta.*` — Meta tags
+- `response.*` — HTTP response characteristics
+- `page.*` — Page structure observations
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` for full architecture.
+See `src/facts/` for implementation.
 
 How AGENTS.md stays small (and smart)
 
@@ -162,11 +265,28 @@ Update AGENTS.md and the index with exactly one small improvement you wish you h
 
 This loop keeps the code modular, the database fast, and the documentation self-healing—so each pass makes both the system and this playbook sharper.
 
+## Codex VS Code Extension (UI Singularity Emulation)
+
+Applies only when running inside the **VS Codex extension** (not Copilot Chat). Defaults and expectations:
+- Assume the 💡UI Singularity💡 persona (`.github/agents/💡UI Singularity💡.agent.md`) is your base mode; load its rules first.
+- You may switch to other personas when needed, but keep a short running memory of which personas were emulated and the top takeaways. Capture that list in the current session’s `WORKING_NOTES.md`.
+- Note the active mode in your plan header (e.g., “Codex: UI Singularity mode active”) so the context is explicit.
+- Do **not** apply this rule when using Copilot Chat inside VS Code; it is specific to the Codex extension runtime.
+
 ## CLI Tooling & Agent Workflows
 
 When working with CLI tools (js-scan, js-edit), optimize for **bulk operations** and **efficient state passing** to enable AI agents to accomplish more per invocation.
 
 **Test Runner Requirement**: Always use `npm run test:by-path` or `npm run test:file` for testing CLI tools. Never use pipes (`|`), `Select-Object`, or direct `npx jest` commands. See `/docs/TESTING_QUICK_REFERENCE.md` for runner details.
+
+### UI Debugging (Puppeteer)
+
+When working on UI servers (`src/ui/server/*.js`), use `tools/dev/ui-console-capture.js` to see browser console logs and network errors.
+
+```bash
+# Start server, check URL, capture logs, kill server
+node tools/dev/ui-console-capture.js --server="src/ui/server/gazetteerInfoServer.js" --url="http://localhost:3000"
+```
 
 ### Multi-Code Discovery (Batch Search)
 

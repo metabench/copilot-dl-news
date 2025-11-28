@@ -6,7 +6,7 @@
  * Exports all utility functions for the documentation viewer.
  */
 
-const { buildDocTree, findNodeByPath, getAllFilePaths, countFiles } = require("./docTree");
+const { buildDocTree, findNodeByPath, getAllFilePaths, countFiles, sortTree } = require("./docTree");
 const { renderMarkdown, markdownToHtml } = require("./markdownRenderer");
 
 module.exports = {
@@ -15,6 +15,7 @@ module.exports = {
   findNodeByPath,
   getAllFilePaths,
   countFiles,
+  sortTree,
   
   // Markdown utilities
   renderMarkdown,

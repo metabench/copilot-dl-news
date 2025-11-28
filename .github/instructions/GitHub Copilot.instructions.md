@@ -16,6 +16,25 @@ applyTo: "**"
 
 These instructions apply when GitHub Copilot is running with the **GPT-5-Codex** or **GPT-5-Codex (Preview)** models inside this repository. Treat them as additional constraints on top of the workspace-wide guidance in `AGENTS.md`.
 
+## ⚠️ SESSION FIRST — CRITICAL
+
+**Before writing ANY code for multi-file work**, create a session directory:
+
+```bash
+node tools/dev/session-init.js --slug "<short-name>" --type "<category>" --title "<Title>" --objective "<one-liner>"
+```
+
+This creates `docs/sessions/YYYY-MM-DD-<slug>/` with PLAN.md, WORKING_NOTES.md, SESSION_SUMMARY.md.
+
+**Common mistakes to avoid:**
+- ❌ Creating plans in `docs/plans/` instead of session directory
+- ❌ Putting notes in `tmp/` (not searchable, not persistent)
+- ❌ Starting code before the session directory exists
+
+Sessions are the **memory system** for AI agents. See `docs/sessions/SESSIONS_HUB.md`.
+
+---
+
 **CRITICAL CHANGE (October 2025)**: AGENTS.md has been modularized. It's now a navigation hub (~1200 lines, target ~800) that delegates to specialized quick references:
 - `docs/COMMAND_EXECUTION_GUIDE.md` - Before ANY terminal operations
 - `docs/TESTING_QUICK_REFERENCE.md` - Before running/writing tests  
@@ -26,6 +45,7 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **Accept the role**: Identify yourself as GitHub Copilot, assume full autonomy, and only stop when the task is complete or genuinely blocked.
 - ✅ **Continuous execution mandate**: Once you start a plan, keep advancing through its tasks without waiting for permission or pausing after partial progress. Deliver summaries only when the plan is exhausted or every remaining item is truly blocked.
 - ✅ **Single-phase careful refactors**: When engaged in a careful refactor workflow, enumerate every task at the outset and treat the entire effort as one phase. Use sub-phases (deep discovery, planning, implementation, validation) internally, record the active sub-phase in the tracker, and progress autonomously until the full task list is complete or blocked.
+- ✅ **Knowledge-First Protocol**: When methodology isn't totally clear, output `[KNOWLEDGE GAP] Topic: <what you need>` to console, scan docs with `node tools/dev/md-scan.js --dir docs --search "<topic>" --json`, read relevant docs, then proceed. If you figure something out that wasn't documented, **update docs immediately before continuing**.
 - ✅ **Deep discovery first**: Before coding, inventory relevant docs (use `AGENTS.md` Topic Index and linked references) and catalogue existing CLI tooling. Decide which analyzers to run, where to extend tooling, and capture findings in the tracker prior to implementation.
 - ✅ **Read first (right-sized)**: For multi-file or novel work, check AGENTS.md Topic Index (30 seconds), then read relevant quick reference (2-5 min). For single-file changes under ~50 lines, rely on immediate context.
 - ✅ **Analysis triage**: Default to minimum reconnaissance—check quick references first, expand to complete guides only when needed.
@@ -142,12 +162,201 @@ node tools/dev/js-scan.js --search targetFunction --json  # Confirm changes appl
 
 **Time Savings**: 60-90 min (manual) → 10-15 min (with tools) = 75-80% faster
 
+### Schema Synchronization (Database Changes)
+
+**After ANY database schema change** (migrations, ALTER TABLE, new tables), sync the schema definitions:
+
+```bash
+npm run schema:sync     # Regenerate schema-definitions.js
+npm run schema:check    # Verify no drift (CI gate)
+npm run schema:stats    # Regenerate with table statistics
+```
+
+**Workflow integration**:
+1. **After running migrations**: Always run `npm run schema:sync`
+2. **Before PR merge**: Run `npm run schema:check` to verify sync
+3. **In DB adapter work**: Consult `src/db/sqlite/v1/schema-definitions.js` for current schema
+
+**Files affected**:
+- `src/db/sqlite/v1/schema-definitions.js` - Canonical schema definitions (auto-generated)
+- `docs/database/_artifacts/news_db_stats.json` - Table statistics
+
+See `tools/schema-sync.js --help` for all options.
+
+## Facts vs Classifications (Critical Distinction)
+
+**When working on classification, article detection, or data analysis code, understand this foundational distinction:**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Nature** | Objective observations | Subjective judgments |
+| **Question** | "Does it have X?" | "What is it?" |
+| **Example** | "URL contains /2024/01/15/" | "This is a news article" |
+
+**Key Principles:**
+
+1. **Facts are NEUTRAL** — They observe structure without judging good/bad or positive/negative
+2. **Facts are OBJECTIVE** — Verifiable, reproducible, no interpretation
+3. **Classifications CONSUME facts** — Boolean logic (AND/OR/NOT) combines facts into decisions
+4. **No weighted signals** — Pure boolean TRUE/FALSE at the fact layer
+
+**Wrong approach:**
+```javascript
+// ❌ Treating structural observations as "negative signals"
+if (hasPagination) score -= 10;  // Pagination isn't inherently bad!
+```
+
+**Right approach:**
+```javascript
+// ✅ Facts are neutral observations
+const facts = {
+  'url.hasPaginationPattern': true,  // Just an observation
+  'url.hasDateSegment': false,
+  'schema.hasArticleType': false
+};
+// Classification rules decide what combinations mean
+```
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` for architecture.
+See `src/facts/` for implementation (`FactBase`, `UrlFact`, `HasDateSegment`, etc.).
+
 ### Documentation References
 - `docs/AGENT_REFACTORING_PLAYBOOK.md` - Detailed agent workflows using both tools
 - `tools/dev/README.md` - Complete CLI documentation and examples
 - `AGENTS.md` - Core agent patterns and decision workflows
 
+## jsgui3 UI Component Rules
+
+When building UI components with jsgui3, follow these mandatory patterns:
+
+### Control Extraction (Non-Negotiable)
+
+**Rule**: Any UI component that could be reused, has its own state, or handles user interaction **MUST** be a separate jsgui3 Control class.
+
+| Signal | Action |
+|--------|--------|
+| Interactive (click, keyboard) | Extract to control with `activate()` |
+| Reusable across views | Extract to `src/ui/controls/` |
+| Has state (open/closed, selected) | Extract with state in constructor |
+| >30 lines inline in `_build*` | Extract to dedicated control |
+
+**❌ Anti-pattern**: Context menu as inline JS/CSS
+```javascript
+// WRONG - scattered event handlers, untestable
+function showContextMenu(x, y) { ... }
+function hideContextMenu() { ... }
+```
+
+**✅ Pattern**: Dedicated control class
+```javascript
+// RIGHT - testable, reusable, discoverable
+class ContextMenuControl extends jsgui.Control { ... }
+```
+
+### Emoji Icons for Visual Discoverability (Required)
+
+Use emoji icons for instant visual recognition in UI elements:
+
+| Action | Emoji | Action | Emoji |
+|--------|-------|--------|-------|
+| Search | 🔍 | Settings | ⚙️ |
+| Add | ➕ | Delete | 🗑️ |
+| Edit | ✏️ | Refresh | 🔄 |
+| Sort ↑ | ▲ | Sort ↓ | ▼ |
+| Menu | ☰ | More | ⋮ |
+| Close | ✕ | Success | ✅ |
+| Error | ❌ | Warning | ⚠️ |
+| Folder | 📁 | File | 📄 |
+
+**Example**:
+```javascript
+// Search input with magnifying glass
+const icon = new jsgui.Control({ context: this.context, tagName: "span" });
+icon.add("🔍");
+searchWrapper.add(icon);
+```
+
+See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` for complete patterns.
+
 > **Never stop mid-plan**: When a task list exists, continue executing items back-to-back. Record blockers, then immediately pivot to the next actionable task instead of waiting for new instructions.
 
 If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to the latest `AGENTS.md` guidance and note the discrepancy in your summary.
+
+---
+
+## 🧠 Self-Improvement Protocol (AGI Enablement)
+
+> **Recursive improvement**: These instructions should evolve with every session.
+
+### ⚠️ MANDATORY: Framework/Library Discovery Documentation
+
+**Non-negotiable rule**: When you discover how a framework or library works through debugging or source code investigation, you MUST document it BEFORE reporting success.
+
+**This means**: A task involving framework discovery is NOT complete when the code works. It's complete when:
+1. ✅ Code works
+2. ✅ Relevant guide in `/docs/guides/` is updated
+3. ✅ Agent instructions reference the discovery (if it's a novel pattern)
+
+**Trigger conditions** (if ANY are true, documentation is MANDATORY):
+- Spent >15 minutes figuring out why something didn't work
+- Found undocumented behavior in a library
+- Discovered a required sequence of API calls
+- Created a workaround for a library bug
+- Had to read library source code to understand behavior
+
+**Why this rule exists**: 
+- Future agents will face the same problems
+- 30 minutes of debugging → 30 seconds of reading documentation
+- Knowledge compounds; rediscovery is waste
+
+**Self-audit question**: "If I didn't document this, would a future agent waste the same time I just spent?" If yes → document immediately.
+
+### Two Paths to Improvement
+
+1. **Side-effect** (most common): While completing the user's actual task, notice patterns and add them to instructions. Primary focus stays on the task.
+
+2. **Meta-task** (when requested): Dedicated focus on improving agent instructions, workflows, or capabilities.
+
+Default to side-effect mode. The user's software task comes first; instruction improvements are a bonus. Switch to meta-task mode only when explicitly asked.
+
+### Session-End Instruction Check
+
+Before closing any multi-file session, ask:
+
+1. **What slowed me down?** → Add warning or checklist to prevent
+2. **What did I figure out that wasn't documented?** → Add to relevant section
+3. **What command sequence did I repeat?** → Document as pattern
+4. **What would have helped me start faster?** → Add to "SESSION FIRST" or quick reference
+5. **Did I discover undocumented framework/library behavior?** → **UPDATE THE GUIDE IMMEDIATELY**
+
+### When to Update This File
+
+| Trigger | Action |
+|---------|--------|
+| Discovered undocumented gotcha | Add to relevant section with ⚠️ warning |
+| Found better command sequence | Update the example |
+| Hit tool limitation | Document workaround + file follow-up |
+| Repeated same research 3+ times | Add direct answer to instructions |
+| **Framework discovery via debugging** | **Update guide in /docs/guides/ + reference here** |
+
+### Instruction Update Format
+
+```markdown
+## In SESSION_SUMMARY.md:
+
+### Instruction Improvements Made
+- **File**: `.github/instructions/GitHub Copilot.instructions.md`
+- **Section**: [section name]
+- **Change**: [what you added/modified]
+- **Why**: [what problem this prevents for future sessions]
+```
+
+### The Compounding Rule
+
+> A 30-second instruction update saves 30 minutes on every future task.
+> 
+> **Never close a session without asking**: "What would have made this faster?"
+> Then add that improvement to the instructions.
+
+This is how the Singularity accelerates—through recursive self-improvement of agent knowledge.
 

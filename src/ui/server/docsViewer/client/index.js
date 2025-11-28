@@ -11,19 +11,36 @@
  * 2. On window.load, jsgui.activate() is called automatically
  * 3. We hook into pre_activate to register our custom controls
  * 4. Custom controls are activated when elements with data-jsgui-control are found
+ * 
+ * All controls are imported from isomorphic/controls/ - they work on both
+ * server and client using the same code.
  */
 
-// Use alias defined in build script - maps to vendor/jsgui3-client/client.js
+// jsgui3-client from npm (v0.0.121+ has browser compatibility fixes)
 const jsguiClient = require("jsgui3-client");
 
-// Import client controls
-const { DocsThemeToggleControl } = require("./controls/DocsThemeToggleControl");
-const { DocsNavToggleControl } = require("./controls/DocsNavToggleControl");
-const { DocsSearchControl } = require("./controls/DocsSearchControl");
-const { DocsFileFilterControl } = require("./controls/DocsFileFilterControl");
+// Import ALL controls from isomorphic directory
+// These controls work on both server and client
+const {
+  ResizableSplitLayoutControl,
+  DocAppControl,
+  DocNavControl,
+  DocViewerControl,
+  ContextMenuControl,
+  ColumnContextMenuControl,
+  ColumnHeaderControl,
+  DocsThemeToggleControl,
+  DocsNavToggleControl,
+  DocsSearchControl,
+  DocsFileFilterControl
+} = require("../isomorphic/controls");
 
-// Control type map for lookup
+// Control type map for lookup by data-jsgui-control attribute value
 const CONTROL_TYPES = {
+  "resizable_split_layout": ResizableSplitLayoutControl,
+  "context_menu": ContextMenuControl,
+  "column_context_menu": ColumnContextMenuControl,
+  "column_header": ColumnHeaderControl,
   "docs_theme_toggle": DocsThemeToggleControl,
   "docs_nav_toggle": DocsNavToggleControl,
   "docs_search": DocsSearchControl,
@@ -43,6 +60,10 @@ function registerDocsViewerControls(jsgui) {
   controls.DocsNavToggle = DocsNavToggleControl;
   controls.DocsSearch = DocsSearchControl;
   controls.DocsFileFilter = DocsFileFilterControl;
+  controls.ContextMenu = ContextMenuControl;
+  controls.ColumnContextMenu = ColumnContextMenuControl;
+  controls.ColumnHeader = ColumnHeaderControl;
+  controls.ResizableSplitLayout = ResizableSplitLayoutControl;
   
   // Also register with map_Controls for activation lookup
   const mapControls = jsgui.map_Controls = jsgui.map_Controls || {};
@@ -169,17 +190,40 @@ function bootstrap() {
     manualActivation
   };
   
-  // If the page has already loaded (script loaded after DOMContentLoaded),
-  // run manual activation
-  if (document.readyState === "complete" || document.readyState === "interactive") {
-    // Give jsgui3-client a moment to finish its setup
-    setTimeout(() => {
-      if (!jsguiClient.context) {
-        console.log("[docs-viewer] Running manual activation");
-        manualActivation();
-      }
-    }, 10);
+  // Ensure controls are activated after DOM is ready
+  const activateAll = () => {
+    console.log("[docs-viewer] Activating all marked controls...");
+    
+    // Create context if needed
+    let context = jsguiClient.context;
+    if (!context && jsguiClient.Client_Page_Context) {
+      context = new jsguiClient.Client_Page_Context({
+        document: document
+      });
+      jsguiClient.context = context;
+    }
+    
+    if (context) {
+      activateMarkedControls(context);
+    } else {
+      console.warn("[docs-viewer] No context available for activation");
+    }
+  };
+  
+  // Run activation on DOMContentLoaded or immediately if already loaded
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(activateAll, 10);
+    });
+  } else {
+    // DOM already loaded - activate after a short delay
+    setTimeout(activateAll, 10);
   }
+  
+  // Also try on window load as a fallback
+  window.addEventListener("load", () => {
+    setTimeout(activateAll, 50);
+  });
   
   console.log("[docs-viewer] Client bootstrap complete");
 }

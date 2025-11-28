@@ -30,6 +30,94 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 - Doc updates that contradict AGENTS.md or repo-wide mandates.
 - Start servers in foreground when subsequent commands are needed (use detached mode).
 
+---
+
+## ⚠️ Knowledge-First Protocol (MANDATORY)
+
+> **Before attempting anything where the methodology isn't totally clear, STOP and gather knowledge.**
+
+### Trigger Conditions
+
+Run the knowledge-first sequence when ANY of these are true:
+- The exact approach/API/pattern is unclear
+- You haven't worked with this part of the codebase before
+- You're about to experiment to see what works
+- The task involves a framework or library you're not certain about
+
+### The Sequence
+
+**Step 1: Output knowledge gaps to console (makes gaps visible)**
+```javascript
+console.log('[KNOWLEDGE GAP] ─────────────────────────────────────────');
+console.log('  Topic: <what you need to understand>');
+console.log('  Questions:');
+console.log('    • <specific question 1>');
+console.log('    • <specific question 2>');
+console.log('  Scanning docs for: <search terms>');
+console.log('[KNOWLEDGE GAP] ─────────────────────────────────────────');
+```
+
+**Step 2: Scan documentation**
+```bash
+# Primary search - all docs
+node tools/dev/md-scan.js --dir docs --search "<topic>" --json
+
+# Guides (in-depth explanations)
+node tools/dev/md-scan.js --dir docs/guides --search "<topic>" --json
+
+# Session history (prior solutions)
+node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json
+
+# Code patterns
+node tools/dev/js-scan.js --search "<function or pattern>" --json
+```
+
+**Step 3: Read and absorb**
+- Read matching docs thoroughly, not just skim
+- Look for working code examples
+- Note any gaps, contradictions, or outdated content
+
+**Step 4: Proceed or improve**
+- Docs complete → proceed with implementation
+- Docs missing/incomplete → add to task list: "Update <doc> with <topic>"
+- Had to figure it out yourself → **UPDATE DOCS IMMEDIATELY** (before continuing)
+
+### Knowledge Sources by Topic
+
+| Topic | Primary Source | Command |
+|-------|----------------|----------|
+| Agent workflows | `AGENTS.md`, `.github/agents/*.md` | `md-scan --dir .github/agents` |
+| js-scan/js-edit | `tools/dev/README.md` | `md-scan --dir tools/dev` |
+| Database | `docs/database/` | `md-scan --dir docs/database` |
+| Refactoring | `docs/AGENT_REFACTORING_PLAYBOOK.md` | direct read |
+| jsgui3 | `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` | direct read |
+| Prior solutions | `docs/sessions/` | `md-scan --dir docs/sessions` |
+
+### Why This Protocol Exists
+
+1. **Prevents costly guessing** — Reading for 2 min beats debugging for 30 min
+2. **Surfaces gaps early** — Console output shows exactly what's unclear
+3. **Builds compound knowledge** — Every doc improvement helps all future agents
+4. **Creates audit trail** — Knowledge gaps are logged, not hidden
+
+### The Doc Improvement Loop
+
+```
+Encounter gap → Search docs → Docs missing/unclear?
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │ YES                          │ NO
+                    ▼                              ▼
+          Figure it out, then         Proceed with implementation
+          UPDATE DOCS FIRST           (docs worked!)
+          (task not done until
+           docs are updated)
+```
+
+**The rule**: Knowledge discovered = knowledge documented. A solution that isn't in docs might as well not exist for future agents.
+
+---
+
 ## Server Management & Detached Mode
 
 **Critical Problem**: Starting a server in a terminal and running another command often kills the server due to signal propagation. This wastes debugging time when the real issue is that the server simply died.
@@ -61,6 +149,26 @@ See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` → "Development Server & Deta
 ## jsgui3 Terminology
 
 **Activation vs Hydration**: jsgui3 uses "**activation**" (`activate()` method) for what other frameworks call "**hydration**" - binding controls to existing server-rendered DOM. Use "activation" in jsgui3 code/docs, but understand both terms refer to the same concept.
+
+## Facts vs Classifications (Critical Distinction)
+
+**When working on classification, article detection, or URL analysis:**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Nature** | Objective observations | Subjective judgments |
+| **Question** | "Does it have X?" | "What is it?" |
+| **Neutrality** | Always neutral | Interprets facts |
+
+**Key Principles:**
+1. **Facts are NEUTRAL** — Observe structure without judging it as good/bad
+2. **Facts are OBJECTIVE** — Verifiable, reproducible, same input = same output
+3. **No weighted signals** — Pure boolean TRUE/FALSE, no scores
+4. **Classifications CONSUME facts** — Rules combine facts with AND/OR/NOT
+
+**Example**: `url.hasPaginationPattern: true` is a neutral observation. Whether pagination matters depends on what you're classifying—it's not inherently "negative."
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` and `src/facts/`.
 
 ## Lifecycle — Spark → Spec City → Scaffold → Thicken → Polish → Steward
 
@@ -164,4 +272,84 @@ When a core task ends, ask: *What tooling or documentation enhancement would unl
 - **Default to contributing upstream.** Enhancements to `js-scan`/`js-edit` require tests in `tests/tools/` and updates to `tools/dev/README.md`.
 - **Document every enhancement.** Capture before/after behavior, commands, and new flags inside the current session folder and `docs/AGENT_REFACTORING_PLAYBOOK.md`.
 - **Escalate blockers quickly.** If the CLI lacks a needed feature, either implement it now or record a detailed follow-up (owner, file, flag) before proceeding—no manual workarounds.
+
+---
+
+## 🧠 Self-Improvement Protocol (AGI Enablement)
+
+> **The Singularity Engineer's meta-task**: Improve the system that improves the system.
+
+### Dual-Mode Operation
+
+| Mode | Focus | Output |
+|------|-------|--------|
+| **Primary task + side-effect** | Ship the feature, improve instructions along the way | Feature + small instruction updates |
+| **Dedicated meta-task** | Explicitly improve agent capabilities | Larger instruction restructuring, new patterns |
+
+The Singularity advances through **both**: thousands of small side-effect improvements during normal work, plus occasional dedicated meta-sessions that synthesize patterns into structural changes.
+
+### Recursive Improvement Levels
+
+| Level | What You Improve | Example |
+|-------|------------------|--------|
+| **L0: Code** | The codebase itself | Fix bug, add feature |
+| **L1: Tools** | js-scan, js-edit, scripts | New flag, better output |
+| **L2: Workflows** | How agents use tools | Better discovery → apply sequence |
+| **L3: Instructions** | Agent .md files | This section you're reading |
+| **L4: Meta-process** | How instructions evolve | Cross-session pattern extraction |
+
+**Target**: Every session should touch L0 + at least one higher level.
+
+### Instruction Update Protocol
+
+When you identify an instruction improvement:
+
+1. **Capture immediately** in `WORKING_NOTES.md`:
+   ```markdown
+   ## Instruction Improvement Identified
+   - **File**: `.github/agents/💡Singularity Engineer💡.agent.md`
+   - **Section**: [where it belongs]
+   - **Content**: [what to add]
+   - **Trigger**: [what made you realize this was needed]
+   ```
+
+2. **Implement before session close** — Don't defer instruction updates
+
+3. **Cross-reference** — If relevant to other agents, update them too
+
+### Pattern Extraction Cadence
+
+Every 3-5 sessions, run:
+
+```bash
+# Find recurring themes in recent sessions
+node tools/dev/md-scan.js --dir docs/sessions --search "should have|workaround|limitation|realized" --json --limit 20
+```
+
+Look for:
+- **Repeated workarounds** → Document as official pattern
+- **Repeated tool invocations** → Create npm script alias
+- **Repeated context gathering** → Add to "Before you start" sections
+- **Repeated mistakes** → Add explicit warnings
+
+### Effectiveness Metrics
+
+Track in `SESSION_SUMMARY.md`:
+
+| Metric | Good | Needs Work |
+|--------|------|------------|
+| Time to first useful edit | <10 min | >30 min |
+| Tool commands before editing | 2-4 | >8 |
+| Instruction updates this session | ≥1 | 0 |
+| Knowledge reused from prior sessions | Yes | No |
+
+### The Compounding Rule
+
+> **Every instruction improvement has infinite ROI.**
+>
+> A 30-second addition to this file saves 30 minutes for every future invocation.
+> Across hundreds of future sessions, that's thousands of hours.
+>
+> **Never close a session without asking**: "What would have made this faster?"
+> Then add that to the instructions.
 

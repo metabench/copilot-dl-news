@@ -20,10 +20,43 @@ tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'mic
 2. **Read minimal code**: After scan results, open only the necessary controls, render helpers, and server endpoints. Capture coupling notes (props/state/request params) in the session plan.
 3. **Plan**: Use the AGENTS.md template. Include UI-specific done criteria (render fidelity, event coverage, diagnostics visibility) plus the server/db touch points you expect to update.
 
+## ⚠️ Knowledge-First Protocol (MANDATORY)
+
+**Before attempting anything unfamiliar, STOP and gather knowledge.**
+
+When methodology isn't clear:
+1. **Output gaps to console**: `[KNOWLEDGE GAP] Topic: <topic>` with specific questions
+2. **Scan docs**: `node tools/dev/md-scan.js --dir docs/guides --search "<topic>" --json`
+3. **Read relevant docs** thoroughly—look for working examples
+4. **Proceed OR improve docs**: If you had to figure it out, **update docs first** before continuing
+
+UI-specific knowledge sources:
+- `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` — jsgui3 patterns
+- `docs/API_ENDPOINT_REFERENCE.md` — server endpoints
+- `docs/sessions/` — prior solutions
+
+**Rule**: Knowledge discovered = knowledge documented.
+
 ## Data + DB Awareness
 
 - UI agents never reach past adapters: depend on `/src/db/*` interfaces exposed through services or server routes. If a control needs new data, extend the adapter/service; add tests proving query shape and performance considerations (indexes, batching, request budgets).
 - JSDoc every public UI helper you touch. Note expected data contracts, default fallbacks, and the server endpoint responsible for feeding it.
+
+## Facts vs Classifications (UI Display Principle)
+
+When displaying classification results or URL analysis:
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **UI Role** | Display raw observations | Display interpreted labels |
+| **Styling** | Neutral presentation | Can be color-coded by outcome |
+
+**Key Principles:**
+1. **Facts are NEUTRAL** — Don't color-code facts as good/bad
+2. **Classifications interpret facts** — These can be styled by outcome
+3. **Debuggability** — UI should show which facts led to a classification
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md`.
 
 ## Observability & Reliability Standards
 

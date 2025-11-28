@@ -1,0 +1,234 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1800">
+  <!-- Plain version - correct layout without styling -->
+  
+  <!-- Title -->
+  <text x="700" y="50" text-anchor="middle" font-family="Arial" font-size="28" font-weight="bold">
+    Gazetteer Database Improvements
+  </text>
+  <text x="700" y="80" text-anchor="middle" font-family="Arial" font-size="14" fill="#666">
+    Proposed Schema Changes &amp; Data Population Strategy
+  </text>
+
+  <!-- Section 1: Current State Summary -->
+  <g transform="translate(50, 110)">
+    <rect x="0" y="0" width="620" height="200" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+    <text x="310" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold">Current State</text>
+    
+    <text x="20" y="60" font-family="Arial" font-size="14">• 508 places total</text>
+    <text x="20" y="85" font-family="Arial" font-size="14">• 14,855 place_names (10,587 unique normalized)</text>
+    <text x="20" y="110" font-family="Arial" font-size="14">• ~250 countries (RestCountries - complete)</text>
+    <text x="20" y="135" font-family="Arial" font-size="14">• ~10 cities (London, Dublin, Paris...)</text>
+    <text x="20" y="160" font-family="Arial" font-size="14">• 1 US city (Washington D.C.)</text>
+    <text x="20" y="185" font-family="Arial" font-size="14" fill="#c00">• Missing: New York, California, Texas, Chicago...</text>
+  </g>
+
+  <!-- Section 2: Target State -->
+  <g transform="translate(730, 110)">
+    <rect x="0" y="0" width="620" height="200" fill="#e8f5e9" stroke="#4caf50" stroke-width="1"/>
+    <text x="310" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#2e7d32">Target State</text>
+    
+    <text x="20" y="60" font-family="Arial" font-size="14">• ~25,000 places</text>
+    <text x="20" y="85" font-family="Arial" font-size="14">• ~150,000 place_names</text>
+    <text x="20" y="110" font-family="Arial" font-size="14">• All countries + admin regions</text>
+    <text x="20" y="135" font-family="Arial" font-size="14">• Cities with population &gt; 15,000</text>
+    <text x="20" y="160" font-family="Arial" font-size="14">• US states, UK counties, major regions</text>
+    <text x="20" y="185" font-family="Arial" font-size="14">• Memory: ~1.5MB → ~15MB (acceptable)</text>
+  </g>
+
+  <!-- Section 3: Schema Changes -->
+  <g transform="translate(50, 340)">
+    <rect x="0" y="0" width="1300" height="280" fill="#fff3e0" stroke="#ff9800" stroke-width="1"/>
+    <text x="650" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#e65100">Schema Changes</text>
+    
+    <!-- Change 1: url_slug - NOT IMPLEMENTED (computed at runtime) -->
+    <g transform="translate(20, 50)" opacity="0.4">
+      <rect x="0" y="0" width="400" height="100" fill="#f5f5f5" stroke="#999" stroke-width="1" stroke-dasharray="4,2"/>
+      <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" text-decoration="line-through">1. Add url_slug column</text>
+      <text x="10" y="50" font-family="monospace" font-size="12" text-decoration="line-through">ALTER TABLE place_names</text>
+      <text x="10" y="70" font-family="monospace" font-size="12" text-decoration="line-through">ADD COLUMN url_slug TEXT;</text>
+      <text x="10" y="90" font-family="Arial" font-size="11" fill="#c00">NOT IMPLEMENTED - computed at runtime</text>
+    </g>
+
+    <!-- Change 2: alias_mappings -->
+    <g transform="translate(450, 50)">
+      <rect x="0" y="0" width="400" height="100" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">2. Create alias_mappings table</text>
+      <text x="10" y="50" font-family="monospace" font-size="12">alias TEXT → place_id INT</text>
+      <text x="10" y="70" font-family="monospace" font-size="12">"nyc" → New York City</text>
+      <text x="10" y="90" font-family="Arial" font-size="11" fill="#666">Purpose: Common abbreviations</text>
+    </g>
+
+    <!-- Change 3: canonical_name fix -->
+    <g transform="translate(880, 50)">
+      <rect x="0" y="0" width="400" height="100" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">3. Fix canonical_name_id</text>
+      <text x="10" y="50" font-family="monospace" font-size="12">UPDATE places SET canonical_name_id</text>
+      <text x="10" y="70" font-family="monospace" font-size="12">WHERE canonical_name_id IS NULL;</text>
+      <text x="10" y="90" font-family="Arial" font-size="11" fill="#666">Purpose: Fix "Place #21" names</text>
+    </g>
+
+    <!-- Change 4: Indexes -->
+    <g transform="translate(20, 170)">
+      <rect x="0" y="0" width="620" height="90" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="310" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">4. Add Indexes</text>
+      <text x="10" y="50" font-family="monospace" font-size="12" text-decoration="line-through" fill="#999">CREATE INDEX idx_place_names_url_slug ON place_names(url_slug);</text>
+      <text x="10" y="70" font-family="monospace" font-size="12">CREATE INDEX idx_place_names_normalized ON place_names(normalized);</text>
+    </g>
+
+    <!-- Change 5: place_type -->
+    <g transform="translate(660, 170)">
+      <rect x="0" y="0" width="620" height="90" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="310" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">5. Standardize place_type</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">Values: country | admin1 | admin2 | city | locality</text>
+      <text x="10" y="70" font-family="Arial" font-size="12" fill="#666">Current: mixed (country, city, island, state, region...)</text>
+    </g>
+  </g>
+
+  <!-- Section 4: Data Population Strategy -->
+  <g transform="translate(50, 650)">
+    <rect x="0" y="0" width="1300" height="400" fill="#e3f2fd" stroke="#2196f3" stroke-width="1"/>
+    <text x="650" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#1565c0">Data Population Strategy</text>
+
+    <!-- Phase 1 -->
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="400" height="160" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#1565c0">Phase 1: GeoNames Cities</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">Source: cities15000.txt</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">Count: ~24,000 cities</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">Fields: geonameid, name, lat, lng, country,</text>
+      <text x="10" y="110" font-family="Arial" font-size="12">        admin1, population, timezone</text>
+      <text x="10" y="135" font-family="Arial" font-size="12" fill="#666">Impact: Covers all major news cities</text>
+      <text x="10" y="150" font-family="Arial" font-size="12" fill="#4caf50">Priority: HIGH</text>
+    </g>
+
+    <!-- Phase 2 -->
+    <g transform="translate(450, 50)">
+      <rect x="0" y="0" width="400" height="160" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#1565c0">Phase 2: Admin Regions</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">Source: admin1CodesASCII.txt</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">Count: ~4,000 regions</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">Fields: code, name, ascii_name, geonameid</text>
+      <text x="10" y="110" font-family="Arial" font-size="12">Examples: California, Texas, Scotland,</text>
+      <text x="10" y="130" font-family="Arial" font-size="12">          Bavaria, New South Wales</text>
+      <text x="10" y="150" font-family="Arial" font-size="12" fill="#4caf50">Priority: HIGH</text>
+    </g>
+
+    <!-- Phase 3 -->
+    <g transform="translate(880, 50)">
+      <rect x="0" y="0" width="400" height="160" fill="#fff" stroke="#ccc" stroke-width="1"/>
+      <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#1565c0">Phase 3: Alternate Names</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">Source: alternateNames.txt</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">Count: ~15M (filter to en, abbrev)</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">Fields: geonameid, isolanguage, name,</text>
+      <text x="10" y="110" font-family="Arial" font-size="12">        isPreferredName, isShortName</text>
+      <text x="10" y="130" font-family="Arial" font-size="12">Examples: NYC, LA, SF, Philly</text>
+      <text x="10" y="150" font-family="Arial" font-size="12" fill="#ff9800">Priority: MEDIUM</text>
+    </g>
+
+    <!-- Implementation Script -->
+    <g transform="translate(20, 230)">
+      <rect x="0" y="0" width="1260" height="150" fill="#263238" stroke="#455a64" stroke-width="1"/>
+      <text x="630" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#fff">Implementation: scripts/gazetteer/load-geonames.js</text>
+      <text x="20" y="55" font-family="monospace" font-size="12" fill="#4fc3f7">// Usage:</text>
+      <text x="20" y="75" font-family="monospace" font-size="12" fill="#fff">node scripts/gazetteer/load-geonames.js --source cities15000.txt --phase 1</text>
+      <text x="20" y="95" font-family="monospace" font-size="12" fill="#fff">node scripts/gazetteer/load-geonames.js --source admin1CodesASCII.txt --phase 2</text>
+      <text x="20" y="115" font-family="monospace" font-size="12" fill="#fff">node scripts/gazetteer/load-geonames.js --source alternateNames.txt --phase 3 --lang en</text>
+      <text x="20" y="140" font-family="monospace" font-size="12" fill="#81c784">// Estimated time: Phase 1 (~30s), Phase 2 (~5s), Phase 3 (~2min filtered)</text>
+    </g>
+  </g>
+
+  <!-- Section 5: Memory & Performance -->
+  <g transform="translate(50, 1080)">
+    <rect x="0" y="0" width="620" height="200" fill="#fce4ec" stroke="#e91e63" stroke-width="1"/>
+    <text x="310" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#c2185b">Memory &amp; Performance</text>
+    
+    <text x="20" y="60" font-family="Arial" font-size="14" font-weight="bold">Current:</text>
+    <text x="100" y="60" font-family="Arial" font-size="14">508 places, ~1.5MB, 35ms load</text>
+    
+    <text x="20" y="90" font-family="Arial" font-size="14" font-weight="bold">After Phase 1:</text>
+    <text x="140" y="90" font-family="Arial" font-size="14">~25,000 places, ~10MB, ~200ms load</text>
+    
+    <text x="20" y="120" font-family="Arial" font-size="14" font-weight="bold">After Phase 2:</text>
+    <text x="140" y="120" font-family="Arial" font-size="14">~29,000 places, ~12MB, ~250ms load</text>
+    
+    <text x="20" y="150" font-family="Arial" font-size="14" font-weight="bold">After Phase 3:</text>
+    <text x="140" y="150" font-family="Arial" font-size="14">~29,000 places, ~15MB, ~300ms load</text>
+    
+    <text x="20" y="185" font-family="Arial" font-size="13" fill="#666">Note: One-time load on startup. Map lookups remain O(1).</text>
+  </g>
+
+  <!-- Section 6: Migration Script -->
+  <g transform="translate(730, 1080)">
+    <rect x="0" y="0" width="620" height="200" fill="#f3e5f5" stroke="#9c27b0" stroke-width="1"/>
+    <text x="310" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#7b1fa2">Migration Plan</text>
+    
+    <text x="20" y="60" font-family="Arial" font-size="13">1. Backup: cp data/gazetteer.db data/gazetteer.db.backup</text>
+    <text x="20" y="85" font-family="Arial" font-size="13">2. Schema: node scripts/gazetteer/migrate-schema.js</text>
+    <text x="20" y="110" font-family="Arial" font-size="13">3. Fix canonical: node scripts/gazetteer/fix-canonical-names.js</text>
+    <text x="20" y="135" font-family="Arial" font-size="13">4. Load cities: node scripts/gazetteer/load-geonames.js --phase 1</text>
+    <text x="20" y="160" font-family="Arial" font-size="13">5. Load admin: node scripts/gazetteer/load-geonames.js --phase 2</text>
+    <text x="20" y="185" font-family="Arial" font-size="13">6. Verify: node scripts/gazetteer/verify-coverage.js</text>
+  </g>
+
+  <!-- Section 7: Expected Coverage -->
+  <g transform="translate(50, 1310)">
+    <rect x="0" y="0" width="1300" height="180" fill="#e8f5e9" stroke="#4caf50" stroke-width="2"/>
+    <text x="650" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#2e7d32">Expected Coverage After Implementation</text>
+    
+    <!-- Coverage boxes -->
+    <g transform="translate(30, 50)">
+      <rect x="0" y="0" width="240" height="110" fill="#c8e6c9" stroke="#4caf50" stroke-width="1"/>
+      <text x="120" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">US Coverage</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">✓ 50 states</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">✓ ~1,500 cities (pop &gt; 15k)</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">✓ NYC, LA, Chicago, etc.</text>
+    </g>
+
+    <g transform="translate(290, 50)">
+      <rect x="0" y="0" width="240" height="110" fill="#c8e6c9" stroke="#4caf50" stroke-width="1"/>
+      <text x="120" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">UK Coverage</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">✓ England, Scotland, Wales, NI</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">✓ ~300 cities/towns</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">✓ Manchester, Birmingham, etc.</text>
+    </g>
+
+    <g transform="translate(550, 50)">
+      <rect x="0" y="0" width="240" height="110" fill="#c8e6c9" stroke="#4caf50" stroke-width="1"/>
+      <text x="120" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">Europe Coverage</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">✓ All EU countries + regions</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">✓ ~5,000 cities</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">✓ Berlin, Munich, Milan, etc.</text>
+    </g>
+
+    <g transform="translate(810, 50)">
+      <rect x="0" y="0" width="240" height="110" fill="#c8e6c9" stroke="#4caf50" stroke-width="1"/>
+      <text x="120" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">Asia/Pacific</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">✓ ~8,000 cities</text>
+      <text x="10" y="70" font-family="Arial" font-size="12">✓ Tokyo, Beijing, Sydney, etc.</text>
+      <text x="10" y="90" font-family="Arial" font-size="12">✓ Indian states, Chinese provinces</text>
+    </g>
+
+    <g transform="translate(1070, 50)">
+      <rect x="0" y="0" width="200" height="110" fill="#c8e6c9" stroke="#4caf50" stroke-width="1"/>
+      <text x="100" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">News URL Match</text>
+      <text x="10" y="50" font-family="Arial" font-size="12">Before: ~40%</text>
+      <text x="10" y="70" font-family="Arial" font-size="12" font-weight="bold" fill="#2e7d32">After: ~95%</text>
+      <text x="10" y="90" font-family="Arial" font-size="12" fill="#666">(for location URLs)</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <text x="700" y="1520" text-anchor="middle" font-family="Arial" font-size="12" fill="#999">
+    Generated: 2025-11-28 | Data Sources: GeoNames (CC BY 4.0), RestCountries
+  </text>
+
+  <!-- Arrows showing flow -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
+  </defs>
+  
+  <!-- Current → Target arrow -->
+  <line x1="670" y1="210" x2="720" y2="210" stroke="#666" stroke-width="2" marker-end="url(#arrowhead)"/>
+</svg>

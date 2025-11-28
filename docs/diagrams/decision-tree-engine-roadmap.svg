@@ -1,0 +1,1328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2800 1280">
+  <defs>
+    <!-- ═══════════════════════════════════════════════════════════════════════════════
+         INDUSTRIAL OBSIDIAN LUXURY THEME — ENHANCED
+         Dark steel, burnished gold, copper accents, mechanical precision
+         v2.0 — Improved visual hierarchy and industrial details
+         ═══════════════════════════════════════════════════════════════════════════════ -->
+    
+    <!-- Primary Background - Deep Industrial Black with radial center glow -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06080a"/>
+      <stop offset="30%" stop-color="#0a0c10"/>
+      <stop offset="70%" stop-color="#0c0e12"/>
+      <stop offset="100%" stop-color="#08090c"/>
+    </linearGradient>
+    
+    <radialGradient id="centerGlow" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#1a1d25" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#06080a" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Steel Gradient with more depth -->
+    <linearGradient id="steelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4a5159"/>
+      <stop offset="30%" stop-color="#3a4149"/>
+      <stop offset="70%" stop-color="#2a3038"/>
+      <stop offset="100%" stop-color="#1a2028"/>
+    </linearGradient>
+    
+    <!-- Brushed Steel for rivets and mechanical parts -->
+    <linearGradient id="brushedSteel" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a3038"/>
+      <stop offset="25%" stop-color="#4a5159"/>
+      <stop offset="50%" stop-color="#5a6169"/>
+      <stop offset="75%" stop-color="#4a5159"/>
+      <stop offset="100%" stop-color="#2a3038"/>
+    </linearGradient>
+    
+    <!-- Gold Accent Gradients - Enhanced shimmer -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/>
+      <stop offset="20%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#e8c252"/>
+      <stop offset="80%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+    
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5a4a0e"/>
+      <stop offset="25%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#f7e08a"/>
+      <stop offset="75%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#5a4a0e"/>
+    </linearGradient>
+    
+    <linearGradient id="goldVertical" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e8c252"/>
+      <stop offset="50%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#8b6914"/>
+    </linearGradient>
+    
+    <!-- Copper Industrial Accent - Richer tones -->
+    <linearGradient id="copperGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e69050"/>
+      <stop offset="30%" stop-color="#cd7f32"/>
+      <stop offset="70%" stop-color="#b87333"/>
+      <stop offset="100%" stop-color="#8b5a2b"/>
+    </linearGradient>
+    
+    <!-- Bronze for timeline and connectors -->
+    <linearGradient id="bronzeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cd9b4a"/>
+      <stop offset="50%" stop-color="#a67c3d"/>
+      <stop offset="100%" stop-color="#7a5c2b"/>
+    </linearGradient>
+    
+    <!-- Stage Color Gradients - Enhanced with glowing effects -->
+    <linearGradient id="stage1Color" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7"/>
+      <stop offset="50%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    
+    <linearGradient id="stage2Color" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="50%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    
+    <linearGradient id="stage3Color" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#d8b4fe"/>
+      <stop offset="50%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    
+    <linearGradient id="stage4Color" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fdba74"/>
+      <stop offset="50%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    
+    <linearGradient id="stage5Color" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f9a8d4"/>
+      <stop offset="50%" stop-color="#f472b6"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    
+    <linearGradient id="stage6Color" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fca5a5"/>
+      <stop offset="50%" stop-color="#f87171"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    
+    <!-- Current State (Foundation) - Gold/amber tones -->
+    <linearGradient id="currentColor" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="50%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    
+    <!-- Card Gradients - Deeper with more industrial feel -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e232c"/>
+      <stop offset="50%" stop-color="#171b22"/>
+      <stop offset="100%" stop-color="#10131a"/>
+    </linearGradient>
+    
+    <linearGradient id="cardHeaderGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#252b38"/>
+      <stop offset="100%" stop-color="#1a1f28"/>
+    </linearGradient>
+    
+    <!-- Industrial Grid Pattern - Enhanced with more detail -->
+    <pattern id="industrialGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#c9a227" stroke-width="0.4" opacity="0.06"/>
+      <!-- Grid intersection dots -->
+      <circle cx="0" cy="0" r="1.5" fill="#c9a227" opacity="0.12"/>
+      <circle cx="50" cy="0" r="1.5" fill="#c9a227" opacity="0.12"/>
+      <circle cx="0" cy="50" r="1.5" fill="#c9a227" opacity="0.12"/>
+      <circle cx="50" cy="50" r="1.5" fill="#c9a227" opacity="0.12"/>
+      <circle cx="25" cy="25" r="0.8" fill="#c9a227" opacity="0.05"/>
+    </pattern>
+    
+    <!-- Fine diagonal hatching for industrial feel -->
+    <pattern id="diagonalHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#c9a227" stroke-width="0.2" opacity="0.04"/>
+    </pattern>
+    
+    <!-- Conduit/pipe pattern for connections -->
+    <pattern id="conduitPattern" width="12" height="4" patternUnits="userSpaceOnUse">
+      <rect width="12" height="4" fill="#1a1f28"/>
+      <line x1="0" y1="1" x2="12" y2="1" stroke="#2a3038" stroke-width="1"/>
+      <line x1="0" y1="3" x2="12" y2="3" stroke="#2a3038" stroke-width="1"/>
+      <circle cx="6" cy="2" r="1" fill="#3a4149"/>
+    </pattern>
+    
+    <!-- Blueprint Grid - Subtle engineering feel -->
+    <pattern id="blueprintGrid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="none"/>
+      <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#3b82f6" stroke-width="0.5" opacity="0.08"/>
+      <path d="M 50 0 L 50 100 M 0 50 L 100 50" fill="none" stroke="#3b82f6" stroke-width="0.25" opacity="0.04"/>
+      <circle cx="0" cy="0" r="2" fill="#3b82f6" opacity="0.08"/>
+    </pattern>
+    
+    <!-- Filters - Enhanced shadows and glows -->
+    <filter id="industrialShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="3" dy="5" stdDeviation="8" flood-color="#000" flood-opacity="0.6"/>
+      <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <filter id="deepShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="6" dy="10" stdDeviation="15" flood-color="#000" flood-opacity="0.7"/>
+      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    
+    <filter id="goldGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.6"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Stage-specific glows -->
+    <filter id="greenGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#22c55e" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    
+    <filter id="blueGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#3b82f6" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    
+    <filter id="purpleGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#a855f7" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    
+    <filter id="orangeGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#f97316" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    
+    <!-- Inset shadow for cards -->
+    <filter id="insetShadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="2" result="offset-blur"/>
+      <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+      <feFlood flood-color="#000" flood-opacity="0.3"/>
+      <feComposite operator="in" in2="inverse"/>
+      <feComposite operator="over" in2="SourceGraphic"/>
+    </filter>
+    
+    <!-- Arrow Markers - Enhanced with gradients -->
+    <marker id="arrowGold" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M2,2 L12,7 L2,12 L5,7 Z" fill="url(#goldAccent)" stroke="#705a10" stroke-width="0.5"/>
+    </marker>
+    
+    <marker id="arrowGoldLarge" markerWidth="18" markerHeight="18" refX="15" refY="9" orient="auto">
+      <path d="M2,2 L15,9 L2,16 L6,9 Z" fill="url(#goldShine)" stroke="#705a10" stroke-width="0.5"/>
+    </marker>
+    
+    <marker id="arrowSteel" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M2,2 L8,5 L2,8 L3,5 Z" fill="#64748b"/>
+    </marker>
+    
+    <!-- Progression arrow between stages -->
+    <marker id="progressArrow" markerWidth="16" markerHeight="16" refX="8" refY="8" orient="auto">
+      <circle cx="8" cy="8" r="6" fill="url(#cardGradient)" stroke="url(#goldAccent)" stroke-width="1"/>
+      <path d="M5,8 L10,8 M8,5 L11,8 L8,11" fill="none" stroke="url(#goldAccent)" stroke-width="1.5" stroke-linecap="round"/>
+    </marker>
+    
+    <!-- Rivet symbol for industrial details -->
+    <symbol id="rivet" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" r="7" fill="url(#brushedSteel)" stroke="#1a2028" stroke-width="1"/>
+      <circle cx="8" cy="8" r="4" fill="url(#steelGradient)"/>
+      <circle cx="6" cy="6" r="1.5" fill="#5a6169" opacity="0.6"/>
+    </symbol>
+    
+    <!-- Bolt symbol -->
+    <symbol id="bolt" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="9" fill="url(#brushedSteel)" stroke="#0c0e12" stroke-width="1"/>
+      <path d="M6,8 L10,4 L14,8 M6,12 L10,16 L14,12" fill="none" stroke="#3a4149" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="8" cy="7" r="1" fill="#5a6169" opacity="0.5"/>
+    </symbol>
+    
+    <!-- Symbols - Icons for stages -->
+    <symbol id="gearIcon" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="2.5"/>
+      <g stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="16" y1="2" x2="16" y2="7"/>
+        <line x1="16" y1="25" x2="16" y2="30"/>
+        <line x1="2" y1="16" x2="7" y2="16"/>
+        <line x1="25" y1="16" x2="30" y2="16"/>
+        <line x1="6.1" y1="6.1" x2="9.6" y2="9.6"/>
+        <line x1="22.4" y1="22.4" x2="25.9" y2="25.9"/>
+        <line x1="6.1" y1="25.9" x2="9.6" y2="22.4"/>
+        <line x1="22.4" y1="9.6" x2="25.9" y2="6.1"/>
+      </g>
+    </symbol>
+    
+    <symbol id="chipIcon" viewBox="0 0 32 32">
+      <rect x="8" y="8" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="11" y="11" width="10" height="10" rx="1" fill="currentColor" opacity="0.2"/>
+      <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="12" y1="8" x2="12" y2="3"/>
+        <line x1="20" y1="8" x2="20" y2="3"/>
+        <line x1="12" y1="24" x2="12" y2="29"/>
+        <line x1="20" y1="24" x2="20" y2="29"/>
+        <line x1="8" y1="12" x2="3" y2="12"/>
+        <line x1="8" y1="20" x2="3" y2="20"/>
+        <line x1="24" y1="12" x2="29" y2="12"/>
+        <line x1="24" y1="20" x2="29" y2="20"/>
+      </g>
+    </symbol>
+    
+    <symbol id="brainIcon" viewBox="0 0 32 32">
+      <path d="M16,3 C11,3 8,7 8,11 C5,11 3,14 3,17 C3,21 6,23 9,23 L9,23 C9,26 12,29 16,29 C20,29 23,26 23,23 L23,23 C26,23 29,21 29,17 C29,14 27,11 24,11 C24,7 21,3 16,3 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M11,14 Q16,18 21,14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M10,19 Q16,23 22,19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="12" cy="11" r="1.5" fill="currentColor"/>
+      <circle cx="20" cy="11" r="1.5" fill="currentColor"/>
+    </symbol>
+    
+    <symbol id="rocketIcon" viewBox="0 0 32 32">
+      <path d="M16,2 C16,2 6,12 6,22 L10,26 L16,20 L22,26 L26,22 C26,12 16,2 16,2 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="16" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M6,22 L2,26 L6,30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M26,22 L30,26 L26,30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    
+    <symbol id="treeIcon" viewBox="0 0 32 32">
+      <circle cx="16" cy="5" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="9" x2="16" y2="14" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="14" x2="7" y2="23" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="14" x2="25" y2="23" stroke="currentColor" stroke-width="2"/>
+      <circle cx="7" cy="26" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="25" cy="26" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="16" cy="5" r="1.5" fill="currentColor"/>
+    </symbol>
+    
+    <symbol id="checkIcon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#22c55e" opacity="0.25"/>
+      <circle cx="12" cy="12" r="10" fill="none" stroke="#22c55e" stroke-width="1.5"/>
+      <polyline points="6,12 10,16 18,8" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    
+    <symbol id="networkIcon" viewBox="0 0 32 32">
+      <circle cx="16" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="6" cy="24" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="26" cy="24" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="14" y1="11" x2="8" y2="21" stroke="currentColor" stroke-width="2"/>
+      <line x1="18" y1="11" x2="24" y2="21" stroke="currentColor" stroke-width="2"/>
+      <line x1="10" y1="24" x2="22" y2="24" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    
+    <symbol id="sparkIcon" viewBox="0 0 24 24">
+      <path d="M12,2 L14,9 L21,9 L15,14 L17,21 L12,17 L7,21 L9,14 L3,9 L10,9 Z" fill="currentColor" stroke="none"/>
+    </symbol>
+    
+    <!-- CSS Animations for subtle visual polish -->
+    <style type="text/css">
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      @keyframes glow {
+        0%, 100% { filter: drop-shadow(0 0 2px #22c55e); }
+        50% { filter: drop-shadow(0 0 8px #22c55e); }
+      }
+      .live-badge { animation: pulse 2s ease-in-out infinite; }
+      .live-glow { animation: glow 3s ease-in-out infinite; }
+    </style>
+  </defs>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       BACKGROUND LAYER - Enhanced Industrial Theme
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <rect width="2800" height="1280" fill="url(#obsidianBg)"/>
+  <rect width="2800" height="1280" fill="url(#centerGlow)"/>
+  <rect width="2800" height="1280" fill="url(#industrialGrid)"/>
+  <rect width="2800" height="1280" fill="url(#diagonalHatch)"/>
+  
+  <!-- Outer Industrial Frame - Heavy steel border -->
+  <rect x="12" y="12" width="2776" height="1256" fill="none" stroke="url(#steelGradient)" stroke-width="8" rx="12"/>
+  <rect x="22" y="22" width="2756" height="1236" fill="none" stroke="#1a2028" stroke-width="3" rx="10"/>
+  <rect x="28" y="28" width="2744" height="1224" fill="none" stroke="url(#goldAccent)" stroke-width="1.5" opacity="0.5" rx="8"/>
+  
+  <!-- Corner Plates with Rivets -->
+  <g id="cornerPlates">
+    <!-- Top-left corner plate -->
+    <g transform="translate(20, 20)">
+      <rect width="80" height="80" rx="6" fill="url(#cardGradient)" stroke="url(#steelGradient)" stroke-width="2"/>
+      <use href="#rivet" x="8" y="8" width="16" height="16"/>
+      <use href="#rivet" x="56" y="8" width="16" height="16"/>
+      <use href="#rivet" x="8" y="56" width="16" height="16"/>
+      <use href="#rivet" x="56" y="56" width="16" height="16"/>
+      <use href="#bolt" x="30" y="30" width="20" height="20"/>
+    </g>
+    
+    <!-- Top-right corner plate -->
+    <g transform="translate(2700, 20)">
+      <rect width="80" height="80" rx="6" fill="url(#cardGradient)" stroke="url(#steelGradient)" stroke-width="2"/>
+      <use href="#rivet" x="8" y="8" width="16" height="16"/>
+      <use href="#rivet" x="56" y="8" width="16" height="16"/>
+      <use href="#rivet" x="8" y="56" width="16" height="16"/>
+      <use href="#rivet" x="56" y="56" width="16" height="16"/>
+      <use href="#bolt" x="30" y="30" width="20" height="20"/>
+    </g>
+    
+    <!-- Bottom-left corner plate -->
+    <g transform="translate(20, 1180)">
+      <rect width="80" height="80" rx="6" fill="url(#cardGradient)" stroke="url(#steelGradient)" stroke-width="2"/>
+      <use href="#rivet" x="8" y="8" width="16" height="16"/>
+      <use href="#rivet" x="56" y="8" width="16" height="16"/>
+      <use href="#rivet" x="8" y="56" width="16" height="16"/>
+      <use href="#rivet" x="56" y="56" width="16" height="16"/>
+      <use href="#bolt" x="30" y="30" width="20" height="20"/>
+    </g>
+    
+    <!-- Bottom-right corner plate -->
+    <g transform="translate(2700, 1180)">
+      <rect width="80" height="80" rx="6" fill="url(#cardGradient)" stroke="url(#steelGradient)" stroke-width="2"/>
+      <use href="#rivet" x="8" y="8" width="16" height="16"/>
+      <use href="#rivet" x="56" y="8" width="16" height="16"/>
+      <use href="#rivet" x="8" y="56" width="16" height="16"/>
+      <use href="#rivet" x="56" y="56" width="16" height="16"/>
+      <use href="#bolt" x="30" y="30" width="20" height="20"/>
+    </g>
+  </g>
+  
+  <!-- Edge rivets along frame -->
+  <g fill="url(#brushedSteel)" stroke="#0c0e12" stroke-width="1">
+    <!-- Top edge rivets -->
+    <circle cx="200" cy="20" r="5"/>
+    <circle cx="700" cy="20" r="5"/>
+    <circle cx="1200" cy="20" r="5"/>
+    <circle cx="1600" cy="20" r="5"/>
+    <circle cx="2100" cy="20" r="5"/>
+    <circle cx="2600" cy="20" r="5"/>
+    <!-- Bottom edge rivets -->
+    <circle cx="200" cy="1260" r="5"/>
+    <circle cx="700" cy="1260" r="5"/>
+    <circle cx="1200" cy="1260" r="5"/>
+    <circle cx="1600" cy="1260" r="5"/>
+    <circle cx="2100" cy="1260" r="5"/>
+    <circle cx="2600" cy="1260" r="5"/>
+    <!-- Left edge rivets -->
+    <circle cx="20" cy="300" r="5"/>
+    <circle cx="20" cy="640" r="5"/>
+    <circle cx="20" cy="980" r="5"/>
+    <!-- Right edge rivets -->
+    <circle cx="2780" cy="300" r="5"/>
+    <circle cx="2780" cy="640" r="5"/>
+    <circle cx="2780" cy="980" r="5"/>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       TITLE BANNER - Enhanced with Industrial Details
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(1400, 75)">
+    <!-- Banner backing plate -->
+    <rect x="-650" y="-45" width="1300" height="90" rx="10" fill="url(#cardGradient)" filter="url(#deepShadow)"/>
+    <rect x="-650" y="-45" width="1300" height="90" rx="10" fill="none" stroke="url(#steelGradient)" stroke-width="3"/>
+    <rect x="-645" y="-40" width="1290" height="80" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1.5"/>
+    
+    <!-- Industrial corner accents -->
+    <g fill="url(#goldVertical)" opacity="0.8">
+      <path d="M-640,-35 L-640,-15 L-620,-35 Z"/>
+      <path d="M640,-35 L640,-15 L620,-35 Z"/>
+      <path d="M-640,35 L-640,15 L-620,35 Z"/>
+      <path d="M640,35 L640,15 L620,35 Z"/>
+    </g>
+    
+    <!-- Decorative bolts on banner -->
+    <use href="#bolt" x="-635" y="-15" width="20" height="20"/>
+    <use href="#bolt" x="615" y="-15" width="20" height="20"/>
+    
+    <!-- Gold accent lines -->
+    <line x1="-580" y1="-30" x2="-200" y2="-30" stroke="url(#goldAccent)" stroke-width="1" opacity="0.4"/>
+    <line x1="200" y1="-30" x2="580" y2="-30" stroke="url(#goldAccent)" stroke-width="1" opacity="0.4"/>
+    
+    <!-- Main Title -->
+    <text x="0" y="5" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="36" fill="url(#goldShine)" font-weight="bold" filter="url(#goldGlow)">
+      Decision Tree Engine — Future Roadmap
+    </text>
+    
+    <!-- Subtitle with decorative elements -->
+    <g transform="translate(0, 28)">
+      <line x1="-280" y1="0" x2="-180" y2="0" stroke="url(#goldAccent)" stroke-width="1" opacity="0.6"/>
+      <text x="0" y="5" text-anchor="middle" font-family="Inter, 'Segoe UI', sans-serif" font-size="12" fill="#8b9aaf" letter-spacing="5" font-weight="500">
+        STAGED EVOLUTION FROM RULES TO AUTONOMOUS INTELLIGENCE
+      </text>
+      <line x1="180" y1="0" x2="280" y2="0" stroke="url(#goldAccent)" stroke-width="1" opacity="0.6"/>
+    </g>
+    
+    <!-- Decorative gear icons flanking title -->
+    <use href="#gearIcon" x="-190" y="-18" width="24" height="24" style="color:#705a10" opacity="0.5"/>
+    <use href="#gearIcon" x="166" y="-18" width="24" height="24" style="color:#705a10" opacity="0.5"/>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       TIMELINE SPINE - Enhanced Industrial Conduit Style
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(0, 640)">
+    <!-- Background conduit -->
+    <rect x="50" y="-12" width="2700" height="24" rx="12" fill="url(#cardGradient)" stroke="url(#steelGradient)" stroke-width="2"/>
+    
+    <!-- Main horizontal gold line -->
+    <line x1="70" y1="0" x2="2730" y2="0" stroke="url(#goldAccent)" stroke-width="5" stroke-linecap="round"/>
+    
+    <!-- Inner gold highlight -->
+    <line x1="70" y1="-2" x2="2730" y2="-2" stroke="url(#goldShine)" stroke-width="1" opacity="0.5" stroke-linecap="round"/>
+    
+    <!-- Decorative end caps - Left -->
+    <g transform="translate(55, 0)">
+      <circle r="18" fill="url(#cardGradient)" stroke="url(#goldAccent)" stroke-width="2"/>
+      <circle r="12" fill="url(#steelGradient)"/>
+      <circle r="6" fill="url(#goldVertical)"/>
+    </g>
+    
+    <!-- Decorative end cap - Right with arrow -->
+    <g transform="translate(2745, 0)">
+      <circle r="18" fill="url(#cardGradient)" stroke="url(#goldAccent)" stroke-width="2"/>
+      <circle r="12" fill="url(#steelGradient)"/>
+      <polygon points="10,0 -4,-6 -4,6" fill="url(#goldAccent)"/>
+    </g>
+    
+    <!-- Progress pulse effect (decorative dots) -->
+    <g fill="url(#goldAccent)" opacity="0.3">
+      <circle cx="300" cy="0" r="2"/>
+      <circle cx="450" cy="0" r="2"/>
+      <circle cx="600" cy="0" r="2"/>
+      <circle cx="750" cy="0" r="2"/>
+      <circle cx="1050" cy="0" r="2"/>
+      <circle cx="1200" cy="0" r="2"/>
+      <circle cx="1450" cy="0" r="2"/>
+      <circle cx="1600" cy="0" r="2"/>
+      <circle cx="1850" cy="0" r="2"/>
+      <circle cx="2000" cy="0" r="2"/>
+      <circle cx="2250" cy="0" r="2"/>
+      <circle cx="2400" cy="0" r="2"/>
+      <circle cx="2550" cy="0" r="2"/>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       EVOLUTION ARROW ANNOTATIONS
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(0, 640)" font-family="Inter, sans-serif" font-size="9" fill="#64748b">
+    <!-- Evolution labels between stages -->
+    <g transform="translate(350, 35)">
+      <text text-anchor="middle" fill="#c9a227" opacity="0.6">▸ enhance ▸</text>
+    </g>
+    <g transform="translate(710, 35)">
+      <text text-anchor="middle" fill="#c9a227" opacity="0.6">▸ compose ▸</text>
+    </g>
+    <g transform="translate(1100, 35)">
+      <text text-anchor="middle" fill="#c9a227" opacity="0.6">▸ learn ▸</text>
+    </g>
+    <g transform="translate(1500, 35)">
+      <text text-anchor="middle" fill="#c9a227" opacity="0.6">▸ integrate ▸</text>
+    </g>
+    <g transform="translate(1900, 35)">
+      <text text-anchor="middle" fill="#c9a227" opacity="0.6">▸ scale ▸</text>
+    </g>
+    <g transform="translate(2300, 35)">
+      <text text-anchor="middle" fill="#c9a227" opacity="0.6">▸ autonomize ▸</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       STAGE MARKERS ON TIMELINE - Enhanced with Glows and Labels
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Current State Marker (v1.0) -->
+  <g transform="translate(180, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#currentColor)" stroke-width="3"/>
+    <circle r="16" fill="url(#currentColor)" filter="url(#goldGlow)"/>
+    <use href="#checkIcon" x="-11" y="-11" width="22" height="22"/>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#fbbf24" font-weight="bold">v1.0</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">NOW</text>
+  </g>
+  
+  <!-- Stage 1.5 Marker -->
+  <g transform="translate(520, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#stage1Color)" stroke-width="3"/>
+    <circle r="16" fill="url(#stage1Color)" filter="url(#greenGlow)"/>
+    <text y="5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0c0e12" font-weight="bold">1.5</text>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#4ade80" font-weight="bold">v1.5</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Q1 2026</text>
+  </g>
+  
+  <!-- Stage 2.0 Marker -->
+  <g transform="translate(900, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#stage2Color)" stroke-width="3"/>
+    <circle r="16" fill="url(#stage2Color)" filter="url(#blueGlow)"/>
+    <text y="5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0c0e12" font-weight="bold">2.0</text>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#60a5fa" font-weight="bold">v2.0</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Q2 2026</text>
+  </g>
+  
+  <!-- Stage 2.5 Marker -->
+  <g transform="translate(1300, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#stage3Color)" stroke-width="3"/>
+    <circle r="16" fill="url(#stage3Color)" filter="url(#purpleGlow)"/>
+    <text y="5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0c0e12" font-weight="bold">2.5</text>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc" font-weight="bold">v2.5</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Q3 2026</text>
+  </g>
+  
+  <!-- Stage 3.0 Marker -->
+  <g transform="translate(1700, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#stage4Color)" stroke-width="3"/>
+    <circle r="16" fill="url(#stage4Color)" filter="url(#orangeGlow)"/>
+    <text y="5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0c0e12" font-weight="bold">3.0</text>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#fb923c" font-weight="bold">v3.0</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Q4 2026</text>
+  </g>
+  
+  <!-- Stage 3.5 Marker -->
+  <g transform="translate(2100, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#stage5Color)" stroke-width="3"/>
+    <circle r="16" fill="url(#stage5Color)"/>
+    <text y="5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0c0e12" font-weight="bold">3.5</text>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#f472b6" font-weight="bold">v3.5</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Q1 2027</text>
+  </g>
+  
+  <!-- Stage 4.0 Marker -->
+  <g transform="translate(2500, 640)">
+    <circle r="22" fill="url(#cardGradient)" stroke="url(#stage6Color)" stroke-width="3"/>
+    <circle r="16" fill="url(#stage6Color)"/>
+    <text y="5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0c0e12" font-weight="bold">4.0</text>
+    <text y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#f87171" font-weight="bold">v4.0</text>
+    <text y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Q2 2027</text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       STAGE CARDS - UPPER ROW (Above Timeline)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- CURRENT STATE CARD -->
+  <g transform="translate(60, 145)">
+    <rect width="360" height="420" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#currentColor)" stroke-width="2"/>
+    <rect x="3" y="3" width="354" height="414" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="360" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="360" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="360" height="5" fill="url(#currentColor)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#treeIcon" x="15" y="12" width="32" height="32" style="color:#fbbf24"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#currentColor)" font-weight="bold">CURRENT STATE</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v1.0 — Foundation Complete</text>
+    
+    <!-- Status Badge with pulse animation -->
+    <g transform="translate(285, 28)" class="live-badge">
+      <rect x="0" y="-14" width="60" height="28" rx="14" fill="#22c55e" opacity="0.2" stroke="#22c55e" stroke-width="1.5" class="live-glow"/>
+      <text x="30" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#22c55e" font-weight="bold">✓ LIVE</text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#c9a227" font-weight="600">Core Capabilities</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• JSON-configured decision trees</text>
+        <text y="52">• Boolean branching with audit trails</text>
+        <text y="69">• 5 condition types supported</text>
+        <text y="86">• Sub-millisecond evaluation</text>
+        <text y="103">• Compact DB storage format</text>
+      </g>
+      
+      <text y="130" font-family="Inter, sans-serif" font-size="11" fill="#c9a227" font-weight="600">Active Categories</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">
+        <text y="150">in-depth</text><text x="75" y="150" fill="#22c55e" font-size="11">✓</text>
+        <text y="165">breaking</text><text x="75" y="165" fill="#22c55e" font-size="11">✓</text>
+        <text y="180">opinion</text><text x="75" y="180" fill="#22c55e" font-size="11">✓</text>
+        <text y="195">hub</text><text x="75" y="195" fill="#22c55e" font-size="11">✓</text>
+        <text y="210">reference</text><text x="75" y="210" fill="#22c55e" font-size="11">✓</text>
+        
+        <text x="120" y="150">regional-news</text><text x="210" y="150" fill="#22c55e" font-size="11">✓</text>
+        <text x="120" y="165">ai-generated</text><text x="210" y="165" fill="#22c55e" font-size="11">✓</text>
+        <text x="120" y="180">paywall</text><text x="210" y="180" fill="#22c55e" font-size="11">✓</text>
+      </g>
+      
+      <text y="240" font-family="Inter, sans-serif" font-size="11" fill="#c9a227" font-weight="600">Performance</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10">
+        <text y="260" fill="#64748b">Latency:</text><text x="75" y="260" fill="#22c55e">&lt;1ms</text>
+        <text y="278" fill="#64748b">Accuracy:</text><text x="75" y="278" fill="#fbbf24">~85%</text>
+        <text y="296" fill="#64748b">LOC:</text><text x="75" y="296" fill="#94a3b8">~280</text>
+        
+        <text x="150" y="260" fill="#64748b">Trees:</text><text x="205" y="260" fill="#94a3b8">3</text>
+        <text x="150" y="278" fill="#64748b">Nodes:</text><text x="205" y="278" fill="#94a3b8">~50</text>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="420" x2="180" y2="495" stroke="url(#currentColor)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="180" cy="495" r="4" fill="url(#currentColor)"/>
+  </g>
+  
+  <!-- STAGE 1.5 CARD -->
+  <g transform="translate(440, 145)">
+    <rect width="360" height="420" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#stage1Color)" stroke-width="2"/>
+    <rect x="3" y="3" width="354" height="414" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="360" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="360" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="360" height="5" fill="url(#stage1Color)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#gearIcon" x="15" y="12" width="32" height="32" style="color:#4ade80"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#stage1Color)" font-weight="bold">ENHANCED CONDITIONS</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v1.5 — Q1 2026 • <tspan fill="#4ade80">2-3 wks</tspan></text>
+    
+    <!-- Priority Badge -->
+    <g transform="translate(275, 28)">
+      <rect x="0" y="-14" width="70" height="28" rx="14" fill="#22c55e" opacity="0.2" stroke="#22c55e" stroke-width="1.5"/>
+      <text x="35" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#22c55e" font-weight="bold">⭐⭐⭐ HIGH</text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="600">New Condition Types</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• date_proximity — Time relevance</text>
+        <text y="52">• link_density — Structure signals</text>
+        <text y="69">• regex_capture — Pattern extraction</text>
+        <text y="86">• html_structure — DOM analysis</text>
+        <text y="103">• semantic_similarity — Embeddings</text>
+      </g>
+      
+      <text y="130" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="600">Weighted Confidence</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="150">• Node-level confidence weights</text>
+        <text y="167">• Cumulative score calculation</text>
+        <text y="184">• Configurable thresholds</text>
+        <text y="201">• Soft vs hard classification</text>
+      </g>
+      
+      <text y="230" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="600">Target Metrics</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10">
+        <text y="250" fill="#64748b">Accuracy:</text><text x="75" y="250" fill="#22c55e">85% → 88%</text>
+        <text y="268" fill="#64748b">Latency:</text><text x="75" y="268" fill="#94a3b8">&lt;2ms</text>
+        <text y="286" fill="#64748b">Conditions:</text><text x="75" y="286" fill="#fbbf24">5 → 10</text>
+      </g>
+      
+      <text y="315" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="600">Key Dependencies</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">
+        <text y="333">cheerio (DOM)</text>
+        <text x="110" y="333">transformers.js (embed)</text>
+        <text x="240" y="333" fill="#475569">~2KB bundled</text>
+      </g>
+      
+      <text y="358" font-family="Inter, sans-serif" font-size="11" fill="#22c55e" font-weight="600">Implementation Example</text>
+      <g font-family="JetBrains Mono, monospace" font-size="8" fill="#475569" opacity="0.85">
+        <text y="376" fill="#4ade80">// New condition type</text>
+        <text y="390">{type: "semantic_similarity",</text>
+        <text y="404"> field: "title", threshold: 0.8}</text>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="420" x2="80" y2="495" stroke="url(#stage1Color)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="80" cy="495" r="4" fill="url(#stage1Color)"/>
+  </g>
+  
+  <!-- STAGE 2.0 CARD -->
+  <g transform="translate(820, 145)">
+    <rect width="360" height="420" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#stage2Color)" stroke-width="2"/>
+    <rect x="3" y="3" width="354" height="414" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="360" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="360" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="360" height="5" fill="url(#stage2Color)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#networkIcon" x="15" y="12" width="32" height="32" style="color:#60a5fa"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#stage2Color)" font-weight="bold">MULTI-TREE</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v2.0 — Q2 2026 • <tspan fill="#60a5fa">3-4 wks</tspan></text>
+    
+    <!-- Priority Badge -->
+    <g transform="translate(290, 28)">
+      <rect x="0" y="-14" width="55" height="28" rx="14" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="1.5"/>
+      <text x="27" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#3b82f6" font-weight="bold">⭐⭐ MED</text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#3b82f6" font-weight="600">Tree Chaining</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• Pre-filter → Content → Boost</text>
+        <text y="52">• Sequential pipeline execution</text>
+        <text y="69">• Early exit optimization</text>
+        <text y="86">• Context passing between trees</text>
+      </g>
+      
+      <text y="113" font-family="Inter, sans-serif" font-size="11" fill="#3b82f6" font-weight="600">Parallel Evaluation</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="133">• Concurrent tree execution</text>
+        <text y="150">• Result merging with priorities</text>
+        <text y="167">• Conflict resolution rules</text>
+      </g>
+      
+      <text y="194" font-family="Inter, sans-serif" font-size="11" fill="#3b82f6" font-weight="600">Fallback Chains</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="214">• Primary → Secondary → Default</text>
+        <text y="231">• Graceful degradation</text>
+        <text y="248">• Confidence-based routing</text>
+      </g>
+      
+      <text y="278" font-family="Inter, sans-serif" font-size="11" fill="#3b82f6" font-weight="600">New API Methods</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#60a5fa">
+        <text y="298">evaluateChain()</text>
+        <text x="130" y="298">evaluateParallel()</text>
+        <text y="313">evaluateWithFallback()</text>
+      </g>
+      
+      <text y="343" font-family="Inter, sans-serif" font-size="11" fill="#3b82f6" font-weight="600">Target Metrics</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9">
+        <text y="363" fill="#64748b">Accuracy:</text><text x="75" y="363" fill="#60a5fa">88% → 90%</text>
+        <text x="170" y="363" fill="#64748b">Trees:</text><text x="210" y="363" fill="#94a3b8">3 → 5</text>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="420" x2="80" y2="495" stroke="url(#stage2Color)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="80" cy="495" r="4" fill="url(#stage2Color)"/>
+  </g>
+  
+  <!-- STAGE 2.5 CARD -->
+  <g transform="translate(1200, 145)">
+    <rect width="360" height="420" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#stage3Color)" stroke-width="2"/>
+    <rect x="3" y="3" width="354" height="414" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="360" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="360" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="360" height="5" fill="url(#stage3Color)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#brainIcon" x="15" y="12" width="32" height="32" style="color:#c084fc"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#stage3Color)" font-weight="bold">LEARNING</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v2.5 — Q3 2026 • <tspan fill="#c084fc">4-5 wks</tspan></text>
+    
+    <!-- Priority Badge -->
+    <g transform="translate(275, 28)">
+      <rect x="0" y="-14" width="70" height="28" rx="14" fill="#a855f7" opacity="0.2" stroke="#a855f7" stroke-width="1.5"/>
+      <text x="35" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#a855f7" font-weight="bold">⭐⭐⭐ HIGH</text>
+    </g>
+    
+    <!-- Requires Badge -->
+    <g transform="translate(15, 405)">
+      <text font-family="Inter, sans-serif" font-size="8" fill="#64748b">Requires: <tspan fill="#4ade80">v1.5</tspan> + <tspan fill="#60a5fa">v2.0</tspan></text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#a855f7" font-weight="600">Feedback Loop</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• User correction capture</text>
+        <text y="52">• Pattern extraction from fixes</text>
+        <text y="69">• Automatic tree updates</text>
+        <text y="86">• Human-in-the-loop approval</text>
+      </g>
+      
+      <text y="113" font-family="Inter, sans-serif" font-size="11" fill="#a855f7" font-weight="600">A/B Testing</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="133">• Shadow evaluation mode</text>
+        <text y="150">• Statistical comparison</text>
+        <text y="167">• Auto-promote winners</text>
+      </g>
+      
+      <text y="194" font-family="Inter, sans-serif" font-size="11" fill="#a855f7" font-weight="600">Confidence Calibration</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="214">• Predicted vs actual tracking</text>
+        <text y="231">• Node multiplier adjustment</text>
+        <text y="248">• Platt scaling integration</text>
+      </g>
+      
+      <text y="278" font-family="Inter, sans-serif" font-size="11" fill="#a855f7" font-weight="600">New Database Tables</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#c084fc">
+        <text y="298">decision_feedback</text>
+        <text y="313">decision_experiments</text>
+        <text y="328">pattern_candidates</text>
+      </g>
+      
+      <text y="358" font-family="Inter, sans-serif" font-size="11" fill="#a855f7" font-weight="600">Target Metrics</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9">
+        <text y="378" fill="#64748b">Accuracy:</text><text x="75" y="378" fill="#c084fc">90% → 92%</text>
+        <text x="170" y="378" fill="#64748b">Auto-fix:</text><text x="230" y="378" fill="#94a3b8">~30%</text>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="420" x2="100" y2="495" stroke="url(#stage3Color)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="100" cy="495" r="4" fill="url(#stage3Color)"/>
+  </g>
+  
+  <!-- UPPER ROW FLOW ARROWS - Showing progression between stages -->
+  <g opacity="0.6">
+    <!-- Current → v1.5 -->
+    <line x1="420" y1="355" x2="440" y2="355" stroke="url(#goldAccent)" stroke-width="2"/>
+    <polygon points="440,350 450,355 440,360" fill="url(#goldAccent)"/>
+    
+    <!-- v1.5 → v2.0 -->
+    <line x1="800" y1="355" x2="820" y2="355" stroke="url(#goldAccent)" stroke-width="2"/>
+    <polygon points="820,350 830,355 820,360" fill="url(#goldAccent)"/>
+    
+    <!-- v2.0 → v2.5 -->
+    <line x1="1180" y1="355" x2="1200" y2="355" stroke="url(#goldAccent)" stroke-width="2"/>
+    <polygon points="1200,350 1210,355 1200,360" fill="url(#goldAccent)"/>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       STAGE CARDS - LOWER ROW (Below Timeline)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- STAGE 3.0 CARD -->
+  <g transform="translate(1580, 720)">
+    <rect width="360" height="390" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#stage4Color)" stroke-width="2"/>
+    <rect x="3" y="3" width="354" height="384" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="360" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="360" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="360" height="5" fill="url(#stage4Color)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#chipIcon" x="15" y="12" width="32" height="32" style="color:#fb923c"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#stage4Color)" font-weight="bold">ML HYBRID</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v3.0 — Q4 2026 • <tspan fill="#fb923c">6-8 wks</tspan></text>
+    
+    <!-- Priority Badge -->
+    <g transform="translate(290, 28)">
+      <rect x="0" y="-14" width="55" height="28" rx="14" fill="#f97316" opacity="0.2" stroke="#f97316" stroke-width="1.5"/>
+      <text x="27" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f97316" font-weight="bold">⭐⭐ MED</text>
+    </g>
+    
+    <!-- Requires Badge -->
+    <g transform="translate(15, 375)">
+      <text font-family="Inter, sans-serif" font-size="8" fill="#64748b">Requires: <tspan fill="#c084fc">v2.5</tspan> feedback system</text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#f97316" font-weight="600">Hybrid Architecture</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• Rule-based + Neural ensemble</text>
+        <text y="52">• Weighted voting combiner</text>
+        <text y="69">• Interpretability guarantee</text>
+      </g>
+      
+      <text y="96" font-family="Inter, sans-serif" font-size="11" fill="#f97316" font-weight="600">Embedding Classifier</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="116">• Sentence transformer base</text>
+        <text y="133">• Domain fine-tuning</text>
+        <text y="150">• Soft probability output</text>
+      </g>
+      
+      <text y="177" font-family="Inter, sans-serif" font-size="11" fill="#f97316" font-weight="600">Explanation Generator</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="197">• SHAP values for ML</text>
+        <text y="214">• Rule path for trees</text>
+        <text y="231">• Natural language summary</text>
+      </g>
+      
+      <text y="258" font-family="Inter, sans-serif" font-size="11" fill="#f97316" font-weight="600">Safeguards &amp; Metrics</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9">
+        <text y="278" fill="#fb923c">ML contribution cap: 40%</text>
+        <text y="293" fill="#64748b">Accuracy:</text><text x="70" y="293" fill="#fb923c">92% → 95%</text>
+        <text y="308" fill="#64748b">Model:</text><text x="55" y="308" fill="#94a3b8">all-MiniLM-L6-v2</text>
+        <text y="323" fill="#64748b">Size:</text><text x="45" y="323" fill="#94a3b8">~22M params</text>
+      </g>
+      
+      <g transform="translate(200, 278)">
+        <text font-family="Inter, sans-serif" font-size="8" fill="#64748b">Risk: </text>
+        <text x="28" font-family="Inter, sans-serif" font-size="8" fill="#f97316" font-weight="bold">⚠ MEDIUM</text>
+        <text y="13" font-family="Inter, sans-serif" font-size="7" fill="#475569">Model drift, latency</text>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="0" x2="120" y2="-80" stroke="url(#stage4Color)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="120" cy="-80" r="4" fill="url(#stage4Color)"/>
+  </g>
+  
+  <!-- STAGE 3.5 CARD -->
+  <g transform="translate(1960, 720)">
+    <rect width="360" height="390" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#stage5Color)" stroke-width="2"/>
+    <rect x="3" y="3" width="354" height="384" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="360" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="360" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="360" height="5" fill="url(#stage5Color)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#rocketIcon" x="15" y="12" width="32" height="32" style="color:#f472b6"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#stage5Color)" font-weight="bold">DISTRIBUTED</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v3.5 — Q1 2027 • <tspan fill="#f472b6">6-8 wks</tspan></text>
+    
+    <!-- Priority Badge -->
+    <g transform="translate(300, 28)">
+      <rect x="0" y="-14" width="45" height="28" rx="14" fill="#ec4899" opacity="0.2" stroke="#ec4899" stroke-width="1.5"/>
+      <text x="22" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#ec4899" font-weight="bold">⭐ LOW</text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#ec4899" font-weight="600">Edge Deployment</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• WebAssembly compilation</text>
+        <text y="52">• CDN worker execution</text>
+        <text y="69">• Global &lt;10ms latency</text>
+      </g>
+      
+      <text y="96" font-family="Inter, sans-serif" font-size="11" fill="#ec4899" font-weight="600">Streaming Classification</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="116">• Real-time article streams</text>
+        <text y="133">• Incremental updates</text>
+        <text y="150">• Priority queue integration</text>
+      </g>
+      
+      <text y="177" font-family="Inter, sans-serif" font-size="11" fill="#ec4899" font-weight="600">Multi-Tenant</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="197">• Per-domain configurations</text>
+        <text y="214">• Isolated training data</text>
+        <text y="231">• Usage-based allocation</text>
+      </g>
+      
+      <text y="258" font-family="Inter, sans-serif" font-size="11" fill="#ec4899" font-weight="600">Observability</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#f472b6">
+        <text y="278">OpenTelemetry tracing</text>
+        <text y="293">Latency histograms</text>
+        <text y="308">Drift detection alerts</text>
+      </g>
+      
+      <text y="338" font-family="Inter, sans-serif" font-size="11" fill="#ec4899" font-weight="600">Target Performance</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9">
+        <text y="358" fill="#64748b">Global P99:</text><text x="80" y="358" fill="#f472b6">&lt;10ms</text>
+        <text x="150" y="358" fill="#64748b">WASM:</text><text x="195" y="358" fill="#94a3b8">~120KB</text>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="0" x2="140" y2="-80" stroke="url(#stage5Color)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="140" cy="-80" r="4" fill="url(#stage5Color)"/>
+  </g>
+  
+  <!-- STAGE 4.0 CARD -->
+  <g transform="translate(2340, 720)">
+    <rect width="420" height="390" rx="12" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#stage6Color)" stroke-width="2"/>
+    <rect x="3" y="3" width="414" height="384" rx="10" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.15"/>
+    
+    <!-- Header -->
+    <rect width="420" height="55" rx="12" fill="url(#cardHeaderGradient)"/>
+    <rect y="40" width="420" height="15" fill="url(#cardHeaderGradient)"/>
+    <rect y="50" width="420" height="5" fill="url(#stage6Color)" opacity="0.4"/>
+    
+    <!-- Icon and title -->
+    <use href="#sparkIcon" x="15" y="12" width="32" height="32" style="color:#f87171"/>
+    <text x="58" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="url(#stage6Color)" font-weight="bold">AUTONOMOUS</text>
+    <text x="58" y="46" font-family="Inter, 'Segoe UI', sans-serif" font-size="10" fill="#8b9aaf">v4.0 — Q2 2027 • <tspan fill="#f87171">8-12 wks</tspan> • THE VISION</text>
+    
+    <!-- Priority Badge -->
+    <g transform="translate(350, 28)">
+      <rect x="0" y="-14" width="55" height="28" rx="14" fill="#ef4444" opacity="0.2" stroke="#ef4444" stroke-width="1.5"/>
+      <text x="27" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#ef4444" font-weight="bold">⭐ FUTURE</text>
+    </g>
+    
+    <!-- Requires Badge -->
+    <g transform="translate(15, 375)">
+      <text font-family="Inter, sans-serif" font-size="8" fill="#64748b">Requires: <tspan fill="#fb923c">v3.0</tspan> + <tspan fill="#f472b6">v3.5</tspan> infrastructure</text>
+    </g>
+    
+    <!-- Content -->
+    <g transform="translate(20, 70)">
+      <text y="15" font-family="Inter, sans-serif" font-size="11" fill="#ef4444" font-weight="600">Auto-Tree Generation</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="35">• Generate from labeled data</text>
+        <text y="52">• Optimize accuracy + clarity</text>
+        <text y="69">• Human review gate</text>
+      </g>
+      
+      <text y="96" font-family="Inter, sans-serif" font-size="11" fill="#ef4444" font-weight="600">Concept Drift Detection</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="116">• Distribution monitoring</text>
+        <text y="133">• Pattern shift alerts</text>
+        <text y="150">• Auto-retrain triggers</text>
+      </g>
+      
+      <text y="177" font-family="Inter, sans-serif" font-size="11" fill="#ef4444" font-weight="600">Cross-Domain Transfer</text>
+      <g font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">
+        <text y="197">• Share successful patterns</text>
+        <text y="214">• Domain adaptation</text>
+        <text y="231">• Global pattern library</text>
+      </g>
+      
+      <text y="258" font-family="Inter, sans-serif" font-size="11" fill="#ef4444" font-weight="600">Meta-Learning Capabilities</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#f87171">
+        <text y="278">Structure optimization</text>
+        <text y="293">Auto hyperparameter tune</text>
+        <text y="308">Neural architecture search</text>
+      </g>
+      
+      <!-- Vision statement box -->
+      <g transform="translate(200, 0)">
+        <rect x="0" y="5" width="180" height="140" rx="8" fill="#1a1f28" stroke="#ef4444" stroke-width="1" opacity="0.8"/>
+        <text x="10" y="25" font-family="Inter, sans-serif" font-size="10" fill="#ef4444" font-weight="600">🎯 Target State</text>
+        <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+          <text x="10" y="45">Accuracy: 97%+</text>
+          <text x="10" y="60">Latency: &lt;5ms global</text>
+          <text x="10" y="75">Human review: &lt;5%</text>
+          <text x="10" y="90">Self-healing: ✓</text>
+          <text x="10" y="110" fill="#f87171">Fully autonomous</text>
+          <text x="10" y="125" fill="#f87171">classification system</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Connector to timeline -->
+    <line x1="180" y1="0" x2="160" y2="-80" stroke="url(#stage6Color)" stroke-width="2" stroke-dasharray="6,3"/>
+    <circle cx="160" cy="-80" r="4" fill="url(#stage6Color)"/>
+  </g>
+  
+  <!-- LOWER ROW FLOW ARROWS - Showing progression between stages -->
+  <g opacity="0.6">
+    <!-- v3.0 → v3.5 -->
+    <line x1="1940" y1="915" x2="1960" y2="915" stroke="url(#goldAccent)" stroke-width="2"/>
+    <polygon points="1960,910 1970,915 1960,920" fill="url(#goldAccent)"/>
+    
+    <!-- v3.5 → v4.0 -->
+    <line x1="2320" y1="915" x2="2340" y2="915" stroke="url(#goldAccent)" stroke-width="2"/>
+    <polygon points="2340,910 2350,915 2340,920" fill="url(#goldAccent)"/>
+  </g>
+  
+  <!-- CROSS-ROW CONNECTION - v2.5 to v3.0 diagonal -->
+  <g opacity="0.5">
+    <path d="M1380,565 Q1480,640 1580,720" fill="none" stroke="url(#goldAccent)" stroke-width="2" stroke-dasharray="8,4"/>
+    <polygon points="1580,715 1585,725 1575,725" fill="url(#goldAccent)"/>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       LEGEND PANEL - Enhanced Industrial Style
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(60, 1145)">
+    <!-- Main legend panel -->
+    <rect width="660" height="100" rx="10" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#steelGradient)" stroke-width="2"/>
+    <rect x="3" y="3" width="654" height="94" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Panel header -->
+    <rect width="660" height="30" rx="10" fill="url(#cardHeaderGradient)"/>
+    <rect y="20" width="660" height="10" fill="url(#cardHeaderGradient)"/>
+    <text x="20" y="21" font-family="Georgia, serif" font-size="13" fill="url(#goldShine)" font-weight="bold">STAGE LEGEND</text>
+    
+    <!-- Corner rivets -->
+    <use href="#rivet" x="4" y="4" width="14" height="14"/>
+    <use href="#rivet" x="642" y="4" width="14" height="14"/>
+    
+    <!-- Stage color legend -->
+    <g transform="translate(20, 52)">
+      <g>
+        <circle r="8" fill="url(#currentColor)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">Current v1.0</text>
+      </g>
+      <g transform="translate(105, 0)">
+        <circle r="8" fill="url(#stage1Color)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">v1.5 Enhanced</text>
+      </g>
+      <g transform="translate(220, 0)">
+        <circle r="8" fill="url(#stage2Color)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">v2.0 Multi-Tree</text>
+      </g>
+      <g transform="translate(340, 0)">
+        <circle r="8" fill="url(#stage3Color)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">v2.5 Learning</text>
+      </g>
+      <g transform="translate(455, 0)">
+        <circle r="8" fill="url(#stage4Color)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">v3.0 ML Hybrid</text>
+      </g>
+      <g transform="translate(575, 0)">
+        <circle r="8" fill="url(#stage5Color)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">v3.5</text>
+      </g>
+    </g>
+    
+    <!-- Second row -->
+    <g transform="translate(20, 78)">
+      <g>
+        <circle r="8" fill="url(#stage6Color)" stroke="#0c0e12" stroke-width="1"/>
+        <text x="15" font-family="Inter, sans-serif" font-size="10" fill="#94a3b8">v4.0 Autonomous</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Priority Legend Panel -->
+  <g transform="translate(740, 1145)">
+    <rect width="350" height="100" rx="10" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#steelGradient)" stroke-width="2"/>
+    <rect x="3" y="3" width="344" height="94" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Panel header -->
+    <rect width="350" height="30" rx="10" fill="url(#cardHeaderGradient)"/>
+    <rect y="20" width="350" height="10" fill="url(#cardHeaderGradient)"/>
+    <text x="20" y="21" font-family="Georgia, serif" font-size="13" fill="url(#goldShine)" font-weight="bold">PRIORITY</text>
+    
+    <!-- Corner rivets -->
+    <use href="#rivet" x="4" y="4" width="14" height="14"/>
+    <use href="#rivet" x="332" y="4" width="14" height="14"/>
+    
+    <!-- Priority levels -->
+    <g transform="translate(20, 55)" font-family="Inter, sans-serif" font-size="11">
+      <g>
+        <rect x="-5" y="-12" width="90" height="22" rx="11" fill="#22c55e" opacity="0.15" stroke="#22c55e" stroke-width="1"/>
+        <text x="40" y="4" text-anchor="middle" fill="#22c55e" font-weight="bold">⭐⭐⭐ HIGH</text>
+      </g>
+      <g transform="translate(105, 0)">
+        <rect x="-5" y="-12" width="90" height="22" rx="11" fill="#3b82f6" opacity="0.15" stroke="#3b82f6" stroke-width="1"/>
+        <text x="40" y="4" text-anchor="middle" fill="#3b82f6" font-weight="bold">⭐⭐ MED</text>
+      </g>
+      <g transform="translate(210, 0)">
+        <rect x="-5" y="-12" width="75" height="22" rx="11" fill="#ef4444" opacity="0.15" stroke="#ef4444" stroke-width="1"/>
+        <text x="32" y="4" text-anchor="middle" fill="#ef4444" font-weight="bold">⭐ LOW</text>
+      </g>
+    </g>
+    
+    <!-- Explanation -->
+    <text x="20" y="85" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Priority reflects business value + implementation complexity</text>
+  </g>
+  
+  <!-- Accuracy Progression Panel -->
+  <g transform="translate(1110, 1145)">
+    <rect width="500" height="100" rx="10" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#steelGradient)" stroke-width="2"/>
+    <rect x="3" y="3" width="494" height="94" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Panel header -->
+    <rect width="500" height="30" rx="10" fill="url(#cardHeaderGradient)"/>
+    <rect y="20" width="500" height="10" fill="url(#cardHeaderGradient)"/>
+    <text x="20" y="21" font-family="Georgia, serif" font-size="13" fill="url(#goldShine)" font-weight="bold">ACCURACY PROGRESSION</text>
+    
+    <!-- Corner rivets -->
+    <use href="#rivet" x="4" y="4" width="14" height="14"/>
+    <use href="#rivet" x="482" y="4" width="14" height="14"/>
+    
+    <!-- Accuracy timeline -->
+    <g transform="translate(20, 55)">
+      <!-- Progress bar background -->
+      <rect x="0" y="-5" width="460" height="12" rx="6" fill="#1a2028" stroke="#2a3038" stroke-width="1"/>
+      
+      <!-- Progress segments -->
+      <rect x="0" y="-5" width="80" height="12" rx="6" fill="url(#currentColor)" opacity="0.8"/>
+      <rect x="80" y="-5" width="95" height="12" fill="url(#stage1Color)" opacity="0.8"/>
+      <rect x="175" y="-5" width="95" height="12" fill="url(#stage3Color)" opacity="0.8"/>
+      <rect x="270" y="-5" width="95" height="12" fill="url(#stage4Color)" opacity="0.8"/>
+      <rect x="365" y="-5" width="95" height="12" rx="6" fill="url(#stage6Color)" opacity="0.8"/>
+      
+      <!-- Percentage labels -->
+      <g font-family="JetBrains Mono, monospace" font-size="9" fill="#0c0e12" font-weight="bold" text-anchor="middle">
+        <text x="40" y="4">85%</text>
+        <text x="127" y="4">88%</text>
+        <text x="222" y="4">91%</text>
+        <text x="317" y="4">95%</text>
+        <text x="412" y="4">97%</text>
+      </g>
+    </g>
+    
+    <!-- Version labels -->
+    <g transform="translate(20, 78)" font-family="JetBrains Mono, monospace" font-size="8" fill="#64748b" text-anchor="middle">
+      <text x="40">v1.0</text>
+      <text x="127">v1.5</text>
+      <text x="222">v2.5</text>
+      <text x="317">v3.0</text>
+      <text x="412">v4.0</text>
+    </g>
+  </g>
+  
+  <!-- Implementation Effort Panel -->
+  <g transform="translate(1630, 1145)">
+    <rect width="380" height="100" rx="10" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#steelGradient)" stroke-width="2"/>
+    <rect x="3" y="3" width="374" height="94" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Panel header -->
+    <rect width="380" height="30" rx="10" fill="url(#cardHeaderGradient)"/>
+    <rect y="20" width="380" height="10" fill="url(#cardHeaderGradient)"/>
+    <text x="20" y="21" font-family="Georgia, serif" font-size="13" fill="url(#goldShine)" font-weight="bold">EFFORT ESTIMATE</text>
+    
+    <!-- Corner rivets -->
+    <use href="#rivet" x="4" y="4" width="14" height="14"/>
+    <use href="#rivet" x="362" y="4" width="14" height="14"/>
+    
+    <!-- Effort bars -->
+    <g transform="translate(20, 48)" font-family="JetBrains Mono, monospace" font-size="9">
+      <text fill="#64748b">v1.5</text>
+      <rect x="35" y="-8" width="80" height="12" rx="3" fill="url(#stage1Color)" opacity="0.6"/>
+      <text x="120" fill="#94a3b8">2-3 weeks</text>
+      
+      <g transform="translate(180, 0)">
+        <text fill="#64748b">v2.0</text>
+        <rect x="35" y="-8" width="60" height="12" rx="3" fill="url(#stage2Color)" opacity="0.6"/>
+        <text x="100" fill="#94a3b8">1-2 weeks</text>
+      </g>
+    </g>
+    
+    <g transform="translate(20, 70)" font-family="JetBrains Mono, monospace" font-size="9">
+      <text fill="#64748b">v2.5</text>
+      <rect x="35" y="-8" width="100" height="12" rx="3" fill="url(#stage3Color)" opacity="0.6"/>
+      <text x="140" fill="#94a3b8">3-4 weeks</text>
+      
+      <g transform="translate(180, 0)">
+        <text fill="#64748b">v3.0+</text>
+        <rect x="40" y="-8" width="120" height="12" rx="3" fill="url(#stage4Color)" opacity="0.6"/>
+        <text x="165" fill="#94a3b8">4-8 weeks</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Footer attribution -->
+  <g transform="translate(2050, 1145)">
+    <rect width="710" height="100" rx="10" fill="url(#cardGradient)" filter="url(#industrialShadow)" stroke="url(#steelGradient)" stroke-width="2"/>
+    <rect x="3" y="3" width="704" height="94" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Panel header -->
+    <rect width="710" height="30" rx="10" fill="url(#cardHeaderGradient)"/>
+    <rect y="20" width="710" height="10" fill="url(#cardHeaderGradient)"/>
+    <text x="20" y="21" font-family="Georgia, serif" font-size="13" fill="url(#goldShine)" font-weight="bold">ABOUT THIS ROADMAP</text>
+    
+    <!-- Corner rivets -->
+    <use href="#rivet" x="4" y="4" width="14" height="14"/>
+    <use href="#rivet" x="692" y="4" width="14" height="14"/>
+    
+    <!-- Content -->
+    <g transform="translate(20, 48)" font-family="Inter, sans-serif" font-size="10" fill="#8b9aaf">
+      <text>This roadmap represents the planned evolution of the Decision Tree Engine from a simple</text>
+      <text y="18">boolean classifier to an autonomous, self-improving classification system.</text>
+    </g>
+    
+    <g transform="translate(20, 85)" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">
+      <text>Document: decision-tree-engine-roadmap.svg</text>
+      <text x="300">Generated: Nov 2025</text>
+      <text x="450">Source: src/ai/classification/decisionTreeEngine.js</text>
+    </g>
+  </g>
+</svg>

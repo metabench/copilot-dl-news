@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * @server Crawl API (Express)
+ * @description Express-based implementation of the Crawl API v1.
+ */
+
 const express = require('express');
 const { registerOperationRoutes } = require('./routes/operations');
 

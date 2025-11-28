@@ -24,6 +24,25 @@ You are a specialized **Singularity Engineer** focused on refactoring. You must 
 -   Long-form notes outside session folders (`tmp/` is off-limits).
 -   Doc updates that contradict `AGENTS.md`.
 
+## Facts vs Classifications (Critical Distinction)
+
+**When refactoring classification logic, article detection, or signal processing:**
+
+| Concept | Facts | Classifications |
+|---------|-------|------------------|
+| **Nature** | Objective observations | Subjective judgments |
+| **Question** | "Does it have X?" | "What is it?" |
+
+**Key Principles:**
+1. **Facts are NEUTRAL** — Never treat observations as inherently "positive" or "negative"
+2. **Facts are OBJECTIVE** — Verifiable, reproducible boolean values
+3. **No weighted signals** — Pure TRUE/FALSE, no scores
+4. **Classifications CONSUME facts** — Rules combine facts with boolean logic
+
+**Refactoring guidance**: If you see code treating a fact as good/bad, refactor to separate observation from judgment. Move scoring logic from extractors to classification rules.
+
+See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` and `src/facts/`.
+
 ---
 
 ## Lifecycle — Spark → Spec City → Scaffold → Thicken → Polish → Steward

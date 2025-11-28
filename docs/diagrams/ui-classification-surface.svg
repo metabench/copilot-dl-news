@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1221"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="accent-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="accent-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="accent-rose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <text x="700" y="56" fill="#e5e7eb" font-size="30" font-weight="700" text-anchor="middle">UI Surface: Predicted vs Verified Classification</text>
+  <text x="700" y="80" fill="#94a3b8" font-size="14" text-anchor="middle">Badges, confidence, evidence, filters, and queue signals in Data Explorer</text>
+
+  <!-- Layout frames -->
+  <rect x="50" y="120" width="620" height="720" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="730" y="120" width="620" height="360" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="730" y="520" width="620" height="320" rx="16" fill="url(#panel)" stroke="#1f2937" stroke-width="2" filter="url(#shadow)"/>
+
+  <!-- Left: URL detail -->
+  <text x="70" y="150" fill="#cbd5e1" font-size="16" font-weight="700">URL Detail / Drawer</text>
+  <rect x="70" y="170" width="580" height="90" rx="12" fill="#111827" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="90" y="200" fill="#9ca3af" font-size="12">https://example.com/world/2025/12/01/story</text>
+  <rect x="90" y="212" width="120" height="26" rx="8" fill="url(#accent-green)"/>
+  <text x="150" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#0b1221">Verified: article</text>
+  <rect x="230" y="212" width="120" height="26" rx="8" fill="url(#accent-amber)"/>
+  <text x="290" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#0b1221">Predicted: article</text>
+  <rect x="370" y="214" width="180" height="22" rx="11" fill="#0f172a" stroke="#0ea5e9" stroke-width="2"/>
+  <rect x="372" y="216" width="126" height="18" rx="9" fill="#0ea5e9"/>
+  <text x="460" y="229" fill="#e0f2fe" font-size="11" font-weight="700" text-anchor="middle">Confidence 0.70</text>
+  <text x="560" y="230" fill="#f97316" font-size="12" font-weight="700">Δ +0.10 vs last fetch</text>
+
+  <g transform="translate(70,280)">
+    <text x="0" y="0" fill="#cbd5e1" font-size="14" font-weight="700">Evidence</text>
+    <rect x="0" y="14" width="580" height="120" rx="10" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="42" fill="#e5e7eb" font-size="12" font-weight="600">Pattern</text>
+    <text x="20" y="64" fill="#94a3b8" font-size="11">^/world/\d{4}/\d{2}/\d{2}/[a-z0-9-]+</text>
+    <text x="20" y="90" fill="#e5e7eb" font-size="12" font-weight="600">Similar URL</text>
+    <text x="20" y="112" fill="#94a3b8" font-size="11">/world/2025/11/20/another-story (verified article)</text>
+    <text x="320" y="42" fill="#e5e7eb" font-size="12" font-weight="600">Signals</text>
+    <text x="320" y="64" fill="#94a3b8" font-size="11">hasDatePath • hasArticleWords • depth=5 • slugLen=28</text>
+  </g>
+
+  <g transform="translate(70,430)">
+    <text x="0" y="0" fill="#cbd5e1" font-size="14" font-weight="700">Queue Priority</text>
+    <rect x="0" y="14" width="580" height="80" rx="10" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="48" fill="#9ca3af" font-size="12">Prefetch priority: <tspan fill="#22d3ee" font-weight="700">0.82</tspan> (boosted by verified pattern)</text>
+    <text x="20" y="68" fill="#9ca3af" font-size="12">Next fetch window: 15 min • Recent verification: 2h ago</text>
+  </g>
+
+  <g transform="translate(70,540)">
+    <text x="0" y="0" fill="#cbd5e1" font-size="14" font-weight="700">History</text>
+    <rect x="0" y="14" width="580" height="160" rx="10" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="46" fill="#9ca3af" font-size="12">2025-12-01 10:05 — Predicted article (0.70) source: learned_pattern</text>
+    <text x="20" y="68" fill="#9ca3af" font-size="12">2025-12-01 10:08 — Fetched, Verified article, match ✅</text>
+    <text x="20" y="90" fill="#9ca3af" font-size="12">2025-12-02 02:00 — Pattern accuracy updated to 0.95</text>
+    <text x="20" y="112" fill="#9ca3af" font-size="12">2025-12-02 06:00 — Queue priority decayed to 0.60</text>
+  </g>
+
+  <!-- Top-right: Listing filters -->
+  <text x="750" y="150" fill="#cbd5e1" font-size="16" font-weight="700">Listing Filters &amp; Badges</text>
+  <rect x="750" y="170" width="580" height="80" rx="12" fill="#0f172a" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="770" y="200" fill="#9ca3af" font-size="12">Filter:</text>
+  <rect x="820" y="186" width="110" height="28" rx="8" fill="#111827" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="875" y="204" text-anchor="middle" fill="#e0f2fe" font-size="12" font-weight="700">Predicted</text>
+  <rect x="940" y="186" width="110" height="28" rx="8" fill="#111827" stroke="#34d399" stroke-width="1.5"/>
+  <text x="995" y="204" text-anchor="middle" fill="#d1fae5" font-size="12" font-weight="700">Verified</text>
+  <rect x="1060" y="186" width="120" height="28" rx="8" fill="#111827" stroke="#f97316" stroke-width="1.5"/>
+  <text x="1120" y="204" text-anchor="middle" fill="#fed7aa" font-size="12" font-weight="700">Confidence &gt; 0.7</text>
+
+  <g transform="translate(750,270)">
+    <rect width="580" height="180" rx="12" fill="#111827" stroke="#1f2937" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#cbd5e1" font-size="14" font-weight="700">Table badges</text>
+    <text x="20" y="60" fill="#9ca3af" font-size="12">Each row shows</text>
+    <text x="40" y="80" fill="#e5e7eb" font-size="12">• Prediction badge (amber) with confidence bar</text>
+    <text x="40" y="100" fill="#e5e7eb" font-size="12">• Verified badge (green) when content fetched</text>
+    <text x="40" y="120" fill="#e5e7eb" font-size="12">• Evidence tooltip: pattern + similar URL reference</text>
+    <text x="40" y="140" fill="#e5e7eb" font-size="12">• Queue priority chip derived from confidence</text>
+  </g>
+
+  <!-- Bottom-right: Action flow -->
+  <text x="750" y="550" fill="#cbd5e1" font-size="16" font-weight="700">User/Agent Actions</text>
+  <rect x="750" y="570" width="580" height="250" rx="12" fill="#111827" stroke="#1f2937" stroke-width="1.5"/>
+  <text x="770" y="600" fill="#e5e7eb" font-size="13" font-weight="700">Interactions</text>
+  <text x="770" y="622" fill="#9ca3af" font-size="12">• Accept/override prediction → mark verified, drop confidence</text>
+  <text x="770" y="642" fill="#9ca3af" font-size="12">• Trigger fetch now → move to high-priority queue</text>
+  <text x="770" y="662" fill="#9ca3af" font-size="12">• Flag pattern as low-accuracy → decay accuracy, relearn</text>
+  <text x="770" y="682" fill="#9ca3af" font-size="12">• Filter by prediction source: learned_pattern | similar_url | signals</text>
+  <text x="770" y="702" fill="#9ca3af" font-size="12">• Export queue suggestions for crawler scheduler</text>
+
+  <g transform="translate(770,720)">
+    <rect width="220" height="80" rx="10" fill="url(#accent-green)" filter="url(#shadow)"/>
+    <text x="110" y="32" text-anchor="middle" font-size="14" font-weight="700" fill="#0b1221">Verified Updates</text>
+    <text x="110" y="54" text-anchor="middle" font-size="12" fill="#0b1221">write verified_at + verification_match</text>
+  </g>
+  <g transform="translate(1040,720)">
+    <rect width="240" height="80" rx="10" fill="url(#accent-rose)" filter="url(#shadow)"/>
+    <text x="120" y="32" text-anchor="middle" font-size="14" font-weight="700" fill="#0b1221">Pattern Feedback</text>
+    <text x="120" y="54" text-anchor="middle" font-size="12" fill="#0b1221">adjust accuracy / trigger relearn</text>
+  </g>
+</svg>

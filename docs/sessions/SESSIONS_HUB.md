@@ -31,6 +31,149 @@
 
 ## Current Session
 
+### Session 2025-11-28: Z-Server Scan Progress Bar
+
+**Duration**: Active
+**Type**: Feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add real progress bar to z-server scan with debounced IPC updates
+
+**Location**: `docs/sessions/2025-11-28-z-server-progress-bar/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-z-server-progress-bar/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-z-server-progress-bar/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-z-server-progress-bar/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-z-server-progress-bar/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-z-server-progress-bar/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: Add Scanning UI to Z-Server
+
+**Duration**: Active
+**Type**: Feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement SVG scanning indicator in Z-Server sidebar
+
+**Location**: `docs/sessions/2025-11-28-z-server-scanning-ui/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-z-server-scanning-ui/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-z-server-scanning-ui/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-z-server-scanning-ui/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-z-server-scanning-ui/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-z-server-scanning-ui/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: Fix z-server page_context error
+
+**Duration**: Active
+**Type**: Bug Fix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Fix ReferenceError in z-server renderer
+
+**Location**: `docs/sessions/2025-11-28-fix-z-server-page-context/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-fix-z-server-page-context/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-fix-z-server-page-context/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-fix-z-server-page-context/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-fix-z-server-page-context/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-fix-z-server-page-context/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: Fix page_context not defined in z-server
+
+**Duration**: Active
+**Type**: Bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify and fix the page_context not defined error in z-server
+
+**Location**: `docs/sessions/2025-11-28-z-server-page-context-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-z-server-page-context-fix/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-z-server-page-context-fix/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-z-server-page-context-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-z-server-page-context-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-z-server-page-context-fix/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: Fix z-server and Improve Puppeteer Workflow
+
+**Duration**: Active
+**Type**: Refactoring
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Fix z-server bugs and create Puppeteer log capture tool for UI workflows
+
+**Location**: `docs/sessions/2025-11-28-z-server-fix-and-puppeteer-workflow/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-z-server-fix-and-puppeteer-workflow/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-z-server-fix-and-puppeteer-workflow/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-z-server-fix-and-puppeteer-workflow/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-z-server-fix-and-puppeteer-workflow/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-z-server-fix-and-puppeteer-workflow/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: Z-Server jsgui3 Refactor
+
+**Duration**: Active
+**Type**: UI/Architecture
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Convert Z-Server Electron app to use jsgui3-client with Industrial Luxury Obsidian theme
+
+**Location**: `docs/sessions/2025-11-28-z-server-jsgui3-refactor/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-z-server-jsgui3-refactor/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-z-server-jsgui3-refactor/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-z-server-jsgui3-refactor/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-z-server-jsgui3-refactor/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-z-server-jsgui3-refactor/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: CSS/JS Separation Refactoring
+
+**Duration**: Active
+**Type**: Build System / Architecture
+**Completion**: 🔄 Planning
+
+**Focus**:
+- Separate inline CSS from server files (getStyles() functions)
+- Separate inline client JS from servers (getClientScript() functions)
+- Extract CSS from control classes (ClassName.css = `...` pattern)
+- Create esbuild-based build process for CSS/JS bundling
+- Enable external static file serving from Express servers
+
+**Inspired By**: jsgui3-server CSS extraction architecture using AST-based parsing
+
+**Key Files**:
+- `geoImportServer.js` - 500+ lines inline CSS
+- `DatabaseSelector.js` - CSS in getStyles() method
+- `diagramAtlasServer.js` - buildBaseStyles() function
+
+**Location**: `docs/sessions/2025-11-28-css-js-separation/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-28-css-js-separation/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-css-js-separation/WORKING_NOTES.md)
+- 🏗️ [Architecture Diagram](./2025-11-28-css-js-separation/architecture.svg)
+
+---
+
 ### Session 2025-06-20: Gazetteer Ingestion Robustness
 
 **Duration**: Closed
@@ -53,6 +196,27 @@
 
 **Quick Links**:
 - 📘 [Implementation Plan](./2025-06-20-gazetteer-ingestion-robustness/PLAN.md)
+
+---
+
+### Session 2025-11-27: URL Classification Improvement
+
+**Duration**: Active
+**Type**: Classification system enhancement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Distinguish between URL-only predictions and content-verified classifications
+- Learn URL patterns from verified classifications for better predictions
+- Pattern matching from similar verified URLs
+- New database tables: `url_classifications`, `url_classification_patterns`, `domain_classification_profiles`
+- New services: `UrlClassificationService`, `UrlPatternLearningService`
+
+**Location**: `docs/sessions/2025-11-27-url-classification-improvement/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-11-27-url-classification-improvement/PLAN.md)
+- 📝 [Working Notes](./2025-11-27-url-classification-improvement/WORKING_NOTES.md)
 
 ---
 

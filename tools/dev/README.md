@@ -564,4 +564,22 @@ The tool walks each directory breadth-first, skips `.gitkeep`, and reports any W
 - `node tools/dev/md-edit.js docs/AGENTS.md --节列 --lang zh` — section inventories, stats, and search output now translate headings and summaries (`节`, `段`, `匹数`) while preserving JSON structures.
 - `node tools/dev/md-edit.js --助 --语 zh` — render the Chinese alias grid highlighting `--搜题`, `--显节`, and `--替节` so Markdown plan/replacement workflows line up with the js-edit conventions.
 
+## `ui-console-capture` — Puppeteer Log Capture
+
+`ui-console-capture` launches a headless browser against a URL (or a locally spawned server) and captures console logs, errors, and network failures. This is essential for debugging UI applications where logs are trapped in the browser console.
+
+- `node tools/dev/ui-console-capture.js --url="http://localhost:3000"` — capture logs from a running server.
+- `node tools/dev/ui-console-capture.js --server="src/ui/server/myServer.js" --url="http://localhost:3000"` — spawn the server, wait for it to start, capture logs, then kill it.
+- `node tools/dev/ui-console-capture.js --url="..." --timeout=5000` — wait 5 seconds for logs (default 2s).
+
+**Output:**
+JSON array of log entries:
+```json
+[
+  { "type": "log", "text": "App started" },
+  { "type": "error", "text": "Failed to load resource: 404" },
+  { "type": "network-error", "text": "Status 404 http://localhost:3000/favicon.ico" }
+]
+```
+
 Additional examples and guardrail details live in `docs/CLI_REFACTORING_QUICK_START.md`.

@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 /**
+ * @server API Server
+ * @description Standalone API server providing REST endpoints for crawl management, background tasks, and analysis.
+ */
+
+/**
  * API Server with Swagger/OpenAPI Documentation
  *
  * Standalone API server providing comprehensive REST endpoints for:

@@ -53,6 +53,7 @@ var DocsViewerClient = (() => {
               } else {
                 res_item = fn(collection[c2], c2, stop);
               }
+              if (ctu == false) break;
               res2.push(res_item);
             }
             return res2;
@@ -65,6 +66,7 @@ var DocsViewerClient = (() => {
               } else {
                 res2[name] = fn(collection[name], name, stop);
               }
+              if (ctu === false) break;
             }
             return res2;
           }
@@ -114,6 +116,7 @@ var DocsViewerClient = (() => {
         "function": "f",
         "boolean": "b",
         "undefined": "u",
+        "null": "N",
         "array": "a",
         "arguments": "A",
         "date": "d",
@@ -372,9 +375,8 @@ var DocsViewerClient = (() => {
         for (c2 = 0; c2 < l2; c2++) {
           if (!first) {
             res2 = res2 + ",";
-          } else {
-            first = false;
           }
+          first = false;
           res2 = res2 + get_item_sig(a[c2]);
         }
         res2 = res2 + "]";
@@ -535,6 +537,9 @@ var DocsViewerClient = (() => {
           each(arr_idxs_to_ignore, (idx_to_ignore) => {
             map_ignore_idxs[idx_to_ignore] = true;
           });
+        }
+        if (arr.some((subArray) => subArray.length === 0)) {
+          return [];
         }
         const res2 = [];
         const l2 = arr.length;
@@ -1439,9 +1444,9 @@ var DocsViewerClient = (() => {
         const ctr = map_tas_by_type[type];
         if (ctr) {
           if (input_array) {
-            return ctr(input_array);
+            return new ctr(input_array);
           } else if (length) {
-            return ctr(length);
+            return new ctr(length);
           }
         }
       };
@@ -2236,13 +2241,11 @@ var DocsViewerClient = (() => {
           return Number.isInteger(x);
         },
         parse_string(str) {
-          const p2 = parseInt(str);
-          if (p2 + "" === str) {
-            const parsed_is_valid = this.validate(p2);
-            if (parsed_is_valid) {
-              return p2;
-            }
+          const p2 = parseInt(str, 10);
+          if (!isNaN(p2) && p2.toString() === str) {
+            return p2;
           }
+          return void 0;
         }
       });
       var field = (...a) => {
@@ -2608,9 +2611,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/collective.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/collective.js
   var require_collective = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/collective.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/collective.js"(exports, module) {
       var { each, is_array } = require_lib_lang_mini();
       var collective = (arr) => {
         if (is_array(arr)) {
@@ -2649,18 +2652,18 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Data_Model.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js
   var require_Data_Model = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
       var { Evented_Class } = require_lib_lang_mini();
       var Data_Model = class extends Evented_Class {
         constructor(spec = {}) {
           super(spec);
           this.__data_model = true;
-          if (spec.context) {
+          if (spec && spec.context) {
             this.context = spec.context;
           }
-          if (spec.name) {
+          if (spec && spec.name) {
             this.name = spec.name;
           }
           this.__type = "data_model";
@@ -2670,9 +2673,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/tools.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js
   var require_tools = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
       var Data_Model = require_Data_Model();
       var { tof } = require_lib_lang_mini();
       var more_general_equals = (that2, other) => {
@@ -2735,9 +2738,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/b-plus-tree/stiffarray.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js
   var require_stiffarray = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
       var StiffArray = function(capacity) {
         var m_public = {
           items: new Array(capacity),
@@ -2858,9 +2861,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/b-plus-tree/b-plus-tree.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js
   var require_b_plus_tree = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
       var StiffArray = require_stiffarray();
       var B_Plus_Node = function(nodeCapacity) {
         var m_public = {
@@ -3620,9 +3623,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/old/Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js
   var require_Data_Value = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var Data_Model = require_Data_Model();
       var j = jsgui;
@@ -3660,7 +3663,6 @@ var DocsViewerClient = (() => {
         constructor(spec = {}) {
           super(spec);
           this.__data_value = true;
-          console.log("old (1.1) Data_Value constructor");
           if (spec.context) {
             this.context = spec.context;
           }
@@ -3765,9 +3767,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Mini_Context.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js
   var require_Mini_Context = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
       var Mini_Context = class {
         // Need quite a simple mechanism to get IDs for objects.
         // They will be typed objects/
@@ -3804,9 +3806,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/old/Data_Object.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js
   var require_Data_Object = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var Data_Value2 = require_Data_Value();
       var j = jsgui;
@@ -4248,9 +4250,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/sorted-kvs.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js
   var require_sorted_kvs = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/sorted-kvs.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var mapify = jsgui.mapify;
       var B_Plus_Tree = require_b_plus_tree();
@@ -4333,9 +4335,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/old/Collection.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js
   var require_Collection = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
       var lang = require_lib_lang_mini();
       var Data_Value2 = require_Data_Value();
       var Data_Object = require_Data_Object();
@@ -4435,8 +4437,12 @@ var DocsViewerClient = (() => {
               value2.each(function(v, i) {
                 that.push(v);
               });
+            } else if (tval === "string" || tval === "number" || tval === "boolean" || tval === "null" || tval === "undefined") {
+              this.clear();
+              return this.push(value2);
             } else {
-              return this.super.set(value2);
+              const Data_Object2 = require_Data_Object();
+              return Data_Object2.prototype.set.call(this, value2);
             }
           }
         }
@@ -4771,7 +4777,7 @@ var DocsViewerClient = (() => {
               this.raise("change", e);
             }
           }
-          if (tv === "string" || tv === "number") {
+          if (tv === "string" || tv === "number" || tv === "boolean" || tv === "null" || tv === "undefined") {
             const dv = new Data_Value2({
               "value": value2
             });
@@ -4827,16 +4833,16 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Data_Object.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js
   var require_Data_Object2 = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
       module.exports = require_Data_Object();
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
   var require_Immutable_Data_Model = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
       var Data_Model = require_Data_Model();
       var Immutable_Data_Model = class extends Data_Model {
         constructor(...a) {
@@ -4847,18 +4853,18 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Validation_Result.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js
   var require_Validation_Result = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
       var Validation_Result = class {
       };
       module.exports = Validation_Result;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Validation_Success.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js
   var require_Validation_Success = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
       var Validation_Result = require_Validation_Result();
       var Validation_Success = class extends Validation_Result {
         constructor(spec) {
@@ -4869,9 +4875,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
   var require_setup_base_data_value_value_property = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
       var Validation_Success = require_Validation_Success();
       var setup_base_data_value_value_property = (data_value) => {
         let local_js_value2;
@@ -4916,9 +4922,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
   var require_Base_Data_Value = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5000,9 +5006,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
   var require_Value_Set_Attempt = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
       var Value_Set_Attempt = class {
         constructor(spec = {}) {
           Object.assign(this, spec);
@@ -5012,9 +5018,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
   var require_Immutable_Base_Data_Value = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5095,9 +5101,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
   var require_Immutable_Data_Value = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5151,6 +5157,7 @@ var DocsViewerClient = (() => {
               get() {
                 return local_js_value2;
               }
+              // MISSING: set() { throw new TypeError('Cannot modify immutable Data_Value'); }
             });
           } else {
             let value2;
@@ -5169,6 +5176,7 @@ var DocsViewerClient = (() => {
               get() {
                 return value2;
               }
+              // MISSING: set() { throw new TypeError('Cannot modify immutable Data_Value'); }
             });
           }
           this.__type = "data_value";
@@ -5280,9 +5288,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
   var require_setup_data_value_data_type_set = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Base_Data_Value = require_Base_Data_Value();
@@ -5753,9 +5761,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js
   var require_Data_Value2 = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Base_Data_Value = require_Base_Data_Value();
@@ -6015,16 +6023,16 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js
   var require_Data_Value3 = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
       module.exports = require_Data_Value2();
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/doubly-linked-list.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js
   var require_doubly_linked_list = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
       var Node = class {
         constructor(spec) {
           this.neighbours = spec.neighbours || [];
@@ -6164,9 +6172,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/ordered-kvs.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js
   var require_ordered_kvs = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/ordered-kvs.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js"(exports, module) {
       var Doubly_Linked_List = require_doubly_linked_list();
       var Ordered_KVS = class {
         constructor() {
@@ -6231,9 +6239,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/ordered-string-list.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js
   var require_ordered_string_list = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/ordered-string-list.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js"(exports, module) {
       var Ordered_String_List = class {
         constructor() {
           var arr = [];
@@ -6321,16 +6329,16 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Collection.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js
   var require_Collection2 = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
       module.exports = require_Collection();
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/util.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/util.js
   var require_util = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/util.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/util.js"(exports, module) {
       var jsgui = require_lib_lang_mini();
       var Collection = require_Collection2();
       var j = jsgui;
@@ -6407,13 +6415,13 @@ var DocsViewerClient = (() => {
       var execute_on_each_simple = function(items, fn) {
         var res2 = [], that2 = this;
         each(items, function(i, v) {
-          res2.push(fn.call(that2, v));
+          res2.push(fn.call(that2, i));
         });
         return res2;
       };
       var filter_map_by_regex = function(map, regex) {
         var res2 = {};
-        each(map, function(i, v) {
+        each(map, function(v, i) {
           if (i.match(regex)) {
             res2[i] = v;
           }
@@ -6735,9 +6743,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/lang-tools/lang.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/lang.js
   var require_lang = __commonJS({
-    "vendor/jsgui3-client/node_modules/lang-tools/lang.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/lang.js"(exports, module) {
       var lang_mini = require_lib_lang_mini();
       var collective = require_collective();
       var { more_general_equals } = require_tools();
@@ -6775,9 +6783,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/text-node.js
+  // node_modules/jsgui3-html/html-core/text-node.js
   var require_text_node = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/text-node.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/text-node.js"(exports, module) {
       var { tof, Evented_Class } = require_lang();
       var escape_html_replacements = [
         [/&/g, "&amp;"],
@@ -10882,9 +10890,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/control-core.js
+  // node_modules/jsgui3-html/html-core/control-core.js
   var require_control_core = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/control-core.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control-core.js"(exports, module) {
       var jsgui = require_lang();
       var oext = require_oext();
       var { Data_Model, Data_Object, Collection, tof, stringify, get_a_sig: get_a_sig2, each, Evented_Class } = jsgui;
@@ -11941,18 +11949,18 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Shape.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Shape.js
   var require_Shape = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Shape.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Shape.js"(exports, module) {
       var Shape = class {
       };
       module.exports = Shape;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js
+  // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js
   var require_lang_mini3 = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lang-mini.js"(exports, module) {
       var running_in_browser = typeof window !== "undefined";
       var running_in_node = !running_in_browser;
       var Readable_Stream;
@@ -11992,6 +12000,7 @@ var DocsViewerClient = (() => {
               } else {
                 res_item = fn(collection[c2], c2, stop);
               }
+              if (ctu == false) break;
               res2.push(res_item);
             }
             return res2;
@@ -12004,6 +12013,7 @@ var DocsViewerClient = (() => {
               } else {
                 res2[name] = fn(collection[name], name, stop);
               }
+              if (ctu === false) break;
             }
             return res2;
           }
@@ -12053,6 +12063,7 @@ var DocsViewerClient = (() => {
         "function": "f",
         "boolean": "b",
         "undefined": "u",
+        "null": "N",
         "array": "a",
         "arguments": "A",
         "date": "d",
@@ -14280,6 +14291,836 @@ var DocsViewerClient = (() => {
           }
         }
       };
+      var KEYWORD_LITERALS = /* @__PURE__ */ new Set(["true", "false", "null", "undefined"]);
+      var KEYWORD_OPERATORS = /* @__PURE__ */ new Set(["typeof", "void", "delete", "in", "instanceof"]);
+      var MULTI_CHAR_OPERATORS = [
+        "===",
+        "!==",
+        "==",
+        "!=",
+        "<=",
+        ">=",
+        "&&",
+        "||",
+        "??",
+        "++",
+        "--",
+        "+=",
+        "-=",
+        "*=",
+        "/=",
+        "%=",
+        "&=",
+        "|=",
+        "^=",
+        "<<",
+        ">>",
+        ">>>",
+        "**"
+      ];
+      var SINGLE_CHAR_OPERATORS = /* @__PURE__ */ new Set(["+", "-", "*", "/", "%", "=", "!", "<", ">", "&", "|", "^", "~"]);
+      var PUNCTUATION_CHARS = /* @__PURE__ */ new Set(["(", ")", "{", "}", "[", "]", ",", ":", "?", "."]);
+      var GLOBAL_SCOPE = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
+      var Tokenizer = class {
+        constructor(expression) {
+          this.expression = expression || "";
+          this.length = this.expression.length;
+          this.position = 0;
+        }
+        tokenize() {
+          const tokens = [];
+          if (!this.expression.trim()) {
+            return tokens;
+          }
+          while (!this.isAtEnd()) {
+            this.skipWhitespace();
+            if (this.isAtEnd()) break;
+            const ch = this.peek();
+            if (this.isIdentifierStart(ch)) {
+              tokens.push(this.tokenizeIdentifier());
+            } else if (this.isDigit(ch) || ch === "." && this.isDigit(this.peek(1))) {
+              tokens.push(this.tokenizeNumber());
+            } else if (ch === '"' || ch === "'") {
+              tokens.push(this.tokenizeString());
+            } else if (this.isOperatorStart(ch)) {
+              tokens.push(this.tokenizeOperator());
+            } else if (PUNCTUATION_CHARS.has(ch)) {
+              tokens.push(this.tokenizePunctuation());
+            } else {
+              throw new Error(`Unexpected character: ${ch}`);
+            }
+          }
+          return tokens;
+        }
+        isAtEnd() {
+          return this.position >= this.length;
+        }
+        peek(offset2 = 0) {
+          if (this.position + offset2 >= this.length) return "\0";
+          return this.expression[this.position + offset2];
+        }
+        advance() {
+          return this.expression[this.position++];
+        }
+        skipWhitespace() {
+          while (!this.isAtEnd()) {
+            const ch = this.peek();
+            if (/\s/.test(ch)) {
+              this.advance();
+              continue;
+            }
+            if (ch === "/" && this.peek(1) === "/") {
+              while (!this.isAtEnd() && this.peek() !== "\n") {
+                this.advance();
+              }
+              continue;
+            }
+            if (ch === "/" && this.peek(1) === "*") {
+              this.advance();
+              this.advance();
+              while (!this.isAtEnd()) {
+                if (this.peek() === "*" && this.peek(1) === "/") {
+                  this.advance();
+                  this.advance();
+                  break;
+                }
+                this.advance();
+              }
+              continue;
+            }
+            break;
+          }
+        }
+        isIdentifierStart(ch) {
+          return /[A-Za-z_$]/.test(ch);
+        }
+        isIdentifierPart(ch) {
+          return /[A-Za-z0-9_$]/.test(ch);
+        }
+        isDigit(ch) {
+          return /[0-9]/.test(ch);
+        }
+        isOperatorStart(ch) {
+          if (ch === "." && this.peek(1) === "." && this.peek(2) === ".") {
+            throw new Error("Spread syntax is not supported");
+          }
+          if (ch === "?" && this.peek(1) === "?") {
+            return true;
+          }
+          return SINGLE_CHAR_OPERATORS.has(ch);
+        }
+        tokenizeIdentifier() {
+          let value2 = "";
+          while (!this.isAtEnd() && this.isIdentifierPart(this.peek())) {
+            value2 += this.advance();
+          }
+          if (KEYWORD_LITERALS.has(value2)) {
+            return { type: "KEYWORD", value: value2 };
+          }
+          if (KEYWORD_OPERATORS.has(value2)) {
+            return { type: "OPERATOR", value: value2 };
+          }
+          return { type: "IDENTIFIER", value: value2 };
+        }
+        tokenizeNumber() {
+          let value2 = "";
+          let hasDot = false;
+          while (!this.isAtEnd()) {
+            const ch = this.peek();
+            if (this.isDigit(ch)) {
+              value2 += this.advance();
+            } else if (ch === "." && !hasDot) {
+              hasDot = true;
+              value2 += this.advance();
+            } else {
+              break;
+            }
+          }
+          return { type: "NUMBER", value: Number(value2) };
+        }
+        tokenizeString() {
+          const quote = this.advance();
+          let value2 = "";
+          while (!this.isAtEnd()) {
+            const ch = this.advance();
+            if (ch === quote) {
+              return { type: "STRING", value: value2 };
+            }
+            if (ch === "\\") {
+              const next = this.advance();
+              switch (next) {
+                case "n":
+                  value2 += "\n";
+                  break;
+                case "r":
+                  value2 += "\r";
+                  break;
+                case "t":
+                  value2 += "	";
+                  break;
+                case "\\":
+                  value2 += "\\";
+                  break;
+                case '"':
+                  value2 += '"';
+                  break;
+                case "'":
+                  value2 += "'";
+                  break;
+                default:
+                  value2 += next;
+              }
+            } else {
+              value2 += ch;
+            }
+          }
+          throw new Error("Unterminated string literal");
+        }
+        tokenizeOperator() {
+          const remaining = this.expression.slice(this.position);
+          for (const op of MULTI_CHAR_OPERATORS) {
+            if (remaining.startsWith(op)) {
+              if (op === "=>") {
+                throw new Error("Arrow functions are not supported");
+              }
+              this.position += op.length;
+              return { type: "OPERATOR", value: op };
+            }
+          }
+          const ch = this.advance();
+          if (ch === "=" && this.peek() === ">") {
+            throw new Error("Arrow functions are not supported");
+          }
+          if (!SINGLE_CHAR_OPERATORS.has(ch) && ch !== "?") {
+            throw new Error("Unexpected operator");
+          }
+          return { type: "OPERATOR", value: ch };
+        }
+        tokenizePunctuation() {
+          const ch = this.advance();
+          if (ch === "." && this.peek() === "." && this.peek(1) === ".") {
+            throw new Error("Spread syntax is not supported");
+          }
+          return { type: "PUNCTUATION", value: ch };
+        }
+      };
+      var Parser = class {
+        constructor(tokens) {
+          this.tokens = tokens;
+          this.pos = 0;
+        }
+        parse() {
+          if (!this.tokens.length) {
+            throw new Error("Empty expression");
+          }
+          const ast = this.parseExpression();
+          if (!this.isAtEnd()) {
+            throw new Error(`Unexpected token: ${this.peek().value}`);
+          }
+          return ast;
+        }
+        parseExpression() {
+          return this.parseConditionalExpression();
+        }
+        parseConditionalExpression() {
+          let expr = this.parseLogicalOrExpression();
+          if (this.matchPunctuation("?")) {
+            const consequent = this.parseExpression();
+            this.consume("PUNCTUATION", ":");
+            const alternate = this.parseExpression();
+            expr = {
+              type: "ConditionalExpression",
+              test: expr,
+              consequent,
+              alternate
+            };
+          }
+          return expr;
+        }
+        parseLogicalOrExpression() {
+          let expr = this.parseLogicalAndExpression();
+          while (this.matchOperator("||")) {
+            const operator = this.previous().value;
+            const right = this.parseLogicalAndExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseLogicalAndExpression() {
+          let expr = this.parseNullishExpression();
+          while (this.matchOperator("&&")) {
+            const operator = this.previous().value;
+            const right = this.parseNullishExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseNullishExpression() {
+          let expr = this.parseEqualityExpression();
+          while (this.matchOperator("??")) {
+            const operator = this.previous().value;
+            const right = this.parseEqualityExpression();
+            expr = this.buildLogicalExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseEqualityExpression() {
+          let expr = this.parseRelationalExpression();
+          while (this.matchOperator("==", "!=", "===", "!==")) {
+            const operator = this.previous().value;
+            const right = this.parseRelationalExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseRelationalExpression() {
+          let expr = this.parseAdditiveExpression();
+          while (this.matchOperator("<", ">", "<=", ">=", "in", "instanceof")) {
+            const operator = this.previous().value;
+            const right = this.parseAdditiveExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseAdditiveExpression() {
+          let expr = this.parseMultiplicativeExpression();
+          while (this.matchOperator("+", "-")) {
+            const operator = this.previous().value;
+            const right = this.parseMultiplicativeExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseMultiplicativeExpression() {
+          let expr = this.parseUnaryExpression();
+          while (this.matchOperator("*", "/", "%")) {
+            const operator = this.previous().value;
+            const right = this.parseUnaryExpression();
+            expr = this.buildBinaryExpression(operator, expr, right);
+          }
+          return expr;
+        }
+        parseUnaryExpression() {
+          if (this.matchOperator("+", "-", "!", "~", "typeof", "void", "delete")) {
+            const operator = this.previous().value;
+            const argument = this.parseUnaryExpression();
+            return { type: "UnaryExpression", operator, argument };
+          }
+          return this.parseLeftHandSideExpression();
+        }
+        parseLeftHandSideExpression() {
+          let expr = this.parsePrimaryExpression();
+          while (true) {
+            if (this.matchPunctuation(".")) {
+              const property = this.consumePropertyIdentifier();
+              expr = {
+                type: "MemberExpression",
+                object: expr,
+                property,
+                computed: false
+              };
+            } else if (this.matchPunctuation("[")) {
+              const property = this.parseExpression();
+              this.consume("PUNCTUATION", "]");
+              expr = {
+                type: "MemberExpression",
+                object: expr,
+                property,
+                computed: true
+              };
+            } else if (this.matchPunctuation("(")) {
+              const args = this.parseArguments();
+              expr = {
+                type: "CallExpression",
+                callee: expr,
+                arguments: args
+              };
+            } else {
+              break;
+            }
+          }
+          return expr;
+        }
+        parsePrimaryExpression() {
+          const token = this.peek();
+          if (!token) {
+            throw new Error("Unexpected end of expression");
+          }
+          if (token.type === "NUMBER" || token.type === "STRING") {
+            this.advance();
+            return { type: "Literal", value: token.value };
+          }
+          if (token.type === "KEYWORD") {
+            this.advance();
+            return { type: "Literal", value: this.literalFromKeyword(token.value) };
+          }
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (this.matchPunctuation("(")) {
+            const expr = this.parseExpression();
+            this.consume("PUNCTUATION", ")");
+            return expr;
+          }
+          if (this.matchPunctuation("[")) {
+            const elements = [];
+            if (!this.check("PUNCTUATION", "]")) {
+              do {
+                elements.push(this.parseExpression());
+              } while (this.matchPunctuation(","));
+            }
+            this.consume("PUNCTUATION", "]");
+            return { type: "ArrayExpression", elements };
+          }
+          if (this.matchPunctuation("{")) {
+            const properties = [];
+            if (!this.check("PUNCTUATION", "}")) {
+              do {
+                const key2 = this.parsePropertyKey();
+                this.consume("PUNCTUATION", ":");
+                const value2 = this.parseExpression();
+                properties.push({ key: key2, value: value2 });
+              } while (this.matchPunctuation(","));
+            }
+            this.consume("PUNCTUATION", "}");
+            return { type: "ObjectExpression", properties };
+          }
+          throw new Error(`Unexpected token: ${token.value}`);
+        }
+        parsePropertyKey() {
+          const token = this.peek();
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
+            this.advance();
+            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
+            return { type: "Literal", value: value2 };
+          }
+          throw new Error("Invalid object property key");
+        }
+        parseArguments() {
+          const args = [];
+          if (!this.check("PUNCTUATION", ")")) {
+            do {
+              args.push(this.parseExpression());
+            } while (this.matchPunctuation(","));
+          }
+          this.consume("PUNCTUATION", ")");
+          return args;
+        }
+        literalFromKeyword(value2) {
+          switch (value2) {
+            case "true":
+              return true;
+            case "false":
+              return false;
+            case "null":
+              return null;
+            case "undefined":
+              return void 0;
+            default:
+              return value2;
+          }
+        }
+        consume(type, value2) {
+          if (this.check(type, value2)) {
+            return this.advance();
+          }
+          const expected = value2 ? `${type} '${value2}'` : type;
+          throw new Error(`Expected ${expected}`);
+        }
+        check(type, value2) {
+          if (this.isAtEnd()) return false;
+          const token = this.peek();
+          if (token.type !== type) return false;
+          if (typeof value2 === "undefined") return true;
+          return token.value === value2;
+        }
+        matchOperator(...operators) {
+          if (this.check("OPERATOR") && operators.includes(this.peek().value)) {
+            this.advance();
+            return true;
+          }
+          return false;
+        }
+        matchPunctuation(value2) {
+          if (this.check("PUNCTUATION", value2)) {
+            this.advance();
+            return true;
+          }
+          return false;
+        }
+        consumePropertyIdentifier() {
+          const token = this.peek();
+          if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", value: token.value };
+          }
+          if (token.type === "STRING" || token.type === "NUMBER" || token.type === "KEYWORD") {
+            this.advance();
+            const value2 = token.type === "KEYWORD" ? this.literalFromKeyword(token.value) : token.value;
+            return { type: "Literal", value: value2 };
+          }
+          throw new Error("Expected property name");
+        }
+        buildBinaryExpression(operator, left, right) {
+          return { type: "BinaryExpression", operator, left, right };
+        }
+        buildLogicalExpression(operator, left, right) {
+          return { type: "LogicalExpression", operator, left, right };
+        }
+        advance() {
+          if (!this.isAtEnd()) {
+            this.pos += 1;
+          }
+          return this.tokens[this.pos - 1];
+        }
+        peek() {
+          if (this.isAtEnd()) return null;
+          return this.tokens[this.pos];
+        }
+        previous() {
+          return this.tokens[this.pos - 1];
+        }
+        isAtEnd() {
+          return this.pos >= this.tokens.length;
+        }
+      };
+      var Evaluator = class {
+        constructor(context2 = {}, options = {}) {
+          this.context = context2 || {};
+          this.helpers = options.helpers || {};
+          this.strict = options.strict || false;
+          this.allowCall = options.allowCall || null;
+          this.allowedFunctions = new Set(options.allowedFunctions || []);
+          Object.values(this.helpers).forEach((value2) => {
+            if (typeof value2 === "function") {
+              this.allowedFunctions.add(value2);
+            }
+          });
+        }
+        evaluate(node) {
+          switch (node.type) {
+            case "Literal":
+              return node.value;
+            case "Identifier":
+              return this.evaluateIdentifier(node);
+            case "MemberExpression":
+              return this.evaluateMemberExpression(node);
+            case "CallExpression":
+              return this.evaluateCallExpression(node);
+            case "UnaryExpression":
+              return this.evaluateUnaryExpression(node);
+            case "BinaryExpression":
+              return this.evaluateBinaryExpression(node);
+            case "LogicalExpression":
+              return this.evaluateLogicalExpression(node);
+            case "ArrayExpression":
+              return node.elements.map((element) => this.evaluate(element));
+            case "ObjectExpression":
+              return this.evaluateObjectExpression(node);
+            case "ConditionalExpression":
+              return this.evaluateConditionalExpression(node);
+            default:
+              throw new Error(`Unsupported AST node type: ${node.type}`);
+          }
+        }
+        evaluateIdentifier(node) {
+          const name = node.value;
+          if (Object.prototype.hasOwnProperty.call(this.helpers, name)) {
+            return this.helpers[name];
+          }
+          if (this.context && Object.prototype.hasOwnProperty.call(this.context, name)) {
+            return this.context[name];
+          }
+          if (name in GLOBAL_SCOPE) {
+            return GLOBAL_SCOPE[name];
+          }
+          if (this.strict) {
+            throw new Error(`Undefined identifier: ${name}`);
+          }
+          console.error(`Undefined identifier: ${name}`);
+          return void 0;
+        }
+        evaluateMemberExpression(node) {
+          const object = this.evaluate(node.object);
+          if (object === null || object === void 0) {
+            throw new Error("Cannot read property of null or undefined");
+          }
+          const property = node.computed ? this.evaluate(node.property) : node.property.type === "Identifier" ? node.property.value : node.property.value;
+          return object[property];
+        }
+        evaluateCallExpression(node) {
+          let callee;
+          let thisArg;
+          if (node.callee.type === "MemberExpression") {
+            const object = this.evaluate(node.callee.object);
+            if (object === null || object === void 0) {
+              throw new Error("Cannot call property of null or undefined");
+            }
+            const property = node.callee.computed ? this.evaluate(node.callee.property) : node.callee.property.type === "Identifier" ? node.callee.property.value : node.callee.property.value;
+            callee = object[property];
+            thisArg = object;
+          } else {
+            callee = this.evaluate(node.callee);
+            thisArg = void 0;
+          }
+          if (typeof callee !== "function") {
+            throw new Error("Attempted to call a non-function");
+          }
+          if (!this.isCallAllowed(callee, thisArg)) {
+            throw new Error("Function call not allowed by policy");
+          }
+          const args = node.arguments.map((arg) => this.evaluate(arg));
+          return callee.apply(thisArg, args);
+        }
+        isCallAllowed(fn, thisArg) {
+          if (this.allowCall) {
+            const decision = this.allowCall(fn, thisArg);
+            if (decision === true) return true;
+            if (decision === false) return false;
+          }
+          return this.allowedFunctions.has(fn);
+        }
+        evaluateUnaryExpression(node) {
+          let argumentValue;
+          if (node.operator === "delete") {
+            argumentValue = node.argument;
+          } else if (node.operator === "typeof" && node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
+            argumentValue = void 0;
+          } else {
+            argumentValue = this.evaluate(node.argument);
+          }
+          switch (node.operator) {
+            case "+":
+              return +argumentValue;
+            case "-":
+              return -argumentValue;
+            case "!":
+              return !argumentValue;
+            case "~":
+              return ~argumentValue;
+            case "typeof":
+              if (node.argument.type === "Identifier" && !this.isIdentifierDefined(node.argument.value)) {
+                return "undefined";
+              }
+              return typeof argumentValue;
+            case "void":
+              return void argumentValue;
+            case "delete":
+              return this.performDelete(node.argument);
+            default:
+              throw new Error(`Unsupported unary operator: ${node.operator}`);
+          }
+        }
+        isIdentifierDefined(name) {
+          return Object.prototype.hasOwnProperty.call(this.helpers, name) || this.context && Object.prototype.hasOwnProperty.call(this.context, name) || name in GLOBAL_SCOPE;
+        }
+        performDelete(argument) {
+          if (argument.type === "Identifier" && this.context && typeof this.context === "object") {
+            return delete this.context[argument.value];
+          }
+          if (argument.type === "MemberExpression") {
+            const target = this.evaluate(argument.object);
+            if (target === null || target === void 0) {
+              return true;
+            }
+            const property = argument.computed ? this.evaluate(argument.property) : argument.property.type === "Identifier" ? argument.property.value : argument.property.value;
+            return delete target[property];
+          }
+          this.evaluate(argument);
+          return true;
+        }
+        evaluateBinaryExpression(node) {
+          const left = this.evaluate(node.left);
+          const right = this.evaluate(node.right);
+          switch (node.operator) {
+            case "+":
+              return left + right;
+            case "-":
+              return left - right;
+            case "*":
+              return left * right;
+            case "/":
+              return left / right;
+            case "%":
+              return left % right;
+            case "==":
+              return left == right;
+            // eslint-disable-line eqeqeq
+            case "!=":
+              return left != right;
+            // eslint-disable-line eqeqeq
+            case "===":
+              return left === right;
+            case "!==":
+              return left !== right;
+            case "<":
+              return left < right;
+            case ">":
+              return left > right;
+            case "<=":
+              return left <= right;
+            case ">=":
+              return left >= right;
+            case "in":
+              return left in right;
+            case "instanceof":
+              return left instanceof right;
+            default:
+              throw new Error(`Unsupported binary operator: ${node.operator}`);
+          }
+        }
+        evaluateLogicalExpression(node) {
+          switch (node.operator) {
+            case "&&": {
+              const left = this.evaluate(node.left);
+              return left ? this.evaluate(node.right) : left;
+            }
+            case "||": {
+              const left = this.evaluate(node.left);
+              return left ? left : this.evaluate(node.right);
+            }
+            case "??": {
+              const left = this.evaluate(node.left);
+              return left !== null && left !== void 0 ? left : this.evaluate(node.right);
+            }
+            default:
+              throw new Error(`Unsupported logical operator: ${node.operator}`);
+          }
+        }
+        evaluateObjectExpression(node) {
+          const obj2 = {};
+          node.properties.forEach((property) => {
+            const key2 = this.evaluatePropertyKey(property.key);
+            obj2[key2] = this.evaluate(property.value);
+          });
+          return obj2;
+        }
+        evaluatePropertyKey(node) {
+          if (node.type === "Identifier") {
+            return node.value;
+          }
+          return node.value;
+        }
+        evaluateConditionalExpression(node) {
+          const test = this.evaluate(node.test);
+          return test ? this.evaluate(node.consequent) : this.evaluate(node.alternate);
+        }
+      };
+      var ExpressionParser = class {
+        constructor(options = {}) {
+          this.options = { cache: options.cache !== false, ...options };
+          this.astCache = /* @__PURE__ */ new Map();
+          this.valueCache = /* @__PURE__ */ new Map();
+        }
+        tokenize(expression) {
+          return new Tokenizer(expression).tokenize();
+        }
+        parse(expression, options = this.options) {
+          const useCache = this.shouldUseCache(options);
+          if (useCache && this.astCache.has(expression)) {
+            return this.astCache.get(expression);
+          }
+          const tokens = this.tokenize(expression);
+          if (!tokens.length) {
+            throw new Error("Empty expression");
+          }
+          const parser = new Parser(tokens);
+          const ast = parser.parse();
+          Object.defineProperty(ast, "tokens", {
+            value: tokens,
+            enumerable: false,
+            configurable: true
+          });
+          if (useCache) {
+            this.astCache.set(expression, ast);
+          }
+          return ast;
+        }
+        evaluate(expression, context2 = {}, options = {}) {
+          const mergedOptions = this.mergeOptions(options);
+          const useCache = this.shouldUseCache(mergedOptions);
+          if (useCache) {
+            const cached = this.getCachedValue(expression, context2, mergedOptions);
+            if (cached.hit) {
+              return cached.value;
+            }
+          }
+          const ast = this.parse(expression, mergedOptions);
+          const evaluator = new Evaluator(context2, mergedOptions);
+          const result = evaluator.evaluate(ast);
+          if (useCache) {
+            this.storeCachedValue(expression, context2, result, mergedOptions);
+          }
+          return result;
+        }
+        shouldUseCache(options) {
+          return options.cache !== false;
+        }
+        mergeOptions(override = {}) {
+          const base = this.options || {};
+          const helpers = { ...base.helpers || {}, ...override.helpers || {} };
+          const allowedFunctions = /* @__PURE__ */ new Set([
+            ...base.allowedFunctions || [],
+            ...override.allowedFunctions || []
+          ]);
+          return {
+            ...base,
+            ...override,
+            helpers,
+            allowedFunctions: Array.from(allowedFunctions)
+          };
+        }
+        getCachedValue(expression, context2, options) {
+          const bucket = this.valueCache.get(expression);
+          if (!bucket) {
+            return { hit: false };
+          }
+          if (this.isObjectLike(context2)) {
+            if (bucket.objectCache && bucket.objectCache.has(context2)) {
+              return { hit: true, value: bucket.objectCache.get(context2) };
+            }
+            return { hit: false };
+          }
+          const key2 = this.resolvePrimitiveKey(context2, options);
+          if (key2 === void 0) {
+            return { hit: false };
+          }
+          if (bucket.primitiveCache && bucket.primitiveCache.has(key2)) {
+            return { hit: true, value: bucket.primitiveCache.get(key2) };
+          }
+          return { hit: false };
+        }
+        storeCachedValue(expression, context2, value2, options) {
+          let bucket = this.valueCache.get(expression);
+          if (!bucket) {
+            bucket = { objectCache: /* @__PURE__ */ new WeakMap(), primitiveCache: /* @__PURE__ */ new Map() };
+            this.valueCache.set(expression, bucket);
+          }
+          if (this.isObjectLike(context2)) {
+            bucket.objectCache.set(context2, value2);
+            return;
+          }
+          const key2 = this.resolvePrimitiveKey(context2, options);
+          if (key2 === void 0) {
+            return;
+          }
+          bucket.primitiveCache.set(key2, value2);
+        }
+        resolvePrimitiveKey(context2, options) {
+          if (options.cacheKeyResolver) {
+            return options.cacheKeyResolver(context2);
+          }
+          return context2;
+        }
+        isObjectLike(value2) {
+          return value2 !== null && (typeof value2 === "object" || typeof value2 === "function");
+        }
+      };
       var lang_mini_props = {
         each,
         is_array,
@@ -14350,7 +15191,8 @@ var DocsViewerClient = (() => {
         field,
         prop,
         Data_Type,
-        Functional_Data_Type
+        Functional_Data_Type,
+        ExpressionParser
       };
       var lang_mini = new Evented_Class();
       Object.assign(lang_mini, lang_mini_props);
@@ -14407,9 +15249,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js
+  // node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js
   var require_lib_lang_mini3 = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/node_modules/lang-mini/lib-lang-mini.js"(exports, module) {
       var lang = require_lang_mini3();
       var { each, tof } = lang;
       var Type_Signifier = class _Type_Signifier {
@@ -14547,9 +15389,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js
   var require_Rectangle = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Rectangle.js"(exports, module) {
       var Shape = require_Shape();
       var { tof, get_item_sig, is_arr_of_t } = require_lib_lang_mini3();
       var { prop, get_set } = require_oext();
@@ -14674,9 +15516,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-pos-list.js
+  // node_modules/jsgui3-gfx-core/core/pixel-pos-list.js
   var require_pixel_pos_list = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-pos-list.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-pos-list.js"(exports, module) {
       var inspect = Symbol.for("nodejs.util.inspect.custom");
       var Ui16toUi32 = (ui16) => {
         let res2 = new Uint32Array(ui16.length / 2);
@@ -15042,9 +15884,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js
+  // node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js
   var require_Typed_Array_Binary_Read_Write = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/Typed_Array_Binary_Read_Write.js"(exports, module) {
       var Typed_Array_Binary_Read_Write = class {
         constructor(ta2) {
           this.ta = ta2;
@@ -15071,9 +15913,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/copy.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/copy.js
   var require_copy = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/copy.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/copy.js"(exports, module) {
       var get_instance = () => {
         const copy_ta_byte_range = (ta_source2, ta_dest, byte_idx_source_start, byte_idx_dest_start, length) => {
           ta_dest.set(ta_source2.subarray(byte_idx_source_start, byte_idx_source_start + length), byte_idx_dest_start);
@@ -15155,9 +15997,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/info.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/info.js
   var require_info = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/info.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/info.js"(exports, module) {
       var get_instance = () => {
         const byi_from_cs_pos2 = (colorspace, pos) => {
           const [width, height2, bypp2, bypr2, bipp, bipr] = colorspace;
@@ -15180,9 +16022,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/read.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/read.js
   var require_read = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/read.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/read.js"(exports, module) {
       var get_instance = () => {
         const read_px = (ta_source2, ta_colorspace, ta_pos) => {
           const bipp = ta_colorspace[4];
@@ -15372,9 +16214,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/transform.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/transform.js
   var require_transform = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/transform.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/transform.js"(exports, module) {
       var each_source_dest_pixels_resized_limited_further_info$inline = (source_colorspace, dest_size, callback2) => {
         const dest_to_source_ratio = new Float32Array([source_colorspace[0] / dest_size[0], source_colorspace[1] / dest_size[1]]);
         const source_edge_distances = new Float32Array(4);
@@ -15874,9 +16716,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/write.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/write.js
   var require_write = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/write.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/write.js"(exports, module) {
       var get_instance = () => {
         const fill_solid_rect_by_bounds_8bipp = (ta_dest, bypr_dest, ta_bounds, ui8_color) => {
           const row_width = ta_bounds[2] - ta_bounds[0];
@@ -15929,9 +16771,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js
   var require_bitwise = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/bitwise.js"(exports, module) {
       var to_binary_string = (uint8Array) => {
         return Array.from(uint8Array).map((byte) => byte.toString(2).padStart(8, "0")).join("");
       };
@@ -16195,9 +17037,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/draw.js
+  // node_modules/jsgui3-gfx-core/core/ta-math/draw.js
   var require_draw = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math/draw.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math/draw.js"(exports, module) {
       var is_integer_typed_array = (obj2) => {
         if (ArrayBuffer.isView(obj2)) {
           return obj2 instanceof Int8Array || obj2 instanceof Uint8Array || obj2 instanceof Int16Array || obj2 instanceof Uint16Array || obj2 instanceof Int32Array || obj2 instanceof Uint32Array || obj2 instanceof BigInt64Array || obj2 instanceof BigUint64Array;
@@ -16417,9 +17259,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math.js
+  // node_modules/jsgui3-gfx-core/core/ta-math.js
   var require_ta_math = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/ta-math.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/ta-math.js"(exports, module) {
       var copy = require_copy();
       var info = require_info();
       var read = require_read();
@@ -16486,9 +17328,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js
   var require_pixel_buffer_painter = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-painter.js"(exports, module) {
       var ta_math2 = require_ta_math();
       var { fill_solid_rect_by_bounds } = ta_math2;
       var Pixel_Buffer_Painter = class {
@@ -16510,9 +17352,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js
   var require_pixel_buffer_0_core_inner_structures = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-0-core-inner-structures.js"(exports, module) {
       var lang = require_lib_lang_mini3();
       var {
         each,
@@ -17003,9 +17845,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js
   var require_pixel_buffer_1_core_get_set_pixel = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1-core-get-set-pixel.js"(exports, module) {
       var lang = require_lib_lang_mini3();
       var {
         each,
@@ -17227,9 +18069,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js
   var require_pixel_buffer_1_1_core_draw_line = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.1-core-draw-line.js"(exports, module) {
       var lang = require_lib_lang_mini3();
       var {
         each,
@@ -17553,16 +18395,16 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/is_debug.js
+  // node_modules/jsgui3-gfx-core/core/shapes/is_debug.js
   var require_is_debug = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/is_debug.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/is_debug.js"(exports, module) {
       module.exports = false;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js
+  // node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js
   var require_TA_Table_8_Columns = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/TA_Table_8_Columns.js"(exports, module) {
       var TA_Table_8_Columns = class {
         constructor(row_count) {
           this.row_size = 8;
@@ -17587,9 +18429,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js
   var require_Polygon_Edges = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Polygon_Edges.js"(exports, module) {
       var DEBUG = require_is_debug();
       var TA_Table_8_Columns = require_TA_Table_8_Columns();
       var Polygon_Edges = class extends TA_Table_8_Columns {
@@ -17672,9 +18514,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js
   var require_Polygon_Scanline_Edges = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Polygon_Scanline_Edges.js"(exports, module) {
       var DEBUG = require_is_debug();
       var Polygon_Edges = require_Polygon_Edges();
       var Scanline_Polygon_Edges = class extends Polygon_Edges {
@@ -17737,9 +18579,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Polygon.js
+  // node_modules/jsgui3-gfx-core/core/shapes/Polygon.js
   var require_Polygon = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/Polygon.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/Polygon.js"(exports, module) {
       var Shape = require_Shape();
       var { tof, is_array, get_item_sig, is_arr_of_t } = require_lib_lang_mini3();
       var Rectangle = require_Rectangle();
@@ -18089,9 +18931,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js
+  // node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js
   var require_ScanlineProcessor = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/shapes/ScanlineProcessor.js"(exports, module) {
       var DEBUG = require_is_debug();
       var ScanlineProcessor = class {
         constructor(polygon_scanline_edges, width, height2, bitmap, options = {}) {
@@ -18260,9 +19102,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js
   var require_pixel_buffer_1_2_core_draw_polygon = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.2-core-draw-polygon.js"(exports, module) {
       var Pixel_Buffer_Core_Draw_Lines = require_pixel_buffer_1_1_core_draw_line();
       var Polygon_Scanline_Edges = require_Polygon_Scanline_Edges();
       var {
@@ -18452,9 +19294,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js
   var require_pixel_buffer_1_5_core_mask = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-1.5-core-mask.js"(exports, module) {
       var Pixel_Buffer_Core_Draw_Polygons = require_pixel_buffer_1_2_core_draw_polygon();
       var Polygon_Scanline_Edges = require_Polygon_Scanline_Edges();
       var ScanlineProcessor = require_ScanlineProcessor();
@@ -18652,9 +19494,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js
   var require_pixel_buffer_2_core_reference_implementations = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-2-core-reference-implementations.js"(exports, module) {
       var lang = require_lib_lang_mini3();
       var {
         each,
@@ -19209,9 +20051,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js
   var require_pixel_buffer_3_core = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-3-core.js"(exports, module) {
       var lang = require_lib_lang_mini3();
       var {
         each,
@@ -20169,9 +21011,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js
   var require_pixel_buffer_4_advanced_typedarray_properties = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-4-advanced-typedarray-properties.js"(exports, module) {
       var lang = require_lib_lang_mini3();
       var {
         each,
@@ -20367,9 +21209,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js
+  // node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js
   var require_kernels = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/convolution-kernels/kernels.js"(exports, module) {
       function generateGaussianKernel(dimension, sigma) {
         function hypotenuse(x1, y1, x2, y2) {
           var xSquare = Math.pow(x1 - x2, 2);
@@ -20492,9 +21334,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js
   var require_pixel_buffer_5_idiomatic_enh = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-5-idiomatic-enh.js"(exports, module) {
       var Pixel_Buffer_Advanced_TypedArray_Properties = require_pixel_buffer_4_advanced_typedarray_properties();
       var kernels = require_kernels();
       var Pixel_Buffer_Idiomatic_Enh = class extends Pixel_Buffer_Advanced_TypedArray_Properties {
@@ -20560,9 +21402,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js
   var require_pixel_buffer_6_perf_focus_enh = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-6-perf-focus-enh.js"(exports, module) {
       var Pixel_Buffer_Idiomatic_Enh = require_pixel_buffer_5_idiomatic_enh();
       var Pixel_Pos_List = require_pixel_pos_list();
       var get_idx_movement_vectors = (f32a_convolution, bpp, bpr) => {
@@ -22364,9 +23206,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js
   var require_pixel_buffer_7_specialised_enh = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-7-specialised-enh.js"(exports, module) {
       var Pixel_Buffer_Perf_Focus_Enh = require_pixel_buffer_6_perf_focus_enh();
       var {
         resize_ta_colorspace,
@@ -23464,24 +24306,24 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js
   var require_pixel_buffer_8_enh = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer-8-enh.js"(exports, module) {
       var Pixel_Buffer_Enh = require_pixel_buffer_7_specialised_enh();
       module.exports = Pixel_Buffer_Enh;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer.js
+  // node_modules/jsgui3-gfx-core/core/pixel-buffer.js
   var require_pixel_buffer = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/pixel-buffer.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/pixel-buffer.js"(exports, module) {
       module.exports = require_pixel_buffer_8_enh();
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/gfx-core.js
+  // node_modules/jsgui3-gfx-core/core/gfx-core.js
   var require_gfx_core = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-gfx-core/core/gfx-core.js"(exports, module) {
+    "node_modules/jsgui3-gfx-core/core/gfx-core.js"(exports, module) {
       var Rectangle = require_Rectangle();
       var gfx_core = {
         Pixel_Pos_List: require_pixel_pos_list(),
@@ -23496,9 +24338,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Data.js
+  // node_modules/jsgui3-html/html-core/Data.js
   var require_Data = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Data.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Data_Model, Evented_Class } = require_lang();
       var Data = class extends Evented_Class {
         constructor(...a) {
@@ -23543,14 +24385,20 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Data.js
+  // node_modules/jsgui3-html/html-core/Control_Data.js
   var require_Control_Data = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Data.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Data = require_Data();
       var Control_Data = class extends Data {
         constructor(spec = {}) {
-          super(spec);
+          const enriched_spec = Object.assign(
+            {
+              model_constructor: Data_Object
+            },
+            spec
+          );
+          super(enriched_spec);
         }
         // but will have a model on change system of some sort(s).
         // Reassigning events (change event handlers).
@@ -23563,9 +24411,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js
+  // node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js
   var require_Control_View_UI_Low_Level_Data = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level_Data.js"(exports, module) {
       var Control_Data = require_Control_Data();
       var Control_View_UI_Low_Level_Data = class extends Control_Data {
         constructor(spec) {
@@ -23576,9 +24424,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level.js
+  // node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level.js
   var require_Control_View_UI_Low_Level = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_UI_Low_Level.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_View_UI_Low_Level_Data = require_Control_View_UI_Low_Level_Data();
       var Control_View_UI_Low_Level = class extends Data_Object {
@@ -23596,9 +24444,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_UI.js
+  // node_modules/jsgui3-html/html-core/Control_View_UI.js
   var require_Control_View_UI = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_UI.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_UI.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_View_UI_Low_Level = require_Control_View_UI_Low_Level();
       var Control_View_UI_Compositional = class extends Data_Object {
@@ -23633,9 +24481,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_Data.js
+  // node_modules/jsgui3-html/html-core/Control_View_Data.js
   var require_Control_View_Data = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_Data.js"(exports, module) {
       var Control_Data = require_Control_Data();
       var Control_View_Data = class extends Control_Data {
         constructor(spec) {
@@ -23646,9 +24494,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_Low_Level_Data.js
+  // node_modules/jsgui3-html/html-core/Control_View_Low_Level_Data.js
   var require_Control_View_Low_Level_Data = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_Low_Level_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_Low_Level_Data.js"(exports, module) {
       var Control_Data = require_Control_Data();
       var Control_View_Low_Level_Data = class extends Control_Data {
         constructor(spec) {
@@ -23659,9 +24507,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_Low_Level.js
+  // node_modules/jsgui3-html/html-core/Control_View_Low_Level.js
   var require_Control_View_Low_Level = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View_Low_Level.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View_Low_Level.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_View_Low_Level_Data = require_Control_View_Low_Level_Data();
       var Control_View_Low_Level = class extends Data_Object {
@@ -23682,9 +24530,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View.js
+  // node_modules/jsgui3-html/html-core/Control_View.js
   var require_Control_View = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_View.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_View.js"(exports, module) {
       var { field, Data_Object, Evented_Class } = require_lang();
       var Data = require_Data();
       var Control_View_UI = require_Control_View_UI();
@@ -23720,9 +24568,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation_Data.js
+  // node_modules/jsgui3-html/html-core/Control_Validation_Data.js
   var require_Control_Validation_Data = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation_Data.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation_Data.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Data = require_Data();
       var Control_Validation_Data = class extends Data {
@@ -23734,9 +24582,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Validation_State.js
+  // node_modules/jsgui3-html/html-core/Validation_State.js
   var require_Validation_State = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Validation_State.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Validation_State.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class, tof } = require_lang();
       var Validation_State = class extends Evented_Class {
         constructor(spec = {}) {
@@ -23762,9 +24610,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation_Target.js
+  // node_modules/jsgui3-html/html-core/Control_Validation_Target.js
   var require_Control_Validation_Target = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation_Target.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation_Target.js"(exports, module) {
       var { Evented_Class } = require_lang();
       var Control_Validation_Target = class {
         // will target 'data'.
@@ -23775,9 +24623,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation_Validator.js
+  // node_modules/jsgui3-html/html-core/Control_Validation_Validator.js
   var require_Control_Validation_Validator = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation_Validator.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation_Validator.js"(exports, module) {
       var { Evented_Class } = require_lang();
       var Control_Validation_Validator = class extends Evented_Class {
         constructor(spec) {
@@ -23790,9 +24638,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation.js
+  // node_modules/jsgui3-html/html-core/Control_Validation.js
   var require_Control_Validation = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Control_Validation.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Control_Validation.js"(exports, module) {
       var { field, Data_Object, Data_Value: Data_Value2, Evented_Class } = require_lang();
       var Control_Validation_Data = require_Control_Validation_Data();
       var Validation_State = require_Validation_State();
@@ -23888,9 +24736,54 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/model_data_view_compositional_representation.js
+  // node_modules/jsgui3-html/html-core/control_model_factory.js
+  var require_control_model_factory = __commonJS({
+    "node_modules/jsgui3-html/html-core/control_model_factory.js"(exports, module) {
+      var { Data_Object } = require_lang();
+      var Control_Data = require_Control_Data();
+      var Control_View = require_Control_View();
+      var Control_View_Data = require_Control_View_Data();
+      var Control_View_UI = require_Control_View_UI();
+      var ensure_control_models = (ctrl2, spec = {}) => {
+        const context2 = ctrl2.context;
+        if (!ctrl2.data) {
+          ctrl2.data = new Control_Data({
+            context: context2,
+            model: spec.data && spec.data.model ? spec.data.model : void 0,
+            model_constructor: Data_Object
+          });
+        } else if (!ctrl2.data.model) {
+          ctrl2.data.model = spec.data && spec.data.model ? spec.data.model : new Data_Object({ context: context2 });
+        }
+        if (!ctrl2.view) {
+          ctrl2.view = new Control_View({
+            context: context2,
+            data: spec.view && spec.view.data ? spec.view.data : void 0
+          });
+        } else {
+          if (!ctrl2.view.data) {
+            ctrl2.view.data = new Control_View_Data({
+              context: context2,
+              model: spec.view && spec.view.data ? spec.view.data.model : void 0
+            });
+          } else if (!ctrl2.view.data.model) {
+            ctrl2.view.data.model = spec.view && spec.view.data && spec.view.data.model ? spec.view.data.model : new Data_Object({ context: context2 });
+          }
+          if (!ctrl2.view.ui) {
+            ctrl2.view.ui = new Control_View_UI({ context: context2 });
+          }
+        }
+        return ctrl2;
+      };
+      module.exports = {
+        ensure_control_models
+      };
+    }
+  });
+
+  // node_modules/jsgui3-html/control_mixins/model_data_view_compositional_representation.js
   var require_model_data_view_compositional_representation = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/model_data_view_compositional_representation.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/model_data_view_compositional_representation.js"(exports, module) {
       var {
         tof,
         each,
@@ -23903,6 +24796,7 @@ var DocsViewerClient = (() => {
       var Control_Data = require_Control_Data();
       var Control_View = require_Control_View();
       var Control_Validation = require_Control_Validation();
+      var { ensure_control_models } = require_control_model_factory();
       var model_data_view_compositional_representation = (ctrl2, options = {}) => {
         const { data } = options;
         ctrl2.using_model_data_view_compositional_representation = true;
@@ -23915,17 +24809,9 @@ var DocsViewerClient = (() => {
         const can_proceed = verify_ctrl_conditions(ctrl2);
         if (can_proceed) {
           const { context: context2 } = ctrl2;
-          const o_cd = {
-            context: context2
-          };
-          if (data) {
-            if (data.model) {
-              o_cd.model = data.model;
-            }
-          }
-          ctrl2.data = new Control_Data(o_cd);
+          ensure_control_models(ctrl2, { data });
           ctrl2.validation = new Control_Validation();
-          ctrl2.view = new Control_View({
+          ctrl2.view = ctrl2.view || new Control_View({
             context: context2
           });
           ctrl2.view.data.model.mixins = ctrl2.view.data.model.mixins || new Collection();
@@ -23952,9 +24838,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/control-enh.js
+  // node_modules/jsgui3-html/html-core/control-enh.js
   var require_control_enh = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/control-enh.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control-enh.js"(exports, module) {
       var jsgui = require_lang();
       var {
         get_a_sig: get_a_sig2,
@@ -24697,9 +25583,11 @@ var DocsViewerClient = (() => {
                           corresponding_ctrl.dom.el = cn;
                         }
                       } else {
+                        console.log("&&& no corresponding control");
                       }
                       const do_add = () => {
                         let val = cn.nodeValue;
+                        console.log("adding Text_Node control", val);
                         const tn = new Text_Node({
                           context: this.context,
                           text: val,
@@ -24820,52 +25708,833 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js
+  // node_modules/jsgui3-html/html-core/ModelBinder.js
+  var require_ModelBinder = __commonJS({
+    "node_modules/jsgui3-html/html-core/ModelBinder.js"(exports, module) {
+      var { Data_Object, Data_Value: Data_Value2, tof, each } = require_lang();
+      var ModelBinder = class _ModelBinder {
+        constructor(sourceModel, targetModel, bindings = {}, options = {}) {
+          if (typeof targetModel === "string") {
+            const [
+              sourceProp,
+              legacyTargetModel,
+              targetProp,
+              legacyOptions = {}
+            ] = Array.prototype.slice.call(arguments, 1);
+            const normalizedBindings = {
+              [sourceProp]: Object.assign(
+                { to: targetProp },
+                legacyOptions.transform ? { transform: legacyOptions.transform } : {},
+                legacyOptions.reverse ? { reverse: legacyOptions.reverse } : {}
+              )
+            };
+            const normalizedOptions = Object.assign({
+              bidirectional: legacyOptions.twoWay || legacyOptions.bidirectional || !!legacyOptions.reverse,
+              immediate: legacyOptions.immediate !== false,
+              debug: legacyOptions.debug || false
+            }, legacyOptions);
+            return new _ModelBinder(sourceModel, legacyTargetModel, normalizedBindings, normalizedOptions);
+          }
+          this.sourceModel = sourceModel;
+          this.targetModel = targetModel;
+          this.bindings = bindings;
+          this.options = Object.assign({
+            bidirectional: true,
+            immediate: true,
+            debug: false
+          }, options);
+          this._listeners = [];
+          this._locks = /* @__PURE__ */ new Set();
+          this._active = false;
+          if (this.options.immediate) {
+            this.activate();
+          }
+        }
+        /**
+         * Activate all bindings
+         */
+        activate() {
+          if (this._active) return;
+          this._active = true;
+          each(this.bindings, (binding, sourceProp) => {
+            this._setupBinding(sourceProp, binding);
+          });
+          if (this.options.debug) {
+            console.log("[ModelBinder] Activated bindings:", Object.keys(this.bindings));
+          }
+        }
+        /**
+         * Deactivate all bindings and cleanup listeners
+         */
+        deactivate() {
+          if (!this._active) return;
+          this._active = false;
+          this._listeners.forEach(({ model, event, handler }) => {
+            if (model && model.off) {
+              model.off(event, handler);
+            }
+          });
+          this._listeners = [];
+          if (this.options.debug) {
+            console.log("[ModelBinder] Deactivated bindings");
+          }
+        }
+        /**
+         * Setup a single binding between source and target properties
+         * @private
+         */
+        _setupBinding(sourceProp, binding) {
+          const targetProp = typeof binding === "string" ? binding : binding.to;
+          const transform = binding.transform;
+          const reverse = binding.reverse;
+          const condition = binding.condition;
+          if (this.sourceModel[sourceProp] !== void 0) {
+            const value2 = this.sourceModel[sourceProp];
+            const transformedValue = transform ? transform(value2) : value2;
+            if (!condition || condition(value2)) {
+              this.targetModel[targetProp] = transformedValue;
+            }
+          }
+          const sourceHandler = (e) => {
+            if (e.name === sourceProp) {
+              const value2 = e.value;
+              const transformedValue = transform ? transform(value2) : value2;
+              if (!condition || condition(value2)) {
+                const lock_key = `${sourceProp}->${targetProp}`;
+                if (this._acquire(lock_key)) {
+                  this.targetModel[targetProp] = transformedValue;
+                  if (this.options.debug) {
+                    console.log(`[ModelBinder] ${sourceProp} \u2192 ${targetProp}:`, value2, "\u2192", transformedValue);
+                  }
+                  this._release(lock_key);
+                }
+              }
+            }
+          };
+          this.sourceModel.on("change", sourceHandler);
+          this._listeners.push({
+            model: this.sourceModel,
+            event: "change",
+            handler: sourceHandler
+          });
+          if (this.options.bidirectional && reverse) {
+            const targetHandler = (e) => {
+              if (e.name === targetProp) {
+                const value2 = e.value;
+                const reversedValue = reverse(value2);
+                if (!condition || condition(reversedValue)) {
+                  const lock_key = `${targetProp}->${sourceProp}`;
+                  if (this._acquire(lock_key)) {
+                    this.sourceModel[sourceProp] = reversedValue;
+                    if (this.options.debug) {
+                      console.log(`[ModelBinder] ${targetProp} \u2192 ${sourceProp}:`, value2, "\u2192", reversedValue);
+                    }
+                    this._release(lock_key);
+                  }
+                }
+              }
+            };
+            this.targetModel.on("change", targetHandler);
+            this._listeners.push({
+              model: this.targetModel,
+              event: "change",
+              handler: targetHandler
+            });
+          }
+        }
+        _acquire(key2) {
+          if (!key2) return true;
+          if (this._locks.has(key2)) {
+            if (this.options.debug) {
+              console.warn("[ModelBinder] Loop suppressed for", key2);
+            }
+            return false;
+          }
+          this._locks.add(key2);
+          return true;
+        }
+        _release(key2) {
+          if (key2) {
+            this._locks.delete(key2);
+          }
+        }
+        unbind() {
+          this.deactivate();
+        }
+        /**
+         * Update a specific binding manually
+         */
+        updateBinding(sourceProp) {
+          const binding = this.bindings[sourceProp];
+          if (!binding) return;
+          const targetProp = typeof binding === "string" ? binding : binding.to;
+          const transform = binding.transform;
+          const value2 = this.sourceModel[sourceProp];
+          const transformedValue = transform ? transform(value2) : value2;
+          this.targetModel[targetProp] = transformedValue;
+        }
+        /**
+         * Get current binding state for inspection
+         */
+        inspect() {
+          const state = {};
+          each(this.bindings, (binding, sourceProp) => {
+            const targetProp = typeof binding === "string" ? binding : binding.to;
+            state[sourceProp] = {
+              target: targetProp,
+              sourceValue: this.sourceModel[sourceProp],
+              targetValue: this.targetModel[targetProp],
+              hasTransform: !!binding.transform,
+              hasReverse: !!binding.reverse,
+              bidirectional: this.options.bidirectional && !!binding.reverse
+            };
+          });
+          return state;
+        }
+      };
+      var ComputedProperty = class {
+        constructor(model, dependencies, computeFn, options = {}) {
+          this.model = model;
+          this.dependencies = Array.isArray(dependencies) ? dependencies : [dependencies];
+          this.computeFn = computeFn;
+          this.options = Object.assign({
+            propertyName: "computed",
+            immediate: true,
+            debug: false
+          }, options);
+          this._listeners = [];
+          this._active = false;
+          this._lastValue = void 0;
+          if (this.options.immediate) {
+            this.activate();
+          }
+        }
+        activate() {
+          if (this._active) return;
+          this._active = true;
+          this.compute();
+          const handler = (e) => {
+            if (this.dependencies.includes(e.name)) {
+              this.compute();
+            }
+          };
+          this.model.on("change", handler);
+          this._listeners.push({ model: this.model, event: "change", handler });
+          if (this.options.debug) {
+            console.log("[ComputedProperty] Activated for dependencies:", this.dependencies);
+          }
+        }
+        deactivate() {
+          if (!this._active) return;
+          this._active = false;
+          this._listeners.forEach(({ model, event, handler }) => {
+            if (model && model.off) {
+              model.off(event, handler);
+            }
+          });
+          this._listeners = [];
+        }
+        compute() {
+          const args = this.dependencies.map((dep) => this.model[dep]);
+          const newValue = this.computeFn(...args);
+          if (newValue !== this._lastValue) {
+            this._lastValue = newValue;
+            this.model[this.options.propertyName] = newValue;
+            if (this.options.debug) {
+              console.log("[ComputedProperty] Updated:", this.options.propertyName, "=", newValue);
+            }
+          }
+          return newValue;
+        }
+        get value() {
+          return this._lastValue;
+        }
+        destroy() {
+          this.deactivate();
+        }
+      };
+      var PropertyWatcher = class {
+        constructor(model, property, callback2, options = {}) {
+          this.model = model;
+          this.properties = Array.isArray(property) ? property : [property];
+          this.callback = callback2;
+          this.options = Object.assign({
+            immediate: false,
+            deep: false,
+            debug: false
+          }, options);
+          this._handler = null;
+          this._active = false;
+          this.activate();
+        }
+        activate() {
+          if (this._active) return;
+          this._active = true;
+          if (this.options.immediate && this.properties.length > 0) {
+            const prop = this.properties[0];
+            this.callback(this.model[prop], void 0, prop);
+          }
+          this._handler = (e) => {
+            if (this.properties.includes(e.name)) {
+              this.callback(e.value, e.old, e.name);
+              if (this.options.debug) {
+                console.log("[PropertyWatcher] Property changed:", e.name, e.old, "\u2192", e.value);
+              }
+            }
+          };
+          this.model.on("change", this._handler);
+        }
+        deactivate() {
+          if (!this._active) return;
+          this._active = false;
+          if (this._handler && this.model.off) {
+            this.model.off("change", this._handler);
+          }
+          this._handler = null;
+        }
+        unwatch() {
+          this.deactivate();
+        }
+      };
+      var BindingManager = class {
+        constructor(control) {
+          this.control = control;
+          this.binders = [];
+          this.computed = [];
+          this.watchers = [];
+        }
+        /**
+         * Create a new binding between models
+         */
+        bind(sourceModel, targetModel, bindings, options) {
+          const binder = new ModelBinder(sourceModel, targetModel, bindings, options);
+          this.binders.push(binder);
+          return binder;
+        }
+        bind_value(sourceModel, sourceProp, targetModel, targetProp = sourceProp, options = {}) {
+          const bindings = {
+            [sourceProp]: Object.assign(
+              { to: targetProp },
+              options.transform ? { transform: options.transform } : {},
+              options.reverse ? { reverse: options.reverse } : {},
+              options.condition ? { condition: options.condition } : {}
+            )
+          };
+          const binder_options = {
+            bidirectional: options.bidirectional !== void 0 ? options.bidirectional : !!options.reverse,
+            immediate: options.immediate !== void 0 ? options.immediate : true,
+            debug: options.debug || false
+          };
+          return this.bind(sourceModel, targetModel, bindings, binder_options);
+        }
+        bind_collection(sourceModel, sourceProp, targetModel, targetProp = sourceProp, options = {}) {
+          const map_fn = options.map;
+          const clone = options.clone !== false;
+          const transform = (collection = []) => {
+            const arr = Array.isArray(collection) ? collection : [];
+            const mapped = map_fn ? arr.map(map_fn) : arr.slice();
+            return clone ? mapped.slice() : mapped;
+          };
+          const reverse = options.reverse_map ? (collection = []) => {
+            const arr = Array.isArray(collection) ? collection : [];
+            return arr.map(options.reverse_map);
+          } : void 0;
+          return this.bind_value(sourceModel, sourceProp, targetModel, targetProp, Object.assign({}, options, {
+            transform,
+            reverse,
+            bidirectional: options.bidirectional && !!reverse
+          }));
+        }
+        /**
+         * Create a computed property
+         */
+        createComputed(model, dependencies, computeFn, options) {
+          const computed = new ComputedProperty(model, dependencies, computeFn, options);
+          this.computed.push(computed);
+          return computed;
+        }
+        /**
+         * Watch a property for changes
+         */
+        watch(model, property, callback2, options) {
+          const watcher = new PropertyWatcher(model, property, callback2, options);
+          this.watchers.push(watcher);
+          return watcher;
+        }
+        /**
+         * Cleanup all bindings
+         */
+        cleanup() {
+          this.binders.forEach((b) => b.deactivate());
+          this.computed.forEach((c2) => c2.deactivate());
+          this.watchers.forEach((w) => w.deactivate());
+          this.binders = [];
+          this.computed = [];
+          this.watchers = [];
+        }
+        /**
+         * Get inspection data for all bindings
+         */
+        inspect() {
+          return {
+            binders: this.binders.map((b) => b.inspect()),
+            computed: this.computed.map((c2) => ({
+              propertyName: c2.options.propertyName,
+              dependencies: c2.dependencies,
+              value: c2.value
+            })),
+            watchers: this.watchers.map((w) => ({
+              property: w.property,
+              active: w._active
+            }))
+          };
+        }
+      };
+      module.exports = {
+        ModelBinder,
+        ComputedProperty,
+        PropertyWatcher,
+        BindingManager
+      };
+    }
+  });
+
+  // node_modules/jsgui3-html/html-core/Transformations.js
+  var require_Transformations = __commonJS({
+    "node_modules/jsgui3-html/html-core/Transformations.js"(exports, module) {
+      var { tof } = require_lang();
+      var Transformations = {
+        /**
+         * Date transformations
+         */
+        date: {
+          /**
+           * Format a Date object to ISO string
+           */
+          toISO: (date) => {
+            if (!date) return "";
+            if (date instanceof Date) return date.toISOString();
+            return new Date(date).toISOString();
+          },
+          /**
+           * Format a Date object to locale string
+           */
+          toLocale: (date, locale = "en-US", options = {}) => {
+            if (!date) return "";
+            if (date instanceof Date) return date.toLocaleDateString(locale, options);
+            return new Date(date).toLocaleDateString(locale, options);
+          },
+          /**
+           * Format a Date object to custom format
+           */
+          format: (date, format = "YYYY-MM-DD") => {
+            if (!date) return "";
+            const d = date instanceof Date ? date : new Date(date);
+            const map = {
+              YYYY: d.getFullYear(),
+              MM: String(d.getMonth() + 1).padStart(2, "0"),
+              DD: String(d.getDate()).padStart(2, "0"),
+              HH: String(d.getHours()).padStart(2, "0"),
+              mm: String(d.getMinutes()).padStart(2, "0"),
+              ss: String(d.getSeconds()).padStart(2, "0")
+            };
+            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, (matched) => map[matched]);
+          },
+          /**
+           * Parse a date string
+           */
+          parse: (str) => {
+            if (!str) return null;
+            const date = new Date(str);
+            return isNaN(date.getTime()) ? null : date;
+          },
+          /**
+           * Parse a date from custom format
+           */
+          parseFormat: (str, format = "YYYY-MM-DD") => {
+            if (!str) return null;
+            const parts = {
+              YYYY: { start: format.indexOf("YYYY"), length: 4 },
+              MM: { start: format.indexOf("MM"), length: 2 },
+              DD: { start: format.indexOf("DD"), length: 2 }
+            };
+            const year = parseInt(str.substr(parts.YYYY.start, parts.YYYY.length));
+            const month = parseInt(str.substr(parts.MM.start, parts.MM.length)) - 1;
+            const day = parseInt(str.substr(parts.DD.start, parts.DD.length));
+            return new Date(year, month, day);
+          }
+        },
+        /**
+         * Number transformations
+         */
+        number: {
+          /**
+           * Format number to string with decimals
+           */
+          toFixed: (num, decimals = 2) => {
+            if (num === null || num === void 0) return "";
+            return Number(num).toFixed(decimals);
+          },
+          /**
+           * Format number with thousands separator
+           */
+          toLocale: (num, locale = "en-US", options = {}) => {
+            if (num === null || num === void 0) return "";
+            return Number(num).toLocaleString(locale, options);
+          },
+          /**
+           * Format number as currency
+           */
+          toCurrency: (num, currency = "USD", locale = "en-US") => {
+            if (num === null || num === void 0) return "";
+            return Number(num).toLocaleString(locale, {
+              style: "currency",
+              currency
+            });
+          },
+          /**
+           * Format number as percentage
+           */
+          toPercent: (num, decimals = 0) => {
+            if (num === null || num === void 0) return "";
+            return (Number(num) * 100).toFixed(decimals) + "%";
+          },
+          /**
+           * Parse number from string
+           */
+          parse: (str) => {
+            if (str === null || str === void 0 || str === "") return null;
+            const num = parseFloat(String(str).replace(/[^0-9.-]/g, ""));
+            return isNaN(num) ? null : num;
+          },
+          /**
+           * Parse integer from string
+           */
+          parseInt: (str) => {
+            if (str === null || str === void 0 || str === "") return null;
+            const num = parseInt(String(str).replace(/[^0-9-]/g, ""));
+            return isNaN(num) ? null : num;
+          },
+          /**
+           * Clamp number between min and max
+           */
+          clamp: (min, max) => (num) => {
+            return Math.max(min, Math.min(max, Number(num)));
+          }
+        },
+        /**
+         * String transformations
+         */
+        string: {
+          /**
+           * Convert to uppercase
+           */
+          toUpper: (str) => {
+            return str ? String(str).toUpperCase() : "";
+          },
+          /**
+           * Convert to lowercase
+           */
+          toLower: (str) => {
+            return str ? String(str).toLowerCase() : "";
+          },
+          /**
+           * Capitalize first letter
+           */
+          capitalize: (str) => {
+            if (!str) return "";
+            const s = String(str);
+            return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+          },
+          /**
+           * Capitalize each word
+           */
+          titleCase: (str) => {
+            if (!str) return "";
+            return String(str).split(" ").map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+          },
+          /**
+           * Trim whitespace
+           */
+          trim: (str) => {
+            return str ? String(str).trim() : "";
+          },
+          /**
+           * Truncate string to length
+           */
+          truncate: (maxLength, suffix = "...") => (str) => {
+            if (!str) return "";
+            const s = String(str);
+            if (s.length <= maxLength) return s;
+            return s.substr(0, maxLength - suffix.length) + suffix;
+          },
+          /**
+           * Default value if empty
+           */
+          default: (defaultValue) => (str) => {
+            return str ? String(str) : defaultValue;
+          }
+        },
+        /**
+         * Boolean transformations
+         */
+        boolean: {
+          /**
+           * Convert to boolean
+           */
+          toBool: (value2) => {
+            if (value2 === null || value2 === void 0) return false;
+            if (typeof value2 === "boolean") return value2;
+            if (typeof value2 === "number") return value2 !== 0;
+            const str = String(value2).toLowerCase();
+            return str === "true" || str === "1" || str === "yes";
+          },
+          /**
+           * Convert to yes/no string
+           */
+          toYesNo: (value2) => {
+            return Transformations.boolean.toBool(value2) ? "Yes" : "No";
+          },
+          /**
+           * Convert to on/off string
+           */
+          toOnOff: (value2) => {
+            return Transformations.boolean.toBool(value2) ? "On" : "Off";
+          },
+          /**
+           * Invert boolean
+           */
+          not: (value2) => {
+            return !Transformations.boolean.toBool(value2);
+          }
+        },
+        /**
+         * Array transformations
+         */
+        array: {
+          /**
+           * Join array to string
+           */
+          join: (separator = ", ") => (arr) => {
+            if (!Array.isArray(arr)) return "";
+            return arr.join(separator);
+          },
+          /**
+           * Get array length
+           */
+          length: (arr) => {
+            return Array.isArray(arr) ? arr.length : 0;
+          },
+          /**
+           * Filter array
+           */
+          filter: (predicate) => (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr.filter(predicate);
+          },
+          /**
+           * Map array
+           */
+          map: (mapper) => (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr.map(mapper);
+          },
+          /**
+           * Get first element
+           */
+          first: (arr) => {
+            return Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
+          },
+          /**
+           * Get last element
+           */
+          last: (arr) => {
+            return Array.isArray(arr) && arr.length > 0 ? arr[arr.length - 1] : null;
+          },
+          /**
+           * Sort array
+           */
+          sort: (compareFn) => (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return [...arr].sort(compareFn);
+          }
+        },
+        /**
+         * Object transformations
+         */
+        object: {
+          /**
+           * Get property value
+           */
+          get: (propertyPath) => (obj2) => {
+            if (!obj2) return null;
+            const parts = propertyPath.split(".");
+            let value2 = obj2;
+            for (const part of parts) {
+              if (value2 === null || value2 === void 0) return null;
+              value2 = value2[part];
+            }
+            return value2;
+          },
+          /**
+           * Check if object has property
+           */
+          has: (property) => (obj2) => {
+            return obj2 && obj2.hasOwnProperty(property);
+          },
+          /**
+           * Get object keys
+           */
+          keys: (obj2) => {
+            return obj2 ? Object.keys(obj2) : [];
+          },
+          /**
+           * Get object values
+           */
+          values: (obj2) => {
+            return obj2 ? Object.values(obj2) : [];
+          }
+        },
+        /**
+         * Compose multiple transformations
+         */
+        compose: (...fns) => {
+          return (value2) => {
+            return fns.reduce((acc, fn) => fn(acc), value2);
+          };
+        },
+        /**
+         * Identity transformation (returns input unchanged)
+         */
+        identity: (value2) => value2,
+        /**
+         * Default value transformation
+         */
+        defaultTo: (defaultValue) => (value2) => {
+          return value2 !== null && value2 !== void 0 ? value2 : defaultValue;
+        },
+        /**
+         * Conditional transformation
+         */
+        when: (condition, thenTransform, elseTransform = Transformations.identity) => {
+          return (value2) => {
+            return condition(value2) ? thenTransform(value2) : elseTransform(value2);
+          };
+        },
+        /**
+         * Create a bidirectional transformation pair
+         */
+        bidirectional: (forward, reverse) => {
+          return {
+            transform: forward,
+            reverse
+          };
+        }
+      };
+      var Validators = {
+        /**
+         * Required field validator
+         */
+        required: (value2) => {
+          if (value2 === null || value2 === void 0) return false;
+          if (typeof value2 === "string" && value2.trim() === "") return false;
+          if (Array.isArray(value2) && value2.length === 0) return false;
+          return true;
+        },
+        /**
+         * Email validator
+         */
+        email: (value2) => {
+          if (!value2) return true;
+          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          return re.test(String(value2));
+        },
+        /**
+         * URL validator
+         */
+        url: (value2) => {
+          if (!value2) return true;
+          try {
+            new URL(value2);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        /**
+         * Number range validator
+         */
+        range: (min, max) => (value2) => {
+          const num = Number(value2);
+          if (isNaN(num)) return false;
+          return num >= min && num <= max;
+        },
+        /**
+         * String length validator
+         */
+        length: (min, max) => (value2) => {
+          if (!value2) return true;
+          const len = String(value2).length;
+          return len >= min && len <= max;
+        },
+        /**
+         * Pattern validator
+         */
+        pattern: (regex) => (value2) => {
+          if (!value2) return true;
+          return regex.test(String(value2));
+        },
+        /**
+         * Custom validator
+         */
+        custom: (fn) => fn
+      };
+      module.exports = {
+        Transformations,
+        Validators
+      };
+    }
+  });
+
+  // node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js
   var require_Data_Model_View_Model_Control = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/Data_Model_View_Model_Control.js"(exports, module) {
       var Ctrl_Enh = require_control_enh();
       var { Data_Object } = require_lang();
+      var { ModelBinder, ComputedProperty, PropertyWatcher, BindingManager } = require_ModelBinder();
+      var { Transformations, Validators } = require_Transformations();
       var Control_Data = require_Control_Data();
       var Control_View = require_Control_View();
+      var { ensure_control_models } = require_control_model_factory();
       var Data_Model_View_Model_Control = class extends Ctrl_Enh {
         constructor(...a) {
           super(...a);
           const spec = a[0] || {};
+          this._binding_manager = new BindingManager(this);
           const { context: context2 } = this;
-          if (spec.data) {
-            this.data = new Control_Data();
-            if (spec.data.model) {
-              this.data.model = spec.data.model;
-              this.data.model.on("change", (e) => {
-                console.log("Data_Model_View_Model_Control this.data.model change e:", e);
-              });
+          ensure_control_models(this, spec);
+          if (this.data && this.data.model) {
+            this.data.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.data.model change e:", e);
+            });
+            if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-data-model"] = this.data.model._id();
             }
           }
-          if (spec.view) {
-            this.view = new Control_View();
-            if (!spec.view.data) {
-              const view_data_model = new Data_Object({ context: context2 });
-              this.view.data = {
-                model: view_data_model
-              };
-            } else {
-              this.view.data = spec.view.data;
-              if (!this.view.data.model) {
-                this.view.data.model = new Data_Object({ context: context2 });
-              }
-            }
-            if (this.view.data.model) {
-              this.view.data.model.on("change", (e) => {
-                console.log("Data_Model_View_Model_Control this.view.data.model change e:", e);
-              });
+          if (this.view && this.view.data && this.view.data.model) {
+            this.view.data.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.view.data.model change e:", e);
+            });
+            if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-view-data-model"] = this.view.data.model._id();
             }
-            if (spec.view.model) {
-              this.view.model = spec.view.model;
-              this.view.model.on("change", (e) => {
-                console.log("Data_Model_View_Model_Control this.view.model change e:", e);
-              });
+          }
+          if (spec.view && spec.view.model) {
+            this.view.model = spec.view.model;
+            this.view.model.on("change", (e) => {
+              console.log("Data_Model_View_Model_Control this.view.model change e:", e);
+            });
+            if (this.dom && this.dom.attributes) {
               this.dom.attributes["data-jsgui-view-model"] = this.view.model._id();
             }
           }
@@ -24902,23 +26571,111 @@ var DocsViewerClient = (() => {
         }
         pre_activate() {
           super.pre_activate();
+          console.log("Data_Model_View_Model_Control pre_activate complete");
+        }
+        /**
+         * Create a binding between data model and view model
+         * @param {Object} bindings - Property binding definitions
+         * @param {Object} options - Binding options
+         * @example
+         * this.bind({
+         *     'date': {
+         *         to: 'formattedDate',
+         *         transform: (date) => formatDate(date, 'YYYY-MM-DD'),
+         *         reverse: (str) => parseDate(str)
+         *     }
+         * });
+         */
+        bind(bindings, options = {}) {
+          if (!this.data || !this.data.model) {
+            console.warn("Data_Model_View_Model_Control.bind: No data.model available");
+            return null;
+          }
+          if (!this.view || !this.view.data || !this.view.data.model) {
+            console.warn("Data_Model_View_Model_Control.bind: No view.data.model available");
+            return null;
+          }
+          return this._binding_manager.bind(
+            this.data.model,
+            this.view.data.model,
+            bindings,
+            options
+          );
+        }
+        /**
+         * Create a computed property on a model
+         * @param {Object} model - Target model (data.model or view.data.model)
+         * @param {Array|string} dependencies - Property names to watch
+         * @param {Function} computeFn - Function to compute the value
+         * @param {Object} options - Options including propertyName
+         * @example
+         * this.computed(this.view.data.model, ['firstName', 'lastName'], 
+         *     (first, last) => `${first} ${last}`,
+         *     { propertyName: 'fullName' }
+         * );
+         */
+        computed(model, dependencies, computeFn, options = {}) {
+          return this._binding_manager.createComputed(model, dependencies, computeFn, options);
+        }
+        /**
+         * Watch a property for changes
+         * @param {Object} model - Model to watch
+         * @param {string} property - Property name to watch
+         * @param {Function} callback - Callback function (newVal, oldVal) => void
+         * @param {Object} options - Watch options
+         * @example
+         * this.watch(this.data.model, 'selectedItem', (newVal, oldVal) => {
+         *     console.log('Selection changed:', oldVal, '→', newVal);
+         * });
+         */
+        watch(model, property, callback2, options = {}) {
+          return this._binding_manager.watch(model, property, callback2, options);
+        }
+        /**
+         * Get transformations library
+         */
+        get transforms() {
+          return Transformations;
+        }
+        /**
+         * Get validators library
+         */
+        get validators() {
+          return Validators;
+        }
+        /**
+         * Inspect all bindings for debugging
+         */
+        inspectBindings() {
+          return this._binding_manager.inspect();
+        }
+        /**
+         * Cleanup bindings when control is destroyed
+         */
+        destroy() {
+          if (this._binding_manager) {
+            this._binding_manager.cleanup();
+          }
+          if (super.destroy) {
+            super.destroy();
+          }
         }
       };
       module.exports = Data_Model_View_Model_Control;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/control.js
+  // node_modules/jsgui3-html/html-core/control.js
   var require_control = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/control.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/control.js"(exports, module) {
       var Control2 = require_Data_Model_View_Model_Control();
       module.exports = Control2;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/selection-scope.js
+  // node_modules/jsgui3-html/html-core/selection-scope.js
   var require_selection_scope = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/selection-scope.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/selection-scope.js"(exports, module) {
       var jsgui = require_lang();
       var each = jsgui.each;
       var tof = jsgui.tof;
@@ -25069,9 +26826,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/page-context.js
+  // node_modules/jsgui3-html/html-core/page-context.js
   var require_page_context = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/page-context.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/page-context.js"(exports, module) {
       var jsgui = require_lang();
       var { each, tof, is_defined, get_a_sig: get_a_sig2, Evented_Class, Data_Model } = jsgui;
       var Selection_Scope = require_selection_scope();
@@ -25207,9 +26964,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/parse-mount.js
+  // node_modules/jsgui3-html/html-core/parse-mount.js
   var require_parse_mount = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/parse-mount.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/parse-mount.js"(exports, module) {
       var htmlparser = require_htmlparser_shim();
       var { tof, each } = require_lang();
       var map_jsgui_attr_names = {
@@ -25394,9 +27151,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/html-core.js
+  // node_modules/jsgui3-html/html-core/html-core.js
   var require_html_core = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/html-core.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/html-core.js"(exports, module) {
       var jsgui = require_lang();
       var Text_Node = require_text_node();
       var Page_Context = require_page_context();
@@ -26161,9 +27918,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/router/routing-tree.js
+  // node_modules/jsgui3-html/router/routing-tree.js
   var require_routing_tree = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/router/routing-tree.js"(exports, module) {
+    "node_modules/jsgui3-html/router/routing-tree.js"(exports, module) {
       var Routing_Tree_Node = class {
         constructor(spec) {
           spec = spec || {};
@@ -26374,14 +28131,37 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/router/router.js
+  // node_modules/jsgui3-html/router/router.js
   var require_router = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/router/router.js"(exports, module) {
+    "node_modules/jsgui3-html/router/router.js"(exports, module) {
       var url = require_url_parse();
       var jsgui = require_lang();
       var tof = jsgui.tof;
       var get_item_sig = jsgui.get_item_sig;
       var Routing_Tree = require_routing_tree();
+      var default_logger = (level, message, meta) => {
+        const log_meta = meta && Object.keys(meta).length ? meta : void 0;
+        if (level === "error" && console.error) {
+          console.error("[router]", message, log_meta || "");
+        } else if (level === "warn" && console.warn) {
+          console.warn("[router]", message, log_meta || "");
+        } else if (console.log) {
+          console.log("[router]", message, log_meta || "");
+        }
+      };
+      var default_not_found_handler = (req, res2) => {
+        if (res2) {
+          if (typeof res2.statusCode === "number") {
+            res2.statusCode = res2.statusCode && res2.statusCode !== 200 ? res2.statusCode : 404;
+          }
+          if (typeof res2.setHeader === "function" && !res2.headersSent) {
+            res2.setHeader("Content-Type", "text/plain; charset=utf-8");
+          }
+          if (typeof res2.end === "function" && !res2.writableEnded) {
+            res2.end("Not Found");
+          }
+        }
+      };
       var Router = class {
         constructor(spec) {
           spec = spec || {};
@@ -26391,93 +28171,224 @@ var DocsViewerClient = (() => {
             this.name = "Router";
           }
           this.routing_tree = new Routing_Tree();
+          this.logger = spec.logger || default_logger;
+          this.handle_not_found_fn = spec.handle_not_found || default_not_found_handler;
+          this.handle_error_fn = spec.handle_error;
+          this._listeners = /* @__PURE__ */ new Map();
+        }
+        on(event_name, handler) {
+          if (!handler) return this;
+          let set_listeners = this._listeners.get(event_name);
+          if (!set_listeners) {
+            set_listeners = /* @__PURE__ */ new Set();
+            this._listeners.set(event_name, set_listeners);
+          }
+          set_listeners.add(handler);
+          return this;
+        }
+        off(event_name, handler) {
+          if (!handler) return this;
+          const set_listeners = this._listeners.get(event_name);
+          if (set_listeners) {
+            set_listeners.delete(handler);
+            if (set_listeners.size === 0) {
+              this._listeners.delete(event_name);
+            }
+          }
+          return this;
+        }
+        emit(event_name, ...args) {
+          const set_listeners = this._listeners.get(event_name);
+          if (!set_listeners || set_listeners.size === 0) return false;
+          for (const listener of Array.from(set_listeners)) {
+            try {
+              listener(...args);
+            } catch (err) {
+              this._log("error", "router_listener_error", {
+                event: event_name,
+                error: err
+              });
+            }
+          }
+          return true;
+        }
+        _log(level, message, meta) {
+          if (this.logger) {
+            try {
+              this.logger(level, message, meta || {});
+            } catch (err) {
+              if (console && console.error) {
+                console.error("[router] logger error", err);
+              }
+            }
+          }
+        }
+        set_logger(fn_logger) {
+          this.logger = fn_logger || default_logger;
+        }
+        set_not_found_handler(fn_handler) {
+          this.handle_not_found_fn = fn_handler || default_not_found_handler;
+        }
+        set_error_handler(fn_handler) {
+          this.handle_error_fn = fn_handler;
         }
         "start"(callback2) {
           callback2(null, true);
         }
         "set_route"(str_route, context2, fn_handler) {
-          console.log("pre routing tree set route:", str_route);
+          this._log("debug", "set_route", {
+            route: str_route
+          });
           return this.routing_tree.set(str_route, context2, fn_handler);
         }
         "meets_requirements"() {
           return true;
         }
+        _invoke_handler(handler, context2, req, res2, params, result) {
+          try {
+            if (params && typeof params === "object") {
+              req.params = params;
+            }
+            if (context2) {
+              handler.call(context2, req, res2);
+            } else {
+              handler(req, res2);
+            }
+            result.handled = true;
+            result.params = params;
+          } catch (err) {
+            result.handled = true;
+            result.params = params;
+            result.handlerError = err;
+            this._log("error", "handler_error", {
+              url: req && req.url,
+              error: err,
+              params
+            });
+            this.emit("error", err, {
+              req,
+              res: res2,
+              params,
+              handler
+            });
+            if (this.handle_error_fn) {
+              try {
+                this.handle_error_fn(err, req, res2, params);
+              } catch (secondary_err) {
+                this._log("error", "error_handler_failure", {
+                  url: req && req.url,
+                  error: secondary_err
+                });
+                this.emit("error", secondary_err, {
+                  req,
+                  res: res2,
+                  params,
+                  handler: this.handle_error_fn,
+                  stage: "error-handler"
+                });
+              }
+            }
+          }
+        }
+        _handle_not_found(req, res2, meta, result) {
+          const details = Object.assign({
+            url: req && req.url
+          }, meta || {});
+          this._log("warn", "route_not_found", details);
+          this.emit("not-found", {
+            req,
+            res: res2,
+            meta: details
+          });
+          if (this.handle_not_found_fn) {
+            try {
+              this.handle_not_found_fn(req, res2);
+            } catch (err) {
+              result.handlerError = err;
+              this._log("error", "not_found_handler_error", {
+                url: req && req.url,
+                error: err
+              });
+              this.emit("error", err, {
+                req,
+                res: res2,
+                stage: "not-found"
+              });
+            }
+          }
+        }
         get arr_paths() {
           return this.routing_tree.arr_paths;
         }
         "process"(req, res2) {
+          const result = {
+            handled: false,
+            params: void 0,
+            handlerError: void 0
+          };
           var rt = this.routing_tree;
           let parsed_url;
           try {
             parsed_url = url(req.url, true);
           } catch (err) {
-            console.log("error parsing url", req.url);
+            this._log("error", "url_parse_error", {
+              url: req && req.url,
+              error: err
+            });
+            result.handlerError = err;
+            this.emit("error", err, {
+              req,
+              res: res2,
+              stage: "url-parse"
+            });
+            return result;
           }
-          if (parsed_url) {
-            var splitPath = parsed_url.pathname.substr(1).split("/");
-            var route_res = rt.get(req.url);
-            var processor_values_pair;
-            var t_handler;
-            if (tof(route_res) === "array") {
-              processor_values_pair = route_res;
-              var context2, handler, params;
-              if (route_res.length === 2) {
-                var rr_sig = get_item_sig(route_res, 1);
-                if (rr_sig == "[D,f]") {
-                  context2 = processor_values_pair[0];
-                  handler = processor_values_pair[1];
-                } else if (rr_sig == "[f,o]") {
-                  handler = processor_values_pair[0];
-                  params = processor_values_pair[1];
-                } else if (rr_sig == "[o,f]") {
-                  context2 = processor_values_pair[0];
-                  handler = processor_values_pair[1];
-                }
-              }
-              if (route_res.length === 3) {
-                context2 = processor_values_pair[0];
-                handler = processor_values_pair[1];
-                params = processor_values_pair[2];
-              }
-              if (params) req.params = params;
-              if (context2) {
-                handler.call(context2, req, res2);
-              } else {
-                t_handler = typeof handler;
-                if (typeof handler === "function") {
-                  handler(req, res2);
-                } else {
-                  if (t_handler === "undefined") {
-                    let their_ip = req.connection.remoteAddress;
-                    let last_part = splitPath[splitPath.length - 1];
-                    if (last_part.indexOf(".php") > -1) {
-                    }
-                    console.log("1) no defined route result ", their_ip.padEnd(16, " "), splitPath);
-                    console.log("req.url", req.url);
-                    console.log("parsed_url", parsed_url);
-                    return false;
-                  } else {
-                    console.log("handler", handler);
-                    throw "Expected handler to be a function";
-                  }
-                }
-              }
-            } else if (tof(route_res) === "function") {
-              if (context2) {
-                route_res.call(context2, req, res2);
-              } else {
-                route_res(req, res2);
-              }
-            } else if (tof(route_res) === "undefined") {
-              console.log("2) no defined route result", splitPath);
-              return false;
-            }
-            if (processor_values_pair) {
-            }
-            return true;
-          } else {
-            return false;
+          if (!parsed_url) {
+            return result;
           }
+          var route_res = rt.get(req.url);
+          var handler;
+          var context2;
+          var params;
+          var route_type = tof(route_res);
+          if (route_type === "array") {
+            var rr_sig = get_item_sig(route_res, 1);
+            if (route_res.length === 3) {
+              context2 = route_res[0];
+              handler = route_res[1];
+              params = route_res[2];
+            } else if (rr_sig == "[D,f]") {
+              context2 = route_res[0];
+              handler = route_res[1];
+            } else if (rr_sig == "[f,o]") {
+              handler = route_res[0];
+              params = route_res[1];
+            } else if (rr_sig == "[o,f]") {
+              context2 = route_res[0];
+              handler = route_res[1];
+            } else if (route_res.length === 2 && typeof route_res[0] === "function" && tof(route_res[1]) === "object") {
+              handler = route_res[0];
+              params = route_res[1];
+            }
+          } else if (route_type === "function") {
+            handler = route_res;
+          } else if (route_type === "object" && route_res) {
+            if (typeof route_res.handler === "function") {
+              handler = route_res.handler;
+              context2 = route_res.context;
+              if (route_res.params) {
+                params = route_res.params;
+              }
+            }
+          }
+          if (handler && typeof handler === "function") {
+            this._invoke_handler(handler, context2, req, res2, params, result);
+            return result;
+          }
+          this._handle_not_found(req, res2, {
+            url: req && req.url
+          }, result);
+          return result;
         }
       };
       Router.Routing_Tree = Routing_Tree;
@@ -26485,9 +28396,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/resource/pool.js
+  // node_modules/jsgui3-html/resource/pool.js
   var require_pool = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/resource/pool.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/pool.js"(exports, module) {
       var jsgui = require_lang();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -26605,9 +28516,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/resource/resource.js
+  // node_modules/jsgui3-html/resource/resource.js
   var require_resource = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/resource/resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/resource.js"(exports, module) {
       var jsgui = require_lang();
       var Pool = require_pool();
       var Evented_Class = jsgui.Evented_Class;
@@ -26687,9 +28598,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/resource/data-kv-resource.js
+  // node_modules/jsgui3-html/resource/data-kv-resource.js
   var require_data_kv_resource = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/resource/data-kv-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/data-kv-resource.js"(exports, module) {
       var jsgui = require_lang();
       var Pool = require_pool();
       var Evented_Class = jsgui.Evented_Class;
@@ -26764,9 +28675,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/resource/data-transform-resource.js
+  // node_modules/jsgui3-html/resource/data-transform-resource.js
   var require_data_transform_resource = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/resource/data-transform-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/data-transform-resource.js"(exports, module) {
       var jsgui = require_lang();
       var Pool = require_pool();
       var Evented_Class = jsgui.Evented_Class;
@@ -26877,9 +28788,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/resource/compilation-resource.js
+  // node_modules/jsgui3-html/resource/compilation-resource.js
   var require_compilation_resource = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/resource/compilation-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/compilation-resource.js"(exports, module) {
       var Data_Transform_Resource = require_data_transform_resource();
       var Compilation_Resource = class extends Data_Transform_Resource {
         constructor(spec) {
@@ -26898,9 +28809,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/resource/compiler-resource.js
+  // node_modules/jsgui3-html/resource/compiler-resource.js
   var require_compiler_resource = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/resource/compiler-resource.js"(exports, module) {
+    "node_modules/jsgui3-html/resource/compiler-resource.js"(exports, module) {
       var Data_Transform_Resource = require_data_transform_resource();
       var Compiler_Resource = class extends Data_Transform_Resource {
         constructor(spec) {
@@ -26919,9 +28830,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js
   var require_Active_HTML_Document = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Active_HTML_Document.js"(exports, module) {
       var jsgui = require_html_core();
       var { Blank_HTML_Document } = jsgui;
       var Active_HTML_Document = class extends Blank_HTML_Document {
@@ -26989,9 +28900,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js
   var require_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/button.js"(exports, module) {
       var jsgui = require_html_core();
       var Control2 = jsgui.Control;
       var Button = class extends Control2 {
@@ -27030,9 +28941,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js
   var require_arrow_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/vector/arrow-button.js"(exports, module) {
       var jsgui = require_html_core();
       var Control2 = jsgui.Control;
       var def = jsgui.is_defined;
@@ -27135,9 +29046,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/dragable.js
+  // node_modules/jsgui3-html/control_mixins/dragable.js
   var require_dragable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/dragable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/dragable.js"(exports, module) {
       var {
         prop,
         field
@@ -27249,14 +29160,19 @@ var DocsViewerClient = (() => {
               let tr_x = movement_offset[0] + initial_ctrl_translate[0];
               let tr_y = movement_offset[1] + initial_ctrl_translate[1];
               if (bounds2) {
-                const min_x_movement_offset = -1 * (initial_bcr_offset_from_bounds2[0][0] - initial_ctrl_translate[0]);
-                if (tr_x < min_x_movement_offset) tr_x = min_x_movement_offset;
-                const max_x_movement_offset = -1 * (initial_bcr_offset_from_bounds2[1][0] - initial_ctrl_translate[0]);
-                if (tr_x > max_x_movement_offset) tr_x = max_x_movement_offset;
-                const min_y_movement_offset = -1 * (initial_bcr_offset_from_bounds2[0][1] - initial_ctrl_translate[1]);
-                if (tr_y < min_y_movement_offset) tr_y = min_y_movement_offset;
-                const max_y_movement_offset = -1 * (initial_bcr_offset_from_bounds2[1][1] - initial_ctrl_translate[1]);
-                if (tr_y > max_y_movement_offset) tr_y = max_y_movement_offset;
+                const current_bounds_bcr = bounds2.bcr();
+                const bounds_left = current_bounds_bcr[0][0];
+                const bounds_top = current_bounds_bcr[0][1];
+                const bounds_right = current_bounds_bcr[1][0] - ctrl_size[0];
+                const bounds_bottom = current_bounds_bcr[1][1] - ctrl_size[1];
+                const min_x_offset = bounds_left - initial_ctrl_translate[0];
+                const max_x_offset = bounds_right - initial_ctrl_translate[0];
+                const min_y_offset = bounds_top - initial_ctrl_translate[1];
+                const max_y_offset = bounds_bottom - initial_ctrl_translate[1];
+                if (tr_x < min_x_offset) tr_x = min_x_offset;
+                if (tr_x > max_x_offset) tr_x = max_x_offset;
+                if (tr_y < min_y_offset) tr_y = min_y_offset;
+                if (tr_y > max_y_offset) tr_y = max_y_offset;
               }
               ctrl2.ta[6] = tr_x;
               ctrl2.ta[7] = tr_y;
@@ -27381,9 +29297,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js
   var require_horizontal_slider = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-slider.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -27503,9 +29419,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js
   var require_audio_volume = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/audio-volume.js"(exports, module) {
       var jsgui = require_html_core();
       var Horizontal_Slider = require_horizontal_slider();
       var stringify = jsgui.stringify;
@@ -27547,9 +29463,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selectable.js
+  // node_modules/jsgui3-html/control_mixins/selectable.js
   var require_selectable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selectable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selectable.js"(exports, module) {
       var {
         prop,
         field
@@ -27758,9 +29674,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js
   var require_Cell = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Cell.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -27801,9 +29717,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js
   var require_menu_node = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/menu-node.js"(exports, module) {
       var jsgui = require_html_core();
       var { stringify, each, tof, Control: Control2 } = jsgui;
       var Menu_Node = class _Menu_Node extends Control2 {
@@ -27917,9 +29833,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js
   var require_context_menu = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/context-menu.js"(exports, module) {
       var jsgui = require_html_core();
       var Menu_Node = require_menu_node();
       var stringify = jsgui.stringify;
@@ -27978,9 +29894,9 @@ var DocsViewerClient = (() => {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js
   var require_grid = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/grid.js"(exports, module) {
       var jsgui = require_html_core();
       var {
         stringify,
@@ -28356,9 +30272,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js
   var require_color_grid = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-grid.js"(exports, module) {
       var jsgui = require_html_core();
       var Grid = require_grid();
       var stringify = jsgui.stringify;
@@ -28458,9 +30374,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html-core/arr_colors.js
+  // node_modules/jsgui3-html/html-core/arr_colors.js
   var require_arr_colors = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html-core/arr_colors.js"(exports, module) {
+    "node_modules/jsgui3-html/html-core/arr_colors.js"(exports, module) {
       var pal_crayola2 = [
         {
           "hex": "#EFDECD",
@@ -29132,9 +31048,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js
   var require_color_palette = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/color-palette.js"(exports, module) {
       var jsgui = require_html_core();
       var Color_Grid = require_color_grid();
       var { v_subtract: v_subtract2 } = jsgui;
@@ -29214,9 +31130,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js
   var require_checkbox = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/checkbox.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -29286,9 +31202,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js
   var require_combo_box = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/combo-box.js"(exports, module) {
       var jsgui = require_html_core();
       var Control2 = jsgui.Control;
       var Combo_Box = class extends Control2 {
@@ -29301,9 +31217,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/coverable.js
+  // node_modules/jsgui3-html/control_mixins/coverable.js
   var require_coverable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/coverable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/coverable.js"(exports, module) {
       var jsgui = require_html_core();
       var { prop, field, Control: Control2 } = jsgui;
       var coverable = (ctrl2, opts) => {
@@ -29344,9 +31260,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/typed_data/date.js
+  // node_modules/jsgui3-html/control_mixins/typed_data/date.js
   var require_date = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/typed_data/date.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/typed_data/date.js"(exports, module) {
       var lang = require_lang();
       var is_defined = lang.is_defined;
       var date = (ctrl2, spec) => {
@@ -29485,9 +31401,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/display.js
+  // node_modules/jsgui3-html/control_mixins/display.js
   var require_display = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/display.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/display.js"(exports, module) {
       var lang = require_lang();
       var { Evented_Class, tof, each } = lang;
       var Ctrl_Display_Mode_Category = class extends Evented_Class {
@@ -29571,18 +31487,18 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/display-modes.js
+  // node_modules/jsgui3-html/control_mixins/display-modes.js
   var require_display_modes = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/display-modes.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/display-modes.js"(exports, module) {
       var display_modes = (ctrl2, opts = {}) => {
       };
       module.exports = display_modes;
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/fast-touch-click.js
+  // node_modules/jsgui3-html/control_mixins/fast-touch-click.js
   var require_fast_touch_click = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/fast-touch-click.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/fast-touch-click.js"(exports, module) {
       var fast_touch_click = (ctrl2) => {
         let has_moved_away = false;
         ctrl2.on("touchstart", (ets) => {
@@ -29602,9 +31518,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/popup.js
+  // node_modules/jsgui3-html/control_mixins/popup.js
   var require_popup = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/popup.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/popup.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -29657,9 +31573,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/drag_like_events.js
+  // node_modules/jsgui3-html/control_mixins/drag_like_events.js
   var require_drag_like_events = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/drag_like_events.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/drag_like_events.js"(exports, module) {
       var {
         prop,
         field
@@ -29809,9 +31725,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/resizable.js
+  // node_modules/jsgui3-html/control_mixins/resizable.js
   var require_resizable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/resizable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/resizable.js"(exports, module) {
       var Control2 = require_control();
       var drag_like_events = require_drag_like_events();
       var { tof } = require_lang();
@@ -29886,9 +31802,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/deletable.js
+  // node_modules/jsgui3-html/control_mixins/deletable.js
   var require_deletable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/deletable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/deletable.js"(exports, module) {
       var deletable = (ctrl2) => {
         ctrl2.delete = () => {
           ctrl2.remove();
@@ -29899,9 +31815,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selected-deletable.js
+  // node_modules/jsgui3-html/control_mixins/selected-deletable.js
   var require_selected_deletable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selected-deletable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selected-deletable.js"(exports, module) {
       var {
         prop,
         field
@@ -29945,9 +31861,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selected-resizable.js
+  // node_modules/jsgui3-html/control_mixins/selected-resizable.js
   var require_selected_resizable = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selected-resizable.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selected-resizable.js"(exports, module) {
       var {
         prop,
         field
@@ -29993,9 +31909,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selection-box-host.js
+  // node_modules/jsgui3-html/control_mixins/selection-box-host.js
   var require_selection_box_host = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/selection-box-host.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/selection-box-host.js"(exports, module) {
       var {
         prop,
         field
@@ -30113,9 +32029,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/press-events.js
+  // node_modules/jsgui3-html/control_mixins/press-events.js
   var require_press_events = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/press-events.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/press-events.js"(exports, module) {
       var { get_truth_map_from_arr, each } = require_lang();
       var press_events = (ctrl2, options = {}) => {
         ctrl2.__mx = ctrl2.__mx || {};
@@ -30305,9 +32221,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/press-outside.js
+  // node_modules/jsgui3-html/control_mixins/press-outside.js
   var require_press_outside = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/press-outside.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/press-outside.js"(exports, module) {
       var press_events = require_press_events();
       var press_outside = (ctrl2, options = {}) => {
         let once = options.one || options.once || false;
@@ -30353,9 +32269,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/pressed-state.js
+  // node_modules/jsgui3-html/control_mixins/pressed-state.js
   var require_pressed_state = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/pressed-state.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/pressed-state.js"(exports, module) {
       var {
         field,
         prop
@@ -30395,9 +32311,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/mx.js
+  // node_modules/jsgui3-html/control_mixins/mx.js
   var require_mx = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/control_mixins/mx.js"(exports, module) {
+    "node_modules/jsgui3-html/control_mixins/mx.js"(exports, module) {
       var mx = {
         coverable: require_coverable(),
         date: require_date(),
@@ -30421,9 +32337,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js
   var require_Dropdown_Menu = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Dropdown_Menu.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -30596,9 +32512,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js
   var require_Text_Input = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Text_Input.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -30661,7 +32577,7 @@ div.grid .row .cell span {
             this.data.model.value = spec.value;
           }
           this.dom.tagName = "input";
-          this.dom.attributes.type = "input";
+          this.dom.attributes.type = "text";
         }
         get value() {
           return this.data.model.value;
@@ -30750,9 +32666,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js
   var require_text_item = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/text-item.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -30780,9 +32696,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js
   var require_Indicator = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Indicator.js"(exports, module) {
       var jsgui = require_html_core();
       var {
         Control: Control2,
@@ -30811,9 +32727,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js
   var require_Status_Indicator = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Status_Indicator.js"(exports, module) {
       var Indicator = require_Indicator();
       var Status_Indicator = class extends Indicator {
         constructor(spec) {
@@ -30862,9 +32778,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js
   var require_Validation_Status_Indicator = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Validation_Status_Indicator.js"(exports, module) {
       var Status_Indicator = require_Status_Indicator();
       var Control_Validation = require_Control_Validation();
       var Validation_Status_Indicator = class extends Status_Indicator {
@@ -30947,9 +32863,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js
   var require_Text_Field = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/Text_Field.js"(exports, module) {
       var jsgui = require_html_core();
       var Text_Input = require_Text_Input();
       var Text_Item = require_text_item();
@@ -31041,7 +32957,7 @@ div.grid .row .cell span {
             this.compose_text_field();
           }
           if (spec.value !== void 0) {
-            this.data.model.value = value;
+            this.data.model.value = spec.value;
           }
         }
         setup_inner_control_events() {
@@ -31141,9 +33057,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js
   var require_file_upload = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/file-upload.js"(exports, module) {
       var jsgui = require_html_core();
       var Text_Field = require_Text_Field();
       var Button = require_button();
@@ -31214,9 +33130,160 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/1-editor/form_field.js
+  var require_form_field = __commonJS({
+    "node_modules/jsgui3-html/controls/organised/1-standard/1-editor/form_field.js"(exports, module) {
+      var Control2 = require_control();
+      var Text_Input = require_Text_Input();
+      var Validation_Status_Indicator = require_Validation_Status_Indicator();
+      var Form_Field = class extends Control2 {
+        constructor(options = {}) {
+          super(options);
+          const { context: context2 } = options;
+          this.config = {
+            label: options.label || "",
+            name: options.name || "",
+            type: options.type || "text",
+            // text, email, password, checkbox, select, textarea
+            placeholder: options.placeholder || "",
+            required: options.required || false,
+            input_control: options.input_control || null,
+            // Custom input control
+            validator: options.validator || null
+          };
+          this.add_class("form-field");
+          if (this.config.label) {
+            this.label_container = new Control2({ context: context2, tag_name: "div" });
+            this.label_container.add_class("form-field-label-container");
+            this.label = new Control2({ context: context2, tag_name: "label" });
+            this.label.add_class("form-field-label");
+            this.label.add(this.config.label);
+            if (this.config.required) {
+              this.required_indicator = new Control2({ context: context2, tag_name: "span" });
+              this.required_indicator.add_class("required-indicator");
+              this.required_indicator.add(" *");
+              this.label.add(this.required_indicator);
+            }
+            this.label_container.add(this.label);
+            this.add(this.label_container);
+          }
+          this.input_container = new Control2({ context: context2, tag_name: "div" });
+          this.input_container.add_class("form-field-input-container");
+          if (this.config.input_control) {
+            this.input = this.config.input_control;
+          } else {
+            this.input = this._create_input_control(context2);
+          }
+          this.input_container.add(this.input);
+          this.validation_indicator = new Validation_Status_Indicator({ context: context2 });
+          this.validation_indicator.add_class("form-field-validation");
+          this.input_container.add(this.validation_indicator);
+          this.add(this.input_container);
+          this.error_message = new Control2({ context: context2, tag_name: "div" });
+          this.error_message.add_class("form-field-error");
+          this.add(this.error_message);
+        }
+        _create_input_control(context2) {
+          const { type, placeholder, name } = this.config;
+          switch (type) {
+            case "text":
+            case "email":
+            case "password":
+            case "number":
+            case "url":
+            case "tel":
+              const input = new Text_Input({ context: context2 });
+              input.dom.attributes.type = type;
+              input.dom.attributes.name = name;
+              if (placeholder) input.dom.attributes.placeholder = placeholder;
+              return input;
+            case "textarea":
+              const textarea = new Control2({ context: context2, tag_name: "textarea" });
+              textarea.dom.attributes.name = name;
+              if (placeholder) textarea.dom.attributes.placeholder = placeholder;
+              textarea.add_class("form-textarea");
+              return textarea;
+            case "checkbox":
+              const checkbox = new Control2({ context: context2, tag_name: "input" });
+              checkbox.dom.attributes.type = "checkbox";
+              checkbox.dom.attributes.name = name;
+              checkbox.add_class("form-checkbox");
+              return checkbox;
+            case "select":
+              const select = new Control2({ context: context2, tag_name: "select" });
+              select.dom.attributes.name = name;
+              select.add_class("form-select");
+              return select;
+            default:
+              return new Text_Input({ context: context2 });
+          }
+        }
+        /**
+         * Set the field value
+         */
+        set_value(value2) {
+          const { type } = this.config;
+          if (type === "checkbox") {
+            this.input.dom.el.checked = !!value2;
+          } else if (type === "select") {
+            this.input.dom.el.value = value2;
+          } else {
+            this.input.dom.el.value = value2 || "";
+          }
+        }
+        /**
+         * Get the field value
+         */
+        get_value() {
+          const { type } = this.config;
+          if (type === "checkbox") {
+            return this.input.dom.el.checked;
+          } else {
+            return this.input.dom.el.value;
+          }
+        }
+        /**
+         * Set validation state
+         */
+        set_validation(is_valid, error_message = "") {
+          if (is_valid) {
+            this.validation_indicator.set_status("valid");
+            this.error_message.content.clear();
+            this.remove_class("has-error");
+          } else {
+            this.validation_indicator.set_status("invalid");
+            this.error_message.content.clear();
+            this.error_message.add(error_message);
+            this.add_class("has-error");
+          }
+        }
+        /**
+         * Clear validation state
+         */
+        clear_validation() {
+          this.validation_indicator.set_status("neutral");
+          this.error_message.content.clear();
+          this.remove_class("has-error");
+        }
+        /**
+         * Enable/disable the field
+         */
+        set_enabled(enabled) {
+          this.input.dom.el.disabled = !enabled;
+          if (enabled) {
+            this.remove_class("disabled");
+          } else {
+            this.add_class("disabled");
+          }
+        }
+      };
+      module.exports = Form_Field;
+    }
+  });
+
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js
   var require_horizontal_menu = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/horizontal-menu.js"(exports, module) {
       var jsgui = require_html_core();
       var Menu_Node = require_menu_node();
       var stringify = jsgui.stringify;
@@ -31281,9 +33348,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-item.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-item.js
   var require_data_item = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-item.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-item.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -31313,9 +33380,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-row.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-row.js
   var require_data_row = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-row.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/4-data/data-row.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -31346,9 +33413,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js
   var require_date_picker = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/date-picker.js"(exports, module) {
       var jsgui = require_html_core();
       var { Control: Control2, Control_Data, Control_View, Data_Object } = jsgui;
       var { field } = require_oext();
@@ -31441,9 +33508,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js
   var require_dropdown_list = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/dropdown-list.js"(exports, module) {
       var jsgui = require_html_core();
       var each = jsgui.each;
       var tof = jsgui.tof;
@@ -31474,9 +33541,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/panel.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/panel.js
   var require_panel = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/panel.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/panel.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -31528,9 +33595,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js
   var require_title_bar = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/title-bar.js"(exports, module) {
       var jsgui = require_html_core();
       var { stringify, each, tof, def, Control: Control2 } = jsgui;
       var fields = [
@@ -31555,9 +33622,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js
   var require_toggle_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/toggle-button.js"(exports, module) {
       var jsgui = require_html_core();
       var { stringify, each, tof, def, Control: Control2 } = jsgui;
       var { prop, field } = require_oext();
@@ -31617,9 +33684,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js
   var require_plus_minus_toggle_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/plus-minus-toggle-button.js"(exports, module) {
       var jsgui = require_html_core();
       var Toggle_Button = require_toggle_button();
       var stringify = jsgui.stringify;
@@ -31640,9 +33707,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js
   var require_vertical_expander = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/vertical-expander.js"(exports, module) {
       var jsgui = require_html_core();
       var Control2 = jsgui.Control;
       var { prop, field } = require_oext();
@@ -31721,9 +33788,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js
   var require_tree_node = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree-node.js"(exports, module) {
       var jsgui = require_html_core();
       var Plus_Minus_Toggle_Button = require_plus_minus_toggle_button();
       var Vertical_Expander = require_vertical_expander();
@@ -31905,9 +33972,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree.js
   var require_tree = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/tree.js"(exports, module) {
       var jsgui = require_html_core();
       var { stringify, each, tof, def, Control: Control2 } = jsgui;
       var Panel = require_panel();
@@ -31974,9 +34041,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js
   var require_file_tree = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree.js"(exports, module) {
       var jsgui = require_html_core();
       var Tree = require_tree();
       var File_Tree = class extends Tree {
@@ -32007,9 +34074,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js
   var require_file_tree_node = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/file-tree-node.js"(exports, module) {
       var jsgui = require_html_core();
       var Tree_Node = require_tree_node();
       var File_Tree_Node = class extends Tree_Node {
@@ -32031,9 +34098,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js
   var require_icon = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/icon.js"(exports, module) {
       var jsgui = require_html_core();
       var {
         Control: Control2,
@@ -32091,9 +34158,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js
   var require_item = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item.js"(exports, module) {
       var jsgui = require_html_core();
       var { Control: Control2, controls, tf: tf2, are_equal, each } = jsgui;
       var { span } = controls;
@@ -32110,9 +34177,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js
   var require_list = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/list.js"(exports, module) {
       var jsgui = require_html_core();
       var Item = require_item();
       var { each } = jsgui;
@@ -32187,9 +34254,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js
   var require_item_selector = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/item-selector.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -32386,9 +34453,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js
   var require_left_right_arrows_selector = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/2-misc/left-right-arrows-selector.js"(exports, module) {
       var jsgui = require_html_core();
       var Control2 = jsgui.Control;
       var def = jsgui.is_defined;
@@ -32486,9 +34553,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js
   var require_line_chart = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/line-chart.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -32957,9 +35024,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/login.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/login.js
   var require_login = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/login.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/login.js"(exports, module) {
       var jsgui = require_html_core();
       var Text_Field = require_Text_Field();
       var stringify = jsgui.stringify;
@@ -33051,9 +35118,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/modal.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/modal.js
   var require_modal = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/modal.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/modal.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -33071,9 +35138,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js
   var require_tile_slide = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tile-slide.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -33239,9 +35306,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js
   var require_month_view = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/month-view.js"(exports, module) {
       var jsgui = require_html_core();
       var clone = jsgui.clone;
       var each = jsgui.each;
@@ -33408,9 +35475,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js
   var require_radio_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/radio-button.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -33429,6 +35496,8 @@ div.grid .row .cell span {
           this.add_class("radio-button");
           var context2 = this.context;
           if (spec.group_name) this.group_name = spec.group_name;
+          if (spec.text) this.text = spec.text;
+          if (spec.label) this.text = spec.label;
           if (!spec.abstract && !spec.el) {
             var name = this.group_name;
             var html_radio = new Control2({
@@ -33469,9 +35538,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js
   var require_radio_button_group = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/radio-button-group.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -33528,9 +35597,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js
   var require_tabbed_panel = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/tabbed-panel.js"(exports, module) {
       var jsgui = require_html_core();
       var Control2 = jsgui.Control;
       var mx_selectable = require_selectable();
@@ -33745,9 +35814,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js
   var require_multi_layout_mode = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/app/multi-layout-mode.js"(exports, module) {
       var jsgui = require_html_core();
       var Panel = require_panel();
       var Tabbed_Panel = require_tabbed_panel();
@@ -33879,9 +35948,146 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/1-editor/property_editor.js
+  var require_property_editor = __commonJS({
+    "node_modules/jsgui3-html/controls/organised/1-standard/1-editor/property_editor.js"(exports, module) {
+      var Panel = require_panel();
+      var Control2 = require_control();
+      var Text_Input = require_Text_Input();
+      var Checkbox = require_checkbox();
+      var Property_Editor = class extends Panel {
+        constructor(options = {}) {
+          super(options);
+          this.add_class("property-editor");
+          const { context: context2 } = this;
+          this.header = new Control2({ context: context2, tag_name: "div" });
+          this.header.add_class("property-editor-header");
+          this.header_title = new Control2({ context: context2, tag_name: "h3" });
+          this.header_title.add("Properties");
+          this.header.add(this.header_title);
+          this.add(this.header);
+          this.properties_container = new Control2({ context: context2, tag_name: "div" });
+          this.properties_container.add_class("property-editor-properties");
+          this.add(this.properties_container);
+          this.no_selection_message = new Control2({ context: context2, tag_name: "div" });
+          this.no_selection_message.add_class("property-editor-no-selection");
+          this.no_selection_message.add("Select a field to edit its properties");
+          this.properties_container.add(this.no_selection_message);
+          this.current_item = null;
+          this.property_fields = {};
+        }
+        /**
+         * Load properties for an item
+         */
+        load_item(item2, on_change) {
+          this.current_item = item2;
+          this.on_change = on_change;
+          this.property_fields = {};
+          this.properties_container.content.clear();
+          if (!item2) {
+            this.properties_container.add(this.no_selection_message);
+            return;
+          }
+          const { context: context2 } = this;
+          const properties = item2.properties || {};
+          this._add_property_group(context2, "Field Type", properties.type || "text", null, true);
+          this._add_property_group(context2, "Label", properties.label || "", (value2) => {
+            properties.label = value2;
+            if (this.on_change) this.on_change();
+          });
+          this._add_property_group(context2, "Name/ID", properties.name || "", (value2) => {
+            properties.name = value2;
+            if (this.on_change) this.on_change();
+          });
+          if (["text", "email", "password", "number", "url", "tel", "textarea"].includes(properties.type)) {
+            this._add_property_group(context2, "Placeholder", properties.placeholder || "", (value2) => {
+              properties.placeholder = value2;
+              if (this.on_change) this.on_change();
+            });
+          }
+          this._add_property_checkbox(context2, "Required", properties.required || false, (checked) => {
+            properties.required = checked;
+            if (this.on_change) this.on_change();
+          });
+          if (properties.type === "select") {
+            this._add_property_group(
+              context2,
+              "Options (comma-separated)",
+              (properties.options || []).join(", "),
+              (value2) => {
+                properties.options = value2.split(",").map((s) => s.trim()).filter((s) => s);
+                if (this.on_change) this.on_change();
+              }
+            );
+          }
+          this._add_property_group(context2, "Width (%)", properties.width || "100", (value2) => {
+            properties.width = value2;
+            if (this.on_change) this.on_change();
+          });
+          const delete_btn = new Control2({ context: context2, tag_name: "button" });
+          delete_btn.add_class("property-editor-delete-btn");
+          delete_btn.add("Delete Field");
+          delete_btn.on("click", () => {
+            if (this.on_delete) this.on_delete(item2);
+          });
+          this.properties_container.add(delete_btn);
+        }
+        _add_property_group(context2, label, value2, on_change, read_only = false) {
+          const group = new Control2({ context: context2, tag_name: "div" });
+          group.add_class("property-group");
+          const label_el = new Control2({ context: context2, tag_name: "label" });
+          label_el.add_class("property-label");
+          label_el.add(label);
+          group.add(label_el);
+          const input = new Text_Input({ context: context2 });
+          input.add_class("property-input");
+          input.dom.el.value = value2;
+          if (read_only) input.dom.el.disabled = true;
+          if (on_change && !read_only) {
+            input.on("input", () => {
+              on_change(input.dom.el.value);
+            });
+          }
+          group.add(input);
+          this.properties_container.add(group);
+          this.property_fields[label] = input;
+          return group;
+        }
+        _add_property_checkbox(context2, label, checked, on_change) {
+          const group = new Control2({ context: context2, tag_name: "div" });
+          group.add_class("property-group");
+          group.add_class("property-group-checkbox");
+          const checkbox = new Checkbox({ context: context2 });
+          checkbox.add_class("property-checkbox");
+          checkbox.dom.el.checked = checked;
+          if (on_change) {
+            checkbox.on("change", () => {
+              on_change(checkbox.dom.el.checked);
+            });
+          }
+          const label_el = new Control2({ context: context2, tag_name: "label" });
+          label_el.add_class("property-label");
+          label_el.add(label);
+          group.add(checkbox);
+          group.add(label_el);
+          this.properties_container.add(group);
+          this.property_fields[label] = checkbox;
+          return group;
+        }
+        /**
+         * Set the delete callback
+         */
+        set_on_delete(callback2) {
+          this.on_delete = callback2;
+        }
+      };
+      module.exports = Property_Editor;
+    }
+  });
+
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js
   var require_popup_menu_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/popup-menu-button.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -33994,9 +36200,316 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/1-editor/Rich_Text_Editor.js
+  var require_Rich_Text_Editor = __commonJS({
+    "node_modules/jsgui3-html/controls/organised/1-standard/1-editor/Rich_Text_Editor.js"(exports, module) {
+      var Control2 = require_control();
+      var Rich_Text_Editor = class extends Control2 {
+        constructor(options = {}) {
+          options.__type_name = options.__type_name || "rich_text_editor";
+          super(options);
+          const { context: context2 } = this;
+          this.add_class("rich-text-editor");
+          this.config = {
+            placeholder: options.placeholder || "Start typing...",
+            initial_html: options.initial_html || "",
+            min_height: options.min_height || "200px",
+            max_height: options.max_height || "500px",
+            toolbar_position: options.toolbar_position || "top",
+            // top, bottom, floating
+            on_change: options.on_change || null,
+            read_only: options.read_only || false
+          };
+          this._create_toolbar(context2);
+          this._create_editor(context2);
+          this.is_dirty = false;
+          this.last_html = "";
+        }
+        /**
+         * Create the formatting toolbar
+         */
+        _create_toolbar(context2) {
+          this.toolbar = new Control2({ context: context2, tag_name: "div" });
+          this.toolbar.add_class("rte-toolbar");
+          const buttons = [
+            ["bold", "<strong>B</strong>", "Bold (Ctrl+B)"],
+            ["italic", "<em>I</em>", "Italic (Ctrl+I)"],
+            ["underline", "<u>U</u>", "Underline (Ctrl+U)"],
+            ["separator"],
+            ["insertUnorderedList", "\u2022 List", "Bullet List"],
+            ["insertOrderedList", "1. List", "Numbered List"],
+            ["separator"],
+            ["createLink", "\u{1F517}", "Insert Link", this._handle_create_link.bind(this)],
+            ["unlink", "\u{1F517}\u2717", "Remove Link"],
+            ["separator"],
+            ["removeFormat", "\u2717", "Clear Formatting"]
+          ];
+          buttons.forEach((btn_def) => {
+            if (btn_def[0] === "separator") {
+              const sep = new Control2({ context: context2, tag_name: "span" });
+              sep.add_class("rte-toolbar-separator");
+              this.toolbar.add(sep);
+            } else {
+              const [command, icon, title, custom_handler] = btn_def;
+              const button = new Control2({ context: context2, tag_name: "button" });
+              button.add_class("rte-toolbar-button");
+              button.dom.attributes.type = "button";
+              button.dom.attributes.title = title;
+              button.dom.attributes["data-command"] = command;
+              button.dom.innerHTML = icon;
+              if (custom_handler) {
+                button.custom_handler = custom_handler;
+              }
+              this.toolbar.add(button);
+            }
+          });
+          this.add(this.toolbar);
+        }
+        /**
+         * Create the contenteditable editor area
+         */
+        _create_editor(context2) {
+          this.editor_container = new Control2({ context: context2, tag_name: "div" });
+          this.editor_container.add_class("rte-editor-container");
+          this.editor = new Control2({ context: context2, tag_name: "div" });
+          this.editor.add_class("rte-editor");
+          this.editor.dom.attributes.contenteditable = "true";
+          this.editor.dom.attributes["data-placeholder"] = this.config.placeholder;
+          if (this.config.initial_html) {
+            this.editor.dom.innerHTML = this.config.initial_html;
+          }
+          if (this.editor.dom.el) {
+            this.editor.dom.el.style.minHeight = this.config.min_height;
+            this.editor.dom.el.style.maxHeight = this.config.max_height;
+          }
+          if (this.config.read_only && this.editor.dom.el) {
+            this.editor.dom.el.contentEditable = "false";
+          }
+          this.editor_container.add(this.editor);
+          this.add(this.editor_container);
+        }
+        /**
+         * Activate - attach event listeners (client-only)
+         */
+        activate() {
+          if (!this.__active) {
+            super.activate();
+            const toolbar_buttons = this.toolbar.dom.el.querySelectorAll(".rte-toolbar-button");
+            toolbar_buttons.forEach((btn) => {
+              btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                const command = btn.getAttribute("data-command");
+                const button_control = Array.from(this.toolbar.content._items).find(
+                  (item2) => item2.dom && item2.dom.el === btn
+                );
+                if (button_control && button_control.custom_handler) {
+                  button_control.custom_handler(command);
+                } else {
+                  this._execute_command(command);
+                }
+                this.editor.dom.el.focus();
+              });
+            });
+            this.editor.dom.el.addEventListener("input", () => {
+              this.is_dirty = true;
+              this._handle_change();
+            });
+            this.editor.dom.el.addEventListener("paste", (e) => {
+              e.preventDefault();
+              const text = e.clipboardData.getData("text/plain");
+              document.execCommand("insertText", false, text);
+            });
+            this.editor.dom.el.addEventListener("keydown", (e) => {
+              if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                  case "b":
+                    e.preventDefault();
+                    this._execute_command("bold");
+                    break;
+                  case "i":
+                    e.preventDefault();
+                    this._execute_command("italic");
+                    break;
+                  case "u":
+                    e.preventDefault();
+                    this._execute_command("underline");
+                    break;
+                }
+              }
+            });
+            document.addEventListener("selectionchange", () => {
+              if (this.editor.dom.el.contains(document.activeElement)) {
+                this._update_toolbar_states();
+              }
+            });
+            this._update_toolbar_states();
+          }
+        }
+        /**
+         * Execute a formatting command
+         */
+        _execute_command(command, value2 = null) {
+          document.execCommand(command, false, value2);
+          this._handle_change();
+        }
+        /**
+         * Handle link creation (custom handler)
+         */
+        _handle_create_link(command) {
+          const selection = window.getSelection();
+          if (selection.rangeCount === 0 || selection.isCollapsed) {
+            alert("Please select text to create a link");
+            return;
+          }
+          const url = prompt("Enter URL:", "https://");
+          if (url && url.trim() !== "" && url !== "https://") {
+            if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("mailto:")) {
+              alert("URL must start with http://, https://, or mailto:");
+              return;
+            }
+            this._execute_command("createLink", url);
+          }
+        }
+        /**
+         * Update toolbar button active states based on current selection
+         */
+        _update_toolbar_states() {
+          const toolbar_buttons = this.toolbar.dom.el.querySelectorAll(".rte-toolbar-button");
+          toolbar_buttons.forEach((btn) => {
+            const command = btn.getAttribute("data-command");
+            try {
+              const is_active = document.queryCommandState(command);
+              if (is_active) {
+                btn.classList.add("active");
+              } else {
+                btn.classList.remove("active");
+              }
+            } catch (e) {
+              btn.classList.remove("active");
+            }
+          });
+        }
+        /**
+         * Handle content change
+         */
+        _handle_change() {
+          const current_html = this.get_html();
+          if (current_html !== this.last_html) {
+            this.last_html = current_html;
+            if (this.config.on_change) {
+              this.config.on_change(current_html);
+            }
+          }
+        }
+        /**
+         * Get HTML content from editor
+         */
+        get_html() {
+          if (!this.editor.dom.el) {
+            return this.config.initial_html || "";
+          }
+          const html = this.editor.dom.el.innerHTML;
+          return this._sanitize_html(html);
+        }
+        /**
+         * Set HTML content in editor
+         */
+        set_html(html) {
+          const sanitized = this._sanitize_html(html);
+          if (this.editor.dom.el) {
+            this.editor.dom.el.innerHTML = sanitized;
+          }
+          this.last_html = sanitized;
+          this.is_dirty = false;
+        }
+        /**
+         * Get plain text content (strips all HTML)
+         */
+        get_text() {
+          if (!this.editor.dom.el) {
+            return "";
+          }
+          return this.editor.dom.el.textContent || "";
+        }
+        /**
+         * Basic HTML sanitization
+         * Removes dangerous tags and attributes
+         * 
+         * TODO Phase 2: Replace with DOMPurify for production
+         * This is a minimal implementation for MVP
+         */
+        _sanitize_html(html) {
+          if (!html) return "";
+          html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+          html = html.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "");
+          html = html.replace(/\s*on\w+\s*=\s*[^\s>]*/gi, "");
+          html = html.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, "");
+          const dangerous_tags = ["script", "iframe", "object", "embed", "form", "input", "button"];
+          dangerous_tags.forEach((tag) => {
+            const regex = new RegExp(`<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`, "gi");
+            html = html.replace(regex, "");
+          });
+          return html;
+        }
+        /**
+         * Clear all content
+         */
+        clear() {
+          this.set_html("");
+        }
+        /**
+         * Check if editor has content
+         */
+        is_empty() {
+          const text = this.get_text().trim();
+          return text.length === 0;
+        }
+        /**
+         * Set read-only mode
+         */
+        set_read_only(read_only) {
+          this.config.read_only = read_only;
+          if (this.editor.dom.el) {
+            this.editor.dom.el.contentEditable = read_only ? "false" : "true";
+          }
+          if (read_only) {
+            this.toolbar.add_class("disabled");
+          } else {
+            this.toolbar.remove_class("disabled");
+          }
+        }
+        /**
+         * Focus the editor
+         */
+        focus() {
+          if (this.editor.dom.el) {
+            this.editor.dom.el.focus();
+          }
+        }
+        /**
+         * Get character count
+         * TODO Phase 4: Add to UI, show live count below editor
+         */
+        get_character_count() {
+          return this.get_text().length;
+        }
+        /**
+         * Get word count
+         * TODO Phase 4: Add to UI, show alongside character count
+         */
+        get_word_count() {
+          const text = this.get_text().trim();
+          if (text.length === 0) return 0;
+          return text.split(/\s+/).length;
+        }
+      };
+      module.exports = Rich_Text_Editor;
+    }
+  });
+
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js
   var require_scrollbar = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scrollbar.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -34063,9 +36576,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js
   var require_scroll_view = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/scroll-view.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -34115,9 +36628,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js
   var require_search_bar = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/search-bar.js"(exports, module) {
       var jsgui = require_html_core();
       var { Control: Control2 } = jsgui;
       var view_model_spec = {
@@ -34160,9 +36673,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js
   var require_Select_Options = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/0-native-compositional/Select_Options.js"(exports, module) {
       var jsgui = require_html_core();
       var { Control: Control2, Control_Data, Control_View, Data_Object, is_array, is_arr_of_strs, each } = jsgui;
       var { field } = require_oext();
@@ -34260,9 +36773,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/single-line.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/single-line.js
   var require_single_line = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/single-line.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/single-line.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -34309,9 +36822,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js
   var require_standard_web_page = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/3-page/standard-web-page.js"(exports, module) {
       var jsgui = require_html_core();
       var Standard_Web_Page = class extends jsgui.Blank_HTML_Document {
         constructor(spec) {
@@ -34322,9 +36835,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js
   var require_start_stop_toggle_button = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/start-stop-toggle-button.js"(exports, module) {
       var jsgui = require_html_core();
       var Toggle_Button = require_toggle_button();
       var stringify = jsgui.stringify;
@@ -34364,9 +36877,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/string-span.js
+  // node_modules/jsgui3-html/controls/organised/0-core/1-advanced/string-span.js
   var require_string_span = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/1-advanced/string-span.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/1-advanced/string-span.js"(exports, module) {
       var jsgui = require_html_core();
       var { controls, parse, each, are_equal } = jsgui;
       var { Control: Control2, Text_Node } = controls;
@@ -34598,9 +37111,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js
+  // node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js
   var require_timespan_selector = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/0-core/0-basic/1-compositional/timespan-selector.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -34645,9 +37158,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js
   var require_titled_panel = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/titled-panel.js"(exports, module) {
       var jsgui = require_html_core();
       var stringify = jsgui.stringify;
       var each = jsgui.each;
@@ -34683,9 +37196,97 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Toolbar.js
+  var require_Toolbar = __commonJS({
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/Toolbar.js"(exports, module) {
+      var Control2 = require_control();
+      var Button = require_button();
+      var Toolbar = class extends Control2 {
+        constructor(options = {}) {
+          super(options);
+          this.add_class("toolbar");
+          if (options.orientation === "vertical") {
+            this.add_class("toolbar-vertical");
+          } else {
+            this.add_class("toolbar-horizontal");
+          }
+          this.items = [];
+        }
+        /**
+         * Add a button to the toolbar
+         */
+        addButton(config) {
+          const { context: context2 } = this;
+          const button = new Button({ context: context2 });
+          button.add_class("toolbar-button");
+          if (config.icon) {
+            const icon = new Control2({ context: context2, tag_name: "span" });
+            icon.add_class("toolbar-button-icon");
+            icon.add(config.icon);
+            button.add(icon);
+          }
+          if (config.label) {
+            const label = new Control2({ context: context2, tag_name: "span" });
+            label.add_class("toolbar-button-label");
+            label.add(config.label);
+            button.add(label);
+          }
+          if (config.tooltip) {
+            button.dom.attributes.title = config.tooltip;
+          }
+          if (config.onClick) {
+            button.on("click", config.onClick);
+          }
+          this.add(button);
+          this.items.push(button);
+          return button;
+        }
+        /**
+         * Add a separator
+         */
+        addSeparator() {
+          const { context: context2 } = this;
+          const separator = new Control2({ context: context2, tag_name: "div" });
+          separator.add_class("toolbar-separator");
+          this.add(separator);
+          this.items.push(separator);
+          return separator;
+        }
+        /**
+         * Add a spacer (flexible space)
+         */
+        addSpacer() {
+          const { context: context2 } = this;
+          const spacer = new Control2({ context: context2, tag_name: "div" });
+          spacer.add_class("toolbar-spacer");
+          this.add(spacer);
+          this.items.push(spacer);
+          return spacer;
+        }
+        /**
+         * Add any custom control
+         */
+        addControl(control) {
+          control.add_class("toolbar-item");
+          this.add(control);
+          this.items.push(control);
+          return control;
+        }
+        /**
+         * Clear all items
+         */
+        clear() {
+          this.content.clear();
+          this.items = [];
+        }
+      };
+      module.exports = Toolbar;
+    }
+  });
+
+  // node_modules/jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js
   var require_toolbox = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/5-ui/toolbox.js"(exports, module) {
       var jsgui = require_html_core();
       var { Control: Control2 } = jsgui;
       var { prop, field } = require_oext();
@@ -34700,11 +37301,12 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/window.js
+  // node_modules/jsgui3-html/controls/organised/1-standard/6-layout/window.js
   var require_window = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/organised/1-standard/6-layout/window.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/organised/1-standard/6-layout/window.js"(exports, module) {
       var jsgui = require_html_core();
       var Horizontal_Menu = require_horizontal_menu();
+      var Button = require_button();
       var { def, each } = jsgui;
       var Control2 = jsgui.Control;
       var { dragable, resizable } = require_mx();
@@ -34740,7 +37342,7 @@ div.grid .row .cell span {
               });
               right_button_group.add_class("button-group");
               right_button_group.add_class("right");
-              btn_minimize = new jsgui.controls.Button({
+              btn_minimize = new Button({
                 context: context2
               });
               const span = (text) => {
@@ -34750,12 +37352,12 @@ div.grid .row .cell span {
               };
               btn_minimize.add(span("\u2296"));
               right_button_group.add(btn_minimize);
-              btn_maximize = new jsgui.controls.Button({
+              btn_maximize = new Button({
                 context: context2
               });
               btn_maximize.add(span("\u2295"));
               right_button_group.add(btn_maximize);
-              btn_close = new jsgui.controls.Button({
+              btn_close = new Button({
                 context: context2
               });
               btn_close.add(span("\u2297"));
@@ -35157,9 +37759,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/controls/controls.js
+  // node_modules/jsgui3-html/controls/controls.js
   var require_controls = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/controls/controls.js"(exports, module) {
+    "node_modules/jsgui3-html/controls/controls.js"(exports, module) {
       var controls = {
         Active_HTML_Document: require_Active_HTML_Document(),
         Arrow_Button: require_arrow_button(),
@@ -35178,6 +37780,7 @@ div.grid .row .cell span {
         // Not using (data-)connected controls.
         //Data_Grid: require('./connected/data-grid'),
         File_Upload: require_file_upload(),
+        Form_Field: require_form_field(),
         // maybe 0-basic/0-layout?
         //  A layout control may be / need to be displayed a little differently.
         Grid: require_grid(),
@@ -35212,11 +37815,13 @@ div.grid .row .cell span {
         //Object_Editor: require('./editor/object'),
         Panel: require_panel(),
         Plus_Minus_Toggle_Button: require_plus_minus_toggle_button(),
+        Property_Editor: require_property_editor(),
         // More advanced functionality - may require more work to keep it with the right APIs.
         Popup_Menu_Button: require_popup_menu_button(),
         Radio_Button: require_radio_button(),
         Radio_Button_Group: require_radio_button_group(),
         //Resize_Handle: require('./organised/0-core/0-basic/_resize-handle'),
+        Rich_Text_Editor: require_Rich_Text_Editor(),
         Scroll_View: require_scroll_view(),
         Scrollbar: require_scrollbar(),
         Search_Bar: require_search_bar(),
@@ -35235,6 +37840,7 @@ div.grid .row .cell span {
         Title_Bar: require_title_bar(),
         Titled_Panel: require_titled_panel(),
         Toggle_Button: require_toggle_button(),
+        Toolbar: require_Toolbar(),
         Toolbox: require_toolbox(),
         Tree: require_tree(),
         Tree_Node: require_tree_node(),
@@ -35250,9 +37856,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/node_modules/jsgui3-html/html.js
+  // node_modules/jsgui3-html/html.js
   var require_html = __commonJS({
-    "vendor/jsgui3-client/node_modules/jsgui3-html/html.js"(exports, module) {
+    "node_modules/jsgui3-html/html.js"(exports, module) {
       var jsgui = require_html_core();
       jsgui.Router = require_router();
       jsgui.Resource = require_resource();
@@ -35273,9 +37879,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/client-resource-pool.js
+  // node_modules/jsgui3-client/client-resource-pool.js
   var require_client_resource_pool = __commonJS({
-    "vendor/jsgui3-client/client-resource-pool.js"(exports, module) {
+    "node_modules/jsgui3-client/client-resource-pool.js"(exports, module) {
       var jsgui = require_html();
       var Resource_Pool = jsgui.Resource_Pool;
       var fnl = require_fnl();
@@ -35295,9 +37901,9 @@ div.grid .row .cell span {
     }
   });
 
-  // vendor/jsgui3-client/page-context.js
+  // node_modules/jsgui3-client/page-context.js
   var require_page_context2 = __commonJS({
-    "vendor/jsgui3-client/page-context.js"(exports, module) {
+    "node_modules/jsgui3-client/page-context.js"(exports, module) {
       var jsgui = require_html();
       var {
         Control: Control2,
@@ -35636,9 +38242,9 @@ body .overlay {
     }
   });
 
-  // vendor/jsgui3-client/resource.js
+  // node_modules/jsgui3-client/resource.js
   var require_resource2 = __commonJS({
-    "vendor/jsgui3-client/resource.js"(exports, module) {
+    "node_modules/jsgui3-client/resource.js"(exports, module) {
       var jsgui = require_html();
       var Resource = jsgui.Resource;
       var fnl = require_fnl();
@@ -35719,12 +38325,10 @@ body .overlay {
     }
   });
 
-  // vendor/jsgui3-client/client.js
+  // node_modules/jsgui3-client/client.js
   var require_client = __commonJS({
-    "vendor/jsgui3-client/client.js"(exports, module) {
-      var root = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : typeof window !== "undefined" ? window : {};
-      var jsgui = root.jsgui || require_html();
-      root.jsgui = jsgui;
+    "node_modules/jsgui3-client/client.js"(exports, module) {
+      var jsgui = require_html();
       jsgui.Resource_Pool = require_client_resource_pool();
       jsgui.Client_Page_Context = require_page_context2();
       jsgui.Client_Resource = require_resource2();
@@ -35733,7 +38337,6 @@ body .overlay {
       var { each, tf: tf2 } = jsgui;
       if (typeof window !== "undefined") {
         let context2;
-        let page_context;
         jsgui.http = (url, callback2) => {
           return prom_or_cb((resolve, reject) => {
             let timeout = 2500;
@@ -35861,11 +38464,1420 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/client/controls/DocsThemeToggleControl.js
-  var require_DocsThemeToggleControl = __commonJS({
-    "src/ui/server/docsViewer/client/controls/DocsThemeToggleControl.js"(exports, module) {
+  // src/ui/server/docsViewer/isomorphic/jsgui.js
+  var require_jsgui = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/jsgui.js"(exports, module) {
       "use strict";
-      var jsgui = require_client();
+      var isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
+      var jsgui;
+      if (isBrowser) {
+        jsgui = require_client();
+      } else {
+        jsgui = require_html();
+      }
+      module.exports = jsgui;
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/ResizableSplitLayoutControl.js
+  var require_ResizableSplitLayoutControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/ResizableSplitLayoutControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
+      var ResizableSplitLayoutControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Object} spec.context - jsgui context
+         * @param {HTMLElement} [spec.el] - Existing DOM element for hydration (client-side)
+         * @param {Control} [spec.leftPanel] - Control for left panel (server-side compose)
+         * @param {Control} [spec.rightPanel] - Control for right panel (server-side compose)
+         * @param {number} [spec.initialLeftWidth=280] - Initial width of left panel in pixels
+         * @param {number} [spec.minLeftWidth=150] - Minimum width of left panel
+         * @param {number} [spec.maxLeftWidth=600] - Maximum width of left panel
+         * @param {string} [spec.storageKey] - localStorage key for persisting width
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "resizable_split_layout" });
+          this.leftPanel = spec.leftPanel || null;
+          this.rightPanel = spec.rightPanel || null;
+          this.initialLeftWidth = spec.initialLeftWidth || 280;
+          this.minLeftWidth = spec.minLeftWidth || 150;
+          this.maxLeftWidth = spec.maxLeftWidth || 600;
+          this.storageKey = spec.storageKey || null;
+          this._isDragging = false;
+          this._startX = 0;
+          this._startWidth = 0;
+          this._leftPanelEl = null;
+          this._dividerEl = null;
+          this._rightPanelEl = null;
+          this.add_class("split-layout");
+          this.add_class("split-layout--horizontal");
+          this.dom.attributes["data-jsgui-control"] = "resizable_split_layout";
+          this.dom.attributes["data-initial-width"] = String(this.initialLeftWidth);
+          this.dom.attributes["data-min-width"] = String(this.minLeftWidth);
+          this.dom.attributes["data-max-width"] = String(this.maxLeftWidth);
+          if (this.storageKey) {
+            this.dom.attributes["data-storage-key"] = this.storageKey;
+          }
+          if (!spec.el) {
+            this.compose();
+          }
+        }
+        /**
+         * Compose the control's DOM structure
+         * Called on server for SSR, or on client for dynamic creation
+         */
+        compose() {
+          const leftContainer = new jsgui.Control({ context: this.context, tagName: "div" });
+          leftContainer.add_class("split-layout__panel");
+          leftContainer.add_class("split-layout__panel--left");
+          leftContainer.dom.attributes["data-panel"] = "left";
+          leftContainer.dom.attributes.style = `width: ${this.initialLeftWidth}px; min-width: ${this.minLeftWidth}px; max-width: ${this.maxLeftWidth}px;`;
+          if (this.leftPanel) {
+            leftContainer.add(this.leftPanel);
+          }
+          this.add(leftContainer);
+          const divider = new jsgui.Control({ context: this.context, tagName: "div" });
+          divider.add_class("split-layout__divider");
+          divider.dom.attributes["data-divider"] = "true";
+          divider.dom.attributes.role = "separator";
+          divider.dom.attributes["aria-orientation"] = "vertical";
+          divider.dom.attributes["aria-valuenow"] = String(this.initialLeftWidth);
+          divider.dom.attributes["aria-valuemin"] = String(this.minLeftWidth);
+          divider.dom.attributes["aria-valuemax"] = String(this.maxLeftWidth);
+          divider.dom.attributes.tabindex = "0";
+          divider.dom.attributes.title = "Drag to resize. Double-click to reset.";
+          const handle = new jsgui.Control({ context: this.context, tagName: "div" });
+          handle.add_class("split-layout__handle");
+          divider.add(handle);
+          this.add(divider);
+          const rightContainer = new jsgui.Control({ context: this.context, tagName: "div" });
+          rightContainer.add_class("split-layout__panel");
+          rightContainer.add_class("split-layout__panel--right");
+          rightContainer.dom.attributes["data-panel"] = "right";
+          if (this.rightPanel) {
+            rightContainer.add(this.rightPanel);
+          }
+          this.add(rightContainer);
+        }
+        /**
+         * Activate the control for client-side interactivity
+         * 
+         * This method is called during hydration when the control wraps
+         * an existing server-rendered DOM element. It:
+         * 1. Reads configuration from data attributes
+         * 2. Finds child elements (panels, divider)
+         * 3. Restores saved width from localStorage
+         * 4. Binds all event handlers for drag/resize behavior
+         */
+        activate() {
+          var _a;
+          if (this.__active) return;
+          this.__active = true;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) {
+            console.warn("[ResizableSplitLayoutControl] No element to activate");
+            return;
+          }
+          this.initialLeftWidth = parseInt(el.dataset.initialWidth, 10) || this.initialLeftWidth;
+          this.minLeftWidth = parseInt(el.dataset.minWidth, 10) || this.minLeftWidth;
+          this.maxLeftWidth = parseInt(el.dataset.maxWidth, 10) || this.maxLeftWidth;
+          this.storageKey = el.dataset.storageKey || this.storageKey;
+          this._leftPanelEl = el.querySelector("[data-panel='left']");
+          this._dividerEl = el.querySelector("[data-divider]");
+          this._rightPanelEl = el.querySelector("[data-panel='right']");
+          if (!this._leftPanelEl || !this._dividerEl) {
+            console.warn("[ResizableSplitLayoutControl] Missing required child elements");
+            return;
+          }
+          this._restoreSavedWidth();
+          this._onMouseDown = this._handleMouseDown.bind(this);
+          this._onMouseMove = this._handleMouseMove.bind(this);
+          this._onMouseUp = this._handleMouseUp.bind(this);
+          this._onTouchStart = this._handleTouchStart.bind(this);
+          this._onTouchMove = this._handleTouchMove.bind(this);
+          this._onTouchEnd = this._handleTouchEnd.bind(this);
+          this._onDblClick = this._handleDoubleClick.bind(this);
+          this._onKeyDown = this._handleKeyDown.bind(this);
+          this._dividerEl.addEventListener("mousedown", this._onMouseDown);
+          this._dividerEl.addEventListener("touchstart", this._onTouchStart, { passive: false });
+          this._dividerEl.addEventListener("dblclick", this._onDblClick);
+          this._dividerEl.addEventListener("keydown", this._onKeyDown);
+          console.log("[ResizableSplitLayoutControl] Activated with width:", this._getLeftWidth());
+        }
+        // ==================== Width Management ====================
+        /**
+         * Restore saved width from localStorage
+         * @private
+         */
+        _restoreSavedWidth() {
+          if (!this.storageKey || typeof localStorage === "undefined") return;
+          try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (saved) {
+              const width = parseInt(saved, 10);
+              if (width >= this.minLeftWidth && width <= this.maxLeftWidth) {
+                this._setLeftWidth(width);
+              }
+            }
+          } catch (e) {
+          }
+        }
+        /**
+         * Save current width to localStorage
+         * @param {number} width - Width in pixels
+         * @private
+         */
+        _saveWidth(width) {
+          if (!this.storageKey || typeof localStorage === "undefined") return;
+          try {
+            localStorage.setItem(this.storageKey, String(width));
+          } catch (e) {
+          }
+        }
+        /**
+         * Set the left panel width with constraints
+         * @param {number} width - Width in pixels
+         * @private
+         */
+        _setLeftWidth(width) {
+          if (!this._leftPanelEl) return;
+          width = Math.max(this.minLeftWidth, Math.min(this.maxLeftWidth, width));
+          this._leftPanelEl.style.width = width + "px";
+          if (this._dividerEl) {
+            this._dividerEl.setAttribute("aria-valuenow", String(width));
+          }
+        }
+        /**
+         * Get current left panel width
+         * @returns {number} Width in pixels
+         * @private
+         */
+        _getLeftWidth() {
+          return this._leftPanelEl ? this._leftPanelEl.offsetWidth : this.initialLeftWidth;
+        }
+        // ==================== Mouse Events ====================
+        /**
+         * Handle mousedown on divider - start drag operation
+         * @private
+         */
+        _handleMouseDown(e) {
+          e.preventDefault();
+          this._startDrag(e.clientX);
+          document.addEventListener("mousemove", this._onMouseMove);
+          document.addEventListener("mouseup", this._onMouseUp);
+        }
+        /**
+         * Handle mousemove - resize during drag
+         * @private
+         */
+        _handleMouseMove(e) {
+          if (!this._isDragging) return;
+          this._doDrag(e.clientX);
+        }
+        /**
+         * Handle mouseup - end drag operation
+         * @private
+         */
+        _handleMouseUp(e) {
+          this._endDrag();
+          document.removeEventListener("mousemove", this._onMouseMove);
+          document.removeEventListener("mouseup", this._onMouseUp);
+        }
+        // ==================== Touch Events ====================
+        /**
+         * Handle touchstart - start drag operation
+         * @private
+         */
+        _handleTouchStart(e) {
+          if (e.touches.length !== 1) return;
+          e.preventDefault();
+          this._startDrag(e.touches[0].clientX);
+          document.addEventListener("touchmove", this._onTouchMove, { passive: false });
+          document.addEventListener("touchend", this._onTouchEnd);
+          document.addEventListener("touchcancel", this._onTouchEnd);
+        }
+        /**
+         * Handle touchmove - resize during drag
+         * @private
+         */
+        _handleTouchMove(e) {
+          if (!this._isDragging || e.touches.length !== 1) return;
+          e.preventDefault();
+          this._doDrag(e.touches[0].clientX);
+        }
+        /**
+         * Handle touchend - end drag operation
+         * @private
+         */
+        _handleTouchEnd(e) {
+          this._endDrag();
+          document.removeEventListener("touchmove", this._onTouchMove);
+          document.removeEventListener("touchend", this._onTouchEnd);
+          document.removeEventListener("touchcancel", this._onTouchEnd);
+        }
+        // ==================== Drag Logic ====================
+        /**
+         * Start a drag operation
+         * @param {number} clientX - Starting X coordinate
+         * @private
+         */
+        _startDrag(clientX) {
+          var _a;
+          this._isDragging = true;
+          this._startX = clientX;
+          this._startWidth = this._getLeftWidth();
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (el) {
+            el.classList.add("split-layout--dragging");
+          }
+          document.body.style.userSelect = "none";
+          document.body.style.cursor = "ew-resize";
+        }
+        /**
+         * Perform drag resize calculation
+         * @param {number} clientX - Current X coordinate
+         * @private
+         */
+        _doDrag(clientX) {
+          const delta = clientX - this._startX;
+          const newWidth = this._startWidth + delta;
+          this._setLeftWidth(newWidth);
+        }
+        /**
+         * End a drag operation
+         * @private
+         */
+        _endDrag() {
+          var _a;
+          if (!this._isDragging) return;
+          this._isDragging = false;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (el) {
+            el.classList.remove("split-layout--dragging");
+          }
+          document.body.style.userSelect = "";
+          document.body.style.cursor = "";
+          this._saveWidth(this._getLeftWidth());
+        }
+        // ==================== Keyboard & Other Events ====================
+        /**
+         * Handle double-click on divider - reset to default width
+         * @private
+         */
+        _handleDoubleClick(e) {
+          this._setLeftWidth(this.initialLeftWidth);
+          this._saveWidth(this.initialLeftWidth);
+        }
+        /**
+         * Handle keyboard navigation on focused divider
+         * @private
+         */
+        _handleKeyDown(e) {
+          const step = e.shiftKey ? 50 : 10;
+          let width = this._getLeftWidth();
+          switch (e.key) {
+            case "ArrowLeft":
+              e.preventDefault();
+              width -= step;
+              break;
+            case "ArrowRight":
+              e.preventDefault();
+              width += step;
+              break;
+            case "Home":
+              e.preventDefault();
+              width = this.minLeftWidth;
+              break;
+            case "End":
+              e.preventDefault();
+              width = this.maxLeftWidth;
+              break;
+            default:
+              return;
+          }
+          this._setLeftWidth(width);
+          this._saveWidth(width);
+        }
+      };
+      module.exports = { ResizableSplitLayoutControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/DocNavControl.js
+  var require_DocNavControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/DocNavControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
+      var StringControl = jsgui.String_Control;
+      var DocNavControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Array} spec.docTree - Array of doc tree nodes
+         * @param {string} spec.selectedPath - Currently selected document path
+         * @param {string} spec.basePath - Base URL path for links
+         * @param {Object} spec.filters - File type filters { md: boolean, svg: boolean }
+         * @param {Object} spec.columns - Column visibility { mtime: boolean }
+         * @param {string} spec.sortBy - Sort field ('name' or 'mtime')
+         * @param {string} spec.sortOrder - Sort order ('asc' or 'desc')
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "nav" });
+          this.docTree = spec.docTree || [];
+          this.selectedPath = spec.selectedPath || null;
+          this.basePath = spec.basePath || "/";
+          this.filters = spec.filters || { md: true, svg: true };
+          this.columns = spec.columns || { mtime: false };
+          this.sortBy = spec.sortBy || "name";
+          this.sortOrder = spec.sortOrder || "asc";
+          this.add_class("doc-nav");
+          this.dom.attributes["aria-label"] = "Documentation navigation";
+          if (!spec.el) {
+            this.compose();
+          }
+        }
+        compose() {
+          const header = new jsgui.Control({ context: this.context, tagName: "div" });
+          header.add_class("doc-nav__header");
+          const title = new jsgui.Control({ context: this.context, tagName: "h2" });
+          title.add_class("doc-nav__title");
+          title.add(new StringControl({ context: this.context, text: "Documentation" }));
+          header.add(title);
+          const searchBox = new jsgui.Control({ context: this.context, tagName: "div" });
+          searchBox.add_class("doc-nav__search");
+          const searchIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+          searchIcon.add_class("doc-nav__search-icon");
+          searchIcon.add("\u{1F50D}");
+          searchBox.add(searchIcon);
+          const searchInput = new jsgui.Control({ context: this.context, tagName: "input" });
+          searchInput.dom.attributes.type = "text";
+          searchInput.dom.attributes.placeholder = "Search docs...";
+          searchInput.dom.attributes["data-jsgui-control"] = "docs_search";
+          searchInput.add_class("doc-nav__search-input");
+          searchBox.add(searchInput);
+          header.add(searchBox);
+          const filtersContainer = new jsgui.Control({ context: this.context, tagName: "div" });
+          filtersContainer.add_class("doc-nav__filters");
+          filtersContainer.dom.attributes["data-jsgui-control"] = "docs_file_filter";
+          const mdLabel = new jsgui.Control({ context: this.context, tagName: "label" });
+          mdLabel.add_class("doc-nav__filter-label");
+          const mdCheckbox = new jsgui.Control({ context: this.context, tagName: "input" });
+          mdCheckbox.dom.attributes.type = "checkbox";
+          if (this.filters.md) {
+            mdCheckbox.dom.attributes.checked = "checked";
+          }
+          mdCheckbox.dom.attributes["data-filter-ext"] = "md";
+          mdCheckbox.add_class("doc-nav__filter-checkbox");
+          mdLabel.add(mdCheckbox);
+          mdLabel.add(new StringControl({ context: this.context, text: " .md" }));
+          filtersContainer.add(mdLabel);
+          const svgLabel = new jsgui.Control({ context: this.context, tagName: "label" });
+          svgLabel.add_class("doc-nav__filter-label");
+          const svgCheckbox = new jsgui.Control({ context: this.context, tagName: "input" });
+          svgCheckbox.dom.attributes.type = "checkbox";
+          if (this.filters.svg) {
+            svgCheckbox.dom.attributes.checked = "checked";
+          }
+          svgCheckbox.dom.attributes["data-filter-ext"] = "svg";
+          svgCheckbox.add_class("doc-nav__filter-checkbox");
+          svgLabel.add(svgCheckbox);
+          svgLabel.add(new StringControl({ context: this.context, text: " .svg" }));
+          filtersContainer.add(svgLabel);
+          header.add(filtersContainer);
+          this.add(header);
+          const columnHeader = this._buildColumnHeader();
+          this.add(columnHeader);
+          const contextMenu = this._buildColumnContextMenu();
+          this.add(contextMenu);
+          const treeContainer = new jsgui.Control({ context: this.context, tagName: "div" });
+          treeContainer.add_class("doc-nav__tree");
+          treeContainer.dom.attributes["data-doc-tree"] = "";
+          const rootList = this._buildTreeList(this.docTree, 0);
+          treeContainer.add(rootList);
+          this.add(treeContainer);
+        }
+        /**
+         * Build the column header row with sort controls
+         */
+        _buildColumnHeader() {
+          const headerRow = new jsgui.Control({ context: this.context, tagName: "div" });
+          headerRow.add_class("doc-nav__column-header");
+          headerRow.dom.attributes["data-column-header"] = "true";
+          headerRow.dom.attributes["data-jsgui-control"] = "column_header";
+          const nameHeader = new jsgui.Control({ context: this.context, tagName: "div" });
+          nameHeader.add_class("doc-nav__col-header");
+          nameHeader.add_class("doc-nav__col-header--name");
+          nameHeader.add_class("doc-nav__col-header--sortable");
+          if (this.sortBy === "name") {
+            nameHeader.add_class("doc-nav__col-header--active");
+          }
+          nameHeader.dom.attributes["data-sort-by"] = "name";
+          nameHeader.dom.attributes["data-sort-order"] = this.sortBy === "name" ? this.sortOrder : "asc";
+          nameHeader.dom.attributes.title = "Click to sort by name";
+          const nameText = new jsgui.Control({ context: this.context, tagName: "span" });
+          nameText.add(new StringControl({ context: this.context, text: "Name" }));
+          nameHeader.add(nameText);
+          if (this.sortBy === "name") {
+            const sortIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+            sortIcon.add_class("doc-nav__sort-icon");
+            sortIcon.add(new StringControl({ context: this.context, text: this.sortOrder === "asc" ? " \u25B2" : " \u25BC" }));
+            nameHeader.add(sortIcon);
+          }
+          headerRow.add(nameHeader);
+          if (this.columns.mtime) {
+            const mtimeHeader = new jsgui.Control({ context: this.context, tagName: "div" });
+            mtimeHeader.add_class("doc-nav__col-header");
+            mtimeHeader.add_class("doc-nav__col-header--mtime");
+            mtimeHeader.add_class("doc-nav__col-header--sortable");
+            if (this.sortBy === "mtime") {
+              mtimeHeader.add_class("doc-nav__col-header--active");
+            }
+            mtimeHeader.dom.attributes["data-sort-by"] = "mtime";
+            mtimeHeader.dom.attributes["data-sort-order"] = this.sortBy === "mtime" ? this.sortOrder : "desc";
+            mtimeHeader.dom.attributes.title = "Click to sort by date modified";
+            const mtimeText = new jsgui.Control({ context: this.context, tagName: "span" });
+            mtimeText.add(new StringControl({ context: this.context, text: "Modified" }));
+            mtimeHeader.add(mtimeText);
+            if (this.sortBy === "mtime") {
+              const sortIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+              sortIcon.add_class("doc-nav__sort-icon");
+              sortIcon.add(new StringControl({ context: this.context, text: this.sortOrder === "asc" ? " \u25B2" : " \u25BC" }));
+              mtimeHeader.add(sortIcon);
+            }
+            headerRow.add(mtimeHeader);
+          }
+          const optionsBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+          optionsBtn.add_class("doc-nav__col-options-btn");
+          optionsBtn.dom.attributes.type = "button";
+          optionsBtn.dom.attributes.title = "Column options";
+          optionsBtn.dom.attributes["data-action"] = "show-column-menu";
+          optionsBtn.add(new StringControl({ context: this.context, text: "\u22EE" }));
+          headerRow.add(optionsBtn);
+          return headerRow;
+        }
+        /**
+         * Build the context menu for column selection
+         */
+        _buildColumnContextMenu() {
+          const menu = new jsgui.Control({ context: this.context, tagName: "div" });
+          menu.add_class("doc-nav__context-menu");
+          menu.dom.attributes["data-context-menu"] = "columns";
+          menu.dom.attributes["data-jsgui-control"] = "column_context_menu";
+          menu.dom.attributes.style = "display: none;";
+          const menuTitle = new jsgui.Control({ context: this.context, tagName: "div" });
+          menuTitle.add_class("doc-nav__context-menu-title");
+          menuTitle.add(new StringControl({ context: this.context, text: "\u2699\uFE0F Show Columns" }));
+          menu.add(menuTitle);
+          const mtimeOption = new jsgui.Control({ context: this.context, tagName: "label" });
+          mtimeOption.add_class("doc-nav__context-menu-option");
+          const mtimeCheckbox = new jsgui.Control({ context: this.context, tagName: "input" });
+          mtimeCheckbox.dom.attributes.type = "checkbox";
+          mtimeCheckbox.dom.attributes["data-column-toggle"] = "mtime";
+          if (this.columns.mtime) {
+            mtimeCheckbox.dom.attributes.checked = "checked";
+          }
+          mtimeOption.add(mtimeCheckbox);
+          mtimeOption.add(new StringControl({ context: this.context, text: " \u{1F4C5} Last Modified" }));
+          menu.add(mtimeOption);
+          return menu;
+        }
+        /**
+         * Build a nested list for a set of tree nodes
+         */
+        _buildTreeList(nodes, depth = 0) {
+          const list = new jsgui.Control({ context: this.context, tagName: "ul" });
+          list.add_class("doc-nav__list");
+          list.add_class(`doc-nav__list--depth-${Math.min(depth, 3)}`);
+          for (const node of nodes) {
+            if (node.type === "file") {
+              const ext = (node.name || "").split(".").pop().toLowerCase();
+              if (ext === "md" && !this.filters.md) continue;
+              if (ext === "svg" && !this.filters.svg) continue;
+            }
+            if (node.type === "folder" && !this._hasVisibleChildren(node)) {
+              continue;
+            }
+            const item2 = this._buildTreeItem(node, depth);
+            list.add(item2);
+          }
+          return list;
+        }
+        /**
+         * Check if a folder has any visible children after filtering
+         */
+        _hasVisibleChildren(node) {
+          if (!node.children || node.children.length === 0) return false;
+          for (const child of node.children) {
+            if (child.type === "file") {
+              const ext = (child.name || "").split(".").pop().toLowerCase();
+              if (ext === "md" && this.filters.md) return true;
+              if (ext === "svg" && this.filters.svg) return true;
+              if (ext !== "md" && ext !== "svg") return true;
+            } else if (child.type === "folder") {
+              if (this._hasVisibleChildren(child)) return true;
+            }
+          }
+          return false;
+        }
+        /**
+         * Build URL with current filter, column, and sort state preserved
+         */
+        _buildUrl(docPath) {
+          const params = new URLSearchParams();
+          if (docPath) {
+            params.set("doc", docPath);
+          }
+          if (!this.filters.md) params.set("show_md", "0");
+          if (!this.filters.svg) params.set("show_svg", "0");
+          if (this.columns.mtime) params.set("col_mtime", "1");
+          if (this.sortBy !== "name") params.set("sort_by", this.sortBy);
+          if (this.sortOrder !== "asc") params.set("sort_order", this.sortOrder);
+          const queryString = params.toString();
+          return queryString ? `${this.basePath}?${queryString}` : this.basePath;
+        }
+        /**
+         * Build a single tree item (file or folder)
+         */
+        _buildTreeItem(node, depth = 0) {
+          const item2 = new jsgui.Control({ context: this.context, tagName: "li" });
+          item2.add_class("doc-nav__item");
+          item2.add_class(`doc-nav__item--${node.type}`);
+          if (this.columns.mtime) {
+            item2.add_class("doc-nav__item--with-columns");
+          }
+          if (node.type === "file") {
+            const ext = (node.name || "").split(".").pop().toLowerCase();
+            item2.dom.attributes["data-file-ext"] = ext;
+          }
+          if (node.type === "folder") {
+            const details = new jsgui.Control({ context: this.context, tagName: "details" });
+            details.add_class("doc-nav__folder");
+            if (depth === 0 || this._containsSelected(node)) {
+              details.dom.attributes.open = "open";
+            }
+            const summary = new jsgui.Control({ context: this.context, tagName: "summary" });
+            summary.add_class("doc-nav__folder-summary");
+            const rowContainer = new jsgui.Control({ context: this.context, tagName: "div" });
+            rowContainer.add_class("doc-nav__row");
+            const nameCell = new jsgui.Control({ context: this.context, tagName: "div" });
+            nameCell.add_class("doc-nav__cell");
+            nameCell.add_class("doc-nav__cell--name");
+            const icon = new jsgui.Control({ context: this.context, tagName: "span" });
+            icon.add_class("doc-nav__icon");
+            icon.add_class("doc-nav__icon--folder");
+            icon.add(new StringControl({ context: this.context, text: "\u{1F4C1}" }));
+            nameCell.add(icon);
+            const label = new jsgui.Control({ context: this.context, tagName: "span" });
+            label.add_class("doc-nav__label");
+            label.add(new StringControl({ context: this.context, text: node.name }));
+            nameCell.add(label);
+            rowContainer.add(nameCell);
+            if (this.columns.mtime && node.mtime) {
+              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+              mtimeCell.add_class("doc-nav__cell");
+              mtimeCell.add_class("doc-nav__cell--mtime");
+              mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
+              rowContainer.add(mtimeCell);
+            } else if (this.columns.mtime) {
+              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+              mtimeCell.add_class("doc-nav__cell");
+              mtimeCell.add_class("doc-nav__cell--mtime");
+              rowContainer.add(mtimeCell);
+            }
+            summary.add(rowContainer);
+            details.add(summary);
+            if (node.children && node.children.length > 0) {
+              const childList = this._buildTreeList(node.children, depth + 1);
+              details.add(childList);
+            }
+            item2.add(details);
+          } else {
+            const link = new jsgui.Control({ context: this.context, tagName: "a" });
+            link.add_class("doc-nav__link");
+            link.dom.attributes.href = this._buildUrl(node.path);
+            link.dom.attributes["data-doc-path"] = node.path;
+            if (this.selectedPath === node.path) {
+              link.add_class("doc-nav__link--selected");
+              link.dom.attributes["aria-current"] = "page";
+            }
+            const rowContainer = new jsgui.Control({ context: this.context, tagName: "div" });
+            rowContainer.add_class("doc-nav__row");
+            const nameCell = new jsgui.Control({ context: this.context, tagName: "div" });
+            nameCell.add_class("doc-nav__cell");
+            nameCell.add_class("doc-nav__cell--name");
+            const icon = new jsgui.Control({ context: this.context, tagName: "span" });
+            icon.add_class("doc-nav__icon");
+            icon.add_class("doc-nav__icon--file");
+            icon.add(new StringControl({ context: this.context, text: this._getFileIcon(node.name) }));
+            nameCell.add(icon);
+            const label = new jsgui.Control({ context: this.context, tagName: "span" });
+            label.add_class("doc-nav__label");
+            label.add(new StringControl({ context: this.context, text: this._formatFileName(node.name) }));
+            nameCell.add(label);
+            rowContainer.add(nameCell);
+            if (this.columns.mtime && node.mtime) {
+              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+              mtimeCell.add_class("doc-nav__cell");
+              mtimeCell.add_class("doc-nav__cell--mtime");
+              mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
+              rowContainer.add(mtimeCell);
+            } else if (this.columns.mtime) {
+              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+              mtimeCell.add_class("doc-nav__cell");
+              mtimeCell.add_class("doc-nav__cell--mtime");
+              rowContainer.add(mtimeCell);
+            }
+            link.add(rowContainer);
+            item2.add(link);
+          }
+          return item2;
+        }
+        /**
+         * Format an ISO date string for display
+         */
+        _formatDate(isoString) {
+          if (!isoString) return "";
+          try {
+            const date = new Date(isoString);
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            const year = String(date.getFullYear()).slice(-2);
+            return `${month}-${day}-${year}`;
+          } catch (e) {
+            return "";
+          }
+        }
+        /**
+         * Check if a folder contains the selected document
+         */
+        _containsSelected(node) {
+          if (!this.selectedPath) return false;
+          if (node.type === "file") {
+            return node.path === this.selectedPath;
+          }
+          if (node.children) {
+            return node.children.some((child) => this._containsSelected(child));
+          }
+          return false;
+        }
+        /**
+         * Get an appropriate icon for a file
+         */
+        _getFileIcon(filename) {
+          const ext = (filename || "").split(".").pop().toLowerCase();
+          switch (ext) {
+            case "md":
+              return "\u{1F4C4}";
+            case "svg":
+              return "\u{1F5BC}\uFE0F";
+            case "json":
+              return "\u{1F4CB}";
+            case "sql":
+              return "\u{1F5C3}\uFE0F";
+            default:
+              return "\u{1F4C4}";
+          }
+        }
+        /**
+         * Format filename for display (remove extension, humanize)
+         */
+        _formatFileName(filename) {
+          let name = filename.replace(/\.md$/i, "");
+          if (!/^[A-Z_]+$/.test(name)) {
+          }
+          return name;
+        }
+      };
+      module.exports = { DocNavControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/DocViewerControl.js
+  var require_DocViewerControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/DocViewerControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
+      var StringControl = jsgui.String_Control;
+      var DocViewerControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Object} spec.docContent - Document content { title, html, path, svgControl? }
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "main" });
+          this.docContent = spec.docContent || null;
+          this.add_class("doc-viewer");
+          this.dom.attributes["role"] = "main";
+          if (!spec.el) {
+            this.compose();
+          }
+        }
+        compose() {
+          if (!this.docContent) {
+            this._composeWelcome();
+            return;
+          }
+          this._composeDocument();
+        }
+        /**
+         * Compose welcome/empty state
+         */
+        _composeWelcome() {
+          const welcome = new jsgui.Control({ context: this.context, tagName: "div" });
+          welcome.add_class("doc-viewer__welcome");
+          const icon = new jsgui.Control({ context: this.context, tagName: "div" });
+          icon.add_class("doc-viewer__welcome-icon");
+          icon.add(new StringControl({ context: this.context, text: "\u{1F4DA}" }));
+          welcome.add(icon);
+          const title = new jsgui.Control({ context: this.context, tagName: "h1" });
+          title.add_class("doc-viewer__welcome-title");
+          title.add(new StringControl({ context: this.context, text: "Documentation Viewer" }));
+          welcome.add(title);
+          const message = new jsgui.Control({ context: this.context, tagName: "p" });
+          message.add_class("doc-viewer__welcome-message");
+          message.add(new StringControl({ context: this.context, text: "Select a document from the navigation panel to view its contents." }));
+          welcome.add(message);
+          const quickLinks = new jsgui.Control({ context: this.context, tagName: "div" });
+          quickLinks.add_class("doc-viewer__quick-links");
+          const quickTitle = new jsgui.Control({ context: this.context, tagName: "h3" });
+          quickTitle.add(new StringControl({ context: this.context, text: "Quick Links" }));
+          quickLinks.add(quickTitle);
+          const linkList = new jsgui.Control({ context: this.context, tagName: "ul" });
+          const defaultDocs = [
+            { name: "INDEX.md", label: "Documentation Index" },
+            { name: "ROADMAP.md", label: "Project Roadmap" },
+            { name: "QUICK_REFERENCE.md", label: "Quick Reference" }
+          ];
+          for (const doc of defaultDocs) {
+            const li = new jsgui.Control({ context: this.context, tagName: "li" });
+            const link = new jsgui.Control({ context: this.context, tagName: "a" });
+            link.dom.attributes.href = `/?doc=${encodeURIComponent(doc.name)}`;
+            link.add(new StringControl({ context: this.context, text: doc.label }));
+            li.add(link);
+            linkList.add(li);
+          }
+          quickLinks.add(linkList);
+          welcome.add(quickLinks);
+          this.add(welcome);
+        }
+        /**
+         * Compose document view with header, content, and footer
+         */
+        _composeDocument() {
+          const header = new jsgui.Control({ context: this.context, tagName: "header" });
+          header.add_class("doc-viewer__header");
+          if (this.docContent.path) {
+            const breadcrumb = this._buildBreadcrumb(this.docContent.path);
+            header.add(breadcrumb);
+          }
+          const title = new jsgui.Control({ context: this.context, tagName: "h1" });
+          title.add_class("doc-viewer__title");
+          title.add(new StringControl({ context: this.context, text: this.docContent.title || "Document" }));
+          header.add(title);
+          const toolbar = this._buildToolbar();
+          header.add(toolbar);
+          this.add(header);
+          const article = new jsgui.Control({ context: this.context, tagName: "article" });
+          article.add_class("doc-viewer__content");
+          article.dom.attributes["data-doc-content"] = "";
+          if (this.docContent.svgControl) {
+            article.add(this.docContent.svgControl);
+          } else {
+            const contentWrapper = new DocContentControl({
+              context: this.context,
+              html: this.docContent.html || ""
+            });
+            article.add(contentWrapper);
+          }
+          this.add(article);
+          const footer = new jsgui.Control({ context: this.context, tagName: "footer" });
+          footer.add_class("doc-viewer__footer");
+          if (this.docContent.path) {
+            const pathInfo = new jsgui.Control({ context: this.context, tagName: "span" });
+            pathInfo.add_class("doc-viewer__path-info");
+            pathInfo.add(new StringControl({ context: this.context, text: `\u{1F4C1} ${this.docContent.path}` }));
+            footer.add(pathInfo);
+          }
+          this.add(footer);
+        }
+        /**
+         * Build breadcrumb navigation from path
+         */
+        _buildBreadcrumb(docPath) {
+          const nav = new jsgui.Control({ context: this.context, tagName: "nav" });
+          nav.add_class("doc-viewer__breadcrumb");
+          nav.dom.attributes["aria-label"] = "Breadcrumb";
+          const ol = new jsgui.Control({ context: this.context, tagName: "ol" });
+          ol.add_class("doc-viewer__breadcrumb-list");
+          const homeLi = new jsgui.Control({ context: this.context, tagName: "li" });
+          homeLi.add_class("doc-viewer__breadcrumb-item");
+          const homeLink = new jsgui.Control({ context: this.context, tagName: "a" });
+          homeLink.dom.attributes.href = "/";
+          homeLink.add(new StringControl({ context: this.context, text: "Home" }));
+          homeLi.add(homeLink);
+          ol.add(homeLi);
+          const parts = docPath.split("/").filter(Boolean);
+          let accPath = "";
+          for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            accPath += (accPath ? "/" : "") + part;
+            const li = new jsgui.Control({ context: this.context, tagName: "li" });
+            li.add_class("doc-viewer__breadcrumb-item");
+            if (i === parts.length - 1) {
+              const span = new jsgui.Control({ context: this.context, tagName: "span" });
+              span.dom.attributes["aria-current"] = "page";
+              span.add(new StringControl({ context: this.context, text: part.replace(/\.md$/i, "") }));
+              li.add(span);
+            } else {
+              const span = new jsgui.Control({ context: this.context, tagName: "span" });
+              span.add(new StringControl({ context: this.context, text: part }));
+              li.add(span);
+            }
+            ol.add(li);
+          }
+          nav.add(ol);
+          return nav;
+        }
+        /**
+         * Build toolbar with actions
+         */
+        _buildToolbar() {
+          const toolbar = new jsgui.Control({ context: this.context, tagName: "div" });
+          toolbar.add_class("doc-viewer__toolbar");
+          toolbar.dom.attributes["role"] = "toolbar";
+          const copyBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+          copyBtn.add_class("doc-viewer__toolbar-btn");
+          copyBtn.dom.attributes.type = "button";
+          copyBtn.dom.attributes.title = "Copy link";
+          copyBtn.dom.attributes["data-action"] = "copy-link";
+          copyBtn.add(new StringControl({ context: this.context, text: "\u{1F517}" }));
+          toolbar.add(copyBtn);
+          const printBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+          printBtn.add_class("doc-viewer__toolbar-btn");
+          printBtn.dom.attributes.type = "button";
+          printBtn.dom.attributes.title = "Print document";
+          printBtn.dom.attributes["data-action"] = "print";
+          printBtn.add(new StringControl({ context: this.context, text: "\u{1F5A8}\uFE0F" }));
+          toolbar.add(printBtn);
+          return toolbar;
+        }
+      };
+      var DocContentControl = class extends jsgui.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.rawHtml = spec.html || "";
+          this.add_class("doc-content");
+        }
+        /**
+         * Override all_html_render to inject raw HTML
+         */
+        all_html_render() {
+          const attributes = this.renderDomAttributes ? this.renderDomAttributes() : "";
+          return `<div${attributes}>${this.rawHtml}</div>`;
+        }
+      };
+      module.exports = { DocViewerControl, DocContentControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/DocAppControl.js
+  var require_DocAppControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/DocAppControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
+      var { DocNavControl } = require_DocNavControl();
+      var { DocViewerControl } = require_DocViewerControl();
+      var { ResizableSplitLayoutControl } = require_ResizableSplitLayoutControl();
+      var StringControl = jsgui.String_Control;
+      var DocAppControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Array} spec.docTree - Documentation tree structure
+         * @param {string} spec.selectedPath - Currently selected document path
+         * @param {Object} spec.docContent - Document content { title, html, path }
+         * @param {Object} spec.filters - File type filters { md: boolean, svg: boolean }
+         * @param {Object} spec.columns - Column visibility { mtime: boolean }
+         * @param {string} spec.sortBy - Sort field ('name' or 'mtime')
+         * @param {string} spec.sortOrder - Sort order ('asc' or 'desc')
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.docTree = spec.docTree || [];
+          this.selectedPath = spec.selectedPath || null;
+          this.docContent = spec.docContent || null;
+          this.filters = spec.filters || { md: true, svg: true };
+          this.columns = spec.columns || { mtime: false };
+          this.sortBy = spec.sortBy || "name";
+          this.sortOrder = spec.sortOrder || "asc";
+          this.add_class("doc-app");
+          this.dom.attributes["data-jsgui-id"] = "doc-app";
+          if (!spec.el) {
+            this.compose();
+          }
+        }
+        compose() {
+          const header = this._buildHeader();
+          this.add(header);
+          const navColumn = new jsgui.Control({ context: this.context, tagName: "aside" });
+          navColumn.add_class("doc-app__nav-column");
+          navColumn.dom.attributes["data-jsgui-id"] = "nav-column";
+          const nav = new DocNavControl({
+            context: this.context,
+            docTree: this.docTree,
+            selectedPath: this.selectedPath,
+            basePath: "/",
+            filters: this.filters,
+            columns: this.columns,
+            sortBy: this.sortBy,
+            sortOrder: this.sortOrder
+          });
+          navColumn.add(nav);
+          const toggleBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+          toggleBtn.add_class("doc-app__nav-toggle");
+          toggleBtn.dom.attributes.type = "button";
+          toggleBtn.dom.attributes["aria-label"] = "Toggle navigation";
+          toggleBtn.dom.attributes["data-jsgui-control"] = "docs_nav_toggle";
+          toggleBtn.add(new StringControl({ context: this.context, text: "\u2630" }));
+          navColumn.add(toggleBtn);
+          const contentColumn = new jsgui.Control({ context: this.context, tagName: "div" });
+          contentColumn.add_class("doc-app__content-column");
+          contentColumn.dom.attributes["data-jsgui-id"] = "content-column";
+          const viewer = new DocViewerControl({
+            context: this.context,
+            docContent: this.docContent
+          });
+          contentColumn.add(viewer);
+          const layout = new ResizableSplitLayoutControl({
+            context: this.context,
+            leftPanel: navColumn,
+            rightPanel: contentColumn,
+            initialLeftWidth: 280,
+            minLeftWidth: 180,
+            maxLeftWidth: 600,
+            storageKey: "docs-viewer-nav-width"
+          });
+          layout.add_class("doc-app__layout");
+          this.add(layout);
+        }
+        /**
+         * Build the application header
+         */
+        _buildHeader() {
+          const header = new jsgui.Control({ context: this.context, tagName: "header" });
+          header.add_class("doc-app__header");
+          const logo = new jsgui.Control({ context: this.context, tagName: "a" });
+          logo.add_class("doc-app__logo");
+          logo.dom.attributes.href = "/";
+          const logoIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+          logoIcon.add_class("doc-app__logo-icon");
+          logoIcon.add(new StringControl({ context: this.context, text: "\u{1F4DA}" }));
+          logo.add(logoIcon);
+          const logoText = new jsgui.Control({ context: this.context, tagName: "span" });
+          logoText.add_class("doc-app__logo-text");
+          logoText.add(new StringControl({ context: this.context, text: "Docs" }));
+          logo.add(logoText);
+          header.add(logo);
+          if (this.docContent && this.docContent.title) {
+            const titleSep = new jsgui.Control({ context: this.context, tagName: "span" });
+            titleSep.add_class("doc-app__header-sep");
+            titleSep.add(new StringControl({ context: this.context, text: "/" }));
+            header.add(titleSep);
+            const title = new jsgui.Control({ context: this.context, tagName: "span" });
+            title.add_class("doc-app__header-title");
+            title.add(new StringControl({ context: this.context, text: this.docContent.title }));
+            header.add(title);
+          }
+          const spacer = new jsgui.Control({ context: this.context, tagName: "div" });
+          spacer.add_class("doc-app__header-spacer");
+          header.add(spacer);
+          const themeBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+          themeBtn.add_class("doc-app__theme-toggle");
+          themeBtn.dom.attributes.type = "button";
+          themeBtn.dom.attributes.title = "Toggle theme";
+          themeBtn.dom.attributes["data-jsgui-control"] = "docs_theme_toggle";
+          themeBtn.add(new StringControl({ context: this.context, text: "\u{1F319}" }));
+          header.add(themeBtn);
+          return header;
+        }
+      };
+      module.exports = { DocAppControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/ContextMenuControl.js
+  var require_ContextMenuControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/ContextMenuControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
+      var ContextMenuControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Object} spec.context - jsgui context
+         * @param {HTMLElement} [spec.el] - Existing DOM element to activate
+         * @param {Function} [spec.onClose] - Callback when menu closes
+         * @param {Function} [spec.onSelect] - Callback when item is selected
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "context_menu" });
+          this.onClose = spec.onClose || (() => {
+          });
+          this.onSelect = spec.onSelect || (() => {
+          });
+          this._boundCloseOnClickOutside = this._closeOnClickOutside.bind(this);
+          this._boundCloseOnEscape = this._closeOnEscape.bind(this);
+          this._isVisible = false;
+        }
+        /**
+         * Activate the control - bind event listeners
+         */
+        activate() {
+          var _a;
+          if (this.__active) return;
+          this.__active = true;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          el.addEventListener("keydown", this._handleKeyNav.bind(this));
+        }
+        /**
+         * Show the context menu at the specified position
+         * @param {number} x - X coordinate (pixels from viewport left)
+         * @param {number} y - Y coordinate (pixels from viewport top)
+         */
+        show(x, y) {
+          var _a;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          if (!this._originalParent) {
+            this._originalParent = el.parentNode;
+          }
+          if (el.parentNode !== document.body) {
+            document.body.appendChild(el);
+          }
+          el.style.position = "fixed";
+          el.style.display = "block";
+          el.style.left = x + "px";
+          el.style.top = y + "px";
+          el.style.zIndex = "10000";
+          this._adjustForViewport();
+          this._isVisible = true;
+          setTimeout(() => {
+            document.addEventListener("click", this._boundCloseOnClickOutside);
+            document.addEventListener("keydown", this._boundCloseOnEscape);
+          }, 10);
+          const firstFocusable = el.querySelector("input, button, [tabindex]");
+          if (firstFocusable) {
+            firstFocusable.focus();
+          }
+        }
+        /**
+         * Hide the context menu
+         */
+        hide() {
+          var _a;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          el.style.display = "none";
+          this._isVisible = false;
+          if (this._originalParent && el.parentNode === document.body) {
+            this._originalParent.appendChild(el);
+          }
+          document.removeEventListener("click", this._boundCloseOnClickOutside);
+          document.removeEventListener("keydown", this._boundCloseOnEscape);
+          this.onClose();
+        }
+        /**
+         * Toggle menu visibility
+         * @param {number} x - X coordinate for show
+         * @param {number} y - Y coordinate for show
+         */
+        toggle(x, y) {
+          if (this._isVisible) {
+            this.hide();
+          } else {
+            this.show(x, y);
+          }
+        }
+        /**
+         * Check if menu is currently visible
+         * @returns {boolean}
+         */
+        isVisible() {
+          return this._isVisible;
+        }
+        /**
+         * Adjust menu position to stay within viewport
+         * @private
+         */
+        _adjustForViewport() {
+          var _a;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          const rect = el.getBoundingClientRect();
+          const currentLeft = parseFloat(el.style.left) || 0;
+          const currentTop = parseFloat(el.style.top) || 0;
+          if (rect.right > window.innerWidth) {
+            el.style.left = currentLeft - (rect.right - window.innerWidth) - 8 + "px";
+          }
+          if (rect.left < 0) {
+            el.style.left = "8px";
+          }
+          if (rect.bottom > window.innerHeight) {
+            el.style.top = currentTop - (rect.bottom - window.innerHeight) - 8 + "px";
+          }
+          if (rect.top < 0) {
+            el.style.top = "8px";
+          }
+        }
+        /**
+         * Handle click outside to close
+         * @private
+         */
+        _closeOnClickOutside(e) {
+          var _a;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          if (!el.contains(e.target)) {
+            this.hide();
+          }
+        }
+        /**
+         * Handle escape key to close
+         * @private
+         */
+        _closeOnEscape(e) {
+          if (e.key === "Escape") {
+            this.hide();
+          }
+        }
+        /**
+         * Handle keyboard navigation within menu
+         * @private
+         */
+        _handleKeyNav(e) {
+          var _a;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          const focusables = Array.from(el.querySelectorAll("input, button, [tabindex]:not([tabindex='-1'])"));
+          if (focusables.length === 0) return;
+          const currentIndex = focusables.indexOf(document.activeElement);
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const nextIndex = (currentIndex + 1) % focusables.length;
+            focusables[nextIndex].focus();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            const prevIndex = (currentIndex - 1 + focusables.length) % focusables.length;
+            focusables[prevIndex].focus();
+          }
+        }
+      };
+      module.exports = { ContextMenuControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/ColumnContextMenuControl.js
+  var require_ColumnContextMenuControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/ColumnContextMenuControl.js"(exports, module) {
+      "use strict";
+      var { ContextMenuControl } = require_ContextMenuControl();
+      var ColumnContextMenuControl = class extends ContextMenuControl {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Object} spec.context - jsgui context
+         * @param {HTMLElement} [spec.el] - Existing DOM element to activate
+         */
+        constructor(spec = {}) {
+          super({ ...spec });
+          this.__type_name = "column_context_menu";
+        }
+        /**
+         * Activate the control - bind event listeners
+         */
+        activate() {
+          var _a;
+          if (this.__active) return;
+          super.activate();
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          el.addEventListener("change", this._handleColumnToggle.bind(this));
+        }
+        /**
+         * Handle checkbox change to toggle column visibility
+         * @private
+         */
+        _handleColumnToggle(e) {
+          const toggle = e.target.closest("[data-column-toggle]");
+          if (!toggle) return;
+          const column = toggle.getAttribute("data-column-toggle");
+          const isChecked = toggle.checked;
+          const url = new URL(window.location.href);
+          if (isChecked) {
+            url.searchParams.set("col_" + column, "1");
+          } else {
+            url.searchParams.delete("col_" + column);
+          }
+          window.location.href = url.toString();
+        }
+      };
+      module.exports = { ColumnContextMenuControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/ColumnHeaderControl.js
+  var require_ColumnHeaderControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/ColumnHeaderControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
+      var ColumnHeaderControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {Object} spec.context - jsgui context
+         * @param {HTMLElement} [spec.el] - Existing DOM element to activate
+         * @param {string} [spec.contextMenuSelector] - Selector for context menu element
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "column_header" });
+          this.contextMenuSelector = spec.contextMenuSelector || "[data-context-menu='columns']";
+          this._contextMenuControl = null;
+        }
+        /**
+         * Get the context menu control (lazy lookup)
+         * @returns {Object|null}
+         */
+        getContextMenuControl() {
+          if (this._contextMenuControl) return this._contextMenuControl;
+          const menuEl = document.querySelector(this.contextMenuSelector);
+          if (menuEl && menuEl.__jsgui_control) {
+            this._contextMenuControl = menuEl.__jsgui_control;
+          }
+          return this._contextMenuControl;
+        }
+        /**
+         * Activate the control - bind event listeners
+         */
+        activate() {
+          var _a;
+          if (this.__active) return;
+          this.__active = true;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          el.addEventListener("click", this._handleClick.bind(this));
+          el.addEventListener("contextmenu", this._handleContextMenu.bind(this));
+          const optionsBtn = el.querySelector(".doc-nav__col-options-btn, [data-action='show-column-menu']");
+          if (optionsBtn) {
+            optionsBtn.addEventListener("click", this._handleOptionsClick.bind(this));
+          }
+          console.log("[ColumnHeaderControl] Activated");
+        }
+        /**
+         * Handle click on sortable headers
+         * @private
+         */
+        _handleClick(e) {
+          if (e.target.closest(".doc-nav__col-options-btn, [data-action='show-column-menu']")) {
+            return;
+          }
+          const header = e.target.closest(".doc-nav__col-header--sortable");
+          if (!header) return;
+          const sortBy = header.getAttribute("data-sort-by");
+          const currentOrder = header.getAttribute("data-sort-order") || "asc";
+          let newOrder;
+          if (header.classList.contains("doc-nav__col-header--active")) {
+            newOrder = currentOrder === "asc" ? "desc" : "asc";
+          } else {
+            newOrder = sortBy === "mtime" ? "desc" : "asc";
+          }
+          const url = new URL(window.location.href);
+          url.searchParams.set("sort_by", sortBy);
+          url.searchParams.set("sort_order", newOrder);
+          console.log("[ColumnHeaderControl] Sorting by", sortBy, newOrder);
+          window.location.href = url.toString();
+        }
+        /**
+         * Handle right-click to show context menu
+         * @private
+         */
+        _handleContextMenu(e) {
+          e.preventDefault();
+          this._showContextMenu(e.clientX, e.clientY);
+        }
+        /**
+         * Handle options button click
+         * @private
+         */
+        _handleOptionsClick(e) {
+          e.stopPropagation();
+          const btn = e.currentTarget;
+          const rect = btn.getBoundingClientRect();
+          this._showContextMenu(rect.left, rect.bottom + 4);
+        }
+        /**
+         * Show the context menu at position
+         * @private
+         */
+        _showContextMenu(x, y) {
+          const control = this.getContextMenuControl();
+          if (control && typeof control.show === "function") {
+            console.log("[ColumnHeaderControl] Showing context menu via control at", x, y);
+            control.show(x, y);
+          } else {
+            console.log("[ColumnHeaderControl] Showing context menu via fallback at", x, y);
+            this._showContextMenuFallback(x, y);
+          }
+        }
+        /**
+         * Fallback: show context menu by direct DOM manipulation
+         * @private
+         */
+        _showContextMenuFallback(x, y) {
+          const menu = document.querySelector(this.contextMenuSelector);
+          if (!menu) {
+            console.warn("[ColumnHeaderControl] Context menu not found:", this.contextMenuSelector);
+            return;
+          }
+          menu.style.display = "block";
+          menu.style.position = "fixed";
+          menu.style.left = x + "px";
+          menu.style.top = y + "px";
+          requestAnimationFrame(() => {
+            const rect = menu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+              menu.style.left = x - rect.width + "px";
+            }
+            if (rect.bottom > window.innerHeight) {
+              menu.style.top = y - rect.height + "px";
+            }
+          });
+          const closeMenu = () => {
+            menu.style.display = "none";
+            document.removeEventListener("click", onClickOutside);
+            document.removeEventListener("keydown", onEscape);
+          };
+          const onClickOutside = (e) => {
+            if (!menu.contains(e.target)) {
+              closeMenu();
+            }
+          };
+          const onEscape = (e) => {
+            if (e.key === "Escape") {
+              closeMenu();
+            }
+          };
+          setTimeout(() => {
+            document.addEventListener("click", onClickOutside);
+            document.addEventListener("keydown", onEscape);
+          }, 10);
+        }
+      };
+      module.exports = { ColumnHeaderControl };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/controls/DocsThemeToggleControl.js
+  var require_DocsThemeToggleControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/DocsThemeToggleControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui();
       var DocsThemeToggleControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -35971,11 +39983,11 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/client/controls/DocsNavToggleControl.js
+  // src/ui/server/docsViewer/isomorphic/controls/DocsNavToggleControl.js
   var require_DocsNavToggleControl = __commonJS({
-    "src/ui/server/docsViewer/client/controls/DocsNavToggleControl.js"(exports, module) {
+    "src/ui/server/docsViewer/isomorphic/controls/DocsNavToggleControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_client();
+      var jsgui = require_jsgui();
       var DocsNavToggleControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -36037,11 +40049,11 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/client/controls/DocsSearchControl.js
+  // src/ui/server/docsViewer/isomorphic/controls/DocsSearchControl.js
   var require_DocsSearchControl = __commonJS({
-    "src/ui/server/docsViewer/client/controls/DocsSearchControl.js"(exports, module) {
+    "src/ui/server/docsViewer/isomorphic/controls/DocsSearchControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_client();
+      var jsgui = require_jsgui();
       var DocsSearchControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -36146,11 +40158,11 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/client/controls/DocsFileFilterControl.js
+  // src/ui/server/docsViewer/isomorphic/controls/DocsFileFilterControl.js
   var require_DocsFileFilterControl = __commonJS({
-    "src/ui/server/docsViewer/client/controls/DocsFileFilterControl.js"(exports, module) {
+    "src/ui/server/docsViewer/isomorphic/controls/DocsFileFilterControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_client();
+      var jsgui = require_jsgui();
       var DocsFileFilterControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -36243,15 +40255,63 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/client/index.js
-  var require_index = __commonJS({
-    "src/ui/server/docsViewer/client/index.js"(exports, module) {
-      var jsguiClient = require_client();
+  // src/ui/server/docsViewer/isomorphic/controls/index.js
+  var require_controls2 = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/index.js"(exports, module) {
+      "use strict";
+      var { ResizableSplitLayoutControl } = require_ResizableSplitLayoutControl();
+      var { DocAppControl } = require_DocAppControl();
+      var { DocNavControl } = require_DocNavControl();
+      var { DocViewerControl, DocContentControl } = require_DocViewerControl();
+      var { ContextMenuControl } = require_ContextMenuControl();
+      var { ColumnContextMenuControl } = require_ColumnContextMenuControl();
+      var { ColumnHeaderControl } = require_ColumnHeaderControl();
       var { DocsThemeToggleControl } = require_DocsThemeToggleControl();
       var { DocsNavToggleControl } = require_DocsNavToggleControl();
       var { DocsSearchControl } = require_DocsSearchControl();
       var { DocsFileFilterControl } = require_DocsFileFilterControl();
+      module.exports = {
+        // Layout
+        ResizableSplitLayoutControl,
+        // App structure
+        DocAppControl,
+        DocNavControl,
+        DocViewerControl,
+        DocContentControl,
+        // Interactive
+        ContextMenuControl,
+        ColumnContextMenuControl,
+        ColumnHeaderControl,
+        DocsThemeToggleControl,
+        DocsNavToggleControl,
+        DocsSearchControl,
+        DocsFileFilterControl
+      };
+    }
+  });
+
+  // src/ui/server/docsViewer/client/index.js
+  var require_index = __commonJS({
+    "src/ui/server/docsViewer/client/index.js"(exports, module) {
+      var jsguiClient = require_client();
+      var {
+        ResizableSplitLayoutControl,
+        DocAppControl,
+        DocNavControl,
+        DocViewerControl,
+        ContextMenuControl,
+        ColumnContextMenuControl,
+        ColumnHeaderControl,
+        DocsThemeToggleControl,
+        DocsNavToggleControl,
+        DocsSearchControl,
+        DocsFileFilterControl
+      } = require_controls2();
       var CONTROL_TYPES = {
+        "resizable_split_layout": ResizableSplitLayoutControl,
+        "context_menu": ContextMenuControl,
+        "column_context_menu": ColumnContextMenuControl,
+        "column_header": ColumnHeaderControl,
         "docs_theme_toggle": DocsThemeToggleControl,
         "docs_nav_toggle": DocsNavToggleControl,
         "docs_search": DocsSearchControl,
@@ -36264,6 +40324,10 @@ body .overlay {
         controls.DocsNavToggle = DocsNavToggleControl;
         controls.DocsSearch = DocsSearchControl;
         controls.DocsFileFilter = DocsFileFilterControl;
+        controls.ContextMenu = ContextMenuControl;
+        controls.ColumnContextMenu = ColumnContextMenuControl;
+        controls.ColumnHeader = ColumnHeaderControl;
+        controls.ResizableSplitLayout = ResizableSplitLayoutControl;
         const mapControls = jsgui.map_Controls = jsgui.map_Controls || {};
         Object.entries(CONTROL_TYPES).forEach(([type, ControlClass]) => {
           mapControls[type] = ControlClass;
@@ -36342,14 +40406,31 @@ body .overlay {
           activateMarkedControls,
           manualActivation
         };
-        if (document.readyState === "complete" || document.readyState === "interactive") {
-          setTimeout(() => {
-            if (!jsguiClient.context) {
-              console.log("[docs-viewer] Running manual activation");
-              manualActivation();
-            }
-          }, 10);
+        const activateAll = () => {
+          console.log("[docs-viewer] Activating all marked controls...");
+          let context2 = jsguiClient.context;
+          if (!context2 && jsguiClient.Client_Page_Context) {
+            context2 = new jsguiClient.Client_Page_Context({
+              document
+            });
+            jsguiClient.context = context2;
+          }
+          if (context2) {
+            activateMarkedControls(context2);
+          } else {
+            console.warn("[docs-viewer] No context available for activation");
+          }
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(activateAll, 10);
+          });
+        } else {
+          setTimeout(activateAll, 10);
         }
+        window.addEventListener("load", () => {
+          setTimeout(activateAll, 50);
+        });
         console.log("[docs-viewer] Client bootstrap complete");
       }
       bootstrap();

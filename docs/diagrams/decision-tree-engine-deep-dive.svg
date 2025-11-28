@@ -1,0 +1,1166 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1400 3500">
+  <defs>
+    <!-- ═══════════════════════════════════════════════════════════════════════════════
+         LUXURY OBSIDIAN THEME - Premium Dark Gradients &amp; Effects
+         ═══════════════════════════════════════════════════════════════════════════════ -->
+    
+    <!-- Primary Background - Deep Obsidian -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050508"/>
+      <stop offset="25%" style="stop-color:#0a0d14"/>
+      <stop offset="50%" style="stop-color:#0f1420"/>
+      <stop offset="75%" style="stop-color:#0a0d14"/>
+      <stop offset="100%" style="stop-color:#080c12"/>
+    </linearGradient>
+    
+    <!-- Gold Accent Gradients -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="25%" style="stop-color:#d4af37"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="75%" style="stop-color:#b8960f"/>
+      <stop offset="100%" style="stop-color:#a07d00"/>
+    </linearGradient>
+    
+    <linearGradient id="goldAccentVertical" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#8b7500"/>
+    </linearGradient>
+    
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b7500"/>
+      <stop offset="30%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#fffacd"/>
+      <stop offset="70%" style="stop-color:#ffd700"/>
+      <stop offset="100%" style="stop-color:#8b7500"/>
+    </linearGradient>
+    
+    <!-- Card &amp; Panel Gradients -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f2e"/>
+      <stop offset="50%" style="stop-color:#141824"/>
+      <stop offset="100%" style="stop-color:#0f1420"/>
+    </linearGradient>
+    
+    <linearGradient id="cardGradientHover" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#252b3d"/>
+      <stop offset="100%" style="stop-color:#1a1f2e"/>
+    </linearGradient>
+    
+    <linearGradient id="sectionHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0f1420"/>
+      <stop offset="50%" style="stop-color:#1a1f2e"/>
+      <stop offset="100%" style="stop-color:#0f1420"/>
+    </linearGradient>
+    
+    <!-- Gem Color Gradients -->
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#50c878"/>
+      <stop offset="50%" style="stop-color:#2e8b57"/>
+      <stop offset="100%" style="stop-color:#1a5d38"/>
+    </linearGradient>
+    
+    <linearGradient id="rubyGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b"/>
+      <stop offset="50%" style="stop-color:#e31837"/>
+      <stop offset="100%" style="stop-color:#8b0000"/>
+    </linearGradient>
+    
+    <linearGradient id="sapphireGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6fa8dc"/>
+      <stop offset="50%" style="stop-color:#0f52ba"/>
+      <stop offset="100%" style="stop-color:#082567"/>
+    </linearGradient>
+    
+    <linearGradient id="amethystGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#da70d6"/>
+      <stop offset="50%" style="stop-color:#9966cc"/>
+      <stop offset="100%" style="stop-color:#4b0082"/>
+    </linearGradient>
+    
+    <linearGradient id="topazGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffc87c"/>
+      <stop offset="50%" style="stop-color:#ff9f00"/>
+      <stop offset="100%" style="stop-color:#cc7000"/>
+    </linearGradient>
+    
+    <!-- Radial Glows -->
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#c9a227;stop-opacity:0.4"/>
+      <stop offset="70%" style="stop-color:#c9a227;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:#c9a227;stop-opacity:0"/>
+    </radialGradient>
+    
+    <radialGradient id="softGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </radialGradient>
+    
+    <!-- Filters -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.7"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="4" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+    
+    <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feComponentTransfer in="SourceAlpha">
+        <feFuncA type="table" tableValues="1 0"/>
+      </feComponentTransfer>
+      <feGaussianBlur stdDeviation="3"/>
+      <feOffset dx="2" dy="2" result="offsetblur"/>
+      <feFlood flood-color="#000" flood-opacity="0.5"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="textGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#ffd700" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Patterns -->
+    <pattern id="luxuryGrid" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#c9a227" stroke-width="0.4" opacity="0.12"/>
+      <circle cx="0" cy="0" r="1.5" fill="#c9a227" opacity="0.15"/>
+      <circle cx="80" cy="0" r="1.5" fill="#c9a227" opacity="0.15"/>
+      <circle cx="0" cy="80" r="1.5" fill="#c9a227" opacity="0.15"/>
+      <circle cx="80" cy="80" r="1.5" fill="#c9a227" opacity="0.15"/>
+    </pattern>
+    
+    <pattern id="diagonalHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="10" stroke="#c9a227" stroke-width="0.5" opacity="0.08"/>
+    </pattern>
+    
+    <!-- Arrow Markers -->
+    <marker id="arrowGold" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M2,2 L12,7 L2,12 L5,7 Z" fill="url(#goldAccent)"/>
+    </marker>
+    
+    <marker id="arrowEmerald" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M2,2 L12,7 L2,12 L5,7 Z" fill="url(#emeraldGlow)"/>
+    </marker>
+    
+    <marker id="arrowRuby" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
+      <path d="M2,2 L12,7 L2,12 L5,7 Z" fill="url(#rubyGlow)"/>
+    </marker>
+    
+    <!-- Symbols -->
+    <symbol id="gemIcon" viewBox="0 0 32 32">
+      <polygon points="16,2 28,12 24,28 8,28 4,12" fill="none" stroke="currentColor" stroke-width="2"/>
+      <polygon points="16,2 28,12 16,28 4,12" fill="currentColor" opacity="0.2"/>
+      <line x1="16" y1="2" x2="16" y2="28" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+    </symbol>
+    
+    <symbol id="treeIcon" viewBox="0 0 32 32">
+      <circle cx="16" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="10" x2="16" y2="14" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="14" x2="8" y2="20" stroke="currentColor" stroke-width="2"/>
+      <line x1="16" y1="14" x2="24" y2="20" stroke="currentColor" stroke-width="2"/>
+      <circle cx="8" cy="22" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="24" cy="22" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    
+    <symbol id="codeIcon" viewBox="0 0 32 32">
+      <polyline points="10,8 4,16 10,24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <polyline points="22,8 28,16 22,24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="18" y1="6" x2="14" y2="26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    
+    <symbol id="dbIcon" viewBox="0 0 32 32">
+      <ellipse cx="16" cy="8" rx="12" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M4,8 L4,24 C4,26.2 9.4,28 16,28 C22.6,28 28,26.2 28,24 L28,8" fill="none" stroke="currentColor" stroke-width="2"/>
+      <ellipse cx="16" cy="16" rx="12" ry="4" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+    </symbol>
+    
+    <symbol id="checkIcon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="url(#emeraldGlow)" opacity="0.3"/>
+      <polyline points="6,12 10,16 18,8" fill="none" stroke="#50c878" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    
+    <symbol id="crossIcon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="url(#rubyGlow)" opacity="0.3"/>
+      <line x1="8" y1="8" x2="16" y2="16" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="16" y1="8" x2="8" y2="16" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       BACKGROUND LAYER
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <rect width="1400" height="3200" fill="url(#obsidianBg)"/>
+  <rect width="1400" height="3200" fill="url(#luxuryGrid)"/>
+  <rect width="1400" height="3200" fill="url(#diagonalHatch)"/>
+  
+  <!-- Ambient Glow Effects -->
+  <ellipse cx="700" cy="200" rx="600" ry="200" fill="url(#coreGlow)" opacity="0.4"/>
+  <ellipse cx="300" cy="1200" rx="400" ry="300" fill="url(#coreGlow)" opacity="0.2"/>
+  <ellipse cx="1100" cy="2000" rx="400" ry="300" fill="url(#coreGlow)" opacity="0.2"/>
+  
+  <!-- Decorative Corner Flourishes -->
+  <g opacity="0.4">
+    <path d="M 0,0 Q 120,0 120,120 L 90,120 Q 90,30 0,30 Z" fill="url(#goldAccent)"/>
+    <path d="M 1400,0 Q 1280,0 1280,120 L 1310,120 Q 1310,30 1400,30 Z" fill="url(#goldAccent)"/>
+    <path d="M 0,3200 Q 120,3200 120,3080 L 90,3080 Q 90,3170 0,3170 Z" fill="url(#goldAccent)"/>
+    <path d="M 1400,3200 Q 1280,3200 1280,3080 L 1310,3080 Q 1310,3170 1400,3170 Z" fill="url(#goldAccent)"/>
+  </g>
+  
+  <!-- Side Accent Lines -->
+  <line x1="40" y1="150" x2="40" y2="3050" stroke="url(#goldAccentVertical)" stroke-width="2" opacity="0.3"/>
+  <line x1="1360" y1="150" x2="1360" y2="3050" stroke="url(#goldAccentVertical)" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Decorative section markers on left side -->
+  <g opacity="0.5">
+    <circle cx="40" cy="300" r="5" fill="url(#goldAccent)"/>
+    <circle cx="40" cy="665" r="5" fill="url(#sapphireGlow)"/>
+    <circle cx="40" cy="1115" r="5" fill="url(#amethystGlow)"/>
+    <circle cx="40" cy="1590" r="5" fill="url(#emeraldGlow)"/>
+    <circle cx="40" cy="2115" r="5" fill="url(#topazGlow)"/>
+    <circle cx="40" cy="2565" r="5" fill="url(#rubyGlow)"/>
+    <circle cx="40" cy="2915" r="5" fill="url(#goldAccent)"/>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 1: TITLE BANNER (Y: 0-150)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(700, 80)">
+    <!-- Outer glow -->
+    <ellipse cx="0" cy="0" rx="500" ry="50" fill="url(#coreGlow)" opacity="0.5"/>
+    
+    <!-- Banner background -->
+    <rect x="-550" y="-45" width="1100" height="90" rx="12" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#goldAccent)" stroke-width="3"/>
+    
+    <!-- Gem decorations -->
+    <use href="#gemIcon" x="-520" y="-25" width="50" height="50" style="color:#c9a227"/>
+    <use href="#gemIcon" x="470" y="-25" width="50" height="50" style="color:#c9a227"/>
+    
+    <!-- Title text -->
+    <text x="0" y="8" text-anchor="middle" font-family="Georgia, serif" font-size="38" fill="url(#goldShine)" font-weight="bold" filter="url(#textGlow)">
+      Decision Tree Engine
+    </text>
+    <text x="0" y="32" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" fill="#94a3b8" letter-spacing="4">
+      COMPLETE TECHNICAL DEEP DIVE
+    </text>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 2: OVERVIEW PANEL (Y: 150-450)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 170)">
+    <rect width="1260" height="260" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#goldAccent)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="50" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="35" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <text x="630" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#goldAccent)" font-weight="bold">
+      ◆ SYSTEM OVERVIEW ◆
+    </text>
+    
+    <!-- Overview Content -->
+    <g transform="translate(30, 70)">
+      <!-- Left Column: What It Is -->
+      <g>
+        <rect width="380" height="170" rx="10" fill="#0f1420" stroke="#334155" stroke-width="1"/>
+        <text x="190" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#goldAccent)" font-weight="bold">WHAT IT IS</text>
+        <line x1="20" y1="35" x2="360" y2="35" stroke="#334155"/>
+        <g font-family="Inter, sans-serif" font-size="11" fill="#cbd5e1">
+          <text x="20" y="58">A configurable boolean classification</text>
+          <text x="20" y="75">system for categorizing web pages using</text>
+          <text x="20" y="92">JSON-defined decision trees.</text>
+          <text x="20" y="118" fill="#94a3b8">✦ Boolean-only decisions (true/false)</text>
+          <text x="20" y="138" fill="#94a3b8">✦ Full audit trail for every decision</text>
+          <text x="20" y="158" fill="#94a3b8">✦ Human &amp; AI editable rules</text>
+        </g>
+      </g>
+      
+      <!-- Middle Column: Key Stats -->
+      <g transform="translate(400, 0)">
+        <rect width="240" height="170" rx="10" fill="#0f1420" stroke="#334155" stroke-width="1"/>
+        <text x="120" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#goldAccent)" font-weight="bold">KEY STATS</text>
+        <line x1="20" y1="35" x2="220" y2="35" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="20" y="58" fill="#94a3b8">Source:</text>
+          <text x="100" y="58" fill="#6fa8dc">decisionTreeEngine.js</text>
+          <text x="20" y="80" fill="#94a3b8">Lines:</text>
+          <text x="100" y="80" fill="#50c878">~280</text>
+          <text x="20" y="102" fill="#94a3b8">Categories:</text>
+          <text x="100" y="102" fill="#da70d6">5 active</text>
+          <text x="20" y="124" fill="#94a3b8">Conditions:</text>
+          <text x="100" y="124" fill="#ffc87c">5 types</text>
+          <text x="20" y="146" fill="#94a3b8">Eval Time:</text>
+          <text x="100" y="146" fill="#50c878">&lt;1ms/category</text>
+        </g>
+      </g>
+      
+      <!-- Right Column: File Locations -->
+      <g transform="translate(660, 0)">
+        <rect width="570" height="170" rx="10" fill="#0f1420" stroke="#334155" stroke-width="1"/>
+        <text x="285" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#goldAccent)" font-weight="bold">FILE LOCATIONS</text>
+        <line x1="20" y1="35" x2="550" y2="35" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="20" y="58" fill="#c9a227">Engine:</text>
+          <text x="100" y="58" fill="#cbd5e1">src/analysis/decisionTreeEngine.js</text>
+          <text x="20" y="82" fill="#c9a227">Config:</text>
+          <text x="100" y="82" fill="#cbd5e1">config/decision-trees/page-categories.json</text>
+          <text x="20" y="106" fill="#c9a227">Schema:</text>
+          <text x="100" y="106" fill="#cbd5e1">config/decision-trees/decision-tree.schema.json</text>
+          <text x="20" y="130" fill="#c9a227">Tests:</text>
+          <text x="100" y="130" fill="#cbd5e1">src/analysis/test-decision-tree.js</text>
+          <text x="20" y="154" fill="#c9a227">Diagram:</text>
+          <text x="100" y="154" fill="#cbd5e1">docs/diagrams/decision-tree-engine-deep-dive.svg</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 3: ARCHITECTURE DIAGRAM (Y: 450-900)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 450)">
+    <rect width="1260" height="430" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#sapphireGlow)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="60" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="40" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <use href="#treeIcon" x="25" y="12" width="26" height="26" style="color:#6fa8dc;opacity:0.85"/>
+    <use href="#treeIcon" x="1209" y="12" width="26" height="26" style="color:#6fa8dc;opacity:0.85"/>
+    <text x="630" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#sapphireGlow)" font-weight="bold">
+      ◆ CORE ARCHITECTURE ◆
+    </text>
+    
+    <!-- Architecture Diagram Content -->
+    <g transform="translate(30, 70)">
+      <!-- JSON Config Box -->
+      <g transform="translate(0, 50)">
+        <rect width="180" height="120" rx="10" fill="#0f1420" stroke="url(#goldAccent)" stroke-width="2"/>
+        <text x="90" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="url(#goldAccent)" font-weight="bold">JSON Config</text>
+        <line x1="10" y1="35" x2="170" y2="35" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+          <text x="15" y="55">page-categories.json</text>
+          <text x="15" y="75" fill="#64748b">├─ version</text>
+          <text x="15" y="90" fill="#64748b">├─ categories{}</text>
+          <text x="15" y="105" fill="#64748b">└─ metadata</text>
+        </g>
+      </g>
+      
+      <!-- Arrow to Engine -->
+      <path d="M 185,110 L 260,110" stroke="url(#goldAccent)" stroke-width="2" marker-end="url(#arrowGold)" fill="none"/>
+      <text x="222" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">load</text>
+      
+      <!-- Central Engine -->
+      <g transform="translate(265, 0)">
+        <rect width="300" height="220" rx="14" fill="#141824" stroke="url(#sapphireGlow)" stroke-width="3" filter="url(#softShadow)"/>
+        <rect x="5" y="5" width="290" height="210" rx="12" fill="none" stroke="url(#sapphireGlow)" stroke-width="1" opacity="0.3"/>
+        
+        <!-- Engine header -->
+        <rect x="0" y="0" width="300" height="40" rx="14" fill="url(#sapphireGlow)" opacity="0.2"/>
+        <rect x="0" y="25" width="300" height="15" fill="url(#sapphireGlow)" opacity="0.2"/>
+        <text x="150" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#6fa8dc" font-weight="bold">DecisionTreeEngine</text>
+        
+        <!-- Engine methods -->
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="20" y="60" fill="#cbd5e1">constructor(config)</text>
+          <text x="20" y="80" fill="#50c878">static fromFile(path)</text>
+          <text x="20" y="100" fill="#50c878">static loadPageCategories()</text>
+          <line x1="20" y1="110" x2="280" y2="110" stroke="#334155" stroke-dasharray="3,3"/>
+          <text x="20" y="130" fill="#ffc87c">evaluate(categoryId, ctx)</text>
+          <text x="20" y="150" fill="#ffc87c">evaluateAll(ctx)</text>
+          <text x="20" y="170" fill="#ffc87c">getMatches(ctx)</text>
+          <line x1="20" y1="180" x2="280" y2="180" stroke="#334155" stroke-dasharray="3,3"/>
+          <text x="20" y="200" fill="#64748b">_evaluateNode()</text>
+          <text x="150" y="200" fill="#64748b">_evaluateCondition()</text>
+        </g>
+      </g>
+      
+      <!-- Input Context -->
+      <g transform="translate(265, 240)">
+        <rect width="300" height="100" rx="10" fill="#0f1420" stroke="url(#emeraldGlow)" stroke-width="2"/>
+        <text x="150" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#emeraldGlow)" font-weight="bold">EvaluationContext</text>
+        <line x1="20" y1="32" x2="280" y2="32" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+          <text x="20" y="50">url, title, description</text>
+          <text x="20" y="65">classification, article_links_count</text>
+          <text x="20" y="80">section_avg_word_count</text>
+          <text x="20" y="95">domain_avg_word_count, max_linked_word_count</text>
+        </g>
+      </g>
+      
+      <!-- Arrow from context to engine -->
+      <path d="M 415,240 L 415,220" stroke="url(#emeraldGlow)" stroke-width="2" marker-end="url(#arrowEmerald)" fill="none"/>
+      
+      <!-- Output Result -->
+      <g transform="translate(600, 50)">
+        <rect width="250" height="170" rx="10" fill="#0f1420" stroke="url(#topazGlow)" stroke-width="2"/>
+        <text x="125" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#topazGlow)" font-weight="bold">EvaluationResult</text>
+        <line x1="15" y1="32" x2="235" y2="32" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="52" fill="#94a3b8">categoryId:</text><text x="100" y="52" fill="#6fa8dc">"in-depth"</text>
+          <text x="15" y="70" fill="#94a3b8">match:</text><text x="100" y="70" fill="#50c878">true</text>
+          <text x="15" y="88" fill="#94a3b8">confidence:</text><text x="100" y="88" fill="#ffc87c">0.85</text>
+          <text x="15" y="106" fill="#94a3b8">reason:</text><text x="100" y="106" fill="#da70d6">"url-pattern..."</text>
+          <text x="15" y="124" fill="#94a3b8">path:</text><text x="100" y="124" fill="#cbd5e1">[PathStep...]</text>
+          <text x="15" y="142" fill="#94a3b8">encodedPath:</text><text x="100" y="142" fill="#cbd5e1">"depth-ro:Y,..."</text>
+        </g>
+      </g>
+      
+      <!-- Arrow from engine to result -->
+      <path d="M 565,110 L 595,110" stroke="url(#topazGlow)" stroke-width="2" marker-end="url(#arrowGold)" fill="none"/>
+      
+      <!-- Compact Storage -->
+      <g transform="translate(870, 50)">
+        <rect width="180" height="170" rx="10" fill="#0f1420" stroke="url(#rubyGlow)" stroke-width="2"/>
+        <text x="90" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#rubyGlow)" font-weight="bold">DecisionJustification</text>
+        <line x1="15" y1="32" x2="165" y2="32" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="55" fill="#64748b">// Compact storage</text>
+          <text x="15" y="75" fill="#94a3b8">cat:</text><text x="55" y="75" fill="#6fa8dc">"in-depth"</text>
+          <text x="15" y="93" fill="#94a3b8">m:</text><text x="55" y="93" fill="#50c878">1</text>
+          <text x="15" y="111" fill="#94a3b8">c:</text><text x="55" y="111" fill="#ffc87c">85</text>
+          <text x="15" y="129" fill="#94a3b8">r:</text><text x="55" y="129" fill="#da70d6">"reason"</text>
+          <text x="15" y="147" fill="#94a3b8">p:</text><text x="55" y="147" fill="#cbd5e1">"depth-ro:Y"</text>
+        </g>
+      </g>
+      
+      <!-- Arrow from result to compact -->
+      <path d="M 850,135 L 865,135" stroke="url(#rubyGlow)" stroke-width="2" marker-end="url(#arrowRuby)" fill="none"/>
+      
+      <!-- Database -->
+      <g transform="translate(1070, 80)">
+        <ellipse cx="60" cy="15" rx="55" ry="15" fill="#0f1420" stroke="#64748b" stroke-width="1"/>
+        <rect x="5" y="15" width="110" height="80" fill="#0f1420" stroke="#64748b" stroke-width="1"/>
+        <ellipse cx="60" cy="95" rx="55" ry="15" fill="#0f1420" stroke="#64748b" stroke-width="1"/>
+        <text x="60" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#64748b">SQLite DB</text>
+      </g>
+      
+      <!-- Arrow to DB -->
+      <path d="M 1050,135 L 1070,135" stroke="#64748b" stroke-width="2" fill="none"/>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 4: CLASS STRUCTURE (Y: 900-1350)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 900)">
+    <rect width="1260" height="430" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#amethystGlow)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="60" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="40" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <use href="#codeIcon" x="25" y="12" width="26" height="26" style="color:#da70d6;opacity:0.85"/>
+    <use href="#codeIcon" x="1209" y="12" width="26" height="26" style="color:#da70d6;opacity:0.85"/>
+    <text x="630" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#amethystGlow)" font-weight="bold">
+      ◆ CLASS STRUCTURE &amp; API ◆
+    </text>
+    
+    <!-- Class Structure Content -->
+    <g transform="translate(30, 70)">
+      <!-- DecisionTreeEngine Class -->
+      <g>
+        <rect width="600" height="340" rx="12" fill="#0f1420" stroke="url(#amethystGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="600" height="35" rx="12" fill="url(#amethystGlow)" opacity="0.2"/>
+        <rect x="0" y="22" width="600" height="13" fill="url(#amethystGlow)" opacity="0.2"/>
+        <text x="300" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="url(#amethystGlow)" font-weight="bold">class DecisionTreeEngine</text>
+        
+        <!-- Properties -->
+        <text x="20" y="55" font-family="Inter, sans-serif" font-size="11" fill="#c9a227" font-weight="bold">Properties:</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="30" y="75" fill="#94a3b8">this.config</text><text x="150" y="75" fill="#64748b">// Full configuration object</text>
+          <text x="30" y="92" fill="#94a3b8">this.version</text><text x="150" y="92" fill="#64748b">// Config version string</text>
+          <text x="30" y="109" fill="#94a3b8">this.name</text><text x="150" y="109" fill="#64748b">// Engine name</text>
+          <text x="30" y="126" fill="#94a3b8">this.categories</text><text x="150" y="126" fill="#64748b">// Category definitions object</text>
+        </g>
+        
+        <!-- Static Methods -->
+        <line x1="20" y1="140" x2="580" y2="140" stroke="#334155"/>
+        <text x="20" y="158" font-family="Inter, sans-serif" font-size="11" fill="#50c878" font-weight="bold">Static Methods:</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="30" y="178" fill="#50c878">fromFile(configPath)</text><text x="230" y="178" fill="#64748b">→ DecisionTreeEngine</text>
+          <text x="30" y="195" fill="#50c878">loadPageCategories()</text><text x="230" y="195" fill="#64748b">→ DecisionTreeEngine</text>
+        </g>
+        
+        <!-- Public Methods -->
+        <line x1="20" y1="210" x2="580" y2="210" stroke="#334155"/>
+        <text x="20" y="228" font-family="Inter, sans-serif" font-size="11" fill="#ffc87c" font-weight="bold">Public API:</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="30" y="248" fill="#ffc87c">getCategoryIds()</text><text x="230" y="248" fill="#64748b">→ string[]</text>
+          <text x="30" y="265" fill="#ffc87c">evaluate(categoryId, context)</text><text x="280" y="265" fill="#64748b">→ EvaluationResult</text>
+          <text x="30" y="282" fill="#ffc87c">evaluateAll(context)</text><text x="230" y="282" fill="#64748b">→ EvaluationResult[]</text>
+          <text x="30" y="299" fill="#ffc87c">getMatches(context)</text><text x="230" y="299" fill="#64748b">→ EvaluationResult[]</text>
+        </g>
+        
+        <!-- Private Methods -->
+        <line x1="20" y1="310" x2="580" y2="310" stroke="#334155"/>
+        <text x="20" y="330" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Private: _evaluateNode() _evaluateCondition() _evalUrlMatches() _evalCompare() ...</text>
+      </g>
+      
+      <!-- DecisionJustification Class -->
+      <g transform="translate(630, 0)">
+        <rect width="380" height="200" rx="12" fill="#0f1420" stroke="url(#rubyGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="380" height="35" rx="12" fill="url(#rubyGlow)" opacity="0.2"/>
+        <rect x="0" y="22" width="380" height="13" fill="url(#rubyGlow)" opacity="0.2"/>
+        <text x="190" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#rubyGlow)" font-weight="bold">class DecisionJustification</text>
+        
+        <text x="20" y="55" font-family="Inter, sans-serif" font-size="11" fill="#c9a227" font-weight="bold">Static Methods:</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="30" y="78" fill="#ff6b6b">toCompact(result)</text>
+          <text x="200" y="78" fill="#64748b">→ CompactObject</text>
+          <text x="30" y="100" fill="#ff6b6b">fromCompact(compact)</text>
+          <text x="200" y="100" fill="#64748b">→ ExpandedResult</text>
+          <text x="30" y="122" fill="#ff6b6b">encodeMultiple(results)</text>
+          <text x="200" y="122" fill="#64748b">→ JSON string (matches only)</text>
+        </g>
+        
+        <line x1="20" y1="140" x2="360" y2="140" stroke="#334155"/>
+        <text x="20" y="160" font-family="Inter, sans-serif" font-size="10" fill="#64748b">Compact Format:</text>
+        <text x="30" y="180" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">{cat, m, c, r, p} // match-only record</text>
+      </g>
+      
+      <!-- TypeDefs -->
+      <g transform="translate(630, 220)">
+        <rect width="380" height="140" rx="12" fill="#0f1420" stroke="url(#sapphireGlow)" stroke-width="2"/>
+        <text x="190" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#sapphireGlow)" font-weight="bold">PathStep Interface</text>
+        <line x1="20" y1="32" x2="360" y2="32" stroke="#334155"/>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="20" y="55" fill="#6fa8dc">nodeId:</text><text x="100" y="55" fill="#94a3b8">string</text><text x="180" y="55" fill="#64748b">// Node evaluated</text>
+          <text x="20" y="75" fill="#6fa8dc">condition:</text><text x="100" y="75" fill="#94a3b8">string</text><text x="180" y="75" fill="#64748b">// Description</text>
+          <text x="20" y="95" fill="#6fa8dc">result:</text><text x="100" y="95" fill="#94a3b8">boolean</text><text x="180" y="95" fill="#64748b">// Condition result</text>
+          <text x="20" y="115" fill="#6fa8dc">branch:</text><text x="100" y="115" fill="#94a3b8">'yes'|'no'</text><text x="180" y="115" fill="#64748b">// Branch taken</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 5: CONDITION TYPES (Y: 1350-1850)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 1350)">
+    <rect width="1260" height="480" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#emeraldGlow)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="50" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="35" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <text x="630" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#emeraldGlow)" font-weight="bold">
+      ◆ CONDITION TYPES ◆
+    </text>
+    
+    <!-- Condition Types Content -->
+    <g transform="translate(20, 60)">
+      <!-- url_matches -->
+      <g transform="translate(0, 0)">
+        <rect width="400" height="180" rx="10" fill="#0f1420" stroke="url(#emeraldGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="400" height="30" rx="10" fill="url(#emeraldGlow)" opacity="0.15"/>
+        <rect x="0" y="20" width="400" height="10" fill="url(#emeraldGlow)" opacity="0.15"/>
+        <text x="20" y="22" font-family="Georgia, serif" font-size="13" fill="url(#emeraldGlow)" font-weight="bold">1. url_matches</text>
+        <text x="380" y="22" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#50c878">URL Pattern</text>
+        
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="50" fill="#64748b">// Match URL against patterns</text>
+          <text x="15" y="70" fill="#c9a227">{</text>
+          <text x="25" y="85" fill="#94a3b8">"type":</text><text x="80" y="85" fill="#50c878">"url_matches"</text><text x="180" y="85" fill="#c9a227">,</text>
+          <text x="25" y="100" fill="#94a3b8">"patterns":</text><text x="100" y="100" fill="#50c878">["long-read", "feature"]</text><text x="280" y="100" fill="#c9a227">,</text>
+          <text x="25" y="115" fill="#94a3b8">"matchType":</text><text x="110" y="115" fill="#50c878">"segment"</text>
+          <text x="15" y="130" fill="#c9a227">}</text>
+          <text x="15" y="155" fill="#64748b">matchTypes: segment | contains | regex</text>
+          <text x="15" y="170" fill="#64748b">Segment matches: /feature/ or -feature-</text>
+        </g>
+      </g>
+      
+      <!-- text_contains -->
+      <g transform="translate(420, 0)">
+        <rect width="400" height="180" rx="10" fill="#0f1420" stroke="url(#sapphireGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="400" height="30" rx="10" fill="url(#sapphireGlow)" opacity="0.15"/>
+        <rect x="0" y="20" width="400" height="10" fill="url(#sapphireGlow)" opacity="0.15"/>
+        <text x="20" y="22" font-family="Georgia, serif" font-size="13" fill="url(#sapphireGlow)" font-weight="bold">2. text_contains</text>
+        <text x="380" y="22" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#6fa8dc">Text Search</text>
+        
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="50" fill="#64748b">// Check if field contains patterns</text>
+          <text x="15" y="70" fill="#c9a227">{</text>
+          <text x="25" y="85" fill="#94a3b8">"type":</text><text x="80" y="85" fill="#6fa8dc">"text_contains"</text><text x="190" y="85" fill="#c9a227">,</text>
+          <text x="25" y="100" fill="#94a3b8">"field":</text><text x="85" y="100" fill="#6fa8dc">"title"</text><text x="130" y="100" fill="#c9a227">,</text>
+          <text x="25" y="115" fill="#94a3b8">"patterns":</text><text x="100" y="115" fill="#6fa8dc">["live:", "- live"]</text>
+          <text x="15" y="130" fill="#c9a227">}</text>
+          <text x="15" y="155" fill="#64748b">Fields: title, description, url, etc.</text>
+          <text x="15" y="170" fill="#64748b">Case-insensitive matching</text>
+        </g>
+      </g>
+      
+      <!-- compare -->
+      <g transform="translate(840, 0)">
+        <rect width="380" height="180" rx="10" fill="#0f1420" stroke="url(#topazGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="380" height="30" rx="10" fill="url(#topazGlow)" opacity="0.15"/>
+        <rect x="0" y="20" width="380" height="10" fill="url(#topazGlow)" opacity="0.15"/>
+        <text x="20" y="22" font-family="Georgia, serif" font-size="13" fill="url(#topazGlow)" font-weight="bold">3. compare</text>
+        <text x="360" y="22" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#ffc87c">Numeric/String</text>
+        
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="50" fill="#64748b">// Comparison operations</text>
+          <text x="15" y="70" fill="#c9a227">{</text>
+          <text x="25" y="85" fill="#94a3b8">"type":</text><text x="80" y="85" fill="#ffc87c">"compare"</text><text x="150" y="85" fill="#c9a227">,</text>
+          <text x="25" y="100" fill="#94a3b8">"field":</text><text x="85" y="100" fill="#ffc87c">"article_links_count"</text><text x="230" y="100" fill="#c9a227">,</text>
+          <text x="25" y="115" fill="#94a3b8">"operator":</text><text x="100" y="115" fill="#ffc87c">"gte"</text><text x="135" y="115" fill="#c9a227">,</text>
+          <text x="25" y="130" fill="#94a3b8">"value":</text><text x="85" y="130" fill="#ffc87c">5</text>
+          <text x="15" y="145" fill="#c9a227">}</text>
+          <text x="15" y="165" fill="#64748b">ops: eq ne gt gte lt lte</text>
+        </g>
+      </g>
+      
+      <!-- compound -->
+      <g transform="translate(0, 200)">
+        <rect width="610" height="190" rx="10" fill="#0f1420" stroke="url(#amethystGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="610" height="30" rx="10" fill="url(#amethystGlow)" opacity="0.15"/>
+        <rect x="0" y="20" width="610" height="10" fill="url(#amethystGlow)" opacity="0.15"/>
+        <text x="20" y="22" font-family="Georgia, serif" font-size="13" fill="url(#amethystGlow)" font-weight="bold">4. compound</text>
+        <text x="590" y="22" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#da70d6">AND/OR Logic</text>
+        
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="50" fill="#64748b">// Combine multiple conditions</text>
+          <text x="15" y="70" fill="#c9a227">{</text>
+          <text x="25" y="85" fill="#94a3b8">"type":</text><text x="80" y="85" fill="#da70d6">"compound"</text><text x="160" y="85" fill="#c9a227">,</text>
+          <text x="25" y="100" fill="#94a3b8">"operator":</text><text x="100" y="100" fill="#da70d6">"AND"</text><text x="140" y="100" fill="#c9a227">,</text>
+          <text x="25" y="115" fill="#94a3b8">"conditions":</text><text x="110" y="115" fill="#c9a227">[</text>
+          <text x="35" y="130" fill="#c9a227">{</text><text x="45" y="130" fill="#94a3b8">"type":</text><text x="90" y="130" fill="#6fa8dc">"compare"</text><text x="150" y="130" fill="#c9a227">, "field":</text><text x="200" y="130" fill="#6fa8dc">"classification"</text><text x="300" y="130" fill="#c9a227">, "operator":</text><text x="375" y="130" fill="#6fa8dc">"eq"</text><text x="400" y="130" fill="#c9a227">, "value":</text><text x="455" y="130" fill="#6fa8dc">"nav"</text><text x="485" y="130" fill="#c9a227">},</text>
+          <text x="35" y="145" fill="#c9a227">{</text><text x="45" y="145" fill="#94a3b8">"type":</text><text x="90" y="145" fill="#6fa8dc">"compare"</text><text x="150" y="145" fill="#c9a227">, "field":</text><text x="200" y="145" fill="#6fa8dc">"article_links_count"</text><text x="340" y="145" fill="#c9a227">, "operator":</text><text x="415" y="145" fill="#6fa8dc">"gte"</text><text x="450" y="145" fill="#c9a227">, "value":</text><text x="505" y="145" fill="#6fa8dc">5</text><text x="520" y="145" fill="#c9a227">}</text>
+          <text x="25" y="160" fill="#c9a227">  ]</text>
+          <text x="15" y="175" fill="#c9a227">}</text>
+        </g>
+      </g>
+      
+      <!-- flag -->
+      <g transform="translate(630, 200)">
+        <rect width="590" height="190" rx="10" fill="#0f1420" stroke="url(#goldAccent)" stroke-width="2"/>
+        <rect x="0" y="0" width="590" height="30" rx="10" fill="url(#goldAccent)" opacity="0.15"/>
+        <rect x="0" y="20" width="590" height="10" fill="url(#goldAccent)" opacity="0.15"/>
+        <text x="20" y="22" font-family="Georgia, serif" font-size="13" fill="url(#goldAccent)" font-weight="bold">5. flag</text>
+        <text x="570" y="22" text-anchor="end" font-family="Inter, sans-serif" font-size="10" fill="#c9a227">Boolean Flag</text>
+        
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="50" fill="#64748b">// Check boolean flag value</text>
+          <text x="15" y="70" fill="#c9a227">{</text>
+          <text x="25" y="85" fill="#94a3b8">"type":</text><text x="80" y="85" fill="#c9a227">"flag"</text><text x="125" y="85" fill="#c9a227">,</text>
+          <text x="25" y="100" fill="#94a3b8">"flag":</text><text x="80" y="100" fill="#c9a227">"is_homepage"</text><text x="175" y="100" fill="#c9a227">,</text>
+          <text x="25" y="115" fill="#94a3b8">"expected":</text><text x="100" y="115" fill="#c9a227">false</text>
+          <text x="15" y="130" fill="#c9a227">}</text>
+        </g>
+        
+        <!-- Dynamic Value Reference -->
+        <line x1="250" y1="45" x2="250" y2="175" stroke="#334155"/>
+        <text x="270" y="60" font-family="Inter, sans-serif" font-size="10" fill="#c9a227" font-weight="bold">Dynamic Field Reference:</text>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="270" y="85" fill="#94a3b8">"value":</text><text x="325" y="85" fill="#c9a227">{</text>
+          <text x="280" y="100" fill="#94a3b8">"field":</text><text x="330" y="100" fill="#6fa8dc">"domain_avg_word_count"</text><text x="490" y="100" fill="#c9a227">,</text>
+          <text x="280" y="115" fill="#94a3b8">"multiplier":</text><text x="360" y="115" fill="#ffc87c">1.3</text>
+          <text x="270" y="130" fill="#c9a227">}</text>
+          <text x="270" y="155" fill="#64748b">// Compare section_avg to</text>
+          <text x="270" y="170" fill="#64748b">// domain_avg × 1.3</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Additional Implementation Details Strip -->
+    <g transform="translate(20, 410)">
+      <rect width="1220" height="50" rx="8" fill="#0a0d14" stroke="#334155" stroke-width="1"/>
+      <text x="610" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="url(#goldAccent)" font-weight="bold">Implementation Notes</text>
+      <g font-family="JetBrains Mono, monospace" font-size="9">
+        <text x="30" y="38" fill="#64748b">_evalUrlMatches():</text><text x="155" y="38" fill="#94a3b8">regex pattern (^|/)pattern(/|$|\?|#) + hyphen boundary check</text>
+        <text x="500" y="38" fill="#64748b">_evalCompare():</text><text x="605" y="38" fill="#94a3b8">supports dynamic field refs with multiplier</text>
+        <text x="900" y="38" fill="#64748b">_escapeRegex():</text><text x="1010" y="38" fill="#94a3b8">escapes special chars</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 6: CATEGORY TREES (Y: 1850-2410)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 1850)">
+    <rect width="1260" height="560" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#topazGlow)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="50" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="35" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <text x="630" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#topazGlow)" font-weight="bold">
+      ◆ CATEGORY DECISION TREES ◆
+    </text>
+    
+    <!-- Category Decision Trees Content -->
+    <g transform="translate(20, 60)">
+      <!-- In-Depth Tree -->
+      <g transform="translate(0, 0)">
+        <rect width="600" height="450" rx="12" fill="#0f1420" stroke="url(#emeraldGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="600" height="35" rx="12" fill="url(#emeraldGlow)" opacity="0.2"/>
+        <rect x="0" y="22" width="600" height="13" fill="url(#emeraldGlow)" opacity="0.2"/>
+        <text x="300" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#emeraldGlow)" font-weight="bold">🔍 IN-DEPTH Category Tree</text>
+        
+        <!-- Root node -->
+        <g transform="translate(230, 55)">
+          <polygon points="70,0 140,35 70,70 0,35" fill="#1e293b" stroke="url(#goldAccent)" stroke-width="2"/>
+          <text x="70" y="32" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">URL matches</text>
+          <text x="70" y="44" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#cbd5e1">long-read?</text>
+        </g>
+        
+        <!-- Yes from root -->
+        <line x1="300" y1="125" x2="150" y2="165" stroke="#50c878" stroke-width="2"/>
+        <text x="210" y="140" font-family="Inter, sans-serif" font-size="10" fill="#50c878" font-weight="bold">YES</text>
+        
+        <!-- Leaf: Match 0.9 -->
+        <g transform="translate(80, 170)">
+          <rect width="140" height="45" rx="6" fill="#166534" stroke="#50c878" stroke-width="1"/>
+          <text x="70" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#f0fff4" font-weight="bold">✓ MATCH</text>
+          <text x="70" y="35" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#86efac">conf: 0.9</text>
+        </g>
+        
+        <!-- No from root -->
+        <line x1="300" y1="125" x2="430" y2="165" stroke="#ef4444" stroke-width="2"/>
+        <text x="380" y="140" font-family="Inter, sans-serif" font-size="10" fill="#ef4444" font-weight="bold">NO</text>
+        
+        <!-- Second decision node -->
+        <g transform="translate(360, 165)">
+          <polygon points="70,0 140,35 70,70 0,35" fill="#1e293b" stroke="url(#goldAccent)" stroke-width="2"/>
+          <text x="70" y="28" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#cbd5e1">series/feature</text>
+          <text x="70" y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#cbd5e1">pattern?</text>
+        </g>
+        
+        <!-- Branches from second node -->
+        <line x1="430" y1="235" x2="330" y2="275" stroke="#50c878" stroke-width="2"/>
+        <line x1="430" y1="235" x2="520" y2="275" stroke="#ef4444" stroke-width="2"/>
+        
+        <!-- Word count check -->
+        <g transform="translate(260, 280)">
+          <polygon points="60,0 120,30 60,60 0,30" fill="#1e293b" stroke="url(#goldAccent)" stroke-width="1.5"/>
+          <text x="60" y="27" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#cbd5e1">high word</text>
+          <text x="60" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#cbd5e1">count?</text>
+        </g>
+        
+        <!-- Leaf nodes from word count -->
+        <line x1="320" y1="340" x2="260" y2="370" stroke="#50c878" stroke-width="1.5"/>
+        <line x1="320" y1="340" x2="380" y2="370" stroke="#ef4444" stroke-width="1.5"/>
+        
+        <g transform="translate(190, 375)">
+          <rect width="100" height="35" rx="5" fill="#166534" stroke="#50c878" stroke-width="1"/>
+          <text x="50" y="15" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f0fff4">✓ 0.85</text>
+          <text x="50" y="28" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="7" fill="#86efac">series+wc</text>
+        </g>
+        
+        <g transform="translate(340, 375)">
+          <rect width="100" height="35" rx="5" fill="#166534" stroke="#50c878" stroke-width="1"/>
+          <text x="50" y="15" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#f0fff4">✓ 0.7</text>
+          <text x="50" y="28" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="7" fill="#86efac">series-only</text>
+        </g>
+        
+        <!-- Content signals branch -->
+        <g transform="translate(470, 280)">
+          <polygon points="50,0 100,25 50,50 0,25" fill="#1e293b" stroke="#64748b" stroke-width="1"/>
+          <text x="50" y="22" text-anchor="middle" font-family="Inter, sans-serif" font-size="7" fill="#94a3b8">nav+links?</text>
+        </g>
+        
+        <line x1="520" y1="330" x2="480" y2="360" stroke="#50c878" stroke-width="1"/>
+        <line x1="520" y1="330" x2="560" y2="360" stroke="#ef4444" stroke-width="1"/>
+        
+        <g transform="translate(430, 365)">
+          <rect width="80" height="30" rx="4" fill="#166534" stroke="#50c878" stroke-width="1"/>
+          <text x="40" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#f0fff4">✓ 0.75</text>
+        </g>
+        
+        <g transform="translate(520, 365)">
+          <rect width="70" height="30" rx="4" fill="#7f1d1d" stroke="#ef4444" stroke-width="1"/>
+          <text x="35" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#fef2f2">✗ NO</text>
+        </g>
+      </g>
+      
+      <!-- Opinion + Live Trees (Compact) -->
+      <g transform="translate(620, 0)">
+        <rect width="600" height="215" rx="12" fill="#0f1420" stroke="url(#sapphireGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="600" height="35" rx="12" fill="url(#sapphireGlow)" opacity="0.2"/>
+        <text x="300" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#sapphireGlow)" font-weight="bold">💬 OPINION + 📡 LIVE Trees</text>
+        
+        <!-- Opinion mini tree -->
+        <g transform="translate(30, 50)">
+          <text x="0" y="12" font-family="Inter, sans-serif" font-size="11" fill="#6fa8dc" font-weight="bold">Opinion:</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+            <text x="10" y="35">url: opinion|editorial|op-ed...</text>
+            <text x="10" y="55">├─ YES + hub signals → <tspan fill="#50c878">0.85</tspan></text>
+            <text x="10" y="75">├─ YES only → <tspan fill="#50c878">0.6</tspan></text>
+            <text x="10" y="95">└─ NO → <tspan fill="#ef4444">no-match</tspan></text>
+          </g>
+          <text x="10" y="120" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Patterns: opinion, comment, editorial, columnist, voices...</text>
+        </g>
+        
+        <!-- Live mini tree -->
+        <g transform="translate(310, 50)">
+          <text x="0" y="12" font-family="Inter, sans-serif" font-size="11" fill="#6fa8dc" font-weight="bold">Live Coverage:</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+            <text x="10" y="35">url: live|liveblog|breaking...</text>
+            <text x="10" y="55">├─ URL match → <tspan fill="#50c878">0.9</tspan></text>
+            <text x="10" y="75">├─ title: "live:" → <tspan fill="#50c878">0.8</tspan></text>
+            <text x="10" y="95">└─ else → <tspan fill="#ef4444">no-match</tspan></text>
+          </g>
+          <text x="10" y="120" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Patterns: live, liveblog, as-it-happened, breaking...</text>
+        </g>
+      </g>
+      
+      <!-- Explainer + Multimedia Trees (Compact) -->
+      <g transform="translate(620, 230)">
+        <rect width="600" height="240" rx="12" fill="#0f1420" stroke="url(#topazGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="600" height="35" rx="12" fill="url(#topazGlow)" opacity="0.2"/>
+        <text x="300" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#topazGlow)" font-weight="bold">📚 EXPLAINER + 🎬 MULTIMEDIA Trees</text>
+        
+        <!-- Explainer mini tree -->
+        <g transform="translate(30, 50)">
+          <text x="0" y="12" font-family="Inter, sans-serif" font-size="11" fill="#ffc87c" font-weight="bold">Explainer:</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+            <text x="10" y="35">url: explainer|guide|what-is|how-to...</text>
+            <text x="10" y="55">├─ match → <tspan fill="#50c878">0.85</tspan></text>
+            <text x="10" y="75">└─ else → <tspan fill="#ef4444">no-match</tspan></text>
+          </g>
+          <text x="10" y="100" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Patterns: explainer, explained, guide, faq, 101, understand...</text>
+        </g>
+        
+        <!-- Multimedia mini tree -->
+        <g transform="translate(310, 50)">
+          <text x="0" y="12" font-family="Inter, sans-serif" font-size="11" fill="#ffc87c" font-weight="bold">Multimedia:</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">
+            <text x="10" y="35">url: video|podcast|interactive...</text>
+            <text x="10" y="55">├─ match → <tspan fill="#50c878">0.85</tspan></text>
+            <text x="10" y="75">└─ else → <tspan fill="#ef4444">no-match</tspan></text>
+          </g>
+          <text x="10" y="100" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Patterns: video, audio, podcast, gallery, photos, graphics...</text>
+        </g>
+        
+        <!-- Summary stats (moved down to avoid overlap with Patterns text) -->
+        <g transform="translate(30, 150)">
+          <rect width="540" height="70" rx="8" fill="#141824" stroke="#334155"/>
+          <text x="270" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#c9a227" font-weight="bold">Category Summary</text>
+          <g font-family="JetBrains Mono, monospace" font-size="10">
+            <text x="30" y="45" fill="#50c878">in-depth</text><text x="120" y="45" fill="#94a3b8">5 nodes</text>
+            <text x="200" y="45" fill="#6fa8dc">opinion</text><text x="280" y="45" fill="#94a3b8">3 nodes</text>
+            <text x="360" y="45" fill="#da70d6">live</text><text x="420" y="45" fill="#94a3b8">3 nodes</text>
+            <text x="30" y="62" fill="#ffc87c">explainer</text><text x="120" y="62" fill="#94a3b8">2 nodes</text>
+            <text x="200" y="62" fill="#ff6b6b">multimedia</text><text x="300" y="62" fill="#94a3b8">2 nodes</text>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 7: DATA FLOW &amp; STORAGE (Y: 2440-2800)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 2440)">
+    <rect width="1260" height="360" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#rubyGlow)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="60" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="40" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <use href="#dbIcon" x="25" y="12" width="26" height="26" style="color:#ff6b6b;opacity:0.9"/>
+    <use href="#dbIcon" x="1209" y="12" width="26" height="26" style="color:#ff6b6b;opacity:0.9"/>
+    <text x="630" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#rubyGlow)" font-weight="bold">
+      ◆ DATA FLOW &amp; STORAGE ◆
+    </text>
+    
+    <!-- Data Flow &amp; Storage Content -->
+    <g transform="translate(20, 60)">
+      <!-- Flow Diagram -->
+      <g transform="translate(0, 0)">
+        <!-- Input -->
+        <g transform="translate(0, 60)">
+          <rect width="150" height="80" rx="8" fill="#0f1420" stroke="url(#emeraldGlow)" stroke-width="2"/>
+          <text x="75" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#emeraldGlow)" font-weight="bold">Page Data</text>
+          <text x="75" y="45" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">url, title</text>
+          <text x="75" y="60" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">classification</text>
+          <text x="75" y="75" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">article_links...</text>
+        </g>
+        
+        <path d="M 155,100 L 195,100" stroke="url(#goldAccent)" stroke-width="2" marker-end="url(#arrowGold)"/>
+        
+        <!-- Engine -->
+        <g transform="translate(200, 40)">
+          <rect width="200" height="120" rx="10" fill="#141824" stroke="url(#sapphireGlow)" stroke-width="2"/>
+          <text x="100" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#sapphireGlow)" font-weight="bold">Decision Engine</text>
+          <text x="100" y="50" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#94a3b8">evaluate()</text>
+          <text x="100" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">↓ traverse tree</text>
+          <text x="100" y="90" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">↓ record path</text>
+          <text x="100" y="110" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">↓ return result</text>
+        </g>
+        
+        <path d="M 405,100 L 445,100" stroke="url(#goldAccent)" stroke-width="2" marker-end="url(#arrowGold)"/>
+        
+        <!-- Result -->
+        <g transform="translate(450, 30)">
+          <rect width="180" height="140" rx="10" fill="#0f1420" stroke="url(#topazGlow)" stroke-width="2"/>
+          <text x="90" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#topazGlow)" font-weight="bold">EvaluationResult</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9">
+            <text x="15" y="45" fill="#94a3b8">match:</text><text x="70" y="45" fill="#50c878">true</text>
+            <text x="15" y="62" fill="#94a3b8">confidence:</text><text x="85" y="62" fill="#ffc87c">0.85</text>
+            <text x="15" y="79" fill="#94a3b8">reason:</text><text x="70" y="79" fill="#da70d6">"url-pat..."</text>
+            <text x="15" y="96" fill="#94a3b8">path:</text><text x="55" y="96" fill="#cbd5e1">[steps]</text>
+            <text x="15" y="113" fill="#94a3b8">encodedPath:</text>
+            <text x="15" y="130" fill="#6fa8dc">"depth-ro:N,depth-se:Y"</text>
+          </g>
+        </g>
+        
+        <path d="M 635,100 L 675,100" stroke="url(#goldAccent)" stroke-width="2" marker-end="url(#arrowGold)"/>
+        
+        <!-- Compact -->
+        <g transform="translate(680, 40)">
+          <rect width="160" height="120" rx="10" fill="#0f1420" stroke="url(#rubyGlow)" stroke-width="2"/>
+          <text x="80" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#rubyGlow)" font-weight="bold">Compact</text>
+          <text x="80" y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">toCompact()</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9">
+            <text x="15" y="60" fill="#94a3b8">cat:</text><text x="50" y="60" fill="#6fa8dc">"in-depth"</text>
+            <text x="15" y="77" fill="#94a3b8">m:</text><text x="35" y="77" fill="#50c878">1</text>
+            <text x="15" y="94" fill="#94a3b8">c:</text><text x="35" y="94" fill="#ffc87c">85</text>
+            <text x="15" y="111" fill="#94a3b8">p:</text><text x="35" y="111" fill="#cbd5e1">"depth-ro:N,..."</text>
+          </g>
+        </g>
+        
+        <path d="M 845,100 L 885,100" stroke="url(#goldAccent)" stroke-width="2" marker-end="url(#arrowGold)"/>
+        
+        <!-- Database -->
+        <g transform="translate(890, 25)">
+          <ellipse cx="80" cy="20" rx="75" ry="20" fill="#0f1420" stroke="#64748b" stroke-width="1.5"/>
+          <path d="M 5,20 L 5,130 C 5,141 40,150 80,150 C 120,150 155,141 155,130 L 155,20" fill="#0f1420" stroke="#64748b" stroke-width="1.5"/>
+          <ellipse cx="80" cy="130" rx="75" ry="20" fill="#0f1420" stroke="#64748b" stroke-width="1.5"/>
+          <text x="80" y="60" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#94a3b8" font-weight="bold">SQLite</text>
+          <text x="80" y="80" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">page_categories</text>
+          <text x="80" y="95" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b">decision_audit</text>
+          <text x="80" y="110" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">stores match-only {cat,m,c,r,p}</text>
+        </g>
+      </g>
+      
+      <!-- Path Encoding Details -->
+      <g transform="translate(0, 190)">
+        <rect width="500" height="100" rx="10" fill="#0f1420" stroke="#334155" stroke-width="1"/>
+        <text x="250" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#goldAccent)" font-weight="bold">Path Encoding Format</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10">
+          <text x="20" y="48" fill="#64748b">// Full path:</text>
+          <text x="20" y="65" fill="#94a3b8">[{nodeId: "in-depth-root", branch: "no"}, {nodeId: "in-depth-series", branch: "yes"}]</text>
+          <text x="20" y="88" fill="#64748b">// Encoded:</text>
+          <text x="105" y="88" fill="#50c878">"depth-ro:N,depth-se:Y"</text>
+          <text x="230" y="88" fill="#64748b">// trims alpha prefix, 8-char IDs, Y=yes/N=no</text>
+        </g>
+      </g>
+      
+      <!-- Storage Stats -->
+      <g transform="translate(520, 190)">
+        <rect width="340" height="100" rx="10" fill="#0f1420" stroke="#334155" stroke-width="1"/>
+        <text x="170" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#goldAccent)" font-weight="bold">Performance</text>
+        <g font-family="Inter, sans-serif" font-size="10">
+          <text x="20" y="45" fill="#94a3b8">Eval cost:</text><text x="200" y="45" fill="#50c878">boolean checks, depth-limited</text>
+          <text x="20" y="62" fill="#94a3b8">Storage per match:</text><text x="200" y="62" fill="#ffc87c">compact JSON {cat,m,c,r,p}</text>
+          <text x="20" y="79" fill="#94a3b8">Tree depth (typical):</text><text x="200" y="79" fill="#6fa8dc">3-5 levels</text>
+        </g>
+      </g>
+      
+      <!-- Integration -->
+      <g transform="translate(880, 190)">
+        <rect width="330" height="100" rx="10" fill="#0f1420" stroke="url(#emeraldGlow)" stroke-width="1"/>
+        <text x="165" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="12" fill="url(#emeraldGlow)" font-weight="bold">Integration</text>
+        <g font-family="JetBrains Mono, monospace" font-size="9">
+          <text x="15" y="45" fill="#64748b">// In page-analyzer.js</text>
+          <text x="15" y="62" fill="#94a3b8">const results = engine.getMatches(ctx);</text>
+          <text x="15" y="79" fill="#94a3b8">const compact = DecisionJustification.encodeMultiple(results);</text>
+          <text x="15" y="96" fill="#94a3b8">db.run("UPDATE pages SET...")</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       SECTION 8: INTEGRATION &amp; FUTURE (Y: 2830-3300)
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  <g transform="translate(70, 2830)">
+    <rect width="1260" height="440" rx="16" fill="url(#cardGradient)" filter="url(#softShadow)" stroke="url(#goldAccent)" stroke-width="2"/>
+    
+    <!-- Section Title -->
+    <rect x="0" y="0" width="1260" height="50" rx="16" fill="url(#sectionHeader)"/>
+    <rect x="0" y="35" width="1260" height="15" fill="url(#sectionHeader)"/>
+    <text x="630" y="35" text-anchor="middle" font-family="Georgia, serif" font-size="20" fill="url(#goldAccent)" font-weight="bold">
+      ◆ INTEGRATION &amp; FUTURE ROADMAP ◆
+    </text>
+    
+    <!-- Integration &amp; Future Content -->
+    <g transform="translate(20, 60)">
+      <!-- Integration Points -->
+      <g transform="translate(0, 0)">
+        <rect width="600" height="250" rx="12" fill="#0f1420" stroke="url(#sapphireGlow)" stroke-width="2"/>
+        <rect x="0" y="0" width="600" height="35" rx="12" fill="url(#sapphireGlow)" opacity="0.15"/>
+        <text x="300" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#sapphireGlow)" font-weight="bold">🔗 Integration Points</text>
+        
+        <g transform="translate(20, 50)">
+          <!-- Page Analyzer -->
+          <g>
+            <rect width="170" height="90" rx="8" fill="#141824" stroke="#334155"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6fa8dc" font-weight="bold">Page Analyzer</text>
+            <text x="85" y="40" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#94a3b8">page-analyzer.js</text>
+            <text x="85" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Calls engine for</text>
+            <text x="85" y="75" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">each page analyzed</text>
+          </g>
+          
+          <!-- Page Category Detector -->
+          <g transform="translate(200, 0)">
+            <rect width="170" height="90" rx="8" fill="#141824" stroke="#334155"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#da70d6" font-weight="bold">Category Detector</text>
+            <text x="85" y="40" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#94a3b8">pageCategoryDetector.js</text>
+            <text x="85" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Stores results</text>
+            <text x="85" y="75" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">in database</text>
+          </g>
+          
+          <!-- Data Explorer -->
+          <g transform="translate(400, 0)">
+            <rect width="170" height="90" rx="8" fill="#141824" stroke="#334155"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#50c878" font-weight="bold">Data Explorer</text>
+            <text x="85" y="40" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#94a3b8">dataExplorerServer.js</text>
+            <text x="85" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Displays category</text>
+            <text x="85" y="75" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">assignments in UI</text>
+          </g>
+        </g>
+        
+        <!-- Usage example -->
+        <g transform="translate(20, 155)">
+          <rect width="560" height="80" rx="8" fill="#0a0d14" stroke="#334155"/>
+          <text x="280" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#c9a227" font-weight="bold">Usage Example</text>
+          <g font-family="JetBrains Mono, monospace" font-size="9">
+            <text x="15" y="38" fill="#c9a227">const</text><text x="50" y="38" fill="#cbd5e1"> engine = DecisionTreeEngine.loadPageCategories();</text>
+            <text x="15" y="55" fill="#c9a227">const</text><text x="50" y="55" fill="#cbd5e1"> matches = engine.getMatches({ url, title, classification, ... });</text>
+            <text x="15" y="72" fill="#64748b">// Returns: [{ categoryId: "in-depth", match: true, confidence: 0.85, ... }]</text>
+          </g>
+        </g>
+      </g>
+      
+      <!-- Future Roadmap -->
+      <g transform="translate(620, 0)">
+        <rect width="600" height="320" rx="12" fill="#0f1420" stroke="url(#goldAccent)" stroke-width="2" stroke-dasharray="6,3"/>
+        <rect x="0" y="0" width="600" height="35" rx="12" fill="url(#goldAccent)" opacity="0.1"/>
+        <text x="300" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="url(#goldAccent)" font-weight="bold">🚀 Future Roadmap</text>
+        
+        <g transform="translate(20, 50)">
+          <!-- Enhancement 1 -->
+          <g>
+            <rect width="170" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#ffc87c" font-weight="bold">Visual Editor</text>
+            <text x="85" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">Drag-drop tree editor</text>
+            <text x="85" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">in Data Explorer</text>
+          </g>
+          
+          <!-- Enhancement 2 -->
+          <g transform="translate(190, 0)">
+            <rect width="170" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#da70d6" font-weight="bold">A/B Testing</text>
+            <text x="85" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">Compare rule changes</text>
+            <text x="85" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">side-by-side</text>
+          </g>
+          
+          <!-- Enhancement 3 -->
+          <g transform="translate(380, 0)">
+            <rect width="200" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="100" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#50c878" font-weight="bold">AI Rule Suggestions</text>
+            <text x="100" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">Auto-suggest rules from</text>
+            <text x="100" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">pattern analysis</text>
+          </g>
+          
+          <!-- Enhancement 4 -->
+          <g transform="translate(0, 85)">
+            <rect width="170" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6fa8dc" font-weight="bold">Performance Metrics</text>
+            <text x="85" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">Track rule hit rates</text>
+            <text x="85" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">&amp; confidence stats</text>
+          </g>
+          
+          <!-- Enhancement 5 -->
+          <g transform="translate(190, 85)">
+            <rect width="170" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="85" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#ff6b6b" font-weight="bold">Tree Versioning</text>
+            <text x="85" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">Full version history</text>
+            <text x="85" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">with rollback</text>
+          </g>
+          
+          <!-- Enhancement 6 -->
+          <g transform="translate(380, 85)">
+            <rect width="200" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="100" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#c9a227" font-weight="bold">Export/Import</text>
+            <text x="100" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">Share trees between</text>
+            <text x="100" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">crawler instances</text>
+          </g>
+          
+          <!-- Enhancement 7 -->
+          <g transform="translate(0, 170)">
+            <rect width="180" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="90" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#50c878" font-weight="bold">Telemetry &amp; Drift</text>
+            <text x="90" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">capture hit rates, alert on</text>
+            <text x="90" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">score drift per domain</text>
+          </g>
+          
+          <!-- Enhancement 8 -->
+          <g transform="translate(200, 170)">
+            <rect width="180" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="90" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#6fa8dc" font-weight="bold">Replay Simulator</text>
+            <text x="90" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">run historical URLs through</text>
+            <text x="90" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">new trees before rollout</text>
+          </g>
+          
+          <!-- Enhancement 9 -->
+          <g transform="translate(400, 170)">
+            <rect width="180" height="70" rx="6" fill="#141824" stroke="#334155" stroke-dasharray="3,2"/>
+            <text x="90" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#ffc87c" font-weight="bold">Confidence Tuning</text>
+            <text x="90" y="38" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">calibrate thresholds via</text>
+            <text x="90" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#64748b">ROC/precision curves</text>
+          </g>
+        </g>
+        
+        <!-- Version info -->
+        <g transform="translate(20, 270)">
+          <rect width="560" height="45" rx="6" fill="#0a0d14" stroke="#334155"/>
+          <text x="280" y="18" text-anchor="middle" font-family="Inter, sans-serif" font-size="9" fill="#64748b">Current: v1.0.0 • November 2025 • Production Ready</text>
+          <text x="280" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="8" fill="#94a3b8">Next: telemetry + simulator beta • target: Q1 2026 • AI suggestors: Q2 2026</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Decorative divider before footer -->
+  <g transform="translate(100, 3380)">
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="url(#goldAccent)" stroke-width="1" opacity="0.4"/>
+    <circle cx="200" cy="0" r="4" fill="url(#goldAccent)" opacity="0.6"/>
+    <circle cx="600" cy="0" r="6" fill="url(#goldAccent)" opacity="0.8"/>
+    <circle cx="1000" cy="0" r="4" fill="url(#goldAccent)" opacity="0.6"/>
+  </g>
+  
+  <g transform="translate(700, 3430)">
+    <line x1="-600" y1="0" x2="600" y2="0" stroke="url(#goldAccent)" stroke-width="1" opacity="0.5"/>
+    <text x="0" y="25" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">
+      Decision Tree Engine v1.0.0 • src/analysis/decisionTreeEngine.js • November 2025
+    </text>
+    <text x="0" y="42" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#475569">
+      Boolean Classification System with Full Audit Trail
+    </text>
+  </g>
+  
+  <!-- Navigation link back to parent -->
+  <a xlink:href="analysis-systems-architecture.svg">
+    <g transform="translate(70, 3420)" style="cursor:pointer">
+      <rect width="180" height="35" rx="6" fill="url(#cardGradient)" stroke="url(#goldAccent)" stroke-width="1" opacity="0.8"/>
+      <text x="90" y="22" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="url(#goldAccent)">← Back to Overview</text>
+    </g>
+  </a>
+</svg>

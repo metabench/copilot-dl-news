@@ -5,11 +5,13 @@
  * 
  * A jsgui3 + Express web application for browsing and viewing markdown documentation.
  * 
+ * All controls are isomorphic - they work on both server and client.
+ * 
  * @module docsViewer
  */
 
 const { createDocsViewerServer, createDocsViewerMiddleware } = require("./server");
-const controls = require("./controls");
+const controls = require("./isomorphic/controls");
 const utils = require("./utils");
 
 module.exports = {
@@ -17,7 +19,7 @@ module.exports = {
   createDocsViewerServer,
   createDocsViewerMiddleware,
   
-  // Controls
+  // Controls (all isomorphic)
   ...controls,
   
   // Utilities

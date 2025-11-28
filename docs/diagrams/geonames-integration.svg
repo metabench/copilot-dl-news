@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a5f"/>
+      <stop offset="100%" style="stop-color:#2d5a87"/>
+    </linearGradient>
+    <linearGradient id="geonamesGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b35"/>
+      <stop offset="100%" style="stop-color:#d94f1a"/>
+    </linearGradient>
+    <linearGradient id="fileGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a90d9"/>
+      <stop offset="100%" style="stop-color:#2d6cb5"/>
+    </linearGradient>
+    <linearGradient id="loaderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="100%" style="stop-color:#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="dbGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    
+    <!-- Arrow marker -->
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#0f172a"/>
+  
+  <!-- Title -->
+  <rect x="0" y="0" width="1000" height="60" fill="url(#headerGrad)"/>
+  <text x="500" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#fff">
+    GeoNames Integration Pipeline
+  </text>
+  <text x="500" y="55" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#94a3b8">
+    Pre-curated geographic data for reliable place name matching
+  </text>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: GeoNames Source (Left) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(40, 90)">
+    <!-- GeoNames logo/box -->
+    <rect x="0" y="0" width="200" height="120" rx="8" fill="url(#geonamesGrad)" opacity="0.9"/>
+    <text x="100" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#fff">🌍 GeoNames</text>
+    <text x="100" y="52" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#fef3c7">download.geonames.org</text>
+    <line x1="20" y1="65" x2="180" y2="65" stroke="#fff" stroke-opacity="0.3" stroke-width="1"/>
+    <text x="100" y="85" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#fff">CC BY 4.0 License</text>
+    <text x="100" y="100" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#fef3c7">12M+ places • 250 countries</text>
+    <text x="100" y="115" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#fef3c7">Updated daily</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: Download Files (Center-left) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow from GeoNames to files -->
+  <path d="M 250 150 L 290 150" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <g transform="translate(300, 85)">
+    <text x="110" y="0" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#94a3b8">KEY DATA FILES</text>
+    
+    <!-- File 1: cities15000 -->
+    <rect x="0" y="15" width="220" height="50" rx="6" fill="url(#fileGrad)" opacity="0.9"/>
+    <text x="15" y="38" font-family="monospace" font-size="12" font-weight="bold" fill="#fff">📁 cities15000.txt</text>
+    <text x="15" y="55" font-family="sans-serif" font-size="10" fill="#bfdbfe">~25,000 cities (pop &gt; 15K) • 2.9 MB</text>
+    
+    <!-- File 2: admin1Codes -->
+    <rect x="0" y="75" width="220" height="50" rx="6" fill="url(#fileGrad)" opacity="0.85"/>
+    <text x="15" y="98" font-family="monospace" font-size="12" font-weight="bold" fill="#fff">📁 admin1CodesASCII.txt</text>
+    <text x="15" y="115" font-family="sans-serif" font-size="10" fill="#bfdbfe">~3,900 regions (states/provinces) • 142 KB</text>
+    
+    <!-- File 3: alternateNames -->
+    <rect x="0" y="135" width="220" height="50" rx="6" fill="url(#fileGrad)" opacity="0.8"/>
+    <text x="15" y="158" font-family="monospace" font-size="12" font-weight="bold" fill="#fff">📁 alternateNamesV2.zip</text>
+    <text x="15" y="175" font-family="sans-serif" font-size="10" fill="#bfdbfe">~15M names (multilingual) • 189 MB</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: Data Format Box -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(40, 240)">
+    <rect x="0" y="0" width="480" height="130" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="240" y="22" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="bold" fill="#94a3b8">CITIES15000 RECORD FORMAT (TAB-DELIMITED)</text>
+    
+    <text x="15" y="48" font-family="monospace" font-size="10" fill="#22d3ee">geonameid</text>
+    <text x="95" y="48" font-family="monospace" font-size="10" fill="#a5b4fc">name</text>
+    <text x="140" y="48" font-family="monospace" font-size="10" fill="#a5b4fc">asciiname</text>
+    <text x="210" y="48" font-family="monospace" font-size="10" fill="#94a3b8">alternatenames</text>
+    <text x="310" y="48" font-family="monospace" font-size="10" fill="#fbbf24">latitude</text>
+    <text x="370" y="48" font-family="monospace" font-size="10" fill="#fbbf24">longitude</text>
+    <text x="440" y="48" font-family="monospace" font-size="10" fill="#94a3b8">...</text>
+    
+    <text x="15" y="68" font-family="monospace" font-size="10" fill="#22d3ee">feature_class</text>
+    <text x="110" y="68" font-family="monospace" font-size="10" fill="#22d3ee">feature_code</text>
+    <text x="200" y="68" font-family="monospace" font-size="10" fill="#4ade80">country_code</text>
+    <text x="295" y="68" font-family="monospace" font-size="10" fill="#4ade80">admin1_code</text>
+    <text x="385" y="68" font-family="monospace" font-size="10" fill="#4ade80">admin2_code</text>
+    
+    <line x1="15" y1="80" x2="465" y2="80" stroke="#334155" stroke-width="1"/>
+    
+    <text x="15" y="98" font-family="monospace" font-size="9" fill="#64748b">Example:</text>
+    <text x="15" y="115" font-family="monospace" font-size="9" fill="#f8fafc">5128581 | New York City | New York City | NYC,Nueva York,... | 40.71 | -74.01 | P | PPL | US | NY | ...</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: Loader Script (Center-right) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow from files to loader -->
+  <path d="M 530 150 L 570 150" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <g transform="translate(580, 90)">
+    <rect x="0" y="0" width="180" height="125" rx="8" fill="url(#loaderGrad)" opacity="0.9"/>
+    <text x="90" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#fff">⚙️ GeoNames Loader</text>
+    <line x1="15" y1="38" x2="165" y2="38" stroke="#fff" stroke-opacity="0.3" stroke-width="1"/>
+    
+    <text x="15" y="58" font-family="monospace" font-size="9" fill="#e9d5ff">scripts/gazetteer/</text>
+    <text x="15" y="73" font-family="monospace" font-size="10" font-weight="bold" fill="#fff">load-geonames.js</text>
+    
+    <text x="15" y="95" font-family="sans-serif" font-size="9" fill="#c4b5fd">• Parse TSV files</text>
+    <text x="15" y="108" font-family="sans-serif" font-size="9" fill="#c4b5fd">• Normalize names</text>
+    <text x="15" y="121" font-family="sans-serif" font-size="9" fill="#c4b5fd">• Batch insert to SQLite</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: Database (Right) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow from loader to DB -->
+  <path d="M 770 150 L 810 150" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+  
+  <g transform="translate(820, 85)">
+    <rect x="0" y="0" width="150" height="130" rx="8" fill="url(#dbGrad)" opacity="0.9"/>
+    <text x="75" y="28" text-anchor="middle" font-family="Georgia, serif" font-size="15" font-weight="bold" fill="#fff">🗄️ gazetteer.db</text>
+    <line x1="15" y1="40" x2="135" y2="40" stroke="#fff" stroke-opacity="0.3" stroke-width="1"/>
+    
+    <text x="75" y="60" text-anchor="middle" font-family="monospace" font-size="10" fill="#d1fae5">places</text>
+    <text x="75" y="78" text-anchor="middle" font-family="monospace" font-size="10" fill="#d1fae5">place_names</text>
+    <text x="75" y="96" text-anchor="middle" font-family="monospace" font-size="10" fill="#d1fae5">place_external_ids</text>
+    <text x="75" y="114" text-anchor="middle" font-family="monospace" font-size="10" fill="#d1fae5">place_hierarchy</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6: Comparison Box (Bottom) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(40, 400)">
+    <rect x="0" y="0" width="920" height="160" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="460" y="25" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#f8fafc">Why GeoNames vs Wikidata SPARQL?</text>
+    
+    <!-- Current approach (Wikidata) -->
+    <g transform="translate(20, 45)">
+      <rect x="0" y="0" width="420" height="100" rx="6" fill="#7f1d1d" opacity="0.4"/>
+      <text x="210" y="22" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fca5a5">❌ Current: Wikidata SPARQL</text>
+      <text x="15" y="45" font-family="sans-serif" font-size="10" fill="#fecaca">• Live queries timeout after 20 seconds</text>
+      <text x="15" y="60" font-family="sans-serif" font-size="10" fill="#fecaca">• Rate limited (50 cities/country max)</text>
+      <text x="15" y="75" font-family="sans-serif" font-size="10" fill="#fecaca">• Missing: Chicago, Houston, Manchester, Birmingham...</text>
+      <text x="15" y="90" font-family="sans-serif" font-size="10" fill="#fecaca">• Sequential processing: ~30 min for 250 countries</text>
+    </g>
+    
+    <!-- New approach (GeoNames) -->
+    <g transform="translate(480, 45)">
+      <rect x="0" y="0" width="420" height="100" rx="6" fill="#14532d" opacity="0.4"/>
+      <text x="210" y="22" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#86efac">✓ Proposed: GeoNames Files</text>
+      <text x="15" y="45" font-family="sans-serif" font-size="10" fill="#bbf7d0">• Pre-curated: 25,000 cities ready to load</text>
+      <text x="15" y="60" font-family="sans-serif" font-size="10" fill="#bbf7d0">• No rate limits - one-time download</text>
+      <text x="15" y="75" font-family="sans-serif" font-size="10" fill="#bbf7d0">• All major cities included (pop &gt; 15K)</text>
+      <text x="15" y="90" font-family="sans-serif" font-size="10" fill="#bbf7d0">• Batch import: ~30 seconds total</text>
+    </g>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 7: Implementation Steps (Bottom) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(40, 580)">
+    <text x="0" y="15" font-family="Georgia, serif" font-size="13" font-weight="bold" fill="#94a3b8">Implementation Phases:</text>
+    
+    <rect x="0" y="30" width="220" height="60" rx="6" fill="#1e40af" opacity="0.3"/>
+    <text x="110" y="50" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="bold" fill="#93c5fd">Phase 1: Cities</text>
+    <text x="110" y="68" text-anchor="middle" font-family="monospace" font-size="9" fill="#bfdbfe">cities15000.txt → ~25K cities</text>
+    <text x="110" y="82" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#60a5fa">~30 seconds</text>
+    
+    <rect x="240" y="30" width="220" height="60" rx="6" fill="#1e40af" opacity="0.25"/>
+    <text x="350" y="50" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="bold" fill="#93c5fd">Phase 2: Admin Regions</text>
+    <text x="350" y="68" text-anchor="middle" font-family="monospace" font-size="9" fill="#bfdbfe">admin1CodesASCII.txt → ~4K</text>
+    <text x="350" y="82" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#60a5fa">~5 seconds</text>
+    
+    <rect x="480" y="30" width="220" height="60" rx="6" fill="#1e40af" opacity="0.2"/>
+    <text x="590" y="50" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="bold" fill="#93c5fd">Phase 3: Alternate Names</text>
+    <text x="590" y="68" text-anchor="middle" font-family="monospace" font-size="9" fill="#bfdbfe">alternateNamesV2 (filtered)</text>
+    <text x="590" y="82" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#60a5fa">~2 minutes (en only)</text>
+    
+    <rect x="720" y="30" width="220" height="60" rx="6" fill="#10b981" opacity="0.3"/>
+    <text x="830" y="50" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="bold" fill="#86efac">Result</text>
+    <text x="830" y="68" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#d1fae5">~95% URL match rate</text>
+    <text x="830" y="82" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#a7f3d0">vs ~40% currently</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="500" y="685" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#475569">
+    GeoNames: Creative Commons Attribution 4.0 License • geonames.org • Updated: 2025-11-28
+  </text>
+</svg>

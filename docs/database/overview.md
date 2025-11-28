@@ -1,11 +1,28 @@
 # Database Overview
 
-_Last updated: 2025-11-04_
+_Last updated: 2025-11-27_
 
 ## Purpose
 The data layer for **copilot-dl-news** is backed by SQLite and powers every stage of the news ingestion pipeline—URL discovery, crawling, content normalization, coverage analytics, and gazetteer enrichment. This document provides an operator-focused guide to the databases in use, how they fit together, and the operational expectations around them.
 
 SQLite was selected because the crawler runs in a single-node footprint with heavy write bursts, and better-sqlite3 gives predictable latency with a minimal operational surface. WAL mode is enabled everywhere to support concurrent readers and the background analysis workload.
+
+## Schema Synchronization (Critical)
+
+**After ANY schema change** (migrations, direct ALTER TABLE, new tables), regenerate the schema definitions:
+
+```bash
+npm run schema:sync     # Regenerate schema-definitions.js from database
+npm run schema:check    # Verify no drift (CI gate)
+npm run schema:stats    # Regenerate with table statistics
+```
+
+**Files updated**:
+- `src/db/sqlite/v1/schema-definitions.js` — Canonical schema definitions (auto-generated)
+- `docs/database/_artifacts/news_db_stats.json` — Table row counts and statistics
+- `docs/database/schema/main.md` — Human-readable schema docs (manual update)
+
+See `tools/schema-sync.js --help` for all options.
 
 ## Top-Level Databases
 | File | Role | Default Location | Notes |

@@ -1,0 +1,361 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1000">
+  <defs>
+    <!-- Luxury Industrial Obsidian Gradients -->
+    <linearGradient id="obsidianBase" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a"/>
+      <stop offset="50%" style="stop-color:#0d0d0d"/>
+      <stop offset="100%" style="stop-color:#050505"/>
+    </linearGradient>
+    <linearGradient id="steelAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3d3d3d"/>
+      <stop offset="50%" style="stop-color:#2a2a2a"/>
+      <stop offset="100%" style="stop-color:#1a1a1a"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8B7355"/>
+      <stop offset="50%" style="stop-color:#C9A962"/>
+      <stop offset="100%" style="stop-color:#8B7355"/>
+    </linearGradient>
+    <linearGradient id="copperGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#B87333"/>
+      <stop offset="100%" style="stop-color:#8B4513"/>
+    </linearGradient>
+    <linearGradient id="silverShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C0C0C0"/>
+      <stop offset="50%" style="stop-color:#A0A0A0"/>
+      <stop offset="100%" style="stop-color:#808080"/>
+    </linearGradient>
+    <linearGradient id="bronzeAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#CD7F32"/>
+      <stop offset="100%" style="stop-color:#8B4513"/>
+    </linearGradient>
+    
+    <!-- Filters -->
+    <filter id="industrialShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.7"/>
+    </filter>
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="metalSheen">
+      <feGaussianBlur stdDeviation="1" result="blur"/>
+      <feSpecularLighting result="spec" in="blur" specularConstant="1.5" specularExponent="30" lighting-color="#ffffff">
+        <fePointLight x="200" y="100" z="200"/>
+      </feSpecularLighting>
+      <feComposite in="SourceGraphic" in2="spec" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+    </filter>
+    
+    <!-- Patterns -->
+    <pattern id="carbonFiber" patternUnits="userSpaceOnUse" width="6" height="6">
+      <rect width="6" height="6" fill="#0a0a0a"/>
+      <path d="M0 0L3 3M3 0L6 3M0 3L3 6M3 3L6 6" stroke="#151515" stroke-width="0.5"/>
+    </pattern>
+    <pattern id="brushedSteel" patternUnits="userSpaceOnUse" width="100" height="4">
+      <rect width="100" height="4" fill="#1a1a1a"/>
+      <line x1="0" y1="1" x2="100" y2="1" stroke="#222" stroke-width="0.3"/>
+      <line x1="0" y1="3" x2="100" y2="3" stroke="#111" stroke-width="0.3"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1500" height="1000" fill="url(#obsidianBase)"/>
+  <rect width="1500" height="1000" fill="url(#carbonFiber)" opacity="0.3"/>
+  
+  <!-- Decorative border -->
+  <rect x="20" y="20" width="1460" height="960" rx="4" fill="none" stroke="#2a2a2a" stroke-width="2"/>
+  <rect x="25" y="25" width="1450" height="950" rx="3" fill="none" stroke="#C9A962" stroke-width="0.5" opacity="0.3"/>
+  
+  <!-- Header -->
+  <rect x="40" y="40" width="1420" height="80" rx="4" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="40" y="40" width="1420" height="80" rx="4" fill="none" stroke="url(#goldAccent)" stroke-width="1"/>
+  <line x1="40" y1="118" x2="1460" y2="118" stroke="#C9A962" stroke-width="0.5"/>
+  
+  <text x="750" y="75" text-anchor="middle" fill="#C9A962" font-family="Georgia, serif" font-size="28" font-weight="400" letter-spacing="8">CLASSIFICATION ENGINE</text>
+  <text x="750" y="105" text-anchor="middle" fill="#808080" font-family="system-ui" font-size="13" letter-spacing="4">PAGE ANALYSIS CLASSIFIER SUITE</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- PRIMARY CLASSIFIERS - Top Row -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Decision Tree Classifier -->
+  <rect x="60" y="150" width="320" height="240" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="60" y="150" width="320" height="240" rx="6" fill="url(#brushedSteel)" opacity="0.5"/>
+  <rect x="60" y="150" width="320" height="50" rx="6" fill="#1a1a1a"/>
+  <rect x="60" y="150" width="320" height="50" rx="6" fill="none" stroke="#C9A962" stroke-width="1"/>
+  <line x1="60" y1="200" x2="380" y2="200" stroke="#C9A962" stroke-width="0.5"/>
+  
+  <text x="220" y="183" text-anchor="middle" fill="#C9A962" font-family="Georgia, serif" font-size="16" font-weight="400">🌳 Decision Tree</text>
+  
+  <text x="80" y="225" fill="#707070" font-family="system-ui" font-size="10" letter-spacing="2">RULE-BASED CLASSIFICATION</text>
+  
+  <text x="80" y="250" fill="#909090" font-family="system-ui" font-size="11">• URL pattern matching (regex)</text>
+  <text x="80" y="270" fill="#909090" font-family="system-ui" font-size="11">• Text field contains checks</text>
+  <text x="80" y="290" fill="#909090" font-family="system-ui" font-size="11">• Numeric comparisons (&gt;, &lt;, ==)</text>
+  <text x="80" y="310" fill="#909090" font-family="system-ui" font-size="11">• Compound logic (AND/OR/NOT)</text>
+  <text x="80" y="330" fill="#909090" font-family="system-ui" font-size="11">• Boolean flag evaluation</text>
+  
+  <rect x="80" y="355" width="100" height="22" rx="3" fill="#1a1a1a" stroke="#C9A962" stroke-width="0.5"/>
+  <text x="130" y="370" text-anchor="middle" fill="#C9A962" font-family="monospace" font-size="9">CONFIGURABLE</text>
+  
+  <rect x="190" y="355" width="80" height="22" rx="3" fill="#1a1a1a" stroke="#B87333" stroke-width="0.5"/>
+  <text x="230" y="370" text-anchor="middle" fill="#B87333" font-family="monospace" font-size="9">JSON TREES</text>
+  
+  <!-- Article Scorer Classifier -->
+  <rect x="400" y="150" width="320" height="240" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="400" y="150" width="320" height="240" rx="6" fill="url(#brushedSteel)" opacity="0.5"/>
+  <rect x="400" y="150" width="320" height="50" rx="6" fill="#1a1a1a"/>
+  <rect x="400" y="150" width="320" height="50" rx="6" fill="none" stroke="#B87333" stroke-width="1"/>
+  <line x1="400" y1="200" x2="720" y2="200" stroke="#B87333" stroke-width="0.5"/>
+  
+  <text x="560" y="183" text-anchor="middle" fill="#B87333" font-family="Georgia, serif" font-size="16" font-weight="400">📰 Article Scorer</text>
+  
+  <text x="420" y="225" fill="#707070" font-family="system-ui" font-size="10" letter-spacing="2">CONTENT QUALITY SIGNALS</text>
+  
+  <text x="420" y="250" fill="#909090" font-family="system-ui" font-size="11">• Word count threshold (+2 pts)</text>
+  <text x="420" y="270" fill="#909090" font-family="system-ui" font-size="11">• Link density analysis (+1 pt)</text>
+  <text x="420" y="290" fill="#909090" font-family="system-ui" font-size="11">• Schema.org score (+3 pts)</text>
+  <text x="420" y="310" fill="#909090" font-family="system-ui" font-size="11">• Author presence (+1 pt)</text>
+  <text x="420" y="330" fill="#909090" font-family="system-ui" font-size="11">• Publish date signal (+1 pt)</text>
+  
+  <rect x="420" y="355" width="80" height="22" rx="3" fill="#1a1a1a" stroke="#B87333" stroke-width="0.5"/>
+  <text x="460" y="370" text-anchor="middle" fill="#B87333" font-family="monospace" font-size="9">WEIGHTED</text>
+  
+  <rect x="510" y="355" width="90" height="22" rx="3" fill="#1a1a1a" stroke="#C0C0C0" stroke-width="0.5"/>
+  <text x="555" y="370" text-anchor="middle" fill="#C0C0C0" font-family="monospace" font-size="9">POINT-BASED</text>
+  
+  <!-- Hub Detector Classifier -->
+  <rect x="740" y="150" width="320" height="240" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="740" y="150" width="320" height="240" rx="6" fill="url(#brushedSteel)" opacity="0.5"/>
+  <rect x="740" y="150" width="320" height="50" rx="6" fill="#1a1a1a"/>
+  <rect x="740" y="150" width="320" height="50" rx="6" fill="none" stroke="#808080" stroke-width="1"/>
+  <line x1="740" y1="200" x2="1060" y2="200" stroke="#808080" stroke-width="0.5"/>
+  
+  <text x="900" y="183" text-anchor="middle" fill="#A0A0A0" font-family="Georgia, serif" font-size="16" font-weight="400">🏠 Hub Detector</text>
+  
+  <text x="760" y="225" fill="#707070" font-family="system-ui" font-size="10" letter-spacing="2">NAVIGATION PAGE SIGNALS</text>
+  
+  <text x="760" y="250" fill="#909090" font-family="system-ui" font-size="11">• High article link count (&gt;10)</text>
+  <text x="760" y="270" fill="#909090" font-family="system-ui" font-size="11">• Low word count (&lt;200)</text>
+  <text x="760" y="290" fill="#909090" font-family="system-ui" font-size="11">• List structure detection (ul/ol)</text>
+  <text x="760" y="310" fill="#909090" font-family="system-ui" font-size="11">• Category URL patterns</text>
+  <text x="760" y="330" fill="#909090" font-family="system-ui" font-size="11">• Pagination indicators</text>
+  
+  <rect x="760" y="355" width="90" height="22" rx="3" fill="#1a1a1a" stroke="#808080" stroke-width="0.5"/>
+  <text x="805" y="370" text-anchor="middle" fill="#808080" font-family="monospace" font-size="9">STRUCTURAL</text>
+  
+  <rect x="860" y="355" width="80" height="22" rx="3" fill="#1a1a1a" stroke="#CD7F32" stroke-width="0.5"/>
+  <text x="900" y="370" text-anchor="middle" fill="#CD7F32" font-family="monospace" font-size="9">HEURISTIC</text>
+  
+  <!-- Schema Analyzer Classifier -->
+  <rect x="1080" y="150" width="320" height="240" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="1080" y="150" width="320" height="240" rx="6" fill="url(#brushedSteel)" opacity="0.5"/>
+  <rect x="1080" y="150" width="320" height="50" rx="6" fill="#1a1a1a"/>
+  <rect x="1080" y="150" width="320" height="50" rx="6" fill="none" stroke="#CD7F32" stroke-width="1"/>
+  <line x1="1080" y1="200" x2="1400" y2="200" stroke="#CD7F32" stroke-width="0.5"/>
+  
+  <text x="1240" y="183" text-anchor="middle" fill="#CD7F32" font-family="Georgia, serif" font-size="16" font-weight="400">🏷️ Schema Analyzer</text>
+  
+  <text x="1100" y="225" fill="#707070" font-family="system-ui" font-size="10" letter-spacing="2">STRUCTURED DATA PARSING</text>
+  
+  <text x="1100" y="250" fill="#909090" font-family="system-ui" font-size="11">• JSON-LD extraction</text>
+  <text x="1100" y="270" fill="#909090" font-family="system-ui" font-size="11">• @type: NewsArticle, Article</text>
+  <text x="1100" y="290" fill="#909090" font-family="system-ui" font-size="11">• articleBody presence</text>
+  <text x="1100" y="310" fill="#909090" font-family="system-ui" font-size="11">• Author/datePublished fields</text>
+  <text x="1100" y="330" fill="#909090" font-family="system-ui" font-size="11">• OpenGraph type detection</text>
+  
+  <rect x="1100" y="355" width="90" height="22" rx="3" fill="#1a1a1a" stroke="#CD7F32" stroke-width="0.5"/>
+  <text x="1145" y="370" text-anchor="middle" fill="#CD7F32" font-family="monospace" font-size="9">SCHEMA.ORG</text>
+  
+  <rect x="1200" y="355" width="70" height="22" rx="3" fill="#1a1a1a" stroke="#C9A962" stroke-width="0.5"/>
+  <text x="1235" y="370" text-anchor="middle" fill="#C9A962" font-family="monospace" font-size="9">SEMANTIC</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECONDARY CLASSIFIERS - Middle Row -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="60" y="425" fill="#505050" font-family="system-ui" font-size="11" letter-spacing="3">SPECIALIZED CLASSIFIERS</text>
+  <line x1="60" y1="435" x2="1440" y2="435" stroke="#2a2a2a" stroke-width="1"/>
+  
+  <!-- URL Pattern Classifier -->
+  <rect x="60" y="455" width="260" height="180" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="60" y="455" width="260" height="40" rx="6" fill="#1a1a1a"/>
+  <line x1="60" y1="495" x2="320" y2="495" stroke="#606060" stroke-width="0.5"/>
+  
+  <text x="190" y="482" text-anchor="middle" fill="#909090" font-family="Georgia, serif" font-size="14">🔗 URL Patterns</text>
+  
+  <text x="80" y="520" fill="#707070" font-family="system-ui" font-size="10">Path segment analysis</text>
+  <text x="80" y="540" fill="#606060" font-family="monospace" font-size="9">/news/, /article/, /story/</text>
+  <text x="80" y="560" fill="#606060" font-family="monospace" font-size="9">/category/, /tag/, /archive/</text>
+  <text x="80" y="580" fill="#606060" font-family="monospace" font-size="9">/2025/11/27/ (date patterns)</text>
+  <text x="80" y="600" fill="#606060" font-family="monospace" font-size="9">/p/12345 (numeric IDs)</text>
+  
+  <rect x="80" y="612" width="60" height="18" rx="2" fill="#1a1a1a" stroke="#505050" stroke-width="0.5"/>
+  <text x="110" y="624" text-anchor="middle" fill="#606060" font-family="monospace" font-size="8">REGEX</text>
+  
+  <!-- Content Length Classifier -->
+  <rect x="340" y="455" width="260" height="180" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="340" y="455" width="260" height="40" rx="6" fill="#1a1a1a"/>
+  <line x1="340" y1="495" x2="600" y2="495" stroke="#606060" stroke-width="0.5"/>
+  
+  <text x="470" y="482" text-anchor="middle" fill="#909090" font-family="Georgia, serif" font-size="14">📏 Content Length</text>
+  
+  <text x="360" y="520" fill="#707070" font-family="system-ui" font-size="10">Threshold-based classification</text>
+  <text x="360" y="545" fill="#606060" font-family="system-ui" font-size="10">Short: &lt;200 words → likely nav</text>
+  <text x="360" y="565" fill="#606060" font-family="system-ui" font-size="10">Medium: 200-500 → uncertain</text>
+  <text x="360" y="585" fill="#606060" font-family="system-ui" font-size="10">Long: 500-2000 → likely article</text>
+  <text x="360" y="605" fill="#606060" font-family="system-ui" font-size="10">Extended: &gt;2000 → deep content</text>
+  
+  <rect x="360" y="612" width="80" height="18" rx="2" fill="#1a1a1a" stroke="#505050" stroke-width="0.5"/>
+  <text x="400" y="624" text-anchor="middle" fill="#606060" font-family="monospace" font-size="8">THRESHOLD</text>
+  
+  <!-- Link Analysis Classifier -->
+  <rect x="620" y="455" width="260" height="180" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="620" y="455" width="260" height="40" rx="6" fill="#1a1a1a"/>
+  <line x1="620" y1="495" x2="880" y2="495" stroke="#606060" stroke-width="0.5"/>
+  
+  <text x="750" y="482" text-anchor="middle" fill="#909090" font-family="Georgia, serif" font-size="14">🔗 Link Analysis</text>
+  
+  <text x="640" y="520" fill="#707070" font-family="system-ui" font-size="10">Link distribution metrics</text>
+  <text x="640" y="545" fill="#606060" font-family="system-ui" font-size="10">Nav links: header/footer refs</text>
+  <text x="640" y="565" fill="#606060" font-family="system-ui" font-size="10">Article links: story references</text>
+  <text x="640" y="585" fill="#606060" font-family="system-ui" font-size="10">Internal/external ratio</text>
+  <text x="640" y="605" fill="#606060" font-family="system-ui" font-size="10">Link density calculation</text>
+  
+  <rect x="640" y="612" width="60" height="18" rx="2" fill="#1a1a1a" stroke="#505050" stroke-width="0.5"/>
+  <text x="670" y="624" text-anchor="middle" fill="#606060" font-family="monospace" font-size="8">RATIO</text>
+  
+  <!-- Readability Classifier -->
+  <rect x="900" y="455" width="260" height="180" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="900" y="455" width="260" height="40" rx="6" fill="#1a1a1a"/>
+  <line x1="900" y1="495" x2="1160" y2="495" stroke="#606060" stroke-width="0.5"/>
+  
+  <text x="1030" y="482" text-anchor="middle" fill="#909090" font-family="Georgia, serif" font-size="14">📖 Readability</text>
+  
+  <text x="920" y="520" fill="#707070" font-family="system-ui" font-size="10">Content extraction quality</text>
+  <text x="920" y="545" fill="#606060" font-family="system-ui" font-size="10">Title extraction success</text>
+  <text x="920" y="565" fill="#606060" font-family="system-ui" font-size="10">Byline/author detection</text>
+  <text x="920" y="585" fill="#606060" font-family="system-ui" font-size="10">Excerpt generation</text>
+  <text x="920" y="605" fill="#606060" font-family="system-ui" font-size="10">Content length post-parse</text>
+  
+  <rect x="920" y="612" width="70" height="18" rx="2" fill="#1a1a1a" stroke="#505050" stroke-width="0.5"/>
+  <text x="955" y="624" text-anchor="middle" fill="#606060" font-family="monospace" font-size="8">MOZILLA</text>
+  
+  <!-- Domain Context Classifier -->
+  <rect x="1180" y="455" width="260" height="180" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="1180" y="455" width="260" height="40" rx="6" fill="#1a1a1a"/>
+  <line x1="1180" y1="495" x2="1440" y2="495" stroke="#606060" stroke-width="0.5"/>
+  
+  <text x="1310" y="482" text-anchor="middle" fill="#909090" font-family="Georgia, serif" font-size="14">🌐 Domain Context</text>
+  
+  <text x="1200" y="520" fill="#707070" font-family="system-ui" font-size="10">Historical baseline comparison</text>
+  <text x="1200" y="545" fill="#606060" font-family="system-ui" font-size="10">Domain avg word count</text>
+  <text x="1200" y="565" fill="#606060" font-family="system-ui" font-size="10">Section-specific baselines</text>
+  <text x="1200" y="585" fill="#606060" font-family="system-ui" font-size="10">Article/nav distribution</text>
+  <text x="1200" y="605" fill="#606060" font-family="system-ui" font-size="10">Historical classification</text>
+  
+  <rect x="1200" y="612" width="80" height="18" rx="2" fill="#1a1a1a" stroke="#505050" stroke-width="0.5"/>
+  <text x="1240" y="624" text-anchor="middle" fill="#606060" font-family="monospace" font-size="8">STATISTICAL</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- TERTIARY CLASSIFIERS - Bottom Row -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="60" y="670" fill="#505050" font-family="system-ui" font-size="11" letter-spacing="3">AUXILIARY CLASSIFIERS</text>
+  <line x1="60" y1="680" x2="1440" y2="680" stroke="#2a2a2a" stroke-width="1"/>
+  
+  <!-- Structure Classifier -->
+  <rect x="60" y="700" width="200" height="130" rx="5" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="60" y="700" width="200" height="32" rx="5" fill="#1a1a1a"/>
+  <text x="160" y="722" text-anchor="middle" fill="#707070" font-family="Georgia, serif" font-size="12">🏗️ Structure</text>
+  <text x="80" y="755" fill="#505050" font-family="system-ui" font-size="9">Heading hierarchy (H1-H6)</text>
+  <text x="80" y="770" fill="#505050" font-family="system-ui" font-size="9">Paragraph distribution</text>
+  <text x="80" y="785" fill="#505050" font-family="system-ui" font-size="9">List/table presence</text>
+  <text x="80" y="800" fill="#505050" font-family="system-ui" font-size="9">Blockquote usage</text>
+  
+  <!-- Media Classifier -->
+  <rect x="280" y="700" width="200" height="130" rx="5" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="280" y="700" width="200" height="32" rx="5" fill="#1a1a1a"/>
+  <text x="380" y="722" text-anchor="middle" fill="#707070" font-family="Georgia, serif" font-size="12">🖼️ Media</text>
+  <text x="300" y="755" fill="#505050" font-family="system-ui" font-size="9">Image count &amp; placement</text>
+  <text x="300" y="770" fill="#505050" font-family="system-ui" font-size="9">Video embed detection</text>
+  <text x="300" y="785" fill="#505050" font-family="system-ui" font-size="9">Figure/caption pairs</text>
+  <text x="300" y="800" fill="#505050" font-family="system-ui" font-size="9">Hero image presence</text>
+  
+  <!-- Social Classifier -->
+  <rect x="500" y="700" width="200" height="130" rx="5" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="500" y="700" width="200" height="32" rx="5" fill="#1a1a1a"/>
+  <text x="600" y="722" text-anchor="middle" fill="#707070" font-family="Georgia, serif" font-size="12">📱 Social</text>
+  <text x="520" y="755" fill="#505050" font-family="system-ui" font-size="9">Share button presence</text>
+  <text x="520" y="770" fill="#505050" font-family="system-ui" font-size="9">Comment section</text>
+  <text x="520" y="785" fill="#505050" font-family="system-ui" font-size="9">Author social links</text>
+  <text x="520" y="800" fill="#505050" font-family="system-ui" font-size="9">Engagement widgets</text>
+  
+  <!-- Time Classifier -->
+  <rect x="720" y="700" width="200" height="130" rx="5" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="720" y="700" width="200" height="32" rx="5" fill="#1a1a1a"/>
+  <text x="820" y="722" text-anchor="middle" fill="#707070" font-family="Georgia, serif" font-size="12">⏱️ Temporal</text>
+  <text x="740" y="755" fill="#505050" font-family="system-ui" font-size="9">Date in URL path</text>
+  <text x="740" y="770" fill="#505050" font-family="system-ui" font-size="9">Published timestamp</text>
+  <text x="740" y="785" fill="#505050" font-family="system-ui" font-size="9">Modified timestamp</text>
+  <text x="740" y="800" fill="#505050" font-family="system-ui" font-size="9">Time-based URL decay</text>
+  
+  <!-- Language Classifier -->
+  <rect x="940" y="700" width="200" height="130" rx="5" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="940" y="700" width="200" height="32" rx="5" fill="#1a1a1a"/>
+  <text x="1040" y="722" text-anchor="middle" fill="#707070" font-family="Georgia, serif" font-size="12">🌍 Language</text>
+  <text x="960" y="755" fill="#505050" font-family="system-ui" font-size="9">HTML lang attribute</text>
+  <text x="960" y="770" fill="#505050" font-family="system-ui" font-size="9">Content-Language header</text>
+  <text x="960" y="785" fill="#505050" font-family="system-ui" font-size="9">Text language detection</text>
+  <text x="960" y="800" fill="#505050" font-family="system-ui" font-size="9">Locale-specific patterns</text>
+  
+  <!-- Paywall Classifier -->
+  <rect x="1160" y="700" width="200" height="130" rx="5" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="1160" y="700" width="200" height="32" rx="5" fill="#1a1a1a"/>
+  <text x="1260" y="722" text-anchor="middle" fill="#707070" font-family="Georgia, serif" font-size="12">🔒 Access</text>
+  <text x="1180" y="755" fill="#505050" font-family="system-ui" font-size="9">Paywall detection</text>
+  <text x="1180" y="770" fill="#505050" font-family="system-ui" font-size="9">Subscriber-only markers</text>
+  <text x="1180" y="785" fill="#505050" font-family="system-ui" font-size="9">Content truncation</text>
+  <text x="1180" y="800" fill="#505050" font-family="system-ui" font-size="9">Registration walls</text>
+  
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- Footer: Aggregation -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <rect x="60" y="855" width="1380" height="100" rx="6" fill="url(#steelAccent)" filter="url(#industrialShadow)"/>
+  <rect x="60" y="855" width="1380" height="100" rx="6" fill="none" stroke="url(#goldAccent)" stroke-width="1"/>
+  
+  <text x="750" y="890" text-anchor="middle" fill="#C9A962" font-family="Georgia, serif" font-size="16" letter-spacing="4">ENSEMBLE AGGREGATION</text>
+  
+  <!-- Aggregation flow -->
+  <rect x="120" y="910" width="160" height="30" rx="4" fill="#1a1a1a" stroke="#C9A962" stroke-width="0.5"/>
+  <text x="200" y="930" text-anchor="middle" fill="#C9A962" font-family="system-ui" font-size="10">Weighted Voting</text>
+  
+  <path d="M290 925 L340 925" stroke="#505050" stroke-width="1" marker-end="url(#arrowGold)"/>
+  <defs><marker id="arrowGold" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C9A962"/></marker></defs>
+  
+  <rect x="350" y="910" width="160" height="30" rx="4" fill="#1a1a1a" stroke="#B87333" stroke-width="0.5"/>
+  <text x="430" y="930" text-anchor="middle" fill="#B87333" font-family="system-ui" font-size="10">Confidence Scoring</text>
+  
+  <path d="M520 925 L570 925" stroke="#505050" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="580" y="910" width="160" height="30" rx="4" fill="#1a1a1a" stroke="#808080" stroke-width="0.5"/>
+  <text x="660" y="930" text-anchor="middle" fill="#A0A0A0" font-family="system-ui" font-size="10">Conflict Resolution</text>
+  
+  <path d="M750 925 L800 925" stroke="#505050" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="810" y="910" width="160" height="30" rx="4" fill="#1a1a1a" stroke="#CD7F32" stroke-width="0.5"/>
+  <text x="890" y="930" text-anchor="middle" fill="#CD7F32" font-family="system-ui" font-size="10">Decision Path Trace</text>
+  
+  <path d="M980 925 L1030 925" stroke="#505050" stroke-width="1" marker-end="url(#arrowGold)"/>
+  
+  <rect x="1040" y="905" width="180" height="40" rx="5" fill="#1a1a1a" stroke="#C9A962" stroke-width="1.5"/>
+  <text x="1130" y="922" text-anchor="middle" fill="#C9A962" font-family="Georgia, serif" font-size="12">FINAL</text>
+  <text x="1130" y="938" text-anchor="middle" fill="#C9A962" font-family="Georgia, serif" font-size="12">CLASSIFICATION</text>
+  
+  <rect x="1250" y="910" width="140" height="30" rx="4" fill="#2a2a2a"/>
+  <text x="1320" y="930" text-anchor="middle" fill="#606060" font-family="system-ui" font-size="10">article | hub | nav</text>
+  
+  <!-- Version -->
+  <text x="1420" y="975" text-anchor="end" fill="#303030" font-family="monospace" font-size="9">CLASSIFIER SUITE v1.0</text>
+</svg>

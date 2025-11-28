@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="Inter, 'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="lane" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="card-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+    <linearGradient id="card-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="card-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="card-rose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 L2,4 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrow-strong" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 L2,4 Z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <text x="600" y="56" fill="#e2e8f0" font-size="30" font-weight="700" text-anchor="middle">URL Classification Lifecycle</text>
+  <text x="600" y="82" fill="#94a3b8" font-size="14" text-anchor="middle">Discovery → Prediction → Queue priority → Fetch/Verify → Feedback &amp; Learning</text>
+
+  <!-- Swimlanes -->
+  <g opacity="0.4">
+    <rect x="30" y="110" width="1140" height="130" rx="12" fill="url(#lane)"/>
+    <rect x="30" y="260" width="1140" height="130" rx="12" fill="url(#lane)"/>
+    <rect x="30" y="410" width="1140" height="130" rx="12" fill="url(#lane)"/>
+    <rect x="30" y="560" width="1140" height="130" rx="12" fill="url(#lane)"/>
+    <rect x="30" y="710" width="1140" height="130" rx="12" fill="url(#lane)"/>
+  </g>
+  <g fill="#cbd5e1" font-size="12" font-weight="600">
+    <text x="60" y="140">Discovery</text>
+    <text x="60" y="290">Prediction Service</text>
+    <text x="60" y="440">Data Layer</text>
+    <text x="60" y="590">Fetch &amp; Verify</text>
+    <text x="60" y="740">Learning Feedback</text>
+  </g>
+
+  <!-- Discovery -->
+  <g transform="translate(130,120)">
+    <rect width="230" height="90" rx="14" fill="url(#card-blue)" filter="url(#shadow)"/>
+    <text x="115" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1021">URL Discovered</text>
+    <text x="115" y="52" text-anchor="middle" font-size="11" fill="#0b1021">Crawl links • Sitemaps • External submissions</text>
+    <text x="115" y="72" text-anchor="middle" font-size="11" fill="#0b1021">Persist to `urls` table</text>
+  </g>
+
+  <!-- Prediction -->
+  <g transform="translate(420,270)">
+    <rect width="260" height="100" rx="14" fill="url(#card-amber)" filter="url(#shadow)"/>
+    <text x="130" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1021">UrlClassificationService</text>
+    <text x="130" y="52" text-anchor="middle" font-size="11" fill="#0b1021">learned pattern → similar URL → signals</text>
+    <text x="130" y="72" text-anchor="middle" font-size="11" fill="#0b1021">select best prediction + confidence</text>
+  </g>
+
+  <!-- Data Layer -->
+  <g transform="translate(780,420)">
+    <rect width="300" height="110" rx="14" fill="url(#card-emerald)" filter="url(#shadow)"/>
+    <text x="150" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1021">Persistence</text>
+    <text x="150" y="52" text-anchor="middle" font-size="12" font-weight="600" fill="#0b1021">url_classifications</text>
+    <text x="150" y="72" text-anchor="middle" font-size="11" fill="#0b1021">predicted_classification • confidence • source</text>
+    <text x="150" y="90" text-anchor="middle" font-size="11" fill="#0b1021">pattern_matched • similar_url_id • verified_at</text>
+  </g>
+
+  <!-- Queue -->
+  <g transform="translate(150,420)">
+    <rect width="240" height="110" rx="14" fill="url(#card-blue)" filter="url(#shadow)"/>
+    <text x="120" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1021">Queue Prioritizer</text>
+    <text x="120" y="54" text-anchor="middle" font-size="11" fill="#0b1021">use prediction confidence</text>
+    <text x="120" y="72" text-anchor="middle" font-size="11" fill="#0b1021">e.g., high-confidence articles → fetch sooner</text>
+  </g>
+
+  <!-- Fetch/Verify -->
+  <g transform="translate(430,570)">
+    <rect width="320" height="110" rx="14" fill="url(#card-amber)" filter="url(#shadow)"/>
+    <text x="160" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1021">ArticleProcessor</text>
+    <text x="160" y="52" text-anchor="middle" font-size="11" fill="#0b1021">fetch → content_analysis.classification</text>
+    <text x="160" y="72" text-anchor="middle" font-size="11" fill="#0b1021">verify prediction vs actual</text>
+    <text x="160" y="92" text-anchor="middle" font-size="11" fill="#0b1021">update verification_match + accuracy</text>
+  </g>
+
+  <!-- Feedback -->
+  <g transform="translate(830,720)">
+    <rect width="260" height="110" rx="14" fill="url(#card-rose)" filter="url(#shadow)"/>
+    <text x="130" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#0b1021">Learning Feedback</text>
+    <text x="130" y="52" text-anchor="middle" font-size="11" fill="#0b1021">update pattern accuracy</text>
+    <text x="130" y="72" text-anchor="middle" font-size="11" fill="#0b1021">decay stale patterns</text>
+    <text x="130" y="92" text-anchor="middle" font-size="11" fill="#0b1021">emit signals for domain profiles</text>
+  </g>
+
+  <!-- Arrows -->
+  <g stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M360 165 C420 165 430 220 430 260"/>
+    <path d="M680 320 C740 320 760 360 760 420"/>
+    <path d="M780 475 C700 475 560 475 390 475"/>
+    <path d="M390 475 C350 475 330 520 330 570"/>
+    <path d="M430 625 C390 625 350 625 330 575"/>
+    <path d="M750 625 C820 625 880 645 940 700"/>
+    <path d="M940 700 C1000 650 1040 560 1040 530"/>
+    <path d="M1040 530 C1040 360 720 200 360 165" marker-end="url(#arrow-strong)"/>
+  </g>
+
+  <!-- Labels -->
+  <g fill="#cbd5e1" font-size="12" font-weight="600">
+    <text x="365" y="210">persist prediction</text>
+    <text x="705" y="362">write to DB</text>
+    <text x="220" y="448">use confidence to sort queue</text>
+    <text x="620" y="552">fetch + classify</text>
+    <text x="965" y="676">verification result</text>
+    <text x="1020" y="350" text-anchor="end">patterns influence future predictions</text>
+  </g>
+</svg>

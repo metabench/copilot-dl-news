@@ -1,0 +1,312 @@
+.database-selector {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .db-selector-header {
+      margin-bottom: 16px;
+    }
+    
+    .db-selector-header h3 {
+      margin: 0 0 4px 0;
+      font-size: 1.1rem;
+    }
+    
+    .db-selector-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin: 0;
+    }
+    
+    /* Quick actions */
+    .db-quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .quick-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-color);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    
+    .quick-btn:hover {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+    
+    .quick-btn.secondary {
+      background: transparent;
+    }
+    
+    /* Database list */
+    .db-list-container {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    
+    .db-list-separator {
+      height: 1px;
+      background: var(--border-color);
+      margin: 12px 0;
+    }
+    
+    .db-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    /* Database item */
+    .db-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .db-item:hover {
+      border-color: var(--accent-color);
+      background: rgba(88, 166, 255, 0.05);
+    }
+    
+    .db-item.selected {
+      border-color: var(--accent-color);
+      background: rgba(88, 166, 255, 0.1);
+    }
+    
+    .db-item.new-db {
+      border-style: dashed;
+    }
+    
+    .db-item.new-db:hover {
+      border-style: solid;
+    }
+    
+    .db-icon {
+      font-size: 1.5rem;
+      width: 40px;
+      text-align: center;
+    }
+    
+    .db-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .db-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    
+    .db-name {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .db-badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    
+    .default-badge {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--accent-color);
+    }
+    
+    .new-badge {
+      background: rgba(59, 185, 80, 0.2);
+      color: var(--success-color);
+    }
+    
+    .db-stats-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .db-stat {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .db-last-import {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .db-check {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--success-color);
+      color: white;
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .db-item.selected .db-check {
+      opacity: 1;
+    }
+    
+    /* Create new database */
+    .db-create-section {
+      margin-bottom: 8px;
+    }
+    
+    .db-new-input-group {
+      display: none;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 12px;
+      background: var(--bg-color);
+      border-radius: 6px;
+    }
+    
+    .db-new-input-group[data-visible="true"] {
+      display: flex;
+    }
+    
+    .db-new-name-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background: var(--surface-color);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+    
+    .db-new-name-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+    
+    .create-db-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: var(--success-color);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    
+    .create-db-btn:hover {
+      background: #2ea043;
+    }
+    
+    /* Empty state */
+    .db-empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+    }
+    
+    .empty-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+    
+    .empty-hint {
+      font-size: 0.875rem;
+      opacity: 0.7;
+    }
+    
+    /* Info panel */
+    .db-info-panel {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 16px;
+    }
+    
+    .info-placeholder {
+      color: var(--text-secondary);
+      text-align: center;
+      margin: 0;
+    }
+    
+    .info-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    .info-hint {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin: 8px 0 0 0;
+    }
+    
+    .info-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .info-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      background: var(--surface-color);
+      border-radius: 4px;
+    }
+    
+    .info-stat .stat-emoji {
+      font-size: 1.25rem;
+      margin-bottom: 4px;
+    }
+    
+    .info-stat .stat-value {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+    
+    .info-stat .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    
+    .info-path {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .info-path code {
+      background: var(--surface-color);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
