@@ -773,10 +773,12 @@ controls.GeoImportDashboard = GeoImportDashboard;
 controls.SourceCard = SourceCard;
 controls.ProgressRing = ProgressRing;
 controls.LiveLog = LiveLog;
+controls.StagesStepper = StagesStepper;
 
 module.exports = { 
   GeoImportDashboard, 
   SourceCard, 
   ProgressRing, 
-  LiveLog 
+  LiveLog,
+  StagesStepper
 };
