@@ -3002,12 +3002,66 @@ body {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CONTROL REGISTRATION
+  // Registers all controls with jsgui's map_Controls for proper activation/hydration
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Register a control type with the jsgui instance.
+   * This is essential for:
+   * - Client-side activation/hydration to find the correct control class
+   * - context.map_Controls lookups during re-instantiation from DOM
+   * - Full jsgui3 functionality including control type resolution
+   * 
+   * @param {string} typeName - The control's __type_name (e.g., "server_item")
+   * @param {Function} ControlClass - The control class constructor
+   */
+  function registerControl(typeName, ControlClass) {
+    if (!typeName || !ControlClass) return;
+    
+    const key = String(typeName).trim().toLowerCase();
+    
+    // Register in jsgui.controls namespace
+    jsgui.controls = jsgui.controls || {};
+    jsgui.controls[key] = ControlClass;
+    
+    // Register in map_Controls for activation lookup
+    if (!jsgui.map_Controls) {
+      jsgui.map_Controls = {};
+    }
+    jsgui.map_Controls[key] = ControlClass;
+    
+    // Also register as a top-level property for convenience
+    if (!jsgui[key]) {
+      jsgui[key] = ControlClass;
+    }
+  }
+
+  // Register all Z-Server controls
+  registerControl("server_item", ServerItemControl);
+  registerControl("server_list", ServerListControl);
+  registerControl("server_url", ServerUrlControl);
+  registerControl("log_entry", LogEntryControl);
+  registerControl("log_viewer", LogViewerControl);
+  registerControl("server_log_window", ServerLogWindowControl);
+  registerControl("control_button", ControlButtonControl);
+  registerControl("context_menu", ContextMenuControl);
+  registerControl("startup_error", StartupErrorControl);
+  registerControl("control_panel", ControlPanelControl);
+  registerControl("scanning_indicator", ScanningIndicatorControl);
+  registerControl("sidebar", SidebarControl);
+  registerControl("content_area", ContentAreaControl);
+  registerControl("title_bar", TitleBarControl);
+  registerControl("zserver_app", ZServerAppControl);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTS
   // ═══════════════════════════════════════════════════════════════════════════
 
   return {
     ServerItemControl,
     ServerListControl,
+    ServerUrlControl,
     LogEntryControl,
     LogViewerControl,
     ServerLogWindowControl,
@@ -3020,7 +3074,9 @@ body {
     ContentAreaControl,
     TitleBarControl,
     ZServerAppControl,
-    buildZServerStyles
+    buildZServerStyles,
+    // Export the register function in case callers need to register additional controls
+    registerControl
   };
 }
 
