@@ -15,14 +15,15 @@
 5. [Creating Controls](#creating-controls)
 6. [Composition Patterns](#composition-patterns)
 7. [Project Structure](#project-structure)
-8. [Verification Scripts](#verification-scripts)
-9. [Development Server & Detached Mode](#development-server--detached-mode)
-10. [Common Patterns](#common-patterns)
-11. [Dashboard Server Performance Patterns](#dashboard-server-performance-patterns)
-12. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
-13. [Quick Reference](#quick-reference)
-14. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
-15. [Troubleshooting](#troubleshooting)
+8. [**Control Registration (ESSENTIAL)**](#control-registration-essential)
+9. [Verification Scripts](#verification-scripts)
+10. [Development Server & Detached Mode](#development-server--detached-mode)
+11. [Common Patterns](#common-patterns)
+12. [Dashboard Server Performance Patterns](#dashboard-server-performance-patterns)
+13. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+14. [Quick Reference](#quick-reference)
+15. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
+16. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -704,6 +705,112 @@ module.exports = {
   KIND_OPTIONS,
   BADGE_VARIANTS
 };
+```
+
+---
+
+## Control Registration (ESSENTIAL)
+
+> ⚠️ **NON-NEGOTIABLE**: Every jsgui3 control that will be used on the client side **MUST** be registered with the jsgui instance. Without registration, controls will not activate properly, event handlers won't bind, and client-side hydration will fail.
+
+### Why Registration is Essential
+
+jsgui3 needs to know about your control classes for several critical operations:
+
+1. **Client-side activation/hydration**: When `activate()` is called, jsgui looks up control types in `map_Controls`
+2. **Control instantiation from DOM**: When parsing existing markup, jsgui needs the class to reconstruct controls
+3. **Type resolution**: The `__type_name` must map to a registered class for proper control lifecycle
+
+### How to Register Controls
+
+Use the `registerControlType` function from `src/ui/controls/controlRegistry.js`:
+
+```javascript
+"use strict";
+
+const jsgui = require("jsgui3-html");
+const { registerControlType } = require("../../controls/controlRegistry");
+
+const CONTROL_TYPE = "my_custom_control";
+
+class MyCustomControl extends jsgui.Control {
+  constructor(spec = {}) {
+    super({
+      ...spec,
+      tagName: "div",
+      __type_name: CONTROL_TYPE  // Must match the registered type name
+    });
+    // ... control implementation
+  }
+}
+
+// ✅ ESSENTIAL: Register the control AFTER defining the class
+registerControlType(CONTROL_TYPE, MyCustomControl);
+
+module.exports = { MyCustomControl };
+```
+
+### Registration for Control Factories
+
+When using a factory pattern (like `createZServerControls`), register controls inside the factory:
+
+```javascript
+function createMyControls(jsgui) {
+  // Define controls...
+  class MyControlA extends jsgui.Control { /* ... */ }
+  class MyControlB extends jsgui.Control { /* ... */ }
+
+  // Register helper function (local to factory)
+  function registerControl(typeName, ControlClass) {
+    const key = String(typeName).trim().toLowerCase();
+    jsgui.controls = jsgui.controls || {};
+    jsgui.controls[key] = ControlClass;
+    
+    if (!jsgui.map_Controls) {
+      jsgui.map_Controls = {};
+    }
+    jsgui.map_Controls[key] = ControlClass;
+  }
+
+  // ✅ Register all controls before returning
+  registerControl("my_control_a", MyControlA);
+  registerControl("my_control_b", MyControlB);
+
+  return { MyControlA, MyControlB };
+}
+```
+
+### Registration Checklist
+
+When creating new controls, verify:
+
+- [ ] `__type_name` is set in the constructor's super() call
+- [ ] The type name is unique and lowercase (convention: `snake_case`)
+- [ ] `registerControlType()` is called after the class definition
+- [ ] The registered name matches `__type_name` exactly
+- [ ] For factory patterns, registration happens inside the factory
+
+### What Happens Without Registration
+
+| Symptom | Cause |
+|---------|-------|
+| `this.dom.el` is null in control methods | Control not found in `map_Controls` during activation |
+| Event handlers don't fire | `activate()` can't link control to DOM element |
+| Console shows "Missing context.map_Controls for type X" | Type not registered |
+| Controls render but aren't interactive | Hydration failed silently |
+
+### Debugging Registration Issues
+
+```javascript
+// Check if a control type is registered
+console.log("Is my_control registered?", !!jsgui.map_Controls?.my_control);
+
+// List all registered control types
+console.log("Registered types:", Object.keys(jsgui.map_Controls || {}));
+
+// Verify control's __type_name
+const ctrl = new MyControl({ context });
+console.log("Control type:", ctrl.__type_name);
 ```
 
 ---

@@ -158,21 +158,48 @@ ipcMain.handle('start-server', async (event, filePath) => {
 
   runningProcesses.set(filePath, { pid: child.pid, process: child });
 
+  // Track startup state - servers that exit quickly with errors are startup failures
+  let startupPhase = true;
+  let stderrBuffer = '';
+  let stdoutBuffer = '';
+  const STARTUP_WINDOW_MS = 3000; // Consider it a startup failure if it crashes within 3 seconds
+  
+  setTimeout(() => {
+    startupPhase = false;
+  }, STARTUP_WINDOW_MS);
+
   child.stdout.on('data', (data) => {
+    const text = data.toString();
+    if (startupPhase) {
+      stdoutBuffer += text;
+    }
     if (mainWindow) {
-      mainWindow.webContents.send('server-log', { filePath, type: 'stdout', data: data.toString() });
+      mainWindow.webContents.send('server-log', { filePath, type: 'stdout', data: text });
     }
   });
 
   child.stderr.on('data', (data) => {
+    const text = data.toString();
+    if (startupPhase) {
+      stderrBuffer += text;
+    }
     if (mainWindow) {
-      mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: data.toString() });
+      mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: text });
     }
   });
 
   child.on('close', (code) => {
     runningProcesses.delete(filePath);
     if (mainWindow) {
+      // If server exited during startup phase with non-zero code, it's a startup failure
+      if (startupPhase && code !== 0) {
+        const errorMessage = stderrBuffer || stdoutBuffer || `Server exited with code ${code}`;
+        mainWindow.webContents.send('server-startup-error', { 
+          filePath, 
+          code, 
+          error: errorMessage 
+        });
+      }
       mainWindow.webContents.send('server-status-change', { filePath, running: false });
     }
   });
