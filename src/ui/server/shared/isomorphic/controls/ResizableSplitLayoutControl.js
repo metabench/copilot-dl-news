@@ -176,7 +176,24 @@ class ResizableSplitLayoutControl extends jsgui.Control {
     this._dividerEl.addEventListener("dblclick", this._onDblClick);
     this._dividerEl.addEventListener("keydown", this._onKeyDown);
     
+    // Remove preload style if present (set by inline script to prevent flickering)
+    this._removePreloadStyle();
+    
     console.log("[ResizableSplitLayoutControl] Activated with width:", this._getLeftWidth());
+  }
+  
+  /**
+   * Remove the preload style element that was added to prevent flickering
+   * during initial page load. Once the control is activated, we no longer
+   * need the !important override.
+   */
+  _removePreloadStyle() {
+    if (typeof document === "undefined") return;
+    
+    const preloadStyle = document.getElementById("split-layout-preload");
+    if (preloadStyle) {
+      preloadStyle.remove();
+    }
   }
   
   // ==================== Width Management ====================

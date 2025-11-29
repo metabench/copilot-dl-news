@@ -334,12 +334,41 @@ function renderPage(control, options = {}) {
     ? '<!-- jsgui3 client bundle for control activation -->\n  <script src="/assets/design-studio-client.js"></script>'
     : '<!-- jsgui3 client bundle not built - run: npm run ui:design:build -->';
   
+  // Inline script to restore split layout width BEFORE render to prevent flickering
+  const preloadScript = `<script>
+(function() {
+  // Restore split layout width from localStorage before first paint
+  // This prevents flickering when navigating between pages
+  var storageKey = 'design-studio-nav-width';
+  var minWidth = 180;
+  var maxWidth = 500;
+  var defaultWidth = 260;
+  
+  try {
+    var saved = localStorage.getItem(storageKey);
+    if (saved) {
+      var width = parseInt(saved, 10);
+      if (width >= minWidth && width <= maxWidth) {
+        // Create a style element to set the width before render
+        var style = document.createElement('style');
+        style.id = 'split-layout-preload';
+        style.textContent = '[data-panel="left"] { width: ' + width + 'px !important; }';
+        document.head.appendChild(style);
+      }
+    }
+  } catch (e) {
+    // localStorage may be disabled
+  }
+})();
+</script>`;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
+  ${preloadScript}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
