@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <title>Decision Diamond</title>
+  <desc>Industrial Luxury Obsidian decision node glyph for decision tree diagrams</desc>
+  
+  <defs>
+    <!-- ═══════════════════════════════════════════════════════════════════════════════
+         INDUSTRIAL LUXURY OBSIDIAN THEME — DECISION DIAMOND GLYPH
+         Dark steel, burnished gold, copper accents, mechanical precision
+         64×64 → 96×96 for clarity, scales down to 24px
+         ═══════════════════════════════════════════════════════════════════════════════ -->
+    
+    <!-- Obsidian Background -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1a"/>
+      <stop offset="100%" stop-color="#1a1f2e"/>
+    </linearGradient>
+    
+    <!-- Decision Node Gradient -->
+    <linearGradient id="decisionNode" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    
+    <!-- Gold Accent for stroke -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#705a10"/>
+      <stop offset="20%" stop-color="#c9a227"/>
+      <stop offset="50%" stop-color="#e8c252"/>
+      <stop offset="80%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#705a10"/>
+    </linearGradient>
+    
+    <!-- Gold Glow Filter -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Soft Shadow -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Industrial Grid Pattern (subtle) -->
+    <pattern id="industrialGrid" width="12" height="12" patternUnits="userSpaceOnUse">
+      <path d="M 12 0 L 0 0 0 12" fill="none" stroke="#c9a227" stroke-width="0.3" opacity="0.06"/>
+    </pattern>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="96" height="96" fill="url(#obsidianBg)"/>
+  <rect width="96" height="96" fill="url(#industrialGrid)"/>
+  
+  <!-- Decision Diamond -->
+  <g transform="translate(48, 48)" filter="url(#softShadow)">
+    <!-- Diamond shape centered at origin -->
+    <polygon 
+      points="0,-32 32,0 0,32 -32,0" 
+      fill="url(#decisionNode)" 
+      stroke="url(#goldAccent)" 
+      stroke-width="2"
+      filter="url(#goldGlow)"
+    />
+    
+    <!-- Inner highlight for depth -->
+    <polygon 
+      points="0,-22 22,0 0,22 -22,0" 
+      fill="none" 
+      stroke="#c9a227" 
+      stroke-width="0.5"
+      opacity="0.3"
+    />
+    
+    <!-- Question mark indicator -->
+    <text 
+      x="0" y="6" 
+      text-anchor="middle" 
+      font-family="Georgia, serif" 
+      font-size="20" 
+      fill="#c9a227" 
+      opacity="0.9"
+    >?</text>
+  </g>
+</svg>
