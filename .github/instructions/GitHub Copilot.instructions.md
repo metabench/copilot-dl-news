@@ -16,9 +16,14 @@ applyTo: "**"
 
 These instructions apply when GitHub Copilot is running with the **GPT-5-Codex** or **GPT-5-Codex (Preview)** models inside this repository. Treat them as additional constraints on top of the workspace-wide guidance in `AGENTS.md`.
 
-## ⚠️ SESSION FIRST — CRITICAL
+## ⚠️ SESSION FIRST — MANDATORY FOR ALL NON-TRIVIAL WORK
 
-**Before writing ANY code for multi-file work**, create a session directory:
+**Create a session BEFORE writing ANY code** unless the task is:
+- A single command (e.g., `Stop-Process -Name node -Force`)
+- A one-file edit under ~30 lines with zero risk of side effects
+- A direct question requiring no code changes
+
+**For EVERYTHING else — create a session first:**
 
 ```bash
 node tools/dev/session-init.js --slug "<short-name>" --type "<category>" --title "<Title>" --objective "<one-liner>"
@@ -26,10 +31,20 @@ node tools/dev/session-init.js --slug "<short-name>" --type "<category>" --title
 
 This creates `docs/sessions/YYYY-MM-DD-<slug>/` with PLAN.md, WORKING_NOTES.md, SESSION_SUMMARY.md.
 
+**Why sessions matter:**
+- 🧠 **Memory**: Sessions are the AI agent's persistent memory across conversations
+- 🔍 **Discoverability**: Future agents can search and learn from past sessions
+- 📊 **Progress tracking**: Plans show what's done, what's blocked, what's next
+- 🛡️ **Risk reduction**: Forces you to think before coding; catches scope creep early
+
+**When in doubt, create a session.** The 30 seconds it takes will save hours of context reconstruction later.
+
 **Common mistakes to avoid:**
 - ❌ Creating plans in `docs/plans/` instead of session directory
 - ❌ Putting notes in `tmp/` (not searchable, not persistent)
 - ❌ Starting code before the session directory exists
+- ❌ Skipping sessions for "quick" multi-file changes (they're never quick)
+- ❌ Thinking "this is too small for a session" when touching >1 file
 
 Sessions are the **memory system** for AI agents. See `docs/sessions/SESSIONS_HUB.md`.
 

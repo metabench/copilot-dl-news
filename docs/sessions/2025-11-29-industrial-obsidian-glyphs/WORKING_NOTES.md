@@ -6,6 +6,32 @@
 	- `docs/diagrams/decision-tree-engine-roadmap.svg` expands the theme with `steelGradient` (#4a5159 → #1a2028), `goldShine` (#5a4a0e → #f7e08a), `copperGlow` (#e69050 → #8b5a2b), and industrial patterns (`industrialGrid`, `diagonalHatch`).
 	- Common strokes use #c9a227 at 1–2 px with 40–60% opacity for overlays; glows rely on `feGaussianBlur` + `feFlood` (#c9a227, 0.5 opacity).
 	- Typography: Georgia/serif for headers, Inter for labels, JetBrains Mono for data callouts. Glyphs will omit text but keep consistent radii and stroke weight cues.
+- 2025-11-29 12:05 — Cached-response browser concept sketch:
+  - Split pane layout: left column lists cached documents (URL, status, size, last-hit); right column shows headers + prettified body preview.
+  - Filters row exposes category dropdown (webpage/API), date pickers, and full-text search input with 🔍 icon.
+  - Adopts `obsidianBg` gradient background, `goldAccent` strokes for active rows, emerald highlights (#22c55e) for cache hits, and warning amber (#fbbf24) for stale entries.
+  - Each table row uses subtle shimmer stripes (opacity 0.04) to echo industrial brushed metal surfaces from existing diagrams.
+- 2025-11-29 12:45 — Produced `design/http-cache-browser.svg` (960×540, Industrial Luxury Obsidian theme):
+  - Shared gradients: `obsidianBg`, `panelGradient`, `goldAccent`, `emeraldGlow` (emerald reused from `leafYes`).
+  - Layout: filters ribbon with dropdowns + search, left cached-document list, right-side headers/body preview.
+  - Typography: Georgia for hero title, Inter for UI chrome, JetBrains Mono for metadata blocks.
+  - Accessibility: `role="img"`, `<title>`/`<desc>` included; contrast >= 4.5:1 for primary text.
+- 2025-11-29 13:05 — Refined the mock with browser chrome:
+  - Added window controls + URL bar (rounded pill) to reinforce "web browser" mental model.
+  - Shifted hero text and content stacks downward to preserve breathing room below the chrome.
+  - URL pill uses `chromeGradient` (#2a3142 → #151b29) and retains Industrial Luxury Obsidian metallic strokes.
+- 2025-11-29 13:20 — Collapsed-left-column treatment:
+  - Cached Documents panel now only shows status pills + Expand prompt, mirroring how secondary panes collapse in jsgui3 dashboards.
+  - Preview canvas widened to 600 px so headers/body excerpt have generous line length.
+  - Updated notes/text overlays to keep typography + color tokens consistent (Inter for chrome, JetBrains Mono for data).
+- 2025-11-29 13:50 — Visual polish pass for production-grade look:
+  - Added `radialGradient` center warmth + subtle grid pattern for depth and texture.
+  - Enhanced gradients: `goldAccent` now uses 5-stop shimmer, status colors (`emeraldGlow`, `amberGlow`, `roseGlow`) each have their own gradient.
+  - Introduced `softShadow` + `innerGlow` filters for card lift and highlight edge.
+  - Browser chrome refined with distinct window button strokes and a lock icon in the URL bar.
+  - Sidebar list items feature status badges with icon glyphs (✓, !, ✗) for quick scanning.
+  - Body excerpt now syntax-highlighted with semantic colors (cyan tags, yellow strings, grey attributes).
+  - Updated spacing for tighter rhythm: filters at y=136, main content at y=210.
 
 - 2025-11-29 04:42 — SVG Glyphs Created:
 

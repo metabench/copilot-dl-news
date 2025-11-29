@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-11-29: Fix Design Studio client errors
+
+**Duration**: Active
+**Type**: ui-dashboard
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Resolve Design Studio console errors and hydrate controls
+
+**Location**: `docs/sessions/2025-11-29-design-studio-console/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-29-design-studio-console/INDEX.md)
+- 🗺️ [Plan](./2025-11-29-design-studio-console/PLAN.md)
+- 📝 [Working Notes](./2025-11-29-design-studio-console/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-29-design-studio-console/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-29-design-studio-console/FOLLOW_UPS.md)
+
+
+### Session 2025-11-29: Design Studio Server App
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create Design Studio app based on docsViewer, targeting design directory with Luxury White Leather theme
+
+**Location**: `docs/sessions/2025-11-29-design-studio-app/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-29-design-studio-app/INDEX.md)
+- 🗺️ [Plan](./2025-11-29-design-studio-app/PLAN.md)
+- 📝 [Working Notes](./2025-11-29-design-studio-app/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-29-design-studio-app/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-29-design-studio-app/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-29: Industrial Luxury Obsidian Glyphs
 
 **Duration**: Active

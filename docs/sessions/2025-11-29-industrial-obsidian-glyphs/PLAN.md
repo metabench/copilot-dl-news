@@ -13,6 +13,7 @@ Create reusable SVG primitives in theme
 - design/decision-diamond.svg (new asset) ✅
 - design/arrow-chevrons.svg (new asset) ✅
 - design/status-box.svg (new asset) ✅
+- design/http-cache-browser.svg (new asset)
 - docs/sessions/2025-11-29-industrial-obsidian-glyphs/WORKING_NOTES.md (palette + commands) ✅
 
 ## Risks & Mitigations
@@ -24,3 +25,4 @@ Create reusable SVG primitives in theme
 - [x] Open each SVG in the browser to verify gradients, filters, and stroke widths render correctly on dark backdrops.
 - [x] Ensure `<title>` / `<desc>` metadata exists for accessibility in every new asset.
 - [ ] Paste glyphs into data explorer dashboard mock to confirm colors match existing theme tokens.
+- [ ] Validate http-cache browser mock renders legible table + preview blocks at 1× and 0.75× zoom.

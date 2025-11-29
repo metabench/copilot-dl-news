@@ -7,14 +7,20 @@
  * - Data Explorer
  * - Diagram Atlas
  * - Gazetteer
+ * - Docs Viewer
+ * - Design Studio
  * 
  * This module provides:
  * - BaseAppControl: Base class for app-level page composition
  * - Page rendering helpers
  * - Common HTML escaping
+ * - Shared utilities (file tree, renderers)
+ * - Shared isomorphic controls
  */
 
 const { BaseAppControl } = require("./BaseAppControl");
+const utils = require("./utils");
+const isomorphic = require("./isomorphic");
 
 /**
  * Render a complete HTML page from a jsgui3 control
@@ -114,5 +120,11 @@ module.exports = {
   renderPageHtml,
   escapeHtml,
   formatDateTime,
-  formatCount
+  formatCount,
+  // Shared utilities
+  utils,
+  // Shared isomorphic controls and jsgui
+  isomorphic,
+  // Re-export key controls directly for convenience
+  ResizableSplitLayoutControl: isomorphic.ResizableSplitLayoutControl
 };
