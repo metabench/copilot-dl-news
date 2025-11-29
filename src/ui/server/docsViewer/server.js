@@ -171,6 +171,9 @@ function createDocsViewerServer(options = {}) {
     app.use("/assets", express.static(publicDir));
   }
 
+  // Favicon handler (suppress 404 errors)
+  app.get("/favicon.ico", (req, res) => res.status(204).end());
+
   // Build documentation tree on startup
   let docTree = buildDocTree(docsPath);
 

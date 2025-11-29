@@ -57,6 +57,9 @@ _Last updated: 2025-11-04_
 - [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
 - [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.
 
+## Reports
+- [20-Session Retrospective (Nov 29, 2025)](reports/20-SESSION-RETROSPECTIVE-2025-11-29.md) - **REQUIRED READING**: Analysis of 20 recent sessions with patterns, solutions, and agent instruction improvements. Covers UI hydration fixes, tooling enhancements, and workflow violations.
+
 ## Legacy Collections
 - [Root Migration Collection](root-migration/README.md) - Former root-level docs awaiting categorization.
 - [AGENTS Archives](archives/agents/) - Historical copies of AGENTS.md variants for reference.

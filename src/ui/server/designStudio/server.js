@@ -3,6 +3,8 @@
 /**
  * @server Design Studio
  * @description A jsgui3 + Express web app to view design assets (SVGs) with a 2-column layout.
+ * @ui true
+ * @port 4800
  */
 
 /**

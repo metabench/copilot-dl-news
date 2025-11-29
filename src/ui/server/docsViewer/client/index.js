@@ -16,6 +16,12 @@
  * server and client using the same code.
  */
 
+// CRITICAL: Guard page_context before jsgui3-client import
+// jsgui3-client expects this global to exist
+if (typeof window !== "undefined" && typeof window.page_context === "undefined") {
+  window.page_context = {};
+}
+
 // jsgui3-client from npm (v0.0.121+ has browser compatibility fixes)
 const jsguiClient = require("jsgui3-client");
 

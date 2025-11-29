@@ -40293,6 +40293,9 @@ body .overlay {
   // src/ui/server/docsViewer/client/index.js
   var require_index = __commonJS({
     "src/ui/server/docsViewer/client/index.js"(exports, module) {
+      if (typeof window !== "undefined" && typeof window.page_context === "undefined") {
+        window.page_context = {};
+      }
       var jsguiClient = require_client();
       var {
         ResizableSplitLayoutControl,
