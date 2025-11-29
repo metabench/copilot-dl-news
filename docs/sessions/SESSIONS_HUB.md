@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-11-29: Industrial Luxury Obsidian Glyphs
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create reusable SVG primitives in theme
+
+**Location**: `docs/sessions/2025-11-29-industrial-obsidian-glyphs/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-29-industrial-obsidian-glyphs/INDEX.md)
+- 🗺️ [Plan](./2025-11-29-industrial-obsidian-glyphs/PLAN.md)
+- 📝 [Working Notes](./2025-11-29-industrial-obsidian-glyphs/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-29-industrial-obsidian-glyphs/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-29-industrial-obsidian-glyphs/FOLLOW_UPS.md)
+
+
+### Session 2025-11-29: Improve jsgui3 Workflow Access
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Enhance guidelines + tooling discoverability for jsgui3 control workflows
+
+**Location**: `docs/sessions/2025-11-29-jsgui-workflows/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-29-jsgui-workflows/INDEX.md)
+- 🗺️ [Plan](./2025-11-29-jsgui-workflows/PLAN.md)
+- 📝 [Working Notes](./2025-11-29-jsgui-workflows/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-29-jsgui-workflows/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-29-jsgui-workflows/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-29: JSGUI3 patterns diagram
 
 **Duration**: Active

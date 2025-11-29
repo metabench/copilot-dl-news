@@ -229,6 +229,12 @@ See `src/facts/` for implementation (`FactBase`, `UrlFact`, `HasDateSegment`, et
 
 When building UI components with jsgui3, follow these mandatory patterns:
 
+### Workflow-First Requirement
+
+- Before editing any jsgui3 surface, skim the current workflows with `node tools/dev/md-scan.js --dir docs --search "jsgui3 workflow" --json` (or a narrower term such as `control registration`).
+- Note the sections you will rely on in your session notes; if the workflow is missing details, you must update `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` (or the relevant workflow doc) before shipping.
+- When you discover another activation/registration path, append it to the workflow doc and drop a pointer here so future agents can find it via md-scan.
+
 ### Control Extraction (Non-Negotiable)
 
 **Rule**: Any UI component that could be reused, has its own state, or handles user interaction **MUST** be a separate jsgui3 Control class.
