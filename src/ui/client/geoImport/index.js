@@ -1,3 +1,91 @@
+// Import jsgui3-client and register controls using the standard controlRegistry pattern
+const jsgui = require('jsgui3-client');
+const { registerControlType } = require('../../controls/controlRegistry');
+
+// Import TwoColumnLayout controls and register them with jsgui
+const { createTwoColumnLayoutControls } = require('../../controls/layouts/TwoColumnLayoutFactory');
+const layoutControls = createTwoColumnLayoutControls(jsgui);
+
+// Build a list of controls to register
+const LAYOUT_CONTROLS = [
+  { type: 'nav_item', control: layoutControls.NavItem },
+  { type: 'sidebar', control: layoutControls.Sidebar },
+  { type: 'content_area', control: layoutControls.ContentArea },
+  { type: 'two_column_layout', control: layoutControls.TwoColumnLayout },
+  { type: 'detail_header', control: layoutControls.DetailHeader }
+];
+
+// Register controls on the jsgui module itself
+LAYOUT_CONTROLS.forEach(({ type, control }) => {
+  registerControlType(type, control, { jsguiInstance: jsgui });
+});
+
+// Debug: log what's registered
+console.log('[GeoImport] jsgui.controls keys:', Object.keys(jsgui.controls || {}));
+console.log('[GeoImport] jsgui.map_Controls keys:', Object.keys(jsgui.map_Controls || {}));
+
+/**
+ * Inject registered controls into a jsgui context.
+ * This is called during pre_activate and activate to ensure the context
+ * has access to our custom control constructors.
+ */
+function injectControlsIntoContext(context) {
+  if (!context) return;
+  console.log('[GeoImport] Injecting controls into context');
+  const map = context.map_Controls || (context.map_Controls = {});
+  
+  // Copy from jsgui.map_Controls
+  if (jsgui.map_Controls) {
+    Object.keys(jsgui.map_Controls).forEach(key => {
+      if (!map[key]) {
+        map[key] = jsgui.map_Controls[key];
+      }
+    });
+  }
+  
+  // Ensure our layout controls are in the context
+  LAYOUT_CONTROLS.forEach(({ type, control }) => {
+    const key = type.toLowerCase();
+    if (!map[key]) {
+      map[key] = control;
+    }
+  });
+  
+  console.log('[GeoImport] context.map_Controls keys after injection:', Object.keys(map));
+}
+
+// Hook into jsgui's pre_activate to inject controls
+const originalPreActivate = jsgui.pre_activate;
+if (typeof originalPreActivate === 'function') {
+  jsgui.pre_activate = function wrappedPreActivate(context, ...args) {
+    injectControlsIntoContext(context);
+    return originalPreActivate.call(this, context, ...args);
+  };
+}
+
+// Hook into jsgui's activate to inject controls
+const originalActivate = jsgui.activate;
+if (typeof originalActivate === 'function') {
+  jsgui.activate = function wrappedActivate(context, ...args) {
+    injectControlsIntoContext(context);
+    return originalActivate.call(this, context, ...args);
+  };
+}
+
+// Hook into Client_Page_Context constructor
+const ClientPageContext = jsgui.Client_Page_Context;
+if (typeof ClientPageContext === 'function') {
+  class GeoImportClientPageContext extends ClientPageContext {
+    constructor(...args) {
+      super(...args);
+      injectControlsIntoContext(this);
+    }
+  }
+  jsgui.Client_Page_Context = GeoImportClientPageContext;
+}
+
+console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => c.type).join(', '));
+
 (function() {
   'use strict';
   
@@ -540,7 +628,127 @@
   // Database Selector Handlers
   // ─────────────────────────────────────────────────────────────────────────
   
-  const dbSelector = document.querySelector('.database-selector');
+  const dbSelector = document.querySelector('[data-jsgui-control="database_selector"]') 
+    || document.querySelector('.database-selector')
+    || document.querySelector('.db-selector-window');
+  const dbContextMenu = dbSelector?.querySelector('[data-context-menu="database"]');
+  let bodyControl = null;
+  let bodyContextMenuHandlersBound = false;
+  let activeContextTarget = null;
+  
+  function ensureBodyControl() {
+    if (bodyControl) return bodyControl;
+    try {
+      if (jsgui && typeof jsgui.Client_Page_Context === 'function') {
+        const ctx = new jsgui.Client_Page_Context({ document });
+        bodyControl = typeof ctx.body === 'function' ? ctx.body() : null;
+      }
+    } catch (err) {
+      console.warn('[GeoImport] Failed to init jsgui body control', err);
+    }
+    return bodyControl;
+  }
+  
+  function showDbContextMenu(x, y, targetPath) {
+    if (!dbContextMenu) return;
+    
+    activeContextTarget = targetPath;
+    dbContextMenu.style.display = 'block';
+    dbContextMenu.style.left = x + 'px';
+    dbContextMenu.style.top = y + 'px';
+    dbContextMenu.setAttribute('data-target-path', targetPath || '');
+    
+    requestAnimationFrame(() => adjustDbContextMenuPosition(x, y));
+  }
+  
+  function hideDbContextMenu() {
+    if (!dbContextMenu) return;
+    dbContextMenu.style.display = 'none';
+    dbContextMenu.removeAttribute('data-target-path');
+    activeContextTarget = null;
+  }
+  
+  function adjustDbContextMenuPosition(x, y) {
+    if (!dbContextMenu) return;
+    const rect = dbContextMenu.getBoundingClientRect();
+    let left = x;
+    let top = y;
+    
+    if (rect.right > window.innerWidth) {
+      left = x - rect.width;
+    }
+    if (rect.bottom > window.innerHeight) {
+      top = y - rect.height;
+    }
+    
+    dbContextMenu.style.left = Math.max(8, left) + 'px';
+    dbContextMenu.style.top = Math.max(8, top) + 'px';
+  }
+  
+  function handleDbContextAction(action, targetPath) {
+    if (action === 'open-in-explorer') {
+      fetch('/api/geo-import/open-in-explorer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: targetPath })
+      }).catch(err => {
+        console.error('Failed to open in explorer:', err);
+      });
+    }
+    
+    dbSelector?.dispatchEvent(new CustomEvent('db-context-action', {
+      bubbles: true,
+      detail: { action, targetPath }
+    }));
+  }
+  
+  function bindContextMenuHandlers() {
+    if (!dbSelector || !dbContextMenu) return;
+    
+    if (!bodyContextMenuHandlersBound) {
+      const body = ensureBodyControl();
+      const outsideHandler = (e) => {
+        if (dbContextMenu.style.display === 'block' && !dbContextMenu.contains(e.target)) {
+          hideDbContextMenu();
+        }
+      };
+      const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+          hideDbContextMenu();
+        }
+      };
+      
+      if (body && typeof body.on === 'function') {
+        body.on('click', outsideHandler);
+        body.on('keydown', escapeHandler);
+      } else {
+        document.addEventListener('click', outsideHandler);
+        document.addEventListener('keydown', escapeHandler);
+      }
+      bodyContextMenuHandlersBound = true;
+    }
+    
+    dbSelector.addEventListener('contextmenu', (e) => {
+      const item = e.target.closest('.db-item');
+      if (!item) return;
+      const dbPath = item.getAttribute('data-db-path');
+      if (!dbPath || dbPath === '__new__') return;
+      
+      e.preventDefault();
+      showDbContextMenu(e.clientX, e.clientY, dbPath);
+    });
+    
+    dbContextMenu.addEventListener('click', (e) => {
+      const item = e.target.closest('.db-context-menu-item');
+      if (!item) return;
+      const action = item.getAttribute('data-action');
+      const targetPath = activeContextTarget || dbContextMenu.getAttribute('data-target-path');
+      if (action && targetPath) {
+        handleDbContextAction(action, targetPath);
+      }
+      hideDbContextMenu();
+    });
+  }
   
   function initDatabaseSelector() {
     if (!dbSelector) return;
@@ -578,6 +786,8 @@
         }
       });
     }
+    
+    bindContextMenuHandlers();
   }
   
   function selectDatabase(dbPath) {
@@ -763,6 +973,30 @@
   
   // Initialize database selector
   initDatabaseSelector();
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // Navigation Handling
+  // ─────────────────────────────────────────────────────────────────────────
+  // NOTE: Navigation clicks are now handled by jsgui3 controls (NavItem)
+  // via the 'nav-select' CustomEvent system in GeoImportDashboard.activate()
+  // 
+  // This keeps initialization minimal - just ensures visual state is correct
+  // The actual click handling and URL navigation is done by the control framework
+  
+  function initNavigation() {
+    const currentView = new URLSearchParams(window.location.search).get('view') || 'database';
+    
+    // Set initial visual state for nav items (defensive - server should set this)
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+      const navId = item.getAttribute('data-nav-id');
+      if (navId === currentView) {
+        item.classList.add('nav-item--selected');
+      }
+    });
+  }
+  
+  initNavigation();
   
   console.log('[GeoImport] Dashboard initialized');
 })();

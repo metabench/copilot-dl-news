@@ -21,6 +21,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 const jsgui = require('jsgui3-html');
 const { GeoImportDashboard } = require('../controls/GeoImportDashboard');
@@ -33,6 +34,19 @@ const { GeoImportStateManager, IMPORT_STAGES } = require('../../services/GeoImpo
 
 const DEFAULT_PORT = 4900;
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Database Listing Cache (avoids slow re-scanning on every request)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DB_CACHE_TTL_MS = 30000; // 30 seconds
+let _dbListCache = null;
+let _dbListCacheTime = 0;
+
+function invalidateDbCache() {
+  _dbListCache = null;
+  _dbListCacheTime = 0;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Database Access
@@ -74,12 +88,33 @@ function getDefaultDbPath(standalone = false) {
   return path.join(PROJECT_ROOT, 'data', 'gazetteer.db');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Database listing cache (avoids slow re-scan on every page load)
+// ─────────────────────────────────────────────────────────────────────────────
+const dbListCache = {
+  data: null,
+  timestamp: 0,
+  TTL: 30000  // 30 seconds cache
+};
+
 /**
- * List all .db files in the data directory that appear to be gazetteer databases
+ * List ALL .db files in the data directory
+ * Shows all databases so user can add gazetteer features to any of them
+ * Uses caching to avoid slow re-scans on every page load
+ * 
  * @param {string} projectRoot
+ * @param {Object} options
+ * @param {boolean} options.forceRefresh - Bypass cache
  * @returns {Array<Object>}
  */
-function listGazetteerDatabases(projectRoot) {
+function listGazetteerDatabases(projectRoot, options = {}) {
+  const now = Date.now();
+  
+  // Return cached data if fresh
+  if (!options.forceRefresh && dbListCache.data && (now - dbListCache.timestamp) < dbListCache.TTL) {
+    return dbListCache.data;
+  }
+  
   const dataDir = path.join(projectRoot, 'data');
   const databases = [];
   const defaultPath = getDefaultDbPath();
@@ -94,15 +129,20 @@ function listGazetteerDatabases(projectRoot) {
     if (!file.endsWith('.db')) continue;
     
     const filePath = path.join(dataDir, file);
-    const stats = fs.statSync(filePath);
+    
+    let stats;
+    try {
+      stats = fs.statSync(filePath);
+    } catch (e) {
+      continue; // Skip files we can't stat
+    }
     
     // Skip if it's a directory or WAL/SHM file
     if (stats.isDirectory()) continue;
     if (file.endsWith('-wal') || file.endsWith('-shm')) continue;
     
-    // Check if it contains gazetteer tables
+    // Get database info (uses fast queries)
     const dbInfo = getBasicDbInfo(filePath);
-    if (!dbInfo.hasGazetteerTables) continue;
     
     databases.push({
       path: filePath,
@@ -112,23 +152,40 @@ function listGazetteerDatabases(projectRoot) {
       modified: stats.mtime.toISOString(),
       places: dbInfo.places,
       names: dbInfo.names,
+      hasGazetteerTables: dbInfo.hasGazetteerTables,
       isDefault: filePath === defaultPath,
       sources: dbInfo.sources
     });
   }
   
-  // Sort: default first, then by name
+  // Sort: default first, then gazetteer DBs, then by name
   databases.sort((a, b) => {
     if (a.isDefault) return -1;
     if (b.isDefault) return 1;
+    if (a.hasGazetteerTables && !b.hasGazetteerTables) return -1;
+    if (!a.hasGazetteerTables && b.hasGazetteerTables) return 1;
     return a.name.localeCompare(b.name);
   });
+  
+  // Update cache
+  dbListCache.data = databases;
+  dbListCache.timestamp = now;
   
   return databases;
 }
 
 /**
- * Get basic info from a database (quick check)
+ * Invalidate database list cache (call after creating/deleting databases)
+ */
+function invalidateDbListCache() {
+  dbListCache.data = null;
+  dbListCache.timestamp = 0;
+}
+
+/**
+ * Get basic info from a database (optimized for speed)
+ * Uses fast queries: table existence check, approximate counts for large DBs
+ * Handles both gazetteer databases and other database types (news.db, etc.)
  * @param {string} dbPath
  * @returns {Object}
  */
@@ -137,41 +194,141 @@ function getBasicDbInfo(dbPath) {
   let db;
   
   try {
-    db = new Database(dbPath, { readonly: true });
+    // Quick file size check - very large DBs get approximate counts
+    const fileStats = fs.statSync(dbPath);
+    const isLargeDb = fileStats.size > 100 * 1024 * 1024; // > 100MB
     
-    // Check if it has places table
-    const tables = db.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('places', 'place_names')"
-    ).all();
+    db = new Database(dbPath, { readonly: true, timeout: 5000 });
     
-    if (tables.length === 0) {
-      return { hasGazetteerTables: false, places: 0, names: 0, sources: [] };
+    // Get all tables (fast query)
+    const allTables = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+    ).all().map(t => t.name);
+    
+    // Check if it has gazetteer tables
+    const hasPlaces = allTables.includes('places');
+    const hasPlaceNames = allTables.includes('place_names');
+    const hasGazetteerTables = hasPlaces || hasPlaceNames;
+    
+    // Filter out gazetteer tables for "other tables" count
+    const otherTables = allTables.filter(t => t !== 'places' && t !== 'place_names' && !t.startsWith('sqlite_'));
+    
+    // Base result with table info (useful for ALL databases)
+    const result = {
+      hasGazetteerTables,
+      tableCount: allTables.length,
+      otherTableCount: otherTables.length,
+      tables: otherTables.slice(0, 10), // First 10 non-gazetteer tables as preview
+      places: 0,
+      names: 0,
+      sources: [],
+      totalRows: 0,
+      tableCounts: []
+    };
+    
+    // Get row counts for non-gazetteer tables (up to 5, for preview)
+    const tablesToCheck = otherTables.slice(0, 5);
+    for (const tableName of tablesToCheck) {
+      try {
+        if (isLargeDb) {
+          // Try sqlite_stat1 first for approximate count
+          const stat = db.prepare(
+            `SELECT stat FROM sqlite_stat1 WHERE tbl=? AND idx IS NULL LIMIT 1`
+          ).get(tableName);
+          if (stat && stat.stat) {
+            const count = parseInt(stat.stat.split(' ')[0], 10) || 0;
+            result.tableCounts.push({ table: tableName, count });
+            result.totalRows += count;
+          } else {
+            // Fallback: quick check if table has data
+            const hasRows = db.prepare(`SELECT 1 FROM "${tableName}" LIMIT 1`).get();
+            if (hasRows) {
+              result.tableCounts.push({ table: tableName, count: -1 }); // -1 = has data
+              result.totalRows += 1; // Mark as having data
+            }
+          }
+        } else {
+          // Small DB - get actual counts
+          const count = db.prepare(`SELECT COUNT(*) as c FROM "${tableName}"`).get()?.c || 0;
+          result.tableCounts.push({ table: tableName, count });
+          result.totalRows += count;
+        }
+      } catch (e) { /* skip problematic tables */ }
     }
     
-    // Count places and names
-    let places = 0, names = 0, sources = [];
+    // Check if sqlite_stat1 exists (for large DB optimization)
+    const hasStat1 = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='sqlite_stat1'"
+    ).get();
     
-    try {
-      places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
-    } catch (e) { /* table might not exist */ }
+    // Gazetteer-specific: Count places and names
+    if (hasPlaces) {
+      try {
+        if (isLargeDb && hasStat1) {
+          // Use approximate count from sqlite_stat1 if available
+          const stat = db.prepare(
+            "SELECT stat FROM sqlite_stat1 WHERE tbl='places' AND idx IS NULL LIMIT 1"
+          ).get();
+          if (stat && stat.stat) {
+            result.places = parseInt(stat.stat.split(' ')[0], 10) || 0;
+          } else {
+            // sqlite_stat1 exists but no entry for places - do actual count
+            result.places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
+          }
+        } else {
+          // No sqlite_stat1 or small DB - do actual count
+          result.places = db.prepare('SELECT COUNT(*) as count FROM places').get()?.count || 0;
+        }
+      } catch (e) { /* table might not exist */ }
+    }
     
-    try {
-      names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
-    } catch (e) { /* table might not exist */ }
+    if (hasPlaceNames) {
+      try {
+        if (isLargeDb && hasStat1) {
+          const stat = db.prepare(
+            "SELECT stat FROM sqlite_stat1 WHERE tbl='place_names' AND idx IS NULL LIMIT 1"
+          ).get();
+          if (stat && stat.stat) {
+            result.names = parseInt(stat.stat.split(' ')[0], 10) || 0;
+          } else {
+            // Fallback: Do actual count - accuracy matters for user display
+            result.names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
+          }
+        } else {
+          result.names = db.prepare('SELECT COUNT(*) as count FROM place_names').get()?.count || 0;
+        }
+      } catch (e) { /* table might not exist */ }
+    }
     
-    try {
-      sources = db.prepare('SELECT DISTINCT source FROM places WHERE source IS NOT NULL').all()
-        .map(r => r.source);
-    } catch (e) { /* table might not exist */ }
+    // Get sources (fast - usually few distinct values)
+    if (hasPlaces) {
+      try {
+        result.sources = db.prepare('SELECT DISTINCT source FROM places WHERE source IS NOT NULL LIMIT 20').all()
+          .map(r => r.source);
+      } catch (e) { /* table might not exist */ }
+    }
     
-    return { hasGazetteerTables: true, places, names, sources };
+    return result;
   } catch (err) {
-    return { hasGazetteerTables: false, places: 0, names: 0, sources: [], error: err.message };
+    // Database might be locked, corrupted, or inaccessible
+    return { 
+      hasGazetteerTables: false, 
+      tableCount: 0,
+      otherTableCount: 0,
+      tables: [],
+      places: 0, 
+      names: 0, 
+      sources: [], 
+      totalRows: 0,
+      tableCounts: [],
+      error: err.message 
+    };
   } finally {
-    if (db) db.close();
+    if (db) {
+      try { db.close(); } catch (e) { /* ignore close errors */ }
+    }
   }
 }
-
 /**
  * Get detailed stats for a database
  * @param {string} dbPath
@@ -392,15 +549,18 @@ function createServer(options = {}) {
   // ─────────────────────────────────────────────────────────────────────────
   
   /**
-   * List available gazetteer databases in the data directory
+   * List available databases in the data directory
+   * Supports ?refresh=true to bypass cache
    */
   app.get('/api/databases', (req, res) => {
     try {
-      const databases = listGazetteerDatabases(PROJECT_ROOT);
+      const forceRefresh = req.query.refresh === 'true';
+      const databases = listGazetteerDatabases(PROJECT_ROOT, { forceRefresh });
       res.json({ 
         databases,
         current: dbPath,
-        dataDir: path.join(PROJECT_ROOT, 'data')
+        dataDir: path.join(PROJECT_ROOT, 'data'),
+        cached: !forceRefresh && dbListCache.data !== null
       });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -448,6 +608,9 @@ function createServer(options = {}) {
       // Create the new database with gazetteer schema
       const newGazetteer = createGazetteerDatabase(newDbPath, { verbose: true });
       newGazetteer.close();
+      
+      // Invalidate cache so new DB shows up
+      invalidateDbListCache();
       
       res.json({ 
         success: true, 
@@ -521,12 +684,71 @@ function createServer(options = {}) {
     }
   });
   
+  /**
+   * Open database directory in system file explorer
+   * Cross-platform: Windows Explorer, macOS Finder, Linux file manager
+   */
+  app.post('/api/geo-import/open-in-explorer', (req, res) => {
+    try {
+      const { path: dbPathParam } = req.body;
+      if (!dbPathParam) {
+        return res.status(400).json({ error: 'Database path is required' });
+      }
+      
+      const fullPath = path.isAbsolute(dbPathParam) 
+        ? dbPathParam 
+        : path.join(PROJECT_ROOT, dbPathParam);
+      
+      // Get the directory containing the file
+      const dirPath = fs.statSync(fullPath).isDirectory() 
+        ? fullPath 
+        : path.dirname(fullPath);
+      
+      if (!fs.existsSync(dirPath)) {
+        return res.status(404).json({ error: 'Directory not found', path: dirPath });
+      }
+      
+      // Platform-specific command to open file explorer
+      // Use spawn to avoid shell interpretation issues
+      let prog, args;
+      
+      switch (process.platform) {
+        case 'win32':
+          // Windows: explorer with /select, to highlight the file
+          // Note: /select, must be followed directly by the path without additional quoting
+          prog = 'explorer';
+          args = ['/select,' + fullPath.replace(/\//g, '\\')];
+          break;
+        case 'darwin':
+          // macOS: open in Finder with -R to reveal the file
+          prog = 'open';
+          args = ['-R', fullPath];
+          break;
+        default:
+          // Linux: xdg-open the directory (can't select file)
+          prog = 'xdg-open';
+          args = [dirPath];
+      }
+      
+      const child = spawn(prog, args, { detached: true, stdio: 'ignore' });
+      child.unref();
+      
+      // Explorer returns immediately but may report error, so just respond success
+      res.json({ success: true, path: fullPath, directory: dirPath });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ─────────────────────────────────────────────────────────────────────────
   // Dashboard Page
   // ─────────────────────────────────────────────────────────────────────────
   
   app.get('/', (req, res) => {
     const context = new jsgui.Page_Context();
+    
+    // Get active view from query param (default to 'pipeline')
+    const activeView = req.query.view || 'pipeline';
     
     // Get current state for initial render
     const state = stateManager.getState();
@@ -552,6 +774,8 @@ function createServer(options = {}) {
     
     const dashboard = new GeoImportDashboard({
       context,
+      activeView,
+      dbSelector,
       importState: {
         phase: state.status,
         progress: state.progress,
@@ -581,15 +805,31 @@ function createServer(options = {}) {
             id: 'wikidata',
             name: 'Wikidata',
             emoji: '📚',
-            status: 'pending',
-            description: 'SPARQL queries for metadata enrichment'
+            status: 'coming-soon',
+            description: 'SPARQL queries for Wikidata IDs, population updates, and multilingual names',
+            available: false,
+            comingSoon: true,
+            plannedFeatures: [
+              'Wikidata entity linking',
+              'Population synchronization',
+              'Multilingual place labels',
+              'Administrative hierarchy'
+            ]
           },
           osm: {
             id: 'osm',
             name: 'OpenStreetMap',
             emoji: '🗺️',
-            status: 'pending',
-            description: 'Local PostGIS database for boundaries'
+            status: 'coming-soon',
+            description: 'Local PostGIS database for boundaries and precise geometries',
+            available: false,
+            comingSoon: true,
+            plannedFeatures: [
+              'Administrative boundaries',
+              'Place polygons',
+              'Coastline data',
+              'POI enrichment'
+            ]
           }
         },
         logs: state.logs,
@@ -602,7 +842,7 @@ function createServer(options = {}) {
       }
     });
     
-    const html = renderPage(dbSelector, dashboard, context, { dbPath, currentDbStats });
+    const html = renderPage(dashboard, context, { dbPath, currentDbStats });
     res.send(html);
   });
   
@@ -616,8 +856,7 @@ function createServer(options = {}) {
 // Page Renderer
 // ─────────────────────────────────────────────────────────────────────────────
 
-function renderPage(dbSelector, dashboard, context, dbInfo = {}) {
-  const dbSelectorHtml = dbSelector.all_html_render();
+function renderPage(dashboard, context, dbInfo = {}) {
   const controlHtml = dashboard.all_html_render();
   
   return `<!DOCTYPE html>
@@ -630,7 +869,6 @@ function renderPage(dbSelector, dashboard, context, dbInfo = {}) {
 </head>
 <body>
   <div class="page-container">
-    ${dbSelectorHtml}
     ${controlHtml}
   </div>
   <script>
@@ -728,13 +966,51 @@ Examples:
   return options;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Detached Process Spawning
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Spawn server as detached background process
+ */
+function spawnDetached(options) {
+  const scriptPath = __filename;
+  const childArgs = [scriptPath, '--port', String(options.port)];
+  
+  if (options.standalone) childArgs.push('--standalone');
+  if (options.dbPath) childArgs.push('--db', options.dbPath);
+  
+  // Spawn detached process with stdio ignored
+  const child = spawn(process.execPath, childArgs, {
+    detached: true,
+    stdio: 'ignore',
+    cwd: process.cwd(),
+    env: { ...process.env, GEO_IMPORT_DETACHED: '1' }
+  });
+  
+  // Write PID to file for later stop command
+  const pidDir = path.join(PROJECT_ROOT, 'tmp');
+  if (!fs.existsSync(pidDir)) fs.mkdirSync(pidDir, { recursive: true });
+  fs.writeFileSync(path.join(pidDir, 'geo-import-server.pid'), String(child.pid), 'utf-8');
+  
+  // Unref so parent can exit
+  child.unref();
+  
+  const modeLabel = options.standalone ? '🧪 STANDALONE' : '🔗 INTEGRATED';
+  console.log(`🌐 Geo Import Dashboard started in background (PID: ${child.pid})`);
+  console.log(`   URL: http://localhost:${options.port}`);
+  console.log(`   Mode: ${modeLabel}`);
+  console.log(`   Stop with: node ${path.relative(process.cwd(), scriptPath)} --stop`);
+}
+
 // Main
 if (require.main === module) {
   const options = parseArgs();
   
+  // Handle stop/status via PID file
+  const pidFile = path.join(PROJECT_ROOT, 'tmp', 'geo-import-server.pid');
+  
   if (options.stop || options.status) {
-    // Handle stop/status via PID file
-    const pidFile = path.join(PROJECT_ROOT, 'tmp', 'geo-import-server.pid');
     
     if (options.status) {
       if (fs.existsSync(pidFile)) {
@@ -762,6 +1038,12 @@ if (require.main === module) {
       }
       process.exit(0);
     }
+  }
+  
+  // Handle --detached flag: spawn background process and exit
+  if (options.detached) {
+    spawnDetached(options);
+    process.exit(0);
   }
   
   // Start server

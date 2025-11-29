@@ -1,0 +1,370 @@
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* OBSIDIAN SCROLLBARS - Luxury Dark Theme Scrollbar Styles                    */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*
+ * Usage: Include this CSS file and add one of these classes to scrollable containers:
+ *   .obsidian-scroll          - Standard 8px scrollbar
+ *   .obsidian-scroll-thin     - Compact 6px scrollbar  
+ *   .obsidian-scroll-wide     - Wide 12px scrollbar
+ *   .obsidian-scroll-glow     - Add gold glow on hover
+ *
+ * Example:
+ *   <div class="my-list obsidian-scroll obsidian-scroll-glow">...</div>
+ *
+ * See: docs/guides/OBSIDIAN_LUXURY_DESIGN_GUIDE.md for full documentation
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* CSS Variables (if not already defined in :root)                             */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Only define if not already set */
+  --obsidian-bg-deep: rgba(10, 13, 20, 0.99);
+  --obsidian-bg-surface: rgba(20, 24, 36, 0.98);
+  --obsidian-bg-elevated: rgba(30, 35, 50, 0.95);
+  --obsidian-gold: #c9a227;
+  --obsidian-gold-dim: rgba(201, 162, 39, 0.6);
+  --obsidian-gold-glow: rgba(201, 162, 39, 0.4);
+  --obsidian-gold-subtle: rgba(201, 162, 39, 0.15);
+  --obsidian-border: rgba(201, 162, 39, 0.3);
+  --obsidian-border-dim: rgba(201, 162, 39, 0.15);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Base Scrollbar Styles                                                       */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll {
+  overflow-y: auto;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) var(--obsidian-bg-deep);
+}
+
+/* WebKit - Track */
+.obsidian-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.obsidian-scroll::-webkit-scrollbar-track {
+  background: var(--obsidian-bg-deep);
+  border-radius: 4px;
+}
+
+/* WebKit - Thumb */
+.obsidian-scroll::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.15s ease;
+}
+
+.obsidian-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+.obsidian-scroll::-webkit-scrollbar-thumb:active {
+  background: var(--obsidian-gold);
+}
+
+/* WebKit - Corner (for both scrollbars visible) */
+.obsidian-scroll::-webkit-scrollbar-corner {
+  background: var(--obsidian-bg-deep);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Size Variants                                                               */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Thin variant - 6px width */
+.obsidian-scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.obsidian-scroll-thin::-webkit-scrollbar-track {
+  border-radius: 3px;
+}
+
+.obsidian-scroll-thin::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+}
+
+/* Wide variant - 12px width */
+.obsidian-scroll-wide::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.obsidian-scroll-wide::-webkit-scrollbar-track {
+  border-radius: 6px;
+}
+
+.obsidian-scroll-wide::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  border: 2px solid transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Glow Effect Modifier                                                        */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-glow::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+  box-shadow: 
+    0 0 6px var(--obsidian-gold-glow),
+    inset 0 0 3px var(--obsidian-gold-glow);
+}
+
+.obsidian-scroll-glow::-webkit-scrollbar-thumb:active {
+  background: var(--obsidian-gold);
+  box-shadow: 
+    0 0 10px var(--obsidian-gold-glow),
+    inset 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Horizontal Scrollbar (when needed)                                          */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) var(--obsidian-bg-deep);
+}
+
+.obsidian-scroll-x::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.obsidian-scroll-x::-webkit-scrollbar-track {
+  background: var(--obsidian-bg-deep);
+  border-radius: 4px;
+}
+
+.obsidian-scroll-x::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 4px;
+}
+
+.obsidian-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Both Scrollbars (overflow: auto on both axes)                               */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-both {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) var(--obsidian-bg-deep);
+}
+
+.obsidian-scroll-both::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.obsidian-scroll-both::-webkit-scrollbar-track {
+  background: var(--obsidian-bg-deep);
+  border-radius: 4px;
+}
+
+.obsidian-scroll-both::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 4px;
+}
+
+.obsidian-scroll-both::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+.obsidian-scroll-both::-webkit-scrollbar-corner {
+  background: var(--obsidian-bg-deep);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Invisible Scrollbar (scroll functionality, hidden bar)                      */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-hidden {
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.obsidian-scroll-hidden::-webkit-scrollbar {
+  display: none; /* WebKit */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Auto-Fade Scrollbar (only visible when scrolling - webkit only)             */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-fade {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent var(--obsidian-bg-deep);
+}
+
+.obsidian-scroll-fade::-webkit-scrollbar {
+  width: 8px;
+}
+
+.obsidian-scroll-fade::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.obsidian-scroll-fade::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.obsidian-scroll-fade:hover::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+}
+
+.obsidian-scroll-fade:hover::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* OVERLAY SCROLLBAR - NO LAYOUT JIGGLE (RECOMMENDED)                          */
+/* ─────────────────────────────────────────────────────────────────────────── */
+/*
+ * This is the RECOMMENDED scrollbar style for most use cases.
+ * Uses overlay scrollbars that float over content instead of pushing it.
+ * Content width stays constant whether scrollbar is visible or not.
+ *
+ * How it works:
+ * - `overflow: overlay` (Chromium) makes scrollbar float over content
+ * - Fallback to `overflow: auto` for Firefox/Safari
+ * - Scrollbar-gutter reserves space on browsers that support it
+ */
+
+.obsidian-scroll-overlay {
+  /* Primary: overlay scrollbars (Chromium-based browsers) */
+  overflow-y: overlay;
+  /* Fallback for Firefox/Safari - reserve space to prevent jiggle */
+  scrollbar-gutter: stable;
+  /* Firefox styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) transparent;
+}
+
+/* Fallback for browsers that don't support overlay */
+@supports not (overflow: overlay) {
+  .obsidian-scroll-overlay {
+    overflow-y: auto;
+    /* scrollbar-gutter: stable ensures space is always reserved */
+  }
+}
+
+.obsidian-scroll-overlay::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.obsidian-scroll-overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.obsidian-scroll-overlay::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 5px;
+  /* Inset border creates visual padding from edge */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.obsidian-scroll-overlay::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.obsidian-scroll-overlay::-webkit-scrollbar-thumb:active {
+  background: var(--obsidian-gold);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.obsidian-scroll-overlay::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* OVERLAY + GLOW (Premium variant)                                            */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-overlay-glow {
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) transparent;
+}
+
+@supports not (overflow: overlay) {
+  .obsidian-scroll-overlay-glow {
+    overflow-y: auto;
+  }
+}
+
+.obsidian-scroll-overlay-glow::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.obsidian-scroll-overlay-glow::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.obsidian-scroll-overlay-glow::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: all 0.2s ease;
+}
+
+.obsidian-scroll-overlay-glow::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    0 0 8px var(--obsidian-gold-glow),
+    inset 0 0 4px var(--obsidian-gold-glow);
+}
+
+.obsidian-scroll-overlay-glow::-webkit-scrollbar-thumb:active {
+  background: var(--obsidian-gold);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 
+    0 0 12px var(--obsidian-gold-glow),
+    inset 0 0 6px rgba(255, 255, 255, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Utility: Apply to body/html for global no-jiggle scrollbars                 */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+.obsidian-scroll-global {
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) var(--obsidian-bg-deep);
+}
+
+@supports not (overflow: overlay) {
+  .obsidian-scroll-global {
+    overflow-y: scroll; /* Always show scrollbar to prevent jiggle */
+  }
+}

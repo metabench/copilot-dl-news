@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-11-29: JSGUI3 patterns diagram
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add SVG diagram summarizing optimal jsgui3 patterns
+
+**Location**: `docs/sessions/2025-11-29-jsgui-patterns-svg/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-29-jsgui-patterns-svg/INDEX.md)
+- 🗺️ [Plan](./2025-11-29-jsgui-patterns-svg/PLAN.md)
+- 📝 [Working Notes](./2025-11-29-jsgui-patterns-svg/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-29-jsgui-patterns-svg/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-29-jsgui-patterns-svg/FOLLOW_UPS.md)
+
+
+### Session 2025-11-28: Fix gazetteer context menu events
+
+**Duration**: Active
+**Type**: bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make importer context menu usable with jsgui events
+
+**Location**: `docs/sessions/2025-11-28-gazetteer-context-menu/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-28-gazetteer-context-menu/INDEX.md)
+- 🗺️ [Plan](./2025-11-28-gazetteer-context-menu/PLAN.md)
+- 📝 [Working Notes](./2025-11-28-gazetteer-context-menu/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-28-gazetteer-context-menu/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-28-gazetteer-context-menu/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-28: Z-Server Scan Progress Bar
 
 **Duration**: Active

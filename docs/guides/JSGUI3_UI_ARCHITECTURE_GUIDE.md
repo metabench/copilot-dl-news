@@ -18,10 +18,11 @@
 8. [Verification Scripts](#verification-scripts)
 9. [Development Server & Detached Mode](#development-server--detached-mode)
 10. [Common Patterns](#common-patterns)
-11. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
-12. [Quick Reference](#quick-reference)
-13. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
-14. [Troubleshooting](#troubleshooting)
+11. [Dashboard Server Performance Patterns](#dashboard-server-performance-patterns)
+12. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+13. [Quick Reference](#quick-reference)
+14. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1249,6 +1250,210 @@ class PaginationControl extends jsgui.Control {
 
 ---
 
+## Dashboard Server Performance Patterns
+
+Dashboards often need to query databases or aggregate data. Poor patterns here cause "waiting for ages" load times.
+
+### ✅ 1. Cache Expensive Queries
+
+**Problem**: Listing databases requires scanning directories and opening each DB to check tables - slow for many DBs.
+
+**Solution**: Cache the result with a TTL (Time To Live).
+
+```javascript
+// Server-side caching pattern
+let databaseListCache = { data: null, timestamp: 0 };
+const DATABASE_CACHE_TTL_MS = 30000;  // 30 seconds
+
+async function listDatabases() {
+  const now = Date.now();
+  
+  // Return cached data if still valid
+  if (databaseListCache.data && (now - databaseListCache.timestamp) < DATABASE_CACHE_TTL_MS) {
+    return databaseListCache.data;
+  }
+  
+  // Expensive operation: scan directory, check each DB
+  const dataDir = path.resolve(__dirname, "../../../data");
+  const files = fs.readdirSync(dataDir).filter(f => f.endsWith(".db"));
+  
+  const databases = [];
+  for (const file of files) {
+    const info = await getBasicDbInfo(path.join(dataDir, file));
+    databases.push(info);
+  }
+  
+  // Update cache
+  databaseListCache = { data: databases, timestamp: now };
+  return databases;
+}
+```
+
+**API Enhancement**: Add `?refresh=true` to force cache refresh:
+
+```javascript
+app.get("/api/databases", async (req, res) => {
+  if (req.query.refresh === "true") {
+    databaseListCache = { data: null, timestamp: 0 };  // Invalidate
+  }
+  const databases = await listDatabases();
+  res.json(databases);
+});
+```
+
+### ✅ 2. Optimize Database Info Queries
+
+**Problem**: Counting all rows in large tables (millions of rows) is slow.
+
+**Solution**: Use existence checks (`LIMIT 1`) and approximate counts for large DBs.
+
+```javascript
+async function getBasicDbInfo(dbPath) {
+  const stats = fs.statSync(dbPath);
+  const sizeBytes = stats.size;
+  
+  // For large DBs (>100MB), use approximate count
+  const isLarge = sizeBytes > 100 * 1024 * 1024;
+  
+  const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
+  
+  try {
+    // Quick existence check - faster than COUNT(*)
+    const hasGazetteerTables = await new Promise((resolve) => {
+      db.get(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='places' LIMIT 1",
+        (err, row) => resolve(!err && !!row)
+      );
+    });
+    
+    let placeCount = 0;
+    if (hasGazetteerTables) {
+      if (isLarge) {
+        // Approximate count for large DBs - instant
+        const approx = await dbGet(db, 
+          "SELECT MAX(rowid) as approx FROM places");
+        placeCount = approx?.approx || 0;
+      } else {
+        // Exact count for small DBs
+        const exact = await dbGet(db, "SELECT COUNT(*) as cnt FROM places");
+        placeCount = exact?.cnt || 0;
+      }
+    }
+    
+    return {
+      name: path.basename(dbPath),
+      path: dbPath,
+      sizeBytes,
+      hasGazetteerTables,
+      placeCount,
+      isApproximate: isLarge
+    };
+  } finally {
+    db.close();
+  }
+}
+```
+
+### ✅ 3. Timeout Guards for DB Operations
+
+**Problem**: Corrupt or locked DBs can hang queries indefinitely.
+
+**Solution**: Wrap in Promise.race with timeout.
+
+```javascript
+async function safeDbQuery(db, sql, timeout = 5000) {
+  return Promise.race([
+    new Promise((resolve, reject) => {
+      db.get(sql, (err, row) => err ? reject(err) : resolve(row));
+    }),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Query timeout")), timeout)
+    )
+  ]);
+}
+
+// Usage
+try {
+  const result = await safeDbQuery(db, "SELECT COUNT(*) FROM large_table", 3000);
+} catch (err) {
+  if (err.message === "Query timeout") {
+    return { count: "unknown", timedOut: true };
+  }
+  throw err;
+}
+```
+
+### ✅ 4. Invalidate Cache on Mutations
+
+When creating/deleting databases, invalidate the cache:
+
+```javascript
+app.post("/api/databases", async (req, res) => {
+  // ... create database logic ...
+  
+  // Invalidate cache so next list reflects new DB
+  databaseListCache = { data: null, timestamp: 0 };
+  
+  res.json({ success: true, database: newDb });
+});
+```
+
+### ✅ 5. Show All Items, Style Differently
+
+**Problem**: Users may want to add features to items that don't have them yet (e.g., add gazetteer tables to a non-gazetteer database).
+
+**Solution**: Show all items, but style non-applicable ones differently.
+
+```javascript
+// In DatabaseItem control
+compose() {
+  const hasGazetteer = this.database.hasGazetteerTables;
+  
+  if (!hasGazetteer) {
+    this.add_class("non-gazetteer");  // Grayed out
+    
+    // Add badge
+    const badge = new jsgui.Control({ context: this.context, tagName: "span" });
+    badge.add_class("init-gazetteer-badge");
+    badge.add("📦 No Gazetteer");
+    this.add(badge);
+    
+    // Add action button
+    const initBtn = new jsgui.Control({ context: this.context, tagName: "button" });
+    initBtn.add_class("init-gazetteer-btn");
+    initBtn.add("Init Gazetteer");
+    this.add(initBtn);
+  }
+}
+```
+
+**CSS**:
+```css
+.non-gazetteer {
+  opacity: 0.7;
+  filter: grayscale(30%);
+}
+
+.init-gazetteer-badge {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.init-gazetteer-btn {
+  background: var(--theme-surface, #2d2d2d);
+  color: var(--theme-text-secondary, #888);
+  border: 1px solid var(--theme-border, #3d3d3d);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+```
+
+---
+
 ## Anti-Patterns to Avoid
 
 ### ❌ 1. Inline Compositions in App Controls
@@ -1509,6 +1714,75 @@ button.add(" Search");
 | Info | ℹ️ | Information |
 | Folder | 📁 | Directory |
 | File | 📄 | Document |
+
+### ❌ 9. Shadowing Reserved Property Names (CRITICAL: `this.content`)
+
+**⚠️ CRITICAL BUG**: Never use `this.content` as a property name in jsgui3 controls!
+
+**Bad**: Using `content` as a property name shadows the base class Collection.
+
+```javascript
+// ❌ CRITICAL BUG - DO NOT DO THIS
+class TwoColumnLayout extends jsgui.Control {
+  constructor(spec) {
+    super(spec);
+    this.sidebar = null;
+    this.content = null;  // 💥 SHADOWS jsgui.Control.content (a Collection)!
+    if (!spec.el) this.compose();
+  }
+  
+  compose() {
+    // This will CRASH because this.add() tries to use this.content
+    // which is now null instead of the Collection!
+    const container = new jsgui.Control({ ... });
+    this.add(container);  // 💥 TypeError: Cannot read property 'push' of null
+  }
+}
+```
+
+**Why this breaks**: In jsgui3, `Control.content` is a **Collection** that holds child controls. When you call `this.add(child)`, it internally calls `this.content.push(child)`. If you shadow `this.content` with `null` or any non-Collection value, `this.add()` crashes.
+
+**Good**: Use a different property name.
+
+```javascript
+// ✅ CORRECT - use a unique property name
+class TwoColumnLayout extends jsgui.Control {
+  constructor(spec) {
+    super(spec);
+    this.sidebar = null;
+    this.contentArea = null;  // ✅ Unique name, doesn't shadow base class
+    if (!spec.el) this.compose();
+  }
+  
+  compose() {
+    const container = new jsgui.Control({ ... });
+    this.add(container);  // ✅ Works - this.content is still the Collection
+    
+    this.contentArea = new jsgui.Control({ context: this.context, tagName: 'div' });
+    this.contentArea.add_class('content-area');
+    container.add(this.contentArea);
+  }
+  
+  addContent(control) {
+    if (this.contentArea) {
+      this.contentArea.add(control);  // ✅ Uses our custom property
+    }
+  }
+}
+```
+
+**Reserved property names to avoid**:
+- `content` - The Collection holding child controls
+- `context` - The jsgui context object
+- `dom` - DOM element references
+- `__type_name` - Internal type identifier
+
+**How to spot this bug**: If you see errors like:
+- `TypeError: Cannot read property 'push' of null`
+- `TypeError: this.content.push is not a function`
+- Controls don't render any children despite calling `this.add()`
+
+Check if you've accidentally shadowed `this.content` in your constructor.
 
 ---
 

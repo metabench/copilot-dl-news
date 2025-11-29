@@ -3,18 +3,20 @@
 /**
  * GeoImportDashboard - Live dashboard for geographic data import operations
  * 
+ * Two-column layout with navigation on left, detail view on right.
  * Shows real-time progress of gazetteer imports from GeoNames, OSM, Wikidata.
  * Uses jsgui3 Data_Object for reactive updates via on('change').
+ * 
+ * Navigation sections:
+ * - 🗄️ Database - Database selector
+ * - 📋 Pipeline - Import stages stepper
+ * - 📦 Sources - Data source cards (GeoNames, Wikidata, OSM)
+ * - 📈 Coverage - Before/after statistics
+ * - 📝 Log - Live import log
  * 
  * @example Server-side rendering:
  *   const { GeoImportDashboard } = require('./controls/GeoImportDashboard');
  *   const dashboard = new GeoImportDashboard({ context });
- *   dashboard.setImportState({
- *     source: 'geonames',
- *     phase: 'importing',
- *     progress: { current: 5000, total: 25000 },
- *     stats: { places: 5000, names: 45000, skipped: 120 }
- *   });
  *   const html = dashboard.all_html_render();
  * 
  * @example Client-side activation with live updates:
@@ -25,12 +27,15 @@
 const jsgui = require('jsgui3-html');
 const { Control, controls } = jsgui;
 const createControlFactory = require('./helpers/controlFactory');
+const { createTwoColumnLayoutControls } = require('./layouts/TwoColumnLayoutFactory');
 
-// Initialize factory with jsgui instance
+// Initialize factories with jsgui instance
 const {
   el, createSection, createStatItem, createActionButton,
   formatNumber, formatLabel
 } = createControlFactory(jsgui);
+
+const { TwoColumnLayout, Sidebar, ContentArea, NavItem, DetailHeader } = createTwoColumnLayoutControls(jsgui);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Label Constants
@@ -44,7 +49,8 @@ const STATUS_LABELS = {
   'completed': '✅ Complete',
   'error': '❌ Error',
   'pending': '⏳ Pending',
-  'missing': '⚠️ Missing'
+  'missing': '⚠️ Missing',
+  'coming-soon': '🚧 Coming Soon'
 };
 
 /** Phase display labels with emoji */
@@ -79,11 +85,16 @@ class SourceCard extends Control {
     this.add_class(`source-${this.source.id}`);
     this.add_class(`status-${this.source.status}`);
     
+    // Add coming-soon class if applicable
+    if (this.source.comingSoon) {
+      this.add_class('coming-soon');
+    }
+    
     if (!spec.el) this.compose();
   }
   
   compose() {
-    const { name, emoji, status, description, stats, lastRun } = this.source;
+    const { name, emoji, status, description, stats, lastRun, comingSoon, plannedFeatures, available } = this.source;
     const ctx = this.context;
     
     // Header row: emoji + name + status badge
@@ -91,9 +102,16 @@ class SourceCard extends Control {
     header.add(el(ctx, 'span', emoji, 'source-emoji'));
     header.add(el(ctx, 'span', name, 'source-name'));
     
-    const badge = el(ctx, 'span', STATUS_LABELS[status] || status, 'status-badge');
-    badge.add_class(`status-${status}`);
-    header.add(badge);
+    // Status badge - special handling for coming-soon
+    if (comingSoon) {
+      const badge = el(ctx, 'span', '🚧 Coming Soon', 'status-badge');
+      badge.add_class('status-coming-soon');
+      header.add(badge);
+    } else {
+      const badge = el(ctx, 'span', STATUS_LABELS[status] || status, 'status-badge');
+      badge.add_class(`status-${status}`);
+      header.add(badge);
+    }
     this.add(header);
     
     // Description
@@ -101,18 +119,34 @@ class SourceCard extends Control {
       this.add(el(ctx, 'p', description, 'source-description'));
     }
     
-    // Stats grid
+    // Planned features list for coming-soon sources
+    if (comingSoon && plannedFeatures && plannedFeatures.length > 0) {
+      const featuresList = el(ctx, 'div', null, 'planned-features');
+      featuresList.add(el(ctx, 'span', '📋 Planned:', 'features-label'));
+      const featuresText = plannedFeatures.map(f => `• ${f}`).join('  ');
+      featuresList.add(el(ctx, 'span', featuresText, 'features-list'));
+      this.add(featuresList);
+    }
+    
+    // Stats grid - show placeholder for coming-soon
     if (stats) {
       const grid = el(ctx, 'div', null, 'stats-grid');
+      if (comingSoon) {
+        grid.add_class('stats-disabled');
+      }
       for (const [key, value] of Object.entries(stats)) {
         grid.add(createStatItem(ctx, formatLabel(key), value));
       }
       this.add(grid);
     }
     
-    // Last run
+    // Last run or availability message
     if (lastRun) {
       this.add(el(ctx, 'div', `Last run: ${lastRun}`, 'last-run'));
+    } else if (comingSoon) {
+      this.add(el(ctx, 'div', '⏳ Backend integration in development', 'availability-note'));
+    } else if (available) {
+      this.add(el(ctx, 'div', '✅ Ready to import', 'availability-note ready'));
     }
   }
 }
@@ -333,23 +367,30 @@ const DEFAULT_SOURCES = {
     emoji: '🌍',
     status: 'ready',
     description: 'cities15000.txt: ~25,000 cities with population >15K',
-    stats: { expected_cities: 25000, expected_names: 150000 }
+    stats: { expected_cities: 25000, expected_names: 150000 },
+    available: true
   },
   wikidata: {
     id: 'wikidata',
     name: 'Wikidata',
     emoji: '📚',
-    status: 'idle',
-    description: 'SPARQL queries for metadata enrichment',
-    stats: { linked_entities: 0 }
+    status: 'coming-soon',
+    description: 'SPARQL queries for Wikidata IDs, population updates, and multilingual names',
+    stats: { linked_entities: '—' },
+    available: false,
+    comingSoon: true,
+    plannedFeatures: ['Entity linking', 'Population sync', 'Multilingual labels']
   },
   osm: {
     id: 'osm',
     name: 'OpenStreetMap',
     emoji: '🗺️',
-    status: 'pending',
-    description: 'Local PostGIS database for boundaries',
-    stats: { boundaries: 0, spatial_queries: 0 }
+    status: 'coming-soon',
+    description: 'Administrative boundaries and spatial containment queries',
+    stats: { boundaries: '—' },
+    available: false,
+    comingSoon: true,
+    plannedFeatures: ['Admin boundaries', 'Spatial queries', 'PostGIS integration']
   }
 };
 
@@ -361,6 +402,15 @@ const DEFAULT_LOGS = [
   { time: '10:30:03', level: 'info', message: 'Ready to import 24,687 cities' }
 ];
 
+/** Navigation sections for the dashboard */
+const NAV_SECTIONS = [
+  { id: 'database', label: 'Database', icon: '🗄️' },
+  { id: 'pipeline', label: 'Pipeline', icon: '📋' },
+  { id: 'sources', label: 'Data Sources', icon: '📦' },
+  { id: 'coverage', label: 'Coverage', icon: '📈' },
+  { id: 'log', label: 'Import Log', icon: '📝' }
+];
+
 class GeoImportDashboard extends Control {
   constructor(spec = {}) {
     super({ ...spec, tagName: 'div', __type_name: 'geo_import_dashboard' });
@@ -368,11 +418,22 @@ class GeoImportDashboard extends Control {
     this.add_class('geo-import-dashboard');
     this.dom.attributes['data-jsgui-control'] = 'geo_import_dashboard';
     
+    // Active view
+    this.activeView = spec.activeView || 'pipeline';
+    
+    // Layout controls
+    this._layout = null;
+    this._sidebar = null;
+    this._contentArea = null;
+    
     // Child control references
     this._progressRing = null;
     this._stagesStepper = null;
     this._sourceCards = {};
     this._liveLog = null;
+    
+    // Database selector (passed from server)
+    this._dbSelector = spec.dbSelector || null;
     
     // State with sensible defaults
     this.importState = {
@@ -397,93 +458,171 @@ class GeoImportDashboard extends Control {
     this.importState = { ...this.importState, ...state };
   }
   
+  setDbSelector(dbSelector) {
+    this._dbSelector = dbSelector;
+  }
+  
   compose() {
-    this._composeHeader();
-    this._composeStagesSection();
-    this._composeProgressSection();
-    this._composeSourcesSection();
-    this._composeCoverageSection();
-    this._composeLogSection();
-    this._composeActionsSection();
-  }
-  
-  // ─────────────────────────────────────────────────────────────────────────
-  // Compose Helpers (private)
-  // ─────────────────────────────────────────────────────────────────────────
-  
-  _composeHeader() {
     const ctx = this.context;
-    const header = new Control({ context: ctx, tagName: 'header' });
-    header.add_class('dashboard-header');
-    header.add(el(ctx, 'h1', '🌐 Gazetteer Import Dashboard'));
-    header.add(el(ctx, 'p', 'Real-time geographic data import from multiple sources', 'subtitle'));
-    this.add(header);
-  }
-  
-  _composeStagesSection() {
-    const ctx = this.context;
-    const section = createSection(ctx, '📋', 'Import Pipeline', 'stages-section');
     
+    // Create two-column layout
+    this._layout = new TwoColumnLayout({
+      context: ctx,
+      sidebarTitle: 'Gazetteer Import',
+      sidebarIcon: '🌐',
+      sidebarWidth: 240,
+      navItems: NAV_SECTIONS.map(s => ({
+        ...s,
+        selected: s.id === this.activeView
+      })),
+      selectedId: this.activeView,
+      contentTitle: this._getViewTitle(this.activeView),
+      contentIcon: this._getViewIcon(this.activeView),
+      contentSubtitle: this._getViewSubtitle(this.activeView)
+    });
+    
+    // Store references
+    this._sidebar = this._layout.sidebar;
+    this._contentArea = this._layout.contentArea;
+    
+    // Add content based on active view
+    this._composeActiveView();
+    
+    // Add actions at bottom of sidebar
+    this._composeActions();
+    
+    this.add(this._layout);
+  }
+  
+  _getViewTitle(viewId) {
+    const titles = {
+      database: 'Database Selection',
+      pipeline: 'Import Pipeline',
+      sources: 'Data Sources',
+      coverage: 'Coverage Statistics',
+      log: 'Import Log'
+    };
+    return titles[viewId] || 'Details';
+  }
+  
+  _getViewIcon(viewId) {
+    const item = NAV_SECTIONS.find(s => s.id === viewId);
+    return item ? item.icon : '📋';
+  }
+  
+  _getViewSubtitle(viewId) {
+    const subtitles = {
+      database: 'Select and configure target database',
+      pipeline: 'Track import stage progress',
+      sources: 'Configure and monitor data sources',
+      coverage: 'Before and after import statistics',
+      log: 'Real-time import activity log'
+    };
+    return subtitles[viewId] || null;
+  }
+  
+  _composeActiveView() {
+    const contentBody = this._contentArea.getBody();
+    
+    switch (this.activeView) {
+      case 'database':
+        this._composeDatabaseView(contentBody);
+        break;
+      case 'pipeline':
+        this._composePipelineView(contentBody);
+        break;
+      case 'sources':
+        this._composeSourcesView(contentBody);
+        break;
+      case 'coverage':
+        this._composeCoverageView(contentBody);
+        break;
+      case 'log':
+        this._composeLogView(contentBody);
+        break;
+      default:
+        this._composePipelineView(contentBody);
+    }
+  }
+  
+  // ─────────────────────────────────────────────────────────────────────────
+  // View Composers
+  // ─────────────────────────────────────────────────────────────────────────
+  
+  _composeDatabaseView(container) {
+    const ctx = this.context;
+    
+    // If we have a database selector from server, add it
+    if (this._dbSelector) {
+      container.add(this._dbSelector);
+    } else {
+      // Placeholder
+      const placeholder = el(ctx, 'div', null, 'db-placeholder');
+      placeholder.add(el(ctx, 'p', '🗄️ Database selector will appear here'));
+      placeholder.add(el(ctx, 'p', 'Current path: data/gazetteer.db', 'db-path'));
+      container.add(placeholder);
+    }
+    
+    // Database stats summary
+    const stats = el(ctx, 'div', null, 'db-stats-compact');
+    stats.add(createStatItem(ctx, 'Places', this.importState.totals.places_before || 0));
+    stats.add(createStatItem(ctx, 'Names', this.importState.totals.names_before || 0));
+    container.add(stats);
+  }
+  
+  _composePipelineView(container) {
+    const ctx = this.context;
+    const { current, total } = this.importState.progress;
+    const percent = total > 0 ? (current / total) * 100 : 0;
+    
+    // Stages stepper
     this._stagesStepper = new StagesStepper({
       context: ctx,
       currentStage: this.importState.phase || 'idle',
       stages: IMPORT_STAGES
     });
-    section.add(this._stagesStepper);
-    this.add(section);
-  }
-  
-  _composeProgressSection() {
-    const ctx = this.context;
-    const { current, total } = this.importState.progress;
-    const percent = total > 0 ? (current / total) * 100 : 0;
+    container.add(this._stagesStepper);
     
-    const section = createSection(ctx, '📊', 'Overall Progress', 'progress-section');
+    // Progress section
+    const progressContainer = el(ctx, 'div', null, 'progress-compact');
     
-    const content = el(ctx, 'div', null, 'progress-content');
-    
-    // Progress ring
+    // Progress ring (smaller for compact view)
     this._progressRing = new ProgressRing({
       context: ctx,
       progress: percent,
-      size: 140,
-      strokeWidth: 10,
+      size: 100,
+      strokeWidth: 8,
       color: this._getProgressColor(percent)
     });
-    content.add(this._progressRing);
+    progressContainer.add(this._progressRing);
     
-    // Stats beside ring
-    const stats = el(ctx, 'div', null, 'progress-stats');
-    const countLabel = el(ctx, 'div', null, 'progress-stat');
-    countLabel.add(`<span class="stat-value">${formatNumber(current)}</span> / <span class="stat-total">${formatNumber(total)}</span> records`);
-    stats.add(countLabel);
+    // Stats
+    const stats = el(ctx, 'div', null, 'progress-stats-compact');
+    stats.add(el(ctx, 'div', `${formatNumber(current)} / ${formatNumber(total)} records`, 'progress-count'));
     stats.add(el(ctx, 'div', PHASE_LABELS[this.importState.phase] || this.importState.phase, 'progress-phase'));
-    content.add(stats);
+    progressContainer.add(stats);
     
-    section.add(content);
-    this.add(section);
+    container.add(progressContainer);
   }
   
-  _composeSourcesSection() {
+  _composeSourcesView(container) {
     const ctx = this.context;
-    const section = createSection(ctx, '📦', 'Data Sources', 'sources-section');
     
-    const grid = el(ctx, 'div', null, 'sources-grid');
+    // Source cards in compact grid
+    const grid = el(ctx, 'div', null, 'sources-grid-compact');
     for (const source of Object.values(this.importState.sources)) {
       const card = new SourceCard({ context: ctx, source });
       this._sourceCards[source.id] = card;
       grid.add(card);
     }
-    section.add(grid);
-    this.add(section);
+    container.add(grid);
   }
   
-  _composeCoverageSection() {
+  _composeCoverageView(container) {
     const ctx = this.context;
     const { totals } = this.importState;
     
-    const section = createSection(ctx, '📈', 'Coverage Improvement', 'coverage-section');
-    const grid = el(ctx, 'div', null, 'coverage-grid');
+    const grid = el(ctx, 'div', null, 'coverage-grid-compact');
     
     // Before column
     grid.add(this._createCoverageColumn('Before', {
@@ -504,31 +643,31 @@ class GeoImportDashboard extends Control {
       usCities: '3,000+'
     }, 'after'));
     
-    section.add(grid);
-    this.add(section);
+    container.add(grid);
   }
   
-  _composeLogSection() {
+  _composeLogView(container) {
     const ctx = this.context;
-    const section = el(ctx, 'section', null, 'log-section');
     
     this._liveLog = new LiveLog({
       context: ctx,
-      entries: this.importState.logs.length > 0 ? this.importState.logs : DEFAULT_LOGS
+      entries: this.importState.logs.length > 0 ? this.importState.logs : DEFAULT_LOGS,
+      maxEntries: 200
     });
-    section.add(this._liveLog);
-    this.add(section);
+    container.add(this._liveLog);
   }
   
-  _composeActionsSection() {
+  _composeActions() {
     const ctx = this.context;
-    const section = el(ctx, 'section', null, 'actions-section');
     
-    section.add(createActionButton(ctx, '🚀', 'Start Import', 'start-import', 'primary'));
-    section.add(createActionButton(ctx, '⏸️', 'Pause', 'pause-import', 'secondary', true));
-    section.add(createActionButton(ctx, '🛑', 'Cancel', 'cancel-import', 'danger', true));
+    // Actions panel at bottom of sidebar
+    const actionsPanel = el(ctx, 'div', null, 'sidebar-actions');
     
-    this.add(section);
+    actionsPanel.add(createActionButton(ctx, '🚀', 'Start', 'start-import', 'primary'));
+    actionsPanel.add(createActionButton(ctx, '⏸️', 'Pause', 'pause-import', 'secondary', true));
+    actionsPanel.add(createActionButton(ctx, '🛑', 'Cancel', 'cancel-import', 'danger', true));
+    
+    this._sidebar.add(actionsPanel);
   }
   
   _createCoverageColumn(label, stats, type) {
@@ -547,10 +686,10 @@ class GeoImportDashboard extends Control {
   }
   
   _getProgressColor(percent) {
-    if (percent < 25) return '#FF9800';
-    if (percent < 50) return '#FFC107';
-    if (percent < 75) return '#8BC34A';
-    return '#4CAF50';
+    if (percent < 25) return '#c9a227'; // Gold
+    if (percent < 50) return '#daa520';
+    if (percent < 75) return '#b8860b';
+    return '#c9a227';
   }
   
   // ─────────────────────────────────────────────────────────────────────────
@@ -558,21 +697,62 @@ class GeoImportDashboard extends Control {
   // ─────────────────────────────────────────────────────────────────────────
   
   activate() {
+    if (this.__active) return;
     super.activate();
     this._bindActionButtons();
+    this._bindNavigation();
   }
   
-  _bindActionButtons() {
-    const actions = {
-      'start-import': () => this._handleStartImport(),
-      'pause-import': () => this._handlePauseImport(),
-      'cancel-import': () => this._handleCancelImport()
-    };
+  /**
+   * Bind navigation events using jsgui3 event system
+   * 
+   * Event flow:
+   * 1. NavItem.activate() binds DOM click → raises 'select' event
+   * 2. Sidebar.addNavItem() subscribes to NavItem's 'select' → re-raises as 'nav-select'
+   * 3. TwoColumnLayout.compose() subscribes to Sidebar's 'nav-select' → re-raises as 'view-change'
+   * 4. Dashboard.activate() subscribes to TwoColumnLayout's 'view-change' → handles navigation
+   */
+  _bindNavigation() {
+    if (!this._layout) return;
     
-    for (const [action, handler] of Object.entries(actions)) {
-      const btn = this.dom_el?.querySelector(`[data-action="${action}"]`);
-      if (btn) btn.addEventListener('click', handler);
-    }
+    // Subscribe to the layout's 'view-change' event using jsgui3 native event system
+    this._layout.on('view-change', (data) => {
+      console.log('[GeoImportDashboard] view-change event received:', data);
+      this._handleViewChange(data.id);
+    });
+  }
+  
+  _handleViewChange(viewId) {
+    console.log('[GeoImportDashboard] Switching to view:', viewId);
+    // Navigate via URL change (server handles view rendering)
+    window.location.search = `?view=${viewId}`;
+  }
+  
+  /**
+   * Bind action buttons using jsgui3 delegation pattern
+   * Uses this.on() where possible, falls back to querySelector for specific data-action elements
+   */
+  _bindActionButtons() {
+    if (!this.dom.el) return;
+    
+    // Use delegated event handling for action buttons
+    this.on('click', (e) => {
+      const actionBtn = e.target.closest('[data-action]');
+      if (!actionBtn) return;
+      
+      const action = actionBtn.getAttribute('data-action');
+      switch (action) {
+        case 'start-import':
+          this._handleStartImport();
+          break;
+        case 'pause-import':
+          this._handlePauseImport();
+          break;
+        case 'cancel-import':
+          this._handleCancelImport();
+          break;
+      }
+    });
   }
   
   _handleStartImport() {

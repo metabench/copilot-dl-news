@@ -1,0 +1,1246 @@
+/**
+ * GeoImportDashboard Styles
+ * 
+ * Industrial Luxury Obsidian Theme - Premium dark dashboard with gold accents.
+ * Two-column layout: Navigation sidebar on left, detail view on right.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CSS Variables - Industrial Obsidian Theme
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --obsidian-bg-deep: rgba(10, 13, 20, 0.99);
+  --obsidian-bg-surface: rgba(20, 24, 36, 0.98);
+  --obsidian-bg-elevated: rgba(30, 35, 50, 0.95);
+  --obsidian-bg-card: rgba(26, 31, 46, 0.98);
+  --obsidian-bg-sidebar: rgba(12, 15, 22, 0.99);
+  --obsidian-gold: #c9a227;
+  --obsidian-gold-bright: #d4af37;
+  --obsidian-gold-dim: rgba(201, 162, 39, 0.6);
+  --obsidian-gold-glow: rgba(201, 162, 39, 0.4);
+  --obsidian-gold-subtle: rgba(201, 162, 39, 0.15);
+  --obsidian-border: rgba(201, 162, 39, 0.3);
+  --obsidian-border-dim: rgba(201, 162, 39, 0.15);
+  --obsidian-text: rgba(255, 255, 255, 0.95);
+  --obsidian-text-dim: rgba(255, 255, 255, 0.6);
+  --obsidian-text-muted: rgba(255, 255, 255, 0.4);
+  --obsidian-success: #3bb950;
+  --obsidian-success-dim: rgba(59, 185, 80, 0.3);
+  --obsidian-danger: #f85149;
+  --obsidian-danger-dim: rgba(248, 81, 73, 0.3);
+  --obsidian-warning: #d29922;
+  --obsidian-warning-dim: rgba(210, 153, 34, 0.3);
+  --obsidian-accent: #58a6ff;
+  --obsidian-accent-dim: rgba(88, 166, 255, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Page Container - Full viewport obsidian foundation
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, 
+    #050508 0%, 
+    #0a0d14 25%, 
+    #0f1420 50%, 
+    #0a0d14 75%, 
+    #080c12 100%
+  );
+  /* Remove padding for 2-column layout */
+  padding: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Two-Column Layout - Industrial Sidebar + Content
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.geo-import-dashboard {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--obsidian-text);
+  /* Remove old max-width constraint */
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+}
+
+/* Two Column Layout Container */
+.two-column-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--obsidian-bg-deep);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sidebar - Navigation Panel
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.layout-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--obsidian-bg-sidebar);
+  border-right: 1px solid var(--obsidian-border-dim);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--obsidian-border-dim);
+  background: linear-gradient(135deg, var(--obsidian-gold-subtle) 0%, transparent 100%);
+}
+
+.sidebar-header__icon {
+  font-size: 22px;
+}
+
+.sidebar-header__title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--obsidian-gold);
+}
+
+.sidebar-nav {
+  flex: 1;
+  /* Overlay scrollbar - no layout jiggle */
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+  /* Firefox styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) transparent;
+  padding: 8px 0;
+}
+
+/* Fallback for browsers without overlay support */
+@supports not (overflow: overlay) {
+  .sidebar-nav {
+    overflow-y: auto;
+  }
+}
+
+/* WebKit scrollbar for sidebar nav */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border-dim);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Navigation Items
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: var(--obsidian-gold-subtle);
+  border-left-color: var(--obsidian-border);
+}
+
+.nav-item--selected {
+  background: rgba(201, 162, 39, 0.12);
+  border-left-color: var(--obsidian-gold);
+}
+
+.nav-item--selected .nav-item__label {
+  color: var(--obsidian-gold);
+  font-weight: 600;
+}
+
+.nav-item__icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.nav-item__label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--obsidian-text-dim);
+}
+
+.nav-item--selected .nav-item__icon {
+  filter: drop-shadow(0 0 4px var(--obsidian-gold-glow));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sidebar Actions Panel
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.sidebar-actions {
+  padding: 12px 16px;
+  border-top: 1px solid var(--obsidian-border-dim);
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-actions .action-btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 12px;
+  justify-content: center;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Content Area - Detail Panel
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.layout-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--obsidian-bg-surface);
+  overflow: hidden;
+}
+
+.detail-header {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--obsidian-border-dim);
+  background: linear-gradient(180deg, var(--obsidian-gold-subtle) 0%, transparent 100%);
+}
+
+.detail-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.detail-header__icon {
+  font-size: 26px;
+  filter: drop-shadow(0 0 6px var(--obsidian-gold-glow));
+}
+
+.detail-header__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--obsidian-text);
+}
+
+.detail-header__subtitle {
+  margin: 6px 0 0 40px;
+  font-size: 12px;
+  color: var(--obsidian-text-muted);
+}
+
+.content-body {
+  flex: 1;
+  /* Overlay scrollbar - no layout jiggle */
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+  /* Firefox styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) transparent;
+  padding: 24px 28px;
+}
+
+/* Fallback for browsers without overlay support */
+@supports not (overflow: overlay) {
+  .content-body {
+    overflow-y: auto;
+  }
+}
+
+/* WebKit scrollbar for content body */
+.content-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.content-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-body::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.content-body::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Compact View Styles (for 2-column layout)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Progress Compact */
+.progress-compact {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+  background: var(--obsidian-bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--obsidian-border-dim);
+  margin-top: 20px;
+}
+
+.progress-stats-compact {
+  flex: 1;
+}
+
+.progress-count {
+  font-size: 15px;
+  color: var(--obsidian-text);
+  margin-bottom: 6px;
+}
+
+.progress-phase {
+  font-size: 13px;
+  color: var(--obsidian-gold);
+  animation: subtlePulse 3s infinite;
+}
+
+/* Sources Grid Compact */
+.sources-grid-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sources-grid-compact .geo-source-card {
+  padding: 14px 18px;
+}
+
+.sources-grid-compact .source-emoji {
+  font-size: 1.3rem;
+}
+
+.sources-grid-compact .source-name {
+  font-size: 1rem;
+}
+
+.sources-grid-compact .stats-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Coverage Grid Compact */
+.coverage-grid-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px;
+}
+
+.coverage-grid-compact .coverage-column {
+  min-width: 140px;
+  padding: 16px;
+}
+
+.coverage-grid-compact .coverage-arrow {
+  font-size: 2rem;
+}
+
+/* Database Placeholder */
+.db-placeholder {
+  text-align: center;
+  padding: 32px;
+  background: var(--obsidian-bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.db-placeholder p {
+  margin: 0 0 8px 0;
+  color: var(--obsidian-text-dim);
+}
+
+.db-path {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--obsidian-gold-dim);
+}
+
+.db-stats-compact {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  justify-content: center;
+}
+
+.db-stats-compact .stat-item {
+  min-width: 100px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Progress Section - Industrial Card Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.stages-section {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.stages-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+/* Stages Stepper */
+.stages-stepper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  position: relative;
+  /* Overlay scrollbar for horizontal scroll - no jiggle */
+  overflow-x: overlay;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) transparent;
+}
+
+/* Fallback for browsers without overlay support */
+@supports not (overflow: overlay) {
+  .stages-stepper {
+    overflow-x: auto;
+  }
+}
+
+/* WebKit horizontal scrollbar for stepper */
+.stages-stepper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.stages-stepper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stages-stepper::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border-dim);
+  border-radius: 3px;
+}
+
+.stages-stepper::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+.stage-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  min-width: 80px;
+}
+
+.stage-marker {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: var(--obsidian-bg-elevated);
+  border: 2px solid var(--obsidian-border-dim);
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.stage-label {
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-align: center;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stage-connector {
+  position: absolute;
+  top: 22px;
+  left: calc(50% + 22px);
+  width: calc(100% - 44px);
+  height: 2px;
+  background: var(--obsidian-border-dim);
+  z-index: 0;
+  transition: background 0.3s ease;
+}
+
+/* Stage states - Obsidian theme */
+.stage-completed .stage-marker {
+  background: linear-gradient(135deg, var(--obsidian-success), #2ea043);
+  border-color: var(--obsidian-success);
+  color: white;
+  box-shadow: 0 0 10px var(--obsidian-success-dim);
+}
+
+.stage-completed .stage-label {
+  color: var(--obsidian-success);
+  font-weight: 500;
+}
+
+.stage-completed .stage-connector,
+.connector-completed {
+  background: linear-gradient(90deg, var(--obsidian-success), var(--obsidian-gold));
+}
+
+.stage-current .stage-marker {
+  background: linear-gradient(135deg, var(--obsidian-gold), var(--obsidian-gold-bright));
+  border-color: var(--obsidian-gold);
+  color: #0f1420;
+  box-shadow: 0 0 14px var(--obsidian-gold-glow);
+  animation: stagePulseGold 2s ease-in-out infinite;
+}
+
+.stage-current .stage-label {
+  color: var(--obsidian-gold);
+  font-weight: 600;
+}
+
+.stage-pending .stage-marker {
+  background: var(--obsidian-bg-elevated);
+  border-color: var(--obsidian-border-dim);
+  color: var(--obsidian-text-muted);
+}
+
+@keyframes stagePulseGold {
+  0%, 100% { box-shadow: 0 0 14px var(--obsidian-gold-glow); transform: scale(1); }
+  50% { box-shadow: 0 0 22px rgba(201, 162, 39, 0.6); transform: scale(1.05); }
+}
+
+.progress-section {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.progress-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+.progress-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Progress Ring */
+.progress-ring-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.progress-ring-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--obsidian-text);
+}
+
+.progress-stats {
+  flex: 1;
+  min-width: 180px;
+}
+
+.progress-stat {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.progress-stat .stat-value {
+  font-weight: 600;
+  color: var(--obsidian-gold);
+}
+
+.progress-stat .stat-total {
+  color: var(--obsidian-text-dim);
+}
+
+.progress-phase {
+  font-size: 0.95rem;
+  color: var(--obsidian-text-dim);
+  animation: subtlePulse 3s infinite;
+}
+
+@keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Source Cards - Industrial Luxury Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.sources-section {
+  margin-bottom: 20px;
+}
+
+.sources-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+.sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.geo-source-card {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 10px;
+  padding: 18px 20px;
+  border: 1px solid var(--obsidian-border-dim);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.3);
+}
+
+.geo-source-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--obsidian-border-dim);
+  transition: background 0.3s ease;
+}
+
+.geo-source-card.status-running::before {
+  background: linear-gradient(90deg, var(--obsidian-gold), var(--obsidian-gold-bright), var(--obsidian-gold));
+  background-size: 200% 100%;
+  animation: goldShimmer 2s infinite linear;
+}
+
+.geo-source-card.status-completed::before {
+  background: var(--obsidian-success);
+}
+
+.geo-source-card.status-error::before {
+  background: var(--obsidian-danger);
+}
+
+.geo-source-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 8px 28px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--obsidian-gold-subtle);
+  border-color: var(--obsidian-border);
+}
+
+@keyframes goldShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.source-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.source-emoji {
+  font-size: 1.6rem;
+}
+
+.source-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  flex: 1;
+  color: var(--obsidian-text);
+}
+
+.status-badge {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--obsidian-bg-elevated);
+  color: var(--obsidian-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.status-running {
+  background: var(--obsidian-gold-subtle);
+  color: var(--obsidian-gold);
+  animation: subtlePulse 2s infinite;
+}
+
+.status-badge.status-completed {
+  background: var(--obsidian-success-dim);
+  color: var(--obsidian-success);
+}
+
+.status-badge.status-error {
+  background: var(--obsidian-danger-dim);
+  color: var(--obsidian-danger);
+}
+
+.status-badge.status-missing {
+  background: var(--obsidian-warning-dim);
+  color: var(--obsidian-warning);
+}
+
+.status-badge.status-coming-soon {
+  background: linear-gradient(135deg, rgba(140, 130, 160, 0.15), rgba(120, 110, 150, 0.15));
+  color: rgba(180, 170, 200, 0.9);
+  border: 1px dashed rgba(140, 130, 160, 0.3);
+  animation: none;
+}
+
+.source-description {
+  color: var(--obsidian-text-dim);
+  font-size: 0.85rem;
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+/* Coming Soon Card Styling */
+.geo-source-card.coming-soon {
+  opacity: 0.8;
+  position: relative;
+}
+
+.geo-source-card.coming-soon::before {
+  background: linear-gradient(90deg, rgba(140, 130, 160, 0.5), rgba(120, 110, 150, 0.5));
+  opacity: 0.7;
+}
+
+.geo-source-card.coming-soon::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(140, 130, 160, 0.03) 10px,
+    rgba(140, 130, 160, 0.03) 20px
+  );
+  pointer-events: none;
+  border-radius: 10px;
+}
+
+.geo-source-card.coming-soon .source-emoji {
+  filter: grayscale(30%);
+}
+
+.geo-source-card.coming-soon .stats-grid.stats-disabled {
+  opacity: 0.5;
+}
+
+.geo-source-card.coming-soon .stats-grid.stats-disabled .stat-value {
+  color: var(--obsidian-text-dim);
+}
+
+/* Planned Features List */
+.planned-features {
+  background: rgba(140, 130, 160, 0.08);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-left: 2px solid rgba(140, 130, 160, 0.5);
+}
+
+.planned-features .features-label {
+  font-weight: 500;
+  color: rgba(180, 170, 200, 0.9);
+  font-size: 0.75rem;
+  display: block;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.planned-features .features-list {
+  font-size: 0.8rem;
+  color: var(--obsidian-text-dim);
+  line-height: 1.6;
+}
+
+/* Availability Notes */
+.availability-note {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--obsidian-text-muted);
+  text-align: right;
+  font-style: italic;
+}
+
+.availability-note.ready {
+  color: var(--obsidian-success);
+  font-style: normal;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 10px;
+  background: var(--obsidian-bg-elevated);
+  border-radius: 6px;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--obsidian-gold);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.last-run {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--obsidian-text-muted);
+  text-align: right;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Coverage Section - Industrial Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.coverage-section {
+  background: 
+    linear-gradient(135deg, 
+      var(--obsidian-bg-card) 0%, 
+      rgba(26, 31, 46, 0.95) 100%
+    );
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  border: 1px solid var(--obsidian-border-dim);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.35),
+    0 1px 0 var(--obsidian-gold-subtle) inset;
+}
+
+.coverage-section h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--obsidian-gold);
+}
+
+.coverage-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.coverage-column {
+  background: var(--obsidian-bg-elevated);
+  border-radius: 10px;
+  padding: 18px 20px;
+  min-width: 160px;
+  text-align: center;
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.coverage-column h3 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: var(--obsidian-text-dim);
+  font-weight: 500;
+}
+
+.coverage-before {
+  border: 1px solid var(--obsidian-danger-dim);
+}
+
+.coverage-after {
+  border: 1px solid var(--obsidian-success-dim);
+}
+
+.coverage-item {
+  margin-bottom: 10px;
+}
+
+.coverage-value {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.coverage-before .coverage-value {
+  color: var(--obsidian-warning);
+}
+
+.coverage-after .coverage-value {
+  color: var(--obsidian-success);
+}
+
+.coverage-label {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--obsidian-text-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.coverage-arrow {
+  font-size: 2.5rem;
+  color: var(--obsidian-gold-dim);
+  animation: arrowPulseGold 2s infinite;
+}
+
+@keyframes arrowPulseGold {
+  0%, 100% { transform: translateX(0); opacity: 1; }
+  50% { transform: translateX(8px); opacity: 0.6; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Live Log - Industrial Console Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.log-section {
+  margin-bottom: 20px;
+}
+
+.live-log {
+  background: 
+    linear-gradient(135deg, 
+      rgba(8, 10, 16, 0.98) 0%, 
+      rgba(12, 15, 22, 0.98) 100%
+    );
+  border-radius: 10px;
+  border: 1px solid var(--obsidian-border-dim);
+  overflow: hidden;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(201, 162, 39, 0.05);
+}
+
+.log-header {
+  background: var(--obsidian-bg-elevated);
+  padding: 10px 16px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--obsidian-border-dim);
+  color: var(--obsidian-gold);
+}
+
+.log-body {
+  max-height: 280px;
+  /* Overlay scrollbar - no layout jiggle */
+  overflow-y: overlay;
+  scrollbar-gutter: stable;
+  /* Firefox styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--obsidian-border) transparent;
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+}
+
+/* Fallback for browsers without overlay support */
+@supports not (overflow: overlay) {
+  .log-body {
+    overflow-y: auto;
+  }
+}
+
+.log-entry {
+  display: flex;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.05);
+  transition: background 0.15s ease;
+}
+
+.log-entry:hover {
+  background: rgba(201, 162, 39, 0.03);
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-timestamp {
+  color: var(--obsidian-text-muted);
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+
+.log-message {
+  flex: 1;
+}
+
+.log-info .log-message {
+  color: var(--obsidian-accent);
+}
+
+.log-success .log-message {
+  color: var(--obsidian-success);
+}
+
+.log-warning .log-message {
+  color: var(--obsidian-warning);
+}
+
+.log-error .log-message {
+  color: var(--obsidian-danger);
+}
+
+/* Custom scrollbar for log - Obsidian style */
+.log-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.log-body::-webkit-scrollbar-thumb {
+  background: var(--obsidian-border);
+  border-radius: 3px;
+}
+
+.log-body::-webkit-scrollbar-thumb:hover {
+  background: var(--obsidian-gold-dim);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Action Buttons - Luxury Industrial Style
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.actions-section {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 12px 24px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--obsidian-gold), var(--obsidian-gold-bright));
+  color: #0f1420;
+  box-shadow: 0 4px 16px var(--obsidian-gold-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(201, 162, 39, 0.5);
+}
+
+.btn-secondary {
+  background: var(--obsidian-bg-elevated);
+  color: var(--obsidian-text);
+  border: 1px solid var(--obsidian-border-dim);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--obsidian-border-dim);
+  border-color: var(--obsidian-border);
+}
+
+.btn-danger {
+  background: var(--obsidian-danger-dim);
+  color: var(--obsidian-danger);
+  border: 1px solid var(--obsidian-danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--obsidian-danger);
+  color: white;
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Animations - Subtle luxury
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.geo-source-card,
+.progress-section,
+.coverage-section,
+.live-log {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Stagger animation for source cards */
+.sources-grid .geo-source-card:nth-child(1) { animation-delay: 0.05s; }
+.sources-grid .geo-source-card:nth-child(2) { animation-delay: 0.1s; }
+.sources-grid .geo-source-card:nth-child(3) { animation-delay: 0.15s; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive - Industrial Mobile
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+  
+  .geo-import-dashboard {
+    padding: 0;
+  }
+  
+  .dashboard-header {
+    padding: 20px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.4rem;
+  }
+  
+  .progress-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .coverage-grid {
+    flex-direction: column;
+  }
+  
+  .coverage-arrow {
+    transform: rotate(90deg);
+  }
+  
+  /* Stages stepper responsive */
+  .stages-stepper {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px 0;
+    gap: 6px;
+  }
+  
+  .stage-item {
+    min-width: 56px;
+  }
+  
+  .stage-marker {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .stage-label {
+    font-size: 0.55rem;
+  }
+  
+  .stage-connector {
+    top: 16px;
+    left: calc(50% + 16px);
+    width: calc(100% - 32px);
+  }
+  
+  @keyframes arrowPulseGold {
+    0%, 100% { transform: rotate(90deg) translateX(0); opacity: 1; }
+    50% { transform: rotate(90deg) translateX(8px); opacity: 0.6; }
+  }
+}

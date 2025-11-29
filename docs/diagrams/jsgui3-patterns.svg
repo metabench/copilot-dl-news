@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Optimal jsgui3 Patterns</title>
+  <desc id="desc">Visual map of compose vs activate, control markers, body control events, and reusable jsgui3 patterns.</desc>
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#0b1120"/>
+    </linearGradient>
+    <linearGradient id="panelGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0c1424"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1f2937" stroke-width="1"/>
+    </pattern>
+    <marker id="arrow-a" markerWidth="12" markerHeight="8" refX="12" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#7dd3fc"/>
+    </marker>
+    <marker id="arrow-b" markerWidth="12" markerHeight="8" refX="12" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#f59e0b"/>
+    </marker>
+    <style>
+      .bg { fill: url(#bgGrad); }
+      .grid { fill: url(#grid); opacity: 0.35; }
+      .panel { fill: url(#panelGrad); stroke: #1f2937; stroke-width: 1.2; rx: 14; }
+      .title { fill: #e2e8f0; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 0.4px; }
+      .subtitle { fill: #94a3b8; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 14px; }
+      .heading { fill: #cbd5e1; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.2px; }
+      .text { fill: #d1d5db; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 13px; }
+      .muted { fill: #94a3b8; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 12px; }
+      .accent { fill: #7dd3fc; }
+      .accent2 { fill: #f59e0b; }
+      .tag { fill: #0b2740; stroke: #1e3a8a; stroke-width: 1; rx: 10; }
+      .tagText { fill: #bfdbfe; font-family: "Segoe UI", "Inter", Arial, sans-serif; font-size: 12px; }
+      .arrowA { stroke: #7dd3fc; stroke-width: 2.2; fill: none; marker-end: url(#arrow-a); }
+      .arrowB { stroke: #f59e0b; stroke-width: 2.2; fill: none; marker-end: url(#arrow-b); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="760"/>
+  <rect class="grid" x="0" y="0" width="1200" height="760"/>
+
+  <!-- Header -->
+  <text class="title" x="44" y="60">Optimal jsgui3 Patterns</text>
+  <text class="subtitle" x="44" y="85">Compose on server, hydrate on client, mark controls, route global events through the body control.</text>
+
+  <!-- Legend -->
+  <rect class="panel" x="880" y="32" width="280" height="90" filter="url(#shadow)"/>
+  <text class="heading" x="900" y="62">Legend</text>
+  <rect class="tag" x="900" y="78" width="110" height="22"/>
+  <text class="tagText" x="912" y="94">Lifecycle</text>
+  <rect class="tag" x="1025" y="78" width="120" height="22" fill="#2b1b05" stroke="#92400e"/>
+  <text class="tagText" x="1038" y="94" fill="#fed7aa">Markers/Events</text>
+
+  <!-- Panels row 1 -->
+  <rect class="panel" x="36" y="120" width="360" height="240" filter="url(#shadow)"/>
+  <text class="heading" x="58" y="148">Server: compose + SSR</text>
+  <text class="text" x="58" y="178">• Build layout in <tspan class="accent">compose()</tspan>; avoid DOM-only APIs.</text>
+  <text class="text" x="58" y="202">• Emit <tspan class="accent">data-jsgui-control="type"</tspan> on root nodes.</text>
+  <text class="text" x="58" y="226">• Keep CSS external (controls.css, feature styles).</text>
+  <text class="text" x="58" y="250">• Pass state via props; no side-effects here.</text>
+  <text class="muted" x="58" y="274">Result: clean HTML + state ready for hydration.</text>
+
+  <rect class="panel" x="420" y="120" width="360" height="240" filter="url(#shadow)"/>
+  <text class="heading" x="442" y="148">Client: hydrate + activate</text>
+  <text class="text" x="442" y="178">1) Create <tspan class="accent">Client_Page_Context</tspan> with document.</text>
+  <text class="text" x="442" y="202">2) Register controls in <tspan class="accent">map_Controls</tspan>.</text>
+  <text class="text" x="442" y="226">3) Run <tspan class="accent">jsgui.activate()</tspan> → hydrate markers.</text>
+  <text class="text" x="442" y="250">4) Bind DOM listeners/timers only in <tspan class="accent">activate()</tspan>.</text>
+  <text class="muted" x="442" y="274">Hydration should not rebuild DOM; just attach behavior.</text>
+
+  <rect class="panel" x="804" y="120" width="360" height="240" filter="url(#shadow)"/>
+  <text class="heading" x="826" y="148">Control markers</text>
+  <text class="text" x="826" y="178">• <tspan class="accent2">data-jsgui-control</tspan>: control lookup key.</text>
+  <text class="text" x="826" y="202">• Semantic hooks like <tspan class="accent2">data-context-menu</tspan>,</text>
+  <text class="text" x="844" y="226"><tspan class="accent2">data-db-path</tspan>, etc. for activation.</text>
+  <text class="text" x="826" y="250">• Keep markers stable for checks + tests.</text>
+  <text class="muted" x="826" y="274">Markers drive hydration and automation safety.</text>
+
+  <!-- Arrows row 1 -->
+  <path class="arrowA" d="M 396 200 L 420 200"/>
+  <path class="arrowA" d="M 780 200 L 804 200"/>
+
+  <!-- Panels row 2 -->
+  <rect class="panel" x="36" y="400" width="360" height="260" filter="url(#shadow)"/>
+  <text class="heading" x="58" y="428">Global events via body control</text>
+  <text class="text" x="58" y="458">• Get <tspan class="accent">context.body()</tspan>; prefer <tspan class="accent">body.on('click')</tspan></text>
+  <text class="text" x="76" y="482">  over <tspan class="accent2">document.addEventListener</tspan>.</text>
+  <text class="text" x="58" y="506">• Use for Escape/outside-close, shortcuts, overlays.</text>
+  <text class="text" x="58" y="530">• Fallback to DOM only when body control is absent.</text>
+  <text class="text" x="58" y="554">• Remove listeners in control cleanup if needed.</text>
+  <text class="muted" x="58" y="578">Plays nicely with jsgui event lifecycle; avoids leaks.</text>
+
+  <rect class="panel" x="420" y="400" width="744" height="260" filter="url(#shadow)"/>
+  <text class="heading" x="442" y="428">Patterns to copy</text>
+  <text class="text" x="442" y="458">• Context menus: mark with <tspan class="accent2">data-context-menu</tspan>, position via control,</text>
+  <text class="text" x="460" y="482">  close via body click/Escape handlers.</text>
+  <text class="text" x="442" y="506">• Compose vs Activate: layout &amp; props in <tspan class="accent">compose()</tspan>; DOM listeners, timers,</text>
+  <text class="text" x="460" y="530">  focus management in <tspan class="accent">activate()</tspan>.</text>
+  <text class="text" x="442" y="554">• Checks: ship <tspan class="accent2">checks/*.check.js</tspan> that render HTML and assert structure.</text>
+  <text class="text" x="442" y="578">• Registration: seed <tspan class="accent">context.map_Controls</tspan> before activation so markers hydrate.</text>
+  <text class="text" x="442" y="602">• Data only: pass data into controls; no direct DB/driver calls inside UI.</text>
+
+  <!-- Arrows row 2 -->
+  <path class="arrowB" d="M 396 520 L 420 520"/>
+
+  <!-- Footer note -->
+  <text class="muted" x="44" y="708">North star: clean compose on the server, predictable activation on the client, stable markers, and body-managed globals for reliability.</text>
+</svg>
