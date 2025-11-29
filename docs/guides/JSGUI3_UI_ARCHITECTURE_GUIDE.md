@@ -26,6 +26,14 @@
 
 ---
 
+## Workflow Discovery Quickstart
+
+1. Before touching any jsgui3 surface, run `node tools/dev/md-scan.js --dir docs --search "jsgui3 workflow" --json` (tweak the search term: `activation`, `control registration`, `dashboard wiring`, etc.).
+2. Record which sections you rely on inside your session notes (`WORKING_NOTES.md`) so the next agent can pick up the same trail.
+3. If the workflow you find is incomplete, expand this guide (or the relevant workflow doc) and mention the new section in your summary so md-scan keeps surfacing it.
+
+> **Tip:** Use `--find-sections "Client-Side Activation"` when you already know the section title you need.
+
 ## Overview
 
 > **Visual Guide**: See [`jsgui3-architecture-diagram.svg`](../diagrams/jsgui3-architecture-diagram.svg) for an illustrated overview of the isomorphic architecture.

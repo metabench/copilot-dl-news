@@ -225,8 +225,8 @@ console.log('[KNOWLEDGE GAP] Scanning docs...');
 Step 2: Scan documentation
 bash
 Copy code
-# General docs
-node tools/dev/md-scan.js --dir docs --search "<topic>" --json
+# General docs (include "jsgui3" or "workflow" in search so you land on the right pattern)
+node tools/dev/md-scan.js --dir docs --search "jsgui3 <topic>" --json
 
 # Guides / AGI / dashboard design
 node tools/dev/md-scan.js --dir docs/guides --search "<topic>" --json
@@ -244,9 +244,9 @@ If there is no pattern, that’s your opportunity to create one.
 Step 4: Proceed OR fix the docs
 Docs clear → proceed.
 
-Docs partial → add missing patterns / examples.
+Docs partial → add missing patterns / examples (especially in `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md`).
 
-Docs absent → create a clearly scoped stub (guide section or new doc) with a working example.
+Docs absent → create a clearly scoped stub (guide section or new doc) with a working example so future agents can locate it via `md-scan`.
 
 Every time you figure out how to:
 
