@@ -883,6 +883,210 @@ function createZServerControls(jsgui) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CONTEXT MENU CONTROL (for right-click menus)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  class ContextMenuControl extends jsgui.Control {
+    constructor(spec = {}) {
+      const normalized = {
+        ...spec,
+        tagName: "div",
+        __type_name: "context_menu"
+      };
+      super(normalized);
+      this.add_class("zs-context-menu");
+      this.add_class("zs-context-menu--hidden");
+      
+      this._items = spec.items || []; // [{ label, icon, action }]
+      
+      if (!spec.el) {
+        this.compose();
+      }
+    }
+
+    compose() {
+      const ctx = this.context;
+      
+      for (const item of this._items) {
+        const menuItem = new jsgui.div({ context: ctx, class: "zs-context-menu__item" });
+        
+        if (item.icon) {
+          const icon = new jsgui.span({ context: ctx, class: "zs-context-menu__icon" });
+          icon.add(new StringControl({ context: ctx, text: item.icon }));
+          menuItem.add(icon);
+        }
+        
+        const label = new jsgui.span({ context: ctx, class: "zs-context-menu__label" });
+        label.add(new StringControl({ context: ctx, text: item.label }));
+        menuItem.add(label);
+        
+        menuItem._action = item.action;
+        this.add(menuItem);
+      }
+    }
+
+    show(x, y) {
+      if (this.dom.el) {
+        this.dom.el.style.left = `${x}px`;
+        this.dom.el.style.top = `${y}px`;
+        this.dom.el.classList.remove("zs-context-menu--hidden");
+      }
+    }
+
+    hide() {
+      if (this.dom.el) {
+        this.dom.el.classList.add("zs-context-menu--hidden");
+      }
+    }
+
+    activate() {
+      if (!this.dom.el) return;
+      
+      // Activate menu items
+      const items = this.dom.el.querySelectorAll(".zs-context-menu__item");
+      for (let i = 0; i < items.length; i++) {
+        const itemEl = items[i];
+        const action = this.content[i]._action;
+        
+        itemEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (action) action();
+          this.hide();
+        });
+      }
+      
+      // Hide on click outside
+      document.addEventListener("click", () => {
+        this.hide();
+      });
+      
+      // Hide on Escape
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          this.hide();
+        }
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STARTUP ERROR CONTROL (Error display with context menu)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  class StartupErrorControl extends jsgui.Control {
+    constructor(spec = {}) {
+      const normalized = {
+        ...spec,
+        tagName: "div",
+        __type_name: "startup_error"
+      };
+      super(normalized);
+      this.add_class("zs-startup-error");
+      this.add_class("zs-startup-error--hidden");
+      
+      this._error = "";
+      this._serverName = "";
+      
+      if (!spec.el) {
+        this.compose();
+      }
+    }
+
+    compose() {
+      const ctx = this.context;
+      
+      // Header with error icon
+      const header = new jsgui.div({ context: ctx, class: "zs-startup-error__header" });
+      const icon = new jsgui.span({ context: ctx, class: "zs-startup-error__icon" });
+      icon.add(new StringControl({ context: ctx, text: "⚠️" }));
+      header.add(icon);
+      
+      const title = new jsgui.span({ context: ctx, class: "zs-startup-error__title" });
+      title.add(new StringControl({ context: ctx, text: "Server Startup Failed" }));
+      header.add(title);
+      this.add(header);
+      
+      // Error message container (acts like a textbox)
+      this._errorBox = new jsgui.div({ context: ctx, class: "zs-startup-error__box" });
+      const errorText = new jsgui.pre({ context: ctx, class: "zs-startup-error__text" });
+      errorText.add(new StringControl({ context: ctx, text: "" }));
+      this._errorBox.add(errorText);
+      this._errorTextEl = errorText;
+      this.add(this._errorBox);
+      
+      // Help text
+      const hint = new jsgui.div({ context: ctx, class: "zs-startup-error__hint" });
+      hint.add(new StringControl({ context: ctx, text: "💡 Right-click to copy error message" }));
+      this.add(hint);
+      
+      // Context menu
+      this._contextMenu = new ContextMenuControl({
+        context: ctx,
+        items: [
+          { label: "Copy Error", icon: "📋", action: () => this._copyToClipboard() },
+          { label: "Dismiss", icon: "✕", action: () => this.hide() }
+        ]
+      });
+      this.add(this._contextMenu);
+    }
+
+    setError(serverName, error) {
+      this._serverName = serverName;
+      this._error = error;
+      
+      // Update error text
+      if (this._errorTextEl && this._errorTextEl.dom.el) {
+        this._errorTextEl.dom.el.textContent = error;
+      }
+      
+      // Show the control
+      if (this.dom.el) {
+        this.dom.el.classList.remove("zs-startup-error--hidden");
+      }
+    }
+
+    hide() {
+      if (this.dom.el) {
+        this.dom.el.classList.add("zs-startup-error--hidden");
+      }
+      this._contextMenu.hide();
+    }
+
+    _copyToClipboard() {
+      const fullMessage = `Server Startup Error: ${this._serverName}\n\n${this._error}`;
+      
+      navigator.clipboard.writeText(fullMessage).then(() => {
+        // Show brief feedback
+        this._showCopyFeedback();
+      }).catch(err => {
+        console.error("Failed to copy:", err);
+      });
+    }
+
+    _showCopyFeedback() {
+      // Briefly flash the error box to indicate copy success
+      if (this._errorBox.dom.el) {
+        this._errorBox.dom.el.classList.add("zs-startup-error__box--copied");
+        setTimeout(() => {
+          this._errorBox.dom.el.classList.remove("zs-startup-error__box--copied");
+        }, 500);
+      }
+    }
+
+    activate() {
+      if (!this.dom.el) return;
+      
+      // Right-click handler for context menu
+      this._errorBox.dom.el.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        this._contextMenu.show(e.clientX, e.clientY);
+      });
+      
+      this._contextMenu.activate();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CONTROL PANEL
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1221,6 +1425,10 @@ function createZServerControls(jsgui) {
       
       this.add(header);
       
+      // Startup Error Display (Hidden by default)
+      this._startupError = new StartupErrorControl({ context: ctx });
+      this.add(this._startupError);
+      
       // Scanning Indicator (Hidden by default, shown during init)
       this._scanningIndicator = new ScanningIndicatorControl({ context: ctx });
       this._scanningIndicator.add_class("zs-hidden");
@@ -1350,8 +1558,17 @@ function createZServerControls(jsgui) {
       this._scanningIndicator.setTotal(total);
     }
 
+    showStartupError(serverName, error) {
+      this._startupError.setError(serverName, error);
+    }
+
+    hideStartupError() {
+      this._startupError.hide();
+    }
+
     activate() {
       this._controlPanel.activate();
+      this._startupError.activate();
     }
   }
 
@@ -1474,6 +1691,11 @@ function createZServerControls(jsgui) {
         this._api.onServerStatusChange(({ filePath, running }) => {
           this._updateServerStatus(filePath, running);
         });
+        
+        // Listen for server startup errors
+        this._api.onServerStartupError(({ filePath, code, error }) => {
+          this._handleStartupError(filePath, code, error);
+        });
       } catch (error) {
         console.error("Failed to scan servers:", error);
         this._contentArea.addLog("stderr", `Failed to scan servers: ${error.message}`);
@@ -1522,8 +1744,26 @@ function createZServerControls(jsgui) {
       }
     }
 
+    _handleStartupError(filePath, code, error) {
+      const server = this._servers.find(s => s.file === filePath);
+      const serverName = server?.metadata?.name || filePath.split(/[\\/]/).pop();
+      
+      console.error(`[ZServerApp] Startup error for ${serverName} (code ${code}):`, error);
+      
+      // Add to logs
+      this._addLog(filePath, "stderr", `Server startup failed (exit code: ${code})`);
+      
+      // Show the startup error control if this is the selected server
+      if (this._selectedServer && this._selectedServer.file === filePath) {
+        this._contentArea.showStartupError(serverName, error);
+      }
+    }
+
     async _startServer() {
       if (!this._selectedServer || !this._api) return;
+      
+      // Hide any previous startup error
+      this._contentArea.hideStartupError();
       
       this._addLog(this._selectedServer.file, "system", "Starting server...");
       
@@ -2593,6 +2833,159 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
+/* CONTEXT MENU                                                                */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-context-menu {
+  position: fixed;
+  min-width: 160px;
+  background: linear-gradient(180deg, 
+    rgba(26, 31, 46, 0.98) 0%, 
+    rgba(10, 13, 20, 0.99) 100%
+  );
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: 8px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.7),
+    0 0 1px rgba(201, 162, 39, 0.5);
+  z-index: 1000;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.zs-context-menu--hidden {
+  display: none !important;
+}
+
+.zs-context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--zs-font-body);
+  font-size: 13px;
+  color: var(--zs-text);
+}
+
+.zs-context-menu__item:hover {
+  background: rgba(201, 162, 39, 0.2);
+  color: var(--zs-gold);
+}
+
+.zs-context-menu__item:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.zs-context-menu__icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.zs-context-menu__label {
+  flex: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STARTUP ERROR                                                               */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-startup-error {
+  position: relative;
+  background: linear-gradient(135deg, 
+    rgba(227, 24, 55, 0.15) 0%, 
+    rgba(26, 31, 46, 0.9) 100%
+  );
+  border: 2px solid var(--zs-ruby);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  animation: zs-error-appear 0.3s ease-out;
+}
+
+@keyframes zs-error-appear {
+  from { 
+    opacity: 0; 
+    transform: translateY(-10px) scale(0.98);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1);
+  }
+}
+
+.zs-startup-error--hidden {
+  display: none !important;
+}
+
+.zs-startup-error__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.zs-startup-error__icon {
+  font-size: 24px;
+  filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.5));
+}
+
+.zs-startup-error__title {
+  font-family: var(--zs-font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--zs-ruby);
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+}
+
+.zs-startup-error__box {
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.6) 0%, 
+    rgba(5, 5, 8, 0.8) 100%
+  );
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  cursor: context-menu;
+  transition: all 0.2s ease;
+}
+
+.zs-startup-error__box:hover {
+  border-color: rgba(255, 107, 107, 0.5);
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.15);
+}
+
+.zs-startup-error__box--copied {
+  background: linear-gradient(135deg, 
+    rgba(80, 200, 120, 0.2) 0%, 
+    rgba(5, 5, 8, 0.8) 100%
+  );
+  border-color: var(--zs-emerald);
+}
+
+.zs-startup-error__text {
+  font-family: var(--zs-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--zs-ruby);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.zs-startup-error__hint {
+  font-family: var(--zs-font-body);
+  font-size: 11px;
+  color: var(--zs-text-dim);
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
 /* ANIMATIONS                                                                  */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -2619,7 +3012,10 @@ body {
     LogViewerControl,
     ServerLogWindowControl,
     ControlButtonControl,
+    ContextMenuControl,
+    StartupErrorControl,
     ControlPanelControl,
+    ScanningIndicatorControl,
     SidebarControl,
     ContentAreaControl,
     TitleBarControl,

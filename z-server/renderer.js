@@ -39793,6 +39793,158 @@ body .overlay {
             }
           }
         }
+        class ContextMenuControl extends jsgui2.Control {
+          constructor(spec = {}) {
+            const normalized = {
+              ...spec,
+              tagName: "div",
+              __type_name: "context_menu"
+            };
+            super(normalized);
+            this.add_class("zs-context-menu");
+            this.add_class("zs-context-menu--hidden");
+            this._items = spec.items || [];
+            if (!spec.el) {
+              this.compose();
+            }
+          }
+          compose() {
+            const ctx = this.context;
+            for (const item2 of this._items) {
+              const menuItem = new jsgui2.div({ context: ctx, class: "zs-context-menu__item" });
+              if (item2.icon) {
+                const icon = new jsgui2.span({ context: ctx, class: "zs-context-menu__icon" });
+                icon.add(new StringControl({ context: ctx, text: item2.icon }));
+                menuItem.add(icon);
+              }
+              const label = new jsgui2.span({ context: ctx, class: "zs-context-menu__label" });
+              label.add(new StringControl({ context: ctx, text: item2.label }));
+              menuItem.add(label);
+              menuItem._action = item2.action;
+              this.add(menuItem);
+            }
+          }
+          show(x, y) {
+            if (this.dom.el) {
+              this.dom.el.style.left = `${x}px`;
+              this.dom.el.style.top = `${y}px`;
+              this.dom.el.classList.remove("zs-context-menu--hidden");
+            }
+          }
+          hide() {
+            if (this.dom.el) {
+              this.dom.el.classList.add("zs-context-menu--hidden");
+            }
+          }
+          activate() {
+            if (!this.dom.el) return;
+            const items = this.dom.el.querySelectorAll(".zs-context-menu__item");
+            for (let i = 0; i < items.length; i++) {
+              const itemEl = items[i];
+              const action = this.content[i]._action;
+              itemEl.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (action) action();
+                this.hide();
+              });
+            }
+            document.addEventListener("click", () => {
+              this.hide();
+            });
+            document.addEventListener("keydown", (e) => {
+              if (e.key === "Escape") {
+                this.hide();
+              }
+            });
+          }
+        }
+        class StartupErrorControl extends jsgui2.Control {
+          constructor(spec = {}) {
+            const normalized = {
+              ...spec,
+              tagName: "div",
+              __type_name: "startup_error"
+            };
+            super(normalized);
+            this.add_class("zs-startup-error");
+            this.add_class("zs-startup-error--hidden");
+            this._error = "";
+            this._serverName = "";
+            if (!spec.el) {
+              this.compose();
+            }
+          }
+          compose() {
+            const ctx = this.context;
+            const header = new jsgui2.div({ context: ctx, class: "zs-startup-error__header" });
+            const icon = new jsgui2.span({ context: ctx, class: "zs-startup-error__icon" });
+            icon.add(new StringControl({ context: ctx, text: "\u26A0\uFE0F" }));
+            header.add(icon);
+            const title = new jsgui2.span({ context: ctx, class: "zs-startup-error__title" });
+            title.add(new StringControl({ context: ctx, text: "Server Startup Failed" }));
+            header.add(title);
+            this.add(header);
+            this._errorBox = new jsgui2.div({ context: ctx, class: "zs-startup-error__box" });
+            const errorText = new jsgui2.pre({ context: ctx, class: "zs-startup-error__text" });
+            errorText.add(new StringControl({ context: ctx, text: "" }));
+            this._errorBox.add(errorText);
+            this._errorTextEl = errorText;
+            this.add(this._errorBox);
+            const hint = new jsgui2.div({ context: ctx, class: "zs-startup-error__hint" });
+            hint.add(new StringControl({ context: ctx, text: "\u{1F4A1} Right-click to copy error message" }));
+            this.add(hint);
+            this._contextMenu = new ContextMenuControl({
+              context: ctx,
+              items: [
+                { label: "Copy Error", icon: "\u{1F4CB}", action: () => this._copyToClipboard() },
+                { label: "Dismiss", icon: "\u2715", action: () => this.hide() }
+              ]
+            });
+            this.add(this._contextMenu);
+          }
+          setError(serverName, error2) {
+            this._serverName = serverName;
+            this._error = error2;
+            if (this._errorTextEl && this._errorTextEl.dom.el) {
+              this._errorTextEl.dom.el.textContent = error2;
+            }
+            if (this.dom.el) {
+              this.dom.el.classList.remove("zs-startup-error--hidden");
+            }
+          }
+          hide() {
+            if (this.dom.el) {
+              this.dom.el.classList.add("zs-startup-error--hidden");
+            }
+            this._contextMenu.hide();
+          }
+          _copyToClipboard() {
+            const fullMessage = `Server Startup Error: ${this._serverName}
+
+${this._error}`;
+            navigator.clipboard.writeText(fullMessage).then(() => {
+              this._showCopyFeedback();
+            }).catch((err) => {
+              console.error("Failed to copy:", err);
+            });
+          }
+          _showCopyFeedback() {
+            if (this._errorBox.dom.el) {
+              this._errorBox.dom.el.classList.add("zs-startup-error__box--copied");
+              setTimeout(() => {
+                this._errorBox.dom.el.classList.remove("zs-startup-error__box--copied");
+              }, 500);
+            }
+          }
+          activate() {
+            if (!this.dom.el) return;
+            this._errorBox.dom.el.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              this._contextMenu.show(e.clientX, e.clientY);
+            });
+            this._contextMenu.activate();
+          }
+        }
         class ControlPanelControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -40042,6 +40194,8 @@ body .overlay {
             });
             header.add(this._controlPanel);
             this.add(header);
+            this._startupError = new StartupErrorControl({ context: ctx });
+            this.add(this._startupError);
             this._scanningIndicator = new ScanningIndicatorControl({ context: ctx });
             this._scanningIndicator.add_class("zs-hidden");
             this.add(this._scanningIndicator);
@@ -40140,8 +40294,15 @@ body .overlay {
           setScanTotal(total) {
             this._scanningIndicator.setTotal(total);
           }
+          showStartupError(serverName, error2) {
+            this._startupError.setError(serverName, error2);
+          }
+          hideStartupError() {
+            this._startupError.hide();
+          }
           activate() {
             this._controlPanel.activate();
+            this._startupError.activate();
           }
         }
         class TitleBarControl extends jsgui2.Control {
@@ -40228,6 +40389,9 @@ body .overlay {
               this._api.onServerStatusChange(({ filePath, running }) => {
                 this._updateServerStatus(filePath, running);
               });
+              this._api.onServerStartupError(({ filePath, code, error: error2 }) => {
+                this._handleStartupError(filePath, code, error2);
+              });
             } catch (error2) {
               console.error("Failed to scan servers:", error2);
               this._contentArea.addLog("stderr", `Failed to scan servers: ${error2.message}`);
@@ -40264,8 +40428,18 @@ body .overlay {
               }
             }
           }
+          _handleStartupError(filePath, code, error2) {
+            const server = this._servers.find((s) => s.file === filePath);
+            const serverName = server?.metadata?.name || filePath.split(/[\\/]/).pop();
+            console.error(`[ZServerApp] Startup error for ${serverName} (code ${code}):`, error2);
+            this._addLog(filePath, "stderr", `Server startup failed (exit code: ${code})`);
+            if (this._selectedServer && this._selectedServer.file === filePath) {
+              this._contentArea.showStartupError(serverName, error2);
+            }
+          }
           async _startServer() {
             if (!this._selectedServer || !this._api) return;
+            this._contentArea.hideStartupError();
             this._addLog(this._selectedServer.file, "system", "Starting server...");
             const result = await this._api.startServer(this._selectedServer.file);
             if (result.success) {
@@ -41319,6 +41493,159 @@ body {
 }
 
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+/* CONTEXT MENU                                                                */
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+
+.zs-context-menu {
+  position: fixed;
+  min-width: 160px;
+  background: linear-gradient(180deg, 
+    rgba(26, 31, 46, 0.98) 0%, 
+    rgba(10, 13, 20, 0.99) 100%
+  );
+  border: 1px solid rgba(201, 162, 39, 0.4);
+  border-radius: 8px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.7),
+    0 0 1px rgba(201, 162, 39, 0.5);
+  z-index: 1000;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.zs-context-menu--hidden {
+  display: none !important;
+}
+
+.zs-context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--zs-font-body);
+  font-size: 13px;
+  color: var(--zs-text);
+}
+
+.zs-context-menu__item:hover {
+  background: rgba(201, 162, 39, 0.2);
+  color: var(--zs-gold);
+}
+
+.zs-context-menu__item:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.zs-context-menu__icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.zs-context-menu__label {
+  flex: 1;
+}
+
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+/* STARTUP ERROR                                                               */
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+
+.zs-startup-error {
+  position: relative;
+  background: linear-gradient(135deg, 
+    rgba(227, 24, 55, 0.15) 0%, 
+    rgba(26, 31, 46, 0.9) 100%
+  );
+  border: 2px solid var(--zs-ruby);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  animation: zs-error-appear 0.3s ease-out;
+}
+
+@keyframes zs-error-appear {
+  from { 
+    opacity: 0; 
+    transform: translateY(-10px) scale(0.98);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1);
+  }
+}
+
+.zs-startup-error--hidden {
+  display: none !important;
+}
+
+.zs-startup-error__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.zs-startup-error__icon {
+  font-size: 24px;
+  filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.5));
+}
+
+.zs-startup-error__title {
+  font-family: var(--zs-font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--zs-ruby);
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+}
+
+.zs-startup-error__box {
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.6) 0%, 
+    rgba(5, 5, 8, 0.8) 100%
+  );
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  cursor: context-menu;
+  transition: all 0.2s ease;
+}
+
+.zs-startup-error__box:hover {
+  border-color: rgba(255, 107, 107, 0.5);
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.15);
+}
+
+.zs-startup-error__box--copied {
+  background: linear-gradient(135deg, 
+    rgba(80, 200, 120, 0.2) 0%, 
+    rgba(5, 5, 8, 0.8) 100%
+  );
+  border-color: var(--zs-emerald);
+}
+
+.zs-startup-error__text {
+  font-family: var(--zs-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--zs-ruby);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.zs-startup-error__hint {
+  font-family: var(--zs-font-body);
+  font-size: 11px;
+  color: var(--zs-text-dim);
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 /* ANIMATIONS                                                                  */
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
 
@@ -41340,7 +41667,10 @@ body {
           LogViewerControl,
           ServerLogWindowControl,
           ControlButtonControl,
+          ContextMenuControl,
+          StartupErrorControl,
           ControlPanelControl,
+          ScanningIndicatorControl,
           SidebarControl,
           ContentAreaControl,
           TitleBarControl,
