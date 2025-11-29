@@ -104,6 +104,10 @@ function activateMarkedControls(context) {
       el: el
     });
     
+    // Link control to DOM element (required for activate() to work)
+    control.dom = control.dom || {};
+    control.dom.el = el;
+    
     // Store reference on element for debugging
     el.__jsgui_control = control;
     

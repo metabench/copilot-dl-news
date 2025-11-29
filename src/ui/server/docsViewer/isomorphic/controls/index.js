@@ -12,8 +12,8 @@
  * - All controls use require("../jsgui") which resolves to the correct implementation
  */
 
-// Layout controls
-const { ResizableSplitLayoutControl } = require("./ResizableSplitLayoutControl");
+// Layout controls - use shared version (same as Design Studio) for consistent behavior
+const { ResizableSplitLayoutControl } = require("../../../shared/isomorphic/controls");
 
 // App structure controls
 const { DocAppControl } = require("./DocAppControl");

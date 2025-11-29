@@ -198,6 +198,7 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
+  min-height: 0; /* Allow flex children to shrink below content size */
 }
 
 .split-layout--horizontal {
@@ -213,6 +214,7 @@ body {
 
 .split-layout__panel--left {
   flex-shrink: 0;
+  overflow: hidden;
   /* Width is set inline from control */
 }
 

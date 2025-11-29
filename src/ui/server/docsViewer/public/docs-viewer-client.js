@@ -38464,9 +38464,9 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/isomorphic/jsgui.js
+  // src/ui/server/shared/isomorphic/jsgui.js
   var require_jsgui = __commonJS({
-    "src/ui/server/docsViewer/isomorphic/jsgui.js"(exports, module) {
+    "src/ui/server/shared/isomorphic/jsgui.js"(exports, module) {
       "use strict";
       var isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
       var jsgui;
@@ -38479,9 +38479,9 @@ body .overlay {
     }
   });
 
-  // src/ui/server/docsViewer/isomorphic/controls/ResizableSplitLayoutControl.js
+  // src/ui/server/shared/isomorphic/controls/ResizableSplitLayoutControl.js
   var require_ResizableSplitLayoutControl = __commonJS({
-    "src/ui/server/docsViewer/isomorphic/controls/ResizableSplitLayoutControl.js"(exports, module) {
+    "src/ui/server/shared/isomorphic/controls/ResizableSplitLayoutControl.js"(exports, module) {
       "use strict";
       var jsgui = require_jsgui();
       var ResizableSplitLayoutControl = class extends jsgui.Control {
@@ -38562,13 +38562,6 @@ body .overlay {
         }
         /**
          * Activate the control for client-side interactivity
-         * 
-         * This method is called during hydration when the control wraps
-         * an existing server-rendered DOM element. It:
-         * 1. Reads configuration from data attributes
-         * 2. Finds child elements (panels, divider)
-         * 3. Restores saved width from localStorage
-         * 4. Binds all event handlers for drag/resize behavior
          */
         activate() {
           var _a;
@@ -38603,13 +38596,22 @@ body .overlay {
           this._dividerEl.addEventListener("touchstart", this._onTouchStart, { passive: false });
           this._dividerEl.addEventListener("dblclick", this._onDblClick);
           this._dividerEl.addEventListener("keydown", this._onKeyDown);
+          this._removePreloadStyle();
           console.log("[ResizableSplitLayoutControl] Activated with width:", this._getLeftWidth());
         }
-        // ==================== Width Management ====================
         /**
-         * Restore saved width from localStorage
-         * @private
+         * Remove the preload style element that was added to prevent flickering
+         * during initial page load. Once the control is activated, we no longer
+         * need the !important override.
          */
+        _removePreloadStyle() {
+          if (typeof document === "undefined") return;
+          const preloadStyle = document.getElementById("split-layout-preload");
+          if (preloadStyle) {
+            preloadStyle.remove();
+          }
+        }
+        // ==================== Width Management ====================
         _restoreSavedWidth() {
           if (!this.storageKey || typeof localStorage === "undefined") return;
           try {
@@ -38623,11 +38625,6 @@ body .overlay {
           } catch (e) {
           }
         }
-        /**
-         * Save current width to localStorage
-         * @param {number} width - Width in pixels
-         * @private
-         */
         _saveWidth(width) {
           if (!this.storageKey || typeof localStorage === "undefined") return;
           try {
@@ -38635,11 +38632,6 @@ body .overlay {
           } catch (e) {
           }
         }
-        /**
-         * Set the left panel width with constraints
-         * @param {number} width - Width in pixels
-         * @private
-         */
         _setLeftWidth(width) {
           if (!this._leftPanelEl) return;
           width = Math.max(this.minLeftWidth, Math.min(this.maxLeftWidth, width));
@@ -38648,47 +38640,26 @@ body .overlay {
             this._dividerEl.setAttribute("aria-valuenow", String(width));
           }
         }
-        /**
-         * Get current left panel width
-         * @returns {number} Width in pixels
-         * @private
-         */
         _getLeftWidth() {
           return this._leftPanelEl ? this._leftPanelEl.offsetWidth : this.initialLeftWidth;
         }
         // ==================== Mouse Events ====================
-        /**
-         * Handle mousedown on divider - start drag operation
-         * @private
-         */
         _handleMouseDown(e) {
           e.preventDefault();
           this._startDrag(e.clientX);
           document.addEventListener("mousemove", this._onMouseMove);
           document.addEventListener("mouseup", this._onMouseUp);
         }
-        /**
-         * Handle mousemove - resize during drag
-         * @private
-         */
         _handleMouseMove(e) {
           if (!this._isDragging) return;
           this._doDrag(e.clientX);
         }
-        /**
-         * Handle mouseup - end drag operation
-         * @private
-         */
         _handleMouseUp(e) {
           this._endDrag();
           document.removeEventListener("mousemove", this._onMouseMove);
           document.removeEventListener("mouseup", this._onMouseUp);
         }
         // ==================== Touch Events ====================
-        /**
-         * Handle touchstart - start drag operation
-         * @private
-         */
         _handleTouchStart(e) {
           if (e.touches.length !== 1) return;
           e.preventDefault();
@@ -38697,19 +38668,11 @@ body .overlay {
           document.addEventListener("touchend", this._onTouchEnd);
           document.addEventListener("touchcancel", this._onTouchEnd);
         }
-        /**
-         * Handle touchmove - resize during drag
-         * @private
-         */
         _handleTouchMove(e) {
           if (!this._isDragging || e.touches.length !== 1) return;
           e.preventDefault();
           this._doDrag(e.touches[0].clientX);
         }
-        /**
-         * Handle touchend - end drag operation
-         * @private
-         */
         _handleTouchEnd(e) {
           this._endDrag();
           document.removeEventListener("touchmove", this._onTouchMove);
@@ -38717,11 +38680,6 @@ body .overlay {
           document.removeEventListener("touchcancel", this._onTouchEnd);
         }
         // ==================== Drag Logic ====================
-        /**
-         * Start a drag operation
-         * @param {number} clientX - Starting X coordinate
-         * @private
-         */
         _startDrag(clientX) {
           var _a;
           this._isDragging = true;
@@ -38734,20 +38692,11 @@ body .overlay {
           document.body.style.userSelect = "none";
           document.body.style.cursor = "ew-resize";
         }
-        /**
-         * Perform drag resize calculation
-         * @param {number} clientX - Current X coordinate
-         * @private
-         */
         _doDrag(clientX) {
           const delta = clientX - this._startX;
           const newWidth = this._startWidth + delta;
           this._setLeftWidth(newWidth);
         }
-        /**
-         * End a drag operation
-         * @private
-         */
         _endDrag() {
           var _a;
           if (!this._isDragging) return;
@@ -38761,18 +38710,10 @@ body .overlay {
           this._saveWidth(this._getLeftWidth());
         }
         // ==================== Keyboard & Other Events ====================
-        /**
-         * Handle double-click on divider - reset to default width
-         * @private
-         */
         _handleDoubleClick(e) {
           this._setLeftWidth(this.initialLeftWidth);
           this._saveWidth(this.initialLeftWidth);
         }
-        /**
-         * Handle keyboard navigation on focused divider
-         * @private
-         */
         _handleKeyDown(e) {
           const step = e.shiftKey ? 50 : 10;
           let width = this._getLeftWidth();
@@ -38804,11 +38745,37 @@ body .overlay {
     }
   });
 
+  // src/ui/server/shared/isomorphic/controls/index.js
+  var require_controls2 = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/index.js"(exports, module) {
+      "use strict";
+      var { ResizableSplitLayoutControl } = require_ResizableSplitLayoutControl();
+      module.exports = {
+        ResizableSplitLayoutControl
+      };
+    }
+  });
+
+  // src/ui/server/docsViewer/isomorphic/jsgui.js
+  var require_jsgui2 = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/jsgui.js"(exports, module) {
+      "use strict";
+      var isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
+      var jsgui;
+      if (isBrowser) {
+        jsgui = require_client();
+      } else {
+        jsgui = require_html();
+      }
+      module.exports = jsgui;
+    }
+  });
+
   // src/ui/server/docsViewer/isomorphic/controls/DocNavControl.js
   var require_DocNavControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocNavControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var StringControl = jsgui.String_Control;
       var DocNavControl = class extends jsgui.Control {
         /**
@@ -39196,7 +39163,7 @@ body .overlay {
   var require_DocViewerControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocViewerControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var StringControl = jsgui.String_Control;
       var DocViewerControl = class extends jsgui.Control {
         /**
@@ -39384,10 +39351,10 @@ body .overlay {
   var require_DocAppControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocAppControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var { DocNavControl } = require_DocNavControl();
       var { DocViewerControl } = require_DocViewerControl();
-      var { ResizableSplitLayoutControl } = require_ResizableSplitLayoutControl();
+      var { ResizableSplitLayoutControl } = require_controls2();
       var StringControl = jsgui.String_Control;
       var DocAppControl = class extends jsgui.Control {
         /**
@@ -39508,7 +39475,7 @@ body .overlay {
   var require_ContextMenuControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/ContextMenuControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var ContextMenuControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -39727,7 +39694,7 @@ body .overlay {
   var require_ColumnHeaderControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/ColumnHeaderControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var ColumnHeaderControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -39877,7 +39844,7 @@ body .overlay {
   var require_DocsThemeToggleControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocsThemeToggleControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var DocsThemeToggleControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -39987,7 +39954,7 @@ body .overlay {
   var require_DocsNavToggleControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocsNavToggleControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var DocsNavToggleControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -40053,7 +40020,7 @@ body .overlay {
   var require_DocsSearchControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocsSearchControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var DocsSearchControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -40162,7 +40129,7 @@ body .overlay {
   var require_DocsFileFilterControl = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/DocsFileFilterControl.js"(exports, module) {
       "use strict";
-      var jsgui = require_jsgui();
+      var jsgui = require_jsgui2();
       var DocsFileFilterControl = class extends jsgui.Control {
         /**
          * @param {Object} spec - Control specification
@@ -40256,10 +40223,10 @@ body .overlay {
   });
 
   // src/ui/server/docsViewer/isomorphic/controls/index.js
-  var require_controls2 = __commonJS({
+  var require_controls3 = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/index.js"(exports, module) {
       "use strict";
-      var { ResizableSplitLayoutControl } = require_ResizableSplitLayoutControl();
+      var { ResizableSplitLayoutControl } = require_controls2();
       var { DocAppControl } = require_DocAppControl();
       var { DocNavControl } = require_DocNavControl();
       var { DocViewerControl, DocContentControl } = require_DocViewerControl();
@@ -40309,7 +40276,7 @@ body .overlay {
         DocsNavToggleControl,
         DocsSearchControl,
         DocsFileFilterControl
-      } = require_controls2();
+      } = require_controls3();
       var CONTROL_TYPES = {
         "resizable_split_layout": ResizableSplitLayoutControl,
         "context_menu": ContextMenuControl,
@@ -40352,6 +40319,8 @@ body .overlay {
             context: context2,
             el
           });
+          control.dom = control.dom || {};
+          control.dom.el = el;
           el.__jsgui_control = control;
           if (typeof control.activate === "function") {
             control.activate();

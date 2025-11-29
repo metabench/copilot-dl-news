@@ -362,12 +362,42 @@ function renderPage(control, options = {}) {
     window.__DOCS_SORT__ = { sortBy: ${JSON.stringify(sortBy)}, sortOrder: ${JSON.stringify(sortOrder)} };
   </script>`;
   
+  // Inline script to restore split layout width BEFORE render to prevent flickering
+  // This matches the Design Studio pattern for consistent behavior
+  const preloadScript = `<script>
+(function() {
+  // Restore split layout width from localStorage before first paint
+  // This prevents flickering when navigating between pages
+  var storageKey = 'docs-viewer-nav-width';
+  var minWidth = 150;
+  var maxWidth = 600;
+  var defaultWidth = 280;
+  
+  try {
+    var saved = localStorage.getItem(storageKey);
+    if (saved) {
+      var width = parseInt(saved, 10);
+      if (width >= minWidth && width <= maxWidth) {
+        // Create a style element to set the width before render
+        var style = document.createElement('style');
+        style.id = 'split-layout-preload';
+        style.textContent = '[data-panel="left"] { width: ' + width + 'px !important; }';
+        document.head.appendChild(style);
+      }
+    }
+  } catch (e) {
+    // localStorage may be disabled
+  }
+})();
+</script>`;
+  
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
+  ${preloadScript}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manufacturing+Consent&display=swap" rel="stylesheet">
