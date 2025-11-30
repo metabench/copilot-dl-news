@@ -31,6 +31,25 @@
 
 ## Current Session
 
+### Session 2025-11-30: Decision Tree Visualization Apps Deep Research
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Research decision tree visualization tools and create example SVGs using Luxury Industrial Obsidian theme
+
+**Location**: `docs/sessions/2025-11-30-decision-tree-viz-research/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-decision-tree-viz-research/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-decision-tree-viz-research/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-decision-tree-viz-research/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-decision-tree-viz-research/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-decision-tree-viz-research/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-29: Fix Design Studio client errors
 
 **Duration**: Active
