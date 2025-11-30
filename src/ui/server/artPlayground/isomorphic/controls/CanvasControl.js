@@ -22,6 +22,7 @@ class CanvasControl extends jsgui.Control {
     this._components = new Map(); // id -> ComponentControl
     this._selectedId = null;
     this._nextId = 1;
+    this._activeColor = "#4A90D9";
     
     // Drag state
     this._dragState = null;
@@ -172,6 +173,7 @@ class CanvasControl extends jsgui.Control {
   _renderComponent(data) {
     const { id, type } = data;
     let el;
+    const fill = data.fill || this._activeColor || "#4A90D9";
     
     if (type === "rect") {
       el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -179,7 +181,7 @@ class CanvasControl extends jsgui.Control {
       el.setAttribute("y", data.y);
       el.setAttribute("width", data.width);
       el.setAttribute("height", data.height);
-      el.setAttribute("fill", data.fill || "#4A90D9");
+      el.setAttribute("fill", fill);
       el.setAttribute("rx", "4");
       
       // Store component data
@@ -190,7 +192,7 @@ class CanvasControl extends jsgui.Control {
         y: data.y,
         width: data.width,
         height: data.height,
-        fill: data.fill
+        fill: fill
       });
     } else if (type === "ellipse") {
       el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
@@ -198,7 +200,7 @@ class CanvasControl extends jsgui.Control {
       el.setAttribute("cy", data.cy);
       el.setAttribute("rx", data.rx);
       el.setAttribute("ry", data.ry);
-      el.setAttribute("fill", data.fill || "#4AD94A");
+      el.setAttribute("fill", fill);
       
       // Store with x/y as center for consistency
       this._components.set(id, {
@@ -212,13 +214,13 @@ class CanvasControl extends jsgui.Control {
         cy: data.cy,
         rx: data.rx,
         ry: data.ry,
-        fill: data.fill
+        fill: fill
       });
     } else if (type === "text") {
       el = document.createElementNS("http://www.w3.org/2000/svg", "text");
       el.setAttribute("x", data.x);
       el.setAttribute("y", data.y);
-      el.setAttribute("fill", data.fill || "#1A1A1A");
+      el.setAttribute("fill", fill);
       el.setAttribute("font-size", data.fontSize || "16");
       el.textContent = data.text || "Text";
       
@@ -230,7 +232,7 @@ class CanvasControl extends jsgui.Control {
         width: 100,
         height: 24,
         text: data.text || "Text",
-        fill: data.fill
+        fill: fill
       });
     }
     
@@ -434,7 +436,7 @@ class CanvasControl extends jsgui.Control {
         y: 200 + Math.random() * 100,
         width: 120,
         height: 80,
-        fill: this._randomColor()
+        fill: this._activeColor
       });
     } else if (type === "ellipse") {
       const rx = 50 + Math.random() * 30;
@@ -446,7 +448,7 @@ class CanvasControl extends jsgui.Control {
         cy: 250 + Math.random() * 100,
         rx,
         ry,
-        fill: this._randomColor()
+        fill: this._activeColor
       });
     } else if (type === "text") {
       this._renderComponent({
@@ -455,7 +457,7 @@ class CanvasControl extends jsgui.Control {
         x: 200 + Math.random() * 100,
         y: 200 + Math.random() * 100,
         text: "New Text",
-        fill: "#1A1A1A"
+        fill: this._activeColor
       });
     }
     
@@ -481,9 +483,39 @@ class CanvasControl extends jsgui.Control {
     }
   }
   
-  _randomColor() {
-    const colors = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
-    return colors[Math.floor(Math.random() * colors.length)];
+  setActiveColor(color, options = {}) {
+    const normalized = this._normalizeColor(color);
+    if (!normalized) return;
+    this._activeColor = normalized;
+
+    const shouldApply = options.applyToSelection !== false;
+    if (shouldApply && this._selectedId) {
+      this._applyColorToComponent(this._selectedId, normalized);
+    }
+  }
+
+  _applyColorToComponent(id, color) {
+    const comp = this._components.get(id);
+    if (!comp || !comp.el) return;
+    comp.fill = color;
+    comp.el.setAttribute("fill", color);
+  }
+
+  _normalizeColor(value) {
+    if (!value) return null;
+    let str = String(value).trim();
+    if (!str) return null;
+    if (!str.startsWith("#")) {
+      str = `#${str}`;
+    }
+    const hex = str.toUpperCase();
+    if (/^#([0-9A-F]{3}|[0-9A-F]{6})$/.test(hex)) {
+      if (hex.length === 4) {
+        return `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+      }
+      return hex;
+    }
+    return null;
   }
 }
 

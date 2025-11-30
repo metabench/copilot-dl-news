@@ -1,6 +1,7 @@
 "use strict";
 
 const jsgui = require("../jsgui");
+const { ColorSelectorControl } = require("./ColorSelectorControl");
 
 /**
  * Toolbar Control
@@ -18,6 +19,7 @@ class ToolbarControl extends jsgui.Control {
     
     this._currentTool = "select";
     this._buttons = {};
+    this._colorSelector = null;
     
     if (!spec.el) {
       this._build();
@@ -83,6 +85,13 @@ class ToolbarControl extends jsgui.Control {
     actionsSection.add(this._buttons.delete);
     
     this.add(actionsSection);
+
+    // Color selector dock
+    const colorDock = new jsgui.Control({ context: this.context, tagName: "div" });
+    colorDock.add_class("art-toolbar__color-selector");
+    this._colorSelector = new ColorSelectorControl({ context: this.context });
+    colorDock.add(this._colorSelector);
+    this.add(colorDock);
   }
   
   _createButton(action, label, active = false) {
@@ -101,6 +110,7 @@ class ToolbarControl extends jsgui.Control {
     
     // Get DOM element reference
     const el = this.dom.el || this.dom;
+    this._hydrateColorSelector(el);
     
     // Bind button clicks
     Object.entries(this._buttons).forEach(([key, btn]) => {
@@ -113,6 +123,11 @@ class ToolbarControl extends jsgui.Control {
         this._handleAction(action);
       });
     });
+
+    if (this._colorSelector && typeof this._colorSelector.activate === 'function') {
+      this._colorSelector.activate();
+      this._bridgeColorSelector();
+    }
   }
   
   _handleAction(action) {
@@ -150,6 +165,33 @@ class ToolbarControl extends jsgui.Control {
     
     this._currentTool = toolName;
     this.raise("tool-change", toolName);
+  }
+
+  _hydrateColorSelector(rootEl) {
+    if (this._colorSelector) return;
+    const host = rootEl || this.dom.el || this.dom;
+    if (!host) return;
+    const selectorEl = host.querySelector("[data-jsgui-control='art_color_selector']");
+    if (selectorEl && selectorEl.__jsgui_control) {
+      this._colorSelector = selectorEl.__jsgui_control;
+    }
+  }
+
+  _bridgeColorSelector() {
+    if (!this._colorSelector) return;
+    this._colorSelector.on("color-change", (payload) => {
+      const color = typeof payload === "string" ? payload : payload?.color;
+      if (color) {
+        this.raise("color-change", color);
+      }
+    });
+  }
+
+  getCurrentColor() {
+    if (this._colorSelector && typeof this._colorSelector.getSelectedColor === "function") {
+      return this._colorSelector.getSelectedColor();
+    }
+    return "#4A90D9";
   }
 }
 

@@ -36,7 +36,11 @@ _Last updated: 2025-11-04_
 
 **Comprehensive AI-generated references** for complex subsystems. These in-depth documents (500–1000+ lines) capture architecture, patterns, gotchas, and working examples discovered through hands-on implementation. Consult before working on an unfamiliar subsystem.
 
-- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, and verification scripts for jsgui3-html UIs.
+- **JSGUI3 Knowledge Hub**
+	- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, and verification scripts for jsgui3-html UIs.
+	- [Art Playground Agent Workflow Guide](guides/ART_PLAYGROUND_AGENT_WORKFLOW_GUIDE.md) - How AI agents can interact with the Art Playground SVG editor using MCP browser tools.
+	- [jsgui3 Lab README](../src/jsgui3-lab/README.md) - Center for reusable jsgui3 controls and utilities within this project.
+	- Headless tooling: [tools/dev/jsgui3-event-lab.js](../tools/dev/jsgui3-event-lab.js) for jsdom simulations, [scripts/ui/capture-control.js](../scripts/ui/capture-control.js) for Puppeteer-based screenshots/tests, and lab scenarios under [src/jsgui3-lab/checks](../src/jsgui3-lab/checks).
 
 ## Reference
 - [Adapters Overview](reference/adapters_overview.md)

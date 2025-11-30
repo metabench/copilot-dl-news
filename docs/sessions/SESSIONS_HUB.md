@@ -31,6 +31,82 @@
 
 ## Current Session
 
+### Session 2025-11-30: Art Playground Resize Investigation
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Understand why selection handles + jsgui3 resizable mixin fail
+
+**Location**: `docs/sessions/2025-11-30-art-resize/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-art-resize/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-art-resize/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-art-resize/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-art-resize/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-art-resize/FOLLOW_UPS.md)
+
+
+### Session 2025-11-30: Art Playground Color Picker
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Prototype improved color selection in lab then integrate into Art Playground
+
+**Location**: `docs/sessions/2025-11-30-art-color-picker/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-art-color-picker/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-art-color-picker/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-art-color-picker/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-art-color-picker/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-art-color-picker/FOLLOW_UPS.md)
+
+
+### Session 2025-11-30: JSGUI3 Lab Tooling
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement headless control testing scripts and puppeteer micro-scenarios
+
+**Location**: `docs/sessions/2025-11-30-jsgui3-lab-upgrades/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-jsgui3-lab-upgrades/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-jsgui3-lab-upgrades/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-jsgui3-lab-upgrades/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-jsgui3-lab-upgrades/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-jsgui3-lab-upgrades/FOLLOW_UPS.md)
+
+
+### Session 2025-11-30: Art Playground Run
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document steps to access art playground and interact
+
+**Location**: `docs/sessions/2025-11-30-art-playground-run/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-art-playground-run/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-art-playground-run/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-art-playground-run/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-art-playground-run/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-art-playground-run/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-30: Art Playground - Interactive SVG Component Editor
 
 **Duration**: Active

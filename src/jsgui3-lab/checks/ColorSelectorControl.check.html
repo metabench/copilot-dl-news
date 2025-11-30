@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ColorSelectorControl Check</title>
+  <style>/**
+ * Art Playground Styles
+ * 
+ * Theme: "Luxury White Leather, Industrial Obsidian Features"
+ */
+
+:root {
+  /* Leather whites */
+  --ap-white: #FAFAFA;
+  --ap-cream: #F5F5F0;
+  --ap-leather: #EDE8E0;
+  
+  /* Obsidian blacks */
+  --ap-obsidian: #1A1A1A;
+  --ap-obsidian-soft: #2D2D2D;
+  --ap-obsidian-mid: #3D3D3D;
+  
+  /* Gold accents */
+  --ap-gold: #C9A227;
+  --ap-gold-light: #DAA520;
+  
+  /* UI colors */
+  --ap-selection: #4A90D9;
+  --ap-selection-light: rgba(74, 144, 217, 0.2);
+  --ap-danger: #D94A4A;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--ap-cream);
+  color: var(--ap-obsidian);
+}
+
+/* Main App Layout */
+.art-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Toolbar */
+.art-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--ap-obsidian);
+  border-bottom: 2px solid var(--ap-gold);
+  flex-shrink: 0;
+}
+
+.art-toolbar__section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.art-toolbar__label {
+  color: var(--ap-leather);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.art-toolbar__divider {
+  width: 1px;
+  height: 24px;
+  background: var(--ap-obsidian-mid);
+  margin: 0 8px;
+}
+
+.art-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--ap-obsidian-soft);
+  border: 1px solid var(--ap-obsidian-mid);
+  border-radius: 4px;
+  color: var(--ap-cream);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.art-toolbar__btn:hover {
+  background: var(--ap-obsidian-mid);
+  border-color: var(--ap-gold);
+}
+
+.art-toolbar__btn--active {
+  background: var(--ap-gold);
+  border-color: var(--ap-gold-light);
+  color: var(--ap-obsidian);
+}
+
+.art-toolbar__btn--danger:hover {
+  background: var(--ap-danger);
+  border-color: var(--ap-danger);
+}
+
+.art-toolbar__color-selector {
+  margin-left: auto;
+  display: flex;
+  flex: 1;
+  max-width: 420px;
+  min-width: 260px;
+}
+
+.art-toolbar__color-selector .color-selector {
+  width: 100%;
+  background: var(--ap-obsidian);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Canvas */
+.art-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--ap-white);
+}
+
+.art-canvas__svg-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.art-canvas__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.art-canvas__grid {
+  pointer-events: all;
+}
+
+.art-canvas__component {
+  cursor: move;
+  transition: filter 0.1s ease;
+}
+
+.art-canvas__component:hover {
+  filter: brightness(1.1);
+}
+
+.art-canvas__component--selected {
+  filter: none;
+}
+
+/* Selection Handles */
+.art-selection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.art-selection__outline {
+  position: absolute;
+  border: 2px solid var(--ap-selection);
+  background: var(--ap-selection-light);
+  pointer-events: none;
+}
+
+.art-selection__handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--ap-white);
+  border: 2px solid var(--ap-selection);
+  border-radius: 2px;
+  pointer-events: all;
+  z-index: 10;
+}
+
+.art-selection__handle:hover {
+  background: var(--ap-selection);
+}
+
+/* Handle cursors */
+.art-selection__handle--nw { cursor: nw-resize; }
+.art-selection__handle--n { cursor: n-resize; }
+.art-selection__handle--ne { cursor: ne-resize; }
+.art-selection__handle--e { cursor: e-resize; }
+.art-selection__handle--se { cursor: se-resize; }
+.art-selection__handle--s { cursor: s-resize; }
+.art-selection__handle--sw { cursor: sw-resize; }
+.art-selection__handle--w { cursor: w-resize; }
+
+/* Tool cursors */
+.art-canvas[data-tool="select"] {
+  cursor: default;
+}
+
+.art-canvas[data-tool="pan"] {
+  cursor: grab;
+}
+
+.art-canvas[data-tool="pan"]:active {
+  cursor: grabbing;
+}
+
+/* Color Selector */
+.color-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--ap-obsidian-soft);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 280px;
+}
+
+.color-selector__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.color-selector__title {
+  font-weight: 600;
+  color: var(--ap-cream);
+}
+
+.color-selector__subtitle {
+  font-size: 12px;
+  color: var(--ap-leather);
+  opacity: 0.8;
+}
+
+.color-selector__preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-selector__preview-chip {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.color-selector__preview-caption {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--ap-leather);
+}
+
+.color-selector__preview-hex {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ap-cream);
+}
+
+.color-selector__palettes,
+.color-selector__variants {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.color-selector__palette {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.color-selector__palette-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ap-leather);
+}
+
+.color-selector__swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.color-selector__swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ap-cream);
+  font-size: 12px;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.color-selector__swatch:hover {
+  border-color: var(--ap-gold);
+  transform: translateY(-1px);
+}
+
+.color-selector__swatch--active {
+  border-color: var(--ap-gold);
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.4);
+}
+
+.color-selector__swatch-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.color-selector__swatch-label {
+  text-align: left;
+}
+
+.color-selector__custom {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 8px;
+}
+
+.color-selector__hex-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--ap-cream);
+  font-size: 14px;
+}
+
+.color-selector__hex-input:focus {
+  outline: none;
+  border-color: var(--ap-gold);
+}
+
+.color-selector__randomize {
+  background: var(--ap-obsidian-mid);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--ap-cream);
+  font-size: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.color-selector__randomize:hover {
+  background: var(--ap-gold);
+  color: var(--ap-obsidian);
+}
+</style>
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #111;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .color-selector {
+      max-width: 420px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+    }
+  </style>
+</head>
+<body>
+  <div data-jsgui-id="control_0" data-jsgui-data-model-id="data_object_0" data-jsgui-type="control" data-jsgui-data-model="data_object_0" class="color-selector" data-jsgui-control="lab_color_selector"><div data-jsgui-id="control_1" data-jsgui-data-model-id="data_object_1" data-jsgui-type="control" data-jsgui-data-model="data_object_1" class="color-selector__header"><span data-jsgui-id="control_2" data-jsgui-data-model-id="data_object_2" data-jsgui-type="control" data-jsgui-data-model="data_object_2" class="color-selector__title">🎨 Colour Studio</span><span data-jsgui-id="control_3" data-jsgui-data-model-id="data_object_3" data-jsgui-type="control" data-jsgui-data-model="data_object_3" class="color-selector__subtitle">Curated palettes + smart variants</span></div><div data-jsgui-id="control_4" data-jsgui-data-model-id="data_object_4" data-jsgui-type="control" data-jsgui-data-model="data_object_4" class="color-selector__preview"><div data-jsgui-id="control_5" data-jsgui-data-model-id="data_object_5" data-jsgui-type="control" style="background:#4A90D9" data-jsgui-data-model="data_object_5" class="color-selector__preview-chip" data-role="preview-chip"></div><div data-jsgui-id="control_6" data-jsgui-data-model-id="data_object_6" data-jsgui-type="control" data-jsgui-data-model="data_object_6" class="color-selector__preview-caption">Active fill<span data-jsgui-id="control_7" data-jsgui-data-model-id="data_object_7" data-jsgui-type="control" data-jsgui-data-model="data_object_7" class="color-selector__preview-hex" data-role="preview-hex">#4A90D9</span></div></div><div data-jsgui-id="control_8" data-jsgui-data-model-id="data_object_9" data-jsgui-type="control" data-jsgui-data-model="data_object_9" class="color-selector__palettes"><div data-jsgui-id="control_9" data-jsgui-data-model-id="data_object_10" data-jsgui-type="control" data-jsgui-data-model="data_object_10" class="color-selector__palette"><div data-jsgui-id="control_10" data-jsgui-data-model-id="data_object_11" data-jsgui-type="control" data-jsgui-data-model="data_object_11" class="color-selector__palette-label">💎 Luxury Core</div><div data-jsgui-id="control_11" data-jsgui-data-model-id="data_object_12" data-jsgui-type="control" data-jsgui-data-model="data_object_12" class="color-selector__swatch-grid"><button data-jsgui-id="control_12" data-jsgui-data-model-id="data_object_13" data-jsgui-type="control" data-jsgui-data-model="data_object_13" class="color-selector__swatch" data-color="#1A1A1A" data-role="palette-swatch"><span data-jsgui-id="control_13" data-jsgui-data-model-id="data_object_14" data-jsgui-type="control" style="background:#1A1A1A" data-jsgui-data-model="data_object_14" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_14" data-jsgui-data-model-id="data_object_15" data-jsgui-type="control" data-jsgui-data-model="data_object_15" class="color-selector__swatch-label">Obsidian</span></button><button data-jsgui-id="control_15" data-jsgui-data-model-id="data_object_16" data-jsgui-type="control" data-jsgui-data-model="data_object_16" class="color-selector__swatch" data-color="#C9A227" data-role="palette-swatch"><span data-jsgui-id="control_16" data-jsgui-data-model-id="data_object_17" data-jsgui-type="control" style="background:#C9A227" data-jsgui-data-model="data_object_17" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_17" data-jsgui-data-model-id="data_object_18" data-jsgui-type="control" data-jsgui-data-model="data_object_18" class="color-selector__swatch-label">Gold</span></button><button data-jsgui-id="control_18" data-jsgui-data-model-id="data_object_19" data-jsgui-type="control" data-jsgui-data-model="data_object_19" class="color-selector__swatch" data-color="#F5F5F0" data-role="palette-swatch"><span data-jsgui-id="control_19" data-jsgui-data-model-id="data_object_20" data-jsgui-type="control" style="background:#F5F5F0" data-jsgui-data-model="data_object_20" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_20" data-jsgui-data-model-id="data_object_21" data-jsgui-type="control" data-jsgui-data-model="data_object_21" class="color-selector__swatch-label">Cream</span></button><button data-jsgui-id="control_21" data-jsgui-data-model-id="data_object_22" data-jsgui-type="control" data-jsgui-data-model="data_object_22" class="color-selector__swatch" data-color="#4A90D9" data-role="palette-swatch"><span data-jsgui-id="control_22" data-jsgui-data-model-id="data_object_23" data-jsgui-type="control" style="background:#4A90D9" data-jsgui-data-model="data_object_23" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_23" data-jsgui-data-model-id="data_object_24" data-jsgui-type="control" data-jsgui-data-model="data_object_24" class="color-selector__swatch-label">Cobalt</span></button><button data-jsgui-id="control_24" data-jsgui-data-model-id="data_object_25" data-jsgui-type="control" data-jsgui-data-model="data_object_25" class="color-selector__swatch" data-color="#D94A4A" data-role="palette-swatch"><span data-jsgui-id="control_25" data-jsgui-data-model-id="data_object_26" data-jsgui-type="control" style="background:#D94A4A" data-jsgui-data-model="data_object_26" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_26" data-jsgui-data-model-id="data_object_27" data-jsgui-type="control" data-jsgui-data-model="data_object_27" class="color-selector__swatch-label">Crimson</span></button><button data-jsgui-id="control_27" data-jsgui-data-model-id="data_object_28" data-jsgui-type="control" data-jsgui-data-model="data_object_28" class="color-selector__swatch" data-color="#4AD9D9" data-role="palette-swatch"><span data-jsgui-id="control_28" data-jsgui-data-model-id="data_object_29" data-jsgui-type="control" style="background:#4AD9D9" data-jsgui-data-model="data_object_29" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_29" data-jsgui-data-model-id="data_object_30" data-jsgui-type="control" data-jsgui-data-model="data_object_30" class="color-selector__swatch-label">Glacier</span></button></div></div><div data-jsgui-id="control_30" data-jsgui-data-model-id="data_object_31" data-jsgui-type="control" data-jsgui-data-model="data_object_31" class="color-selector__palette"><div data-jsgui-id="control_31" data-jsgui-data-model-id="data_object_32" data-jsgui-type="control" data-jsgui-data-model="data_object_32" class="color-selector__palette-label">🎨 Vibrant Studio</div><div data-jsgui-id="control_32" data-jsgui-data-model-id="data_object_33" data-jsgui-type="control" data-jsgui-data-model="data_object_33" class="color-selector__swatch-grid"><button data-jsgui-id="control_33" data-jsgui-data-model-id="data_object_34" data-jsgui-type="control" data-jsgui-data-model="data_object_34" class="color-selector__swatch" data-color="#FF6B6B" data-role="palette-swatch"><span data-jsgui-id="control_34" data-jsgui-data-model-id="data_object_35" data-jsgui-type="control" style="background:#FF6B6B" data-jsgui-data-model="data_object_35" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_35" data-jsgui-data-model-id="data_object_36" data-jsgui-type="control" data-jsgui-data-model="data_object_36" class="color-selector__swatch-label">Coral</span></button><button data-jsgui-id="control_36" data-jsgui-data-model-id="data_object_37" data-jsgui-type="control" data-jsgui-data-model="data_object_37" class="color-selector__swatch" data-color="#FFD166" data-role="palette-swatch"><span data-jsgui-id="control_37" data-jsgui-data-model-id="data_object_38" data-jsgui-type="control" style="background:#FFD166" data-jsgui-data-model="data_object_38" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_38" data-jsgui-data-model-id="data_object_39" data-jsgui-type="control" data-jsgui-data-model="data_object_39" class="color-selector__swatch-label">Amber</span></button><button data-jsgui-id="control_39" data-jsgui-data-model-id="data_object_40" data-jsgui-type="control" data-jsgui-data-model="data_object_40" class="color-selector__swatch" data-color="#06D6A0" data-role="palette-swatch"><span data-jsgui-id="control_40" data-jsgui-data-model-id="data_object_41" data-jsgui-type="control" style="background:#06D6A0" data-jsgui-data-model="data_object_41" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_41" data-jsgui-data-model-id="data_object_42" data-jsgui-type="control" data-jsgui-data-model="data_object_42" class="color-selector__swatch-label">Mint</span></button><button data-jsgui-id="control_42" data-jsgui-data-model-id="data_object_43" data-jsgui-type="control" data-jsgui-data-model="data_object_43" class="color-selector__swatch" data-color="#118AB2" data-role="palette-swatch"><span data-jsgui-id="control_43" data-jsgui-data-model-id="data_object_44" data-jsgui-type="control" style="background:#118AB2" data-jsgui-data-model="data_object_44" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_44" data-jsgui-data-model-id="data_object_45" data-jsgui-type="control" data-jsgui-data-model="data_object_45" class="color-selector__swatch-label">Sky</span></button><button data-jsgui-id="control_45" data-jsgui-data-model-id="data_object_46" data-jsgui-type="control" data-jsgui-data-model="data_object_46" class="color-selector__swatch" data-color="#8338EC" data-role="palette-swatch"><span data-jsgui-id="control_46" data-jsgui-data-model-id="data_object_47" data-jsgui-type="control" style="background:#8338EC" data-jsgui-data-model="data_object_47" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_47" data-jsgui-data-model-id="data_object_48" data-jsgui-type="control" data-jsgui-data-model="data_object_48" class="color-selector__swatch-label">Violet</span></button><button data-jsgui-id="control_48" data-jsgui-data-model-id="data_object_49" data-jsgui-type="control" data-jsgui-data-model="data_object_49" class="color-selector__swatch" data-color="#EF476F" data-role="palette-swatch"><span data-jsgui-id="control_49" data-jsgui-data-model-id="data_object_50" data-jsgui-type="control" style="background:#EF476F" data-jsgui-data-model="data_object_50" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_50" data-jsgui-data-model-id="data_object_51" data-jsgui-type="control" data-jsgui-data-model="data_object_51" class="color-selector__swatch-label">Fuchsia</span></button></div></div></div><div data-jsgui-id="control_51" data-jsgui-data-model-id="data_object_52" data-jsgui-type="control" data-jsgui-data-model="data_object_52" class="color-selector__variants"><div data-jsgui-id="control_52" data-jsgui-data-model-id="data_object_53" data-jsgui-type="control" data-jsgui-data-model="data_object_53" class="color-selector__palette-label">Tonal variants</div><div data-jsgui-id="control_53" data-jsgui-data-model-id="data_object_54" data-jsgui-type="control" data-jsgui-data-model="data_object_54" class="color-selector__swatch-grid" data-role="variant-grid"><button data-jsgui-id="control_54" data-jsgui-data-model-id="data_object_55" data-jsgui-type="control" data-jsgui-data-model="data_object_55" class="color-selector__swatch" data-color="#1D538B" data-role="variant-swatch" data-variant-step="-24"><span data-jsgui-id="control_55" data-jsgui-data-model-id="data_object_56" data-jsgui-type="control" style="background:#1D538B" data-jsgui-data-model="data_object_56" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_56" data-jsgui-data-model-id="data_object_57" data-jsgui-type="control" data-jsgui-data-model="data_object_57" class="color-selector__swatch-label">-24</span></button><button data-jsgui-id="control_57" data-jsgui-data-model-id="data_object_58" data-jsgui-type="control" data-jsgui-data-model="data_object_58" class="color-selector__swatch" data-color="#2871BE" data-role="variant-swatch" data-variant-step="-12"><span data-jsgui-id="control_58" data-jsgui-data-model-id="data_object_59" data-jsgui-type="control" style="background:#2871BE" data-jsgui-data-model="data_object_59" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_59" data-jsgui-data-model-id="data_object_60" data-jsgui-type="control" data-jsgui-data-model="data_object_60" class="color-selector__swatch-label">-12</span></button><button data-jsgui-id="control_60" data-jsgui-data-model-id="data_object_61" data-jsgui-type="control" data-jsgui-data-model="data_object_61" class="color-selector__swatch" data-color="#4A90D9" data-role="variant-swatch"><span data-jsgui-id="control_61" data-jsgui-data-model-id="data_object_62" data-jsgui-type="control" style="background:#4A90D9" data-jsgui-data-model="data_object_62" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_62" data-jsgui-data-model-id="data_object_63" data-jsgui-type="control" data-jsgui-data-model="data_object_63" class="color-selector__swatch-label">Base</span></button><button data-jsgui-id="control_63" data-jsgui-data-model-id="data_object_64" data-jsgui-type="control" data-jsgui-data-model="data_object_64" class="color-selector__swatch" data-color="#7DAFE4" data-role="variant-swatch" data-variant-step="12"><span data-jsgui-id="control_64" data-jsgui-data-model-id="data_object_65" data-jsgui-type="control" style="background:#7DAFE4" data-jsgui-data-model="data_object_65" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_65" data-jsgui-data-model-id="data_object_66" data-jsgui-type="control" data-jsgui-data-model="data_object_66" class="color-selector__swatch-label">+12</span></button><button data-jsgui-id="control_66" data-jsgui-data-model-id="data_object_67" data-jsgui-type="control" data-jsgui-data-model="data_object_67" class="color-selector__swatch" data-color="#AFCEEE" data-role="variant-swatch" data-variant-step="24"><span data-jsgui-id="control_67" data-jsgui-data-model-id="data_object_68" data-jsgui-type="control" style="background:#AFCEEE" data-jsgui-data-model="data_object_68" class="color-selector__swatch-chip"></span><span data-jsgui-id="control_68" data-jsgui-data-model-id="data_object_69" data-jsgui-type="control" data-jsgui-data-model="data_object_69" class="color-selector__swatch-label">+24</span></button></div></div><div data-jsgui-id="control_69" data-jsgui-data-model-id="data_object_70" data-jsgui-type="control" data-jsgui-data-model="data_object_70" class="color-selector__custom"><input data-jsgui-id="control_70" data-jsgui-data-model-id="data_object_71" data-jsgui-type="control" data-jsgui-data-model="data_object_71" type="color" value="#4A90D9" data-role="color-input"></input><input data-jsgui-id="control_71" data-jsgui-data-model-id="data_object_72" data-jsgui-type="control" data-jsgui-data-model="data_object_72" class="color-selector__hex-input" type="text" value="#4A90D9" maxLength="7" data-role="hex-input"></input><button data-jsgui-id="control_72" data-jsgui-data-model-id="data_object_73" data-jsgui-type="control" data-jsgui-data-model="data_object_73" class="color-selector__randomize" data-role="randomize-button">Shuffle palette</button></div></div>
+</body>
+</html>

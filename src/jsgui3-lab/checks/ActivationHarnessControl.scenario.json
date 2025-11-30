@@ -1,0 +1,33 @@
+{
+  "control": "ActivationHarnessControl",
+  "dispatches": [
+    {
+      "type": "click",
+      "selector": "[data-role=\"primary-button\"]",
+      "status": "dispatched"
+    }
+  ],
+  "eventLog": [
+    {
+      "kind": "raise",
+      "eventName": "button-click",
+      "payload": {
+        "eventType": "click"
+      },
+      "timestamp": 1764477070891
+    }
+  ],
+  "detachSimulated": true,
+  "reattachSimulated": true,
+  "domChildCount": 1,
+  "html": "<div data-jsgui-id=\"activation_harness_0\" data-jsgui-data-model-id=\"data_object_0\" data-jsgui-type=\"activation_harness\" data-jsgui-data-model=\"data_object_0\" class=\"activation-harness\"><button data-jsgui-id=\"control_0\" data-jsgui-data-model-id=\"data_object_1\" data-jsgui-type=\"control\" data-jsgui-data-model=\"data_object_1\" class=\"activation-harness__trigger\" data-role=\"primary-button\">Log Event</button><div data-jsgui-id=\"control_1\" data-jsgui-data-model-id=\"data_object_2\" data-jsgui-type=\"control\" data-jsgui-data-model=\"data_object_2\" class=\"activation-harness__status\" data-role=\"status\">Idle</div></div>",
+  "controlLog": [
+    {
+      "kind": "dom-event",
+      "detail": {
+        "type": "click"
+      },
+      "timestamp": 1764477070889
+    }
+  ]
+}

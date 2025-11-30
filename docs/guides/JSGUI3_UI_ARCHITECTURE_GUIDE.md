@@ -835,18 +835,41 @@ if (totalFailed === 0) {
 
 ### Running Check Scripts
 
-```bash
-# Single control
-node src/ui/server/gazetteer/checks/GazetteerAppControl.check.js
+```
+src/ui/server/myApp/
+├── controls/              # Server-side controls (use jsgui3-html)
+│   ├── MyAppControl.js
+│   └── index.js
+├── client/                # Client-side entry + controls
+│   ├── index.js           # Bundle entry point
+│   ├── controls/          # Client controls (use jsgui3-client)
+│   │   └── MyInteractiveControl.js
+│   └── shims/             # Browser shims for Node modules
+└── public/                # Built assets
+  └── my-app-client.js   # Bundled client code
 
-# Multiple controls (PowerShell)
-node src/ui/server/diagramAtlas/checks/DiagramAtlasAppControl.check.js; `
-node src/ui/server/dataExplorer/checks/ExplorerAppControl.check.js
+src/jsgui3-lab/
+├── controls/              # Reusable, ready-to-drop-in jsgui3 controls
+│   └── SimplePanelControl.js
+├── utils/                 # Shared helpers for activation/layout
+├── checks/                # Node scripts to render lab controls
+│   └── SimplePanelControl.check.js
+└── README.md              # Lab purpose and usage
 ```
 
----
+The `src/jsgui3-lab` tree acts as the **center for jsgui3 research and reusable code** inside this project. Controls and utilities here are designed to be:
+- Self-contained and consistent with the patterns in this guide.
+- Easy to adopt elsewhere in this repo (e.g., dashboards, explorers).
+- Candidates for extraction into upstream jsgui3 packages once proven.
 
-## Development Server & Detached Mode
+#### Headless Tooling
+
+- **Event Lab (jsdom)** — `node tools/dev/jsgui3-event-lab.js --control ActivationHarnessControl --dispatch click:[data-role="primary-button"] --simulate-detach --simulate-reattach --write-json tmp/harness-event-lab.json`
+  - Renders a control, hydrates it in jsdom, dispatches synthetic events, and validates detach/reattach cycles without a browser.
+- **Activation Harness Scenario** — `node src/jsgui3-lab/checks/ActivationHarnessControl.scenario.js`
+  - Uses the Event Lab programmatically to chain multiple actions and assert that event listeners are cleaned up.
+- **Puppeteer Micro-capture** — `node scripts/ui/capture-control.js --control SimplePanelControl --screenshot tmp/simple-panel.png --eval 'return document.querySelectorAll(".simple-panel__body").length'`
+  - Loads rendered HTML via `page.setContent` and produces deterministic screenshots + DOM assertions with no Express server.
 
 ### Server Overview
 

@@ -78,6 +78,17 @@ class ArtPlaygroundAppControl extends jsgui.Control {
     this._toolbar.on("delete", () => {
       this._canvas.deleteSelected();
     });
+
+    this._toolbar.on("color-change", (color) => {
+      this._canvas.setActiveColor(color, { applyToSelection: true });
+    });
+
+    if (typeof this._toolbar.getCurrentColor === 'function') {
+      const seedColor = this._toolbar.getCurrentColor();
+      if (seedColor) {
+        this._canvas.setActiveColor(seedColor, { applyToSelection: false });
+      }
+    }
   }
 }
 
