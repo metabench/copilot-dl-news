@@ -1,17 +1,14 @@
 "use strict";
 
 const jsgui = require("../jsgui");
+const { Control } = jsgui;
 
 /**
- * Component Control
- * 
- * Base class for visual components on the canvas.
- * Provides abstraction over SVG elements.
+ * Base class for visual SVG components on the canvas.
  */
-class ComponentControl extends jsgui.Control {
+class ComponentControl extends Control {
   constructor(spec = {}) {
     super(spec);
-    
     this._id = spec.id || `comp-${Date.now()}`;
     this._type = spec.type || "unknown";
     this._x = spec.x || 0;
@@ -24,36 +21,21 @@ class ComponentControl extends jsgui.Control {
   
   get id() { return this._id; }
   get type() { return this._type; }
-  
   get x() { return this._x; }
-  set x(val) { this._x = val; this._updatePosition(); }
-  
   get y() { return this._y; }
-  set y(val) { this._y = val; this._updatePosition(); }
-  
   get width() { return this._width; }
-  set width(val) { this._width = val; this._updateSize(); }
-  
   get height() { return this._height; }
-  set height(val) { this._height = val; this._updateSize(); }
-  
   get fill() { return this._fill; }
-  set fill(val) { this._fill = val; this._updateFill(); }
-  
   get selected() { return this._selected; }
-  set selected(val) {
-    this._selected = val;
-    this._updateSelection();
-  }
   
-  getBounds() {
-    return {
-      x: this._x,
-      y: this._y,
-      width: this._width,
-      height: this._height
-    };
-  }
+  set x(v) { this._x = v; this._updatePosition(); }
+  set y(v) { this._y = v; this._updatePosition(); }
+  set width(v) { this._width = v; this._updateSize(); }
+  set height(v) { this._height = v; this._updateSize(); }
+  set fill(v) { this._fill = v; this._updateFill(); }
+  set selected(v) { this._selected = v; this._updateSelection(); }
+  
+  getBounds() { return { x: this._x, y: this._y, width: this._width, height: this._height }; }
   
   // Override in subclasses
   _updatePosition() {}
@@ -61,47 +43,24 @@ class ComponentControl extends jsgui.Control {
   _updateFill() {}
   _updateSelection() {}
   
-  /**
-   * Move component by delta
-   */
   moveBy(dx, dy) {
     this._x += dx;
     this._y += dy;
     this._updatePosition();
   }
   
-  /**
-   * Resize component
-   */
-  resize(width, height) {
-    this._width = Math.max(20, width);
-    this._height = Math.max(20, height);
+  resize(w, h) {
+    this._width = Math.max(20, w);
+    this._height = Math.max(20, h);
     this._updateSize();
   }
   
-  /**
-   * Serialize component to JSON
-   */
   toJSON() {
-    return {
-      id: this._id,
-      type: this._type,
-      x: this._x,
-      y: this._y,
-      width: this._width,
-      height: this._height,
-      fill: this._fill
-    };
+    return { id: this._id, type: this._type, x: this._x, y: this._y, width: this._width, height: this._height, fill: this._fill };
   }
   
-  /**
-   * Create component from JSON
-   */
   static fromJSON(data, context) {
-    return new ComponentControl({
-      context,
-      ...data
-    });
+    return new ComponentControl({ context, ...data });
   }
 }
 

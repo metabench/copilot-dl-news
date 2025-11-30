@@ -4,68 +4,54 @@ const jsgui = require("../jsgui");
 const { ComponentControl } = require("./ComponentControl");
 const { SelectionHandlesControl } = require("./SelectionHandlesControl");
 
+const { Control, String_Control } = jsgui;
+
+const COLORS = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
+const SVG_NS = "http://www.w3.org/2000/svg";
+
 /**
- * Canvas Control
- * 
- * The main editing surface containing:
- * - SVG canvas for components
- * - Selection handles overlay
- * - Mouse interaction handling
+ * Canvas Control - Main SVG editing surface with selection & resize.
  */
-class CanvasControl extends jsgui.Control {
+class CanvasControl extends Control {
   constructor(spec = {}) {
     super({ ...spec, tagName: "div" });
     this.add_class("art-canvas");
     this.dom.attributes["data-jsgui-control"] = "art_canvas";
     
     this._tool = "select";
-    this._components = new Map(); // id -> ComponentControl
+    this._components = new Map();
     this._selectedId = null;
     this._nextId = 1;
-    
-    // Drag state
     this._dragState = null;
+    this._resizeState = null;
     
-    if (!spec.el) {
-      this._build();
-    }
+    if (!spec.el) this.compose();
   }
   
-  _build() {
-    // Create SVG element for the canvas
-    // Using a wrapper div + SVG inside
-    this._svgWrapper = new jsgui.Control({ context: this.context, tagName: "div" });
-    this._svgWrapper.add_class("art-canvas__svg-wrapper");
+  compose() {
+    const ctx = this.context;
     
-    // SVG content using String_Control for raw HTML output (jsgui doesn't have native SVG support)
-    const svgContent = new jsgui.String_Control({
-      context: this.context,
-      text: `<svg class="art-canvas__svg" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0E0E0" stroke-width="0.5"/>
-          </pattern>
-        </defs>
+    // SVG wrapper
+    const wrapper = this._svgWrapper = new Control({ context: ctx, tagName: "div" });
+    wrapper.add_class("art-canvas__svg-wrapper");
+    wrapper.add(new String_Control({
+      context: ctx,
+      text: `<svg class="art-canvas__svg" xmlns="${SVG_NS}">
+        <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0E0E0" stroke-width="0.5"/>
+        </pattern></defs>
         <rect class="art-canvas__grid" width="100%" height="100%" fill="url(#grid)"/>
         <g class="art-canvas__components"></g>
       </svg>`
-    });
-    this._svgWrapper.add(svgContent);
+    }));
+    this.add(wrapper);
     
-    this.add(this._svgWrapper);
+    // Selection handles
+    const handles = this._selectionHandles = new SelectionHandlesControl({ context: ctx });
+    handles.dom.attributes.style = "display: none;";
+    this.add(handles);
     
-    // Selection handles overlay (positioned absolutely over SVG)
-    this._selectionHandles = new SelectionHandlesControl({ context: this.context });
-    // Hide initially via style
-    this._selectionHandles.dom.attributes.style = "display: none;";
-    this.add(this._selectionHandles);
-    
-    // Add some default components for testing
-    this._addDefaultComponents();
-  }
-  
-  _addDefaultComponents() {
-    // These will be rendered client-side after activation
+    // Default test components
     this._pendingComponents = [
       { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
       { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
@@ -74,417 +60,227 @@ class CanvasControl extends jsgui.Control {
   }
   
   activate() {
-    super.activate();
+    if (this.__active) return;
+    this.__active = true;
     
-    // Get DOM element reference
-    const el = this.dom.el || this.dom;
-    
-    // Get SVG element references
+    const el = this.dom.el;
     this._svg = el.querySelector(".art-canvas__svg");
     this._componentsGroup = this._svg.querySelector(".art-canvas__components");
     
-    // Render pending components
-    if (this._pendingComponents) {
-      this._pendingComponents.forEach(comp => this._renderComponent(comp));
-      this._pendingComponents = null;
-    }
+    // Render pending
+    this._pendingComponents?.forEach(c => this._renderComponent(c));
+    this._pendingComponents = null;
     
-    // Activate selection handles
-    if (this._selectionHandles.activate) {
-      this._selectionHandles.activate();
-    }
-    
-    // Setup event listeners
-    this._setupEventListeners();
+    this._selectionHandles.activate?.();
+    this._setupEvents();
   }
   
-  _setupEventListeners() {
-    // Click on canvas to select/deselect
-    this._svg.addEventListener("mousedown", (e) => this._handleMouseDown(e));
-    document.addEventListener("mousemove", (e) => this._handleMouseMove(e));
-    document.addEventListener("mouseup", (e) => this._handleMouseUp(e));
+  _setupEvents() {
+    this._svg.addEventListener("mousedown", (e) => this._onMouseDown(e));
+    document.addEventListener("mousemove", (e) => this._onMouseMove(e));
+    document.addEventListener("mouseup", () => this._onMouseUp());
     
-    // Selection handle events
-    this._selectionHandles.on("resize-start", (data) => this._startResize(data));
-    this._selectionHandles.on("resize-move", (data) => this._doResize(data));
-    this._selectionHandles.on("resize-end", () => this._endResize());
+    this._selectionHandles.on("resize-start", (d) => this._startResize(d));
+    this._selectionHandles.on("resize-move", (d) => this._doResize(d));
+    this._selectionHandles.on("resize-end", () => { this._resizeState = null; });
   }
   
-  _handleMouseDown(e) {
+  _onMouseDown(e) {
     if (this._tool !== "select") return;
     
-    const target = e.target;
-    const componentEl = target.closest("[data-component-id]");
-    
-    if (componentEl) {
-      const id = componentEl.getAttribute("data-component-id");
-      this._selectComponent(id);
+    const compEl = e.target.closest("[data-component-id]");
+    if (compEl) {
+      const id = compEl.getAttribute("data-component-id");
+      this._select(id);
       
-      // Start drag
       const rect = this._svg.getBoundingClientRect();
+      const comp = this._components.get(id);
       this._dragState = {
-        type: "move",
-        id: id,
+        id, comp,
         startX: e.clientX - rect.left,
         startY: e.clientY - rect.top,
-        component: this._components.get(id)
+        origX: comp?.x,
+        origY: comp?.y
       };
-      
-      if (this._dragState.component) {
-        this._dragState.origX = this._dragState.component.x;
-        this._dragState.origY = this._dragState.component.y;
-      }
-      
       e.preventDefault();
-    } else if (target === this._svg || target.classList.contains("art-canvas__grid")) {
-      // Clicked on empty space - deselect
+    } else if (e.target === this._svg || e.target.classList.contains("art-canvas__grid")) {
       this._deselectAll();
     }
   }
   
-  _handleMouseMove(e) {
+  _onMouseMove(e) {
     if (!this._dragState) return;
-    
     const rect = this._svg.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    if (this._dragState.type === "move") {
-      const dx = x - this._dragState.startX;
-      const dy = y - this._dragState.startY;
-      
-      const comp = this._dragState.component;
-      if (comp) {
-        comp.x = this._dragState.origX + dx;
-        comp.y = this._dragState.origY + dy;
-        this._updateComponentPosition(this._dragState.id);
-        this._updateSelectionHandles();
-      }
+    const dx = (e.clientX - rect.left) - this._dragState.startX;
+    const dy = (e.clientY - rect.top) - this._dragState.startY;
+    const comp = this._dragState.comp;
+    if (comp) {
+      comp.x = this._dragState.origX + dx;
+      comp.y = this._dragState.origY + dy;
+      this._updatePos(this._dragState.id);
+      this._updateHandles();
     }
   }
   
-  _handleMouseUp(e) {
-    if (this._dragState) {
-      this._dragState = null;
-    }
-  }
+  _onMouseUp() { this._dragState = null; }
   
-  _renderComponent(data) {
-    const { id, type } = data;
+  _renderComponent({ id, type, ...data }) {
     let el;
+    const set = (k, v) => el.setAttribute(k, v);
     
     if (type === "rect") {
-      el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      el.setAttribute("x", data.x);
-      el.setAttribute("y", data.y);
-      el.setAttribute("width", data.width);
-      el.setAttribute("height", data.height);
-      el.setAttribute("fill", data.fill || "#4A90D9");
-      el.setAttribute("rx", "4");
-      
-      // Store component data
-      this._components.set(id, {
-        type: "rect",
-        el: el,
-        x: data.x,
-        y: data.y,
-        width: data.width,
-        height: data.height,
-        fill: data.fill
-      });
+      el = document.createElementNS(SVG_NS, "rect");
+      set("x", data.x); set("y", data.y);
+      set("width", data.width); set("height", data.height);
+      set("fill", data.fill || "#4A90D9"); set("rx", "4");
+      this._components.set(id, { type, el, ...data });
     } else if (type === "ellipse") {
-      el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-      el.setAttribute("cx", data.cx);
-      el.setAttribute("cy", data.cy);
-      el.setAttribute("rx", data.rx);
-      el.setAttribute("ry", data.ry);
-      el.setAttribute("fill", data.fill || "#4AD94A");
-      
-      // Store with x/y as center for consistency
+      el = document.createElementNS(SVG_NS, "ellipse");
+      set("cx", data.cx); set("cy", data.cy);
+      set("rx", data.rx); set("ry", data.ry);
+      set("fill", data.fill || "#4AD94A");
       this._components.set(id, {
-        type: "ellipse",
-        el: el,
-        x: data.cx - data.rx,
-        y: data.cy - data.ry,
-        width: data.rx * 2,
-        height: data.ry * 2,
-        cx: data.cx,
-        cy: data.cy,
-        rx: data.rx,
-        ry: data.ry,
+        type, el,
+        x: data.cx - data.rx, y: data.cy - data.ry,
+        width: data.rx * 2, height: data.ry * 2,
+        cx: data.cx, cy: data.cy, rx: data.rx, ry: data.ry,
         fill: data.fill
       });
     } else if (type === "text") {
-      el = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      el.setAttribute("x", data.x);
-      el.setAttribute("y", data.y);
-      el.setAttribute("fill", data.fill || "#1A1A1A");
-      el.setAttribute("font-size", data.fontSize || "16");
+      el = document.createElementNS(SVG_NS, "text");
+      set("x", data.x); set("y", data.y);
+      set("fill", data.fill || "#1A1A1A");
+      set("font-size", data.fontSize || "16");
       el.textContent = data.text || "Text";
-      
-      this._components.set(id, {
-        type: "text",
-        el: el,
-        x: data.x,
-        y: data.y,
-        width: 100,
-        height: 24,
-        text: data.text || "Text",
-        fill: data.fill
-      });
+      this._components.set(id, { type, el, x: data.x, y: data.y, width: 100, height: 24, text: data.text || "Text", fill: data.fill });
     }
     
     if (el) {
-      el.setAttribute("data-component-id", id);
+      set("data-component-id", id);
       el.classList.add("art-canvas__component");
       this._componentsGroup.appendChild(el);
     }
   }
   
-  _updateComponentPosition(id) {
-    const comp = this._components.get(id);
-    if (!comp) return;
-    
-    const el = comp.el;
-    
-    if (comp.type === "rect") {
-      el.setAttribute("x", comp.x);
-      el.setAttribute("y", comp.y);
-    } else if (comp.type === "ellipse") {
-      comp.cx = comp.x + comp.width / 2;
-      comp.cy = comp.y + comp.height / 2;
-      el.setAttribute("cx", comp.cx);
-      el.setAttribute("cy", comp.cy);
-    } else if (comp.type === "text") {
-      el.setAttribute("x", comp.x);
-      el.setAttribute("y", comp.y);
+  _updatePos(id) {
+    const c = this._components.get(id);
+    if (!c) return;
+    if (c.type === "rect") {
+      c.el.setAttribute("x", c.x);
+      c.el.setAttribute("y", c.y);
+    } else if (c.type === "ellipse") {
+      c.cx = c.x + c.width / 2;
+      c.cy = c.y + c.height / 2;
+      c.el.setAttribute("cx", c.cx);
+      c.el.setAttribute("cy", c.cy);
+    } else if (c.type === "text") {
+      c.el.setAttribute("x", c.x);
+      c.el.setAttribute("y", c.y);
     }
   }
   
-  _selectComponent(id) {
-    // Deselect previous
+  _select(id) {
     if (this._selectedId && this._selectedId !== id) {
-      const prevComp = this._components.get(this._selectedId);
-      if (prevComp && prevComp.el) {
-        prevComp.el.classList.remove("art-canvas__component--selected");
-      }
+      this._components.get(this._selectedId)?.el?.classList.remove("art-canvas__component--selected");
     }
-    
     this._selectedId = id;
-    const comp = this._components.get(id);
-    
-    if (comp && comp.el) {
-      comp.el.classList.add("art-canvas__component--selected");
-      this._updateSelectionHandles();
-      
-      // Show selection handles
-      const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
-      if (handlesEl && handlesEl.style) {
-        handlesEl.style.display = "block";
-      }
+    const c = this._components.get(id);
+    if (c?.el) {
+      c.el.classList.add("art-canvas__component--selected");
+      this._updateHandles();
+      const hEl = this._selectionHandles.dom?.el;
+      if (hEl) hEl.style.display = "block";
     }
   }
   
   _deselectAll() {
     if (this._selectedId) {
-      const comp = this._components.get(this._selectedId);
-      if (comp && comp.el) {
-        comp.el.classList.remove("art-canvas__component--selected");
-      }
+      this._components.get(this._selectedId)?.el?.classList.remove("art-canvas__component--selected");
     }
     this._selectedId = null;
-    
-    // Hide selection handles
-    const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
-    if (handlesEl && handlesEl.style) {
-      handlesEl.style.display = "none";
-    }
+    const hEl = this._selectionHandles.dom?.el;
+    if (hEl) hEl.style.display = "none";
   }
   
-  _updateSelectionHandles() {
-    if (!this._selectedId) return;
-    
-    const comp = this._components.get(this._selectedId);
-    if (!comp) return;
-    
-    // Get bounding box relative to canvas
+  _updateHandles() {
+    const c = this._components.get(this._selectedId);
+    if (!c) return;
     const svgRect = this._svg.getBoundingClientRect();
-    const wrapperEl = this._svgWrapper.dom.el || this._svgWrapper.dom;
-    const wrapperRect = wrapperEl.getBoundingClientRect();
-    
-    // Calculate position relative to wrapper
-    const offsetX = svgRect.left - wrapperRect.left;
-    const offsetY = svgRect.top - wrapperRect.top;
-    
+    const wrapRect = this._svgWrapper.dom?.el?.getBoundingClientRect() || svgRect;
     this._selectionHandles.updateBounds({
-      x: comp.x + offsetX,
-      y: comp.y + offsetY,
-      width: comp.width,
-      height: comp.height
+      x: c.x + (svgRect.left - wrapRect.left),
+      y: c.y + (svgRect.top - wrapRect.top),
+      width: c.width, height: c.height
     });
   }
   
-  _startResize(data) {
-    if (!this._selectedId) return;
-    
-    const comp = this._components.get(this._selectedId);
-    if (!comp) return;
-    
-    this._resizeState = {
-      handle: data.handle,
-      origX: comp.x,
-      origY: comp.y,
-      origWidth: comp.width,
-      origHeight: comp.height,
-      startMouseX: data.mouseX,
-      startMouseY: data.mouseY
-    };
+  _startResize({ handle, mouseX, mouseY }) {
+    const c = this._components.get(this._selectedId);
+    if (!c) return;
+    this._resizeState = { handle, origX: c.x, origY: c.y, origW: c.width, origH: c.height, startX: mouseX, startY: mouseY };
   }
   
-  _doResize(data) {
-    if (!this._resizeState || !this._selectedId) return;
+  _doResize({ mouseX, mouseY }) {
+    const r = this._resizeState;
+    const c = this._components.get(this._selectedId);
+    if (!r || !c) return;
     
-    const comp = this._components.get(this._selectedId);
-    if (!comp) return;
+    const dx = mouseX - r.startX, dy = mouseY - r.startY;
+    let { origX: x, origY: y, origW: w, origH: h } = r;
     
-    const dx = data.mouseX - this._resizeState.startMouseX;
-    const dy = data.mouseY - this._resizeState.startMouseY;
-    const handle = this._resizeState.handle;
+    if (r.handle.includes("w")) { x += dx; w -= dx; }
+    if (r.handle.includes("e")) { w += dx; }
+    if (r.handle.includes("n")) { y += dy; h -= dy; }
+    if (r.handle.includes("s")) { h += dy; }
     
-    let newX = this._resizeState.origX;
-    let newY = this._resizeState.origY;
-    let newWidth = this._resizeState.origWidth;
-    let newHeight = this._resizeState.origHeight;
+    if (w < 20) { if (r.handle.includes("w")) x = r.origX + r.origW - 20; w = 20; }
+    if (h < 20) { if (r.handle.includes("n")) y = r.origY + r.origH - 20; h = 20; }
     
-    // Handle resize based on which handle is being dragged
-    if (handle.includes("w")) {
-      newX = this._resizeState.origX + dx;
-      newWidth = this._resizeState.origWidth - dx;
+    Object.assign(c, { x, y, width: w, height: h });
+    
+    if (c.type === "rect") {
+      c.el.setAttribute("x", x); c.el.setAttribute("y", y);
+      c.el.setAttribute("width", w); c.el.setAttribute("height", h);
+    } else if (c.type === "ellipse") {
+      c.rx = w / 2; c.ry = h / 2; c.cx = x + c.rx; c.cy = y + c.ry;
+      c.el.setAttribute("cx", c.cx); c.el.setAttribute("cy", c.cy);
+      c.el.setAttribute("rx", c.rx); c.el.setAttribute("ry", c.ry);
     }
-    if (handle.includes("e")) {
-      newWidth = this._resizeState.origWidth + dx;
-    }
-    if (handle.includes("n")) {
-      newY = this._resizeState.origY + dy;
-      newHeight = this._resizeState.origHeight - dy;
-    }
-    if (handle.includes("s")) {
-      newHeight = this._resizeState.origHeight + dy;
-    }
-    
-    // Enforce minimum size
-    if (newWidth < 20) {
-      if (handle.includes("w")) newX = this._resizeState.origX + this._resizeState.origWidth - 20;
-      newWidth = 20;
-    }
-    if (newHeight < 20) {
-      if (handle.includes("n")) newY = this._resizeState.origY + this._resizeState.origHeight - 20;
-      newHeight = 20;
-    }
-    
-    // Update component
-    comp.x = newX;
-    comp.y = newY;
-    comp.width = newWidth;
-    comp.height = newHeight;
-    
-    // Update SVG element
-    if (comp.type === "rect") {
-      comp.el.setAttribute("x", newX);
-      comp.el.setAttribute("y", newY);
-      comp.el.setAttribute("width", newWidth);
-      comp.el.setAttribute("height", newHeight);
-    } else if (comp.type === "ellipse") {
-      comp.rx = newWidth / 2;
-      comp.ry = newHeight / 2;
-      comp.cx = newX + comp.rx;
-      comp.cy = newY + comp.ry;
-      comp.el.setAttribute("cx", comp.cx);
-      comp.el.setAttribute("cy", comp.cy);
-      comp.el.setAttribute("rx", comp.rx);
-      comp.el.setAttribute("ry", comp.ry);
-    }
-    
-    this._updateSelectionHandles();
+    this._updateHandles();
   }
   
-  _endResize() {
-    this._resizeState = null;
-  }
+  // === Public API ===
   
-  // Public API
-  
-  setTool(toolName) {
-    this._tool = toolName;
-    const el = this.dom.el || this.dom;
-    if (el && el.setAttribute) {
-      el.setAttribute("data-tool", toolName);
-    }
+  setTool(tool) {
+    this._tool = tool;
+    this.dom.el?.setAttribute?.("data-tool", tool);
   }
   
   addComponent(type) {
     const id = `comp${this._nextId++}`;
+    const rand = () => 200 + Math.random() * 100;
     
-    // Add at a default position
     if (type === "rect") {
-      this._renderComponent({
-        id,
-        type: "rect",
-        x: 200 + Math.random() * 100,
-        y: 200 + Math.random() * 100,
-        width: 120,
-        height: 80,
-        fill: this._randomColor()
-      });
+      this._renderComponent({ id, type, x: rand(), y: rand(), width: 120, height: 80, fill: this._randColor() });
     } else if (type === "ellipse") {
-      const rx = 50 + Math.random() * 30;
-      const ry = 40 + Math.random() * 20;
-      this._renderComponent({
-        id,
-        type: "ellipse",
-        cx: 250 + Math.random() * 100,
-        cy: 250 + Math.random() * 100,
-        rx,
-        ry,
-        fill: this._randomColor()
-      });
+      const rx = 50 + Math.random() * 30, ry = 40 + Math.random() * 20;
+      this._renderComponent({ id, type, cx: rand() + 50, cy: rand() + 50, rx, ry, fill: this._randColor() });
     } else if (type === "text") {
-      this._renderComponent({
-        id,
-        type: "text",
-        x: 200 + Math.random() * 100,
-        y: 200 + Math.random() * 100,
-        text: "New Text",
-        fill: "#1A1A1A"
-      });
+      this._renderComponent({ id, type, x: rand(), y: rand(), text: "New Text", fill: "#1A1A1A" });
     }
-    
-    // Select the new component
-    this._selectComponent(id);
+    this._select(id);
   }
   
   deleteSelected() {
     if (!this._selectedId) return;
-    
-    const comp = this._components.get(this._selectedId);
-    if (comp && comp.el) {
-      comp.el.remove();
-    }
-    
+    this._components.get(this._selectedId)?.el?.remove();
     this._components.delete(this._selectedId);
     this._selectedId = null;
-    
-    // Hide selection handles
-    const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
-    if (handlesEl && handlesEl.style) {
-      handlesEl.style.display = "none";
-    }
+    const hEl = this._selectionHandles.dom?.el;
+    if (hEl) hEl.style.display = "none";
   }
   
-  _randomColor() {
-    const colors = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
+  _randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
 }
 
 module.exports = { CanvasControl };
