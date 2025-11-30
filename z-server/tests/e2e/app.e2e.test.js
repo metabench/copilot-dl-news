@@ -36,6 +36,7 @@ const SELECTOR_TIMEOUT = 10000;  // Time to wait for UI elements
 const SCAN_TIMEOUT = 15000;      // Time to wait for server scanning
 const TEST_TIMEOUT = 25000;      // Total timeout for fast tests
 const SCAN_TEST_TIMEOUT = 35000; // Total timeout for tests that wait for scanning
+const RENDERER_INIT_TIMEOUT = 1000; // Time to wait for renderer to attempt initialization
 
 // Track all PIDs we've launched for cleanup
 const launchedPids = new Set();
@@ -277,13 +278,14 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded successfully
       const rendererOK = await checkRendererLoaded(window);
       if (!rendererOK) {
+        // TODO: When jsgui3-client bundling is fixed (htmlparser/Tautologistics), 
+        // remove this early return so the test properly asserts sidebar existence
         console.log('[E2E] Renderer not loaded - known jsgui3-client bundling issue');
-        // Test passes but notes the issue - remove expect when bundling fixed
         return;
       }
       
@@ -302,7 +304,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded successfully
       const rendererOK = await checkRendererLoaded(window);
@@ -326,7 +328,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded
       const rendererOK = await checkRendererLoaded(window);
@@ -367,7 +369,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded
       const rendererOK = await checkRendererLoaded(window);
@@ -393,7 +395,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded
       const rendererOK = await checkRendererLoaded(window);
@@ -436,7 +438,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded
       const rendererOK = await checkRendererLoaded(window);
@@ -468,7 +470,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded
       const rendererOK = await checkRendererLoaded(window);
@@ -496,7 +498,7 @@ describe('Z-Server E2E', () => {
       await window.waitForLoadState('domcontentloaded');
       
       // Give renderer time to attempt initialization
-      await window.waitForTimeout(1000);
+      await window.waitForTimeout(RENDERER_INIT_TIMEOUT);
       
       // Check if renderer loaded
       const rendererOK = await checkRendererLoaded(window);
