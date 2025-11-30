@@ -349,16 +349,130 @@ function createZServerControls(jsgui) {
     compose() {
       const ctx = this.context;
       
-      // Icon
-      const icon = new jsgui.div({ context: ctx, class: "zs-server-url__icon" });
-      icon.add(new StringControl({ context: ctx, text: "🌐" }));
-      this.add(icon);
+      // Large Running Status SVG Icon - Industrial Luxury Obsidian + White Leather + Emerald
+      const iconContainer = new jsgui.div({ context: ctx, class: "zs-server-url__icon" });
+      const svg = new jsgui.Control({ context: ctx, tagName: "svg" });
+      svg.dom.attributes.viewBox = "0 0 120 120";
+      svg.dom.attributes.width = "120";
+      svg.dom.attributes.height = "120";
+      svg.add_class("zs-server-url__svg");
+      
+      // Defs for gradients
+      const defs = new jsgui.Control({ context: ctx, tagName: "defs" });
+      
+      // Outer ring gradient (obsidian to emerald)
+      const outerGradient = new jsgui.Control({ context: ctx, tagName: "linearGradient" });
+      outerGradient.dom.attributes.id = "outerRingGrad";
+      outerGradient.dom.attributes.x1 = "0%";
+      outerGradient.dom.attributes.y1 = "0%";
+      outerGradient.dom.attributes.x2 = "100%";
+      outerGradient.dom.attributes.y2 = "100%";
+      const stop1 = new jsgui.Control({ context: ctx, tagName: "stop" });
+      stop1.dom.attributes.offset = "0%";
+      stop1.dom.attributes["stop-color"] = "#2dd4bf";
+      const stop2 = new jsgui.Control({ context: ctx, tagName: "stop" });
+      stop2.dom.attributes.offset = "50%";
+      stop2.dom.attributes["stop-color"] = "#10b981";
+      const stop3 = new jsgui.Control({ context: ctx, tagName: "stop" });
+      stop3.dom.attributes.offset = "100%";
+      stop3.dom.attributes["stop-color"] = "#059669";
+      outerGradient.add(stop1);
+      outerGradient.add(stop2);
+      outerGradient.add(stop3);
+      defs.add(outerGradient);
+      
+      // Inner glow gradient (white leather center)
+      const innerGradient = new jsgui.Control({ context: ctx, tagName: "radialGradient" });
+      innerGradient.dom.attributes.id = "innerGlowGrad";
+      innerGradient.dom.attributes.cx = "30%";
+      innerGradient.dom.attributes.cy = "30%";
+      const istop1 = new jsgui.Control({ context: ctx, tagName: "stop" });
+      istop1.dom.attributes.offset = "0%";
+      istop1.dom.attributes["stop-color"] = "#ffffff";
+      const istop2 = new jsgui.Control({ context: ctx, tagName: "stop" });
+      istop2.dom.attributes.offset = "60%";
+      istop2.dom.attributes["stop-color"] = "#d1fae5";
+      const istop3 = new jsgui.Control({ context: ctx, tagName: "stop" });
+      istop3.dom.attributes.offset = "100%";
+      istop3.dom.attributes["stop-color"] = "#34d399";
+      innerGradient.add(istop1);
+      innerGradient.add(istop2);
+      innerGradient.add(istop3);
+      defs.add(innerGradient);
+      
+      // Pulse animation filter
+      const pulseFilter = new jsgui.Control({ context: ctx, tagName: "filter" });
+      pulseFilter.dom.attributes.id = "glow";
+      const feGaussianBlur = new jsgui.Control({ context: ctx, tagName: "feGaussianBlur" });
+      feGaussianBlur.dom.attributes.stdDeviation = "4";
+      feGaussianBlur.dom.attributes.result = "coloredBlur";
+      pulseFilter.add(feGaussianBlur);
+      const feMerge = new jsgui.Control({ context: ctx, tagName: "feMerge" });
+      const feMergeNode1 = new jsgui.Control({ context: ctx, tagName: "feMergeNode" });
+      feMergeNode1.dom.attributes.in = "coloredBlur";
+      const feMergeNode2 = new jsgui.Control({ context: ctx, tagName: "feMergeNode" });
+      feMergeNode2.dom.attributes.in = "SourceGraphic";
+      feMerge.add(feMergeNode1);
+      feMerge.add(feMergeNode2);
+      pulseFilter.add(feMerge);
+      defs.add(pulseFilter);
+      
+      svg.add(defs);
+      
+      // Outer pulsing ring (obsidian border)
+      const outerRing = new jsgui.Control({ context: ctx, tagName: "circle" });
+      outerRing.dom.attributes.cx = "60";
+      outerRing.dom.attributes.cy = "60";
+      outerRing.dom.attributes.r = "54";
+      outerRing.dom.attributes.class = "zs-server-url__outer-ring";
+      svg.add(outerRing);
+      
+      // Middle ring (emerald glow)
+      const middleRing = new jsgui.Control({ context: ctx, tagName: "circle" });
+      middleRing.dom.attributes.cx = "60";
+      middleRing.dom.attributes.cy = "60";
+      middleRing.dom.attributes.r = "46";
+      middleRing.dom.attributes.class = "zs-server-url__middle-ring";
+      svg.add(middleRing);
+      
+      // Inner circle (white leather with emerald tint)
+      const innerCircle = new jsgui.Control({ context: ctx, tagName: "circle" });
+      innerCircle.dom.attributes.cx = "60";
+      innerCircle.dom.attributes.cy = "60";
+      innerCircle.dom.attributes.r = "38";
+      innerCircle.dom.attributes.class = "zs-server-url__inner-circle";
+      svg.add(innerCircle);
+      
+      // Check mark (obsidian colored)
+      const checkMark = new jsgui.Control({ context: ctx, tagName: "path" });
+      checkMark.dom.attributes.d = "M42 60 L54 72 L78 48";
+      checkMark.dom.attributes.class = "zs-server-url__check";
+      svg.add(checkMark);
+      
+      // Radiating lines (luxury detail)
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * 45) * Math.PI / 180;
+        const x1 = 60 + Math.cos(angle) * 48;
+        const y1 = 60 + Math.sin(angle) * 48;
+        const x2 = 60 + Math.cos(angle) * 56;
+        const y2 = 60 + Math.sin(angle) * 56;
+        const ray = new jsgui.Control({ context: ctx, tagName: "line" });
+        ray.dom.attributes.x1 = String(x1);
+        ray.dom.attributes.y1 = String(y1);
+        ray.dom.attributes.x2 = String(x2);
+        ray.dom.attributes.y2 = String(y2);
+        ray.dom.attributes.class = "zs-server-url__ray";
+        svg.add(ray);
+      }
+      
+      iconContainer.add(svg);
+      this.add(iconContainer);
       
       // URL wrapper
       const urlWrapper = new jsgui.div({ context: ctx, class: "zs-server-url__wrapper" });
       
       const label = new jsgui.div({ context: ctx, class: "zs-server-url__label" });
-      label.add(new StringControl({ context: ctx, text: "Server Running At" }));
+      label.add(new StringControl({ context: ctx, text: "✦ SERVER RUNNING ✦" }));
       urlWrapper.add(label);
       
       this._urlText = new jsgui.div({ context: ctx, class: "zs-server-url__text" });
@@ -367,10 +481,10 @@ function createZServerControls(jsgui) {
       
       this.add(urlWrapper);
       
-      // Browser indicator
-      const browserHint = new jsgui.div({ context: ctx, class: "zs-server-url__browser" });
-      browserHint.add(new StringControl({ context: ctx, text: "Click to open in Chrome Canary →" }));
-      this.add(browserHint);
+      // Open in browser button
+      const openBtn = new jsgui.div({ context: ctx, class: "zs-server-url__open-btn" });
+      openBtn.add(new StringControl({ context: ctx, text: "OPEN IN BROWSER →" }));
+      this.add(openBtn);
     }
 
     _syncState() {
@@ -1194,6 +1308,7 @@ function createZServerControls(jsgui) {
       this._onStart = spec.onStart || null;
       this._onStop = spec.onStop || null;
       this._onUrlDetected = spec.onUrlDetected || null;
+      this._onOpenUrl = spec.onOpenUrl || null;
       this._detectedUrl = null;
       
       if (!spec.el) {
@@ -1221,6 +1336,14 @@ function createZServerControls(jsgui) {
       
       this.add(header);
       
+      // Server URL Display (prominent, clickable - hidden until URL detected)
+      this._serverUrl = new ServerUrlControl({
+        context: ctx,
+        visible: false,
+        onClick: (url) => this._onOpenUrl && this._onOpenUrl(url)
+      });
+      this.add(this._serverUrl);
+      
       // Scanning Indicator (Hidden by default, shown during init)
       this._scanningIndicator = new ScanningIndicatorControl({ context: ctx });
       this._scanningIndicator.add_class("zs-hidden");
@@ -1237,6 +1360,10 @@ function createZServerControls(jsgui) {
     setSelectedServer(server) {
       this._selectedServer = server;
       this._detectedUrl = null;
+      
+      // Hide URL display when switching servers
+      this._serverUrl.setUrl(null);
+      this._serverUrl.setVisible(false);
       
       // Update title
       const displayName = server.metadata && server.metadata.name
@@ -1261,6 +1388,8 @@ function createZServerControls(jsgui) {
         // Clear detected URL when server stops
         if (!running) {
           this._detectedUrl = null;
+          this._serverUrl.setUrl(null);
+          this._serverUrl.setVisible(false);
         }
       }
     }
@@ -1294,6 +1423,9 @@ function createZServerControls(jsgui) {
         const url = this._extractUrl(data);
         if (url && this._selectedServer) {
           this._detectedUrl = url;
+          // Update the prominent URL display in content area
+          this._serverUrl.setUrl(url);
+          this._serverUrl.setVisible(true);
           // Notify parent to update the sidebar's server item
           if (this._onUrlDetected) {
             this._onUrlDetected(this._selectedServer.file, url);
@@ -1352,6 +1484,7 @@ function createZServerControls(jsgui) {
 
     activate() {
       this._controlPanel.activate();
+      this._serverUrl.activate();
     }
   }
 
@@ -1432,7 +1565,8 @@ function createZServerControls(jsgui) {
         context: ctx,
         onStart: () => this._startServer(),
         onStop: () => this._stopServer(),
-        onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url)
+        onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
+        onOpenUrl: (url) => this._openInBrowser(url)
       });
       container.add(this._contentArea);
       
@@ -2251,110 +2385,229 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* SERVER URL DISPLAY (Large Clickable)                                        */
+/* SERVER URL DISPLAY - Industrial Luxury Obsidian + White Leather + Emerald   */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 .zs-server-url {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 28px;
   background: linear-gradient(135deg, 
-    rgba(80, 200, 120, 0.15) 0%, 
-    rgba(46, 139, 87, 0.1) 50%,
-    rgba(26, 31, 46, 0.9) 100%
+    rgba(16, 185, 129, 0.12) 0%,
+    rgba(5, 150, 105, 0.08) 30%,
+    rgba(20, 24, 36, 0.95) 70%,
+    rgba(10, 13, 20, 0.98) 100%
   );
-  border: 2px solid var(--zs-emerald);
-  border-radius: 12px;
-  padding: 20px 28px;
-  margin-bottom: 20px;
+  border: 3px solid transparent;
+  border-image: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%) 1;
+  border-radius: 16px;
+  padding: 24px 32px;
+  margin-bottom: 24px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  box-shadow: 
+    0 0 40px rgba(16, 185, 129, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+/* White leather texture overlay */
 .zs-server-url::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, 
-    rgba(80, 200, 120, 0.1) 0%, 
-    transparent 100%
-  );
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Animated glow border */
+.zs-server-url::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  background: linear-gradient(135deg, #2dd4bf, #10b981, #059669, #10b981, #2dd4bf);
+  background-size: 300% 300%;
+  border-radius: 18px;
+  z-index: -1;
+  animation: zs-border-glow 3s ease-in-out infinite;
+}
+
+@keyframes zs-border-glow {
+  0%, 100% { background-position: 0% 50%; opacity: 0.6; }
+  50% { background-position: 100% 50%; opacity: 1; }
 }
 
 .zs-server-url:hover {
-  border-color: var(--zs-emerald);
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.01);
   box-shadow: 
-    var(--zs-shadow-lg),
-    0 0 40px rgba(80, 200, 120, 0.3),
-    0 0 60px rgba(80, 200, 120, 0.2);
-}
-
-.zs-server-url:hover::before {
-  opacity: 1;
+    0 0 60px rgba(16, 185, 129, 0.3),
+    0 0 100px rgba(16, 185, 129, 0.15),
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .zs-server-url:active {
-  transform: translateY(0);
+  transform: translateY(-2px) scale(1.005);
 }
 
 .zs-server-url--hidden {
   display: none !important;
 }
 
+/* Large SVG Icon Container */
 .zs-server-url__icon {
-  font-size: 36px;
-  filter: drop-shadow(0 0 10px rgba(80, 200, 120, 0.5));
-  animation: zs-url-pulse 2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-@keyframes zs-url-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+.zs-server-url__svg {
+  filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.5));
 }
 
+/* Outer ring - obsidian with emerald glow */
+.zs-server-url__outer-ring {
+  fill: none;
+  stroke: url(#outerRingGrad);
+  stroke-width: 3;
+  opacity: 0.6;
+  animation: zs-outer-ring-pulse 2.5s ease-in-out infinite;
+  transform-origin: 60px 60px;
+}
+
+@keyframes zs-outer-ring-pulse {
+  0%, 100% { 
+    opacity: 0.4;
+    stroke-width: 3;
+  }
+  50% { 
+    opacity: 0.9;
+    stroke-width: 4;
+  }
+}
+
+/* Middle ring - emerald glow */
+.zs-server-url__middle-ring {
+  fill: none;
+  stroke: #10b981;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 12px #10b981);
+  animation: zs-middle-ring-pulse 2s ease-in-out infinite;
+  transform-origin: 60px 60px;
+}
+
+@keyframes zs-middle-ring-pulse {
+  0%, 100% { 
+    opacity: 0.5;
+    filter: drop-shadow(0 0 8px #10b981);
+  }
+  50% { 
+    opacity: 1;
+    filter: drop-shadow(0 0 20px #10b981);
+  }
+}
+
+/* Inner circle - white leather with emerald tint */
+.zs-server-url__inner-circle {
+  fill: url(#innerGlowGrad);
+  filter: drop-shadow(0 0 15px rgba(52, 211, 153, 0.6));
+  animation: zs-inner-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes zs-inner-breathe {
+  0%, 100% { 
+    filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.5));
+    transform: scale(1);
+  }
+  50% { 
+    filter: drop-shadow(0 0 25px rgba(52, 211, 153, 0.8));
+    transform: scale(1.02);
+  }
+}
+
+/* Check mark - obsidian colored */
+.zs-server-url__check {
+  fill: none;
+  stroke: #0a0d14;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Radiating rays - luxury detail */
+.zs-server-url__ray {
+  stroke: #34d399;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.4;
+  animation: zs-ray-pulse 2s ease-in-out infinite;
+}
+
+@keyframes zs-ray-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* URL Text Wrapper */
 .zs-server-url__wrapper {
   flex: 1;
   min-width: 0;
 }
 
 .zs-server-url__label {
-  font-family: var(--zs-font-body);
-  font-size: 11px;
+  font-family: var(--zs-font-display);
+  font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--zs-emerald);
-  margin-bottom: 6px;
+  letter-spacing: 4px;
+  color: #34d399;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
 }
 
 .zs-server-url__text {
   font-family: var(--zs-font-mono);
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--zs-text);
-  text-shadow: 0 0 20px rgba(80, 200, 120, 0.3);
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 
+    0 0 30px rgba(52, 211, 153, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.zs-server-url__browser {
+/* Open Button */
+.zs-server-url__open-btn {
   font-family: var(--zs-font-body);
-  font-size: 12px;
-  color: var(--zs-text-muted);
-  letter-spacing: 0.5px;
-  opacity: 0.8;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #0a0d14;
+  background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
+  padding: 14px 24px;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 4px 15px rgba(16, 185, 129, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.zs-server-url:hover .zs-server-url__browser {
-  opacity: 1;
+.zs-server-url:hover .zs-server-url__open-btn {
   transform: translateX(4px);
-  color: var(--zs-emerald);
+  box-shadow: 
+    0 6px 25px rgba(16, 185, 129, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, #2dd4bf 0%, #34d399 50%, #10b981 100%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

@@ -131,7 +131,7 @@ class DocNavigationControl extends jsgui.Control {
     // Update selected state in nav immediately for responsiveness
     this._updateSelectedLink(docPath);
     
-    // Show loading indicator
+    // Show loading indicator immediately (prevents cursor stuck on hand)
     this._showLoading();
     
     try {
@@ -174,6 +174,8 @@ class DocNavigationControl extends jsgui.Control {
       this._showError(err.message);
     } finally {
       this.isNavigating = false;
+      // Remove loading cursor
+      document.body.classList.remove("docs-loading");
     }
   }
 
@@ -216,9 +218,15 @@ class DocNavigationControl extends jsgui.Control {
    * Show loading state in content area
    */
   _showLoading() {
+    // Set loading cursor on body immediately to provide feedback
+    document.body.classList.add("docs-loading");
+    
     // Ensure we have a content target (create if needed for welcome → doc transition)
     this._ensureContentTarget();
     if (!this.contentTarget) return;
+    
+    // Add loading class for opacity transition
+    this.contentTarget.classList.add("doc-viewer__content--loading");
     
     // Create a simple loading indicator
     this.contentTarget.innerHTML = `
@@ -265,15 +273,31 @@ class DocNavigationControl extends jsgui.Control {
 
   /**
    * Render document content into the target
-   * @param {Object} content - { path, title, html }
+   * @param {Object} content - { path, title, html, isSvg? }
    */
   _renderContent(content) {
     this._ensureContentTarget();
     if (!this.contentTarget) return;
     
+    // Remove loading class
+    this.contentTarget.classList.remove("doc-viewer__content--loading");
+    
     // Build the document HTML structure
     // This matches DocViewerControl's compose() output
     const breadcrumb = this._buildBreadcrumbHtml(content.path);
+    
+    // Determine if this is an SVG doc (needs different max-width handling)
+    const isSvg = content.isSvg || content.path?.toLowerCase().endsWith('.svg');
+    
+    // Update the main element class to signal SVG content
+    // This allows CSS to handle max-width differently for SVGs
+    if (this.mainEl) {
+      if (isSvg) {
+        this.mainEl.classList.add('doc-viewer--svg');
+      } else {
+        this.mainEl.classList.remove('doc-viewer--svg');
+      }
+    }
     
     this.contentTarget.innerHTML = `
       <header class="doc-viewer__header">
@@ -293,8 +317,11 @@ class DocNavigationControl extends jsgui.Control {
       footer.innerHTML = `<span class="doc-viewer__path-info">📁 ${this._escapeHtml(content.path)}</span>`;
     }
     
-    // Scroll content to top
-    this.contentTarget.scrollTop = 0;
+    // Scroll the content column to top (not just the article)
+    const contentColumn = document.querySelector(".doc-app__content-column");
+    if (contentColumn) {
+      contentColumn.scrollTop = 0;
+    }
     
     // Re-highlight code blocks if Prism is available
     if (typeof Prism !== "undefined") {

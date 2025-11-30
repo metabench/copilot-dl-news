@@ -1,6 +1,8 @@
 "use strict";
 var DocsViewerClient = (() => {
+  var __defProp = Object.defineProperty;
   var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __defNormalProp = (obj2, key2, value2) => key2 in obj2 ? __defProp(obj2, key2, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj2[key2] = value2;
   var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
     get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
   }) : x)(function(x) {
@@ -10,6 +12,7 @@ var DocsViewerClient = (() => {
   var __commonJS = (cb, mod) => function __require2() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
+  var __publicField = (obj2, key2, value2) => __defNormalProp(obj2, typeof key2 !== "symbol" ? key2 + "" : key2, value2);
 
   // node_modules/lang-mini/lang-mini.js
   var require_lang_mini = __commonJS({
@@ -38745,13 +38748,2101 @@ body .overlay {
     }
   });
 
+  // src/ui/server/shared/isomorphic/controls/interactive/DraggableControl.js
+  var require_DraggableControl = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/interactive/DraggableControl.js"(exports, module) {
+      var jsgui = require_html();
+      var { Control: Control2 } = jsgui;
+      var dragable = require_dragable();
+      var DraggableControl = class extends Control2 {
+        /**
+         * Creates a new DraggableControl instance.
+         * 
+         * @param {DraggableControlOptions} spec - Configuration options
+         * @throws {Error} If context is not provided
+         * 
+         * @example
+         * const ctrl = new DraggableControl({
+         *   context: this.context,
+         *   dragMode: 'translate',
+         *   constrainToParent: true,
+         *   initialPosition: [50, 50]
+         * });
+         */
+        constructor(spec = {}) {
+          const {
+            dragMode = "translate",
+            draggable = true,
+            constrainToParent = false,
+            bounds: bounds2,
+            initialPosition,
+            startDistance = 3,
+            condition,
+            ...parentSpec
+          } = spec;
+          super(parentSpec);
+          this._dragMode = dragMode;
+          this._draggable = draggable;
+          this._constrainToParent = constrainToParent;
+          this._bounds = bounds2 || null;
+          this._initialPosition = initialPosition || null;
+          this._startDistance = startDistance;
+          this._condition = condition || null;
+          this._dragHandle = null;
+          this.isDragging = false;
+          this.position = this._initialPosition ? [...this._initialPosition] : [0, 0];
+        }
+        /**
+         * Composes the control's DOM structure.
+         * Called automatically during control construction.
+         * Override in subclasses to add child elements.
+         * 
+         * @protected
+         */
+        compose() {
+          this.add_class("draggable-control");
+          this.add_class(`drag-mode-${this._dragMode}`);
+          if (this._draggable) {
+            this.add_class("draggable");
+          }
+          if (this._initialPosition) {
+            this._applyPosition(this._initialPosition);
+          }
+          this.on("server-pre-render", () => {
+            this._fields = this._fields || {};
+            this._fields.dragMode = this._dragMode;
+            this._fields.draggable = this._draggable;
+            this._fields.constrainToParent = this._constrainToParent;
+            this._fields.position = this.position;
+            this._fields.startDistance = this._startDistance;
+          });
+        }
+        /**
+         * Activates the control, binding event handlers.
+         * Called when the control is attached to the DOM.
+         * 
+         * @protected
+         */
+        activate() {
+          super.activate();
+          if (this._fields) {
+            if (this._fields.dragMode) this._dragMode = this._fields.dragMode;
+            if (this._fields.draggable !== void 0) this._draggable = this._fields.draggable;
+            if (this._fields.constrainToParent !== void 0) this._constrainToParent = this._fields.constrainToParent;
+            if (this._fields.position) this.position = this._fields.position;
+            if (this._fields.startDistance) this._startDistance = this._fields.startDistance;
+          }
+          this._setupDragable();
+        }
+        /**
+         * Sets up the dragable mixin with current configuration.
+         * @private
+         */
+        _setupDragable() {
+          if (!this._draggable) return;
+          let boundsCtrl = this._bounds;
+          if (this._constrainToParent && !boundsCtrl && this.parent) {
+            boundsCtrl = this.parent;
+          }
+          const mixinOpts = {
+            mode: this._dragMode,
+            start_distance: this._startDistance
+          };
+          if (boundsCtrl) {
+            mixinOpts.bounds = boundsCtrl;
+          }
+          if (this._condition) {
+            mixinOpts.condition = this._condition;
+          }
+          if (this._dragHandle) {
+            mixinOpts.handle = this._dragHandle;
+          }
+          dragable(this, mixinOpts);
+          this.on("dragstart", (e) => {
+            this.isDragging = true;
+            this.add_class("dragging");
+            this.raise("drag-start", {
+              startPosition: [...this.position],
+              target: this
+            });
+          });
+          this.on("dragend", (e) => {
+            var _a, _b;
+            this.isDragging = false;
+            this.remove_class("dragging");
+            if (e.movement_offset) {
+              this.position = [
+                this.position[0] + e.movement_offset[0],
+                this.position[1] + e.movement_offset[1]
+              ];
+            }
+            this.raise("drag-end", {
+              startPosition: [this.position[0] - (((_a = e.movement_offset) == null ? void 0 : _a[0]) || 0), this.position[1] - (((_b = e.movement_offset) == null ? void 0 : _b[1]) || 0)],
+              endPosition: [...this.position],
+              movementOffset: e.movement_offset || [0, 0],
+              target: this
+            });
+          });
+        }
+        /**
+         * Applies position to the control based on drag mode.
+         * @param {[number, number]} pos - [x, y] position
+         * @private
+         */
+        _applyPosition(pos) {
+          const [x, y] = pos;
+          switch (this._dragMode) {
+            case "translate":
+              this.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+              break;
+            case "within-parent":
+              this.style.position = "absolute";
+              this.style.left = `${x}px`;
+              this.style.top = `${y}px`;
+              break;
+            case "x":
+              this.style.transform = `translateX(${x}px)`;
+              break;
+          }
+        }
+        // ============================================
+        // Public API
+        // ============================================
+        /**
+         * Gets the current drag mode.
+         * @returns {DragMode}
+         */
+        get dragMode() {
+          return this._dragMode;
+        }
+        /**
+         * Sets the drag mode.
+         * Note: Changing mode after activation may require re-initialization.
+         * @param {DragMode} mode - The new drag mode
+         */
+        set dragMode(mode) {
+          this.remove_class(`drag-mode-${this._dragMode}`);
+          this._dragMode = mode;
+          this.add_class(`drag-mode-${this._dragMode}`);
+        }
+        /**
+         * Enables or disables dragging.
+         * @param {boolean} enabled - Whether dragging should be enabled
+         */
+        setDraggable(enabled) {
+          this._draggable = enabled;
+          if (enabled) {
+            this.add_class("draggable");
+          } else {
+            this.remove_class("draggable");
+            this.remove_class("dragging");
+          }
+        }
+        /**
+         * Checks if dragging is enabled.
+         * @returns {boolean}
+         */
+        isDraggableEnabled() {
+          return this._draggable;
+        }
+        /**
+         * Sets a specific control as the drag handle.
+         * Only interactions with this handle will trigger dragging.
+         * 
+         * @param {Control} handle - The control to use as drag handle
+         * @example
+         * const window = new DraggableControl({ context });
+         * window.setDragHandle(window.ctrl_titleBar);
+         */
+        setDragHandle(handle) {
+          this._dragHandle = handle;
+        }
+        /**
+         * Sets the bounds constraint for dragging.
+         * 
+         * @param {Control} boundsCtrl - The control to constrain movement within
+         */
+        setBounds(boundsCtrl) {
+          this._bounds = boundsCtrl;
+        }
+        /**
+         * Moves the control to a specific position.
+         * 
+         * @param {number} x - X coordinate
+         * @param {number} y - Y coordinate
+         */
+        moveTo(x, y) {
+          this.position = [x, y];
+          this._applyPosition(this.position);
+          this.raise("position-changed", {
+            position: [...this.position],
+            target: this
+          });
+        }
+        /**
+         * Moves the control by a relative offset.
+         * 
+         * @param {number} deltaX - Horizontal offset
+         * @param {number} deltaY - Vertical offset
+         */
+        moveBy(deltaX, deltaY) {
+          this.moveTo(this.position[0] + deltaX, this.position[1] + deltaY);
+        }
+        /**
+         * Gets the current position.
+         * @returns {[number, number]} [x, y] position
+         */
+        getPosition() {
+          return [...this.position];
+        }
+        /**
+         * Sets a condition function that must return true for drag to start.
+         * 
+         * @param {Function} conditionFn - Function returning boolean
+         * @example
+         * ctrl.setCondition(() => !isLocked);
+         */
+        setCondition(conditionFn) {
+          this._condition = conditionFn;
+        }
+      };
+      module.exports = DraggableControl;
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/interactive/SelectableControl.js
+  var require_SelectableControl = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/interactive/SelectableControl.js"(exports, module) {
+      var jsgui = require_html();
+      var { Control: Control2 } = jsgui;
+      var selectable = require_selectable();
+      var SelectableControl = class extends Control2 {
+        /**
+         * Creates a new SelectableControl instance.
+         * 
+         * @param {SelectableControlOptions} spec - Configuration options
+         * @throws {Error} If context is not provided
+         * 
+         * @example
+         * const ctrl = new SelectableControl({
+         *   context: this.context,
+         *   selectable: true,
+         *   toggleSelection: true
+         * });
+         */
+        constructor(spec = {}) {
+          const {
+            selectable: selectableOpt = true,
+            selected = false,
+            toggleSelection = false,
+            multiSelect = false,
+            selectionAction = ["mousedown", "touchstart"],
+            preventDefault = true,
+            condition,
+            handle,
+            ...parentSpec
+          } = spec;
+          super(parentSpec);
+          this._selectable = selectableOpt;
+          this._initialSelected = selected;
+          this._toggleSelection = toggleSelection;
+          this._multiSelect = multiSelect;
+          this._selectionAction = selectionAction;
+          this._preventDefault = preventDefault;
+          this._condition = condition || null;
+          this._handle = handle || null;
+        }
+        /**
+         * Composes the control's DOM structure.
+         * Called automatically during control construction.
+         * Override in subclasses to add child elements.
+         * 
+         * @protected
+         */
+        compose() {
+          this.add_class("selectable-control");
+          if (this._selectable) {
+            this.add_class("selectable");
+          }
+          if (this._initialSelected) {
+            this.add_class("selected");
+          }
+          this.on("server-pre-render", () => {
+            this._fields = this._fields || {};
+            this._fields.selectable = this._selectable;
+            this._fields.selected = this.selected;
+            this._fields.toggleSelection = this._toggleSelection;
+            this._fields.multiSelect = this._multiSelect;
+          });
+        }
+        /**
+         * Activates the control, binding event handlers.
+         * Called when the control is attached to the DOM.
+         * 
+         * @protected
+         */
+        activate() {
+          super.activate();
+          if (this._fields) {
+            if (this._fields.selectable !== void 0) this._selectable = this._fields.selectable;
+            if (this._fields.toggleSelection !== void 0) this._toggleSelection = this._fields.toggleSelection;
+            if (this._fields.multiSelect !== void 0) this._multiSelect = this._fields.multiSelect;
+          }
+          this._setupSelectable();
+        }
+        /**
+         * Sets up the selectable mixin with current configuration.
+         * @private
+         */
+        _setupSelectable() {
+          const mixinOpts = {
+            toggle: this._toggleSelection,
+            multi: this._multiSelect,
+            selection_action: this._selectionAction,
+            preventDefault: this._preventDefault
+          };
+          if (this._condition) {
+            mixinOpts.condition = this._condition;
+          }
+          if (this._handle) {
+            mixinOpts.handle = this._handle;
+          }
+          selectable(this, null, mixinOpts);
+          this.selectable = this._selectable;
+          if (this._initialSelected) {
+            this.selected = true;
+          }
+          this.on("select", () => {
+            this.raise("selection-changed", {
+              target: this,
+              selected: true
+            });
+          });
+          this.on("deselect", () => {
+            this.raise("selection-changed", {
+              target: this,
+              selected: false
+            });
+          });
+        }
+        // ============================================
+        // Public API
+        // ============================================
+        /**
+         * Checks if the control is currently selected.
+         * @returns {boolean}
+         */
+        isSelected() {
+          return this.selected === true;
+        }
+        /**
+         * Selects this control.
+         * If a selection scope is present, uses scope selection.
+         */
+        doSelect() {
+          if (this.select) {
+            this.select();
+          } else {
+            this.selected = true;
+          }
+        }
+        /**
+         * Deselects this control.
+         * If a selection scope is present, uses scope deselection.
+         */
+        doDeselect() {
+          if (this.deselect) {
+            this.deselect();
+          } else {
+            this.selected = false;
+          }
+        }
+        /**
+         * Toggles the selection state.
+         */
+        toggleSelect() {
+          if (this.selected) {
+            this.doDeselect();
+          } else {
+            this.doSelect();
+          }
+        }
+        /**
+         * Enables or disables selection.
+         * @param {boolean} enabled - Whether selection should be enabled
+         */
+        setSelectable(enabled) {
+          this._selectable = enabled;
+          this.selectable = enabled;
+          if (enabled) {
+            this.add_class("selectable");
+          } else {
+            this.remove_class("selectable");
+            this.remove_class("selected");
+          }
+        }
+        /**
+         * Checks if selection is enabled.
+         * @returns {boolean}
+         */
+        isSelectableEnabled() {
+          return this._selectable;
+        }
+        /**
+         * Sets a specific control as the selection handle.
+         * Only interactions with this handle will trigger selection.
+         * 
+         * @param {Control} handle - The control to use as selection handle
+         */
+        setSelectionHandle(handle) {
+          this._handle = handle;
+        }
+        /**
+         * Sets a condition function that must return true for selection to work.
+         * 
+         * @param {Function} conditionFn - Function returning boolean
+         * @example
+         * ctrl.setCondition(() => !isReadOnly);
+         */
+        setCondition(conditionFn) {
+          this._condition = conditionFn;
+        }
+        /**
+         * Enables or disables toggle mode.
+         * In toggle mode, clicking toggles selection instead of always selecting.
+         * 
+         * @param {boolean} enabled - Whether toggle mode should be enabled
+         */
+        setToggleMode(enabled) {
+          this._toggleSelection = enabled;
+        }
+        /**
+         * Enables or disables multi-select mode.
+         * In multi-select mode, Ctrl+click adds to selection instead of replacing.
+         * 
+         * @param {boolean} enabled - Whether multi-select should be enabled
+         */
+        setMultiSelectMode(enabled) {
+          this._multiSelect = enabled;
+        }
+      };
+      module.exports = SelectableControl;
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/interactive/index.js
+  var require_interactive = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/interactive/index.js"(exports, module) {
+      var DraggableControl = require_DraggableControl();
+      var SelectableControl = require_SelectableControl();
+      module.exports = {
+        DraggableControl,
+        SelectableControl
+      };
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/canvas/CanvasControl.js
+  var require_CanvasControl = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/canvas/CanvasControl.js"(exports, module) {
+      var jsgui = require_html();
+      var { Control: Control2 } = jsgui;
+      var CanvasControl = class extends Control2 {
+        /**
+         * Creates a new CanvasControl instance.
+         * 
+         * @param {CanvasControlOptions} spec - Configuration options
+         * @throws {Error} If context is not provided
+         * 
+         * @example
+         * const canvas = new CanvasControl({
+         *   context: this.context,
+         *   width: 1024,
+         *   height: 768,
+         *   gridSize: 25,
+         *   snapToGrid: true,
+         *   showGrid: true
+         * });
+         */
+        constructor(spec = {}) {
+          const {
+            width = 800,
+            height: height2 = 600,
+            gridSize = 20,
+            snapToGrid = false,
+            showGrid = false,
+            gridColor = "#e0e0e0",
+            backgroundColor = "#ffffff",
+            minZoom = 0.25,
+            maxZoom = 4,
+            selectionScope = true,
+            ...parentSpec
+          } = spec;
+          super(parentSpec);
+          this.canvasWidth = width;
+          this.canvasHeight = height2;
+          this.gridSize = gridSize;
+          this.snapToGrid = snapToGrid;
+          this.showGrid = showGrid;
+          this.gridColor = gridColor;
+          this.backgroundColor = backgroundColor;
+          this._minZoom = minZoom;
+          this._maxZoom = maxZoom;
+          this.zoom = 1;
+          this._selectionScope = selectionScope;
+          this._elements = /* @__PURE__ */ new Map();
+          this._selectedElements = /* @__PURE__ */ new Set();
+        }
+        /**
+         * Composes the control's DOM structure.
+         * Called automatically during control construction.
+         * 
+         * @protected
+         */
+        compose() {
+          this.add_class("canvas-control");
+          this.style.width = `${this.canvasWidth}px`;
+          this.style.height = `${this.canvasHeight}px`;
+          this.style.position = "relative";
+          this.style.overflow = "hidden";
+          this.style.backgroundColor = this.backgroundColor;
+          if (this.showGrid) {
+            this.add_class("canvas-grid-visible");
+          }
+          if (this.snapToGrid) {
+            this.add_class("canvas-snap-enabled");
+          }
+          if (this._selectionScope) {
+            this.add_class("selection-scope");
+          }
+          this._createGridLayer();
+          this.ctrl_elementsLayer = new Control2({
+            context: this.context,
+            tagName: "div"
+          });
+          this.ctrl_elementsLayer.add_class("canvas-elements-layer");
+          this.ctrl_elementsLayer.style.position = "absolute";
+          this.ctrl_elementsLayer.style.top = "0";
+          this.ctrl_elementsLayer.style.left = "0";
+          this.ctrl_elementsLayer.style.width = "100%";
+          this.ctrl_elementsLayer.style.height = "100%";
+          this.ctrl_elementsLayer.style.pointerEvents = "none";
+          this.add(this.ctrl_elementsLayer);
+          this.on("server-pre-render", () => {
+            this._fields = this._fields || {};
+            this._fields.canvasWidth = this.canvasWidth;
+            this._fields.canvasHeight = this.canvasHeight;
+            this._fields.gridSize = this.gridSize;
+            this._fields.snapToGrid = this.snapToGrid;
+            this._fields.showGrid = this.showGrid;
+            this._fields.zoom = this.zoom;
+          });
+        }
+        /**
+         * Creates the grid layer with CSS background pattern.
+         * @private
+         */
+        _createGridLayer() {
+          this.ctrl_gridLayer = new Control2({
+            context: this.context,
+            tagName: "div"
+          });
+          this.ctrl_gridLayer.add_class("canvas-grid-layer");
+          this.ctrl_gridLayer.style.position = "absolute";
+          this.ctrl_gridLayer.style.top = "0";
+          this.ctrl_gridLayer.style.left = "0";
+          this.ctrl_gridLayer.style.width = "100%";
+          this.ctrl_gridLayer.style.height = "100%";
+          this.ctrl_gridLayer.style.pointerEvents = "none";
+          if (this.showGrid) {
+            this._applyGridPattern();
+          }
+          this.add(this.ctrl_gridLayer);
+        }
+        /**
+         * Applies the grid pattern as a CSS background.
+         * @private
+         */
+        _applyGridPattern() {
+          const size = this.gridSize;
+          const color = this.gridColor;
+          this.ctrl_gridLayer.style.backgroundImage = `radial-gradient(circle, ${color} 1px, transparent 1px)`;
+          this.ctrl_gridLayer.style.backgroundSize = `${size}px ${size}px`;
+          this.ctrl_gridLayer.style.backgroundPosition = `${size / 2}px ${size / 2}px`;
+        }
+        /**
+         * Activates the control, binding event handlers.
+         * @protected
+         */
+        activate() {
+          super.activate();
+          if (this._fields) {
+            if (this._fields.canvasWidth) this.canvasWidth = this._fields.canvasWidth;
+            if (this._fields.canvasHeight) this.canvasHeight = this._fields.canvasHeight;
+            if (this._fields.gridSize) this.gridSize = this._fields.gridSize;
+            if (this._fields.snapToGrid !== void 0) this.snapToGrid = this._fields.snapToGrid;
+            if (this._fields.showGrid !== void 0) this.showGrid = this._fields.showGrid;
+            if (this._fields.zoom) this.zoom = this._fields.zoom;
+          }
+          this._setupDropTarget();
+          this._setupBackgroundClick();
+        }
+        /**
+         * Sets up drop target event handling.
+         * @private
+         */
+        _setupDropTarget() {
+          this.on("dragover", (e) => {
+            e.preventDefault();
+            this.add_class("canvas-drop-target");
+          });
+          this.on("dragleave", (e) => {
+            this.remove_class("canvas-drop-target");
+          });
+          this.on("drop", (e) => {
+            e.preventDefault();
+            this.remove_class("canvas-drop-target");
+            const bcr = this.bcr();
+            const position = {
+              x: e.clientX - bcr[0][0],
+              y: e.clientY - bcr[0][1]
+            };
+            if (this.snapToGrid) {
+              position.x = this.snapToGridValue(position.x);
+              position.y = this.snapToGridValue(position.y);
+            }
+            this.raise("element-dropped", {
+              position,
+              canvas: this,
+              originalEvent: e
+            });
+          });
+        }
+        /**
+         * Sets up background click to deselect all.
+         * @private
+         */
+        _setupBackgroundClick() {
+          this.on("click", (e) => {
+            var _a, _b;
+            if (e.target === this.dom.el || e.target === ((_b = (_a = this.ctrl_gridLayer) == null ? void 0 : _a.dom) == null ? void 0 : _b.el)) {
+              this.deselectAll();
+            }
+          });
+        }
+        // ============================================
+        // Public API
+        // ============================================
+        /**
+         * Adds an element to the canvas at the specified position.
+         * 
+         * @param {Control} element - The control to add
+         * @param {number} x - X position
+         * @param {number} y - Y position
+         * @returns {Control} The added element
+         * 
+         * @example
+         * canvas.addElement(myShape, 100, 150);
+         */
+        addElement(element, x = 0, y = 0) {
+          if (this.snapToGrid) {
+            x = this.snapToGridValue(x);
+            y = this.snapToGridValue(y);
+          }
+          element.style.position = "absolute";
+          element.style.left = `${x}px`;
+          element.style.top = `${y}px`;
+          element.style.pointerEvents = "auto";
+          const id = element._id ? element._id() : `el_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          this._elements.set(id, element);
+          element._canvasId = id;
+          this.ctrl_elementsLayer.add(element);
+          if (this.snapToGrid) {
+            element.on("drag-end", (e) => {
+              const snappedX = this.snapToGridValue(parseInt(element.style.left) || 0);
+              const snappedY = this.snapToGridValue(parseInt(element.style.top) || 0);
+              element.style.left = `${snappedX}px`;
+              element.style.top = `${snappedY}px`;
+            });
+          }
+          this.raise("element-added", {
+            element,
+            position: { x, y },
+            canvas: this
+          });
+          return element;
+        }
+        /**
+         * Removes an element from the canvas.
+         * 
+         * @param {Control} element - The element to remove
+         */
+        removeElement(element) {
+          const id = element._canvasId;
+          if (id && this._elements.has(id)) {
+            this._elements.delete(id);
+            this._selectedElements.delete(element);
+            element.remove();
+            this.raise("element-removed", {
+              element,
+              canvas: this
+            });
+          }
+        }
+        /**
+         * Gets all elements on the canvas.
+         * 
+         * @returns {Control[]} Array of elements
+         */
+        getElements() {
+          return Array.from(this._elements.values());
+        }
+        /**
+         * Gets all selected elements.
+         * 
+         * @returns {Control[]} Array of selected elements
+         */
+        getSelectedElements() {
+          return Array.from(this._selectedElements);
+        }
+        /**
+         * Selects an element.
+         * 
+         * @param {Control} element - Element to select
+         * @param {boolean} [additive=false] - Add to existing selection
+         */
+        selectElement(element, additive = false) {
+          if (!additive) {
+            this.deselectAll();
+          }
+          this._selectedElements.add(element);
+          element.add_class("selected");
+          if (element.doSelect) {
+            element.doSelect();
+          }
+          this.raise("selection-changed", {
+            selected: this.getSelectedElements(),
+            canvas: this
+          });
+        }
+        /**
+         * Deselects an element.
+         * 
+         * @param {Control} element - Element to deselect
+         */
+        deselectElement(element) {
+          this._selectedElements.delete(element);
+          element.remove_class("selected");
+          if (element.doDeselect) {
+            element.doDeselect();
+          }
+          this.raise("selection-changed", {
+            selected: this.getSelectedElements(),
+            canvas: this
+          });
+        }
+        /**
+         * Deselects all elements.
+         */
+        deselectAll() {
+          for (const element of this._selectedElements) {
+            element.remove_class("selected");
+            if (element.doDeselect) {
+              element.doDeselect();
+            }
+          }
+          this._selectedElements.clear();
+          this.raise("selection-changed", {
+            selected: [],
+            canvas: this
+          });
+        }
+        /**
+         * Snaps a value to the nearest grid point.
+         * 
+         * @param {number} value - The value to snap
+         * @returns {number} The snapped value
+         */
+        snapToGridValue(value2) {
+          return Math.round(value2 / this.gridSize) * this.gridSize;
+        }
+        /**
+         * Converts screen coordinates to canvas coordinates.
+         * 
+         * @param {number} screenX - Screen X coordinate
+         * @param {number} screenY - Screen Y coordinate
+         * @returns {CanvasPosition} Canvas coordinates
+         */
+        screenToCanvas(screenX, screenY) {
+          const bcr = this.bcr();
+          return {
+            x: (screenX - bcr[0][0]) / this.zoom,
+            y: (screenY - bcr[0][1]) / this.zoom
+          };
+        }
+        /**
+         * Converts canvas coordinates to screen coordinates.
+         * 
+         * @param {number} canvasX - Canvas X coordinate
+         * @param {number} canvasY - Canvas Y coordinate
+         * @returns {{x: number, y: number}} Screen coordinates
+         */
+        canvasToScreen(canvasX, canvasY) {
+          const bcr = this.bcr();
+          return {
+            x: canvasX * this.zoom + bcr[0][0],
+            y: canvasY * this.zoom + bcr[0][1]
+          };
+        }
+        /**
+         * Sets the zoom level.
+         * 
+         * @param {number} level - Zoom level (1 = 100%)
+         */
+        setZoom(level) {
+          this.zoom = Math.max(this._minZoom, Math.min(this._maxZoom, level));
+          this.ctrl_elementsLayer.style.transform = `scale(${this.zoom})`;
+          this.ctrl_elementsLayer.style.transformOrigin = "top left";
+          this.raise("zoom-changed", {
+            zoom: this.zoom,
+            canvas: this
+          });
+        }
+        /**
+         * Sets grid visibility.
+         * 
+         * @param {boolean} visible - Whether grid should be visible
+         */
+        setGridVisible(visible) {
+          this.showGrid = visible;
+          if (visible) {
+            this.add_class("canvas-grid-visible");
+            this._applyGridPattern();
+          } else {
+            this.remove_class("canvas-grid-visible");
+            this.ctrl_gridLayer.style.backgroundImage = "none";
+          }
+        }
+        /**
+         * Enables or disables snap-to-grid.
+         * 
+         * @param {boolean} enabled - Whether snap should be enabled
+         */
+        setSnapToGrid(enabled) {
+          this.snapToGrid = enabled;
+          if (enabled) {
+            this.add_class("canvas-snap-enabled");
+          } else {
+            this.remove_class("canvas-snap-enabled");
+          }
+        }
+        /**
+         * Clears all elements from the canvas.
+         */
+        clear() {
+          for (const element of this._elements.values()) {
+            element.remove();
+          }
+          this._elements.clear();
+          this._selectedElements.clear();
+          this.raise("canvas-cleared", {
+            canvas: this
+          });
+        }
+        /**
+         * Resizes the canvas.
+         * 
+         * @param {number} width - New width
+         * @param {number} height - New height
+         */
+        resize(width, height2) {
+          this.canvasWidth = width;
+          this.canvasHeight = height2;
+          this.style.width = `${width}px`;
+          this.style.height = `${height2}px`;
+          this.raise("canvas-resized", {
+            width,
+            height: height2,
+            canvas: this
+          });
+        }
+      };
+      module.exports = CanvasControl;
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/canvas/ShapeControl.js
+  var require_ShapeControl = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/canvas/ShapeControl.js"(exports, module) {
+      var jsgui = require_html();
+      var { Control: Control2 } = jsgui;
+      var dragable = require_dragable();
+      var selectable = require_selectable();
+      var ShapeControl = class extends Control2 {
+        /**
+         * Creates a new ShapeControl instance.
+         * 
+         * @param {ShapeControlOptions} spec - Configuration options
+         */
+        constructor(spec = {}) {
+          const {
+            width = 100,
+            height: height2 = 60,
+            label = "",
+            fillColor = "#ffffff",
+            strokeColor = "#333333",
+            strokeWidth = 2,
+            labelColor = "#333333",
+            labelSize = 14,
+            draggable: isDraggable = true,
+            selectable: isSelectable = true,
+            data = null,
+            shapeType,
+            ...parentSpec
+          } = spec;
+          super(parentSpec);
+          this.shapeWidth = width;
+          this.shapeHeight = height2;
+          this.label = label;
+          this.fillColor = fillColor;
+          this.strokeColor = strokeColor;
+          this.strokeWidth = strokeWidth;
+          this.labelColor = labelColor;
+          this.labelSize = labelSize;
+          this._isDraggable = isDraggable;
+          this._isSelectable = isSelectable;
+          this.data = data;
+          this.shapeType = shapeType || this.constructor.SHAPE_TYPE;
+          this.isSelected = false;
+          this.position = [0, 0];
+        }
+        /**
+         * Composes the control's DOM structure.
+         * @protected
+         */
+        compose() {
+          this.add_class("shape-control");
+          this.add_class(`shape-${this.shapeType}`);
+          this.style.width = `${this.shapeWidth}px`;
+          this.style.height = `${this.shapeHeight}px`;
+          this.style.position = "absolute";
+          this.style.cursor = this._isDraggable ? "move" : "pointer";
+          this._createSVG();
+          this.on("server-pre-render", () => {
+            this._fields = this._fields || {};
+            this._fields.shapeWidth = this.shapeWidth;
+            this._fields.shapeHeight = this.shapeHeight;
+            this._fields.label = this.label;
+            this._fields.fillColor = this.fillColor;
+            this._fields.strokeColor = this.strokeColor;
+            this._fields.strokeWidth = this.strokeWidth;
+            this._fields.labelColor = this.labelColor;
+            this._fields.labelSize = this.labelSize;
+            this._fields.shapeType = this.shapeType;
+            this._fields.isSelected = this.isSelected;
+            this._fields.position = this.position;
+            this._fields.data = this.data;
+          });
+        }
+        /**
+         * Creates the SVG element and renders the shape.
+         * @private
+         */
+        _createSVG() {
+          this.ctrl_svg = new Control2({ context: this.context, tagName: "svg" });
+          this.ctrl_svg.add_class("shape-svg");
+          this.ctrl_svg.dom.attributes.width = this.shapeWidth;
+          this.ctrl_svg.dom.attributes.height = this.shapeHeight;
+          this.ctrl_svg.dom.attributes.viewBox = `0 0 ${this.shapeWidth} ${this.shapeHeight}`;
+          this._renderShapeToControl();
+          this.add(this.ctrl_svg);
+        }
+        /**
+         * Renders the shape content to the SVG control.
+         * Override in subclasses for custom shapes.
+         * @protected
+         */
+        _renderShapeToControl() {
+          const shapeCtrl = new Control2({ context: this.context, tagName: "rect" });
+          shapeCtrl.add_class("shape-path");
+          shapeCtrl.dom.attributes.x = this.strokeWidth / 2;
+          shapeCtrl.dom.attributes.y = this.strokeWidth / 2;
+          shapeCtrl.dom.attributes.width = this.shapeWidth - this.strokeWidth;
+          shapeCtrl.dom.attributes.height = this.shapeHeight - this.strokeWidth;
+          shapeCtrl.dom.attributes.fill = this.fillColor;
+          shapeCtrl.dom.attributes.stroke = this.strokeColor;
+          shapeCtrl.dom.attributes["stroke-width"] = this.strokeWidth;
+          this.ctrl_svg.add(shapeCtrl);
+          this.ctrl_shapePath = shapeCtrl;
+          if (this.label) {
+            this._addLabel();
+          }
+        }
+        /**
+         * Adds a label to the shape.
+         * @protected
+         */
+        _addLabel() {
+          const labelCtrl = new Control2({ context: this.context, tagName: "text" });
+          labelCtrl.add_class("shape-label");
+          labelCtrl.dom.attributes.x = this.shapeWidth / 2;
+          labelCtrl.dom.attributes.y = this.shapeHeight / 2;
+          labelCtrl.dom.attributes["text-anchor"] = "middle";
+          labelCtrl.dom.attributes["dominant-baseline"] = "middle";
+          labelCtrl.dom.attributes.fill = this.labelColor;
+          labelCtrl.dom.attributes["font-size"] = this.labelSize;
+          labelCtrl.dom.attributes["font-family"] = "system-ui, sans-serif";
+          labelCtrl.add(this.label);
+          this.ctrl_svg.add(labelCtrl);
+          this.ctrl_label = labelCtrl;
+        }
+        /**
+         * Activates the control.
+         * @protected
+         */
+        activate() {
+          super.activate();
+          if (this._fields) {
+            if (this._fields.shapeWidth) this.shapeWidth = this._fields.shapeWidth;
+            if (this._fields.shapeHeight) this.shapeHeight = this._fields.shapeHeight;
+            if (this._fields.label) this.label = this._fields.label;
+            if (this._fields.fillColor) this.fillColor = this._fields.fillColor;
+            if (this._fields.strokeColor) this.strokeColor = this._fields.strokeColor;
+            if (this._fields.strokeWidth) this.strokeWidth = this._fields.strokeWidth;
+            if (this._fields.isSelected) this.isSelected = this._fields.isSelected;
+            if (this._fields.position) this.position = this._fields.position;
+            if (this._fields.data) this.data = this._fields.data;
+          }
+          if (this._isDraggable) {
+            this._setupDraggable();
+          }
+          if (this._isSelectable) {
+            this._setupSelectable();
+          }
+          this._setupHover();
+        }
+        /**
+         * Sets up draggable mixin.
+         * @private
+         */
+        _setupDraggable() {
+          dragable(this, {
+            mode: "translate",
+            start_distance: 3
+          });
+          this.on("dragstart", () => {
+            this.add_class("shape-dragging");
+            this.raise("drag-start", { shape: this });
+          });
+          this.on("dragend", (e) => {
+            this.remove_class("shape-dragging");
+            if (e.movement_offset) {
+              this.position = [
+                this.position[0] + e.movement_offset[0],
+                this.position[1] + e.movement_offset[1]
+              ];
+            }
+            this.raise("drag-end", {
+              shape: this,
+              position: [...this.position],
+              movementOffset: e.movement_offset || [0, 0]
+            });
+          });
+        }
+        /**
+         * Sets up selectable mixin.
+         * @private
+         */
+        _setupSelectable() {
+          selectable(this, null, {
+            toggle: true,
+            selection_action: ["mousedown"]
+          });
+          this.selectable = true;
+          this.on("change", (e) => {
+            if (e.name === "selected") {
+              this.isSelected = e.value;
+              if (e.value) {
+                this.add_class("shape-selected");
+              } else {
+                this.remove_class("shape-selected");
+              }
+              this.raise("selection-changed", {
+                shape: this,
+                selected: e.value
+              });
+            }
+          });
+        }
+        /**
+         * Sets up hover effect.
+         * @private
+         */
+        _setupHover() {
+          this.on("mouseenter", () => {
+            this.add_class("shape-hovered");
+          });
+          this.on("mouseleave", () => {
+            this.remove_class("shape-hovered");
+          });
+        }
+        // ============================================
+        // Public API
+        // ============================================
+        /**
+         * Gets the connection points for this shape.
+         * Override in subclasses for custom connection points.
+         * 
+         * @returns {ConnectionPoint[]}
+         */
+        getConnectionPoints() {
+          const w = this.shapeWidth;
+          const h = this.shapeHeight;
+          return [
+            { id: "top", x: w / 2, y: 0, direction: "both" },
+            { id: "right", x: w, y: h / 2, direction: "both" },
+            { id: "bottom", x: w / 2, y: h, direction: "both" },
+            { id: "left", x: 0, y: h / 2, direction: "both" }
+          ];
+        }
+        /**
+         * Gets a specific connection point by ID.
+         * 
+         * @param {string} pointId - Connection point ID
+         * @returns {ConnectionPoint|null}
+         */
+        getConnectionPoint(pointId) {
+          return this.getConnectionPoints().find((p) => p.id === pointId) || null;
+        }
+        /**
+         * Gets the absolute position of a connection point.
+         * 
+         * @param {string} pointId - Connection point ID
+         * @returns {{x: number, y: number}|null}
+         */
+        getAbsoluteConnectionPoint(pointId) {
+          const point = this.getConnectionPoint(pointId);
+          if (!point) return null;
+          return {
+            x: this.position[0] + point.x,
+            y: this.position[1] + point.y
+          };
+        }
+        /**
+         * Sets the shape label.
+         * 
+         * @param {string} text - New label text
+         */
+        setLabel(text) {
+          var _a, _b;
+          this.label = text;
+          if ((_b = (_a = this.ctrl_label) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_label.dom.el.textContent = text;
+          }
+          this.raise("label-changed", {
+            shape: this,
+            label: text
+          });
+        }
+        /**
+         * Sets the fill color.
+         * 
+         * @param {string} color - New fill color
+         */
+        setFillColor(color) {
+          var _a, _b;
+          this.fillColor = color;
+          if ((_b = (_a = this.ctrl_shapePath) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_shapePath.dom.el.setAttribute("fill", color);
+          }
+        }
+        /**
+         * Sets the stroke color.
+         * 
+         * @param {string} color - New stroke color
+         */
+        setStrokeColor(color) {
+          var _a, _b;
+          this.strokeColor = color;
+          if ((_b = (_a = this.ctrl_shapePath) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_shapePath.dom.el.setAttribute("stroke", color);
+          }
+        }
+        /**
+         * Resizes the shape.
+         * 
+         * @param {number} width - New width
+         * @param {number} height - New height
+         */
+        resize(width, height2) {
+          var _a, _b;
+          this.shapeWidth = width;
+          this.shapeHeight = height2;
+          this.style.width = `${width}px`;
+          this.style.height = `${height2}px`;
+          if ((_b = (_a = this.ctrl_svg) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_svg.dom.el.setAttribute("width", width);
+            this.ctrl_svg.dom.el.setAttribute("height", height2);
+            this.ctrl_svg.dom.el.setAttribute("viewBox", `0 0 ${width} ${height2}`);
+          }
+          this._updateShapeSize();
+          this.raise("resized", {
+            shape: this,
+            width,
+            height: height2
+          });
+        }
+        /**
+         * Updates the shape path after resize.
+         * Override in subclasses.
+         * @protected
+         */
+        _updateShapeSize() {
+          var _a, _b, _c, _d;
+          if ((_b = (_a = this.ctrl_shapePath) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_shapePath.dom.el.setAttribute("width", this.shapeWidth - this.strokeWidth);
+            this.ctrl_shapePath.dom.el.setAttribute("height", this.shapeHeight - this.strokeWidth);
+          }
+          if ((_d = (_c = this.ctrl_label) == null ? void 0 : _c.dom) == null ? void 0 : _d.el) {
+            this.ctrl_label.dom.el.setAttribute("x", this.shapeWidth / 2);
+            this.ctrl_label.dom.el.setAttribute("y", this.shapeHeight / 2);
+          }
+        }
+        /**
+         * Moves the shape to a position.
+         * 
+         * @param {number} x - X coordinate
+         * @param {number} y - Y coordinate
+         */
+        moveTo(x, y) {
+          this.position = [x, y];
+          this.style.left = `${x}px`;
+          this.style.top = `${y}px`;
+          this.raise("moved", {
+            shape: this,
+            position: [...this.position]
+          });
+        }
+        /**
+         * Gets the bounding box of the shape.
+         * 
+         * @returns {{x: number, y: number, width: number, height: number}}
+         */
+        getBounds() {
+          return {
+            x: this.position[0],
+            y: this.position[1],
+            width: this.shapeWidth,
+            height: this.shapeHeight
+          };
+        }
+        /**
+         * Checks if a point is inside the shape.
+         * 
+         * @param {number} x - X coordinate
+         * @param {number} y - Y coordinate
+         * @returns {boolean}
+         */
+        containsPoint(x, y) {
+          const bounds2 = this.getBounds();
+          return x >= bounds2.x && x <= bounds2.x + bounds2.width && y >= bounds2.y && y <= bounds2.y + bounds2.height;
+        }
+        /**
+         * Serializes the shape to JSON.
+         * 
+         * @returns {Object}
+         */
+        toJSON() {
+          return {
+            shapeType: this.shapeType,
+            position: [...this.position],
+            width: this.shapeWidth,
+            height: this.shapeHeight,
+            label: this.label,
+            fillColor: this.fillColor,
+            strokeColor: this.strokeColor,
+            strokeWidth: this.strokeWidth,
+            labelColor: this.labelColor,
+            labelSize: this.labelSize,
+            data: this.data
+          };
+        }
+      };
+      /**
+       * The shape type identifier.
+       * Override in subclasses.
+       * @type {string}
+       * @static
+       */
+      __publicField(ShapeControl, "SHAPE_TYPE", "shape");
+      var DiamondShape = class extends ShapeControl {
+        /**
+         * @param {ShapeControlOptions} spec
+         */
+        constructor(spec = {}) {
+          super({
+            ...spec,
+            shapeType: "diamond",
+            width: spec.width || 120,
+            height: spec.height || 80
+          });
+        }
+        /**
+         * Renders diamond shape.
+         * @protected
+         */
+        _renderShapeToControl() {
+          const w = this.shapeWidth;
+          const h = this.shapeHeight;
+          const sw = this.strokeWidth;
+          const points = [
+            `${w / 2},${sw}`,
+            // top
+            `${w - sw},${h / 2}`,
+            // right
+            `${w / 2},${h - sw}`,
+            // bottom
+            `${sw},${h / 2}`
+            // left
+          ].join(" ");
+          const shapeCtrl = new Control2({ context: this.context, tagName: "polygon" });
+          shapeCtrl.add_class("shape-path");
+          shapeCtrl.dom.attributes.points = points;
+          shapeCtrl.dom.attributes.fill = this.fillColor;
+          shapeCtrl.dom.attributes.stroke = this.strokeColor;
+          shapeCtrl.dom.attributes["stroke-width"] = this.strokeWidth;
+          this.ctrl_svg.add(shapeCtrl);
+          this.ctrl_shapePath = shapeCtrl;
+          if (this.label) {
+            this._addLabel();
+          }
+        }
+        /**
+         * @protected
+         */
+        _updateShapeSize() {
+          var _a, _b, _c, _d;
+          const w = this.shapeWidth;
+          const h = this.shapeHeight;
+          const sw = this.strokeWidth;
+          const points = [
+            `${w / 2},${sw}`,
+            `${w - sw},${h / 2}`,
+            `${w / 2},${h - sw}`,
+            `${sw},${h / 2}`
+          ].join(" ");
+          if ((_b = (_a = this.ctrl_shapePath) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_shapePath.dom.el.setAttribute("points", points);
+          }
+          if ((_d = (_c = this.ctrl_label) == null ? void 0 : _c.dom) == null ? void 0 : _d.el) {
+            this.ctrl_label.dom.el.setAttribute("x", w / 2);
+            this.ctrl_label.dom.el.setAttribute("y", h / 2);
+          }
+        }
+      };
+      __publicField(DiamondShape, "SHAPE_TYPE", "diamond");
+      var RectangleShape = class extends ShapeControl {
+        /**
+         * @param {ShapeControlOptions} spec
+         */
+        constructor(spec = {}) {
+          super({
+            ...spec,
+            shapeType: "rectangle"
+          });
+          this.borderRadius = spec.borderRadius || 0;
+        }
+        /**
+         * @protected
+         */
+        _renderShapeToControl() {
+          const shapeCtrl = new Control2({ context: this.context, tagName: "rect" });
+          shapeCtrl.add_class("shape-path");
+          shapeCtrl.dom.attributes.x = this.strokeWidth / 2;
+          shapeCtrl.dom.attributes.y = this.strokeWidth / 2;
+          shapeCtrl.dom.attributes.width = this.shapeWidth - this.strokeWidth;
+          shapeCtrl.dom.attributes.height = this.shapeHeight - this.strokeWidth;
+          shapeCtrl.dom.attributes.rx = this.borderRadius;
+          shapeCtrl.dom.attributes.ry = this.borderRadius;
+          shapeCtrl.dom.attributes.fill = this.fillColor;
+          shapeCtrl.dom.attributes.stroke = this.strokeColor;
+          shapeCtrl.dom.attributes["stroke-width"] = this.strokeWidth;
+          this.ctrl_svg.add(shapeCtrl);
+          this.ctrl_shapePath = shapeCtrl;
+          if (this.label) {
+            this._addLabel();
+          }
+        }
+      };
+      __publicField(RectangleShape, "SHAPE_TYPE", "rectangle");
+      var EllipseShape = class extends ShapeControl {
+        /**
+         * @param {ShapeControlOptions} spec
+         */
+        constructor(spec = {}) {
+          super({
+            ...spec,
+            shapeType: "ellipse",
+            width: spec.width || 100,
+            height: spec.height || 50
+          });
+        }
+        /**
+         * @protected
+         */
+        _renderShapeToControl() {
+          const cx = this.shapeWidth / 2;
+          const cy = this.shapeHeight / 2;
+          const rx = (this.shapeWidth - this.strokeWidth) / 2;
+          const ry = (this.shapeHeight - this.strokeWidth) / 2;
+          const shapeCtrl = new Control2({ context: this.context, tagName: "ellipse" });
+          shapeCtrl.add_class("shape-path");
+          shapeCtrl.dom.attributes.cx = cx;
+          shapeCtrl.dom.attributes.cy = cy;
+          shapeCtrl.dom.attributes.rx = rx;
+          shapeCtrl.dom.attributes.ry = ry;
+          shapeCtrl.dom.attributes.fill = this.fillColor;
+          shapeCtrl.dom.attributes.stroke = this.strokeColor;
+          shapeCtrl.dom.attributes["stroke-width"] = this.strokeWidth;
+          this.ctrl_svg.add(shapeCtrl);
+          this.ctrl_shapePath = shapeCtrl;
+          if (this.label) {
+            this._addLabel();
+          }
+        }
+        /**
+         * @protected
+         */
+        _updateShapeSize() {
+          var _a, _b, _c, _d;
+          const cx = this.shapeWidth / 2;
+          const cy = this.shapeHeight / 2;
+          const rx = (this.shapeWidth - this.strokeWidth) / 2;
+          const ry = (this.shapeHeight - this.strokeWidth) / 2;
+          if ((_b = (_a = this.ctrl_shapePath) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_shapePath.dom.el.setAttribute("cx", cx);
+            this.ctrl_shapePath.dom.el.setAttribute("cy", cy);
+            this.ctrl_shapePath.dom.el.setAttribute("rx", rx);
+            this.ctrl_shapePath.dom.el.setAttribute("ry", ry);
+          }
+          if ((_d = (_c = this.ctrl_label) == null ? void 0 : _c.dom) == null ? void 0 : _d.el) {
+            this.ctrl_label.dom.el.setAttribute("x", cx);
+            this.ctrl_label.dom.el.setAttribute("y", cy);
+          }
+        }
+      };
+      __publicField(EllipseShape, "SHAPE_TYPE", "ellipse");
+      var ParallelogramShape = class extends ShapeControl {
+        /**
+         * @param {ShapeControlOptions} spec
+         */
+        constructor(spec = {}) {
+          super({
+            ...spec,
+            shapeType: "parallelogram",
+            width: spec.width || 120,
+            height: spec.height || 50
+          });
+          this.skew = spec.skew || 20;
+        }
+        /**
+         * @protected
+         */
+        _renderShapeToControl() {
+          const w = this.shapeWidth;
+          const h = this.shapeHeight;
+          const s = this.skew;
+          const sw = this.strokeWidth;
+          const points = [
+            `${s},${sw}`,
+            // top-left
+            `${w - sw},${sw}`,
+            // top-right
+            `${w - s},${h - sw}`,
+            // bottom-right
+            `${sw},${h - sw}`
+            // bottom-left
+          ].join(" ");
+          const shapeCtrl = new Control2({ context: this.context, tagName: "polygon" });
+          shapeCtrl.add_class("shape-path");
+          shapeCtrl.dom.attributes.points = points;
+          shapeCtrl.dom.attributes.fill = this.fillColor;
+          shapeCtrl.dom.attributes.stroke = this.strokeColor;
+          shapeCtrl.dom.attributes["stroke-width"] = this.strokeWidth;
+          this.ctrl_svg.add(shapeCtrl);
+          this.ctrl_shapePath = shapeCtrl;
+          if (this.label) {
+            this._addLabel();
+          }
+        }
+        /**
+         * @protected
+         */
+        _updateShapeSize() {
+          var _a, _b, _c, _d;
+          const w = this.shapeWidth;
+          const h = this.shapeHeight;
+          const s = this.skew;
+          const sw = this.strokeWidth;
+          const points = [
+            `${s},${sw}`,
+            `${w - sw},${sw}`,
+            `${w - s},${h - sw}`,
+            `${sw},${h - sw}`
+          ].join(" ");
+          if ((_b = (_a = this.ctrl_shapePath) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            this.ctrl_shapePath.dom.el.setAttribute("points", points);
+          }
+          if ((_d = (_c = this.ctrl_label) == null ? void 0 : _c.dom) == null ? void 0 : _d.el) {
+            this.ctrl_label.dom.el.setAttribute("x", w / 2);
+            this.ctrl_label.dom.el.setAttribute("y", h / 2);
+          }
+        }
+      };
+      __publicField(ParallelogramShape, "SHAPE_TYPE", "parallelogram");
+      module.exports = {
+        ShapeControl,
+        DiamondShape,
+        RectangleShape,
+        EllipseShape,
+        ParallelogramShape
+      };
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/canvas/index.js
+  var require_canvas = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/canvas/index.js"(exports, module) {
+      var CanvasControl = require_CanvasControl();
+      var {
+        ShapeControl,
+        DiamondShape,
+        RectangleShape,
+        EllipseShape,
+        ParallelogramShape
+      } = require_ShapeControl();
+      module.exports = {
+        CanvasControl,
+        ShapeControl,
+        DiamondShape,
+        RectangleShape,
+        EllipseShape,
+        ParallelogramShape
+      };
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/ui/ToolboxControl.js
+  var require_ToolboxControl = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/ui/ToolboxControl.js"(exports, module) {
+      var jsgui = require_html();
+      var { Control: Control2 } = jsgui;
+      var ToolboxControl = class extends Control2 {
+        /**
+         * Creates a new ToolboxControl instance.
+         * 
+         * @param {ToolboxControlOptions} spec - Configuration options
+         * 
+         * @example
+         * const toolbox = new ToolboxControl({
+         *   context: this.context,
+         *   layout: 'grid',
+         *   tools: [
+         *     { id: 'rect', label: 'Rectangle', icon: '▭' }
+         *   ]
+         * });
+         */
+        constructor(spec = {}) {
+          const {
+            tools = [],
+            groups = [],
+            layout = "grid",
+            collapsible = true,
+            title,
+            gridColumns = 2,
+            ...parentSpec
+          } = spec;
+          super(parentSpec);
+          this.tools = tools;
+          this.groups = groups;
+          this.layout = layout;
+          this.collapsible = collapsible;
+          this.title = title;
+          this.gridColumns = gridColumns;
+          this.selectedTool = null;
+          this._toolControls = /* @__PURE__ */ new Map();
+          this._toolFactories = /* @__PURE__ */ new Map();
+          this._groupControls = /* @__PURE__ */ new Map();
+        }
+        /**
+         * Composes the control's DOM structure.
+         * @protected
+         */
+        compose() {
+          this.add_class("toolbox-control");
+          this.add_class(`toolbox-layout-${this.layout}`);
+          if (this.layout === "grid") {
+            this.style.setProperty("--toolbox-columns", this.gridColumns);
+          }
+          if (this.title) {
+            this.ctrl_title = new Control2({ context: this.context, tagName: "div" });
+            this.ctrl_title.add_class("toolbox-title");
+            this.ctrl_title.add(this.title);
+            this.add(this.ctrl_title);
+          }
+          this.ctrl_content = new Control2({ context: this.context, tagName: "div" });
+          this.ctrl_content.add_class("toolbox-content");
+          this.add(this.ctrl_content);
+          if (this.groups.length > 0) {
+            this._renderGroups();
+          } else if (this.tools.length > 0) {
+            this._renderTools(this.tools, this.ctrl_content);
+          }
+          this.on("server-pre-render", () => {
+            var _a;
+            this._fields = this._fields || {};
+            this._fields.layout = this.layout;
+            this._fields.selectedToolId = ((_a = this.selectedTool) == null ? void 0 : _a.id) || null;
+            this._fields.collapsedGroups = this._getCollapsedGroupIds();
+          });
+        }
+        /**
+         * Renders grouped tools.
+         * @private
+         */
+        _renderGroups() {
+          for (const group of this.groups) {
+            const groupCtrl = new Control2({ context: this.context, tagName: "div" });
+            groupCtrl.add_class("toolbox-group");
+            if (group.collapsed) {
+              groupCtrl.add_class("toolbox-group-collapsed");
+            }
+            const headerCtrl = new Control2({ context: this.context, tagName: "div" });
+            headerCtrl.add_class("toolbox-group-header");
+            const collapseIndicator = new Control2({ context: this.context, tagName: "span" });
+            collapseIndicator.add_class("toolbox-collapse-indicator");
+            collapseIndicator.add(group.collapsed ? "\u25B6" : "\u25BC");
+            headerCtrl.add(collapseIndicator);
+            if (group.icon) {
+              const iconCtrl = new Control2({ context: this.context, tagName: "span" });
+              iconCtrl.add_class("toolbox-group-icon");
+              iconCtrl.add(group.icon);
+              headerCtrl.add(iconCtrl);
+            }
+            const labelCtrl = new Control2({ context: this.context, tagName: "span" });
+            labelCtrl.add_class("toolbox-group-label");
+            labelCtrl.add(group.label);
+            headerCtrl.add(labelCtrl);
+            groupCtrl.add(headerCtrl);
+            const toolsContainer = new Control2({ context: this.context, tagName: "div" });
+            toolsContainer.add_class("toolbox-group-tools");
+            if (this.layout === "grid") {
+              toolsContainer.add_class("toolbox-grid");
+            }
+            this._renderTools(group.tools, toolsContainer);
+            groupCtrl.add(toolsContainer);
+            groupCtrl._groupId = group.id;
+            groupCtrl._headerCtrl = headerCtrl;
+            groupCtrl._toolsContainer = toolsContainer;
+            groupCtrl._collapseIndicator = collapseIndicator;
+            this._groupControls.set(group.id, groupCtrl);
+            this.ctrl_content.add(groupCtrl);
+          }
+        }
+        /**
+         * Renders a list of tools into a container.
+         * @param {ToolDefinition[]} tools - Tools to render
+         * @param {Control} container - Container to add tools to
+         * @private
+         */
+        _renderTools(tools, container) {
+          for (const tool of tools) {
+            const toolCtrl = this._createToolControl(tool);
+            container.add(toolCtrl);
+            this._toolControls.set(tool.id, toolCtrl);
+          }
+        }
+        /**
+         * Creates a control for a single tool.
+         * @param {ToolDefinition} tool - Tool definition
+         * @returns {Control} The tool control
+         * @private
+         */
+        _createToolControl(tool) {
+          const toolCtrl = new Control2({ context: this.context, tagName: "div" });
+          toolCtrl.add_class("toolbox-tool");
+          toolCtrl._toolDef = tool;
+          if (tool.disabled) {
+            toolCtrl.add_class("toolbox-tool-disabled");
+          }
+          toolCtrl.dom.attributes.draggable = "true";
+          if (tool.icon) {
+            const iconCtrl = new Control2({ context: this.context, tagName: "span" });
+            iconCtrl.add_class("toolbox-tool-icon");
+            if (/^[a-zA-Z]/.test(tool.icon) && tool.icon.includes("-")) {
+              iconCtrl.add_class(tool.icon);
+            } else {
+              iconCtrl.add(tool.icon);
+            }
+            toolCtrl.add(iconCtrl);
+          }
+          const labelCtrl = new Control2({ context: this.context, tagName: "span" });
+          labelCtrl.add_class("toolbox-tool-label");
+          labelCtrl.add(tool.label);
+          toolCtrl.add(labelCtrl);
+          return toolCtrl;
+        }
+        /**
+         * Gets IDs of collapsed groups.
+         * @returns {string[]}
+         * @private
+         */
+        _getCollapsedGroupIds() {
+          const collapsed = [];
+          for (const [id, ctrl2] of this._groupControls) {
+            if (ctrl2.has_class("toolbox-group-collapsed")) {
+              collapsed.push(id);
+            }
+          }
+          return collapsed;
+        }
+        /**
+         * Activates the control.
+         * @protected
+         */
+        activate() {
+          var _a, _b;
+          super.activate();
+          if ((_a = this._fields) == null ? void 0 : _a.collapsedGroups) {
+            for (const groupId of this._fields.collapsedGroups) {
+              const groupCtrl = this._groupControls.get(groupId);
+              if (groupCtrl) {
+                groupCtrl.add_class("toolbox-group-collapsed");
+                if (groupCtrl._collapseIndicator) {
+                  groupCtrl._collapseIndicator.dom.el.textContent = "\u25B6";
+                }
+              }
+            }
+          }
+          if ((_b = this._fields) == null ? void 0 : _b.selectedToolId) {
+            const toolCtrl = this._toolControls.get(this._fields.selectedToolId);
+            if (toolCtrl) {
+              this._selectToolControl(toolCtrl);
+            }
+          }
+          this._setupEventHandlers();
+        }
+        /**
+         * Sets up event handlers for tools and groups.
+         * @private
+         */
+        _setupEventHandlers() {
+          for (const [id, toolCtrl] of this._toolControls) {
+            const tool = toolCtrl._toolDef;
+            toolCtrl.on("click", (e) => {
+              if (!tool.disabled) {
+                this.selectTool(tool.id);
+              }
+            });
+            toolCtrl.on("dragstart", (e) => {
+              if (!tool.disabled) {
+                e.dataTransfer.setData("application/x-toolbox-tool", JSON.stringify(tool));
+                e.dataTransfer.effectAllowed = "copy";
+                toolCtrl.add_class("toolbox-tool-dragging");
+                this.raise("tool-drag-start", {
+                  tool,
+                  toolbox: this
+                });
+              }
+            });
+            toolCtrl.on("dragend", (e) => {
+              toolCtrl.remove_class("toolbox-tool-dragging");
+              this.raise("tool-drag-end", {
+                tool,
+                toolbox: this
+              });
+            });
+          }
+          if (this.collapsible) {
+            for (const [id, groupCtrl] of this._groupControls) {
+              groupCtrl._headerCtrl.on("click", () => {
+                this.toggleGroup(id);
+              });
+            }
+          }
+        }
+        /**
+         * Selects a tool control visually.
+         * @param {Control} toolCtrl - Tool control to select
+         * @private
+         */
+        _selectToolControl(toolCtrl) {
+          for (const ctrl2 of this._toolControls.values()) {
+            ctrl2.remove_class("toolbox-tool-selected");
+          }
+          toolCtrl.add_class("toolbox-tool-selected");
+          this.selectedTool = toolCtrl._toolDef;
+        }
+        // ============================================
+        // Public API
+        // ============================================
+        /**
+         * Selects a tool by ID.
+         * 
+         * @param {string} toolId - ID of tool to select
+         */
+        selectTool(toolId) {
+          const toolCtrl = this._toolControls.get(toolId);
+          if (toolCtrl && !toolCtrl._toolDef.disabled) {
+            this._selectToolControl(toolCtrl);
+            this.raise("tool-selected", {
+              tool: this.selectedTool,
+              toolbox: this
+            });
+          }
+        }
+        /**
+         * Deselects the current tool.
+         */
+        deselectTool() {
+          for (const ctrl2 of this._toolControls.values()) {
+            ctrl2.remove_class("toolbox-tool-selected");
+          }
+          this.selectedTool = null;
+          this.raise("tool-deselected", {
+            toolbox: this
+          });
+        }
+        /**
+         * Gets the currently selected tool.
+         * 
+         * @returns {ToolDefinition|null}
+         */
+        getSelectedTool() {
+          return this.selectedTool;
+        }
+        /**
+         * Toggles a group's collapsed state.
+         * 
+         * @param {string} groupId - ID of group to toggle
+         */
+        toggleGroup(groupId) {
+          const groupCtrl = this._groupControls.get(groupId);
+          if (!groupCtrl) return;
+          const isCollapsed = groupCtrl.has_class("toolbox-group-collapsed");
+          if (isCollapsed) {
+            this.expandGroup(groupId);
+          } else {
+            this.collapseGroup(groupId);
+          }
+        }
+        /**
+         * Collapses a group.
+         * 
+         * @param {string} groupId - ID of group to collapse
+         */
+        collapseGroup(groupId) {
+          var _a, _b;
+          const groupCtrl = this._groupControls.get(groupId);
+          if (!groupCtrl) return;
+          groupCtrl.add_class("toolbox-group-collapsed");
+          if ((_b = (_a = groupCtrl._collapseIndicator) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            groupCtrl._collapseIndicator.dom.el.textContent = "\u25B6";
+          }
+          this.raise("group-collapsed", {
+            groupId,
+            toolbox: this
+          });
+        }
+        /**
+         * Expands a group.
+         * 
+         * @param {string} groupId - ID of group to expand
+         */
+        expandGroup(groupId) {
+          var _a, _b;
+          const groupCtrl = this._groupControls.get(groupId);
+          if (!groupCtrl) return;
+          groupCtrl.remove_class("toolbox-group-collapsed");
+          if ((_b = (_a = groupCtrl._collapseIndicator) == null ? void 0 : _a.dom) == null ? void 0 : _b.el) {
+            groupCtrl._collapseIndicator.dom.el.textContent = "\u25BC";
+          }
+          this.raise("group-expanded", {
+            groupId,
+            toolbox: this
+          });
+        }
+        /**
+         * Registers a factory function for creating tool instances.
+         * 
+         * @param {string} toolId - ID of the tool
+         * @param {Function} factory - Factory function (tool, position) => Control
+         * 
+         * @example
+         * toolbox.registerToolFactory('rectangle', (tool, pos) => {
+         *   return new RectangleShape({ context, position: pos });
+         * });
+         */
+        registerToolFactory(toolId, factory) {
+          this._toolFactories.set(toolId, factory);
+        }
+        /**
+         * Creates an instance of a tool using its registered factory.
+         * 
+         * @param {string} toolId - ID of the tool
+         * @param {{x: number, y: number}} position - Position for the new instance
+         * @returns {Control|null} The created control, or null if no factory registered
+         */
+        createToolInstance(toolId, position) {
+          const factory = this._toolFactories.get(toolId);
+          const toolCtrl = this._toolControls.get(toolId);
+          if (!factory || !toolCtrl) return null;
+          return factory(toolCtrl._toolDef, position);
+        }
+        /**
+         * Enables a tool.
+         * 
+         * @param {string} toolId - ID of tool to enable
+         */
+        enableTool(toolId) {
+          const toolCtrl = this._toolControls.get(toolId);
+          if (toolCtrl) {
+            toolCtrl._toolDef.disabled = false;
+            toolCtrl.remove_class("toolbox-tool-disabled");
+            toolCtrl.dom.attributes.draggable = "true";
+          }
+        }
+        /**
+         * Disables a tool.
+         * 
+         * @param {string} toolId - ID of tool to disable
+         */
+        disableTool(toolId) {
+          var _a;
+          const toolCtrl = this._toolControls.get(toolId);
+          if (toolCtrl) {
+            toolCtrl._toolDef.disabled = true;
+            toolCtrl.add_class("toolbox-tool-disabled");
+            toolCtrl.dom.attributes.draggable = "false";
+            if (((_a = this.selectedTool) == null ? void 0 : _a.id) === toolId) {
+              this.deselectTool();
+            }
+          }
+        }
+        /**
+         * Adds a new tool dynamically.
+         * 
+         * @param {ToolDefinition} tool - Tool to add
+         * @param {string} [groupId] - Group to add to (if using groups)
+         */
+        addTool(tool, groupId) {
+          if (this._toolControls.has(tool.id)) {
+            console.warn(`Tool with id "${tool.id}" already exists`);
+            return;
+          }
+          const toolCtrl = this._createToolControl(tool);
+          this._toolControls.set(tool.id, toolCtrl);
+          if (groupId && this._groupControls.has(groupId)) {
+            const groupCtrl = this._groupControls.get(groupId);
+            groupCtrl._toolsContainer.add(toolCtrl);
+          } else {
+            this.ctrl_content.add(toolCtrl);
+          }
+          if (this.dom.el) {
+            toolCtrl.pre_activate();
+            toolCtrl.activate();
+            this._setupEventHandlers();
+          }
+          this.raise("tool-added", {
+            tool,
+            groupId,
+            toolbox: this
+          });
+        }
+        /**
+         * Removes a tool.
+         * 
+         * @param {string} toolId - ID of tool to remove
+         */
+        removeTool(toolId) {
+          var _a;
+          const toolCtrl = this._toolControls.get(toolId);
+          if (!toolCtrl) return;
+          const tool = toolCtrl._toolDef;
+          toolCtrl.remove();
+          this._toolControls.delete(toolId);
+          this._toolFactories.delete(toolId);
+          if (((_a = this.selectedTool) == null ? void 0 : _a.id) === toolId) {
+            this.selectedTool = null;
+          }
+          this.raise("tool-removed", {
+            tool,
+            toolbox: this
+          });
+        }
+        /**
+         * Sets the layout mode.
+         * 
+         * @param {'grid'|'list'|'compact'} mode - New layout mode
+         */
+        setLayout(mode) {
+          this.remove_class(`toolbox-layout-${this.layout}`);
+          this.layout = mode;
+          this.add_class(`toolbox-layout-${this.layout}`);
+        }
+        /**
+         * Gets all tools (flat list, regardless of grouping).
+         * 
+         * @returns {ToolDefinition[]}
+         */
+        getAllTools() {
+          return Array.from(this._toolControls.values()).map((ctrl2) => ctrl2._toolDef);
+        }
+      };
+      module.exports = ToolboxControl;
+    }
+  });
+
+  // src/ui/server/shared/isomorphic/controls/ui/index.js
+  var require_ui = __commonJS({
+    "src/ui/server/shared/isomorphic/controls/ui/index.js"(exports, module) {
+      var ToolboxControl = require_ToolboxControl();
+      module.exports = {
+        ToolboxControl
+      };
+    }
+  });
+
   // src/ui/server/shared/isomorphic/controls/index.js
   var require_controls2 = __commonJS({
     "src/ui/server/shared/isomorphic/controls/index.js"(exports, module) {
       "use strict";
       var { ResizableSplitLayoutControl } = require_ResizableSplitLayoutControl();
+      var { DraggableControl, SelectableControl } = require_interactive();
+      var {
+        CanvasControl,
+        ShapeControl,
+        DiamondShape,
+        RectangleShape,
+        EllipseShape,
+        ParallelogramShape
+      } = require_canvas();
+      var { ToolboxControl } = require_ui();
       module.exports = {
-        ResizableSplitLayoutControl
+        // Layout
+        ResizableSplitLayoutControl,
+        // Interactive
+        DraggableControl,
+        SelectableControl,
+        // Canvas & Shapes
+        CanvasControl,
+        ShapeControl,
+        DiamondShape,
+        RectangleShape,
+        EllipseShape,
+        ParallelogramShape,
+        // UI
+        ToolboxControl
       };
     }
   });
@@ -38891,28 +40982,29 @@ body .overlay {
             nameHeader.add(sortIcon);
           }
           headerRow.add(nameHeader);
-          if (this.columns.mtime) {
-            const mtimeHeader = new jsgui.Control({ context: this.context, tagName: "div" });
-            mtimeHeader.add_class("doc-nav__col-header");
-            mtimeHeader.add_class("doc-nav__col-header--mtime");
-            mtimeHeader.add_class("doc-nav__col-header--sortable");
-            if (this.sortBy === "mtime") {
-              mtimeHeader.add_class("doc-nav__col-header--active");
-            }
-            mtimeHeader.dom.attributes["data-sort-by"] = "mtime";
-            mtimeHeader.dom.attributes["data-sort-order"] = this.sortBy === "mtime" ? this.sortOrder : "desc";
-            mtimeHeader.dom.attributes.title = "Click to sort by date modified";
-            const mtimeText = new jsgui.Control({ context: this.context, tagName: "span" });
-            mtimeText.add(new StringControl({ context: this.context, text: "Modified" }));
-            mtimeHeader.add(mtimeText);
-            if (this.sortBy === "mtime") {
-              const sortIcon = new jsgui.Control({ context: this.context, tagName: "span" });
-              sortIcon.add_class("doc-nav__sort-icon");
-              sortIcon.add(new StringControl({ context: this.context, text: this.sortOrder === "asc" ? " \u25B2" : " \u25BC" }));
-              mtimeHeader.add(sortIcon);
-            }
-            headerRow.add(mtimeHeader);
+          const mtimeHeader = new jsgui.Control({ context: this.context, tagName: "div" });
+          mtimeHeader.add_class("doc-nav__col-header");
+          mtimeHeader.add_class("doc-nav__col-header--mtime");
+          mtimeHeader.add_class("doc-nav__col-header--sortable");
+          if (this.sortBy === "mtime") {
+            mtimeHeader.add_class("doc-nav__col-header--active");
           }
+          if (!this.columns.mtime) {
+            mtimeHeader.dom.attributes.style = "display: none;";
+          }
+          mtimeHeader.dom.attributes["data-sort-by"] = "mtime";
+          mtimeHeader.dom.attributes["data-sort-order"] = this.sortBy === "mtime" ? this.sortOrder : "desc";
+          mtimeHeader.dom.attributes.title = "Click to sort by date modified";
+          const mtimeText = new jsgui.Control({ context: this.context, tagName: "span" });
+          mtimeText.add(new StringControl({ context: this.context, text: "Modified" }));
+          mtimeHeader.add(mtimeText);
+          if (this.sortBy === "mtime") {
+            const sortIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+            sortIcon.add_class("doc-nav__sort-icon");
+            sortIcon.add(new StringControl({ context: this.context, text: this.sortOrder === "asc" ? " \u25B2" : " \u25BC" }));
+            mtimeHeader.add(sortIcon);
+          }
+          headerRow.add(mtimeHeader);
           const optionsBtn = new jsgui.Control({ context: this.context, tagName: "button" });
           optionsBtn.add_class("doc-nav__col-options-btn");
           optionsBtn.dom.attributes.type = "button";
@@ -39039,18 +41131,16 @@ body .overlay {
             label.add(new StringControl({ context: this.context, text: node.name }));
             nameCell.add(label);
             rowContainer.add(nameCell);
-            if (this.columns.mtime && node.mtime) {
-              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-              mtimeCell.add_class("doc-nav__cell");
-              mtimeCell.add_class("doc-nav__cell--mtime");
-              mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
-              rowContainer.add(mtimeCell);
-            } else if (this.columns.mtime) {
-              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-              mtimeCell.add_class("doc-nav__cell");
-              mtimeCell.add_class("doc-nav__cell--mtime");
-              rowContainer.add(mtimeCell);
+            const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+            mtimeCell.add_class("doc-nav__cell");
+            mtimeCell.add_class("doc-nav__cell--mtime");
+            if (!this.columns.mtime) {
+              mtimeCell.dom.attributes.style = "display: none;";
             }
+            if (node.mtime) {
+              mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
+            }
+            rowContainer.add(mtimeCell);
             summary.add(rowContainer);
             details.add(summary);
             if (node.children && node.children.length > 0) {
@@ -39082,18 +41172,16 @@ body .overlay {
             label.add(new StringControl({ context: this.context, text: this._formatFileName(node.name) }));
             nameCell.add(label);
             rowContainer.add(nameCell);
-            if (this.columns.mtime && node.mtime) {
-              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-              mtimeCell.add_class("doc-nav__cell");
-              mtimeCell.add_class("doc-nav__cell--mtime");
-              mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
-              rowContainer.add(mtimeCell);
-            } else if (this.columns.mtime) {
-              const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-              mtimeCell.add_class("doc-nav__cell");
-              mtimeCell.add_class("doc-nav__cell--mtime");
-              rowContainer.add(mtimeCell);
+            const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+            mtimeCell.add_class("doc-nav__cell");
+            mtimeCell.add_class("doc-nav__cell--mtime");
+            if (!this.columns.mtime) {
+              mtimeCell.dom.attributes.style = "display: none;";
             }
+            if (node.mtime) {
+              mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
+            }
+            rowContainer.add(mtimeCell);
             link.add(rowContainer);
             item2.add(link);
           }
@@ -39656,6 +41744,9 @@ body .overlay {
         constructor(spec = {}) {
           super({ ...spec });
           this.__type_name = "column_context_menu";
+          this._columns = {
+            mtime: false
+          };
         }
         /**
          * Activate the control - bind event listeners
@@ -39666,10 +41757,13 @@ body .overlay {
           super.activate();
           const el = (_a = this.dom) == null ? void 0 : _a.el;
           if (!el) return;
+          const urlParams = new URLSearchParams(window.location.search);
+          this._columns.mtime = urlParams.get("col_mtime") === "1";
           el.addEventListener("change", this._handleColumnToggle.bind(this));
+          console.log("[ColumnContextMenuControl] Activated, mtime visible:", this._columns.mtime);
         }
         /**
-         * Handle checkbox change to toggle column visibility
+         * Handle checkbox change to toggle column visibility - INSTANT client-side
          * @private
          */
         _handleColumnToggle(e) {
@@ -39677,13 +41771,56 @@ body .overlay {
           if (!toggle) return;
           const column = toggle.getAttribute("data-column-toggle");
           const isChecked = toggle.checked;
+          console.log("[ColumnContextMenuControl] Toggle column", column, "visible:", isChecked);
+          this._toggleColumnClientSide(column, isChecked);
+          this._updateUrlSilently(column, isChecked);
+          this.hide();
+        }
+        /**
+         * Toggle column visibility client-side without page reload
+         * @private
+         */
+        _toggleColumnClientSide(column, visible) {
+          if (column === "mtime") {
+            this._toggleMtimeColumn(visible);
+          }
+          this._columns[column] = visible;
+        }
+        /**
+         * Toggle the mtime (Last Modified) column
+         * @private
+         */
+        _toggleMtimeColumn(visible) {
+          const mtimeHeader = document.querySelector(".doc-nav__col-header--mtime");
+          if (mtimeHeader) {
+            mtimeHeader.style.display = visible ? "" : "none";
+          }
+          const navItems = document.querySelectorAll(".doc-nav__item");
+          navItems.forEach((item2) => {
+            if (visible) {
+              item2.classList.add("doc-nav__item--with-columns");
+            } else {
+              item2.classList.remove("doc-nav__item--with-columns");
+            }
+          });
+          const mtimeCells = document.querySelectorAll(".doc-nav__cell--mtime");
+          mtimeCells.forEach((cell) => {
+            cell.style.display = visible ? "" : "none";
+          });
+          console.log("[ColumnContextMenuControl] Toggled mtime column, visible:", visible, "header:", !!mtimeHeader, "cells:", mtimeCells.length);
+        }
+        /**
+         * Update URL without triggering page reload
+         * @private
+         */
+        _updateUrlSilently(column, visible) {
           const url = new URL(window.location.href);
-          if (isChecked) {
+          if (visible) {
             url.searchParams.set("col_" + column, "1");
           } else {
             url.searchParams.delete("col_" + column);
           }
-          window.location.href = url.toString();
+          window.history.replaceState({}, "", url.toString());
         }
       };
       module.exports = { ColumnContextMenuControl };
@@ -39706,6 +41843,8 @@ body .overlay {
           super({ ...spec, tagName: "div", __type_name: "column_header" });
           this.contextMenuSelector = spec.contextMenuSelector || "[data-context-menu='columns']";
           this._contextMenuControl = null;
+          this._sortBy = "name";
+          this._sortOrder = "asc";
         }
         /**
          * Get the context menu control (lazy lookup)
@@ -39728,16 +41867,19 @@ body .overlay {
           this.__active = true;
           const el = (_a = this.dom) == null ? void 0 : _a.el;
           if (!el) return;
+          const urlParams = new URLSearchParams(window.location.search);
+          this._sortBy = urlParams.get("sort_by") || "name";
+          this._sortOrder = urlParams.get("sort_order") || "asc";
           el.addEventListener("click", this._handleClick.bind(this));
           el.addEventListener("contextmenu", this._handleContextMenu.bind(this));
           const optionsBtn = el.querySelector(".doc-nav__col-options-btn, [data-action='show-column-menu']");
           if (optionsBtn) {
             optionsBtn.addEventListener("click", this._handleOptionsClick.bind(this));
           }
-          console.log("[ColumnHeaderControl] Activated");
+          console.log("[ColumnHeaderControl] Activated, sort:", this._sortBy, this._sortOrder);
         }
         /**
-         * Handle click on sortable headers
+         * Handle click on sortable headers - INSTANT client-side sort
          * @private
          */
         _handleClick(e) {
@@ -39754,11 +41896,107 @@ body .overlay {
           } else {
             newOrder = sortBy === "mtime" ? "desc" : "asc";
           }
+          console.log("[ColumnHeaderControl] Sorting by", sortBy, newOrder);
+          this._sortClientSide(sortBy, newOrder);
+          this._updateUrlSilently(sortBy, newOrder);
+        }
+        /**
+         * Sort the navigation tree client-side without page reload
+         * @private
+         */
+        _sortClientSide(sortBy, sortOrder) {
+          const tree = document.querySelector(".doc-nav__tree");
+          if (!tree) return;
+          this._sortList(tree, sortBy, sortOrder);
+          this._updateHeaderUI(sortBy, sortOrder);
+          this._sortBy = sortBy;
+          this._sortOrder = sortOrder;
+        }
+        /**
+         * Recursively sort a list element
+         * @private
+         */
+        _sortList(container, sortBy, sortOrder) {
+          const lists = container.querySelectorAll("ul.doc-nav__list");
+          lists.forEach((list) => {
+            const items = Array.from(list.children).filter((el) => el.tagName === "LI");
+            if (items.length <= 1) return;
+            items.sort((a, b) => {
+              var _a, _b;
+              const aIsFolder = a.classList.contains("doc-nav__item--folder");
+              const bIsFolder = b.classList.contains("doc-nav__item--folder");
+              if (aIsFolder !== bIsFolder) {
+                return aIsFolder ? -1 : 1;
+              }
+              let aVal, bVal;
+              if (sortBy === "mtime") {
+                const aMtimeCell = a.querySelector(".doc-nav__cell--mtime");
+                const bMtimeCell = b.querySelector(".doc-nav__cell--mtime");
+                aVal = ((_a = aMtimeCell == null ? void 0 : aMtimeCell.textContent) == null ? void 0 : _a.trim()) || "";
+                bVal = ((_b = bMtimeCell == null ? void 0 : bMtimeCell.textContent) == null ? void 0 : _b.trim()) || "";
+                aVal = this._parseDateString(aVal);
+                bVal = this._parseDateString(bVal);
+              } else {
+                const aLabel = a.querySelector(".doc-nav__label");
+                const bLabel = b.querySelector(".doc-nav__label");
+                aVal = ((aLabel == null ? void 0 : aLabel.textContent) || "").toLowerCase();
+                bVal = ((bLabel == null ? void 0 : bLabel.textContent) || "").toLowerCase();
+              }
+              let result;
+              if (sortBy === "mtime") {
+                result = aVal - bVal;
+              } else {
+                result = aVal.localeCompare(bVal);
+              }
+              return sortOrder === "desc" ? -result : result;
+            });
+            items.forEach((item2) => list.appendChild(item2));
+          });
+        }
+        /**
+         * Parse MM-DD-YY date string to timestamp
+         * @private
+         */
+        _parseDateString(str) {
+          if (!str) return 0;
+          const parts = str.split("-");
+          if (parts.length !== 3) return 0;
+          const [month, day, year] = parts;
+          const fullYear = parseInt(year, 10) + 2e3;
+          return new Date(fullYear, parseInt(month, 10) - 1, parseInt(day, 10)).getTime();
+        }
+        /**
+         * Update header UI to reflect current sort state
+         * @private
+         */
+        _updateHeaderUI(sortBy, sortOrder) {
+          var _a;
+          const el = (_a = this.dom) == null ? void 0 : _a.el;
+          if (!el) return;
+          el.querySelectorAll(".doc-nav__col-header--sortable").forEach((header) => {
+            header.classList.remove("doc-nav__col-header--active");
+            const oldIcon = header.querySelector(".doc-nav__sort-icon");
+            if (oldIcon) oldIcon.remove();
+          });
+          const activeHeader = el.querySelector(`[data-sort-by="${sortBy}"]`);
+          if (activeHeader) {
+            activeHeader.classList.add("doc-nav__col-header--active");
+            activeHeader.setAttribute("data-sort-order", sortOrder);
+            const icon = document.createElement("span");
+            icon.className = "doc-nav__sort-icon";
+            icon.textContent = sortOrder === "asc" ? " \u25B2" : " \u25BC";
+            activeHeader.appendChild(icon);
+          }
+        }
+        /**
+         * Update URL without triggering page reload
+         * @private
+         */
+        _updateUrlSilently(sortBy, sortOrder) {
           const url = new URL(window.location.href);
           url.searchParams.set("sort_by", sortBy);
-          url.searchParams.set("sort_order", newOrder);
-          console.log("[ColumnHeaderControl] Sorting by", sortBy, newOrder);
-          window.location.href = url.toString();
+          url.searchParams.set("sort_order", sortOrder);
+          window.history.replaceState({}, "", url.toString());
         }
         /**
          * Handle right-click to show context menu
@@ -40328,6 +42566,7 @@ body .overlay {
             this._showError(err.message);
           } finally {
             this.isNavigating = false;
+            document.body.classList.remove("docs-loading");
           }
         }
         /**
@@ -40362,8 +42601,10 @@ body .overlay {
          * Show loading state in content area
          */
         _showLoading() {
+          document.body.classList.add("docs-loading");
           this._ensureContentTarget();
           if (!this.contentTarget) return;
+          this.contentTarget.classList.add("doc-viewer__content--loading");
           this.contentTarget.innerHTML = `
       <div class="doc-viewer__loading" style="display: flex; justify-content: center; align-items: center; padding: 2rem;">
         <div style="text-align: center;">
@@ -40394,13 +42635,22 @@ body .overlay {
         }
         /**
          * Render document content into the target
-         * @param {Object} content - { path, title, html }
+         * @param {Object} content - { path, title, html, isSvg? }
          */
         _renderContent(content) {
-          var _a;
+          var _a, _b;
           this._ensureContentTarget();
           if (!this.contentTarget) return;
+          this.contentTarget.classList.remove("doc-viewer__content--loading");
           const breadcrumb = this._buildBreadcrumbHtml(content.path);
+          const isSvg = content.isSvg || ((_a = content.path) == null ? void 0 : _a.toLowerCase().endsWith(".svg"));
+          if (this.mainEl) {
+            if (isSvg) {
+              this.mainEl.classList.add("doc-viewer--svg");
+            } else {
+              this.mainEl.classList.remove("doc-viewer--svg");
+            }
+          }
           this.contentTarget.innerHTML = `
       <header class="doc-viewer__header">
         ${breadcrumb}
@@ -40412,11 +42662,14 @@ body .overlay {
       </header>
       <div class="doc-content">${content.html || ""}</div>
     `;
-          const footer = (_a = this.mainEl) == null ? void 0 : _a.querySelector("footer.doc-viewer__footer");
+          const footer = (_b = this.mainEl) == null ? void 0 : _b.querySelector("footer.doc-viewer__footer");
           if (footer && content.path) {
             footer.innerHTML = `<span class="doc-viewer__path-info">\u{1F4C1} ${this._escapeHtml(content.path)}</span>`;
           }
-          this.contentTarget.scrollTop = 0;
+          const contentColumn = document.querySelector(".doc-app__content-column");
+          if (contentColumn) {
+            contentColumn.scrollTop = 0;
+          }
           if (typeof Prism !== "undefined") {
             Prism.highlightAllUnder(this.contentTarget);
           }

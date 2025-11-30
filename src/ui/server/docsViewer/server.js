@@ -236,15 +236,26 @@ function createDocsViewerServer(options = {}) {
   });
 
   // API endpoint to get document content
+  // This endpoint is used by the client-side SPA navigation for instant doc loading
   app.get("/api/doc", (req, res) => {
     const docPath = req.query.path;
     if (!docPath) {
       return res.status(400).json({ error: "Missing path parameter" });
     }
     
-    const content = loadDocContent(docsPath, docPath);
+    // Create a jsgui context so SVGs render via the isomorphic control system
+    // This ensures SVGs look identical whether loaded via full page or SPA navigation
+    const context = new jsgui.Page_Context();
+    const content = loadDocContent(docsPath, docPath, context);
     if (!content) {
       return res.status(404).json({ error: "Document not found" });
+    }
+    
+    // If SVG was rendered via jsgui3 controls, serialize it to HTML
+    if (content.svgControl) {
+      content.html = content.svgControl.all_html_render();
+      content.isSvg = true;
+      delete content.svgControl; // Don't send the control object
     }
     
     res.json(content);

@@ -1,0 +1,397 @@
+/**
+ * Shared Isomorphic Controls - CSS Styles
+ * 
+ * Default styles for shared jsgui3 controls.
+ * Import this file in your app's CSS bundle.
+ * 
+ * These styles provide sensible defaults and can be overridden
+ * using CSS custom properties (variables) or by targeting the
+ * specific classes with higher specificity.
+ * 
+ * @file shared-controls.css
+ */
+
+/* ============================================
+   CSS Custom Properties (Theme Variables)
+   ============================================ */
+
+:root {
+  /* Canvas */
+  --canvas-bg: #ffffff;
+  --canvas-grid-color: #e0e0e0;
+  --canvas-drop-highlight: rgba(66, 133, 244, 0.2);
+  
+  /* Shapes */
+  --shape-fill: #ffffff;
+  --shape-stroke: #333333;
+  --shape-stroke-width: 2px;
+  --shape-selected-stroke: #2196f3;
+  --shape-hover-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  
+  /* Toolbox */
+  --toolbox-bg: #f5f5f5;
+  --toolbox-border: #e0e0e0;
+  --toolbox-tool-bg: #ffffff;
+  --toolbox-tool-hover-bg: #e3f2fd;
+  --toolbox-tool-selected-bg: #bbdefb;
+  --toolbox-tool-disabled-opacity: 0.5;
+  
+  /* Selection */
+  --selection-color: #2196f3;
+  --selection-handle-size: 8px;
+  
+  /* Typography */
+  --control-font-family: system-ui, -apple-system, sans-serif;
+  --control-font-size: 14px;
+}
+
+/* ============================================
+   DraggableControl
+   ============================================ */
+
+.draggable-control {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.draggable-control.draggable {
+  cursor: grab;
+}
+
+.draggable-control.dragging {
+  cursor: grabbing;
+  opacity: 0.9;
+  z-index: 1000;
+}
+
+.draggable-control.drag-mode-translate {
+  will-change: transform;
+}
+
+.draggable-control.drag-mode-within-parent {
+  position: absolute;
+}
+
+/* ============================================
+   SelectableControl
+   ============================================ */
+
+.selectable-control {
+  cursor: pointer;
+}
+
+.selectable-control.selectable {
+  transition: background-color 0.15s ease;
+}
+
+.selectable-control.selected {
+  outline: 2px solid var(--selection-color);
+  outline-offset: 1px;
+}
+
+/* ============================================
+   CanvasControl
+   ============================================ */
+
+.canvas-control {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--canvas-bg);
+  border: 1px solid var(--canvas-grid-color);
+}
+
+.canvas-control.canvas-drop-target {
+  background-color: var(--canvas-drop-highlight);
+  border-color: var(--selection-color);
+}
+
+.canvas-control.canvas-snap-enabled {
+  /* Visual indicator optional */
+}
+
+.canvas-grid-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.canvas-elements-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.canvas-elements-layer > * {
+  pointer-events: auto;
+}
+
+/* ============================================
+   ShapeControl
+   ============================================ */
+
+.shape-control {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+}
+
+.shape-control .shape-svg {
+  display: block;
+  overflow: visible;
+}
+
+.shape-control .shape-path {
+  transition: filter 0.15s ease;
+}
+
+.shape-control.shape-hovered .shape-path {
+  filter: drop-shadow(var(--shape-hover-shadow));
+}
+
+.shape-control.shape-selected {
+  z-index: 100;
+}
+
+.shape-control.shape-selected .shape-path {
+  stroke: var(--shape-selected-stroke);
+  stroke-width: 3px;
+}
+
+.shape-control.shape-dragging {
+  z-index: 1000;
+  opacity: 0.9;
+}
+
+.shape-control .shape-label {
+  pointer-events: none;
+  font-family: var(--control-font-family);
+}
+
+/* Shape type-specific styles */
+.shape-diamond {
+  /* Diamond-specific overrides */
+}
+
+.shape-rectangle {
+  /* Rectangle-specific overrides */
+}
+
+.shape-ellipse {
+  /* Ellipse-specific overrides */
+}
+
+.shape-parallelogram {
+  /* Parallelogram-specific overrides */
+}
+
+/* ============================================
+   ToolboxControl
+   ============================================ */
+
+.toolbox-control {
+  background: var(--toolbox-bg);
+  border: 1px solid var(--toolbox-border);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: var(--control-font-family);
+  font-size: var(--control-font-size);
+}
+
+.toolbox-title {
+  font-weight: 600;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--toolbox-border);
+}
+
+.toolbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Layout modes */
+.toolbox-layout-grid .toolbox-grid,
+.toolbox-layout-grid .toolbox-content:not(:has(.toolbox-group)) {
+  display: grid;
+  grid-template-columns: repeat(var(--toolbox-columns, 2), 1fr);
+  gap: 4px;
+}
+
+.toolbox-layout-list .toolbox-group-tools,
+.toolbox-layout-list .toolbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolbox-layout-compact .toolbox-group-tools,
+.toolbox-layout-compact .toolbox-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Groups */
+.toolbox-group {
+  margin-bottom: 4px;
+}
+
+.toolbox-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.toolbox-group-header:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.toolbox-collapse-indicator {
+  font-size: 10px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.toolbox-group-icon {
+  font-size: 16px;
+}
+
+.toolbox-group-label {
+  font-weight: 500;
+}
+
+.toolbox-group-tools {
+  padding: 4px 0 4px 8px;
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+}
+
+.toolbox-group-collapsed .toolbox-group-tools {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+}
+
+/* Tools */
+.toolbox-tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--toolbox-tool-bg);
+  border: 1px solid var(--toolbox-border);
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.toolbox-tool:hover {
+  background: var(--toolbox-tool-hover-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toolbox-tool.toolbox-tool-selected {
+  background: var(--toolbox-tool-selected-bg);
+  border-color: var(--selection-color);
+}
+
+.toolbox-tool.toolbox-tool-disabled {
+  opacity: var(--toolbox-tool-disabled-opacity);
+  cursor: not-allowed;
+}
+
+.toolbox-tool.toolbox-tool-dragging {
+  opacity: 0.7;
+  cursor: grabbing;
+}
+
+.toolbox-tool-icon {
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.toolbox-tool-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact layout tool styles */
+.toolbox-layout-compact .toolbox-tool {
+  padding: 6px 10px;
+}
+
+.toolbox-layout-compact .toolbox-tool-label {
+  display: none;
+}
+
+.toolbox-layout-compact .toolbox-tool-icon {
+  margin: 0;
+}
+
+/* ============================================
+   Selection Handles (for future use)
+   ============================================ */
+
+.selection-handles {
+  position: absolute;
+  pointer-events: none;
+}
+
+.selection-handle {
+  position: absolute;
+  width: var(--selection-handle-size);
+  height: var(--selection-handle-size);
+  background: white;
+  border: 2px solid var(--selection-color);
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.selection-handle.nw { top: 0; left: 0; cursor: nwse-resize; }
+.selection-handle.n  { top: 0; left: 50%; cursor: ns-resize; }
+.selection-handle.ne { top: 0; right: 0; cursor: nesw-resize; left: auto; transform: translate(50%, -50%); }
+.selection-handle.e  { top: 50%; right: 0; cursor: ew-resize; left: auto; transform: translate(50%, -50%); }
+.selection-handle.se { bottom: 0; right: 0; cursor: nwse-resize; top: auto; left: auto; transform: translate(50%, 50%); }
+.selection-handle.s  { bottom: 0; left: 50%; cursor: ns-resize; top: auto; transform: translate(-50%, 50%); }
+.selection-handle.sw { bottom: 0; left: 0; cursor: nesw-resize; top: auto; transform: translate(-50%, 50%); }
+.selection-handle.w  { top: 50%; left: 0; cursor: ew-resize; }
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.no-transitions,
+.no-transitions * {
+  transition: none !important;
+}
+
+.no-pointer-events {
+  pointer-events: none;
+}
+
+.hidden {
+  display: none !important;
+}

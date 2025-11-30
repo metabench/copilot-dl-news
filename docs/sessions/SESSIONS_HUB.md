@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-11-30: Art Playground - Interactive SVG Component Editor
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build an interactive SVG component editor with click-to-select, resize handles, and drag-to-move as a stepping stone toward the decision tree editor
+
+**Location**: `docs/sessions/2025-11-30-art-playground/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-art-playground/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-art-playground/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-art-playground/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-art-playground/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-art-playground/FOLLOW_UPS.md)
+
+
+### Session 2025-11-30: Shared Controls Architecture & WYSIWYG Drawing Foundation
+
+**Duration**: Active
+**Type**: architecture
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create shared jsgui3 controls library and lay foundation for WYSIWYG decision tree editor
+
+**Location**: `docs/sessions/2025-11-30-shared-controls-architecture/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-shared-controls-architecture/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-shared-controls-architecture/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-shared-controls-architecture/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-shared-controls-architecture/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-shared-controls-architecture/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-30: Decision Tree Visualization Apps Deep Research
 
 **Duration**: Active

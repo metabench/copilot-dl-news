@@ -271,8 +271,33 @@ element.add(new StringControl({ context: this.context, text: "Hello World" }));
 - When you need a reference to the text node for later manipulation
 - When building reusable components where explicitness aids clarity
 - Legacy code compatibility (older jsgui patterns)
+- **When rendering raw HTML/SVG content** (see below)
 
 For most cases, just use `.add("text")` directly.
+
+### Raw HTML and SVG Content
+
+jsgui3-html doesn't support setting `dom.innerHTML` for server-side rendering. To include raw HTML (like SVG), use `String_Control`:
+
+```javascript
+// ❌ WRONG - innerHTML doesn't work for server rendering
+this._wrapper.dom.innerHTML = '<svg>...</svg>';
+
+// ✅ CORRECT - String_Control outputs raw HTML
+const svgContent = new jsgui.String_Control({
+  context: this.context,
+  text: `<svg class="my-svg" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="100" height="50" fill="blue"/>
+  </svg>`
+});
+this._wrapper.add(svgContent);
+```
+
+**Key points**:
+- `String_Control.text` is rendered as-is (no escaping)
+- Works for any raw HTML: SVG, iframes, embedded content
+- Client-side activation can then query these elements normally
+- See Art Playground (`src/ui/server/artPlayground/`) for a working example
 
 ---
 

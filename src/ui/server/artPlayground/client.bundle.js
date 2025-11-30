@@ -2611,9 +2611,9 @@
     }
   });
 
-  // node_modules/lang-tools/collective.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/collective.js
   var require_collective = __commonJS({
-    "node_modules/lang-tools/collective.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/collective.js"(exports, module) {
       var { each, is_array } = require_lib_lang_mini();
       var collective = (arr) => {
         if (is_array(arr)) {
@@ -2652,9 +2652,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/Data_Model.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js
   var require_Data_Model = __commonJS({
-    "node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Model.js"(exports, module) {
       var { Evented_Class } = require_lib_lang_mini();
       var Data_Model = class extends Evented_Class {
         constructor(spec = {}) {
@@ -2673,9 +2673,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/tools.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js
   var require_tools = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/tools.js"(exports, module) {
       var Data_Model = require_Data_Model();
       var { tof } = require_lib_lang_mini();
       var more_general_equals = (that2, other) => {
@@ -2738,9 +2738,9 @@
     }
   });
 
-  // node_modules/lang-tools/b-plus-tree/stiffarray.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js
   var require_stiffarray = __commonJS({
-    "node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/stiffarray.js"(exports, module) {
       var StiffArray = function(capacity) {
         var m_public = {
           items: new Array(capacity),
@@ -2861,9 +2861,9 @@
     }
   });
 
-  // node_modules/lang-tools/b-plus-tree/b-plus-tree.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js
   var require_b_plus_tree = __commonJS({
-    "node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/b-plus-tree/b-plus-tree.js"(exports, module) {
       var StiffArray = require_stiffarray();
       var B_Plus_Node = function(nodeCapacity) {
         var m_public = {
@@ -3623,9 +3623,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/old/Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js
   var require_Data_Value = __commonJS({
-    "node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var Data_Model = require_Data_Model();
       var j = jsgui2;
@@ -3767,9 +3767,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/Mini_Context.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js
   var require_Mini_Context = __commonJS({
-    "node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Mini_Context.js"(exports, module) {
       var Mini_Context = class {
         // Need quite a simple mechanism to get IDs for objects.
         // They will be typed objects/
@@ -3806,9 +3806,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/old/Data_Object.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js
   var require_Data_Object = __commonJS({
-    "node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Data_Object.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var Data_Value2 = require_Data_Value();
       var j = jsgui2;
@@ -4250,9 +4250,9 @@
     }
   });
 
-  // node_modules/lang-tools/sorted-kvs.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js
   var require_sorted_kvs = __commonJS({
-    "node_modules/lang-tools/sorted-kvs.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/sorted-kvs.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var mapify = jsgui2.mapify;
       var B_Plus_Tree = require_b_plus_tree();
@@ -4335,9 +4335,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/old/Collection.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js
   var require_Collection = __commonJS({
-    "node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/old/Collection.js"(exports, module) {
       var lang = require_lib_lang_mini();
       var Data_Value2 = require_Data_Value();
       var Data_Object = require_Data_Object();
@@ -4833,16 +4833,16 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/Data_Object.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js
   var require_Data_Object2 = __commonJS({
-    "node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Object.js"(exports, module) {
       module.exports = require_Data_Object();
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js
   var require_Immutable_Data_Model = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Model.js"(exports, module) {
       var Data_Model = require_Data_Model();
       var Immutable_Data_Model = class extends Data_Model {
         constructor(...a) {
@@ -4853,18 +4853,18 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Validation_Result.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js
   var require_Validation_Result = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Result.js"(exports, module) {
       var Validation_Result = class {
       };
       module.exports = Validation_Result;
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Validation_Success.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js
   var require_Validation_Success = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Validation_Success.js"(exports, module) {
       var Validation_Result = require_Validation_Result();
       var Validation_Success = class extends Validation_Result {
         constructor(spec) {
@@ -4875,9 +4875,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js
   var require_setup_base_data_value_value_property = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_base_data_value_value_property.js"(exports, module) {
       var Validation_Success = require_Validation_Success();
       var setup_base_data_value_value_property = (data_value) => {
         let local_js_value2;
@@ -4922,9 +4922,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js
   var require_Base_Data_Value = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Base_Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5006,9 +5006,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js
   var require_Value_Set_Attempt = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Value_Set_Attempt.js"(exports, module) {
       var Value_Set_Attempt = class {
         constructor(spec = {}) {
           Object.assign(this, spec);
@@ -5018,9 +5018,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js
   var require_Immutable_Base_Data_Value = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Base_Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5101,9 +5101,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js
   var require_Immutable_Data_Value = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Immutable_Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Data_Model = require_Data_Model();
@@ -5288,9 +5288,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js
   var require_setup_data_value_data_type_set = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/setup_data_value_data_type_set.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Base_Data_Value = require_Base_Data_Value();
@@ -5761,9 +5761,9 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/new/Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js
   var require_Data_Value2 = __commonJS({
-    "node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/new/Data_Value.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var { more_general_equals } = require_tools();
       var Base_Data_Value = require_Base_Data_Value();
@@ -6022,16 +6022,16 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/Data_Value.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js
   var require_Data_Value3 = __commonJS({
-    "node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Data_Value.js"(exports, module) {
       module.exports = require_Data_Value2();
     }
   });
 
-  // node_modules/lang-tools/doubly-linked-list.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js
   var require_doubly_linked_list = __commonJS({
-    "node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/doubly-linked-list.js"(exports, module) {
       var Node = class {
         constructor(spec) {
           this.neighbours = spec.neighbours || [];
@@ -6171,9 +6171,9 @@
     }
   });
 
-  // node_modules/lang-tools/ordered-kvs.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js
   var require_ordered_kvs = __commonJS({
-    "node_modules/lang-tools/ordered-kvs.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-kvs.js"(exports, module) {
       var Doubly_Linked_List = require_doubly_linked_list();
       var Ordered_KVS = class {
         constructor() {
@@ -6238,9 +6238,9 @@
     }
   });
 
-  // node_modules/lang-tools/ordered-string-list.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js
   var require_ordered_string_list = __commonJS({
-    "node_modules/lang-tools/ordered-string-list.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/ordered-string-list.js"(exports, module) {
       var Ordered_String_List = class {
         constructor() {
           var arr = [];
@@ -6328,16 +6328,16 @@
     }
   });
 
-  // node_modules/lang-tools/Data_Model/Collection.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js
   var require_Collection2 = __commonJS({
-    "node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/Data_Model/Collection.js"(exports, module) {
       module.exports = require_Collection();
     }
   });
 
-  // node_modules/lang-tools/util.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/util.js
   var require_util = __commonJS({
-    "node_modules/lang-tools/util.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/util.js"(exports, module) {
       var jsgui2 = require_lib_lang_mini();
       var Collection = require_Collection2();
       var j = jsgui2;
@@ -6742,9 +6742,9 @@
     }
   });
 
-  // node_modules/lang-tools/lang.js
+  // node_modules/jsgui3-html/node_modules/lang-tools/lang.js
   var require_lang = __commonJS({
-    "node_modules/lang-tools/lang.js"(exports, module) {
+    "node_modules/jsgui3-html/node_modules/lang-tools/lang.js"(exports, module) {
       var lang_mini = require_lib_lang_mini();
       var collective = require_collective();
       var { more_general_equals } = require_tools();
@@ -26950,17 +26950,16 @@
   var require_htmlparser = __commonJS({
     "node_modules/htmlparser/lib/htmlparser.js"(exports, module) {
       (function() {
+        const root = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
         function runningInNode() {
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          var _global = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this;
-          if (!_global.Tautologistics)
-            _global.Tautologistics = {};
-          else if (_global.Tautologistics.NodeHtmlParser)
+          const tautologistics = root.Tautologistics || (root.Tautologistics = {});
+          if (tautologistics.NodeHtmlParser)
             return;
-          _global.Tautologistics.NodeHtmlParser = {};
-          exports = _global.Tautologistics.NodeHtmlParser;
+          tautologistics.NodeHtmlParser = {};
+          exports = tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",
@@ -28303,7 +28302,7 @@
       function lolcation(loc) {
         var globalVar;
         if (typeof window !== "undefined") globalVar = window;
-        else if (typeof window !== "undefined") globalVar = window;
+        else if (typeof global !== "undefined") globalVar = global;
         else if (typeof self !== "undefined") globalVar = self;
         else globalVar = {};
         var location = globalVar.location || {};
@@ -39117,2581 +39116,960 @@ body .overlay {
     }
   });
 
-  // ui/controls/zServerControlsFactory.js
-  var require_zServerControlsFactory = __commonJS({
-    "ui/controls/zServerControlsFactory.js"(exports, module) {
+  // src/ui/server/shared/isomorphic/jsgui.js
+  var require_jsgui = __commonJS({
+    "src/ui/server/shared/isomorphic/jsgui.js"(exports, module) {
       "use strict";
-      function createZServerControls2(jsgui2) {
-        if (!jsgui2) {
-          throw new Error("jsgui instance is required to build Z-Server controls");
-        }
-        const StringControl = jsgui2.String_Control;
-        class ServerItemControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "server_item"
-            };
-            super(normalized);
-            this.add_class("zs-server-item");
-            this._server = spec.server || {};
-            this._selected = spec.selected || false;
-            this._onSelect = spec.onSelect || null;
-            this._onOpenUrl = spec.onOpenUrl || null;
-            this._runningUrl = null;
-            if (!spec.el) {
-              this.compose();
-            }
-            this._syncState();
-          }
-          compose() {
-            const ctx = this.context;
-            const statusIndicator = new jsgui2.div({ context: ctx, class: "zs-server-item__status" });
-            this.add(statusIndicator);
-            this._statusEl = statusIndicator;
-            const content = new jsgui2.div({ context: ctx, class: "zs-server-item__content" });
-            const name = new jsgui2.div({ context: ctx, class: "zs-server-item__name" });
-            const displayName = this._getDisplayName();
-            name.add(new StringControl({ context: ctx, text: displayName }));
-            content.add(name);
-            this._nameEl = name;
-            const desc = new jsgui2.div({ context: ctx, class: "zs-server-item__desc" });
-            const descText = this._getDescription();
-            desc.add(new StringControl({ context: ctx, text: descText }));
-            content.add(desc);
-            this._descEl = desc;
-            const urlContainer = new jsgui2.div({ context: ctx, class: "zs-server-item__url-container" });
-            urlContainer.add_class("zs-server-item__url-container--hidden");
-            const urlIcon = new jsgui2.span({ context: ctx, class: "zs-server-item__url-icon" });
-            urlIcon.add(new StringControl({ context: ctx, text: "\u{1F310}" }));
-            urlContainer.add(urlIcon);
-            const urlText = new jsgui2.span({ context: ctx, class: "zs-server-item__url-text" });
-            urlText.add(new StringControl({ context: ctx, text: "" }));
-            urlContainer.add(urlText);
-            this._urlTextEl = urlText;
-            const urlHint = new jsgui2.span({ context: ctx, class: "zs-server-item__url-hint" });
-            urlHint.add(new StringControl({ context: ctx, text: "Click to open \u2192" }));
-            urlContainer.add(urlHint);
-            content.add(urlContainer);
-            this._urlContainer = urlContainer;
-            this.add(content);
-            const score = new jsgui2.div({ context: ctx, class: "zs-server-item__score" });
-            score.dom.attributes.title = "Confidence Score";
-            score.add(new StringControl({ context: ctx, text: String(this._server.score || 0) }));
-            this.add(score);
-            this._scoreEl = score;
-          }
-          _getDisplayName() {
-            if (this._server.metadata && this._server.metadata.name) {
-              return this._server.metadata.name;
-            }
-            if (this._server.relativeFile) {
-              return this._server.relativeFile.split(/[\\/]/).pop();
-            }
-            return "Unknown Server";
-          }
-          _getDescription() {
-            if (this._server.metadata && this._server.metadata.description) {
-              return this._server.metadata.description;
-            }
-            return this._server.relativeFile || "";
-          }
-          _syncState() {
-            if (this._selected) {
-              this.add_class("zs-server-item--selected");
-            } else {
-              this.remove_class("zs-server-item--selected");
-            }
-            if (this._server.running) {
-              this.add_class("zs-server-item--running");
-            } else {
-              this.remove_class("zs-server-item--running");
-            }
-            if (this._urlContainer && this._urlContainer.dom.el) {
-              if (this._runningUrl) {
-                this._urlContainer.dom.el.classList.remove("zs-server-item__url-container--hidden");
-              } else {
-                this._urlContainer.dom.el.classList.add("zs-server-item__url-container--hidden");
-              }
-            }
-          }
-          setSelected(selected) {
-            this._selected = selected;
-            this._syncState();
-          }
-          setRunning(running) {
-            this._server.running = running;
-            if (!running) {
-              this._runningUrl = null;
-            }
-            this._syncState();
-          }
-          setRunningUrl(url) {
-            this._runningUrl = url;
-            if (this._urlTextEl && this._urlTextEl.dom.el) {
-              this._urlTextEl.dom.el.textContent = url || "";
-            }
-            if (this._urlContainer && this._urlContainer.dom.el) {
-              if (url) {
-                this._urlContainer.dom.el.classList.remove("zs-server-item__url-container--hidden");
-              } else {
-                this._urlContainer.dom.el.classList.add("zs-server-item__url-container--hidden");
-              }
-            }
-          }
-          getServer() {
-            return this._server;
-          }
-          getRunningUrl() {
-            return this._runningUrl;
-          }
-          activate() {
-            if (typeof this.dom.el !== "undefined") {
-              this.dom.el.addEventListener("click", (e) => {
-                const urlContainer = this._urlContainer?.dom?.el;
-                if (urlContainer && (e.target === urlContainer || urlContainer.contains(e.target))) {
-                  if (this._runningUrl && this._onOpenUrl) {
-                    e.stopPropagation();
-                    this._onOpenUrl(this._runningUrl);
-                    return;
-                  }
-                }
-                if (this._onSelect) {
-                  this._onSelect(this._server);
-                }
-              });
-            }
-          }
-        }
-        class ServerListControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "server_list"
-            };
-            super(normalized);
-            this.add_class("zs-server-list");
-            this._servers = spec.servers || [];
-            this._selectedFile = null;
-            this._onSelect = spec.onSelect || null;
-            this._onOpenUrl = spec.onOpenUrl || null;
-            this._itemControls = /* @__PURE__ */ new Map();
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            this._renderItems();
-          }
-          _renderItems() {
-            this.clear();
-            this._itemControls.clear();
-            this._servers.forEach((server) => {
-              const item2 = new ServerItemControl({
-                context: this.context,
-                server,
-                selected: server.file === this._selectedFile,
-                onSelect: (s) => this._handleSelect(s),
-                onOpenUrl: (url) => this._onOpenUrl && this._onOpenUrl(url)
-              });
-              this.add(item2);
-              this._itemControls.set(server.file, item2);
-            });
-          }
-          _handleSelect(server) {
-            if (this._selectedFile && this._itemControls.has(this._selectedFile)) {
-              this._itemControls.get(this._selectedFile).setSelected(false);
-            }
-            this._selectedFile = server.file;
-            if (this._itemControls.has(server.file)) {
-              this._itemControls.get(server.file).setSelected(true);
-            }
-            if (this._onSelect) {
-              this._onSelect(server);
-            }
-          }
-          setServers(servers) {
-            console.log("[ServerList] setServers called with", servers.length, "servers");
-            this._servers = servers;
-            this._renderItems();
-            console.log("[ServerList] _renderItems done, itemControls size:", this._itemControls.size);
-            if (this.dom.el) {
-              console.log("[ServerList] DOM element exists, updating directly");
-              this.dom.el.innerHTML = "";
-              this._itemControls.forEach((item2) => {
-                item2.register_this_and_subcontrols();
-                const itemHtml = item2.all_html_render();
-                this.dom.el.insertAdjacentHTML("beforeend", itemHtml);
-                const itemEl = this.dom.el.querySelector('[data-jsgui-id="' + item2._id() + '"]');
-                if (itemEl) {
-                  item2.dom.el = itemEl;
-                  this.context.map_els[item2._id()] = itemEl;
-                  if (item2.rec_desc_ensure_ctrl_el_refs) {
-                    item2.rec_desc_ensure_ctrl_el_refs(itemEl);
-                  }
-                }
-              });
-              this.activate();
-              console.log("[ServerList] DOM updated and activated");
-            } else {
-              console.log("[ServerList] No DOM element yet - will render on next activation");
-            }
-          }
-          updateServerStatus(filePath, running) {
-            if (this._itemControls.has(filePath)) {
-              this._itemControls.get(filePath).setRunning(running);
-              if (!running) {
-                this._itemControls.get(filePath).setRunningUrl(null);
-              }
-            }
-          }
-          setServerRunningUrl(filePath, url) {
-            if (this._itemControls.has(filePath)) {
-              this._itemControls.get(filePath).setRunningUrl(url);
-            }
-          }
-          activate() {
-            this._itemControls.forEach((item2) => {
-              item2.activate();
-            });
-          }
-        }
-        class ServerUrlControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "server_url"
-            };
-            super(normalized);
-            this.add_class("zs-server-url");
-            this.add_class("zs-server-url--hidden");
-            this._url = spec.url || null;
-            this._onClick = spec.onClick || null;
-            this._visible = spec.visible || false;
-            if (!spec.el) {
-              this.compose();
-            }
-            this._syncState();
-          }
-          compose() {
-            const ctx = this.context;
-            const iconContainer = new jsgui2.div({ context: ctx, class: "zs-server-url__icon" });
-            const svg = new jsgui2.Control({ context: ctx, tagName: "svg" });
-            svg.dom.attributes.viewBox = "0 0 120 120";
-            svg.dom.attributes.width = "120";
-            svg.dom.attributes.height = "120";
-            svg.add_class("zs-server-url__svg");
-            const defs = new jsgui2.Control({ context: ctx, tagName: "defs" });
-            const outerGradient = new jsgui2.Control({ context: ctx, tagName: "linearGradient" });
-            outerGradient.dom.attributes.id = "outerRingGrad";
-            outerGradient.dom.attributes.x1 = "0%";
-            outerGradient.dom.attributes.y1 = "0%";
-            outerGradient.dom.attributes.x2 = "100%";
-            outerGradient.dom.attributes.y2 = "100%";
-            const stop1 = new jsgui2.Control({ context: ctx, tagName: "stop" });
-            stop1.dom.attributes.offset = "0%";
-            stop1.dom.attributes["stop-color"] = "#2dd4bf";
-            const stop2 = new jsgui2.Control({ context: ctx, tagName: "stop" });
-            stop2.dom.attributes.offset = "50%";
-            stop2.dom.attributes["stop-color"] = "#10b981";
-            const stop3 = new jsgui2.Control({ context: ctx, tagName: "stop" });
-            stop3.dom.attributes.offset = "100%";
-            stop3.dom.attributes["stop-color"] = "#059669";
-            outerGradient.add(stop1);
-            outerGradient.add(stop2);
-            outerGradient.add(stop3);
-            defs.add(outerGradient);
-            const innerGradient = new jsgui2.Control({ context: ctx, tagName: "radialGradient" });
-            innerGradient.dom.attributes.id = "innerGlowGrad";
-            innerGradient.dom.attributes.cx = "30%";
-            innerGradient.dom.attributes.cy = "30%";
-            const istop1 = new jsgui2.Control({ context: ctx, tagName: "stop" });
-            istop1.dom.attributes.offset = "0%";
-            istop1.dom.attributes["stop-color"] = "#ffffff";
-            const istop2 = new jsgui2.Control({ context: ctx, tagName: "stop" });
-            istop2.dom.attributes.offset = "60%";
-            istop2.dom.attributes["stop-color"] = "#d1fae5";
-            const istop3 = new jsgui2.Control({ context: ctx, tagName: "stop" });
-            istop3.dom.attributes.offset = "100%";
-            istop3.dom.attributes["stop-color"] = "#34d399";
-            innerGradient.add(istop1);
-            innerGradient.add(istop2);
-            innerGradient.add(istop3);
-            defs.add(innerGradient);
-            const pulseFilter = new jsgui2.Control({ context: ctx, tagName: "filter" });
-            pulseFilter.dom.attributes.id = "glow";
-            const feGaussianBlur = new jsgui2.Control({ context: ctx, tagName: "feGaussianBlur" });
-            feGaussianBlur.dom.attributes.stdDeviation = "4";
-            feGaussianBlur.dom.attributes.result = "coloredBlur";
-            pulseFilter.add(feGaussianBlur);
-            const feMerge = new jsgui2.Control({ context: ctx, tagName: "feMerge" });
-            const feMergeNode1 = new jsgui2.Control({ context: ctx, tagName: "feMergeNode" });
-            feMergeNode1.dom.attributes.in = "coloredBlur";
-            const feMergeNode2 = new jsgui2.Control({ context: ctx, tagName: "feMergeNode" });
-            feMergeNode2.dom.attributes.in = "SourceGraphic";
-            feMerge.add(feMergeNode1);
-            feMerge.add(feMergeNode2);
-            pulseFilter.add(feMerge);
-            defs.add(pulseFilter);
-            svg.add(defs);
-            const outerRing = new jsgui2.Control({ context: ctx, tagName: "circle" });
-            outerRing.dom.attributes.cx = "60";
-            outerRing.dom.attributes.cy = "60";
-            outerRing.dom.attributes.r = "54";
-            outerRing.dom.attributes.class = "zs-server-url__outer-ring";
-            svg.add(outerRing);
-            const middleRing = new jsgui2.Control({ context: ctx, tagName: "circle" });
-            middleRing.dom.attributes.cx = "60";
-            middleRing.dom.attributes.cy = "60";
-            middleRing.dom.attributes.r = "46";
-            middleRing.dom.attributes.class = "zs-server-url__middle-ring";
-            svg.add(middleRing);
-            const innerCircle = new jsgui2.Control({ context: ctx, tagName: "circle" });
-            innerCircle.dom.attributes.cx = "60";
-            innerCircle.dom.attributes.cy = "60";
-            innerCircle.dom.attributes.r = "38";
-            innerCircle.dom.attributes.class = "zs-server-url__inner-circle";
-            svg.add(innerCircle);
-            const checkMark = new jsgui2.Control({ context: ctx, tagName: "path" });
-            checkMark.dom.attributes.d = "M42 60 L54 72 L78 48";
-            checkMark.dom.attributes.class = "zs-server-url__check";
-            svg.add(checkMark);
-            for (let i = 0; i < 8; i++) {
-              const angle = i * 45 * Math.PI / 180;
-              const x1 = 60 + Math.cos(angle) * 48;
-              const y1 = 60 + Math.sin(angle) * 48;
-              const x2 = 60 + Math.cos(angle) * 56;
-              const y2 = 60 + Math.sin(angle) * 56;
-              const ray = new jsgui2.Control({ context: ctx, tagName: "line" });
-              ray.dom.attributes.x1 = String(x1);
-              ray.dom.attributes.y1 = String(y1);
-              ray.dom.attributes.x2 = String(x2);
-              ray.dom.attributes.y2 = String(y2);
-              ray.dom.attributes.class = "zs-server-url__ray";
-              svg.add(ray);
-            }
-            iconContainer.add(svg);
-            this.add(iconContainer);
-            const urlWrapper = new jsgui2.div({ context: ctx, class: "zs-server-url__wrapper" });
-            const label = new jsgui2.div({ context: ctx, class: "zs-server-url__label" });
-            label.add(new StringControl({ context: ctx, text: "\u2726 SERVER RUNNING \u2726" }));
-            urlWrapper.add(label);
-            this._urlText = new jsgui2.div({ context: ctx, class: "zs-server-url__text" });
-            this._urlText.add(new StringControl({ context: ctx, text: this._url || "" }));
-            urlWrapper.add(this._urlText);
-            this.add(urlWrapper);
-            const openBtn = new jsgui2.div({ context: ctx, class: "zs-server-url__open-btn" });
-            openBtn.add(new StringControl({ context: ctx, text: "OPEN IN BROWSER \u2192" }));
-            this.add(openBtn);
-          }
-          _syncState() {
-            if (this._visible && this._url) {
-              this.remove_class("zs-server-url--hidden");
-            } else {
-              this.add_class("zs-server-url--hidden");
-            }
-          }
-          setUrl(url) {
-            this._url = url;
-            if (this._urlText && this._urlText.dom.el) {
-              this._urlText.dom.el.textContent = url || "";
-            }
-            this._syncState();
-            if (this.dom.el) {
-              if (url) {
-                this.dom.el.classList.remove("zs-server-url--hidden");
-              } else {
-                this.dom.el.classList.add("zs-server-url--hidden");
-              }
-            }
-          }
-          setVisible(visible) {
-            this._visible = visible;
-            this._syncState();
-            if (this.dom.el) {
-              if (visible && this._url) {
-                this.dom.el.classList.remove("zs-server-url--hidden");
-              } else {
-                this.dom.el.classList.add("zs-server-url--hidden");
-              }
-            }
-          }
-          getUrl() {
-            return this._url;
-          }
-          activate() {
-            if (this.dom.el && this._onClick) {
-              this.dom.el.addEventListener("click", () => {
-                if (this._url) {
-                  this._onClick(this._url);
-                }
-              });
-            }
-          }
-        }
-        class LogEntryControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "log_entry"
-            };
-            super(normalized);
-            this.add_class("zs-log-entry");
-            const type = spec.type || "stdout";
-            this.add_class(`zs-log-entry--${type}`);
-            const text = spec.text || "";
-            this.add(new StringControl({ context: this.context, text }));
-          }
-        }
-        class LogViewerControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "log_viewer"
-            };
-            super(normalized);
-            this.add_class("zs-log-viewer");
-            this._logs = spec.logs || [];
-            this._showEmpty = spec.showEmpty !== false;
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            this._renderLogs();
-          }
-          _renderLogs() {
-            this.clear();
-            if (this._logs.length === 0 && this._showEmpty) {
-              const empty = new jsgui2.div({ context: this.context, class: "zs-log-viewer__empty" });
-              const icon = new jsgui2.div({ context: this.context, class: "zs-log-viewer__empty-icon" });
-              icon.add(new StringControl({ context: this.context, text: "\u25C8" }));
-              empty.add(icon);
-              const text = new jsgui2.div({ context: this.context, class: "zs-log-viewer__empty-text" });
-              text.add(new StringControl({ context: this.context, text: "Select a server to view logs" }));
-              empty.add(text);
-              this.add(empty);
-              return;
-            }
-            this._logs.forEach((log) => {
-              const entry = new LogEntryControl({
-                context: this.context,
-                type: log.type,
-                text: log.data
-              });
-              this.add(entry);
-            });
-          }
-          setLogs(logs) {
-            this._logs = logs;
-            this._renderLogs();
-            this._scrollToBottom();
-          }
-          addLog(type, data) {
-            this._logs.push({ type, data });
-            if (this._logs.length === 1) {
-              this._renderLogs();
-            } else {
-              const entry = new LogEntryControl({
-                context: this.context,
-                type,
-                text: data
-              });
-              this.add(entry);
-            }
-            this._scrollToBottom();
-          }
-          _scrollToBottom() {
-            if (this.dom.el) {
-              this.dom.el.scrollTop = this.dom.el.scrollHeight;
-            }
-          }
-          clear() {
-            while (this.content && this.content.length > 0) {
-              this.content.pop();
-            }
-          }
-        }
-        class ServerLogWindowControl extends jsgui2.Window {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              title: spec.serverName || "Server Logs",
-              show_buttons: true,
-              __type_name: "server_log_window"
-            };
-            super(normalized);
-            this.add_class("zs-log-window");
-            this._serverName = spec.serverName || "Server Logs";
-            this._visible = spec.visible !== false;
-            this._onClose = spec.onClose || null;
-            this._position = spec.position || { x: 50, y: 50 };
-            this._size = spec.size || { width: 600, height: 400 };
-            this._minimized = false;
-            this._maximized = false;
-            if (this.ctrl_inner) {
-              this._logViewer = new LogViewerControl({
-                context: this.context,
-                showEmpty: true
-              });
-              this.ctrl_inner.add(this._logViewer);
-            }
-            const resizeHandle = new jsgui2.div({ context: this.context, class: "zs-log-window__resize-handle" });
-            this.add(resizeHandle);
-            this._resizeHandle = resizeHandle;
-            if (!this._visible) {
-              this.add_class("zs-log-window--hidden");
-            }
-          }
-          activate() {
-            if (super.activate) {
-              super.activate();
-            }
-            if (!this.dom.el) return;
-            const el = this.dom.el;
-            el.style.position = "absolute";
-            el.style.left = `${this._position.x}px`;
-            el.style.top = `${this._position.y}px`;
-            el.style.width = `${this._size.width}px`;
-            el.style.height = `${this._size.height}px`;
-            if (this._ctrl_fields) {
-              const { btn_minimize, btn_maximize, btn_close } = this._ctrl_fields;
-              if (btn_minimize && btn_minimize.dom.el) {
-                btn_minimize.dom.el.addEventListener("click", () => this.toggleMinimize());
-              }
-              if (btn_maximize && btn_maximize.dom.el) {
-                btn_maximize.dom.el.addEventListener("click", () => this.toggleMaximize());
-              }
-              if (btn_close && btn_close.dom.el) {
-                btn_close.dom.el.addEventListener("click", () => this.close());
-              }
-            }
-            if (this.title_bar && this.title_bar.dom.el) {
-              this._setupDragging(this.title_bar.dom.el, el);
-            }
-            if (this._resizeHandle && this._resizeHandle.dom.el) {
-              this._setupResizing(this._resizeHandle.dom.el, el);
-            }
-            el.addEventListener("mousedown", () => this.bringToFront());
-            if (this._logViewer) {
-              this._logViewer.activate();
-            }
-          }
-          _setupDragging(titleEl, windowEl) {
-            let isDragging = false;
-            let dragStart = { x: 0, y: 0 };
-            let posStart = { x: 0, y: 0 };
-            titleEl.addEventListener("mousedown", (e) => {
-              if (e.target.closest("button")) return;
-              if (this._maximized) return;
-              isDragging = true;
-              dragStart = { x: e.clientX, y: e.clientY };
-              posStart = { x: this._position.x, y: this._position.y };
-              windowEl.classList.add("zs-log-window--dragging");
-              this.bringToFront();
-              e.preventDefault();
-            });
-            document.addEventListener("mousemove", (e) => {
-              if (!isDragging) return;
-              const dx = e.clientX - dragStart.x;
-              const dy = e.clientY - dragStart.y;
-              this._position.x = Math.max(0, posStart.x + dx);
-              this._position.y = Math.max(0, posStart.y + dy);
-              windowEl.style.left = `${this._position.x}px`;
-              windowEl.style.top = `${this._position.y}px`;
-            });
-            document.addEventListener("mouseup", () => {
-              if (isDragging) {
-                isDragging = false;
-                windowEl.classList.remove("zs-log-window--dragging");
-              }
-            });
-          }
-          _setupResizing(handleEl, windowEl) {
-            let isResizing = false;
-            let resizeStart = { x: 0, y: 0 };
-            let sizeStart = { width: 0, height: 0 };
-            handleEl.addEventListener("mousedown", (e) => {
-              if (this._maximized) return;
-              isResizing = true;
-              resizeStart = { x: e.clientX, y: e.clientY };
-              sizeStart = { width: this._size.width, height: this._size.height };
-              windowEl.classList.add("zs-log-window--resizing");
-              e.preventDefault();
-              e.stopPropagation();
-            });
-            document.addEventListener("mousemove", (e) => {
-              if (!isResizing) return;
-              const dx = e.clientX - resizeStart.x;
-              const dy = e.clientY - resizeStart.y;
-              this._size.width = Math.max(300, sizeStart.width + dx);
-              this._size.height = Math.max(200, sizeStart.height + dy);
-              windowEl.style.width = `${this._size.width}px`;
-              windowEl.style.height = `${this._size.height}px`;
-            });
-            document.addEventListener("mouseup", () => {
-              if (isResizing) {
-                isResizing = false;
-                windowEl.classList.remove("zs-log-window--resizing");
-              }
-            });
-          }
-          bringToFront() {
-            if (super.bring_to_front_z) {
-              super.bring_to_front_z();
-            } else {
-              const windows = document.querySelectorAll(".zs-log-window");
-              let maxZ = 100;
-              windows.forEach((w) => {
-                const z = parseInt(w.style.zIndex || "100", 10);
-                if (z > maxZ) maxZ = z;
-              });
-              this.dom.el.style.zIndex = String(maxZ + 1);
-            }
-          }
-          toggleMinimize() {
-            this._minimized = !this._minimized;
-            const el = this.dom.el;
-            const btn = this._ctrl_fields?.btn_minimize?.dom?.el;
-            if (this._minimized) {
-              el.classList.add("zs-log-window--minimized");
-              if (btn) btn.textContent = "\u2295";
-            } else {
-              el.classList.remove("zs-log-window--minimized");
-              if (btn) btn.textContent = "\u2296";
-            }
-          }
-          toggleMaximize() {
-            this._maximized = !this._maximized;
-            const el = this.dom.el;
-            const btn = this._ctrl_fields?.btn_maximize?.dom?.el;
-            if (this._maximized) {
-              this._savedPos = { ...this._position };
-              this._savedSize = { ...this._size };
-              el.classList.add("zs-log-window--maximized");
-              if (btn) btn.textContent = "\u25F1";
-            } else {
-              this._position = this._savedPos || this._position;
-              this._size = this._savedSize || this._size;
-              el.classList.remove("zs-log-window--maximized");
-              el.style.left = `${this._position.x}px`;
-              el.style.top = `${this._position.y}px`;
-              el.style.width = `${this._size.width}px`;
-              el.style.height = `${this._size.height}px`;
-              if (btn) btn.textContent = "\u2295";
-            }
-          }
-          show(serverName) {
-            if (serverName) {
-              this._serverName = serverName;
-              if (this.title_bar) {
-                const h2 = this.title_bar.content?.find((c2) => c2.__type_name === "h2" || c2.dom?.tagName?.toLowerCase() === "h2");
-                if (h2 && h2.dom.el) {
-                  h2.dom.el.textContent = serverName;
-                }
-              }
-            }
-            this._visible = true;
-            this.dom.el.classList.remove("zs-log-window--hidden");
-            this.bringToFront();
-            this._logViewer.setLogs([]);
-          }
-          hide() {
-            this._visible = false;
-            this.dom.el.classList.add("zs-log-window--hidden");
-          }
-          close() {
-            this.hide();
-            if (this._onClose) {
-              this._onClose();
-            }
-          }
-          isVisible() {
-            return this._visible;
-          }
-          addLog(type, data) {
-            this._logViewer.addLog(type, data);
-          }
-          setLogs(logs) {
-            this._logViewer.setLogs(logs);
-          }
-          clearLogs() {
-            this._logViewer.setLogs([]);
-          }
-          setTitle(title) {
-            this._serverName = title;
-            if (this.title_bar) {
-              const h2 = this.title_bar.content?.find((c2) => c2.__type_name === "h2" || c2.dom?.tagName?.toLowerCase() === "h2");
-              if (h2 && h2.dom.el) {
-                h2.dom.el.textContent = title;
-              }
-            }
-          }
-        }
-        class ControlButtonControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "button",
-              __type_name: "control_button"
-            };
-            super(normalized);
-            this.add_class("zs-btn");
-            if (spec.variant) {
-              this.add_class(`zs-btn--${spec.variant}`);
-            }
-            this._disabled = spec.disabled || false;
-            this._onClick = spec.onClick || null;
-            this._label = spec.label || "Button";
-            if (!spec.el) {
-              this.compose();
-            }
-            this._syncState();
-          }
-          compose() {
-            this.add(new StringControl({ context: this.context, text: this._label }));
-          }
-          _syncState() {
-            if (this._disabled) {
-              this.dom.attributes.disabled = "disabled";
-              this.add_class("zs-btn--disabled");
-            } else {
-              delete this.dom.attributes.disabled;
-              this.remove_class("zs-btn--disabled");
-            }
-          }
-          setDisabled(disabled) {
-            this._disabled = disabled;
-            this._syncState();
-            if (this.dom.el) {
-              this.dom.el.disabled = disabled;
-              if (disabled) {
-                this.dom.el.classList.add("zs-btn--disabled");
-              } else {
-                this.dom.el.classList.remove("zs-btn--disabled");
-              }
-            }
-          }
-          activate() {
-            if (this.dom.el && this._onClick) {
-              this.dom.el.addEventListener("click", () => {
-                if (!this._disabled) {
-                  this._onClick();
-                }
-              });
-            }
-          }
-        }
-        class ControlPanelControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "control_panel"
-            };
-            super(normalized);
-            this.add_class("zs-control-panel");
-            this._visible = spec.visible || false;
-            this._serverRunning = spec.serverRunning || false;
-            this._onStart = spec.onStart || null;
-            this._onStop = spec.onStop || null;
-            if (!spec.el) {
-              this.compose();
-            }
-            this._syncState();
-          }
-          compose() {
-            const ctx = this.context;
-            this._startBtn = new ControlButtonControl({
-              context: ctx,
-              label: "\u25B6 Start Server",
-              variant: "start",
-              disabled: this._serverRunning,
-              onClick: () => this._onStart && this._onStart()
-            });
-            this.add(this._startBtn);
-            this._stopBtn = new ControlButtonControl({
-              context: ctx,
-              label: "\u25A0 Stop Server",
-              variant: "stop",
-              disabled: !this._serverRunning,
-              onClick: () => this._onStop && this._onStop()
-            });
-            this.add(this._stopBtn);
-          }
-          _syncState() {
-            if (this._visible) {
-              this.remove_class("zs-control-panel--hidden");
-            } else {
-              this.add_class("zs-control-panel--hidden");
-            }
-          }
-          setVisible(visible) {
-            this._visible = visible;
-            this._syncState();
-            if (this.dom.el) {
-              if (visible) {
-                this.dom.el.classList.remove("zs-control-panel--hidden");
-              } else {
-                this.dom.el.classList.add("zs-control-panel--hidden");
-              }
-            }
-          }
-          setServerRunning(running) {
-            this._serverRunning = running;
-            this._startBtn.setDisabled(running);
-            this._stopBtn.setDisabled(!running);
-          }
-          activate() {
-            this._startBtn.activate();
-            this._stopBtn.activate();
-          }
-        }
-        class ScanningIndicatorControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "scanning_indicator"
-            };
-            super(normalized);
-            this.add_class("zs-scanning");
-            this._total = 0;
-            this._current = 0;
-            this._currentFile = "";
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            const ctx = this.context;
-            const svg = new jsgui2.Control({ context: ctx, tagName: "svg" });
-            svg.dom.attributes.viewBox = "0 0 100 100";
-            svg.add_class("zs-scanning__svg");
-            const ring = new jsgui2.Control({ context: ctx, tagName: "circle" });
-            ring.dom.attributes.cx = "50";
-            ring.dom.attributes.cy = "50";
-            ring.dom.attributes.r = "45";
-            ring.dom.attributes.class = "zs-scanning__ring";
-            svg.add(ring);
-            const innerRing = new jsgui2.Control({ context: ctx, tagName: "circle" });
-            innerRing.dom.attributes.cx = "50";
-            innerRing.dom.attributes.cy = "50";
-            innerRing.dom.attributes.r = "30";
-            innerRing.dom.attributes.class = "zs-scanning__ring-inner";
-            svg.add(innerRing);
-            const sweep = new jsgui2.Control({ context: ctx, tagName: "path" });
-            sweep.dom.attributes.d = "M50 50 L50 5 A45 45 0 0 1 95 50 Z";
-            sweep.dom.attributes.class = "zs-scanning__sweep";
-            svg.add(sweep);
-            const dot = new jsgui2.Control({ context: ctx, tagName: "circle" });
-            dot.dom.attributes.cx = "50";
-            dot.dom.attributes.cy = "50";
-            dot.dom.attributes.r = "4";
-            dot.dom.attributes.class = "zs-scanning__dot";
-            svg.add(dot);
-            this.add(svg);
-            const text = new jsgui2.div({ context: ctx, class: "zs-scanning__text" });
-            text.add(new StringControl({ context: ctx, text: "SCANNING FOR SERVERS..." }));
-            this.add(text);
-            this._textEl = text;
-            const progressContainer = new jsgui2.div({ context: ctx, class: "zs-scanning__progress-container" });
-            const progressBg = new jsgui2.div({ context: ctx, class: "zs-scanning__progress-bg" });
-            const progressFill = new jsgui2.div({ context: ctx, class: "zs-scanning__progress-fill" });
-            progressBg.add(progressFill);
-            this._progressFillEl = progressFill;
-            progressContainer.add(progressBg);
-            const progressText = new jsgui2.div({ context: ctx, class: "zs-scanning__progress-text" });
-            progressText.add(new StringControl({ context: ctx, text: "Counting files..." }));
-            progressContainer.add(progressText);
-            this._progressTextEl = progressText;
-            this.add(progressContainer);
-            const subtitle = new jsgui2.div({ context: ctx, class: "zs-scanning__subtitle" });
-            subtitle.add(new StringControl({ context: ctx, text: "Analyzing JavaScript files in repository" }));
-            this.add(subtitle);
-            this._subtitleEl = subtitle;
-          }
-          setTotal(total) {
-            this._total = total;
-            this._current = 0;
-            this._updateProgress();
-          }
-          setProgress(current, total, file) {
-            this._current = current;
-            this._total = total || this._total;
-            this._currentFile = file || "";
-            this._updateProgress();
-          }
-          _updateProgress() {
-            const percent = this._total > 0 ? this._current / this._total * 100 : 0;
-            if (this._progressFillEl && this._progressFillEl.dom.el) {
-              this._progressFillEl.dom.el.style.width = `${percent}%`;
-            }
-            if (this._progressTextEl && this._progressTextEl.dom.el) {
-              if (this._total > 0) {
-                this._progressTextEl.dom.el.textContent = `${this._current} / ${this._total} files`;
-              } else {
-                this._progressTextEl.dom.el.textContent = "Counting files...";
-              }
-            }
-            if (this._subtitleEl && this._subtitleEl.dom.el && this._currentFile) {
-              const displayFile = this._currentFile.length > 50 ? "..." + this._currentFile.slice(-47) : this._currentFile;
-              this._subtitleEl.dom.el.textContent = displayFile;
-            }
-          }
-          reset() {
-            this._total = 0;
-            this._current = 0;
-            this._currentFile = "";
-            if (this._progressFillEl && this._progressFillEl.dom.el) {
-              this._progressFillEl.dom.el.style.width = "0%";
-            }
-            if (this._progressTextEl && this._progressTextEl.dom.el) {
-              this._progressTextEl.dom.el.textContent = "Counting files...";
-            }
-            if (this._subtitleEl && this._subtitleEl.dom.el) {
-              this._subtitleEl.dom.el.textContent = "Analyzing JavaScript files in repository";
-            }
-          }
-        }
-        class SidebarControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "aside",
-              __type_name: "sidebar"
-            };
-            super(normalized);
-            this.add_class("zs-sidebar");
-            this._servers = spec.servers || [];
-            this._onSelect = spec.onSelect || null;
-            this._onOpenUrl = spec.onOpenUrl || null;
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            const ctx = this.context;
-            const header = new jsgui2.div({ context: ctx, class: "zs-sidebar__header" });
-            const title = new jsgui2.h2({ context: ctx, class: "zs-sidebar__title" });
-            title.add(new StringControl({ context: ctx, text: "\u25C8 Servers" }));
-            header.add(title);
-            this.add(header);
-            this._serverList = new ServerListControl({
-              context: ctx,
-              servers: this._servers,
-              onSelect: (s) => this._onSelect && this._onSelect(s),
-              onOpenUrl: (url) => this._onOpenUrl && this._onOpenUrl(url)
-            });
-            this.add(this._serverList);
-          }
-          setServers(servers) {
-            this._servers = servers;
-            this._serverList.setServers(servers);
-          }
-          updateServerStatus(filePath, running) {
-            this._serverList.updateServerStatus(filePath, running);
-          }
-          setServerRunningUrl(filePath, url) {
-            this._serverList.setServerRunningUrl(filePath, url);
-          }
-          activate() {
-            this._serverList.activate();
-          }
-        }
-        class ContentAreaControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "main",
-              __type_name: "content_area"
-            };
-            super(normalized);
-            this.add_class("zs-content");
-            this._selectedServer = null;
-            this._onStart = spec.onStart || null;
-            this._onStop = spec.onStop || null;
-            this._onUrlDetected = spec.onUrlDetected || null;
-            this._onOpenUrl = spec.onOpenUrl || null;
-            this._detectedUrl = null;
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            const ctx = this.context;
-            const header = new jsgui2.div({ context: ctx, class: "zs-content__header" });
-            this._title = new jsgui2.h1({ context: ctx, class: "zs-content__title" });
-            this._title.add(new StringControl({ context: ctx, text: "Select a Server" }));
-            header.add(this._title);
-            this._controlPanel = new ControlPanelControl({
-              context: ctx,
-              visible: false,
-              onStart: () => this._onStart && this._onStart(),
-              onStop: () => this._onStop && this._onStop()
-            });
-            header.add(this._controlPanel);
-            this.add(header);
-            this._serverUrl = new ServerUrlControl({
-              context: ctx,
-              visible: false,
-              onClick: (url) => this._onOpenUrl && this._onOpenUrl(url)
-            });
-            this.add(this._serverUrl);
-            this._scanningIndicator = new ScanningIndicatorControl({ context: ctx });
-            this._scanningIndicator.add_class("zs-hidden");
-            this.add(this._scanningIndicator);
-            this._logViewer = new LogViewerControl({
-              context: ctx,
-              showEmpty: true
-            });
-            this.add(this._logViewer);
-          }
-          setSelectedServer(server) {
-            this._selectedServer = server;
-            this._detectedUrl = null;
-            this._serverUrl.setUrl(null);
-            this._serverUrl.setVisible(false);
-            const displayName = server.metadata && server.metadata.name ? server.metadata.name : server.relativeFile.split(/[\\/]/).pop();
-            if (this._title.dom.el) {
-              this._title.dom.el.textContent = displayName;
-            }
-            this._controlPanel.setVisible(true);
-            this._controlPanel.setServerRunning(server.running || false);
-          }
-          setServerRunning(running) {
-            if (this._selectedServer) {
-              this._selectedServer.running = running;
-              this._controlPanel.setServerRunning(running);
-              if (!running) {
-                this._detectedUrl = null;
-                this._serverUrl.setUrl(null);
-                this._serverUrl.setVisible(false);
-              }
-            }
-          }
-          _extractUrl(text) {
-            const urlPatterns = [
-              /https?:\/\/localhost:\d+[^\s]*/gi,
-              /https?:\/\/127\.0\.0\.1:\d+[^\s]*/gi,
-              /https?:\/\/0\.0\.0\.0:\d+[^\s]*/gi,
-              /Server (?:running|listening|started) (?:on|at) (https?:\/\/[^\s]+)/gi,
-              /listening on (https?:\/\/[^\s]+)/gi,
-              /available at (https?:\/\/[^\s]+)/gi
-            ];
-            for (const pattern of urlPatterns) {
-              const match = pattern.exec(text);
-              if (match) {
-                return match[1] || match[0];
-              }
-            }
-            return null;
-          }
-          addLog(type, data) {
-            this._logViewer.addLog(type, data);
-            if (!this._detectedUrl && (type === "stdout" || type === "system")) {
-              const url = this._extractUrl(data);
-              if (url && this._selectedServer) {
-                this._detectedUrl = url;
-                this._serverUrl.setUrl(url);
-                this._serverUrl.setVisible(true);
-                if (this._onUrlDetected) {
-                  this._onUrlDetected(this._selectedServer.file, url);
-                }
-              }
-            }
-          }
-          setLogs(logs) {
-            this._logViewer.setLogs(logs);
-            this._detectedUrl = null;
-            for (const log of logs) {
-              if (log.type === "stdout" || log.type === "system") {
-                const url = this._extractUrl(log.data);
-                if (url && this._selectedServer) {
-                  this._detectedUrl = url;
-                  if (this._onUrlDetected) {
-                    this._onUrlDetected(this._selectedServer.file, url);
-                  }
-                  break;
-                }
-              }
-            }
-          }
-          setScanning(isScanning) {
-            if (isScanning) {
-              this._scanningIndicator.remove_class("zs-hidden");
-              this._scanningIndicator.reset();
-              this._logViewer.add_class("zs-hidden");
-            } else {
-              this._scanningIndicator.add_class("zs-hidden");
-              this._logViewer.remove_class("zs-hidden");
-            }
-            if (this._scanningIndicator.dom.el) {
-              if (isScanning) {
-                this._scanningIndicator.dom.el.classList.remove("zs-hidden");
-                this._logViewer.dom.el.classList.add("zs-hidden");
-              } else {
-                this._scanningIndicator.dom.el.classList.add("zs-hidden");
-                this._logViewer.dom.el.classList.remove("zs-hidden");
-              }
-            }
-          }
-          setScanProgress(current, total, file) {
-            this._scanningIndicator.setProgress(current, total, file);
-          }
-          setScanTotal(total) {
-            this._scanningIndicator.setTotal(total);
-          }
-          activate() {
-            this._controlPanel.activate();
-            this._serverUrl.activate();
-          }
-        }
-        class TitleBarControl extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "header",
-              __type_name: "title_bar"
-            };
-            super(normalized);
-            this.add_class("zs-title-bar");
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            const ctx = this.context;
-            const title = new jsgui2.div({ context: ctx, class: "zs-title-bar__title" });
-            title.add(new StringControl({ context: ctx, text: "Z-Server // Manager" }));
-            this.add(title);
-          }
-        }
-        class ZServerAppControl2 extends jsgui2.Control {
-          constructor(spec = {}) {
-            const normalized = {
-              ...spec,
-              tagName: "div",
-              __type_name: "zserver_app"
-            };
-            super(normalized);
-            this.add_class("zs-app");
-            this._servers = [];
-            this._selectedServer = null;
-            this._logs = /* @__PURE__ */ new Map();
-            this._api = spec.api || null;
-            if (!spec.el) {
-              this.compose();
-            }
-          }
-          compose() {
-            const ctx = this.context;
-            this._titleBar = new TitleBarControl({ context: ctx });
-            this.add(this._titleBar);
-            const container = new jsgui2.div({ context: ctx, class: "zs-container" });
-            this._sidebar = new SidebarControl({
-              context: ctx,
-              servers: this._servers,
-              onSelect: (s) => this._selectServer(s),
-              onOpenUrl: (url) => this._openInBrowser(url)
-            });
-            container.add(this._sidebar);
-            this._contentArea = new ContentAreaControl({
-              context: ctx,
-              onStart: () => this._startServer(),
-              onStop: () => this._stopServer(),
-              onUrlDetected: (filePath, url) => this._setServerUrl(filePath, url),
-              onOpenUrl: (url) => this._openInBrowser(url)
-            });
-            container.add(this._contentArea);
-            this.add(container);
-          }
-          async init() {
-            if (!this._api) {
-              console.error("No electronAPI provided");
-              return;
-            }
-            try {
-              this._contentArea.setScanning(true);
-              console.log("[ZServerApp] Starting scan...");
-              this._api.onScanProgress((progress) => {
-                console.log("[ZServerApp] Scan progress:", progress);
-                if (progress.type === "count") {
-                  this._contentArea.setScanTotal(progress.total);
-                } else if (progress.type === "progress") {
-                  this._contentArea.setScanProgress(progress.current, progress.total, progress.file);
-                }
-              });
-              this._servers = await this._api.scanServers();
-              console.log("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
-              this._sidebar.setServers(this._servers);
-              console.log("[ZServerApp] Servers set on sidebar");
-              this._api.onServerLog(({ filePath, type, data }) => {
-                this._addLog(filePath, type, data);
-              });
-              this._api.onServerStatusChange(({ filePath, running }) => {
-                this._updateServerStatus(filePath, running);
-              });
-            } catch (error2) {
-              console.error("Failed to scan servers:", error2);
-              this._contentArea.addLog("stderr", `Failed to scan servers: ${error2.message}`);
-            } finally {
-              this._contentArea.setScanning(false);
-            }
-          }
-          _selectServer(server) {
-            this._selectedServer = server;
-            this._contentArea.setSelectedServer(server);
-            const serverLogs = this._logs.get(server.file) || [];
-            this._contentArea.setLogs(serverLogs);
-          }
-          _addLog(filePath, type, data) {
-            if (!this._logs.has(filePath)) {
-              this._logs.set(filePath, []);
-            }
-            this._logs.get(filePath).push({ type, data });
-            if (this._selectedServer && this._selectedServer.file === filePath) {
-              this._contentArea.addLog(type, data);
-              if (type === "stderr" && data.includes("EADDRINUSE")) {
-                const portMatch = data.match(/(?:port\s+)?(\d{4,5})/i);
-                const port = portMatch ? portMatch[1] : this._selectedServer.metadata?.defaultPort;
-                if (port) {
-                  const url = `http://localhost:${port}`;
-                  this._addLog(filePath, "system", `\u26A0\uFE0F Port ${port} is already in use by another process.`);
-                  this._addLog(filePath, "system", `\u{1F4CD} The server might already be running at: ${url}`);
-                  this._setServerUrl(filePath, url);
-                } else {
-                  this._addLog(filePath, "system", "\u26A0\uFE0F Port is already in use. Server may already be running.");
-                }
-              }
-            }
-          }
-          _setServerUrl(filePath, url) {
-            this._sidebar.setServerRunningUrl(filePath, url);
-          }
-          _updateServerStatus(filePath, running) {
-            const server = this._servers.find((s) => s.file === filePath);
-            if (server) {
-              server.running = running;
-              if (!running) server.pid = null;
-              this._sidebar.updateServerStatus(filePath, running);
-              if (this._selectedServer && this._selectedServer.file === filePath) {
-                this._contentArea.setServerRunning(running);
-              }
-            }
-          }
-          async _startServer() {
-            if (!this._selectedServer || !this._api) return;
-            this._addLog(this._selectedServer.file, "system", "Starting server...");
-            const result = await this._api.startServer(this._selectedServer.file);
-            if (result.success) {
-              this._selectedServer.running = true;
-              this._selectedServer.pid = result.pid;
-              this._contentArea.setServerRunning(true);
-              this._sidebar.updateServerStatus(this._selectedServer.file, true);
-              this._addLog(this._selectedServer.file, "system", `Server started (PID: ${result.pid})`);
-            } else {
-              if (result.message === "Already running") {
-                this._selectedServer.running = true;
-                this._contentArea.setServerRunning(true);
-                this._sidebar.updateServerStatus(this._selectedServer.file, true);
-                const port = this._selectedServer.metadata?.defaultPort;
-                const url = port ? `http://localhost:${port}` : null;
-                this._addLog(this._selectedServer.file, "system", "\u26A0\uFE0F Server is already running!");
-                if (url) {
-                  this._setServerUrl(this._selectedServer.file, url);
-                  this._addLog(this._selectedServer.file, "system", `\u{1F4CD} Click to open: ${url}`);
-                } else {
-                  this._addLog(this._selectedServer.file, "system", "Check the server log output for the URL.");
-                }
-              } else {
-                this._addLog(this._selectedServer.file, "stderr", `Failed to start: ${result.message}`);
-              }
-            }
-          }
-          async _stopServer() {
-            if (!this._selectedServer || !this._api) return;
-            this._addLog(this._selectedServer.file, "system", "Stopping server...");
-            const result = await this._api.stopServer(this._selectedServer.file);
-            if (result.success) {
-              this._selectedServer.running = false;
-              this._selectedServer.pid = null;
-              this._contentArea.setServerRunning(false);
-              this._sidebar.updateServerStatus(this._selectedServer.file, false);
-              this._addLog(this._selectedServer.file, "system", "Server stopped");
-            } else {
-              this._addLog(this._selectedServer.file, "stderr", `Failed to stop: ${result.message}`);
-            }
-          }
-          async _openInBrowser(url) {
-            if (!this._api || !url) return;
-            this._addLog(this._selectedServer?.file || "system", "system", `Opening ${url} in browser...`);
-            try {
-              const result = await this._api.openInBrowser(url);
-              if (result.success) {
-                this._addLog(this._selectedServer?.file || "system", "system", `Opened in ${result.browser}`);
-              }
-            } catch (error2) {
-              this._addLog(this._selectedServer?.file || "system", "stderr", `Failed to open browser: ${error2.message}`);
-            }
-          }
-          activate() {
-            this._sidebar.activate();
-            this._contentArea.activate();
-          }
-        }
-        function buildZServerStyles() {
-          return `
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* Z-SERVER MANAGER - INDUSTRIAL LUXURY OBSIDIAN THEME                         */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-:root {
-  /* Obsidian Base */
-  --zs-bg: #050508;
-  --zs-bg-panel: #0a0d14;
-  --zs-bg-card: #141824;
-  --zs-bg-elevated: #1a1f2e;
-  
-  /* Gold Accents */
-  --zs-gold: #c9a227;
-  --zs-gold-dim: #8b7500;
-  --zs-gold-bright: #fffacd;
-  
-  /* Gemstone Accents */
-  --zs-emerald: #50c878;
-  --zs-emerald-dark: #2e8b57;
-  --zs-ruby: #ff6b6b;
-  --zs-ruby-dark: #e31837;
-  --zs-sapphire: #6fa8dc;
-  --zs-sapphire-dark: #0f52ba;
-  --zs-amethyst: #da70d6;
-  --zs-amethyst-dark: #9966cc;
-  --zs-topaz: #ffc87c;
-  
-  /* Text */
-  --zs-text: #f0f4f8;
-  --zs-text-muted: #94a3b8;
-  --zs-text-dim: #64748b;
-  
-  /* Typography */
-  --zs-font-display: "Georgia", "Times New Roman", serif;
-  --zs-font-body: "Inter", "Segoe UI", system-ui, sans-serif;
-  --zs-font-mono: "JetBrains Mono", "Consolas", "Monaco", monospace;
-  
-  /* Shadows */
-  --zs-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --zs-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --zs-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-  --zs-shadow-glow-gold: 0 0 20px rgba(201, 162, 39, 0.3);
-  --zs-shadow-glow-emerald: 0 0 20px rgba(80, 200, 120, 0.3);
-  --zs-shadow-glow-ruby: 0 0 20px rgba(255, 107, 107, 0.3);
-  --zs-shadow-glow-amethyst: 0 0 20px rgba(218, 112, 214, 0.3);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--zs-font-body);
-  background: var(--zs-bg);
-  color: var(--zs-text);
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* APP SHELL                                                                   */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: 
-    radial-gradient(ellipse at 0% 0%, rgba(201, 162, 39, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 100% 0%, rgba(218, 112, 214, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 100%, rgba(80, 200, 120, 0.03) 0%, transparent 50%),
-    var(--zs-bg);
-}
-
-/* Grid overlay */
-.zs-app::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: 
-    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.zs-app > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* TITLE BAR                                                                   */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-title-bar {
-  height: 36px;
-  background: linear-gradient(180deg, rgba(20, 24, 36, 0.95), rgba(10, 13, 20, 0.98));
-  -webkit-app-region: drag;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.2);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
-}
-
-.zs-title-bar__title {
-  font-family: var(--zs-font-display);
-  font-size: 14px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--zs-gold);
-  text-shadow: 0 0 10px rgba(201, 162, 39, 0.5);
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* MAIN CONTAINER                                                              */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-container {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SIDEBAR                                                                     */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-sidebar {
-  width: 380px;
-  background: linear-gradient(180deg, 
-    rgba(20, 24, 36, 0.8) 0%, 
-    rgba(10, 13, 20, 0.9) 100%
-  );
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  backdrop-filter: blur(12px);
-}
-
-.zs-sidebar__header {
-  padding: 24px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(180deg, rgba(26, 31, 46, 0.5), transparent);
-}
-
-.zs-sidebar__title {
-  margin: 0;
-  font-family: var(--zs-font-display);
-  font-size: 22px;
-  font-weight: 400;
-  color: var(--zs-gold);
-  letter-spacing: 1px;
-  text-shadow: 0 0 15px rgba(201, 162, 39, 0.4);
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SCANNING INDICATOR                                                          */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-scanning {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  flex: 1;
-}
-
-.zs-scanning__svg {
-  width: 120px;
-  height: 120px;
-  margin-bottom: 20px;
-}
-
-.zs-scanning__ring {
-  fill: none;
-  stroke: rgba(201, 162, 39, 0.2);
-  stroke-width: 2;
-}
-
-.zs-scanning__ring-inner {
-  fill: none;
-  stroke: rgba(201, 162, 39, 0.1);
-  stroke-width: 1;
-  stroke-dasharray: 4 4;
-  animation: zs-spin-reverse 10s linear infinite;
-  transform-origin: 50px 50px;
-}
-
-.zs-scanning__sweep {
-  fill: url(#radar-gradient); /* Fallback if defs not used */
-  fill: rgba(201, 162, 39, 0.2);
-  transform-origin: 50px 50px;
-  animation: zs-spin 2s linear infinite;
-}
-
-.zs-scanning__dot {
-  fill: var(--zs-gold);
-  filter: drop-shadow(0 0 4px var(--zs-gold));
-  animation: zs-pulse-fast 1s ease-in-out infinite;
-}
-
-.zs-scanning__text {
-  font-family: var(--zs-font-mono);
-  font-size: 14px;
-  color: var(--zs-gold);
-  letter-spacing: 3px;
-  animation: zs-pulse 2s ease-in-out infinite;
-}
-
-.zs-scanning__subtitle {
-  font-family: var(--zs-font-body);
-  font-size: 12px;
-  color: var(--zs-text-muted);
-  margin-top: 8px;
-  letter-spacing: 0.5px;
-  max-width: 400px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Progress Bar Styles */
-.zs-scanning__progress-container {
-  width: 100%;
-  max-width: 400px;
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.zs-scanning__progress-bg {
-  width: 100%;
-  height: 8px;
-  background: rgba(201, 162, 39, 0.1);
-  border: 1px solid rgba(201, 162, 39, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.zs-scanning__progress-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, 
-    var(--zs-gold-dim) 0%,
-    var(--zs-gold) 50%,
-    var(--zs-gold-bright) 100%
-  );
-  border-radius: 3px;
-  transition: width 0.05s ease-out;
-  box-shadow: 
-    0 0 8px rgba(201, 162, 39, 0.5),
-    0 0 20px rgba(201, 162, 39, 0.2);
-  position: relative;
-}
-
-.zs-scanning__progress-fill::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.3) 50%,
-    transparent 100%
-  );
-  animation: zs-shimmer 1.5s infinite;
-}
-
-@keyframes zs-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.zs-scanning__progress-text {
-  font-family: var(--zs-font-mono);
-  font-size: 12px;
-  color: var(--zs-text-muted);
-  letter-spacing: 1px;
-}
-
-@keyframes zs-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes zs-spin-reverse {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
-}
-
-@keyframes zs-pulse-fast {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-.zs-hidden {
-  display: none !important;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SERVER LIST                                                                 */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-server-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SERVER ITEM                                                                 */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-server-item {
-  position: relative;
-  background: linear-gradient(135deg, 
-    rgba(26, 31, 46, 0.6) 0%, 
-    rgba(20, 24, 36, 0.8) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 16px;
-  padding-left: 20px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-}
-
-.zs-server-item::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--zs-text-dim);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.zs-server-item:hover {
-  background: linear-gradient(135deg, 
-    rgba(40, 46, 66, 0.7) 0%, 
-    rgba(26, 31, 46, 0.9) 100%
-  );
-  border-color: var(--zs-gold-dim);
-  transform: translateX(4px);
-  box-shadow: var(--zs-shadow-md), var(--zs-shadow-glow-gold);
-}
-
-.zs-server-item:hover::before {
-  opacity: 1;
-  background: var(--zs-gold);
-}
-
-/* Selected State */
-.zs-server-item--selected {
-  background: linear-gradient(135deg, 
-    rgba(153, 102, 204, 0.15) 0%, 
-    rgba(26, 31, 46, 0.9) 100%
-  );
-  border-color: var(--zs-amethyst-dark);
-  box-shadow: var(--zs-shadow-md), var(--zs-shadow-glow-amethyst);
-}
-
-.zs-server-item--selected::before {
-  opacity: 1;
-  background: var(--zs-amethyst);
-}
-
-/* Running State */
-.zs-server-item--running::after {
-  content: "";
-  position: absolute;
-  top: 12px;
-  right: 60px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--zs-emerald);
-  box-shadow: 0 0 8px var(--zs-emerald), 0 0 16px var(--zs-emerald);
-  animation: zs-pulse 2s ease-in-out infinite;
-}
-
-@keyframes zs-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.9); }
-}
-
-.zs-server-item__content {
-  flex: 1;
-  min-width: 0;
-}
-
-.zs-server-item__name {
-  font-family: var(--zs-font-display);
-  font-size: 15px;
-  color: var(--zs-text);
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-
-.zs-server-item__desc {
-  font-family: var(--zs-font-body);
-  font-size: 12px;
-  color: var(--zs-text-muted);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.zs-server-item__score {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  font-family: var(--zs-font-mono);
-  font-size: 10px;
-  color: var(--zs-gold-dim);
-  border: 1px solid var(--zs-gold-dim);
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(139, 117, 0, 0.1);
-}
-
-.zs-server-item__status {
-  display: none;
-}
-
-/* Server Item - Inline URL Display */
-.zs-server-item__url-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, 
-    rgba(80, 200, 120, 0.15) 0%, 
-    rgba(46, 139, 87, 0.1) 100%
-  );
-  border: 1px solid var(--zs-emerald);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.zs-server-item__url-container:hover {
-  background: linear-gradient(135deg, 
-    rgba(80, 200, 120, 0.25) 0%, 
-    rgba(46, 139, 87, 0.2) 100%
-  );
-  box-shadow: 0 0 15px rgba(80, 200, 120, 0.3);
-  transform: translateX(2px);
-}
-
-.zs-server-item__url-container--hidden {
-  display: none !important;
-}
-
-.zs-server-item__url-icon {
-  font-size: 16px;
-  filter: drop-shadow(0 0 4px rgba(80, 200, 120, 0.5));
-}
-
-.zs-server-item__url-text {
-  flex: 1;
-  font-family: var(--zs-font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--zs-emerald);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.zs-server-item__url-hint {
-  font-family: var(--zs-font-body);
-  font-size: 10px;
-  color: var(--zs-text-muted);
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
-}
-
-.zs-server-item__url-container:hover .zs-server-item__url-hint {
-  opacity: 1;
-  color: var(--zs-emerald);
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* CONTENT AREA                                                                */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: radial-gradient(ellipse at top right, 
-    rgba(26, 31, 46, 0.8) 0%, 
-    var(--zs-bg) 70%
-  );
-  padding: 24px;
-  overflow: hidden;
-}
-
-.zs-content__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.zs-content__title {
-  font-family: var(--zs-font-display);
-  font-size: 28px;
-  font-weight: 400;
-  color: var(--zs-gold);
-  margin: 0;
-  text-shadow: 0 0 20px rgba(201, 162, 39, 0.3);
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* CONTROL PANEL                                                               */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-control-panel {
-  display: flex;
-  gap: 12px;
-}
-
-.zs-control-panel--hidden {
-  display: none;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* BUTTONS                                                                     */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-btn {
-  font-family: var(--zs-font-body);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 10px 24px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.zs-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.zs-btn:hover::before {
-  opacity: 1;
-}
-
-/* Start Button */
-.zs-btn--start {
-  background: transparent;
-  border: 1px solid var(--zs-emerald-dark);
-  color: var(--zs-emerald);
-}
-
-.zs-btn--start:hover {
-  background: var(--zs-emerald);
-  color: var(--zs-bg);
-  box-shadow: var(--zs-shadow-glow-emerald);
-}
-
-/* Stop Button */
-.zs-btn--stop {
-  background: transparent;
-  border: 1px solid var(--zs-ruby-dark);
-  color: var(--zs-ruby);
-}
-
-.zs-btn--stop:hover {
-  background: var(--zs-ruby);
-  color: var(--zs-bg);
-  box-shadow: var(--zs-shadow-glow-ruby);
-}
-
-/* Disabled State */
-.zs-btn--disabled,
-.zs-btn:disabled {
-  border-color: var(--zs-text-dim);
-  color: var(--zs-text-dim);
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.zs-btn--disabled:hover,
-.zs-btn:disabled:hover {
-  background: transparent;
-  box-shadow: none;
-}
-
-.zs-btn--disabled::before,
-.zs-btn:disabled::before {
-  display: none;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SERVER URL DISPLAY - Industrial Luxury Obsidian + White Leather + Emerald   */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-server-url {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  background: linear-gradient(135deg, 
-    rgba(16, 185, 129, 0.12) 0%,
-    rgba(5, 150, 105, 0.08) 30%,
-    rgba(20, 24, 36, 0.95) 70%,
-    rgba(10, 13, 20, 0.98) 100%
-  );
-  border: 3px solid transparent;
-  border-image: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%) 1;
-  border-radius: 16px;
-  padding: 24px 32px;
-  margin-bottom: 24px;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 
-    0 0 40px rgba(16, 185, 129, 0.15),
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* White leather texture overlay */
-.zs-server-url::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse at 20% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
-  opacity: 1;
-  pointer-events: none;
-}
-
-/* Animated glow border */
-.zs-server-url::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  background: linear-gradient(135deg, #2dd4bf, #10b981, #059669, #10b981, #2dd4bf);
-  background-size: 300% 300%;
-  border-radius: 18px;
-  z-index: -1;
-  animation: zs-border-glow 3s ease-in-out infinite;
-}
-
-@keyframes zs-border-glow {
-  0%, 100% { background-position: 0% 50%; opacity: 0.6; }
-  50% { background-position: 100% 50%; opacity: 1; }
-}
-
-.zs-server-url:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 
-    0 0 60px rgba(16, 185, 129, 0.3),
-    0 0 100px rgba(16, 185, 129, 0.15),
-    0 16px 48px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.zs-server-url:active {
-  transform: translateY(-2px) scale(1.005);
-}
-
-.zs-server-url--hidden {
-  display: none !important;
-}
-
-/* Large SVG Icon Container */
-.zs-server-url__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.zs-server-url__svg {
-  filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.5));
-}
-
-/* Outer ring - obsidian with emerald glow */
-.zs-server-url__outer-ring {
-  fill: none;
-  stroke: url(#outerRingGrad);
-  stroke-width: 3;
-  opacity: 0.6;
-  animation: zs-outer-ring-pulse 2.5s ease-in-out infinite;
-  transform-origin: 60px 60px;
-}
-
-@keyframes zs-outer-ring-pulse {
-  0%, 100% { 
-    opacity: 0.4;
-    stroke-width: 3;
-  }
-  50% { 
-    opacity: 0.9;
-    stroke-width: 4;
-  }
-}
-
-/* Middle ring - emerald glow */
-.zs-server-url__middle-ring {
-  fill: none;
-  stroke: #10b981;
-  stroke-width: 2;
-  filter: drop-shadow(0 0 12px #10b981);
-  animation: zs-middle-ring-pulse 2s ease-in-out infinite;
-  transform-origin: 60px 60px;
-}
-
-@keyframes zs-middle-ring-pulse {
-  0%, 100% { 
-    opacity: 0.5;
-    filter: drop-shadow(0 0 8px #10b981);
-  }
-  50% { 
-    opacity: 1;
-    filter: drop-shadow(0 0 20px #10b981);
-  }
-}
-
-/* Inner circle - white leather with emerald tint */
-.zs-server-url__inner-circle {
-  fill: url(#innerGlowGrad);
-  filter: drop-shadow(0 0 15px rgba(52, 211, 153, 0.6));
-  animation: zs-inner-breathe 1.8s ease-in-out infinite;
-}
-
-@keyframes zs-inner-breathe {
-  0%, 100% { 
-    filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.5));
-    transform: scale(1);
-  }
-  50% { 
-    filter: drop-shadow(0 0 25px rgba(52, 211, 153, 0.8));
-    transform: scale(1.02);
-  }
-}
-
-/* Check mark - obsidian colored */
-.zs-server-url__check {
-  fill: none;
-  stroke: #0a0d14;
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-/* Radiating rays - luxury detail */
-.zs-server-url__ray {
-  stroke: #34d399;
-  stroke-width: 2;
-  stroke-linecap: round;
-  opacity: 0.4;
-  animation: zs-ray-pulse 2s ease-in-out infinite;
-}
-
-@keyframes zs-ray-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.8; }
-}
-
-/* URL Text Wrapper */
-.zs-server-url__wrapper {
-  flex: 1;
-  min-width: 0;
-}
-
-.zs-server-url__label {
-  font-family: var(--zs-font-display);
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  color: #34d399;
-  margin-bottom: 8px;
-  text-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
-}
-
-.zs-server-url__text {
-  font-family: var(--zs-font-mono);
-  font-size: 28px;
-  font-weight: 700;
-  color: #ffffff;
-  text-shadow: 
-    0 0 30px rgba(52, 211, 153, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Open Button */
-.zs-server-url__open-btn {
-  font-family: var(--zs-font-body);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: #0a0d14;
-  background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
-  padding: 14px 24px;
-  border-radius: 8px;
-  white-space: nowrap;
-  transition: all 0.3s ease;
-  box-shadow: 
-    0 4px 15px rgba(16, 185, 129, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.zs-server-url:hover .zs-server-url__open-btn {
-  transform: translateX(4px);
-  box-shadow: 
-    0 6px 25px rgba(16, 185, 129, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  background: linear-gradient(135deg, #2dd4bf 0%, #34d399 50%, #10b981 100%);
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* LOG VIEWER                                                                  */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-log-viewer {
-  flex: 1;
-  background: linear-gradient(135deg, 
-    rgba(0, 0, 0, 0.7) 0%, 
-    rgba(5, 5, 8, 0.9) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 16px;
-  overflow-y: auto;
-  font-family: var(--zs-font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-  box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.5);
-}
-
-.zs-log-viewer__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--zs-text-dim);
-}
-
-.zs-log-viewer__empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  color: rgba(201, 162, 39, 0.2);
-  text-shadow: 0 0 30px rgba(201, 162, 39, 0.1);
-}
-
-.zs-log-viewer__empty-text {
-  font-family: var(--zs-font-body);
-  font-size: 14px;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* LOG ENTRIES                                                                 */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-log-entry {
-  padding: 4px 0;
-  white-space: pre-wrap;
-  word-break: break-all;
-  border-left: 2px solid transparent;
-  padding-left: 8px;
-  margin-left: -8px;
-}
-
-.zs-log-entry--stdout {
-  color: var(--zs-text-muted);
-}
-
-.zs-log-entry--stderr {
-  color: #ff8888;
-  border-left-color: var(--zs-ruby);
-  border-left-width: 3px;
-  background: rgba(227, 24, 55, 0.12);
-  padding: 8px 12px;
-  margin: 4px 0;
-  border-radius: 0 4px 4px 0;
-  font-weight: 500;
-  animation: zs-error-flash 0.5s ease-out;
-}
-
-@keyframes zs-error-flash {
-  0% { background: rgba(255, 107, 107, 0.3); }
-  100% { background: rgba(227, 24, 55, 0.12); }
-}
-
-.zs-log-entry--system {
-  color: var(--zs-gold);
-  font-style: italic;
-  border-bottom: 1px solid rgba(201, 162, 39, 0.15);
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SERVER LOG WINDOW - Industrial Luxury Obsidian                              */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-.zs-log-window {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, 
-    rgba(20, 24, 36, 0.98) 0%, 
-    rgba(10, 13, 20, 0.99) 100%
-  );
-  border: 1px solid rgba(201, 162, 39, 0.3);
-  border-radius: 8px;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.7),
-    0 0 1px rgba(201, 162, 39, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  overflow: hidden;
-  z-index: 100;
-  backdrop-filter: blur(12px);
-  transition: box-shadow 0.2s ease, transform 0.15s ease;
-}
-
-.zs-log-window:hover {
-  box-shadow: 
-    0 12px 48px rgba(0, 0, 0, 0.8),
-    0 0 2px rgba(201, 162, 39, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.zs-log-window--hidden {
-  display: none !important;
-}
-
-.zs-log-window--dragging {
-  opacity: 0.9;
-  cursor: grabbing;
-}
-
-.zs-log-window--resizing {
-  opacity: 0.95;
-}
-
-.zs-log-window--minimized {
-  height: auto !important;
-}
-
-.zs-log-window--minimized .inner,
-.zs-log-window--minimized .zs-log-window__resize-handle {
-  display: none;
-}
-
-.zs-log-window--maximized {
-  left: 0 !important;
-  top: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  border-radius: 0;
-}
-
-/* Override jsgui3 Window default styles */
-.zs-log-window.window {
-  background: linear-gradient(180deg, 
-    rgba(20, 24, 36, 0.98) 0%, 
-    rgba(10, 13, 20, 0.99) 100%
-  );
-}
-
-.zs-log-window .relative {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-/* Title bar styling */
-.zs-log-window .title.bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: linear-gradient(180deg, 
-    rgba(201, 162, 39, 0.15) 0%, 
-    rgba(201, 162, 39, 0.05) 100%
-  );
-  border-bottom: 1px solid rgba(201, 162, 39, 0.3);
-  cursor: grab;
-  user-select: none;
-}
-
-.zs-log-window .title.bar:active {
-  cursor: grabbing;
-}
-
-.zs-log-window .title.bar h2 {
-  margin: 0;
-  font-family: var(--zs-font-display);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--zs-gold);
-  text-shadow: 0 0 10px rgba(201, 162, 39, 0.4);
-}
-
-/* Window buttons */
-.zs-log-window .button-group.right {
-  display: flex;
-  gap: 8px;
-}
-
-.zs-log-window .button-group button {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid rgba(201, 162, 39, 0.3);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  color: var(--zs-gold);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.zs-log-window .button-group button:hover {
-  background: rgba(201, 162, 39, 0.2);
-  border-color: var(--zs-gold);
-  transform: scale(1.1);
-}
-
-.zs-log-window .button-group button:last-child:hover {
-  background: rgba(227, 24, 55, 0.3);
-  border-color: var(--zs-ruby);
-  color: var(--zs-ruby);
-}
-
-/* Inner content area */
-.zs-log-window .inner {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 12px;
-}
-
-.zs-log-window .inner .zs-log-viewer {
-  flex: 1;
-  margin: 0;
-  border-radius: 4px;
-}
-
-/* Resize handle */
-.zs-log-window__resize-handle {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 16px;
-  height: 16px;
-  cursor: se-resize;
-  background: linear-gradient(135deg, 
-    transparent 50%, 
-    rgba(201, 162, 39, 0.3) 50%
-  );
-  border-radius: 0 0 8px 0;
-  transition: background 0.15s ease;
-}
-
-.zs-log-window__resize-handle:hover {
-  background: linear-gradient(135deg, 
-    transparent 50%, 
-    rgba(201, 162, 39, 0.5) 50%
-  );
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* SCROLLBAR                                                                   */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(5, 5, 8, 0.5);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--zs-gold-dim), #5a4a10);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--zs-gold), var(--zs-gold-dim));
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-/* ANIMATIONS                                                                  */
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-
-@keyframes zs-fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.zs-server-item {
-  animation: zs-fade-in 0.4s ease both;
-  animation-delay: calc(var(--item-index, 0) * 50ms);
-}
-`;
-        }
-        return {
-          ServerItemControl,
-          ServerListControl,
-          LogEntryControl,
-          LogViewerControl,
-          ServerLogWindowControl,
-          ControlButtonControl,
-          ControlPanelControl,
-          SidebarControl,
-          ContentAreaControl,
-          TitleBarControl,
-          ZServerAppControl: ZServerAppControl2,
-          buildZServerStyles
-        };
+      var isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
+      var jsgui2;
+      if (isBrowser) {
+        jsgui2 = require_client();
+      } else {
+        jsgui2 = require_html();
       }
-      module.exports = { createZServerControls: createZServerControls2 };
+      module.exports = jsgui2;
     }
   });
 
-  // renderer.src.js
-  if (typeof window !== "undefined") {
+  // src/ui/server/artPlayground/isomorphic/jsgui.js
+  var require_jsgui2 = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/jsgui.js"(exports, module) {
+      "use strict";
+      module.exports = require_jsgui();
+    }
+  });
+
+  // src/ui/server/artPlayground/isomorphic/controls/ComponentControl.js
+  var require_ComponentControl = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/controls/ComponentControl.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_jsgui2();
+      var ComponentControl = class _ComponentControl extends jsgui2.Control {
+        constructor(spec = {}) {
+          super(spec);
+          this._id = spec.id || `comp-${Date.now()}`;
+          this._type = spec.type || "unknown";
+          this._x = spec.x || 0;
+          this._y = spec.y || 0;
+          this._width = spec.width || 100;
+          this._height = spec.height || 100;
+          this._fill = spec.fill || "#4A90D9";
+          this._selected = false;
+        }
+        get id() {
+          return this._id;
+        }
+        get type() {
+          return this._type;
+        }
+        get x() {
+          return this._x;
+        }
+        set x(val) {
+          this._x = val;
+          this._updatePosition();
+        }
+        get y() {
+          return this._y;
+        }
+        set y(val) {
+          this._y = val;
+          this._updatePosition();
+        }
+        get width() {
+          return this._width;
+        }
+        set width(val) {
+          this._width = val;
+          this._updateSize();
+        }
+        get height() {
+          return this._height;
+        }
+        set height(val) {
+          this._height = val;
+          this._updateSize();
+        }
+        get fill() {
+          return this._fill;
+        }
+        set fill(val) {
+          this._fill = val;
+          this._updateFill();
+        }
+        get selected() {
+          return this._selected;
+        }
+        set selected(val) {
+          this._selected = val;
+          this._updateSelection();
+        }
+        getBounds() {
+          return {
+            x: this._x,
+            y: this._y,
+            width: this._width,
+            height: this._height
+          };
+        }
+        // Override in subclasses
+        _updatePosition() {
+        }
+        _updateSize() {
+        }
+        _updateFill() {
+        }
+        _updateSelection() {
+        }
+        /**
+         * Move component by delta
+         */
+        moveBy(dx, dy) {
+          this._x += dx;
+          this._y += dy;
+          this._updatePosition();
+        }
+        /**
+         * Resize component
+         */
+        resize(width, height2) {
+          this._width = Math.max(20, width);
+          this._height = Math.max(20, height2);
+          this._updateSize();
+        }
+        /**
+         * Serialize component to JSON
+         */
+        toJSON() {
+          return {
+            id: this._id,
+            type: this._type,
+            x: this._x,
+            y: this._y,
+            width: this._width,
+            height: this._height,
+            fill: this._fill
+          };
+        }
+        /**
+         * Create component from JSON
+         */
+        static fromJSON(data, context2) {
+          return new _ComponentControl({
+            context: context2,
+            ...data
+          });
+        }
+      };
+      module.exports = { ComponentControl };
+    }
+  });
+
+  // src/ui/server/artPlayground/isomorphic/controls/SelectionHandlesControl.js
+  var require_SelectionHandlesControl = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/controls/SelectionHandlesControl.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_jsgui2();
+      var SelectionHandlesControl2 = class extends jsgui2.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.add_class("art-selection");
+          this.dom.attributes["data-jsgui-control"] = "art_selection";
+          this._bounds = { x: 0, y: 0, width: 100, height: 100 };
+          this._handles = {};
+          this._activeHandle = null;
+          if (!spec.el) {
+            this._build();
+          }
+        }
+        _build() {
+          this._outline = new jsgui2.Control({ context: this.context, tagName: "div" });
+          this._outline.add_class("art-selection__outline");
+          this.add(this._outline);
+          const handlePositions = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+          handlePositions.forEach((pos) => {
+            const handle = new jsgui2.Control({ context: this.context, tagName: "div" });
+            handle.add_class("art-selection__handle");
+            handle.add_class(`art-selection__handle--${pos}`);
+            handle.dom.attributes["data-handle"] = pos;
+            this._handles[pos] = handle;
+            this.add(handle);
+          });
+        }
+        activate() {
+          super.activate();
+          Object.entries(this._handles).forEach(([pos, handle]) => {
+            const el = handle.dom.el || handle.dom;
+            if (!el || typeof el.addEventListener !== "function") return;
+            el.addEventListener("mousedown", (e) => {
+              e.stopPropagation();
+              this._activeHandle = pos;
+              this.raise("resize-start", {
+                handle: pos,
+                mouseX: e.clientX,
+                mouseY: e.clientY
+              });
+              const onMove = (moveEvent) => {
+                this.raise("resize-move", {
+                  handle: pos,
+                  mouseX: moveEvent.clientX,
+                  mouseY: moveEvent.clientY
+                });
+              };
+              const onUp = () => {
+                this._activeHandle = null;
+                this.raise("resize-end");
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", onUp);
+            });
+          });
+        }
+        /**
+         * Update handle positions based on component bounds
+         */
+        updateBounds(bounds2) {
+          this._bounds = bounds2;
+          const { x, y, width, height: height2 } = bounds2;
+          const outlineEl = this._outline.dom.el || this._outline.dom;
+          if (outlineEl && outlineEl.style) {
+            outlineEl.style.left = `${x}px`;
+            outlineEl.style.top = `${y}px`;
+            outlineEl.style.width = `${width}px`;
+            outlineEl.style.height = `${height2}px`;
+          }
+          const handleSize = 8;
+          const half = handleSize / 2;
+          this._setHandlePos("nw", x - half, y - half);
+          this._setHandlePos("ne", x + width - half, y - half);
+          this._setHandlePos("se", x + width - half, y + height2 - half);
+          this._setHandlePos("sw", x - half, y + height2 - half);
+          this._setHandlePos("n", x + width / 2 - half, y - half);
+          this._setHandlePos("s", x + width / 2 - half, y + height2 - half);
+          this._setHandlePos("w", x - half, y + height2 / 2 - half);
+          this._setHandlePos("e", x + width - half, y + height2 / 2 - half);
+        }
+        _setHandlePos(pos, left, top) {
+          const handle = this._handles[pos];
+          if (handle) {
+            const el = handle.dom.el || handle.dom;
+            if (el && el.style) {
+              el.style.left = `${left}px`;
+              el.style.top = `${top}px`;
+            }
+          }
+        }
+      };
+      module.exports = { SelectionHandlesControl: SelectionHandlesControl2 };
+    }
+  });
+
+  // src/ui/server/artPlayground/isomorphic/controls/CanvasControl.js
+  var require_CanvasControl = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/controls/CanvasControl.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_jsgui2();
+      var { ComponentControl } = require_ComponentControl();
+      var { SelectionHandlesControl: SelectionHandlesControl2 } = require_SelectionHandlesControl();
+      var CanvasControl2 = class extends jsgui2.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.add_class("art-canvas");
+          this.dom.attributes["data-jsgui-control"] = "art_canvas";
+          this._tool = "select";
+          this._components = /* @__PURE__ */ new Map();
+          this._selectedId = null;
+          this._nextId = 1;
+          this._dragState = null;
+          if (!spec.el) {
+            this._build();
+          }
+        }
+        _build() {
+          this._svgWrapper = new jsgui2.Control({ context: this.context, tagName: "div" });
+          this._svgWrapper.add_class("art-canvas__svg-wrapper");
+          const svgContent = new jsgui2.String_Control({
+            context: this.context,
+            text: `<svg class="art-canvas__svg" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0E0E0" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect class="art-canvas__grid" width="100%" height="100%" fill="url(#grid)"/>
+        <g class="art-canvas__components"></g>
+      </svg>`
+          });
+          this._svgWrapper.add(svgContent);
+          this.add(this._svgWrapper);
+          this._selectionHandles = new SelectionHandlesControl2({ context: this.context });
+          this._selectionHandles.dom.attributes.style = "display: none;";
+          this.add(this._selectionHandles);
+          this._addDefaultComponents();
+        }
+        _addDefaultComponents() {
+          this._pendingComponents = [
+            { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
+            { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
+            { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
+          ];
+        }
+        activate() {
+          super.activate();
+          const el = this.dom.el || this.dom;
+          this._svg = el.querySelector(".art-canvas__svg");
+          this._componentsGroup = this._svg.querySelector(".art-canvas__components");
+          if (this._pendingComponents) {
+            this._pendingComponents.forEach((comp) => this._renderComponent(comp));
+            this._pendingComponents = null;
+          }
+          if (this._selectionHandles.activate) {
+            this._selectionHandles.activate();
+          }
+          this._setupEventListeners();
+        }
+        _setupEventListeners() {
+          this._svg.addEventListener("mousedown", (e) => this._handleMouseDown(e));
+          document.addEventListener("mousemove", (e) => this._handleMouseMove(e));
+          document.addEventListener("mouseup", (e) => this._handleMouseUp(e));
+          this._selectionHandles.on("resize-start", (data) => this._startResize(data));
+          this._selectionHandles.on("resize-move", (data) => this._doResize(data));
+          this._selectionHandles.on("resize-end", () => this._endResize());
+        }
+        _handleMouseDown(e) {
+          if (this._tool !== "select") return;
+          const target = e.target;
+          const componentEl = target.closest("[data-component-id]");
+          if (componentEl) {
+            const id = componentEl.getAttribute("data-component-id");
+            this._selectComponent(id);
+            const rect = this._svg.getBoundingClientRect();
+            this._dragState = {
+              type: "move",
+              id,
+              startX: e.clientX - rect.left,
+              startY: e.clientY - rect.top,
+              component: this._components.get(id)
+            };
+            if (this._dragState.component) {
+              this._dragState.origX = this._dragState.component.x;
+              this._dragState.origY = this._dragState.component.y;
+            }
+            e.preventDefault();
+          } else if (target === this._svg || target.classList.contains("art-canvas__grid")) {
+            this._deselectAll();
+          }
+        }
+        _handleMouseMove(e) {
+          if (!this._dragState) return;
+          const rect = this._svg.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          if (this._dragState.type === "move") {
+            const dx = x - this._dragState.startX;
+            const dy = y - this._dragState.startY;
+            const comp = this._dragState.component;
+            if (comp) {
+              comp.x = this._dragState.origX + dx;
+              comp.y = this._dragState.origY + dy;
+              this._updateComponentPosition(this._dragState.id);
+              this._updateSelectionHandles();
+            }
+          }
+        }
+        _handleMouseUp(e) {
+          if (this._dragState) {
+            this._dragState = null;
+          }
+        }
+        _renderComponent(data) {
+          const { id, type } = data;
+          let el;
+          if (type === "rect") {
+            el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            el.setAttribute("x", data.x);
+            el.setAttribute("y", data.y);
+            el.setAttribute("width", data.width);
+            el.setAttribute("height", data.height);
+            el.setAttribute("fill", data.fill || "#4A90D9");
+            el.setAttribute("rx", "4");
+            this._components.set(id, {
+              type: "rect",
+              el,
+              x: data.x,
+              y: data.y,
+              width: data.width,
+              height: data.height,
+              fill: data.fill
+            });
+          } else if (type === "ellipse") {
+            el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+            el.setAttribute("cx", data.cx);
+            el.setAttribute("cy", data.cy);
+            el.setAttribute("rx", data.rx);
+            el.setAttribute("ry", data.ry);
+            el.setAttribute("fill", data.fill || "#4AD94A");
+            this._components.set(id, {
+              type: "ellipse",
+              el,
+              x: data.cx - data.rx,
+              y: data.cy - data.ry,
+              width: data.rx * 2,
+              height: data.ry * 2,
+              cx: data.cx,
+              cy: data.cy,
+              rx: data.rx,
+              ry: data.ry,
+              fill: data.fill
+            });
+          } else if (type === "text") {
+            el = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            el.setAttribute("x", data.x);
+            el.setAttribute("y", data.y);
+            el.setAttribute("fill", data.fill || "#1A1A1A");
+            el.setAttribute("font-size", data.fontSize || "16");
+            el.textContent = data.text || "Text";
+            this._components.set(id, {
+              type: "text",
+              el,
+              x: data.x,
+              y: data.y,
+              width: 100,
+              height: 24,
+              text: data.text || "Text",
+              fill: data.fill
+            });
+          }
+          if (el) {
+            el.setAttribute("data-component-id", id);
+            el.classList.add("art-canvas__component");
+            this._componentsGroup.appendChild(el);
+          }
+        }
+        _updateComponentPosition(id) {
+          const comp = this._components.get(id);
+          if (!comp) return;
+          const el = comp.el;
+          if (comp.type === "rect") {
+            el.setAttribute("x", comp.x);
+            el.setAttribute("y", comp.y);
+          } else if (comp.type === "ellipse") {
+            comp.cx = comp.x + comp.width / 2;
+            comp.cy = comp.y + comp.height / 2;
+            el.setAttribute("cx", comp.cx);
+            el.setAttribute("cy", comp.cy);
+          } else if (comp.type === "text") {
+            el.setAttribute("x", comp.x);
+            el.setAttribute("y", comp.y);
+          }
+        }
+        _selectComponent(id) {
+          if (this._selectedId && this._selectedId !== id) {
+            const prevComp = this._components.get(this._selectedId);
+            if (prevComp && prevComp.el) {
+              prevComp.el.classList.remove("art-canvas__component--selected");
+            }
+          }
+          this._selectedId = id;
+          const comp = this._components.get(id);
+          if (comp && comp.el) {
+            comp.el.classList.add("art-canvas__component--selected");
+            this._updateSelectionHandles();
+            const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
+            if (handlesEl && handlesEl.style) {
+              handlesEl.style.display = "block";
+            }
+          }
+        }
+        _deselectAll() {
+          if (this._selectedId) {
+            const comp = this._components.get(this._selectedId);
+            if (comp && comp.el) {
+              comp.el.classList.remove("art-canvas__component--selected");
+            }
+          }
+          this._selectedId = null;
+          const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
+          if (handlesEl && handlesEl.style) {
+            handlesEl.style.display = "none";
+          }
+        }
+        _updateSelectionHandles() {
+          if (!this._selectedId) return;
+          const comp = this._components.get(this._selectedId);
+          if (!comp) return;
+          const svgRect = this._svg.getBoundingClientRect();
+          const wrapperEl = this._svgWrapper.dom.el || this._svgWrapper.dom;
+          const wrapperRect = wrapperEl.getBoundingClientRect();
+          const offsetX = svgRect.left - wrapperRect.left;
+          const offsetY = svgRect.top - wrapperRect.top;
+          this._selectionHandles.updateBounds({
+            x: comp.x + offsetX,
+            y: comp.y + offsetY,
+            width: comp.width,
+            height: comp.height
+          });
+        }
+        _startResize(data) {
+          if (!this._selectedId) return;
+          const comp = this._components.get(this._selectedId);
+          if (!comp) return;
+          this._resizeState = {
+            handle: data.handle,
+            origX: comp.x,
+            origY: comp.y,
+            origWidth: comp.width,
+            origHeight: comp.height,
+            startMouseX: data.mouseX,
+            startMouseY: data.mouseY
+          };
+        }
+        _doResize(data) {
+          if (!this._resizeState || !this._selectedId) return;
+          const comp = this._components.get(this._selectedId);
+          if (!comp) return;
+          const dx = data.mouseX - this._resizeState.startMouseX;
+          const dy = data.mouseY - this._resizeState.startMouseY;
+          const handle = this._resizeState.handle;
+          let newX = this._resizeState.origX;
+          let newY = this._resizeState.origY;
+          let newWidth = this._resizeState.origWidth;
+          let newHeight = this._resizeState.origHeight;
+          if (handle.includes("w")) {
+            newX = this._resizeState.origX + dx;
+            newWidth = this._resizeState.origWidth - dx;
+          }
+          if (handle.includes("e")) {
+            newWidth = this._resizeState.origWidth + dx;
+          }
+          if (handle.includes("n")) {
+            newY = this._resizeState.origY + dy;
+            newHeight = this._resizeState.origHeight - dy;
+          }
+          if (handle.includes("s")) {
+            newHeight = this._resizeState.origHeight + dy;
+          }
+          if (newWidth < 20) {
+            if (handle.includes("w")) newX = this._resizeState.origX + this._resizeState.origWidth - 20;
+            newWidth = 20;
+          }
+          if (newHeight < 20) {
+            if (handle.includes("n")) newY = this._resizeState.origY + this._resizeState.origHeight - 20;
+            newHeight = 20;
+          }
+          comp.x = newX;
+          comp.y = newY;
+          comp.width = newWidth;
+          comp.height = newHeight;
+          if (comp.type === "rect") {
+            comp.el.setAttribute("x", newX);
+            comp.el.setAttribute("y", newY);
+            comp.el.setAttribute("width", newWidth);
+            comp.el.setAttribute("height", newHeight);
+          } else if (comp.type === "ellipse") {
+            comp.rx = newWidth / 2;
+            comp.ry = newHeight / 2;
+            comp.cx = newX + comp.rx;
+            comp.cy = newY + comp.ry;
+            comp.el.setAttribute("cx", comp.cx);
+            comp.el.setAttribute("cy", comp.cy);
+            comp.el.setAttribute("rx", comp.rx);
+            comp.el.setAttribute("ry", comp.ry);
+          }
+          this._updateSelectionHandles();
+        }
+        _endResize() {
+          this._resizeState = null;
+        }
+        // Public API
+        setTool(toolName) {
+          this._tool = toolName;
+          const el = this.dom.el || this.dom;
+          if (el && el.setAttribute) {
+            el.setAttribute("data-tool", toolName);
+          }
+        }
+        addComponent(type) {
+          const id = `comp${this._nextId++}`;
+          if (type === "rect") {
+            this._renderComponent({
+              id,
+              type: "rect",
+              x: 200 + Math.random() * 100,
+              y: 200 + Math.random() * 100,
+              width: 120,
+              height: 80,
+              fill: this._randomColor()
+            });
+          } else if (type === "ellipse") {
+            const rx = 50 + Math.random() * 30;
+            const ry = 40 + Math.random() * 20;
+            this._renderComponent({
+              id,
+              type: "ellipse",
+              cx: 250 + Math.random() * 100,
+              cy: 250 + Math.random() * 100,
+              rx,
+              ry,
+              fill: this._randomColor()
+            });
+          } else if (type === "text") {
+            this._renderComponent({
+              id,
+              type: "text",
+              x: 200 + Math.random() * 100,
+              y: 200 + Math.random() * 100,
+              text: "New Text",
+              fill: "#1A1A1A"
+            });
+          }
+          this._selectComponent(id);
+        }
+        deleteSelected() {
+          if (!this._selectedId) return;
+          const comp = this._components.get(this._selectedId);
+          if (comp && comp.el) {
+            comp.el.remove();
+          }
+          this._components.delete(this._selectedId);
+          this._selectedId = null;
+          const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
+          if (handlesEl && handlesEl.style) {
+            handlesEl.style.display = "none";
+          }
+        }
+        _randomColor() {
+          const colors = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
+          return colors[Math.floor(Math.random() * colors.length)];
+        }
+      };
+      module.exports = { CanvasControl: CanvasControl2 };
+    }
+  });
+
+  // src/ui/server/artPlayground/isomorphic/controls/ToolbarControl.js
+  var require_ToolbarControl = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/controls/ToolbarControl.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_jsgui2();
+      var ToolbarControl2 = class extends jsgui2.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.add_class("art-toolbar");
+          this.dom.attributes["data-jsgui-control"] = "art_toolbar";
+          this._currentTool = "select";
+          this._buttons = {};
+          if (!spec.el) {
+            this._build();
+          }
+        }
+        _build() {
+          const toolSection = new jsgui2.Control({ context: this.context, tagName: "div" });
+          toolSection.add_class("art-toolbar__section");
+          const toolLabel = new jsgui2.Control({ context: this.context, tagName: "span" });
+          toolLabel.add_class("art-toolbar__label");
+          toolLabel.add(new jsgui2.String_Control({ context: this.context, text: "Tools:" }));
+          toolSection.add(toolLabel);
+          this._buttons.select = this._createButton("select", "\u238B Select", true);
+          toolSection.add(this._buttons.select);
+          this._buttons.pan = this._createButton("pan", "\u270B Pan", false);
+          toolSection.add(this._buttons.pan);
+          this.add(toolSection);
+          const divider1 = new jsgui2.Control({ context: this.context, tagName: "span" });
+          divider1.add_class("art-toolbar__divider");
+          this.add(divider1);
+          const addSection = new jsgui2.Control({ context: this.context, tagName: "div" });
+          addSection.add_class("art-toolbar__section");
+          const addLabel = new jsgui2.Control({ context: this.context, tagName: "span" });
+          addLabel.add_class("art-toolbar__label");
+          addLabel.add(new jsgui2.String_Control({ context: this.context, text: "Add:" }));
+          addSection.add(addLabel);
+          this._buttons.addRect = this._createButton("add-rect", "\u25AD Rectangle");
+          addSection.add(this._buttons.addRect);
+          this._buttons.addEllipse = this._createButton("add-ellipse", "\u25EF Ellipse");
+          addSection.add(this._buttons.addEllipse);
+          this._buttons.addText = this._createButton("add-text", "T Text");
+          addSection.add(this._buttons.addText);
+          this.add(addSection);
+          const divider2 = new jsgui2.Control({ context: this.context, tagName: "span" });
+          divider2.add_class("art-toolbar__divider");
+          this.add(divider2);
+          const actionsSection = new jsgui2.Control({ context: this.context, tagName: "div" });
+          actionsSection.add_class("art-toolbar__section");
+          this._buttons.delete = this._createButton("delete", "\u{1F5D1}\uFE0F Delete");
+          this._buttons.delete.add_class("art-toolbar__btn--danger");
+          actionsSection.add(this._buttons.delete);
+          this.add(actionsSection);
+        }
+        _createButton(action, label, active = false) {
+          const btn = new jsgui2.Control({ context: this.context, tagName: "button" });
+          btn.add_class("art-toolbar__btn");
+          btn.dom.attributes["data-action"] = action;
+          if (active) {
+            btn.add_class("art-toolbar__btn--active");
+          }
+          btn.add(new jsgui2.String_Control({ context: this.context, text: label }));
+          return btn;
+        }
+        activate() {
+          super.activate();
+          const el = this.dom.el || this.dom;
+          Object.entries(this._buttons).forEach(([key2, btn]) => {
+            const btnEl = btn.dom.el || btn.dom;
+            if (!btnEl || typeof btnEl.addEventListener !== "function") return;
+            const action = btnEl.getAttribute("data-action");
+            btnEl.addEventListener("click", () => {
+              this._handleAction(action);
+            });
+          });
+        }
+        _handleAction(action) {
+          switch (action) {
+            case "select":
+            case "pan":
+              this._setTool(action);
+              break;
+            case "add-rect":
+              this.raise("add-component", "rect");
+              break;
+            case "add-ellipse":
+              this.raise("add-component", "ellipse");
+              break;
+            case "add-text":
+              this.raise("add-component", "text");
+              break;
+            case "delete":
+              this.raise("delete");
+              break;
+          }
+        }
+        _setTool(toolName) {
+          const selectEl = this._buttons.select.dom.el || this._buttons.select.dom;
+          const panEl = this._buttons.pan.dom.el || this._buttons.pan.dom;
+          if (selectEl && selectEl.classList) {
+            selectEl.classList.toggle("art-toolbar__btn--active", toolName === "select");
+          }
+          if (panEl && panEl.classList) {
+            panEl.classList.toggle("art-toolbar__btn--active", toolName === "pan");
+          }
+          this._currentTool = toolName;
+          this.raise("tool-change", toolName);
+        }
+      };
+      module.exports = { ToolbarControl: ToolbarControl2 };
+    }
+  });
+
+  // src/ui/server/artPlayground/isomorphic/controls/ArtPlaygroundAppControl.js
+  var require_ArtPlaygroundAppControl = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/controls/ArtPlaygroundAppControl.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_jsgui2();
+      var { CanvasControl: CanvasControl2 } = require_CanvasControl();
+      var { ToolbarControl: ToolbarControl2 } = require_ToolbarControl();
+      var ArtPlaygroundAppControl2 = class extends jsgui2.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.add_class("art-app");
+          this.dom.attributes["data-jsgui-control"] = "art_app";
+          if (!spec.el) {
+            this._compose();
+          }
+        }
+        _compose() {
+          this._toolbar = new ToolbarControl2({ context: this.context });
+          this.add(this._toolbar);
+          this._canvas = new CanvasControl2({ context: this.context });
+          this.add(this._canvas);
+        }
+        /**
+         * Activate client-side behavior
+         */
+        activate() {
+          if (this.__active) return;
+          this.__active = true;
+          const el = this.dom.el;
+          if (el && !this._toolbar) {
+            const toolbarEl = el.querySelector("[data-jsgui-control='art_toolbar']");
+            if (toolbarEl && toolbarEl.__jsgui_control) {
+              this._toolbar = toolbarEl.__jsgui_control;
+            }
+          }
+          if (el && !this._canvas) {
+            const canvasEl = el.querySelector("[data-jsgui-control='art_canvas']");
+            if (canvasEl && canvasEl.__jsgui_control) {
+              this._canvas = canvasEl.__jsgui_control;
+            }
+          }
+          this._setupToolbarHandlers();
+        }
+        /**
+         * Connect toolbar actions to canvas
+         */
+        _setupToolbarHandlers() {
+          if (!this._toolbar || !this._canvas) return;
+          this._toolbar.on("tool-change", (toolName) => {
+            this._canvas.setTool(toolName);
+          });
+          this._toolbar.on("add-component", (componentType) => {
+            this._canvas.addComponent(componentType);
+          });
+          this._toolbar.on("delete", () => {
+            this._canvas.deleteSelected();
+          });
+        }
+      };
+      module.exports = { ArtPlaygroundAppControl: ArtPlaygroundAppControl2 };
+    }
+  });
+
+  // src/ui/server/artPlayground/client.js
+  if (typeof window !== "undefined" && typeof window.page_context === "undefined") {
     window.page_context = null;
   }
-  console.log("[Z-Server] Renderer starting...");
-  var jsgui;
-  var createZServerControls;
-  try {
-    jsgui = require_client();
-    console.log("[Z-Server] jsgui3-client loaded:", Object.keys(jsgui).slice(0, 10));
-    createZServerControls = require_zServerControlsFactory().createZServerControls;
-    console.log("[Z-Server] Controls factory loaded");
-  } catch (err) {
-    console.error("[Z-Server] Failed to load modules:", err.message);
-    console.error("[Z-Server] Stack:", err.stack);
+  var jsgui = require_client();
+  var { ArtPlaygroundAppControl } = require_ArtPlaygroundAppControl();
+  var { ToolbarControl } = require_ToolbarControl();
+  var { CanvasControl } = require_CanvasControl();
+  var { SelectionHandlesControl } = require_SelectionHandlesControl();
+  function ensureContext() {
+    if (typeof document === "undefined") return null;
+    if (jsgui.context) return jsgui.context;
+    if (typeof jsgui.Client_Page_Context !== "function") {
+      console.warn("[Art Playground] Missing Client_Page_Context");
+      return null;
+    }
+    const context2 = new jsgui.Client_Page_Context({ document });
+    jsgui.context = context2;
+    window.page_context = context2;
+    return context2;
   }
-  var ZServerAppControl;
-  try {
-    const controls = createZServerControls(jsgui);
-    ZServerAppControl = controls.ZServerAppControl;
-    console.log("[Z-Server] ZServerAppControl created");
-  } catch (err) {
-    console.error("[Z-Server] Failed to create controls:", err.message);
-    console.error("[Z-Server] Stack:", err.stack);
-  }
-  document.addEventListener("DOMContentLoaded", async () => {
-    console.log("[Z-Server] DOMContentLoaded fired");
-    let context2;
-    try {
-      context2 = new jsgui.Client_Page_Context();
-      console.log("[Z-Server] Context created");
-    } catch (err) {
-      console.error("[Z-Server] Failed to create context:", err.message);
-      console.error("[Z-Server] Stack:", err.stack);
+  function init() {
+    console.log("[Art Playground] Initializing client...");
+    const context2 = ensureContext();
+    if (!context2) {
+      console.error("[Art Playground] Could not create context");
       return;
     }
-    let app;
-    try {
-      app = new ZServerAppControl({
-        context: context2,
-        api: window.electronAPI
-      });
-      console.log("[Z-Server] App control created");
-    } catch (err) {
-      console.error("[Z-Server] Failed to create app:", err);
+    const appEl = document.querySelector(".art-app");
+    if (!appEl) {
+      console.error("[Art Playground] Could not find .art-app element");
       return;
     }
-    const rootEl = document.getElementById("app-root");
-    if (rootEl) {
-      try {
-        const html = app.all_html_render();
-        console.log("[Z-Server] Rendered HTML length:", html.length);
-        rootEl.innerHTML = html;
-        app.register_this_and_subcontrols();
-        console.log("[Z-Server] All controls registered in context, map_controls size:", Object.keys(context2.map_controls).length);
-        const appEl = rootEl.querySelector('[data-jsgui-id="' + app._id() + '"]');
-        if (appEl) {
-          app.dom.el = appEl;
-          console.log("[Z-Server] App DOM element linked, id:", app._id());
-          app.rec_desc_ensure_ctrl_el_refs(appEl);
-          console.log("[Z-Server] Child controls linked to DOM, map_els size:", Object.keys(context2.map_els).length);
-        } else {
-          console.warn("[Z-Server] Could not find app element with id:", app._id());
-        }
-        app.activate();
-        console.log("[Z-Server] App activated");
-        await app.init();
-        console.log("[Z-Server] App initialized");
-      } catch (err) {
-        console.error("[Z-Server] Failed during render/activate:", err);
-        console.error("[Z-Server] Stack:", err.stack);
+    const app = new ArtPlaygroundAppControl({
+      el: appEl,
+      context: context2
+    });
+    app.dom = app.dom || {};
+    app.dom.el = appEl;
+    appEl.__jsgui_control = app;
+    const toolbarEl = appEl.querySelector(".art-toolbar");
+    if (toolbarEl) {
+      app._toolbar = new ToolbarControl({ el: toolbarEl, context: context2 });
+      app._toolbar.dom = app._toolbar.dom || {};
+      app._toolbar.dom.el = toolbarEl;
+      toolbarEl.__jsgui_control = app._toolbar;
+      app._toolbar._buttons = {
+        select: { dom: { el: toolbarEl.querySelector('[data-action="select"]') } },
+        pan: { dom: { el: toolbarEl.querySelector('[data-action="pan"]') } },
+        addRect: { dom: { el: toolbarEl.querySelector('[data-action="add-rect"]') } },
+        addEllipse: { dom: { el: toolbarEl.querySelector('[data-action="add-ellipse"]') } },
+        addText: { dom: { el: toolbarEl.querySelector('[data-action="add-text"]') } },
+        delete: { dom: { el: toolbarEl.querySelector('[data-action="delete"]') } }
+      };
+    }
+    const canvasEl = appEl.querySelector(".art-canvas");
+    if (canvasEl) {
+      app._canvas = new CanvasControl({ el: canvasEl, context: context2 });
+      app._canvas.dom = app._canvas.dom || {};
+      app._canvas.dom.el = canvasEl;
+      canvasEl.__jsgui_control = app._canvas;
+      const svgWrapperEl = canvasEl.querySelector(".art-canvas__svg-wrapper");
+      if (svgWrapperEl) {
+        app._canvas._svgWrapper = { dom: { el: svgWrapperEl } };
       }
-    } else {
-      console.error("App root element not found");
+      const selectionEl = canvasEl.querySelector(".art-selection");
+      if (selectionEl) {
+        app._canvas._selectionHandles = new SelectionHandlesControl({ el: selectionEl, context: context2 });
+        app._canvas._selectionHandles.dom = app._canvas._selectionHandles.dom || {};
+        app._canvas._selectionHandles.dom.el = selectionEl;
+        app._canvas._selectionHandles._outline = { dom: { el: selectionEl.querySelector(".art-selection__outline") } };
+        app._canvas._selectionHandles._handles = {};
+        ["nw", "n", "ne", "e", "se", "s", "sw", "w"].forEach((pos) => {
+          const handleEl = selectionEl.querySelector(`[data-handle="${pos}"]`);
+          if (handleEl) {
+            app._canvas._selectionHandles._handles[pos] = { dom: { el: handleEl } };
+          }
+        });
+      }
     }
-  });
+    if (app._toolbar) {
+      console.log("[Art Playground] Activating toolbar...");
+      const toolbarEl2 = app._toolbar.dom.el;
+      Object.entries(app._toolbar._buttons).forEach(([key2, btn]) => {
+        const btnEl = btn.dom?.el;
+        if (!btnEl) return;
+        const action = btnEl.getAttribute("data-action");
+        btnEl.addEventListener("click", () => {
+          console.log("[Art Playground] Button clicked:", action);
+          app._toolbar._handleAction(action);
+        });
+      });
+    }
+    if (app._canvas) {
+      console.log("[Art Playground] Activating canvas...");
+      const canvasEl2 = app._canvas.dom.el;
+      app._canvas._svg = canvasEl2.querySelector(".art-canvas__svg");
+      app._canvas._componentsGroup = app._canvas._svg?.querySelector(".art-canvas__components");
+      if (app._canvas._svg) {
+        app._canvas._svg.addEventListener("mousedown", (e) => app._canvas._handleMouseDown(e));
+        document.addEventListener("mousemove", (e) => app._canvas._handleMouseMove(e));
+        document.addEventListener("mouseup", (e) => app._canvas._handleMouseUp(e));
+      }
+      if (app._canvas._selectionHandles) {
+        const selEl = app._canvas._selectionHandles.dom.el;
+        if (selEl) {
+          Object.entries(app._canvas._selectionHandles._handles || {}).forEach(([pos, handle]) => {
+            const handleEl = handle.dom?.el;
+            if (!handleEl) return;
+            handleEl.addEventListener("mousedown", (e) => {
+              e.stopPropagation();
+              app._canvas._selectionHandles.raise("resize-start", { position: pos, event: e });
+            });
+          });
+          app._canvas._selectionHandles.on("resize-start", (data) => app._canvas._startResize(data));
+          app._canvas._selectionHandles.on("resize-move", (data) => app._canvas._doResize(data));
+          app._canvas._selectionHandles.on("resize-end", () => app._canvas._endResize());
+        }
+      }
+    }
+    console.log("[Art Playground] Wiring toolbar to canvas...");
+    if (app._toolbar && app._canvas) {
+      app._toolbar.on("tool-change", (toolName) => {
+        console.log("[Art Playground] Tool changed to:", toolName);
+        app._canvas.setTool(toolName);
+      });
+      app._toolbar.on("add-component", (componentType) => {
+        console.log("[Art Playground] Adding component:", componentType);
+        app._canvas.addComponent(componentType);
+      });
+      app._toolbar.on("delete", () => {
+        console.log("[Art Playground] Deleting selected");
+        app._canvas.deleteSelected();
+      });
+    }
+    console.log("[Art Playground] Client activated");
+  }
+  if (typeof window !== "undefined") {
+    window.jsgui3 = jsgui;
+    window.jsgui = jsgui;
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
+//# sourceMappingURL=client.bundle.js.map

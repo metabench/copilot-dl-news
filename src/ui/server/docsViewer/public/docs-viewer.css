@@ -1036,7 +1036,20 @@ details[open] > .doc-nav__folder-summary::before {
    ======================================== */
 
 /* SVG documents should use full available width, not be constrained by --content-max-width */
+/* Using :has() for server-rendered pages */
 .doc-viewer:has(.doc-svg-container) {
+  max-width: none;
+  padding: var(--space-md);
+}
+
+/* Class-based variant for SPA navigation (JavaScript adds this class) */
+.doc-viewer--svg {
+  max-width: none;
+  padding: var(--space-md);
+}
+
+/* Also target the inner viewer if main has the svg class */
+.doc-viewer--svg .doc-viewer {
   max-width: none;
   padding: var(--space-md);
 }
@@ -1067,4 +1080,40 @@ details[open] > .doc-nav__folder-summary::before {
   margin-top: var(--space-md);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+/* ========================================
+   SPA Navigation Loading States
+   ======================================== */
+
+/* Loading state applied to body during navigation */
+body.docs-loading {
+  cursor: progress;
+}
+
+body.docs-loading * {
+  cursor: progress !important;
+}
+
+/* Loading indicator within content */
+.doc-viewer__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: var(--color-text-secondary);
+}
+
+/* Navigation link active (being clicked) */
+.doc-nav__link:active {
+  opacity: 0.7;
+}
+
+/* Subtle transition for content changes */
+.doc-viewer__content {
+  transition: opacity 0.1s ease;
+}
+
+.doc-viewer__content--loading {
+  opacity: 0.5;
 }

@@ -4,7 +4,7 @@
  * ColumnHeaderControl - Client-side control for sortable column headers
  * 
  * Handles:
- * - Click to sort (toggle asc/desc)
+ * - Click to sort (toggle asc/desc) - INSTANT client-side sorting
  * - Right-click to show context menu
  * - Options button click to show context menu
  * 
@@ -31,6 +31,10 @@ class ColumnHeaderControl extends jsgui.Control {
     
     this.contextMenuSelector = spec.contextMenuSelector || "[data-context-menu='columns']";
     this._contextMenuControl = null;
+    
+    // Current sort state
+    this._sortBy = "name";
+    this._sortOrder = "asc";
   }
   
   /**
@@ -57,6 +61,11 @@ class ColumnHeaderControl extends jsgui.Control {
     const el = this.dom?.el;
     if (!el) return;
     
+    // Read initial sort state from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    this._sortBy = urlParams.get("sort_by") || "name";
+    this._sortOrder = urlParams.get("sort_order") || "asc";
+    
     // Click on sortable headers to sort
     el.addEventListener("click", this._handleClick.bind(this));
     
@@ -69,11 +78,11 @@ class ColumnHeaderControl extends jsgui.Control {
       optionsBtn.addEventListener("click", this._handleOptionsClick.bind(this));
     }
     
-    console.log("[ColumnHeaderControl] Activated");
+    console.log("[ColumnHeaderControl] Activated, sort:", this._sortBy, this._sortOrder);
   }
   
   /**
-   * Handle click on sortable headers
+   * Handle click on sortable headers - INSTANT client-side sort
    * @private
    */
   _handleClick(e) {
@@ -97,13 +106,146 @@ class ColumnHeaderControl extends jsgui.Control {
       newOrder = sortBy === "mtime" ? "desc" : "asc";
     }
     
-    // Build new URL with sort params
+    console.log("[ColumnHeaderControl] Sorting by", sortBy, newOrder);
+    
+    // Perform instant client-side sort
+    this._sortClientSide(sortBy, newOrder);
+    
+    // Update URL without page reload (for bookmarking/sharing)
+    this._updateUrlSilently(sortBy, newOrder);
+  }
+  
+  /**
+   * Sort the navigation tree client-side without page reload
+   * @private
+   */
+  _sortClientSide(sortBy, sortOrder) {
+    const tree = document.querySelector(".doc-nav__tree");
+    if (!tree) return;
+    
+    // Sort all ul.doc-nav__list elements recursively
+    this._sortList(tree, sortBy, sortOrder);
+    
+    // Update header UI
+    this._updateHeaderUI(sortBy, sortOrder);
+    
+    // Save state
+    this._sortBy = sortBy;
+    this._sortOrder = sortOrder;
+  }
+  
+  /**
+   * Recursively sort a list element
+   * @private
+   */
+  _sortList(container, sortBy, sortOrder) {
+    const lists = container.querySelectorAll("ul.doc-nav__list");
+    
+    lists.forEach(list => {
+      const items = Array.from(list.children).filter(el => el.tagName === "LI");
+      if (items.length <= 1) return;
+      
+      // Sort items
+      items.sort((a, b) => {
+        // Folders first, then files
+        const aIsFolder = a.classList.contains("doc-nav__item--folder");
+        const bIsFolder = b.classList.contains("doc-nav__item--folder");
+        
+        if (aIsFolder !== bIsFolder) {
+          return aIsFolder ? -1 : 1; // Folders first
+        }
+        
+        // Get values to compare
+        let aVal, bVal;
+        
+        if (sortBy === "mtime") {
+          // Get mtime from data attribute or cell text
+          const aMtimeCell = a.querySelector(".doc-nav__cell--mtime");
+          const bMtimeCell = b.querySelector(".doc-nav__cell--mtime");
+          aVal = aMtimeCell?.textContent?.trim() || "";
+          bVal = bMtimeCell?.textContent?.trim() || "";
+          
+          // Parse dates (format: MM-DD-YY)
+          aVal = this._parseDateString(aVal);
+          bVal = this._parseDateString(bVal);
+        } else {
+          // Sort by name
+          const aLabel = a.querySelector(".doc-nav__label");
+          const bLabel = b.querySelector(".doc-nav__label");
+          aVal = (aLabel?.textContent || "").toLowerCase();
+          bVal = (bLabel?.textContent || "").toLowerCase();
+        }
+        
+        // Compare
+        let result;
+        if (sortBy === "mtime") {
+          result = aVal - bVal; // Numeric comparison for dates
+        } else {
+          result = aVal.localeCompare(bVal);
+        }
+        
+        return sortOrder === "desc" ? -result : result;
+      });
+      
+      // Reorder DOM
+      items.forEach(item => list.appendChild(item));
+    });
+  }
+  
+  /**
+   * Parse MM-DD-YY date string to timestamp
+   * @private
+   */
+  _parseDateString(str) {
+    if (!str) return 0;
+    const parts = str.split("-");
+    if (parts.length !== 3) return 0;
+    const [month, day, year] = parts;
+    // Assume 20xx for 2-digit years
+    const fullYear = parseInt(year, 10) + 2000;
+    return new Date(fullYear, parseInt(month, 10) - 1, parseInt(day, 10)).getTime();
+  }
+  
+  /**
+   * Update header UI to reflect current sort state
+   * @private
+   */
+  _updateHeaderUI(sortBy, sortOrder) {
+    const el = this.dom?.el;
+    if (!el) return;
+    
+    // Remove active state from all headers
+    el.querySelectorAll(".doc-nav__col-header--sortable").forEach(header => {
+      header.classList.remove("doc-nav__col-header--active");
+      
+      // Remove old sort icon
+      const oldIcon = header.querySelector(".doc-nav__sort-icon");
+      if (oldIcon) oldIcon.remove();
+    });
+    
+    // Add active state to current sort column
+    const activeHeader = el.querySelector(`[data-sort-by="${sortBy}"]`);
+    if (activeHeader) {
+      activeHeader.classList.add("doc-nav__col-header--active");
+      activeHeader.setAttribute("data-sort-order", sortOrder);
+      
+      // Add sort icon
+      const icon = document.createElement("span");
+      icon.className = "doc-nav__sort-icon";
+      icon.textContent = sortOrder === "asc" ? " ▲" : " ▼";
+      activeHeader.appendChild(icon);
+    }
+  }
+  
+  /**
+   * Update URL without triggering page reload
+   * @private
+   */
+  _updateUrlSilently(sortBy, sortOrder) {
     const url = new URL(window.location.href);
     url.searchParams.set("sort_by", sortBy);
-    url.searchParams.set("sort_order", newOrder);
-    
-    console.log("[ColumnHeaderControl] Sorting by", sortBy, newOrder);
-    window.location.href = url.toString();
+    url.searchParams.set("sort_order", sortOrder);
+    window.history.replaceState({}, "", url.toString());
   }
   
   /**

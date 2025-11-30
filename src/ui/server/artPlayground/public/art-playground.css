@@ -1,0 +1,200 @@
+/**
+ * Art Playground Styles
+ * 
+ * Theme: "Luxury White Leather, Industrial Obsidian Features"
+ */
+
+:root {
+  /* Leather whites */
+  --ap-white: #FAFAFA;
+  --ap-cream: #F5F5F0;
+  --ap-leather: #EDE8E0;
+  
+  /* Obsidian blacks */
+  --ap-obsidian: #1A1A1A;
+  --ap-obsidian-soft: #2D2D2D;
+  --ap-obsidian-mid: #3D3D3D;
+  
+  /* Gold accents */
+  --ap-gold: #C9A227;
+  --ap-gold-light: #DAA520;
+  
+  /* UI colors */
+  --ap-selection: #4A90D9;
+  --ap-selection-light: rgba(74, 144, 217, 0.2);
+  --ap-danger: #D94A4A;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--ap-cream);
+  color: var(--ap-obsidian);
+}
+
+/* Main App Layout */
+.art-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Toolbar */
+.art-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--ap-obsidian);
+  border-bottom: 2px solid var(--ap-gold);
+  flex-shrink: 0;
+}
+
+.art-toolbar__section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.art-toolbar__label {
+  color: var(--ap-leather);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.art-toolbar__divider {
+  width: 1px;
+  height: 24px;
+  background: var(--ap-obsidian-mid);
+  margin: 0 8px;
+}
+
+.art-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--ap-obsidian-soft);
+  border: 1px solid var(--ap-obsidian-mid);
+  border-radius: 4px;
+  color: var(--ap-cream);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.art-toolbar__btn:hover {
+  background: var(--ap-obsidian-mid);
+  border-color: var(--ap-gold);
+}
+
+.art-toolbar__btn--active {
+  background: var(--ap-gold);
+  border-color: var(--ap-gold-light);
+  color: var(--ap-obsidian);
+}
+
+.art-toolbar__btn--danger:hover {
+  background: var(--ap-danger);
+  border-color: var(--ap-danger);
+}
+
+/* Canvas */
+.art-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--ap-white);
+}
+
+.art-canvas__svg-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.art-canvas__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.art-canvas__grid {
+  pointer-events: all;
+}
+
+.art-canvas__component {
+  cursor: move;
+  transition: filter 0.1s ease;
+}
+
+.art-canvas__component:hover {
+  filter: brightness(1.1);
+}
+
+.art-canvas__component--selected {
+  filter: none;
+}
+
+/* Selection Handles */
+.art-selection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.art-selection__outline {
+  position: absolute;
+  border: 2px solid var(--ap-selection);
+  background: var(--ap-selection-light);
+  pointer-events: none;
+}
+
+.art-selection__handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--ap-white);
+  border: 2px solid var(--ap-selection);
+  border-radius: 2px;
+  pointer-events: all;
+  z-index: 10;
+}
+
+.art-selection__handle:hover {
+  background: var(--ap-selection);
+}
+
+/* Handle cursors */
+.art-selection__handle--nw { cursor: nw-resize; }
+.art-selection__handle--n { cursor: n-resize; }
+.art-selection__handle--ne { cursor: ne-resize; }
+.art-selection__handle--e { cursor: e-resize; }
+.art-selection__handle--se { cursor: se-resize; }
+.art-selection__handle--s { cursor: s-resize; }
+.art-selection__handle--sw { cursor: sw-resize; }
+.art-selection__handle--w { cursor: w-resize; }
+
+/* Tool cursors */
+.art-canvas[data-tool="select"] {
+  cursor: default;
+}
+
+.art-canvas[data-tool="pan"] {
+  cursor: grab;
+}
+
+.art-canvas[data-tool="pan"]:active {
+  cursor: grabbing;
+}

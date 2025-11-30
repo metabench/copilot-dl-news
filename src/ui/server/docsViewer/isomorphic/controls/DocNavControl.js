@@ -173,33 +173,35 @@ class DocNavControl extends jsgui.Control {
     
     headerRow.add(nameHeader);
     
-    // Last Modified column header (optional)
-    if (this.columns.mtime) {
-      const mtimeHeader = new jsgui.Control({ context: this.context, tagName: "div" });
-      mtimeHeader.add_class("doc-nav__col-header");
-      mtimeHeader.add_class("doc-nav__col-header--mtime");
-      mtimeHeader.add_class("doc-nav__col-header--sortable");
-      if (this.sortBy === 'mtime') {
-        mtimeHeader.add_class("doc-nav__col-header--active");
-      }
-      mtimeHeader.dom.attributes["data-sort-by"] = "mtime";
-      mtimeHeader.dom.attributes["data-sort-order"] = this.sortBy === 'mtime' ? this.sortOrder : 'desc';
-      mtimeHeader.dom.attributes.title = "Click to sort by date modified";
-      
-      const mtimeText = new jsgui.Control({ context: this.context, tagName: "span" });
-      mtimeText.add(new StringControl({ context: this.context, text: "Modified" }));
-      mtimeHeader.add(mtimeText);
-      
-      // Sort indicator for mtime
-      if (this.sortBy === 'mtime') {
-        const sortIcon = new jsgui.Control({ context: this.context, tagName: "span" });
-        sortIcon.add_class("doc-nav__sort-icon");
-        sortIcon.add(new StringControl({ context: this.context, text: this.sortOrder === 'asc' ? ' ▲' : ' ▼' }));
-        mtimeHeader.add(sortIcon);
-      }
-      
-      headerRow.add(mtimeHeader);
+    // Last Modified column header - always rendered for instant client-side toggling
+    // Hidden via CSS/style when column not visible
+    const mtimeHeader = new jsgui.Control({ context: this.context, tagName: "div" });
+    mtimeHeader.add_class("doc-nav__col-header");
+    mtimeHeader.add_class("doc-nav__col-header--mtime");
+    mtimeHeader.add_class("doc-nav__col-header--sortable");
+    if (this.sortBy === 'mtime') {
+      mtimeHeader.add_class("doc-nav__col-header--active");
     }
+    if (!this.columns.mtime) {
+      mtimeHeader.dom.attributes.style = "display: none;";
+    }
+    mtimeHeader.dom.attributes["data-sort-by"] = "mtime";
+    mtimeHeader.dom.attributes["data-sort-order"] = this.sortBy === 'mtime' ? this.sortOrder : 'desc';
+    mtimeHeader.dom.attributes.title = "Click to sort by date modified";
+    
+    const mtimeText = new jsgui.Control({ context: this.context, tagName: "span" });
+    mtimeText.add(new StringControl({ context: this.context, text: "Modified" }));
+    mtimeHeader.add(mtimeText);
+    
+    // Sort indicator for mtime
+    if (this.sortBy === 'mtime') {
+      const sortIcon = new jsgui.Control({ context: this.context, tagName: "span" });
+      sortIcon.add_class("doc-nav__sort-icon");
+      sortIcon.add(new StringControl({ context: this.context, text: this.sortOrder === 'asc' ? ' ▲' : ' ▼' }));
+      mtimeHeader.add(sortIcon);
+    }
+    
+    headerRow.add(mtimeHeader);
     
     // Column options button (opens context menu)
     const optionsBtn = new jsgui.Control({ context: this.context, tagName: "button" });
@@ -368,20 +370,18 @@ class DocNavControl extends jsgui.Control {
       
       rowContainer.add(nameCell);
       
-      // Add mtime cell if column is visible
-      if (this.columns.mtime && node.mtime) {
-        const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-        mtimeCell.add_class("doc-nav__cell");
-        mtimeCell.add_class("doc-nav__cell--mtime");
-        mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
-        rowContainer.add(mtimeCell);
-      } else if (this.columns.mtime) {
-        // Empty cell for alignment
-        const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-        mtimeCell.add_class("doc-nav__cell");
-        mtimeCell.add_class("doc-nav__cell--mtime");
-        rowContainer.add(mtimeCell);
+      // Always render mtime cell for instant client-side column toggling
+      // Hidden via CSS when column not visible
+      const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+      mtimeCell.add_class("doc-nav__cell");
+      mtimeCell.add_class("doc-nav__cell--mtime");
+      if (!this.columns.mtime) {
+        mtimeCell.dom.attributes.style = "display: none;";
       }
+      if (node.mtime) {
+        mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
+      }
+      rowContainer.add(mtimeCell);
       
       summary.add(rowContainer);
       details.add(summary);
@@ -425,20 +425,18 @@ class DocNavControl extends jsgui.Control {
       
       rowContainer.add(nameCell);
       
-      // Add mtime cell if column is visible
-      if (this.columns.mtime && node.mtime) {
-        const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-        mtimeCell.add_class("doc-nav__cell");
-        mtimeCell.add_class("doc-nav__cell--mtime");
-        mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
-        rowContainer.add(mtimeCell);
-      } else if (this.columns.mtime) {
-        // Empty cell for alignment
-        const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
-        mtimeCell.add_class("doc-nav__cell");
-        mtimeCell.add_class("doc-nav__cell--mtime");
-        rowContainer.add(mtimeCell);
+      // Always render mtime cell for instant client-side column toggling
+      // Hidden via CSS when column not visible
+      const mtimeCell = new jsgui.Control({ context: this.context, tagName: "div" });
+      mtimeCell.add_class("doc-nav__cell");
+      mtimeCell.add_class("doc-nav__cell--mtime");
+      if (!this.columns.mtime) {
+        mtimeCell.dom.attributes.style = "display: none;";
       }
+      if (node.mtime) {
+        mtimeCell.add(new StringControl({ context: this.context, text: this._formatDate(node.mtime) }));
+      }
+      rowContainer.add(mtimeCell);
       
       link.add(rowContainer);
       item.add(link);

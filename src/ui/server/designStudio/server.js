@@ -4,7 +4,7 @@
  * @server Design Studio
  * @description A jsgui3 + Express web app to view design assets (SVGs) with a 2-column layout.
  * @ui true
- * @port 4800
+ * @port 4900
  */
 
 /**
@@ -19,7 +19,7 @@
  * - Gold highlights (#C9A227, #DAA520)
  * 
  * Usage:
- *   node src/ui/server/designStudio/server.js [--port 4800] [--design ./design] [--detached]
+ *   node src/ui/server/designStudio/server.js [--port 4900] [--design ./design] [--detached]
  */
 
 const fs = require("fs");
@@ -33,7 +33,7 @@ const { DesignAppControl } = require("./isomorphic/controls");
 const { buildFileTree } = require("../shared/utils/fileTree");
 const { renderSvgContent } = require("../shared/utils/svgRenderer");
 
-const DEFAULT_PORT = 4800;
+const DEFAULT_PORT = 4900;
 const DEFAULT_DESIGN_PATH = path.join(__dirname, "../../../../design");
 const PID_FILE = path.join(__dirname, ".design-studio.pid");
 
