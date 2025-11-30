@@ -18,11 +18,12 @@
 8. [Verification Scripts](#verification-scripts)
 9. [Development Server & Detached Mode](#development-server--detached-mode)
 10. [Common Patterns](#common-patterns)
-11. [Dashboard Server Performance Patterns](#dashboard-server-performance-patterns)
-12. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
-13. [Quick Reference](#quick-reference)
-14. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
-15. [Troubleshooting](#troubleshooting)
+11. [**Extending jsgui3 (Plugins, Mixins, Extensions)**](#extending-jsgui3-plugins-mixins-extensions)
+12. [Dashboard Server Performance Patterns](#dashboard-server-performance-patterns)
+13. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+14. [Quick Reference](#quick-reference)
+15. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
+16. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1258,6 +1259,381 @@ class PaginationControl extends jsgui.Control {
 
 ---
 
+## Extending jsgui3 (Plugins, Mixins, Extensions)
+
+When jsgui3 doesn't provide functionality you need, you have options. The key principle: **write extensions that could be merged back into jsgui3** without major refactoring.
+
+### Philosophy: jsgui3 Abstracts the DOM
+
+jsgui3's job is to abstract over the DOM. If you find yourself writing direct DOM manipulation code repeatedly, that's a signal that:
+
+1. **jsgui3 should handle it** - Consider writing an extension
+2. **It's a jsgui3 bug** - Report it and document a temporary workaround
+3. **It's genuinely client-specific** - Put it in `activate()` with clear comments
+
+### Extension Location
+
+Place extensions in a dedicated directory that mirrors jsgui3's structure:
+
+```
+src/ui/
+├── jsgui-extensions/           # Extensions designed for upstream contribution
+│   ├── controls/               # New control types
+│   │   └── ContextMenuControl.js
+│   ├── mixins/                 # Behavior mixins (drag, resize, etc.)
+│   │   └── DraggableMixin.js
+│   ├── plugins/                # Context-level plugins
+│   │   └── TooltipPlugin.js
+│   └── index.js                # Exports all extensions
+```
+
+### Pattern 1: Control Extensions
+
+Extend `jsgui.Control` for new component types:
+
+```javascript
+// src/ui/jsgui-extensions/controls/ContextMenuControl.js
+"use strict";
+
+/**
+ * ContextMenuControl - Reusable context menu component
+ * 
+ * Designed for upstream contribution to jsgui3.
+ * 
+ * @example
+ * const menu = new ContextMenuControl({
+ *   context,
+ *   items: [
+ *     { label: "Edit", icon: "✏️", value: "edit" },
+ *     { label: "Delete", icon: "🗑️", value: "delete" }
+ *   ],
+ *   onSelect: (value) => handleAction(value)
+ * });
+ */
+class ContextMenuControl extends jsgui.Control {
+  constructor(spec = {}) {
+    super({
+      ...spec,
+      tagName: "div",
+      __type_name: "context_menu"
+    });
+    
+    this.add_class("jsgui-context-menu");
+    
+    this._items = spec.items || [];
+    this._onSelect = spec.onSelect || null;
+    this._visible = false;
+    this._position = { x: 0, y: 0 };
+    
+    if (!spec.el) {
+      this.compose();
+    }
+  }
+  
+  compose() {
+    for (const item of this._items) {
+      const menuItem = new ContextMenuItemControl({
+        context: this.context,
+        ...item,
+        onSelect: (value) => this._handleSelect(value)
+      });
+      this.add(menuItem);
+    }
+  }
+  
+  // Public API - these methods should work pre and post render
+  show(x, y) {
+    this._visible = true;
+    this._position = { x, y };
+    this.remove_class("jsgui-context-menu--hidden");
+    // Position is applied in activate() or via CSS custom properties
+    this._applyPosition();
+  }
+  
+  hide() {
+    this._visible = false;
+    this.add_class("jsgui-context-menu--hidden");
+  }
+  
+  _applyPosition() {
+    // Use CSS custom properties for positioning (works with jsgui3 abstraction)
+    this.dom.attributes.style = `--menu-x: ${this._position.x}px; --menu-y: ${this._position.y}px;`;
+  }
+  
+  _handleSelect(value) {
+    this.hide();
+    if (this._onSelect) {
+      this._onSelect(value);
+    }
+  }
+  
+  activate() {
+    if (this.__activated) return;
+    this.__activated = true;
+    
+    // Client-side: bind keyboard navigation, click-outside-to-close
+    this._bindKeyboardNav();
+    this._bindClickOutside();
+  }
+  
+  _bindKeyboardNav() {
+    // Keyboard handling is inherently client-side
+    if (!this.dom.el) return;
+    this.dom.el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") this.hide();
+      // ... arrow key navigation
+    });
+  }
+  
+  _bindClickOutside() {
+    // Click-outside is inherently client-side
+    document.addEventListener("click", (e) => {
+      if (this._visible && this.dom.el && !this.dom.el.contains(e.target)) {
+        this.hide();
+      }
+    });
+  }
+}
+
+module.exports = { ContextMenuControl };
+```
+
+### Pattern 2: Behavior Mixins
+
+For behaviors that can apply to multiple controls (drag, resize, sortable):
+
+```javascript
+// src/ui/jsgui-extensions/mixins/DraggableMixin.js
+"use strict";
+
+/**
+ * DraggableMixin - Adds drag behavior to any control
+ * 
+ * Designed for upstream contribution to jsgui3.
+ * Apply via: Object.assign(MyControl.prototype, DraggableMixin);
+ * 
+ * Requirements:
+ * - Control must have this.dom.el after activation
+ * - Control should have a drag handle element (or uses whole control)
+ */
+const DraggableMixin = {
+  /**
+   * Initialize draggable behavior
+   * Call this in your control's activate() method
+   * 
+   * @param {Object} options
+   * @param {string} [options.handleSelector] - CSS selector for drag handle
+   * @param {Function} [options.onDragStart] - Called when drag starts
+   * @param {Function} [options.onDragEnd] - Called when drag ends
+   */
+  initDraggable(options = {}) {
+    if (!this.dom.el) return;
+    
+    this._dragOptions = options;
+    this._isDragging = false;
+    this._dragStart = { x: 0, y: 0 };
+    this._posStart = { x: 0, y: 0 };
+    
+    const handle = options.handleSelector 
+      ? this.dom.el.querySelector(options.handleSelector)
+      : this.dom.el;
+    
+    if (handle) {
+      handle.addEventListener("mousedown", (e) => this._onDragMouseDown(e));
+    }
+    
+    // These must be on document to track mouse outside element
+    document.addEventListener("mousemove", (e) => this._onDragMouseMove(e));
+    document.addEventListener("mouseup", (e) => this._onDragMouseUp(e));
+  },
+  
+  _onDragMouseDown(e) {
+    if (e.button !== 0) return; // Left click only
+    
+    this._isDragging = true;
+    this._dragStart = { x: e.clientX, y: e.clientY };
+    
+    // Get current position from control state (not DOM)
+    this._posStart = { 
+      x: this._position?.x || 0, 
+      y: this._position?.y || 0 
+    };
+    
+    this.add_class("jsgui-dragging");
+    
+    if (this._dragOptions.onDragStart) {
+      this._dragOptions.onDragStart();
+    }
+    
+    e.preventDefault();
+  },
+  
+  _onDragMouseMove(e) {
+    if (!this._isDragging) return;
+    
+    const dx = e.clientX - this._dragStart.x;
+    const dy = e.clientY - this._dragStart.y;
+    
+    // Update control state
+    this._position = {
+      x: Math.max(0, this._posStart.x + dx),
+      y: Math.max(0, this._posStart.y + dy)
+    };
+    
+    // Apply via style attribute (jsgui3 compatible)
+    this._applyDragPosition();
+  },
+  
+  _onDragMouseUp(e) {
+    if (!this._isDragging) return;
+    
+    this._isDragging = false;
+    this.remove_class("jsgui-dragging");
+    
+    if (this._dragOptions.onDragEnd) {
+      this._dragOptions.onDragEnd(this._position);
+    }
+  },
+  
+  _applyDragPosition() {
+    // Use style attribute which jsgui3 handles
+    this.dom.attributes.style = `left: ${this._position.x}px; top: ${this._position.y}px;`;
+    // Sync to DOM if rendered
+    if (this.dom.el) {
+      this.dom.el.style.left = `${this._position.x}px`;
+      this.dom.el.style.top = `${this._position.y}px`;
+    }
+  }
+};
+
+module.exports = { DraggableMixin };
+```
+
+### Pattern 3: Context Plugins
+
+For features that need access to all controls (tooltips, focus management):
+
+```javascript
+// src/ui/jsgui-extensions/plugins/TooltipPlugin.js
+"use strict";
+
+/**
+ * TooltipPlugin - Automatic tooltip management for jsgui3 contexts
+ * 
+ * Designed for upstream contribution to jsgui3.
+ * 
+ * @example
+ * const context = new jsgui.Page_Context();
+ * TooltipPlugin.install(context);
+ * 
+ * // Then in any control:
+ * myControl.dom.attributes["data-tooltip"] = "Helpful text";
+ */
+const TooltipPlugin = {
+  install(context) {
+    // Store plugin state on context
+    context._tooltipPlugin = {
+      activeTooltip: null,
+      tooltipEl: null
+    };
+    
+    // Hook into context's activation lifecycle
+    const originalActivate = context.activate?.bind(context) || (() => {});
+    context.activate = function() {
+      originalActivate();
+      TooltipPlugin._initTooltips(context);
+    };
+  },
+  
+  _initTooltips(context) {
+    // Create tooltip element once
+    if (!context._tooltipPlugin.tooltipEl) {
+      const tooltip = document.createElement("div");
+      tooltip.className = "jsgui-tooltip jsgui-tooltip--hidden";
+      document.body.appendChild(tooltip);
+      context._tooltipPlugin.tooltipEl = tooltip;
+    }
+    
+    // Use event delegation on document
+    document.addEventListener("mouseenter", (e) => {
+      const target = e.target.closest("[data-tooltip]");
+      if (target) {
+        TooltipPlugin._showTooltip(context, target);
+      }
+    }, true);
+    
+    document.addEventListener("mouseleave", (e) => {
+      const target = e.target.closest("[data-tooltip]");
+      if (target) {
+        TooltipPlugin._hideTooltip(context);
+      }
+    }, true);
+  },
+  
+  _showTooltip(context, target) {
+    const text = target.getAttribute("data-tooltip");
+    const tooltip = context._tooltipPlugin.tooltipEl;
+    
+    tooltip.textContent = text;
+    tooltip.classList.remove("jsgui-tooltip--hidden");
+    
+    // Position near target
+    const rect = target.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+    tooltip.style.top = `${rect.bottom + 8}px`;
+  },
+  
+  _hideTooltip(context) {
+    const tooltip = context._tooltipPlugin.tooltipEl;
+    tooltip.classList.add("jsgui-tooltip--hidden");
+  }
+};
+
+module.exports = { TooltipPlugin };
+```
+
+### Guidelines for Upstream-Ready Extensions
+
+1. **Use jsgui3 APIs wherever possible**
+   - `add_class()` / `remove_class()` instead of `classList`
+   - `this.dom.attributes` instead of `setAttribute()`
+   - `this.add()` for child controls
+
+2. **Keep DOM access in `activate()`**
+   - Event listeners: always in `activate()`
+   - Document-level listeners: in `activate()`
+   - Element measurements: only when needed, in methods called post-activation
+
+3. **Document the contract**
+   - JSDoc with `@example`
+   - Note any requirements (must call `initX()` in `activate()`)
+   - Explain what's client-only vs isomorphic
+
+4. **Use consistent naming**
+   - Classes: `jsgui-*` prefix for CSS
+   - Types: `__type_name` follows existing patterns
+   - Methods: match jsgui3 conventions (`add_class`, not `addClass`)
+
+5. **Test isomorphically**
+   - Check script should work (server-side render)
+   - Manual test should work (client-side activation)
+   - Document any client-only features
+
+6. **Keep dependencies minimal**
+   - No external libraries in extensions
+   - If you need a utility, write it or reference jsgui3's internals
+
+### Filing Upstream
+
+When an extension is stable and useful:
+
+1. Open issue in jsgui3 repo describing the use case
+2. Reference this repo's implementation
+3. Propose API changes if the extension reveals jsgui3 gaps
+4. Be prepared to adapt to jsgui3's code style
+
+---
+
 ## Dashboard Server Performance Patterns
 
 Dashboards often need to query databases or aggregate data. Poor patterns here cause "waiting for ages" load times.
@@ -1791,6 +2167,51 @@ class TwoColumnLayout extends jsgui.Control {
 - Controls don't render any children despite calling `this.add()`
 
 Check if you've accidentally shadowed `this.content` in your constructor.
+
+### ❌ 10. Direct DOM Manipulation Instead of jsgui3 Methods
+
+**Bad**: Using `classList.add/remove` or `this.dom.el.style` directly when jsgui3 methods exist.
+
+```javascript
+// ❌ Avoid: Direct DOM manipulation
+setVisible(visible) {
+  if (this.dom.el) {
+    if (visible) {
+      this.dom.el.classList.remove("hidden");
+    } else {
+      this.dom.el.classList.add("hidden");
+    }
+  }
+}
+```
+
+**Good**: Use jsgui3's `add_class` and `remove_class` methods - they work whether the control is in the DOM or not.
+
+```javascript
+// ✅ Correct: Use jsgui3 methods
+setVisible(visible) {
+  if (visible) {
+    this.remove_class("hidden");
+  } else {
+    this.add_class("hidden");
+  }
+}
+```
+
+**Why jsgui3 methods are better**:
+- **Work pre-render**: Classes are tracked internally and applied when HTML is generated
+- **Work post-render**: If `this.dom.el` exists, jsgui3 syncs to the DOM automatically
+- **Consistent API**: Same code works on server and client
+- **Maintainable**: State stays in the control, not scattered in DOM
+
+**When direct DOM manipulation IS appropriate**:
+- **Client-side activation**: Setting up event listeners in `activate()`
+- **Dynamic innerHTML updates**: When replacing content after initial render (see [Dynamic Control Updates](#dynamic-control-updates))
+- **Scroll position**: `this.dom.el.scrollTop = this.dom.el.scrollHeight`
+- **Focus management**: `this.dom.el.focus()`
+- **Measurements**: Reading `offsetWidth`, `getBoundingClientRect()`, etc.
+
+**If jsgui3 methods don't work as expected** (e.g., `add_class` doesn't update the DOM), **report it as a bug** in jsgui3. Don't work around it with direct DOM manipulation unless absolutely necessary, and document the workaround with a `// WORKAROUND: jsgui3 bug - <description>` comment.
 
 ---
 

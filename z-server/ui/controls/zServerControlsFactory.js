@@ -1500,6 +1500,22 @@ function createZServerControls(jsgui) {
       // If this is the selected server, show the log
       if (this._selectedServer && this._selectedServer.file === filePath) {
         this._contentArea.addLog(type, data);
+        
+        // Detect EADDRINUSE error (port already in use)
+        if (type === 'stderr' && data.includes('EADDRINUSE')) {
+          // Extract port from error message if possible
+          const portMatch = data.match(/(?:port\s+)?(\d{4,5})/i);
+          const port = portMatch ? portMatch[1] : this._selectedServer.metadata?.defaultPort;
+          
+          if (port) {
+            const url = `http://localhost:${port}`;
+            this._addLog(filePath, 'system', `⚠️ Port ${port} is already in use by another process.`);
+            this._addLog(filePath, 'system', `📍 The server might already be running at: ${url}`);
+            this._setServerUrl(filePath, url);
+          } else {
+            this._addLog(filePath, 'system', '⚠️ Port is already in use. Server may already be running.');
+          }
+        }
       }
     }
 
@@ -1536,7 +1552,29 @@ function createZServerControls(jsgui) {
         this._sidebar.updateServerStatus(this._selectedServer.file, true);
         this._addLog(this._selectedServer.file, "system", `Server started (PID: ${result.pid})`);
       } else {
-        this._addLog(this._selectedServer.file, "stderr", `Failed to start: ${result.message}`);
+        // Check if server is already running
+        if (result.message === 'Already running') {
+          // Mark as running and show URL if we have default port info
+          this._selectedServer.running = true;
+          this._contentArea.setServerRunning(true);
+          this._sidebar.updateServerStatus(this._selectedServer.file, true);
+          
+          // Build URL from metadata or use existing detected URL
+          const port = this._selectedServer.metadata?.defaultPort;
+          const url = port ? `http://localhost:${port}` : null;
+          
+          this._addLog(this._selectedServer.file, "system", "⚠️ Server is already running!");
+          
+          if (url) {
+            // Set the URL so the sidebar shows the link
+            this._setServerUrl(this._selectedServer.file, url);
+            this._addLog(this._selectedServer.file, "system", `📍 Click to open: ${url}`);
+          } else {
+            this._addLog(this._selectedServer.file, "system", "Check the server log output for the URL.");
+          }
+        } else {
+          this._addLog(this._selectedServer.file, "stderr", `Failed to start: ${result.message}`);
+        }
       }
     }
 
@@ -2378,9 +2416,20 @@ body {
 }
 
 .zs-log-entry--stderr {
-  color: var(--zs-ruby);
-  border-left-color: var(--zs-ruby-dark);
-  background: rgba(227, 24, 55, 0.05);
+  color: #ff8888;
+  border-left-color: var(--zs-ruby);
+  border-left-width: 3px;
+  background: rgba(227, 24, 55, 0.12);
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 0 4px 4px 0;
+  font-weight: 500;
+  animation: zs-error-flash 0.5s ease-out;
+}
+
+@keyframes zs-error-flash {
+  0% { background: rgba(255, 107, 107, 0.3); }
+  100% { background: rgba(227, 24, 55, 0.12); }
 }
 
 .zs-log-entry--system {

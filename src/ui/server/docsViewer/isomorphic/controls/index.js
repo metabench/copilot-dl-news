@@ -28,6 +28,7 @@ const { DocsThemeToggleControl } = require("./DocsThemeToggleControl");
 const { DocsNavToggleControl } = require("./DocsNavToggleControl");
 const { DocsSearchControl } = require("./DocsSearchControl");
 const { DocsFileFilterControl } = require("./DocsFileFilterControl");
+const { DocNavigationControl } = require("./DocNavigationControl");
 
 module.exports = {
   // Layout
@@ -46,5 +47,6 @@ module.exports = {
   DocsThemeToggleControl,
   DocsNavToggleControl,
   DocsSearchControl,
-  DocsFileFilterControl
+  DocsFileFilterControl,
+  DocNavigationControl
 };

@@ -40248,6 +40248,18 @@ body .overlay {
             this._logs.get(filePath).push({ type, data });
             if (this._selectedServer && this._selectedServer.file === filePath) {
               this._contentArea.addLog(type, data);
+              if (type === "stderr" && data.includes("EADDRINUSE")) {
+                const portMatch = data.match(/(?:port\s+)?(\d{4,5})/i);
+                const port = portMatch ? portMatch[1] : this._selectedServer.metadata?.defaultPort;
+                if (port) {
+                  const url = `http://localhost:${port}`;
+                  this._addLog(filePath, "system", `\u26A0\uFE0F Port ${port} is already in use by another process.`);
+                  this._addLog(filePath, "system", `\u{1F4CD} The server might already be running at: ${url}`);
+                  this._setServerUrl(filePath, url);
+                } else {
+                  this._addLog(filePath, "system", "\u26A0\uFE0F Port is already in use. Server may already be running.");
+                }
+              }
             }
           }
           _setServerUrl(filePath, url) {
@@ -40275,7 +40287,22 @@ body .overlay {
               this._sidebar.updateServerStatus(this._selectedServer.file, true);
               this._addLog(this._selectedServer.file, "system", `Server started (PID: ${result.pid})`);
             } else {
-              this._addLog(this._selectedServer.file, "stderr", `Failed to start: ${result.message}`);
+              if (result.message === "Already running") {
+                this._selectedServer.running = true;
+                this._contentArea.setServerRunning(true);
+                this._sidebar.updateServerStatus(this._selectedServer.file, true);
+                const port = this._selectedServer.metadata?.defaultPort;
+                const url = port ? `http://localhost:${port}` : null;
+                this._addLog(this._selectedServer.file, "system", "\u26A0\uFE0F Server is already running!");
+                if (url) {
+                  this._setServerUrl(this._selectedServer.file, url);
+                  this._addLog(this._selectedServer.file, "system", `\u{1F4CD} Click to open: ${url}`);
+                } else {
+                  this._addLog(this._selectedServer.file, "system", "Check the server log output for the URL.");
+                }
+              } else {
+                this._addLog(this._selectedServer.file, "stderr", `Failed to start: ${result.message}`);
+              }
             }
           }
           async _stopServer() {
@@ -41104,9 +41131,20 @@ body {
 }
 
 .zs-log-entry--stderr {
-  color: var(--zs-ruby);
-  border-left-color: var(--zs-ruby-dark);
-  background: rgba(227, 24, 55, 0.05);
+  color: #ff8888;
+  border-left-color: var(--zs-ruby);
+  border-left-width: 3px;
+  background: rgba(227, 24, 55, 0.12);
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 0 4px 4px 0;
+  font-weight: 500;
+  animation: zs-error-flash 0.5s ease-out;
+}
+
+@keyframes zs-error-flash {
+  0% { background: rgba(255, 107, 107, 0.3); }
+  100% { background: rgba(227, 24, 55, 0.12); }
 }
 
 .zs-log-entry--system {

@@ -40222,6 +40222,286 @@ body .overlay {
     }
   });
 
+  // src/ui/server/docsViewer/isomorphic/controls/DocNavigationControl.js
+  var require_DocNavigationControl = __commonJS({
+    "src/ui/server/docsViewer/isomorphic/controls/DocNavigationControl.js"(exports, module) {
+      "use strict";
+      var jsgui = require_jsgui2();
+      var DocNavigationControl = class extends jsgui.Control {
+        /**
+         * @param {Object} spec - Control specification
+         * @param {HTMLElement} spec.el - The nav element to attach to
+         * @param {HTMLElement} spec.contentTarget - The content area to update
+         */
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div" });
+          this.navEl = spec.el || null;
+          this.contentTarget = spec.contentTarget || null;
+          this.currentPath = null;
+          this.isNavigating = false;
+          this.docCache = /* @__PURE__ */ new Map();
+        }
+        /**
+         * Activate the control - bind event handlers
+         * Called automatically by jsgui3-client when the page is hydrated
+         */
+        activate() {
+          if (typeof document === "undefined") return;
+          this.navEl = this.navEl || document.querySelector("nav.doc-nav");
+          if (!this.navEl) {
+            console.warn("[DocNavigation] No nav element found");
+            return;
+          }
+          this.mainEl = document.querySelector("main.doc-viewer");
+          if (!this.mainEl) {
+            console.warn("[DocNavigation] No main element found");
+            return;
+          }
+          this.contentTarget = document.querySelector("article.doc-viewer__content");
+          const urlParams = new URLSearchParams(window.location.search);
+          this.currentPath = urlParams.get("doc");
+          this.navEl.addEventListener("click", this._handleNavClick.bind(this));
+          window.addEventListener("popstate", this._handlePopState.bind(this));
+          console.log("[DocNavigation] Activated - SPA navigation enabled", {
+            hasContentTarget: !!this.contentTarget,
+            currentPath: this.currentPath
+          });
+        }
+        /**
+         * Handle click events on navigation links
+         */
+        _handleNavClick(e) {
+          const link = e.target.closest("a[data-doc-path]");
+          if (!link) return;
+          const docPath = link.getAttribute("data-doc-path");
+          if (!docPath) return;
+          e.preventDefault();
+          this.navigateTo(docPath, { pushState: true });
+        }
+        /**
+         * Handle browser back/forward navigation
+         */
+        _handlePopState(e) {
+          const state = e.state;
+          if (state && state.docPath) {
+            this.navigateTo(state.docPath, { pushState: false });
+          } else {
+            this._showWelcome();
+          }
+        }
+        /**
+         * Navigate to a document
+         * @param {string} docPath - Document path to navigate to
+         * @param {Object} options - { pushState: boolean }
+         */
+        async navigateTo(docPath, options = {}) {
+          const { pushState = true } = options;
+          if (this.isNavigating) return;
+          if (docPath === this.currentPath) return;
+          this.isNavigating = true;
+          this._updateSelectedLink(docPath);
+          this._showLoading();
+          try {
+            let content = this.docCache.get(docPath);
+            if (!content) {
+              const response = await fetch(`/api/doc?path=${encodeURIComponent(docPath)}`);
+              if (!response.ok) {
+                throw new Error(`Failed to load document: ${response.statusText}`);
+              }
+              content = await response.json();
+              if (this.docCache.size > 50) {
+                const firstKey = this.docCache.keys().next().value;
+                this.docCache.delete(firstKey);
+              }
+              this.docCache.set(docPath, content);
+            }
+            this._renderContent(content);
+            if (pushState) {
+              const url = new URL(window.location);
+              url.searchParams.set("doc", docPath);
+              window.history.pushState({ docPath }, content.title || "Document", url.toString());
+            }
+            document.title = content.title ? `${content.title} - Docs` : "Documentation";
+            this.currentPath = docPath;
+          } catch (err) {
+            console.error("[DocNavigation] Error loading doc:", err);
+            this._showError(err.message);
+          } finally {
+            this.isNavigating = false;
+          }
+        }
+        /**
+         * Update the selected link styling
+         */
+        _updateSelectedLink(docPath) {
+          const current = this.navEl.querySelector(".doc-nav__link--selected");
+          if (current) {
+            current.classList.remove("doc-nav__link--selected");
+            current.removeAttribute("aria-current");
+          }
+          const newLink = this.navEl.querySelector(`a[data-doc-path="${docPath}"]`);
+          if (newLink) {
+            newLink.classList.add("doc-nav__link--selected");
+            newLink.setAttribute("aria-current", "page");
+            this._expandParentFolders(newLink);
+          }
+        }
+        /**
+         * Expand all parent folder <details> elements
+         */
+        _expandParentFolders(element) {
+          let parent = element.parentElement;
+          while (parent && parent !== this.navEl) {
+            if (parent.tagName === "DETAILS" && !parent.open) {
+              parent.open = true;
+            }
+            parent = parent.parentElement;
+          }
+        }
+        /**
+         * Show loading state in content area
+         */
+        _showLoading() {
+          this._ensureContentTarget();
+          if (!this.contentTarget) return;
+          this.contentTarget.innerHTML = `
+      <div class="doc-viewer__loading" style="display: flex; justify-content: center; align-items: center; padding: 2rem;">
+        <div style="text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">\u23F3</div>
+          <div>Loading...</div>
+        </div>
+      </div>
+    `;
+        }
+        /**
+         * Ensure content target exists, creating it if needed (welcome → doc transition)
+         */
+        _ensureContentTarget() {
+          if (this.contentTarget) return;
+          this.contentTarget = document.querySelector("article.doc-viewer__content");
+          if (this.contentTarget) return;
+          if (this.mainEl) {
+            this.mainEl.innerHTML = "";
+            const article = document.createElement("article");
+            article.className = "doc-viewer__content";
+            this.mainEl.appendChild(article);
+            const footer = document.createElement("footer");
+            footer.className = "doc-viewer__footer";
+            this.mainEl.appendChild(footer);
+            this.contentTarget = article;
+            console.log("[DocNavigation] Created content target for SPA navigation");
+          }
+        }
+        /**
+         * Render document content into the target
+         * @param {Object} content - { path, title, html }
+         */
+        _renderContent(content) {
+          var _a;
+          this._ensureContentTarget();
+          if (!this.contentTarget) return;
+          const breadcrumb = this._buildBreadcrumbHtml(content.path);
+          this.contentTarget.innerHTML = `
+      <header class="doc-viewer__header">
+        ${breadcrumb}
+        <h1 class="doc-viewer__title">${this._escapeHtml(content.title || "Document")}</h1>
+        <div class="doc-viewer__toolbar" role="toolbar">
+          <button class="doc-viewer__toolbar-btn" type="button" title="Copy link" data-action="copy-link">\u{1F517}</button>
+          <button class="doc-viewer__toolbar-btn" type="button" title="Print document" data-action="print">\u{1F5A8}\uFE0F</button>
+        </div>
+      </header>
+      <div class="doc-content">${content.html || ""}</div>
+    `;
+          const footer = (_a = this.mainEl) == null ? void 0 : _a.querySelector("footer.doc-viewer__footer");
+          if (footer && content.path) {
+            footer.innerHTML = `<span class="doc-viewer__path-info">\u{1F4C1} ${this._escapeHtml(content.path)}</span>`;
+          }
+          this.contentTarget.scrollTop = 0;
+          if (typeof Prism !== "undefined") {
+            Prism.highlightAllUnder(this.contentTarget);
+          }
+        }
+        /**
+         * Build breadcrumb HTML from path
+         */
+        _buildBreadcrumbHtml(docPath) {
+          if (!docPath) return "";
+          const parts = docPath.split("/").filter(Boolean);
+          let items = `<li class="doc-viewer__breadcrumb-item"><a href="/">Home</a></li>`;
+          for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            const isLast = i === parts.length - 1;
+            if (isLast) {
+              items += `<li class="doc-viewer__breadcrumb-item"><span aria-current="page">${this._escapeHtml(part.replace(/\.md$/i, ""))}</span></li>`;
+            } else {
+              items += `<li class="doc-viewer__breadcrumb-item"><span>${this._escapeHtml(part)}</span></li>`;
+            }
+          }
+          return `
+      <nav class="doc-viewer__breadcrumb" aria-label="Breadcrumb">
+        <ol class="doc-viewer__breadcrumb-list">${items}</ol>
+      </nav>
+    `;
+        }
+        /**
+         * Show welcome/empty state (when navigating back to home)
+         */
+        _showWelcome() {
+          var _a;
+          if (!this.mainEl) return;
+          this.mainEl.innerHTML = `
+      <div class="doc-viewer__welcome">
+        <div class="doc-viewer__welcome-icon">\u{1F4DA}</div>
+        <h1 class="doc-viewer__welcome-title">Documentation Viewer</h1>
+        <p class="doc-viewer__welcome-message">Select a document from the navigation panel to view its contents.</p>
+        <div class="doc-viewer__quick-links">
+          <h3>Quick Links</h3>
+          <ul>
+            <li><a href="/?doc=INDEX.md">Documentation Index</a></li>
+            <li><a href="/?doc=ROADMAP.md">Project Roadmap</a></li>
+            <li><a href="/?doc=QUICK_REFERENCE.md">Quick Reference</a></li>
+          </ul>
+        </div>
+      </div>
+    `;
+          this.contentTarget = null;
+          const current = (_a = this.navEl) == null ? void 0 : _a.querySelector(".doc-nav__link--selected");
+          if (current) {
+            current.classList.remove("doc-nav__link--selected");
+            current.removeAttribute("aria-current");
+          }
+          this.currentPath = null;
+          document.title = "Documentation Viewer";
+        }
+        /**
+         * Show error state
+         */
+        _showError(message) {
+          this._ensureContentTarget();
+          if (!this.contentTarget) return;
+          this.contentTarget.innerHTML = `
+      <div class="doc-viewer__error" style="padding: 2rem; text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">\u274C</div>
+        <h2>Error Loading Document</h2>
+        <p>${this._escapeHtml(message)}</p>
+        <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer;">
+          Reload Page
+        </button>
+      </div>
+    `;
+        }
+        /**
+         * Escape HTML special characters
+         */
+        _escapeHtml(str) {
+          if (!str) return "";
+          return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+      };
+      module.exports = { DocNavigationControl };
+    }
+  });
+
   // src/ui/server/docsViewer/isomorphic/controls/index.js
   var require_controls3 = __commonJS({
     "src/ui/server/docsViewer/isomorphic/controls/index.js"(exports, module) {
@@ -40237,6 +40517,7 @@ body .overlay {
       var { DocsNavToggleControl } = require_DocsNavToggleControl();
       var { DocsSearchControl } = require_DocsSearchControl();
       var { DocsFileFilterControl } = require_DocsFileFilterControl();
+      var { DocNavigationControl } = require_DocNavigationControl();
       module.exports = {
         // Layout
         ResizableSplitLayoutControl,
@@ -40252,7 +40533,8 @@ body .overlay {
         DocsThemeToggleControl,
         DocsNavToggleControl,
         DocsSearchControl,
-        DocsFileFilterControl
+        DocsFileFilterControl,
+        DocNavigationControl
       };
     }
   });
@@ -40275,7 +40557,8 @@ body .overlay {
         DocsThemeToggleControl,
         DocsNavToggleControl,
         DocsSearchControl,
-        DocsFileFilterControl
+        DocsFileFilterControl,
+        DocNavigationControl
       } = require_controls3();
       var CONTROL_TYPES = {
         "resizable_split_layout": ResizableSplitLayoutControl,
@@ -40285,7 +40568,8 @@ body .overlay {
         "docs_theme_toggle": DocsThemeToggleControl,
         "docs_nav_toggle": DocsNavToggleControl,
         "docs_search": DocsSearchControl,
-        "docs_file_filter": DocsFileFilterControl
+        "docs_file_filter": DocsFileFilterControl,
+        "doc_navigation": DocNavigationControl
       };
       function registerDocsViewerControls(jsgui) {
         if (!jsgui) return;
@@ -40298,6 +40582,7 @@ body .overlay {
         controls.ColumnContextMenu = ColumnContextMenuControl;
         controls.ColumnHeader = ColumnHeaderControl;
         controls.ResizableSplitLayout = ResizableSplitLayoutControl;
+        controls.DocNavigation = DocNavigationControl;
         const mapControls = jsgui.map_Controls = jsgui.map_Controls || {};
         Object.entries(CONTROL_TYPES).forEach(([type, ControlClass]) => {
           mapControls[type] = ControlClass;
@@ -40366,6 +40651,34 @@ body .overlay {
           activateMarkedControls(context2);
         }
       }
+      function initDocNavigation(context2) {
+        if (typeof document === "undefined") return;
+        const navEl = document.querySelector("nav.doc-nav");
+        if (!navEl) {
+          console.warn("[docs-viewer] No nav.doc-nav element found for SPA navigation");
+          return;
+        }
+        const mainEl = document.querySelector("main.doc-viewer");
+        if (!mainEl) {
+          console.warn("[docs-viewer] No main.doc-viewer element found for SPA navigation");
+          return;
+        }
+        const contentTarget = document.querySelector("article.doc-viewer__content");
+        const navControl = new DocNavigationControl({
+          context: context2,
+          el: navEl,
+          contentTarget
+          // may be null on welcome page
+        });
+        navEl.__docNavigation = navControl;
+        window.__docNavigation = navControl;
+        navControl.activate();
+        console.log("[docs-viewer] SPA navigation initialized", {
+          hasNav: !!navEl,
+          hasMain: !!mainEl,
+          hasContentTarget: !!contentTarget
+        });
+      }
       function bootstrap() {
         if (typeof window === "undefined") {
           return;
@@ -40389,6 +40702,7 @@ body .overlay {
           }
           if (context2) {
             activateMarkedControls(context2);
+            initDocNavigation(context2);
           } else {
             console.warn("[docs-viewer] No context available for activation");
           }

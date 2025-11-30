@@ -151,33 +151,51 @@ ipcMain.handle('start-server', async (event, filePath) => {
     return { success: false, message: 'Already running' };
   }
 
-  const child = spawn('node', [filePath], {
-    cwd: path.join(__dirname, '..'),
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
+  try {
+    const child = spawn('node', [filePath], {
+      cwd: path.join(__dirname, '..'),
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
 
-  runningProcesses.set(filePath, { pid: child.pid, process: child });
+    runningProcesses.set(filePath, { pid: child.pid, process: child });
 
-  child.stdout.on('data', (data) => {
-    if (mainWindow) {
-      mainWindow.webContents.send('server-log', { filePath, type: 'stdout', data: data.toString() });
-    }
-  });
+    // Handle spawn errors (e.g., ENOENT)
+    child.on('error', (err) => {
+      console.error(`[start-server] Process error for ${filePath}:`, err.message);
+      runningProcesses.delete(filePath);
+      if (mainWindow) {
+        mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: `Process error: ${err.message}` });
+        mainWindow.webContents.send('server-status-change', { filePath, running: false });
+      }
+    });
 
-  child.stderr.on('data', (data) => {
-    if (mainWindow) {
-      mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: data.toString() });
-    }
-  });
+    child.stdout.on('data', (data) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('server-log', { filePath, type: 'stdout', data: data.toString() });
+      }
+    });
 
-  child.on('close', (code) => {
-    runningProcesses.delete(filePath);
-    if (mainWindow) {
-      mainWindow.webContents.send('server-status-change', { filePath, running: false });
-    }
-  });
+    child.stderr.on('data', (data) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('server-log', { filePath, type: 'stderr', data: data.toString() });
+      }
+    });
 
-  return { success: true, pid: child.pid };
+    child.on('close', (code, signal) => {
+      runningProcesses.delete(filePath);
+      if (mainWindow) {
+        // Send exit info so user knows why it stopped
+        const exitMsg = signal ? `Process killed by signal: ${signal}` : `Process exited with code: ${code}`;
+        mainWindow.webContents.send('server-log', { filePath, type: code === 0 ? 'system' : 'stderr', data: exitMsg });
+        mainWindow.webContents.send('server-status-change', { filePath, running: false });
+      }
+    });
+
+    return { success: true, pid: child.pid };
+  } catch (err) {
+    console.error(`[start-server] Failed to spawn process for ${filePath}:`, err.message);
+    return { success: false, message: err.message };
+  }
 });
 
 ipcMain.handle('stop-server', async (event, filePath) => {
