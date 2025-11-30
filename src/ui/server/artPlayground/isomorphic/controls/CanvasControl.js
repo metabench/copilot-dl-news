@@ -45,6 +45,9 @@ class CanvasControl extends jsgui.Control {
           <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
             <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0E0E0" stroke-width="0.5"/>
           </pattern>
+          <filter id="luxGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#C9A227" flood-opacity="0.35"/>
+          </filter>
         </defs>
         <rect class="art-canvas__grid" width="100%" height="100%" fill="url(#grid)"/>
         <g class="art-canvas__components"></g>
@@ -67,9 +70,9 @@ class CanvasControl extends jsgui.Control {
   _addDefaultComponents() {
     // These will be rendered client-side after activation
     this._pendingComponents = [
-      { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
-      { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
-      { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
+      { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9", opacity: 0.95 },
+      { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#C9A227", stroke: "#0F0F0F", strokeWidth: 2 },
+      { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#2D2D2D", opacity: 0.85, glow: true }
     ];
   }
   
@@ -159,6 +162,7 @@ class CanvasControl extends jsgui.Control {
         comp.y = this._dragState.origY + dy;
         this._updateComponentPosition(this._dragState.id);
         this._updateSelectionHandles();
+        this._emitSelectionChange();
       }
     }
   }
@@ -172,6 +176,7 @@ class CanvasControl extends jsgui.Control {
   _renderComponent(data) {
     const { id, type } = data;
     let el;
+    let compRecord;
     
     if (type === "rect") {
       el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -182,16 +187,15 @@ class CanvasControl extends jsgui.Control {
       el.setAttribute("fill", data.fill || "#4A90D9");
       el.setAttribute("rx", "4");
       
-      // Store component data
-      this._components.set(id, {
+      compRecord = {
         type: "rect",
         el: el,
         x: data.x,
         y: data.y,
         width: data.width,
         height: data.height,
-        fill: data.fill
-      });
+        fill: data.fill || "#4A90D9"
+      };
     } else if (type === "ellipse") {
       el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
       el.setAttribute("cx", data.cx);
@@ -200,8 +204,7 @@ class CanvasControl extends jsgui.Control {
       el.setAttribute("ry", data.ry);
       el.setAttribute("fill", data.fill || "#4AD94A");
       
-      // Store with x/y as center for consistency
-      this._components.set(id, {
+      compRecord = {
         type: "ellipse",
         el: el,
         x: data.cx - data.rx,
@@ -212,8 +215,8 @@ class CanvasControl extends jsgui.Control {
         cy: data.cy,
         rx: data.rx,
         ry: data.ry,
-        fill: data.fill
-      });
+        fill: data.fill || "#4AD94A"
+      };
     } else if (type === "text") {
       el = document.createElementNS("http://www.w3.org/2000/svg", "text");
       el.setAttribute("x", data.x);
@@ -222,7 +225,7 @@ class CanvasControl extends jsgui.Control {
       el.setAttribute("font-size", data.fontSize || "16");
       el.textContent = data.text || "Text";
       
-      this._components.set(id, {
+      compRecord = {
         type: "text",
         el: el,
         x: data.x,
@@ -230,8 +233,20 @@ class CanvasControl extends jsgui.Control {
         width: 100,
         height: 24,
         text: data.text || "Text",
-        fill: data.fill
-      });
+        fill: data.fill || "#1A1A1A"
+      };
+    }
+    
+    if (compRecord) {
+      compRecord.opacity = data.opacity !== undefined ? data.opacity : 1;
+      compRecord.stroke = data.stroke || null;
+      compRecord.strokeWidth = data.strokeWidth || 0;
+      compRecord.glow = !!data.glow;
+      compRecord.shadowDepth = data.shadowDepth || 0;
+      compRecord.cornerRadius = data.cornerRadius !== undefined ? data.cornerRadius : 4;
+      compRecord.blendMode = data.blendMode || "normal";
+      this._components.set(id, compRecord);
+      this._applyVisualAttributes(compRecord);
     }
     
     if (el) {
@@ -239,6 +254,77 @@ class CanvasControl extends jsgui.Control {
       el.classList.add("art-canvas__component");
       this._componentsGroup.appendChild(el);
     }
+  }
+
+  _applyVisualAttributes(comp) {
+    if (!comp || !comp.el) return;
+    if (comp.fill) {
+      comp.el.setAttribute("fill", comp.fill);
+    }
+    const opacity = comp.opacity !== undefined ? comp.opacity : 1;
+    comp.el.setAttribute("opacity", opacity);
+    if (comp.stroke) {
+      comp.el.setAttribute("stroke", comp.stroke);
+      comp.el.setAttribute("stroke-width", comp.strokeWidth || 1);
+    } else {
+      comp.el.removeAttribute("stroke");
+      comp.el.removeAttribute("stroke-width");
+    }
+    
+    // Corner radius (for rects)
+    if (comp.type === "rect") {
+      const rx = comp.cornerRadius !== undefined ? comp.cornerRadius : 4;
+      comp.el.setAttribute("rx", rx);
+      comp.el.setAttribute("ry", rx);
+    }
+    
+    // Blend mode
+    if (comp.blendMode && comp.blendMode !== "normal") {
+      comp.el.style.mixBlendMode = comp.blendMode;
+    } else {
+      comp.el.style.mixBlendMode = "";
+    }
+    
+    // Filter effects (glow and shadow)
+    const filters = [];
+    if (comp.glow) {
+      filters.push("url(#luxGlow)");
+    }
+    if (comp.shadowDepth && comp.shadowDepth > 0) {
+      // Create dynamic shadow filter if not exists
+      this._ensureShadowFilter(comp.shadowDepth);
+      filters.push(`url(#shadowDepth${Math.round(comp.shadowDepth * 100)})`);
+    }
+    if (filters.length > 0) {
+      comp.el.setAttribute("filter", filters.join(" "));
+    } else {
+      comp.el.removeAttribute("filter");
+    }
+  }
+
+  _ensureShadowFilter(depth) {
+    const filterId = `shadowDepth${Math.round(depth * 100)}`;
+    if (this._svg.querySelector(`#${filterId}`)) return;
+    
+    const defs = this._svg.querySelector("defs");
+    if (!defs) return;
+    
+    const filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+    filter.setAttribute("id", filterId);
+    filter.setAttribute("x", "-50%");
+    filter.setAttribute("y", "-50%");
+    filter.setAttribute("width", "200%");
+    filter.setAttribute("height", "200%");
+    
+    const dropShadow = document.createElementNS("http://www.w3.org/2000/svg", "feDropShadow");
+    dropShadow.setAttribute("dx", "0");
+    dropShadow.setAttribute("dy", Math.round(4 + depth * 12));
+    dropShadow.setAttribute("stdDeviation", Math.round(4 + depth * 16));
+    dropShadow.setAttribute("flood-color", "#000000");
+    dropShadow.setAttribute("flood-opacity", (0.15 + depth * 0.35).toFixed(2));
+    
+    filter.appendChild(dropShadow);
+    defs.appendChild(filter);
   }
   
   _updateComponentPosition(id) {
@@ -283,6 +369,8 @@ class CanvasControl extends jsgui.Control {
         handlesEl.style.display = "block";
       }
     }
+
+    this._emitSelectionChange();
   }
   
   _deselectAll() {
@@ -299,6 +387,8 @@ class CanvasControl extends jsgui.Control {
     if (handlesEl && handlesEl.style) {
       handlesEl.style.display = "none";
     }
+
+    this._emitSelectionChange();
   }
   
   _updateSelectionHandles() {
@@ -322,6 +412,32 @@ class CanvasControl extends jsgui.Control {
       width: comp.width,
       height: comp.height
     });
+  }
+
+  _serializeSelection() {
+    if (!this._selectedId) return null;
+    const comp = this._components.get(this._selectedId);
+    if (!comp) return null;
+    return {
+      id: this._selectedId,
+      type: comp.type,
+      x: comp.x,
+      y: comp.y,
+      width: comp.width,
+      height: comp.height,
+      fill: comp.fill,
+      stroke: comp.stroke,
+      strokeWidth: comp.strokeWidth,
+      opacity: comp.opacity !== undefined ? comp.opacity : 1,
+      glow: !!comp.glow,
+      shadowDepth: comp.shadowDepth || 0,
+      cornerRadius: comp.cornerRadius !== undefined ? comp.cornerRadius : 4,
+      blendMode: comp.blendMode || "normal"
+    };
+  }
+
+  _emitSelectionChange() {
+    this.raise("selection-change", this._serializeSelection());
   }
   
   _startResize(data) {
@@ -406,6 +522,7 @@ class CanvasControl extends jsgui.Control {
     }
     
     this._updateSelectionHandles();
+    this._emitSelectionChange();
   }
   
   _endResize() {
@@ -472,17 +589,47 @@ class CanvasControl extends jsgui.Control {
     }
     
     this._components.delete(this._selectedId);
-    this._selectedId = null;
-    
-    // Hide selection handles
-    const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
-    if (handlesEl && handlesEl.style) {
-      handlesEl.style.display = "none";
-    }
+    this._deselectAll();
   }
   
+  updateSelectedProperties(patch = {}) {
+    if (!this._selectedId) return;
+    const comp = this._components.get(this._selectedId);
+    if (!comp) return;
+
+    if (patch.fill) {
+      comp.fill = patch.fill;
+      comp.el.setAttribute("fill", patch.fill);
+    }
+    if (patch.opacity !== undefined) {
+      const clamped = Math.min(1, Math.max(0.2, patch.opacity));
+      comp.opacity = clamped;
+    }
+    if (patch.stroke !== undefined) {
+      comp.stroke = patch.stroke || null;
+    }
+    if (patch.strokeWidth !== undefined) {
+      comp.strokeWidth = patch.strokeWidth;
+    }
+    if (patch.glow !== undefined) {
+      comp.glow = !!patch.glow;
+    }
+    if (patch.shadowDepth !== undefined) {
+      comp.shadowDepth = patch.shadowDepth;
+    }
+    if (patch.cornerRadius !== undefined) {
+      comp.cornerRadius = patch.cornerRadius;
+    }
+    if (patch.blendMode !== undefined) {
+      comp.blendMode = patch.blendMode;
+    }
+
+    this._applyVisualAttributes(comp);
+    this._emitSelectionChange();
+  }
+
   _randomColor() {
-    const colors = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
+    const colors = ["#F2EFE6", "#C9A227", "#2D2D2D", "#4A90D9", "#4AD9B3", "#9B7B4B"];
     return colors[Math.floor(Math.random() * colors.length)];
   }
 }

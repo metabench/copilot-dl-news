@@ -31,6 +31,25 @@
 
 ## Current Session
 
+### Session 2025-11-30: Art Playground Obsidian UI
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve visual property options
+
+**Location**: `docs/sessions/2025-11-30-art-obsidian-visuals/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-art-obsidian-visuals/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-art-obsidian-visuals/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-art-obsidian-visuals/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-art-obsidian-visuals/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-art-obsidian-visuals/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-30: Art Playground - Interactive SVG Component Editor
 
 **Duration**: Active
