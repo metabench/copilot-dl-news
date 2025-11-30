@@ -26954,13 +26954,12 @@
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          var _global = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this;
-          if (!_global.Tautologistics)
-            _global.Tautologistics = {};
-          else if (_global.Tautologistics.NodeHtmlParser)
+          if (!this.Tautologistics)
+            this.Tautologistics = {};
+          else if (this.Tautologistics.NodeHtmlParser)
             return;
-          _global.Tautologistics.NodeHtmlParser = {};
-          exports = _global.Tautologistics.NodeHtmlParser;
+          this.Tautologistics.NodeHtmlParser = {};
+          exports = this.Tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",
