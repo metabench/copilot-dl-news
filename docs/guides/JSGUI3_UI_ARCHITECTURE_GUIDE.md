@@ -222,6 +222,240 @@ const app = new MyAppControl({ context, ...props });
 
 **Critical Rule**: Context flows down through composition. Parent controls pass their `this.context` to child controls.
 
+### 1.1 Context Deep Dive: Propagation & Registration
+
+> **Source**: This section documents research from jsgui3-html source code (`html-core/page-context.js`, `control-core.js`, `control-enh.js`).
+
+#### What is Page_Context?
+
+`Page_Context` is the coordination hub for all controls in a render tree. It tracks:
+
+| Property | Type | Purpose |
+|----------|------|---------|
+| `map_controls` | `Object` | Control ID → Control instance lookup |
+| `map_Controls` | `Object` | Type name → Constructor lookup (for dynamic instantiation) |
+| `map_els` | `Object` | Control ID → DOM element lookup (client-side only) |
+| `map_data_models` | `Object` | Data model registration |
+| `new_id(type)` | `Function` | Generates unique IDs like `"my_control_0"`, `"my_control_1"` |
+
+```javascript
+// Page_Context internals (simplified)
+class Page_Context {
+  constructor() {
+    this.map_controls = {};   // id → Control instance
+    this.map_Controls = {};   // type → Constructor
+    this.map_els = {};        // id → DOM element (client)
+    // ID generation state
+    this._map_new_ids = {};   // type → counter
+  }
+  
+  new_id(type_name) {
+    if (!this._map_new_ids[type_name]) {
+      this._map_new_ids[type_name] = 0;
+    }
+    return `${type_name}_${this._map_new_ids[type_name]++}`;
+  }
+  
+  register_control(control) {
+    control.context = this;
+    const id = control._id();
+    this.map_controls[id] = control;
+  }
+}
+```
+
+#### How Context Propagates Through the Tree
+
+**Automatic propagation** happens when you call `parent.add(child)`:
+
+```javascript
+// Inside Control.add() (from control-core.js):
+add(new_content) {
+  // If new_content is a string, wrap it
+  if (typeof new_content === 'string') {
+    new_content = new jsgui.String_Control({ text: new_content, context: this.context });
+  } else {
+    // CRITICAL: Context propagation happens here
+    if (!new_content.context && this.context) {
+      new_content.context = this.context;
+    }
+  }
+  this.content.add(new_content);
+  new_content.parent = this;
+}
+```
+
+**The propagation chain**:
+
+```
+Page_Context (root)
+    │
+    └── AppControl         ← context passed in constructor
+            │
+            └── add(HeaderControl)    ← context auto-propagated
+                    │
+                    └── add(NavControl)   ← context auto-propagated
+                            │
+                            └── add("Home")   ← wrapped + context set
+```
+
+#### Best Practice: Always Pass Context Explicitly
+
+Even though `add()` propagates context, **always pass `context: this.context`** when creating child controls:
+
+```javascript
+// ✅ RECOMMENDED - Explicit context passing
+compose() {
+  const header = new HeaderControl({ context: this.context, title: "My App" });
+  this.add(header);
+}
+
+// ⚠️ WORKS but discouraged - Relies on auto-propagation
+compose() {
+  const header = new HeaderControl({ title: "My App" });  // No context!
+  this.add(header);  // Context set here
+}
+```
+
+**Why explicit is better**:
+1. Control is fully initialized before `add()` (can call methods immediately)
+2. Makes context dependency visible in code
+3. Avoids timing issues if control does work in constructor
+4. Required for controls created outside `compose()` (event handlers, dynamic content)
+
+#### Registration vs Linking vs Activation
+
+Three distinct phases happen when using jsgui3 on the client:
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                     PHASE 1: REGISTRATION                          │
+│ register_this_and_subcontrols()                                    │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  Walks the control tree and adds each control to context:          │
+│                                                                    │
+│  iterate_this_and_subcontrols((ctrl) => {                         │
+│    context.register_control(ctrl);  // id → Control               │
+│  });                                                               │
+│                                                                    │
+│  After: context.map_controls = {                                   │
+│    "app_0": AppControl,                                            │
+│    "header_0": HeaderControl,                                      │
+│    "nav_0": NavControl,                                            │
+│    ...                                                             │
+│  }                                                                 │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                     PHASE 2: DOM LINKING                           │
+│ rec_desc_ensure_ctrl_el_refs(rootEl)                               │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  Walks the DOM tree, finds data-jsgui-id attributes, and links:    │
+│                                                                    │
+│  dom_desc(el, (el) => {                                            │
+│    const jsgui_id = el.getAttribute('data-jsgui-id');              │
+│    if (jsgui_id) {                                                 │
+│      context.map_els[jsgui_id] = el;  // id → DOM element          │
+│    }                                                               │
+│  });                                                               │
+│                                                                    │
+│  desc(this, (ctrl) => {                                            │
+│    const id = ctrl._id();                                          │
+│    if (map_els[id]) {                                              │
+│      ctrl.dom.el = map_els[id];  // Link Control to DOM            │
+│    }                                                               │
+│    ctrl.activate();  // Called automatically!                      │
+│  });                                                               │
+│                                                                    │
+│  After: Each control's this.dom.el points to its DOM element       │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                     PHASE 3: ACTIVATION                            │
+│ activate()                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  Each control's activate() method runs:                            │
+│                                                                    │
+│  activate() {                                                      │
+│    if (this.__active) return;  // Guard against double-activation  │
+│    this.__active = true;                                           │
+│                                                                    │
+│    const el = this.dom.el;     // NOW this is the real DOM!        │
+│    if (!el) return;            // Server-side safety               │
+│                                                                    │
+│    el.addEventListener('click', this._onClick.bind(this));         │
+│  }                                                                 │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+#### The `_el()` Helper Pattern
+
+Because `ctrl.dom.el` is only populated after linking, use a safe accessor:
+
+```javascript
+class MyControl extends jsgui.Control {
+  // Safe DOM element accessor
+  _el(ctrl = this) {
+    return ctrl?.dom?.el || ctrl?.dom;
+  }
+  
+  activate() {
+    const el = this._el();
+    // On server: el is the dom descriptor object (no addEventListener)
+    // On client before linking: el is the dom descriptor object
+    // On client after linking: el is the real DOM element
+    if (!el?.addEventListener) return;
+    
+    el.addEventListener('click', this._handleClick.bind(this));
+  }
+}
+```
+
+**Return value of `_el()`**:
+
+| Environment | `dom.el` | `_el()` returns |
+|-------------|----------|-----------------|
+| Server | `undefined` | `dom` object (descriptor) |
+| Client pre-link | `undefined` | `dom` object (descriptor) |
+| Client post-link | DOM element | DOM element |
+
+#### Control Lookup Patterns
+
+```javascript
+// Find control by ID
+const ctrl = context.map_controls["header_0"];
+
+// Find DOM element by control ID (client only)
+const el = context.map_els["header_0"];
+
+// Find DOM element from control
+const el = ctrl.dom.el;  // Only works after linking!
+
+// Find control from DOM element (in event handlers)
+el.addEventListener('click', (e) => {
+  const jid = e.target.getAttribute('data-jsgui-id');
+  const clickedCtrl = context.map_controls[jid];
+});
+```
+
+#### Server vs Client Context
+
+| Feature | Server (`Page_Context`) | Client (`Client_Page_Context`) |
+|---------|------------------------|-------------------------------|
+| `map_controls` | ✅ Populated | ✅ Populated |
+| `map_Controls` | ✅ Type constructors | ✅ Type constructors |
+| `map_els` | ❌ Empty | ✅ Populated after linking |
+| `document` | `undefined` | `window.document` |
+| `ctrl.dom.el` | `undefined` | Real DOM element |
+
 ### 2. Controls
 
 Controls are classes that extend `jsgui.Control`. They:

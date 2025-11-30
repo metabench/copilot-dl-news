@@ -39397,6 +39397,9 @@ body .overlay {
           <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
             <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E0E0E0" stroke-width="0.5"/>
           </pattern>
+          <filter id="luxGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#C9A227" flood-opacity="0.35"/>
+          </filter>
         </defs>
         <rect class="art-canvas__grid" width="100%" height="100%" fill="url(#grid)"/>
         <g class="art-canvas__components"></g>
@@ -39411,9 +39414,9 @@ body .overlay {
         }
         _addDefaultComponents() {
           this._pendingComponents = [
-            { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9" },
-            { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#D94A4A" },
-            { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#4AD94A" }
+            { id: "rect1", type: "rect", x: 100, y: 100, width: 150, height: 100, fill: "#4A90D9", opacity: 0.95 },
+            { id: "rect2", type: "rect", x: 300, y: 150, width: 120, height: 80, fill: "#C9A227", stroke: "#0F0F0F", strokeWidth: 2 },
+            { id: "ellipse1", type: "ellipse", cx: 550, cy: 200, rx: 70, ry: 50, fill: "#2D2D2D", opacity: 0.85, glow: true }
           ];
         }
         activate() {
@@ -39476,6 +39479,7 @@ body .overlay {
               comp.y = this._dragState.origY + dy;
               this._updateComponentPosition(this._dragState.id);
               this._updateSelectionHandles();
+              this._emitSelectionChange();
             }
           }
         }
@@ -39487,6 +39491,7 @@ body .overlay {
         _renderComponent(data) {
           const { id, type } = data;
           let el;
+          let compRecord;
           if (type === "rect") {
             el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             el.setAttribute("x", data.x);
@@ -39495,15 +39500,15 @@ body .overlay {
             el.setAttribute("height", data.height);
             el.setAttribute("fill", data.fill || "#4A90D9");
             el.setAttribute("rx", "4");
-            this._components.set(id, {
+            compRecord = {
               type: "rect",
               el,
               x: data.x,
               y: data.y,
               width: data.width,
               height: data.height,
-              fill: data.fill
-            });
+              fill: data.fill || "#4A90D9"
+            };
           } else if (type === "ellipse") {
             el = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
             el.setAttribute("cx", data.cx);
@@ -39511,7 +39516,7 @@ body .overlay {
             el.setAttribute("rx", data.rx);
             el.setAttribute("ry", data.ry);
             el.setAttribute("fill", data.fill || "#4AD94A");
-            this._components.set(id, {
+            compRecord = {
               type: "ellipse",
               el,
               x: data.cx - data.rx,
@@ -39522,8 +39527,8 @@ body .overlay {
               cy: data.cy,
               rx: data.rx,
               ry: data.ry,
-              fill: data.fill
-            });
+              fill: data.fill || "#4AD94A"
+            };
           } else if (type === "text") {
             el = document.createElementNS("http://www.w3.org/2000/svg", "text");
             el.setAttribute("x", data.x);
@@ -39531,7 +39536,7 @@ body .overlay {
             el.setAttribute("fill", data.fill || "#1A1A1A");
             el.setAttribute("font-size", data.fontSize || "16");
             el.textContent = data.text || "Text";
-            this._components.set(id, {
+            compRecord = {
               type: "text",
               el,
               x: data.x,
@@ -39539,14 +39544,83 @@ body .overlay {
               width: 100,
               height: 24,
               text: data.text || "Text",
-              fill: data.fill
-            });
+              fill: data.fill || "#1A1A1A"
+            };
+          }
+          if (compRecord) {
+            compRecord.opacity = data.opacity !== void 0 ? data.opacity : 1;
+            compRecord.stroke = data.stroke || null;
+            compRecord.strokeWidth = data.strokeWidth || 0;
+            compRecord.glow = !!data.glow;
+            compRecord.shadowDepth = data.shadowDepth || 0;
+            compRecord.cornerRadius = data.cornerRadius !== void 0 ? data.cornerRadius : 4;
+            compRecord.blendMode = data.blendMode || "normal";
+            this._components.set(id, compRecord);
+            this._applyVisualAttributes(compRecord);
           }
           if (el) {
             el.setAttribute("data-component-id", id);
             el.classList.add("art-canvas__component");
             this._componentsGroup.appendChild(el);
           }
+        }
+        _applyVisualAttributes(comp) {
+          if (!comp || !comp.el) return;
+          if (comp.fill) {
+            comp.el.setAttribute("fill", comp.fill);
+          }
+          const opacity = comp.opacity !== void 0 ? comp.opacity : 1;
+          comp.el.setAttribute("opacity", opacity);
+          if (comp.stroke) {
+            comp.el.setAttribute("stroke", comp.stroke);
+            comp.el.setAttribute("stroke-width", comp.strokeWidth || 1);
+          } else {
+            comp.el.removeAttribute("stroke");
+            comp.el.removeAttribute("stroke-width");
+          }
+          if (comp.type === "rect") {
+            const rx = comp.cornerRadius !== void 0 ? comp.cornerRadius : 4;
+            comp.el.setAttribute("rx", rx);
+            comp.el.setAttribute("ry", rx);
+          }
+          if (comp.blendMode && comp.blendMode !== "normal") {
+            comp.el.style.mixBlendMode = comp.blendMode;
+          } else {
+            comp.el.style.mixBlendMode = "";
+          }
+          const filters = [];
+          if (comp.glow) {
+            filters.push("url(#luxGlow)");
+          }
+          if (comp.shadowDepth && comp.shadowDepth > 0) {
+            this._ensureShadowFilter(comp.shadowDepth);
+            filters.push(`url(#shadowDepth${Math.round(comp.shadowDepth * 100)})`);
+          }
+          if (filters.length > 0) {
+            comp.el.setAttribute("filter", filters.join(" "));
+          } else {
+            comp.el.removeAttribute("filter");
+          }
+        }
+        _ensureShadowFilter(depth) {
+          const filterId = `shadowDepth${Math.round(depth * 100)}`;
+          if (this._svg.querySelector(`#${filterId}`)) return;
+          const defs = this._svg.querySelector("defs");
+          if (!defs) return;
+          const filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+          filter.setAttribute("id", filterId);
+          filter.setAttribute("x", "-50%");
+          filter.setAttribute("y", "-50%");
+          filter.setAttribute("width", "200%");
+          filter.setAttribute("height", "200%");
+          const dropShadow = document.createElementNS("http://www.w3.org/2000/svg", "feDropShadow");
+          dropShadow.setAttribute("dx", "0");
+          dropShadow.setAttribute("dy", Math.round(4 + depth * 12));
+          dropShadow.setAttribute("stdDeviation", Math.round(4 + depth * 16));
+          dropShadow.setAttribute("flood-color", "#000000");
+          dropShadow.setAttribute("flood-opacity", (0.15 + depth * 0.35).toFixed(2));
+          filter.appendChild(dropShadow);
+          defs.appendChild(filter);
         }
         _updateComponentPosition(id) {
           const comp = this._components.get(id);
@@ -39582,6 +39656,7 @@ body .overlay {
               handlesEl.style.display = "block";
             }
           }
+          this._emitSelectionChange();
         }
         _deselectAll() {
           if (this._selectedId) {
@@ -39595,6 +39670,7 @@ body .overlay {
           if (handlesEl && handlesEl.style) {
             handlesEl.style.display = "none";
           }
+          this._emitSelectionChange();
         }
         _updateSelectionHandles() {
           if (!this._selectedId) return;
@@ -39611,6 +39687,30 @@ body .overlay {
             width: comp.width,
             height: comp.height
           });
+        }
+        _serializeSelection() {
+          if (!this._selectedId) return null;
+          const comp = this._components.get(this._selectedId);
+          if (!comp) return null;
+          return {
+            id: this._selectedId,
+            type: comp.type,
+            x: comp.x,
+            y: comp.y,
+            width: comp.width,
+            height: comp.height,
+            fill: comp.fill,
+            stroke: comp.stroke,
+            strokeWidth: comp.strokeWidth,
+            opacity: comp.opacity !== void 0 ? comp.opacity : 1,
+            glow: !!comp.glow,
+            shadowDepth: comp.shadowDepth || 0,
+            cornerRadius: comp.cornerRadius !== void 0 ? comp.cornerRadius : 4,
+            blendMode: comp.blendMode || "normal"
+          };
+        }
+        _emitSelectionChange() {
+          this.raise("selection-change", this._serializeSelection());
         }
         _startResize(data) {
           if (!this._selectedId) return;
@@ -39679,6 +39779,7 @@ body .overlay {
             comp.el.setAttribute("ry", comp.ry);
           }
           this._updateSelectionHandles();
+          this._emitSelectionChange();
         }
         _endResize() {
           this._resizeState = null;
@@ -39734,14 +39835,43 @@ body .overlay {
             comp.el.remove();
           }
           this._components.delete(this._selectedId);
-          this._selectedId = null;
-          const handlesEl = this._selectionHandles.dom.el || this._selectionHandles.dom;
-          if (handlesEl && handlesEl.style) {
-            handlesEl.style.display = "none";
+          this._deselectAll();
+        }
+        updateSelectedProperties(patch = {}) {
+          if (!this._selectedId) return;
+          const comp = this._components.get(this._selectedId);
+          if (!comp) return;
+          if (patch.fill) {
+            comp.fill = patch.fill;
+            comp.el.setAttribute("fill", patch.fill);
           }
+          if (patch.opacity !== void 0) {
+            const clamped = Math.min(1, Math.max(0.2, patch.opacity));
+            comp.opacity = clamped;
+          }
+          if (patch.stroke !== void 0) {
+            comp.stroke = patch.stroke || null;
+          }
+          if (patch.strokeWidth !== void 0) {
+            comp.strokeWidth = patch.strokeWidth;
+          }
+          if (patch.glow !== void 0) {
+            comp.glow = !!patch.glow;
+          }
+          if (patch.shadowDepth !== void 0) {
+            comp.shadowDepth = patch.shadowDepth;
+          }
+          if (patch.cornerRadius !== void 0) {
+            comp.cornerRadius = patch.cornerRadius;
+          }
+          if (patch.blendMode !== void 0) {
+            comp.blendMode = patch.blendMode;
+          }
+          this._applyVisualAttributes(comp);
+          this._emitSelectionChange();
         }
         _randomColor() {
-          const colors = ["#4A90D9", "#D94A4A", "#4AD94A", "#D9D94A", "#9B4AD9", "#4AD9D9", "#D94A9B"];
+          const colors = ["#F2EFE6", "#C9A227", "#2D2D2D", "#4A90D9", "#4AD9B3", "#9B7B4B"];
           return colors[Math.floor(Math.random() * colors.length)];
         }
       };
@@ -39862,6 +39992,310 @@ body .overlay {
     }
   });
 
+  // src/ui/server/artPlayground/isomorphic/controls/PropertiesPanelControl.js
+  var require_PropertiesPanelControl = __commonJS({
+    "src/ui/server/artPlayground/isomorphic/controls/PropertiesPanelControl.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_jsgui2();
+      var PropertiesPanelControl = class extends jsgui2.Control {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "aside" });
+          this.add_class("art-properties");
+          this.dom.attributes["data-jsgui-control"] = "art_properties";
+          this._selected = null;
+          this._swatchButtons = [];
+          this._strokeButtons = [];
+          this._blendButtons = [];
+          this._inputs = {};
+          if (!spec.el) this._compose();
+        }
+        // --- Helpers for concise control creation ---
+        _ctrl(tagName, className) {
+          const c2 = new jsgui2.Control({ context: this.context, tagName });
+          if (className) c2.add_class(className);
+          return c2;
+        }
+        _text(str) {
+          return new jsgui2.String_Control({ context: this.context, text: str });
+        }
+        _btn(className, label, attrs = {}) {
+          const btn = this._ctrl("button", className);
+          const a = btn.dom.attributes;
+          a.type = "button";
+          Object.assign(a, attrs);
+          btn.add(this._text(label));
+          return btn;
+        }
+        _rangeInput(min, max, value2, step) {
+          const input = this._ctrl("input", "art-properties__range-input");
+          const a = input.dom.attributes;
+          Object.assign(a, { type: "range", min, max, value: value2, step });
+          return input;
+        }
+        _el(ctrl2) {
+          return ctrl2?.dom?.el || ctrl2?.dom;
+        }
+        // --- Composition ---
+        _compose() {
+          this._buildHeader();
+          this._buildSummary();
+          this._buildPaletteSection();
+          this._buildStrokeSection();
+          this._buildRangeSection("strokeWidth", "Stroke Width", "Edge thickness in pixels", 0, 12, 2, 1, "px");
+          this._buildRangeSection("opacity", "Opacity", "Balance transparency vs. solidity", 20, 100, 100, 5, "%");
+          this._buildRangeSection("shadow", "Shadow Depth", "Ambient drop shadow intensity", 0, 100, 0, 10, "%");
+          this._buildRangeSection("cornerRadius", "Corner Radius", "Softness of edges", 0, 50, 4, 2, "px");
+          this._buildBlendSection();
+          this._buildFinishSection();
+        }
+        _buildHeader() {
+          const header = this._ctrl("header", "art-properties__header");
+          const title = this._ctrl("h2", "art-properties__title");
+          title.add(this._text("Visual Options"));
+          const subtitle = this._ctrl("p", "art-properties__subtitle");
+          subtitle.add(this._text("Curated obsidian + gold finishes"));
+          header.add(title);
+          header.add(subtitle);
+          this.add(header);
+        }
+        _buildSummary() {
+          const summary = this._ctrl("section", "art-properties__summary");
+          this._summaryPrimary = this._ctrl("div", "art-properties__summary-primary");
+          this._summaryPrimary.add(this._text("Select a component"));
+          this._summaryMeta = this._ctrl("div", "art-properties__summary-meta");
+          this._summaryMeta.add(this._text(""));
+          summary.add(this._summaryPrimary);
+          summary.add(this._summaryMeta);
+          this.add(summary);
+        }
+        _buildPaletteSection() {
+          const section = this._sectionShell("Palette", "Lux neutrals + obsidian pops");
+          const grid = this._ctrl("div", "art-properties__swatches");
+          const colors = [
+            ["Ivory", "#F2EFE6"],
+            ["Porcelain", "#E6E1D4"],
+            ["Obsidian", "#1A1A1A"],
+            ["Midnight", "#2D2D2D"],
+            ["Citrine", "#C9A227"],
+            ["Champagne", "#D7B46E"],
+            ["Harbor", "#4A90D9"],
+            ["Moss", "#4AD9B3"]
+          ];
+          for (const [label, value2] of colors) {
+            const btn = this._btn("art-properties__swatch", label, { "data-color": value2 });
+            this._swatchButtons.push({ color: value2, control: btn });
+            grid.add(btn);
+          }
+          section.add(grid);
+          this.add(section);
+        }
+        _buildStrokeSection() {
+          const section = this._sectionShell("Edges", "Sculpt light around the shape");
+          const group = this._ctrl("div", "art-properties__actions");
+          const configs = [
+            ["Soft", null, 0],
+            ["Obsidian Edge", "#0F0F0F", 2],
+            ["Gold Edge", "#C9A227", 2]
+          ];
+          for (const [label, value2, width] of configs) {
+            const btn = this._btn("art-properties__pill", label, {
+              "data-stroke": value2 || "none",
+              "data-stroke-width": `${width}`
+            });
+            this._strokeButtons.push({ control: btn, config: { value: value2, width } });
+            group.add(btn);
+          }
+          section.add(group);
+          this.add(section);
+        }
+        _buildRangeSection(type, title, hint, min, max, value2, step, unit) {
+          const section = this._sectionShell(title, hint);
+          const wrapper = this._ctrl("div", "art-properties__range");
+          const input = this._rangeInput(`${min}`, `${max}`, `${value2}`, `${step}`);
+          const valueCtrl = this._ctrl("span", "art-properties__range-value");
+          valueCtrl.add(this._text(`${value2}${unit}`));
+          wrapper.add(input);
+          wrapper.add(valueCtrl);
+          section.add(wrapper);
+          this.add(section);
+          this._inputs[type] = { control: input, valueCtrl, unit };
+        }
+        _buildBlendSection() {
+          const section = this._sectionShell("Blend Mode", "Layer compositing style");
+          const group = this._ctrl("div", "art-properties__chips");
+          const modes = [["Normal", "normal"], ["Multiply", "multiply"], ["Screen", "screen"], ["Overlay", "overlay"]];
+          this._blendButtons = [];
+          for (const [label, value2] of modes) {
+            const chip = this._btn("art-properties__chip", label, { "data-blend": value2 });
+            this._blendButtons.push({ value: value2, control: chip });
+            group.add(chip);
+          }
+          section.add(group);
+          this.add(section);
+        }
+        _buildFinishSection() {
+          const section = this._sectionShell("Finish", "Ambient glow toggle");
+          this._finishButton = this._btn("art-properties__pill", "Golden Halo", { "data-finish": "glow" });
+          section.add(this._finishButton);
+          this.add(section);
+        }
+        _sectionShell(title, hint) {
+          const section = this._ctrl("section", "art-properties__section");
+          const heading = this._ctrl("div", "art-properties__section-heading");
+          const titleEl = this._ctrl("h3");
+          titleEl.add(this._text(title));
+          const hintEl = this._ctrl("span", "art-properties__section-hint");
+          hintEl.add(this._text(hint));
+          heading.add(titleEl);
+          heading.add(hintEl);
+          section.add(heading);
+          return section;
+        }
+        // --- Activation & Event Binding ---
+        activate() {
+          if (this.__active) return;
+          this.__active = true;
+          this._bindPaletteEvents();
+          this._bindStrokeEvents();
+          this._bindRangeEvents("opacity", (v) => ({ opacity: v / 100 }));
+          this._bindRangeEvents("strokeWidth", (v) => ({ strokeWidth: v }));
+          this._bindRangeEvents("shadow", (v) => ({ shadowDepth: v / 100 }));
+          this._bindRangeEvents("cornerRadius", (v) => ({ cornerRadius: v }));
+          this._bindBlendEvents();
+          this._bindFinishEvents();
+          this._setInteractiveState(false);
+        }
+        _bindPaletteEvents() {
+          for (const { color, control } of this._swatchButtons) {
+            const el = this._el(control);
+            if (!el?.addEventListener) continue;
+            el.addEventListener("click", () => {
+              this._markActiveSwatch(color);
+              this._emitPropertyChange({ fill: color });
+            });
+          }
+        }
+        _bindStrokeEvents() {
+          for (const { control, config } of this._strokeButtons) {
+            const el = this._el(control);
+            if (!el?.addEventListener) continue;
+            el.addEventListener("click", () => {
+              for (const { control: c2 } of this._strokeButtons) {
+                this._el(c2)?.classList?.remove("art-properties__pill--active");
+              }
+              el.classList.add("art-properties__pill--active");
+              this._emitPropertyChange(config.value ? { stroke: config.value, strokeWidth: config.width } : { stroke: null, strokeWidth: 0 });
+            });
+          }
+        }
+        _bindRangeEvents(type, patchFn) {
+          const entry = this._inputs[type];
+          if (!entry) return;
+          const el = this._el(entry.control);
+          if (!el?.addEventListener) return;
+          el.addEventListener("input", () => {
+            const v = parseInt(el.value, 10) || 0;
+            const valEl = this._el(entry.valueCtrl);
+            if (valEl) valEl.innerText = `${v}${entry.unit}`;
+            this._emitPropertyChange(patchFn(v));
+          });
+        }
+        _bindBlendEvents() {
+          for (const { value: value2, control } of this._blendButtons) {
+            const el = this._el(control);
+            if (!el?.addEventListener) continue;
+            el.addEventListener("click", () => {
+              for (const { control: c2 } of this._blendButtons) {
+                this._el(c2)?.classList?.remove("art-properties__chip--active");
+              }
+              el.classList.add("art-properties__chip--active");
+              this._emitPropertyChange({ blendMode: value2 });
+            });
+          }
+        }
+        _bindFinishEvents() {
+          const el = this._el(this._finishButton);
+          if (!el?.addEventListener) return;
+          el.addEventListener("click", () => {
+            const active = el.classList.toggle("art-properties__pill--active");
+            this._emitPropertyChange({ glow: active });
+          });
+        }
+        _emitPropertyChange(patch) {
+          if (this._selected) this.raise("property-change", patch);
+        }
+        // --- Selection Sync ---
+        setSelection(comp) {
+          this._selected = comp;
+          const pEl = this._el(this._summaryPrimary), mEl = this._el(this._summaryMeta);
+          if (comp) {
+            if (pEl) pEl.innerText = (comp.type || "Component").toUpperCase();
+            if (mEl) mEl.innerText = `${Math.round(comp.width)} \xD7 ${Math.round(comp.height)} px`;
+            this._markActiveSwatch(comp.fill);
+            this._syncRange("opacity", (comp.opacity ?? 1) * 100);
+            this._syncStroke(comp.stroke);
+            this._syncRange("strokeWidth", comp.strokeWidth ?? 2);
+            this._syncRange("shadow", (comp.shadowDepth ?? 0) * 100);
+            this._syncRange("cornerRadius", comp.cornerRadius ?? 4);
+            this._syncBlendMode(comp.blendMode);
+            this._syncGlow(comp.glow);
+            this._setInteractiveState(true);
+          } else {
+            if (pEl) pEl.innerText = "Select a component";
+            if (mEl) mEl.innerText = "";
+            this._markActiveSwatch(null);
+            this._syncGlow(false);
+            this._setInteractiveState(false);
+          }
+        }
+        _markActiveSwatch(color) {
+          const norm = color?.toLowerCase();
+          for (const { color: c2, control } of this._swatchButtons) {
+            this._el(control)?.classList?.toggle("art-properties__swatch--active", norm && c2.toLowerCase() === norm);
+          }
+        }
+        _syncRange(type, value2) {
+          const entry = this._inputs[type];
+          if (!entry) return;
+          const v = Math.round(value2);
+          const inputEl = this._el(entry.control), valEl = this._el(entry.valueCtrl);
+          if (inputEl) inputEl.value = `${v}`;
+          if (valEl) valEl.innerText = `${v}${entry.unit}`;
+        }
+        _syncStroke(strokeValue) {
+          for (const { control, config } of this._strokeButtons) {
+            const active = !strokeValue && !config.value || strokeValue && config.value === strokeValue;
+            this._el(control)?.classList?.toggle("art-properties__pill--active", !!active);
+          }
+        }
+        _syncBlendMode(blendMode) {
+          const active = blendMode || "normal";
+          for (const { value: value2, control } of this._blendButtons) {
+            this._el(control)?.classList?.toggle("art-properties__chip--active", value2 === active);
+          }
+        }
+        _syncGlow(glow) {
+          this._el(this._finishButton)?.classList?.toggle("art-properties__pill--active", !!glow);
+        }
+        _setInteractiveState(enabled) {
+          this._el(this)?.classList?.toggle("art-properties--empty", !enabled);
+          const all = [...this._swatchButtons, ...this._strokeButtons, ...this._blendButtons];
+          for (const { control } of all) {
+            const el = this._el(control);
+            if (el) el.disabled = !enabled;
+          }
+          for (const { control } of Object.values(this._inputs)) {
+            const el = this._el(control);
+            if (el) el.disabled = !enabled;
+          }
+          const finishEl = this._el(this._finishButton);
+          if (finishEl) finishEl.disabled = !enabled;
+        }
+      };
+      module.exports = { PropertiesPanelControl };
+    }
+  });
+
   // src/ui/server/artPlayground/isomorphic/controls/ArtPlaygroundAppControl.js
   var require_ArtPlaygroundAppControl = __commonJS({
     "src/ui/server/artPlayground/isomorphic/controls/ArtPlaygroundAppControl.js"(exports, module) {
@@ -39869,6 +40303,7 @@ body .overlay {
       var jsgui2 = require_jsgui2();
       var { CanvasControl: CanvasControl2 } = require_CanvasControl();
       var { ToolbarControl: ToolbarControl2 } = require_ToolbarControl();
+      var { PropertiesPanelControl } = require_PropertiesPanelControl();
       var ArtPlaygroundAppControl2 = class extends jsgui2.Control {
         constructor(spec = {}) {
           super({ ...spec, tagName: "div" });
@@ -39881,8 +40316,13 @@ body .overlay {
         _compose() {
           this._toolbar = new ToolbarControl2({ context: this.context });
           this.add(this._toolbar);
+          this._stage = new jsgui2.Control({ context: this.context, tagName: "div" });
+          this._stage.add_class("art-stage");
           this._canvas = new CanvasControl2({ context: this.context });
-          this.add(this._canvas);
+          this._stage.add(this._canvas);
+          this._properties = new PropertiesPanelControl({ context: this.context });
+          this._stage.add(this._properties);
+          this.add(this._stage);
         }
         /**
          * Activate client-side behavior
@@ -39903,7 +40343,17 @@ body .overlay {
               this._canvas = canvasEl.__jsgui_control;
             }
           }
+          if (el && !this._properties) {
+            const propsEl = el.querySelector("[data-jsgui-control='art_properties']");
+            if (propsEl && propsEl.__jsgui_control) {
+              this._properties = propsEl.__jsgui_control;
+            }
+          }
+          if (this._properties && typeof this._properties.activate === "function") {
+            this._properties.activate();
+          }
           this._setupToolbarHandlers();
+          this._setupPropertyPanelHandlers();
         }
         /**
          * Connect toolbar actions to canvas
@@ -39918,6 +40368,15 @@ body .overlay {
           });
           this._toolbar.on("delete", () => {
             this._canvas.deleteSelected();
+          });
+        }
+        _setupPropertyPanelHandlers() {
+          if (!this._properties || !this._canvas) return;
+          this._properties.on("property-change", (patch) => {
+            this._canvas.updateSelectedProperties?.(patch);
+          });
+          this._canvas.on?.("selection-change", (payload) => {
+            this._properties.setSelection?.(payload);
           });
         }
       };
@@ -40036,7 +40495,25 @@ body .overlay {
             if (!handleEl) return;
             handleEl.addEventListener("mousedown", (e) => {
               e.stopPropagation();
-              app._canvas._selectionHandles.raise("resize-start", { position: pos, event: e });
+              app._canvas._selectionHandles.raise("resize-start", {
+                handle: pos,
+                mouseX: e.clientX,
+                mouseY: e.clientY
+              });
+              const onMove = (moveEvent) => {
+                app._canvas._selectionHandles.raise("resize-move", {
+                  handle: pos,
+                  mouseX: moveEvent.clientX,
+                  mouseY: moveEvent.clientY
+                });
+              };
+              const onUp = () => {
+                app._canvas._selectionHandles.raise("resize-end");
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", onUp);
             });
           });
           app._canvas._selectionHandles.on("resize-start", (data) => app._canvas._startResize(data));

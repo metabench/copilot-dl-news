@@ -3,6 +3,7 @@
 const jsgui = require("../jsgui");
 const { CanvasControl } = require("./CanvasControl");
 const { ToolbarControl } = require("./ToolbarControl");
+const { PropertiesPanelControl } = require("./PropertiesPanelControl");
 
 /**
  * Main App Control for Art Playground
@@ -26,10 +27,18 @@ class ArtPlaygroundAppControl extends jsgui.Control {
     // Create toolbar
     this._toolbar = new ToolbarControl({ context: this.context });
     this.add(this._toolbar);
-    
-    // Create canvas area
+
+    // Stage contains canvas + property panel
+    this._stage = new jsgui.Control({ context: this.context, tagName: "div" });
+    this._stage.add_class("art-stage");
+
     this._canvas = new CanvasControl({ context: this.context });
-    this.add(this._canvas);
+    this._stage.add(this._canvas);
+
+    this._properties = new PropertiesPanelControl({ context: this.context });
+    this._stage.add(this._properties);
+
+    this.add(this._stage);
   }
   
   /**
@@ -53,9 +62,21 @@ class ArtPlaygroundAppControl extends jsgui.Control {
         this._canvas = canvasEl.__jsgui_control;
       }
     }
+    if (el && !this._properties) {
+      const propsEl = el.querySelector("[data-jsgui-control='art_properties']");
+      if (propsEl && propsEl.__jsgui_control) {
+        this._properties = propsEl.__jsgui_control;
+      }
+    }
     
-    // Wire up toolbar to canvas
+    // Activate nested controls (toolbar + canvas already handle their own activate flow)
+    if (this._properties && typeof this._properties.activate === "function") {
+      this._properties.activate();
+    }
+
+    // Wire up components
     this._setupToolbarHandlers();
+    this._setupPropertyPanelHandlers();
   }
   
   /**
@@ -77,6 +98,20 @@ class ArtPlaygroundAppControl extends jsgui.Control {
     // Listen for delete request
     this._toolbar.on("delete", () => {
       this._canvas.deleteSelected();
+    });
+  }
+
+  _setupPropertyPanelHandlers() {
+    if (!this._properties || !this._canvas) return;
+
+    // Panel listens for property-change events and pushes them to canvas
+    this._properties.on("property-change", (patch) => {
+      this._canvas.updateSelectedProperties?.(patch);
+    });
+
+    // Canvas emits selection-change so panel can refresh summary
+    this._canvas.on?.("selection-change", (payload) => {
+      this._properties.setSelection?.(payload);
     });
   }
 }
