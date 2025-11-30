@@ -14,5 +14,7 @@ module.exports = {
   // Run serially - can't have multiple Electron instances
   maxWorkers: 1,
   // Clean up
-  clearMocks: true
+  clearMocks: true,
+  // Force exit after tests complete (handles orphaned async handles)
+  forceExit: true
 };
