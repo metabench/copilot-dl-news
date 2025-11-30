@@ -159,19 +159,41 @@ function init() {
     // Activate selection handles
     if (app._canvas._selectionHandles) {
       const selEl = app._canvas._selectionHandles.dom.el;
-      
-      // Wire resize events
+
       if (selEl) {
         Object.entries(app._canvas._selectionHandles._handles || {}).forEach(([pos, handle]) => {
           const handleEl = handle.dom?.el;
           if (!handleEl) return;
-          
+
           handleEl.addEventListener("mousedown", (e) => {
             e.stopPropagation();
-            app._canvas._selectionHandles.raise("resize-start", { position: pos, event: e });
+
+            // Raise resize-start with normalized payload
+            app._canvas._selectionHandles.raise("resize-start", {
+              handle: pos,
+              mouseX: e.clientX,
+              mouseY: e.clientY
+            });
+
+            const onMove = (moveEvent) => {
+              app._canvas._selectionHandles.raise("resize-move", {
+                handle: pos,
+                mouseX: moveEvent.clientX,
+                mouseY: moveEvent.clientY
+              });
+            };
+
+            const onUp = () => {
+              app._canvas._selectionHandles.raise("resize-end");
+              document.removeEventListener("mousemove", onMove);
+              document.removeEventListener("mouseup", onUp);
+            };
+
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
           });
         });
-        
+
         // Listen for resize events from selection handles
         app._canvas._selectionHandles.on("resize-start", (data) => app._canvas._startResize(data));
         app._canvas._selectionHandles.on("resize-move", (data) => app._canvas._doResize(data));
