@@ -26952,16 +26952,16 @@
   var require_htmlparser = __commonJS({
     "node_modules/htmlparser/lib/htmlparser.js"(exports, module) {
       (function() {
-        const root = typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};
         function runningInNode() {
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          const tautologistics = root.Tautologistics || (root.Tautologistics = {});
-          if (tautologistics.NodeHtmlParser)
+          if (!this.Tautologistics)
+            this.Tautologistics = {};
+          else if (this.Tautologistics.NodeHtmlParser)
             return;
-          tautologistics.NodeHtmlParser = {};
-          exports = tautologistics.NodeHtmlParser;
+          this.Tautologistics.NodeHtmlParser = {};
+          exports = this.Tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",
@@ -39674,11 +39674,696 @@ body .overlay {
     }
   });
 
+  // src/ui/controls/helpers/controlFactory.js
+  var require_controlFactory = __commonJS({
+    "src/ui/controls/helpers/controlFactory.js"(exports, module) {
+      "use strict";
+      function createControlFactory(jsgui2) {
+        if (!jsgui2) {
+          throw new Error("jsgui instance is required");
+        }
+        const { Control: Control2 } = jsgui2;
+        function formatNumber(value2) {
+          if (typeof value2 === "number") return value2.toLocaleString();
+          return String(value2);
+        }
+        function formatLabel(key2) {
+          return key2.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim().replace(/\b\w/g, (c2) => c2.toUpperCase());
+        }
+        function formatBytes(bytes) {
+          if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+          const units = ["B", "KB", "MB", "GB", "TB"];
+          const exp = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+          const value2 = bytes / 1024 ** exp;
+          const fixed = value2 >= 100 ? value2.toFixed(0) : value2 >= 10 ? value2.toFixed(1) : value2.toFixed(2);
+          return `${fixed} ${units[exp]}`;
+        }
+        function el(context2, tagName, text, className) {
+          const ctrl2 = new Control2({ context: context2, tagName });
+          if (className) ctrl2.add_class(className);
+          if (text) ctrl2.add(text);
+          return ctrl2;
+        }
+        function div(context2, className, text) {
+          return el(context2, "div", text, className);
+        }
+        function span(context2, className, text) {
+          return el(context2, "span", text, className);
+        }
+        function createSection(context2, emoji, title, className) {
+          const section = new Control2({ context: context2, tagName: "section" });
+          section.add_class(className || "dashboard-section");
+          section.add(el(context2, "h2", `${emoji} ${title}`));
+          return section;
+        }
+        function createStatItem(context2, label, value2, className = "stat-item") {
+          const item2 = new Control2({ context: context2, tagName: "div" });
+          item2.add_class(className);
+          item2.add(el(context2, "span", formatNumber(value2), "stat-value"));
+          item2.add(el(context2, "span", label, "stat-label"));
+          return item2;
+        }
+        function createActionButton(context2, emoji, label, action, variant, disabled = false) {
+          const btn = new Control2({ context: context2, tagName: "button" });
+          btn.add_class("action-btn");
+          btn.add_class(`btn-${variant}`);
+          btn.dom.attributes["data-action"] = action;
+          if (disabled) btn.dom.attributes.disabled = "true";
+          btn.add(`${emoji} ${label}`);
+          return btn;
+        }
+        function createGrid(context2, className = "grid") {
+          return div(context2, className);
+        }
+        function createBadge(context2, text, variant) {
+          const badge = span(context2, "badge", text);
+          if (variant) badge.add_class(`badge-${variant}`);
+          return badge;
+        }
+        return {
+          // Formatters
+          formatNumber,
+          formatLabel,
+          formatBytes,
+          // Element creators
+          el,
+          div,
+          span,
+          // Composite helpers
+          createSection,
+          createStatItem,
+          createActionButton,
+          createGrid,
+          createBadge
+        };
+      }
+      module.exports = createControlFactory;
+    }
+  });
+
+  // src/ui/controls/GeoImportDashboard.js
+  var require_GeoImportDashboard = __commonJS({
+    "src/ui/controls/GeoImportDashboard.js"(exports, module) {
+      "use strict";
+      var jsgui2 = require_html();
+      var { Control: Control2, controls } = jsgui2;
+      var createControlFactory = require_controlFactory();
+      var { createTwoColumnLayoutControls: createTwoColumnLayoutControls2 } = require_TwoColumnLayoutFactory();
+      var {
+        el,
+        createSection,
+        createStatItem,
+        createActionButton,
+        formatNumber,
+        formatLabel
+      } = createControlFactory(jsgui2);
+      var { TwoColumnLayout, Sidebar, ContentArea, NavItem, DetailHeader } = createTwoColumnLayoutControls2(jsgui2);
+      var STATUS_LABELS = {
+        "idle": "\u23F8\uFE0F Idle",
+        "ready": "\u2705 Ready",
+        "running": "\u{1F504} Running",
+        "completed": "\u2705 Complete",
+        "error": "\u274C Error",
+        "pending": "\u23F3 Pending",
+        "missing": "\u26A0\uFE0F Missing",
+        "coming-soon": "\u{1F6A7} Coming Soon"
+      };
+      var PHASE_LABELS = {
+        "idle": "\u23F8\uFE0F Waiting to start",
+        "downloading": "\u{1F4E5} Downloading files...",
+        "parsing": "\u{1F4D1} Parsing data...",
+        "importing": "\u{1F4BE} Importing to database...",
+        "indexing": "\u{1F50D} Building indexes...",
+        "validating": "\u2705 Validating data...",
+        "completed": "\u{1F389} Import complete!",
+        "error": "\u274C Error occurred"
+      };
+      var SourceCard2 = class extends Control2 {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "source_card" });
+          this.source = spec.source || {
+            id: "unknown",
+            name: "Unknown Source",
+            emoji: "\u2753",
+            status: "idle",
+            description: ""
+          };
+          this.add_class("geo-source-card");
+          this.add_class(`source-${this.source.id}`);
+          this.add_class(`status-${this.source.status}`);
+          if (this.source.comingSoon) {
+            this.add_class("coming-soon");
+          }
+          if (!spec.el) this.compose();
+        }
+        compose() {
+          const { name, emoji, status, description, stats, lastRun, comingSoon, plannedFeatures, available } = this.source;
+          const ctx = this.context;
+          const header = el(ctx, "div", null, "source-header");
+          header.add(el(ctx, "span", emoji, "source-emoji"));
+          header.add(el(ctx, "span", name, "source-name"));
+          if (comingSoon) {
+            const badge = el(ctx, "span", "\u{1F6A7} Coming Soon", "status-badge");
+            badge.add_class("status-coming-soon");
+            header.add(badge);
+          } else {
+            const badge = el(ctx, "span", STATUS_LABELS[status] || status, "status-badge");
+            badge.add_class(`status-${status}`);
+            header.add(badge);
+          }
+          this.add(header);
+          if (description) {
+            this.add(el(ctx, "p", description, "source-description"));
+          }
+          if (comingSoon && plannedFeatures && plannedFeatures.length > 0) {
+            const featuresList = el(ctx, "div", null, "planned-features");
+            featuresList.add(el(ctx, "span", "\u{1F4CB} Planned:", "features-label"));
+            const featuresText = plannedFeatures.map((f) => `\u2022 ${f}`).join("  ");
+            featuresList.add(el(ctx, "span", featuresText, "features-list"));
+            this.add(featuresList);
+          }
+          if (stats) {
+            const grid = el(ctx, "div", null, "stats-grid");
+            if (comingSoon) {
+              grid.add_class("stats-disabled");
+            }
+            for (const [key2, value2] of Object.entries(stats)) {
+              grid.add(createStatItem(ctx, formatLabel(key2), value2));
+            }
+            this.add(grid);
+          }
+          if (lastRun) {
+            this.add(el(ctx, "div", `Last run: ${lastRun}`, "last-run"));
+          } else if (comingSoon) {
+            this.add(el(ctx, "div", "\u23F3 Backend integration in development", "availability-note"));
+          } else if (available) {
+            this.add(el(ctx, "div", "\u2705 Ready to import", "availability-note ready"));
+          }
+        }
+      };
+      var ProgressRing2 = class extends Control2 {
+        constructor(spec = {}) {
+          const { progress = 0, size = 120, strokeWidth = 8, color = "#4CAF50", ...restSpec } = spec;
+          super({ ...restSpec, tagName: "div", __type_name: "progress_ring" });
+          this._progress = progress;
+          this._ringSize = size;
+          this._strokeWidth = strokeWidth;
+          this._color = color;
+          this.add_class("progress-ring-container");
+          this.dom.attributes["data-progress"] = String(progress);
+          this.dom.attributes["data-ring-size"] = String(size);
+          if (!spec.el) this.compose();
+        }
+        compose() {
+          const { _ringSize: size, _strokeWidth: sw, _progress: progress, _color: color } = this;
+          const ctx = this.context;
+          const radius = (size - sw) / 2;
+          const circumference = 2 * Math.PI * radius;
+          const offset2 = circumference - progress / 100 * circumference;
+          const center = size / 2;
+          const svg = new Control2({ context: ctx, tagName: "svg" });
+          svg.add_class("progress-ring");
+          svg.dom.attributes = {
+            width: size,
+            height: size,
+            viewBox: `0 0 ${size} ${size}`
+          };
+          const bgCircle = new Control2({ context: ctx, tagName: "circle" });
+          bgCircle.dom.attributes = {
+            cx: center,
+            cy: center,
+            r: radius,
+            fill: "none",
+            stroke: "#e0e0e0",
+            "stroke-width": sw
+          };
+          svg.add(bgCircle);
+          const arc = new Control2({ context: ctx, tagName: "circle" });
+          arc.add_class("progress-ring-circle");
+          arc.dom.attributes = {
+            cx: center,
+            cy: center,
+            r: radius,
+            fill: "none",
+            stroke: color,
+            "stroke-width": sw,
+            "stroke-linecap": "round",
+            "stroke-dasharray": circumference,
+            "stroke-dashoffset": offset2,
+            transform: `rotate(-90 ${center} ${center})`
+          };
+          svg.add(arc);
+          this.add(svg);
+          this.add(el(ctx, "div", `${Math.round(progress)}%`, "progress-ring-text"));
+        }
+      };
+      var IMPORT_STAGES = [
+        { id: "idle", label: "Ready", emoji: "\u23F8\uFE0F", description: "Waiting to start" },
+        { id: "validating", label: "Validating", emoji: "\u{1F50D}", description: "Checking source files" },
+        { id: "counting", label: "Counting", emoji: "\u{1F4CA}", description: "Counting records" },
+        { id: "preparing", label: "Preparing", emoji: "\u2699\uFE0F", description: "Setting up database" },
+        { id: "importing", label: "Importing", emoji: "\u{1F4BE}", description: "Importing records" },
+        { id: "indexing", label: "Indexing", emoji: "\u{1F5C2}\uFE0F", description: "Building indexes" },
+        { id: "verifying", label: "Verifying", emoji: "\u2705", description: "Validating coverage" },
+        { id: "complete", label: "Complete", emoji: "\u{1F389}", description: "Import finished" }
+      ];
+      var STAGE_INDEX = IMPORT_STAGES.reduce((acc, stage, i) => {
+        acc[stage.id] = i;
+        return acc;
+      }, {});
+      var StagesStepper2 = class extends Control2 {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "stages_stepper" });
+          this.currentStage = spec.currentStage || "idle";
+          this.stages = spec.stages || IMPORT_STAGES;
+          this._stageElements = {};
+          this.add_class("stages-stepper");
+          this.dom.attributes["data-current-stage"] = this.currentStage;
+          if (!spec.el) this.compose();
+        }
+        compose() {
+          var _a;
+          const ctx = this.context;
+          const currentIndex = (_a = STAGE_INDEX[this.currentStage]) != null ? _a : 0;
+          for (let i = 0; i < this.stages.length; i++) {
+            const stage = this.stages[i];
+            const stageEl = el(ctx, "div", null, "stage-item");
+            stageEl.dom.attributes["data-stage-id"] = stage.id;
+            if (i < currentIndex) {
+              stageEl.add_class("stage-completed");
+            } else if (i === currentIndex) {
+              stageEl.add_class("stage-current");
+            } else {
+              stageEl.add_class("stage-pending");
+            }
+            const marker = el(ctx, "div", null, "stage-marker");
+            if (i < currentIndex) {
+              marker.add("\u2713");
+            } else {
+              marker.add(stage.emoji);
+            }
+            stageEl.add(marker);
+            const label = el(ctx, "div", stage.label, "stage-label");
+            stageEl.add(label);
+            if (i < this.stages.length - 1) {
+              const connector = el(ctx, "div", null, "stage-connector");
+              if (i < currentIndex) {
+                connector.add_class("connector-completed");
+              }
+              stageEl.add(connector);
+            }
+            this._stageElements[stage.id] = stageEl;
+            this.add(stageEl);
+          }
+        }
+        /**
+         * Update current stage (client-side)
+         * @param {string} stageId - Stage ID to set as current
+         */
+        setStage(stageId) {
+          this.currentStage = stageId;
+          this.dom.attributes["data-current-stage"] = stageId;
+        }
+      };
+      var LiveLog2 = class extends Control2 {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "live_log" });
+          this.entries = spec.entries || [];
+          this.maxEntries = spec.maxEntries || 100;
+          this._logBody = null;
+          this.add_class("live-log");
+          if (!spec.el) this.compose();
+        }
+        compose() {
+          const ctx = this.context;
+          this.add(el(ctx, "div", "\u{1F4CB} Import Log", "log-header"));
+          this._logBody = el(ctx, "div", null, "log-body");
+          this._logBody.dom.attributes["data-log-container"] = "true";
+          for (const entry of this.entries.slice(-this.maxEntries)) {
+            this._logBody.add(this._createLogEntry(entry));
+          }
+          this.add(this._logBody);
+        }
+        _createLogEntry(entry) {
+          const ctx = this.context;
+          const row = el(ctx, "div", null, "log-entry");
+          row.add_class(`log-${entry.level || "info"}`);
+          row.add(el(ctx, "span", entry.time || (/* @__PURE__ */ new Date()).toLocaleTimeString(), "log-timestamp"));
+          row.add(el(ctx, "span", entry.message, "log-message"));
+          return row;
+        }
+        addEntry(entry) {
+          this.entries.push(entry);
+          if (this.entries.length > this.maxEntries) this.entries.shift();
+        }
+      };
+      var DEFAULT_SOURCES = {
+        geonames: {
+          id: "geonames",
+          name: "GeoNames",
+          emoji: "\u{1F30D}",
+          status: "ready",
+          description: "cities15000.txt: ~25,000 cities with population >15K",
+          stats: { expected_cities: 25e3, expected_names: 15e4 },
+          available: true
+        },
+        wikidata: {
+          id: "wikidata",
+          name: "Wikidata",
+          emoji: "\u{1F4DA}",
+          status: "coming-soon",
+          description: "SPARQL queries for Wikidata IDs, population updates, and multilingual names",
+          stats: { linked_entities: "\u2014" },
+          available: false,
+          comingSoon: true,
+          plannedFeatures: ["Entity linking", "Population sync", "Multilingual labels"]
+        },
+        osm: {
+          id: "osm",
+          name: "OpenStreetMap",
+          emoji: "\u{1F5FA}\uFE0F",
+          status: "coming-soon",
+          description: "Administrative boundaries and spatial containment queries",
+          stats: { boundaries: "\u2014" },
+          available: false,
+          comingSoon: true,
+          plannedFeatures: ["Admin boundaries", "Spatial queries", "PostGIS integration"]
+        }
+      };
+      var DEFAULT_LOGS = [
+        { time: "10:30:00", level: "info", message: "Import dashboard initialized" },
+        { time: "10:30:01", level: "info", message: "Checking GeoNames file availability..." },
+        { time: "10:30:02", level: "success", message: "cities15000.txt found (2.9 MB)" },
+        { time: "10:30:03", level: "info", message: "Ready to import 24,687 cities" }
+      ];
+      var NAV_SECTIONS = [
+        { id: "database", label: "Database", icon: "\u{1F5C4}\uFE0F" },
+        { id: "pipeline", label: "Pipeline", icon: "\u{1F4CB}" },
+        { id: "sources", label: "Data Sources", icon: "\u{1F4E6}" },
+        { id: "coverage", label: "Coverage", icon: "\u{1F4C8}" },
+        { id: "log", label: "Import Log", icon: "\u{1F4DD}" }
+      ];
+      var GeoImportDashboard2 = class extends Control2 {
+        constructor(spec = {}) {
+          super({ ...spec, tagName: "div", __type_name: "geo_import_dashboard" });
+          this.add_class("geo-import-dashboard");
+          this.dom.attributes["data-jsgui-control"] = "geo_import_dashboard";
+          this.activeView = spec.activeView || "pipeline";
+          this._layout = null;
+          this._sidebar = null;
+          this._contentArea = null;
+          this._progressRing = null;
+          this._stagesStepper = null;
+          this._sourceCards = {};
+          this._liveLog = null;
+          this._dbSelector = spec.dbSelector || null;
+          this.importState = {
+            phase: "idle",
+            currentSource: null,
+            progress: { current: 0, total: 0 },
+            sources: DEFAULT_SOURCES,
+            logs: [],
+            totals: {
+              places_before: 508,
+              places_after: 0,
+              names_before: 14855,
+              names_after: 0
+            },
+            ...spec.importState
+          };
+          if (!spec.el) this.compose();
+        }
+        setImportState(state) {
+          this.importState = { ...this.importState, ...state };
+        }
+        setDbSelector(dbSelector) {
+          this._dbSelector = dbSelector;
+        }
+        compose() {
+          const ctx = this.context;
+          this._layout = new TwoColumnLayout({
+            context: ctx,
+            sidebarTitle: "Gazetteer Import",
+            sidebarIcon: "\u{1F310}",
+            sidebarWidth: 240,
+            navItems: NAV_SECTIONS.map((s) => ({
+              ...s,
+              selected: s.id === this.activeView
+            })),
+            selectedId: this.activeView,
+            contentTitle: this._getViewTitle(this.activeView),
+            contentIcon: this._getViewIcon(this.activeView),
+            contentSubtitle: this._getViewSubtitle(this.activeView)
+          });
+          this._sidebar = this._layout.sidebar;
+          this._contentArea = this._layout.contentArea;
+          this._composeActiveView();
+          this._composeActions();
+          this.add(this._layout);
+        }
+        _getViewTitle(viewId) {
+          const titles = {
+            database: "Database Selection",
+            pipeline: "Import Pipeline",
+            sources: "Data Sources",
+            coverage: "Coverage Statistics",
+            log: "Import Log"
+          };
+          return titles[viewId] || "Details";
+        }
+        _getViewIcon(viewId) {
+          const item2 = NAV_SECTIONS.find((s) => s.id === viewId);
+          return item2 ? item2.icon : "\u{1F4CB}";
+        }
+        _getViewSubtitle(viewId) {
+          const subtitles = {
+            database: "Select and configure target database",
+            pipeline: "Track import stage progress",
+            sources: "Configure and monitor data sources",
+            coverage: "Before and after import statistics",
+            log: "Real-time import activity log"
+          };
+          return subtitles[viewId] || null;
+        }
+        _composeActiveView() {
+          const contentBody = this._contentArea.getBody();
+          switch (this.activeView) {
+            case "database":
+              this._composeDatabaseView(contentBody);
+              break;
+            case "pipeline":
+              this._composePipelineView(contentBody);
+              break;
+            case "sources":
+              this._composeSourcesView(contentBody);
+              break;
+            case "coverage":
+              this._composeCoverageView(contentBody);
+              break;
+            case "log":
+              this._composeLogView(contentBody);
+              break;
+            default:
+              this._composePipelineView(contentBody);
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        // View Composers
+        // ─────────────────────────────────────────────────────────────────────────
+        _composeDatabaseView(container) {
+          const ctx = this.context;
+          if (this._dbSelector) {
+            container.add(this._dbSelector);
+          } else {
+            const placeholder = el(ctx, "div", null, "db-placeholder");
+            placeholder.add(el(ctx, "p", "\u{1F5C4}\uFE0F Database selector will appear here"));
+            placeholder.add(el(ctx, "p", "Current path: data/gazetteer.db", "db-path"));
+            container.add(placeholder);
+          }
+          const stats = el(ctx, "div", null, "db-stats-compact");
+          stats.add(createStatItem(ctx, "Places", this.importState.totals.places_before || 0));
+          stats.add(createStatItem(ctx, "Names", this.importState.totals.names_before || 0));
+          container.add(stats);
+        }
+        _composePipelineView(container) {
+          const ctx = this.context;
+          const { current, total } = this.importState.progress;
+          const percent = total > 0 ? current / total * 100 : 0;
+          this._stagesStepper = new StagesStepper2({
+            context: ctx,
+            currentStage: this.importState.phase || "idle",
+            stages: IMPORT_STAGES
+          });
+          container.add(this._stagesStepper);
+          const progressContainer = el(ctx, "div", null, "progress-compact");
+          this._progressRing = new ProgressRing2({
+            context: ctx,
+            progress: percent,
+            size: 100,
+            strokeWidth: 8,
+            color: this._getProgressColor(percent)
+          });
+          progressContainer.add(this._progressRing);
+          const stats = el(ctx, "div", null, "progress-stats-compact");
+          stats.add(el(ctx, "div", `${formatNumber(current)} / ${formatNumber(total)} records`, "progress-count"));
+          stats.add(el(ctx, "div", PHASE_LABELS[this.importState.phase] || this.importState.phase, "progress-phase"));
+          progressContainer.add(stats);
+          container.add(progressContainer);
+        }
+        _composeSourcesView(container) {
+          const ctx = this.context;
+          const grid = el(ctx, "div", null, "sources-grid-compact");
+          for (const source of Object.values(this.importState.sources)) {
+            const card = new SourceCard2({ context: ctx, source });
+            this._sourceCards[source.id] = card;
+            grid.add(card);
+          }
+          container.add(grid);
+        }
+        _composeCoverageView(container) {
+          const ctx = this.context;
+          const { totals } = this.importState;
+          const grid = el(ctx, "div", null, "coverage-grid-compact");
+          grid.add(this._createCoverageColumn("Before", {
+            places: totals.places_before,
+            names: totals.names_before,
+            ukCities: 5,
+            usCities: 10
+          }, "before"));
+          grid.add(el(ctx, "div", "\u27A1\uFE0F", "coverage-arrow"));
+          grid.add(this._createCoverageColumn("After", {
+            places: totals.places_after || "~25,000",
+            names: totals.names_after || "~150,000",
+            ukCities: "500+",
+            usCities: "3,000+"
+          }, "after"));
+          container.add(grid);
+        }
+        _composeLogView(container) {
+          const ctx = this.context;
+          this._liveLog = new LiveLog2({
+            context: ctx,
+            entries: this.importState.logs.length > 0 ? this.importState.logs : DEFAULT_LOGS,
+            maxEntries: 200
+          });
+          container.add(this._liveLog);
+        }
+        _composeActions() {
+          const ctx = this.context;
+          const actionsPanel = el(ctx, "div", null, "sidebar-actions");
+          actionsPanel.add(createActionButton(ctx, "\u{1F680}", "Start", "start-import", "primary"));
+          actionsPanel.add(createActionButton(ctx, "\u23F8\uFE0F", "Pause", "pause-import", "secondary", true));
+          actionsPanel.add(createActionButton(ctx, "\u{1F6D1}", "Cancel", "cancel-import", "danger", true));
+          this._sidebar.add(actionsPanel);
+        }
+        _createCoverageColumn(label, stats, type) {
+          const ctx = this.context;
+          const col = el(ctx, "div", null, "coverage-column");
+          col.add_class(`coverage-${type}`);
+          col.add(el(ctx, "h3", label));
+          for (const [key2, value2] of Object.entries(stats)) {
+            const item2 = el(ctx, "div", null, "coverage-item");
+            item2.add(el(ctx, "span", formatNumber(value2), "coverage-value"));
+            item2.add(el(ctx, "span", formatLabel(key2), "coverage-label"));
+            col.add(item2);
+          }
+          return col;
+        }
+        _getProgressColor(percent) {
+          if (percent < 25) return "#c9a227";
+          if (percent < 50) return "#daa520";
+          if (percent < 75) return "#b8860b";
+          return "#c9a227";
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        // Client-Side Activation
+        // ─────────────────────────────────────────────────────────────────────────
+        activate() {
+          if (this.__active) return;
+          super.activate();
+          this._bindActionButtons();
+          this._bindNavigation();
+        }
+        /**
+         * Bind navigation events using jsgui3 event system
+         * 
+         * Event flow:
+         * 1. NavItem.activate() binds DOM click → raises 'select' event
+         * 2. Sidebar.addNavItem() subscribes to NavItem's 'select' → re-raises as 'nav-select'
+         * 3. TwoColumnLayout.compose() subscribes to Sidebar's 'nav-select' → re-raises as 'view-change'
+         * 4. Dashboard.activate() subscribes to TwoColumnLayout's 'view-change' → handles navigation
+         */
+        _bindNavigation() {
+          if (!this._layout) return;
+          this._layout.on("view-change", (data) => {
+            console.log("[GeoImportDashboard] view-change event received:", data);
+            this._handleViewChange(data.id);
+          });
+        }
+        _handleViewChange(viewId) {
+          console.log("[GeoImportDashboard] Switching to view:", viewId);
+          window.location.search = `?view=${viewId}`;
+        }
+        /**
+         * Bind action buttons using jsgui3 delegation pattern
+         * Uses this.on() where possible, falls back to querySelector for specific data-action elements
+         */
+        _bindActionButtons() {
+          if (!this.dom.el) return;
+          this.on("click", (e) => {
+            const actionBtn = e.target.closest("[data-action]");
+            if (!actionBtn) return;
+            const action = actionBtn.getAttribute("data-action");
+            switch (action) {
+              case "start-import":
+                this._handleStartImport();
+                break;
+              case "pause-import":
+                this._handlePauseImport();
+                break;
+              case "cancel-import":
+                this._handleCancelImport();
+                break;
+            }
+          });
+        }
+        _handleStartImport() {
+          console.log("[GeoImportDashboard] Starting import...");
+        }
+        _handlePauseImport() {
+          console.log("[GeoImportDashboard] Pausing import...");
+        }
+        _handleCancelImport() {
+          console.log("[GeoImportDashboard] Cancelling import...");
+        }
+      };
+      controls.GeoImportDashboard = GeoImportDashboard2;
+      controls.SourceCard = SourceCard2;
+      controls.ProgressRing = ProgressRing2;
+      controls.LiveLog = LiveLog2;
+      controls.StagesStepper = StagesStepper2;
+      module.exports = {
+        GeoImportDashboard: GeoImportDashboard2,
+        SourceCard: SourceCard2,
+        ProgressRing: ProgressRing2,
+        LiveLog: LiveLog2,
+        StagesStepper: StagesStepper2
+      };
+    }
+  });
+
   // src/ui/client/geoImport/index.js
   var jsgui = require_client();
   var { registerControlType } = require_controlRegistry();
   var { createTwoColumnLayoutControls } = require_TwoColumnLayoutFactory();
   var layoutControls = createTwoColumnLayoutControls(jsgui);
+  var {
+    GeoImportDashboard,
+    SourceCard,
+    ProgressRing,
+    LiveLog,
+    StagesStepper
+  } = require_GeoImportDashboard();
   var LAYOUT_CONTROLS = [
     { type: "nav_item", control: layoutControls.NavItem },
     { type: "sidebar", control: layoutControls.Sidebar },
@@ -39686,7 +40371,14 @@ body .overlay {
     { type: "two_column_layout", control: layoutControls.TwoColumnLayout },
     { type: "detail_header", control: layoutControls.DetailHeader }
   ];
-  LAYOUT_CONTROLS.forEach(({ type, control }) => {
+  var DASHBOARD_CONTROLS = [
+    { type: "geo_import_dashboard", control: GeoImportDashboard },
+    { type: "source_card", control: SourceCard },
+    { type: "progress_ring", control: ProgressRing },
+    { type: "live_log", control: LiveLog },
+    { type: "stages_stepper", control: StagesStepper }
+  ];
+  [...LAYOUT_CONTROLS, ...DASHBOARD_CONTROLS].forEach(({ type, control }) => {
     registerControlType(type, control, { jsguiInstance: jsgui });
   });
   console.log("[GeoImport] jsgui.controls keys:", Object.keys(jsgui.controls || {}));
@@ -39702,7 +40394,7 @@ body .overlay {
         }
       });
     }
-    LAYOUT_CONTROLS.forEach(({ type, control }) => {
+    [...LAYOUT_CONTROLS, ...DASHBOARD_CONTROLS].forEach(({ type, control }) => {
       const key2 = type.toLowerCase();
       if (!map[key2]) {
         map[key2] = control;
