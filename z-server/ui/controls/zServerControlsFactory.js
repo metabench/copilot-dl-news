@@ -339,6 +339,7 @@ function createZServerControls(jsgui) {
       this._url = spec.url || null;
       this._onClick = spec.onClick || null;
       this._visible = spec.visible || false;
+      this._clickHandlerAttached = false;
       
       if (!spec.el) {
         this.compose();
@@ -494,6 +495,27 @@ function createZServerControls(jsgui) {
         this.add_class("zs-server-url--hidden");
       }
     }
+    
+    /**
+     * Ensure click handler is attached to the DOM element.
+     * Called during activate() and also when URL/visibility changes.
+     */
+    _ensureClickHandler() {
+      if (this._clickHandlerAttached) return;
+      if (!this.dom.el || !this._onClick) return;
+      
+      console.log("[ServerUrlControl] Attaching click handler");
+      this.dom.el.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("[ServerUrlControl] CLICK! url:", this._url);
+        if (this._url && this._onClick) {
+          this._onClick(this._url);
+        }
+      });
+      this._clickHandlerAttached = true;
+      console.log("[ServerUrlControl] Click handler attached successfully");
+    }
 
     setUrl(url) {
       this._url = url;
@@ -509,6 +531,8 @@ function createZServerControls(jsgui) {
       if (this.dom.el) {
         if (url) {
           this.dom.el.classList.remove("zs-server-url--hidden");
+          // Ensure click handler is attached when URL is set
+          this._ensureClickHandler();
         } else {
           this.dom.el.classList.add("zs-server-url--hidden");
         }
@@ -522,6 +546,8 @@ function createZServerControls(jsgui) {
       if (this.dom.el) {
         if (visible && this._url) {
           this.dom.el.classList.remove("zs-server-url--hidden");
+          // Ensure click handler is attached when becoming visible
+          this._ensureClickHandler();
         } else {
           this.dom.el.classList.add("zs-server-url--hidden");
         }
@@ -533,13 +559,8 @@ function createZServerControls(jsgui) {
     }
 
     activate() {
-      if (this.dom.el && this._onClick) {
-        this.dom.el.addEventListener("click", () => {
-          if (this._url) {
-            this._onClick(this._url);
-          }
-        });
-      }
+      console.log("[ServerUrlControl] activate() called, dom.el:", !!this.dom?.el);
+      this._ensureClickHandler();
     }
   }
 
@@ -1340,7 +1361,11 @@ function createZServerControls(jsgui) {
       this._serverUrl = new ServerUrlControl({
         context: ctx,
         visible: false,
-        onClick: (url) => this._onOpenUrl && this._onOpenUrl(url)
+        onClick: (url) => {
+          if (this._onOpenUrl) {
+            this._onOpenUrl(url);
+          }
+        }
       });
       this.add(this._serverUrl);
       
@@ -1361,7 +1386,7 @@ function createZServerControls(jsgui) {
       this._selectedServer = server;
       this._detectedUrl = null;
       
-      // Hide URL display when switching servers
+      // Hide URL display when switching servers (will be restored if server has runningUrl)
       this._serverUrl.setUrl(null);
       this._serverUrl.setVisible(false);
       
@@ -1378,6 +1403,19 @@ function createZServerControls(jsgui) {
       // Show control panel
       this._controlPanel.setVisible(true);
       this._controlPanel.setServerRunning(server.running || false);
+      
+      // If server already has a running URL (from detection), show it
+      if (server.running && server.runningUrl) {
+        this._detectedUrl = server.runningUrl;
+        this._serverUrl.setUrl(server.runningUrl);
+        this._serverUrl.setVisible(true);
+      }
+    }
+    
+    setRunningUrl(url) {
+      this._detectedUrl = url;
+      this._serverUrl.setUrl(url);
+      this._serverUrl.setVisible(!!url);
     }
 
     setServerRunning(running) {
@@ -1597,6 +1635,17 @@ function createZServerControls(jsgui) {
         this._servers = await this._api.scanServers();
         console.log("[ZServerApp] Scan complete, found servers:", this._servers.length, this._servers);
         
+        // For servers detected as already running, construct URL from detectedPort
+        for (const server of this._servers) {
+          if (server.running && server.detectedPort) {
+            const url = `http://localhost:${server.detectedPort}`;
+            server.runningUrl = url;
+            // Also add a log entry so user knows it's running
+            this._addLog(server.file, 'system', `✓ Server detected as already running on port ${server.detectedPort}`);
+            this._addLog(server.file, 'system', `📍 URL: ${url}`);
+          }
+        }
+        
         this._sidebar.setServers(this._servers);
         console.log("[ZServerApp] Servers set on sidebar");
         
@@ -1623,6 +1672,12 @@ function createZServerControls(jsgui) {
       // Load existing logs for this server
       const serverLogs = this._logs.get(server.file) || [];
       this._contentArea.setLogs(serverLogs);
+      
+      // If server is running with a detected port, show the URL
+      if (server.running && server.runningUrl) {
+        this._contentArea.setRunningUrl(server.runningUrl);
+        this._sidebar.setServerRunningUrl(server.file, server.runningUrl);
+      }
     }
 
     _addLog(filePath, type, data) {
@@ -1717,14 +1772,15 @@ function createZServerControls(jsgui) {
       
       this._addLog(this._selectedServer.file, "system", "Stopping server...");
       
-      const result = await this._api.stopServer(this._selectedServer.file);
+      // Pass the detected PID if available (for externally-started servers)
+      const result = await this._api.stopServer(this._selectedServer.file, this._selectedServer.pid);
       
       if (result.success) {
         this._selectedServer.running = false;
         this._selectedServer.pid = null;
         this._contentArea.setServerRunning(false);
         this._sidebar.updateServerStatus(this._selectedServer.file, false);
-        this._addLog(this._selectedServer.file, "system", "Server stopped");
+        this._addLog(this._selectedServer.file, "system", result.wasExternal ? "External server stopped" : "Server stopped");
       } else {
         this._addLog(this._selectedServer.file, "stderr", `Failed to stop: ${result.message}`);
       }

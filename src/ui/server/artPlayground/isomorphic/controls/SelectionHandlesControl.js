@@ -1,132 +1,88 @@
 "use strict";
 
 const jsgui = require("../jsgui");
+const { Control } = jsgui;
+
+const HANDLE_SIZE = 8;
+const POSITIONS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
 
 /**
- * Selection Handles Control
- * 
- * Displays resize handles around selected component:
- * - 8 handles: 4 corners + 4 edges
- * - Visual feedback on hover
- * - Emits resize events
+ * Selection Handles - 8 resize handles around selected component.
+ * @fires resize-start {{ handle, mouseX, mouseY }}
+ * @fires resize-move {{ handle, mouseX, mouseY }}
+ * @fires resize-end
  */
-class SelectionHandlesControl extends jsgui.Control {
+class SelectionHandlesControl extends Control {
   constructor(spec = {}) {
     super({ ...spec, tagName: "div" });
     this.add_class("art-selection");
     this.dom.attributes["data-jsgui-control"] = "art_selection";
-    
     this._bounds = { x: 0, y: 0, width: 100, height: 100 };
     this._handles = {};
-    this._activeHandle = null;
-    
-    if (!spec.el) {
-      this._build();
-    }
+    if (!spec.el) this.compose();
   }
   
-  _build() {
-    // Selection outline
-    this._outline = new jsgui.Control({ context: this.context, tagName: "div" });
-    this._outline.add_class("art-selection__outline");
-    this.add(this._outline);
+  compose() {
+    const ctx = this.context;
     
-    // Create 8 handles
-    const handlePositions = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+    // Outline
+    const outline = this._outline = new Control({ context: ctx, tagName: "div" });
+    outline.add_class("art-selection__outline");
+    this.add(outline);
     
-    handlePositions.forEach(pos => {
-      const handle = new jsgui.Control({ context: this.context, tagName: "div" });
-      handle.add_class("art-selection__handle");
-      handle.add_class(`art-selection__handle--${pos}`);
-      handle.dom.attributes["data-handle"] = pos;
-      this._handles[pos] = handle;
-      this.add(handle);
+    // 8 handles
+    POSITIONS.forEach(pos => {
+      const h = this._handles[pos] = new Control({ context: ctx, tagName: "div" });
+      h.add_class("art-selection__handle");
+      h.add_class(`art-selection__handle--${pos}`);
+      h.dom.attributes["data-handle"] = pos;
+      this.add(h);
     });
   }
   
   activate() {
-    super.activate();
+    if (this.__active) return;
+    this.__active = true;
     
-    // Setup handle drag events
     Object.entries(this._handles).forEach(([pos, handle]) => {
-      const el = handle.dom.el || handle.dom;
-      if (!el || typeof el.addEventListener !== 'function') return;
-      
-      el.addEventListener("mousedown", (e) => {
+      const el = handle.dom?.el;
+      el?.addEventListener?.("mousedown", (e) => {
         e.stopPropagation();
-        this._activeHandle = pos;
+        this.raise("resize-start", { handle: pos, mouseX: e.clientX, mouseY: e.clientY });
         
-        this.raise("resize-start", {
-          handle: pos,
-          mouseX: e.clientX,
-          mouseY: e.clientY
-        });
-        
-        // Track mouse movement
-        const onMove = (moveEvent) => {
-          this.raise("resize-move", {
-            handle: pos,
-            mouseX: moveEvent.clientX,
-            mouseY: moveEvent.clientY
-          });
-        };
-        
+        const onMove = (ev) => this.raise("resize-move", { handle: pos, mouseX: ev.clientX, mouseY: ev.clientY });
         const onUp = () => {
-          this._activeHandle = null;
           this.raise("resize-end");
           document.removeEventListener("mousemove", onMove);
           document.removeEventListener("mouseup", onUp);
         };
-        
         document.addEventListener("mousemove", onMove);
         document.addEventListener("mouseup", onUp);
       });
     });
   }
   
-  /**
-   * Update handle positions based on component bounds
-   */
-  updateBounds(bounds) {
-    this._bounds = bounds;
+  updateBounds({ x, y, width, height }) {
+    this._bounds = { x, y, width, height };
+    const half = HANDLE_SIZE / 2;
     
-    const { x, y, width, height } = bounds;
+    // Outline
+    const s = this._outline.dom?.el?.style;
+    if (s) Object.assign(s, { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px` });
     
-    // Update outline position
-    const outlineEl = this._outline.dom.el || this._outline.dom;
-    if (outlineEl && outlineEl.style) {
-      outlineEl.style.left = `${x}px`;
-      outlineEl.style.top = `${y}px`;
-      outlineEl.style.width = `${width}px`;
-      outlineEl.style.height = `${height}px`;
-    }
-    
-    // Update handle positions
-    const handleSize = 8;
-    const half = handleSize / 2;
-    
-    // Corner handles
-    this._setHandlePos("nw", x - half, y - half);
-    this._setHandlePos("ne", x + width - half, y - half);
-    this._setHandlePos("se", x + width - half, y + height - half);
-    this._setHandlePos("sw", x - half, y + height - half);
-    
-    // Edge handles
-    this._setHandlePos("n", x + width / 2 - half, y - half);
-    this._setHandlePos("s", x + width / 2 - half, y + height - half);
-    this._setHandlePos("w", x - half, y + height / 2 - half);
-    this._setHandlePos("e", x + width - half, y + height / 2 - half);
-  }
-  
-  _setHandlePos(pos, left, top) {
-    const handle = this._handles[pos];
-    if (handle) {
-      const el = handle.dom.el || handle.dom;
-      if (el && el.style) {
-        el.style.left = `${left}px`;
-        el.style.top = `${top}px`;
-      }
-    }
+    // Handles
+    const setPos = (pos, l, t) => {
+      const hs = this._handles[pos]?.dom?.el?.style;
+      if (hs) Object.assign(hs, { left: `${l}px`, top: `${t}px` });
+    };
+    setPos("nw", x - half, y - half);
+    setPos("ne", x + width - half, y - half);
+    setPos("se", x + width - half, y + height - half);
+    setPos("sw", x - half, y + height - half);
+    setPos("n", x + width / 2 - half, y - half);
+    setPos("s", x + width / 2 - half, y + height - half);
+    setPos("w", x - half, y + height / 2 - half);
+    setPos("e", x + width - half, y + height / 2 - half);
   }
 }
 
