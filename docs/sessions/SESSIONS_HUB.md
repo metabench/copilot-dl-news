@@ -31,6 +31,25 @@
 
 ## Current Session
 
+### Session 2025-11-30: Color Palette MVVM Binding Completion
+
+**Duration**: Active
+**Type**: experiment
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Fix reactive MVVM bindings in 002-color-palette-mvvm experiment
+
+**Location**: `docs/sessions/2025-11-30-color-palette-mvvm-binding/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-color-palette-mvvm-binding/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-color-palette-mvvm-binding/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-color-palette-mvvm-binding/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-color-palette-mvvm-binding/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-color-palette-mvvm-binding/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-30: Art Playground Obsidian UI
 
 **Duration**: Active
