@@ -168,7 +168,31 @@ function init() {
           
           handleEl.addEventListener("mousedown", (e) => {
             e.stopPropagation();
-            app._canvas._selectionHandles.raise("resize-start", { position: pos, event: e });
+            
+            // Raise resize-start with correct payload format
+            app._canvas._selectionHandles.raise("resize-start", {
+              handle: pos,
+              mouseX: e.clientX,
+              mouseY: e.clientY
+            });
+            
+            // Track mouse movement for resize
+            const onMove = (moveEvent) => {
+              app._canvas._selectionHandles.raise("resize-move", {
+                handle: pos,
+                mouseX: moveEvent.clientX,
+                mouseY: moveEvent.clientY
+              });
+            };
+            
+            const onUp = () => {
+              app._canvas._selectionHandles.raise("resize-end");
+              document.removeEventListener("mousemove", onMove);
+              document.removeEventListener("mouseup", onUp);
+            };
+            
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
           });
         });
         
