@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200">
+  <defs>
+    <!-- Luxury Obsidian Industrial palette -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050508"/>
+      <stop offset="50%" stop-color="#0a0d14"/>
+      <stop offset="100%" stop-color="#0f1420"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1b2333"/>
+      <stop offset="100%" stop-color="#131926"/>
+    </linearGradient>
+    <linearGradient id="accentGold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8b7500"/>
+      <stop offset="50%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#8b7500"/>
+    </linearGradient>
+    <linearGradient id="accentCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f4c75"/>
+      <stop offset="100%" stop-color="#19a7ce"/>
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.8  0 0 0 0 0.6  0 0 0 0.5 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1f2b3d" stroke-width="0.6" />
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c9a227"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1600" height="1200" fill="url(#obsidianBg)"/>
+  <rect width="1600" height="1200" fill="url(#grid)" opacity="0.35"/>
+
+  <!-- Title -->
+  <rect x="60" y="30" width="1480" height="120" rx="12" fill="url(#panel)" stroke="url(#accentGold)" stroke-width="2"/>
+  <text x="800" y="95" text-anchor="middle" font-family="Georgia, serif" font-size="40" fill="#f7f0c3" filter="url(#softGlow)">◈ Gazetteer Ingestion Review ◈</text>
+  <text x="800" y="125" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="18" fill="#c9d4ff">Sources → Tooling → DB paths → Risks (Luxury Obsidian Industrial)</text>
+
+  <!-- Source inputs -->
+  <g>
+    <rect x="90" y="180" width="430" height="190" rx="12" fill="url(#panel)" stroke="url(#accentGold)" stroke-width="2"/>
+    <text x="305" y="220" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="20" fill="#eaeaea">Source Inputs</text>
+    <text x="120" y="255" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#c9a227">REST Countries v3.1</text>
+    <text x="120" y="280" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Capitals + metadata (multi-capital map)</text>
+    <text x="120" y="305" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Cached via HttpRequestResponseFacade (intended)</text>
+    <text x="120" y="335" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#19d3ae">Wikidata SPARQL</text>
+    <text x="120" y="360" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Optional ADM1/ADM2/cities imports</text>
+    <text x="120" y="385" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Sleep + TTL driven cache expected</text>
+  </g>
+
+  <!-- Import pathway -->
+  <g>
+    <rect x="530" y="180" width="430" height="190" rx="12" fill="url(#panel)" stroke="url(#accentCyan)" stroke-width="2"/>
+    <text x="745" y="220" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="20" fill="#eaeaea">Ingestion Tools</text>
+    <text x="560" y="255" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#c9a227">populate-gazetteer.js</text>
+    <text x="560" y="280" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- REST Countries ingestion + optional Wikidata</text>
+    <text x="560" y="305" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Dedup (external IDs → coords → names)</text>
+    <text x="560" y="330" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ff8c6b">- Bug: ingestion skip logic always true (misreads checkIngestionRun)</text>
+    <text x="560" y="355" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ff8c6b">- Bug: SPARQL cache calls instance methods that do not exist</text>
+    <text x="560" y="380" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ff8c6b">- Bug: capital dedup logs use undefined opt.verbose → ReferenceError path</text>
+  </g>
+
+  <g>
+    <rect x="970" y="180" width="430" height="190" rx="12" fill="url(#panel)" stroke="url(#accentGold)" stroke-width="2"/>
+    <text x="1185" y="220" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="20" fill="#eaeaea">Alternate/Raw Import</text>
+    <text x="1000" y="255" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#c9a227">import-gazetteer.js</text>
+    <text x="1000" y="280" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- NDJSON into tables (sources, places, names, hierarchy, ext_ids)</text>
+    <text x="1000" y="305" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Pragmas tuned for bulk ingest; foreign keys disabled during load</text>
+    <text x="1000" y="330" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ffb347">- No ingestion_run tracking or dedup hooks</text>
+    <text x="1000" y="355" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">Support tools: gazetteer-export, gazetteer-summary, gazetteer-scan</text>
+  </g>
+
+  <!-- DB layer -->
+  <g>
+    <rect x="90" y="420" width="820" height="250" rx="12" fill="url(#panel)" stroke="url(#accentCyan)" stroke-width="2"/>
+    <text x="500" y="460" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="20" fill="#eaeaea">DB Layer & Queries</text>
+    <text x="120" y="495" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#c9a227">gazetteer.ingest.js (v1)</text>
+    <text x="120" y="520" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- upsertPlace uses dedup → external IDs → admin codes → coords</text>
+    <text x="120" y="545" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Emits attributes, place_type mapping, canonical name helpers</text>
+    <text x="120" y="570" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ffb347">- Parallel legacy module at src/db/sqlite/queries/gazetteer.ingest.js (divergent behavior)</text>
+    <text x="120" y="600" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#19d3ae">gazetteer.deduplication.js</text>
+    <text x="120" y="625" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Strategies: Wikidata/OSM/GeoNames IDs → admin codes → names → proximity</text>
+    <text x="120" y="650" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Ingestion run tracking (start/complete/fail), capital relations</text>
+    <text x="120" y="675" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Cleanup helpers (mergeDuplicatePlaces/Capitals)</text>
+  </g>
+
+  <!-- QA and cleanup -->
+  <g>
+    <rect x="930" y="420" width="470" height="250" rx="12" fill="url(#panel)" stroke="url(#accentGold)" stroke-width="2"/>
+    <text x="1165" y="460" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="20" fill="#eaeaea">QA / Cleanup Tooling</text>
+    <text x="960" y="495" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#c9a227">gazetteer-cleanup.js</text>
+    <text x="960" y="520" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- Backfill wikidata_qid, merge duplicates, remove orphans (CLI flags)</text>
+    <text x="960" y="545" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#19d3ae">gazetteerQA</text>
+    <text x="960" y="570" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ff8c6b">- Path broken: gazetteer_qa.js points to missing ../db/sqlite/tools/gazetteerQA</text>
+    <text x="960" y="595" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#c9a227">Telemetry + scan</text>
+    <text x="960" y="620" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#cfd8ff">- GazetteerTelemetry, gazetteer-scan CLI for search/lookup/stats</text>
+    <text x="960" y="645" font-family="Fira Sans, Arial, sans-serif" font-size="16" fill="#ffb347">Runtime blocker</text>
+    <text x="960" y="670" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#ff8c6b">- Local run failed: better-sqlite3 invalid ELF header (needs rebuild)</text>
+  </g>
+
+  <!-- Arrows -->
+  <path d="M 520 270 L 530 270" stroke="#c9a227" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 960 270 L 970 270" stroke="#c9a227" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 520 340 L 530 340" stroke="#c9a227" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 520 410 L 520 430" stroke="#19a7ce" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 970 410 L 970 430" stroke="#19a7ce" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Key findings callout -->
+  <g>
+    <rect x="90" y="700" width="1310" height="220" rx="12" fill="url(#panel)" stroke="#d9534f" stroke-width="2" filter="url(#softGlow)"/>
+    <text x="120" y="740" font-family="Fira Sans, Arial, sans-serif" font-size="20" fill="#f7f0c3">Key Findings</text>
+    <text x="120" y="770" font-family="Fira Sans, Arial, sans-serif" font-size="15" fill="#ff8c6b">1) Ingestion run guard regression: populate-gazetteer treats any checkIngestionRun result as "already ingested", skipping work and emitting "Invalid Date".</text>
+    <text x="120" y="795" font-family="Fira Sans, Arial, sans-serif" font-size="15" fill="#ff8c6b">2) SPARQL cache disabled: HttpRequestResponseFacade instantiated, so getCachedHttpResponse/cacheHttpResponse are undefined → no cache, extra network load.</text>
+    <text x="120" y="820" font-family="Fira Sans, Arial, sans-serif" font-size="15" fill="#ff8c6b">3) Dedup logging crash path: undefined opt.verbose in capital deduplication will throw if a match is found before creation.</text>
+    <text x="120" y="845" font-family="Fira Sans, Arial, sans-serif" font-size="15" fill="#ff8c6b">4) Broken QA entrypoint: gazetteer_qa.js points to ../db/sqlite/tools/gazetteerQA (file lives under v1/tools) so require() fails.</text>
+    <text x="120" y="870" font-family="Fira Sans, Arial, sans-serif" font-size="15" fill="#ffb347">5) Dual ingestion modules (v1 vs legacy) risk drift; callers can pick either, leading to inconsistent place_type/canonical handling.</text>
+    <text x="120" y="895" font-family="Fira Sans, Arial, sans-serif" font-size="15" fill="#ffb347">6) Local validation blocked until better-sqlite3 is rebuilt for this environment (invalid ELF header).</text>
+  </g>
+
+  <!-- Footer -->
+  <text x="800" y="950" text-anchor="middle" font-family="Fira Sans, Arial, sans-serif" font-size="14" fill="#9bb5ff">Next steps: fix ingestion guard + caching, rewire QA module, align ingest helpers, rebuild native deps, then rerun populate/cleanup with tests.</text>
+</svg>

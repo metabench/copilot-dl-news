@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" style="background: #0d1117;">
+  <defs>
+    <linearGradient id="cardBgGood" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#21262d"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#d4af37"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" fill="#10b981" font-family="system-ui" font-size="16" font-weight="bold">
+    ✅ AFTER: CSS Grid Dashboard Layout
+  </text>
+  
+  <!-- Success indicators -->
+  <text x="20" y="60" fill="#8b949e" font-family="system-ui" font-size="11">
+    Improvements: Consistent 16px gaps • Equal card heights • Visual hierarchy • Efficient space use
+  </text>
+  
+  <!-- Grid overlay hint -->
+  <rect x="20" y="75" width="760" height="390" rx="0" fill="none" stroke="#30363d" stroke-dasharray="2,4" opacity="0.5"/>
+  
+  <!-- Row 1: 4 equal stat cards -->
+  <g id="row1">
+    <!-- Card 1 -->
+    <rect x="20" y="80" width="180" height="100" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <rect x="20" y="80" width="180" height="4" rx="6" fill="url(#goldAccent)"/>
+    <text x="30" y="105" fill="#8b949e" font-family="system-ui" font-size="11">Total URLs</text>
+    <text x="30" y="145" fill="#e6edf3" font-family="system-ui" font-size="28" font-weight="bold">12,847</text>
+    <text x="30" y="165" fill="#10b981" font-family="system-ui" font-size="11">↑ 12% this week</text>
+    
+    <!-- Card 2 -->
+    <rect x="216" y="80" width="180" height="100" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <rect x="216" y="80" width="180" height="4" rx="6" fill="#3b82f6"/>
+    <text x="226" y="105" fill="#8b949e" font-family="system-ui" font-size="11">Domains</text>
+    <text x="226" y="145" fill="#e6edf3" font-family="system-ui" font-size="28" font-weight="bold">1,024</text>
+    <text x="226" y="165" fill="#8b949e" font-family="system-ui" font-size="11">Active sources</text>
+    
+    <!-- Card 3 -->
+    <rect x="412" y="80" width="180" height="100" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <rect x="412" y="80" width="180" height="4" rx="6" fill="#10b981"/>
+    <text x="422" y="105" fill="#8b949e" font-family="system-ui" font-size="11">Success Rate</text>
+    <text x="422" y="145" fill="#e6edf3" font-family="system-ui" font-size="28" font-weight="bold">94.2%</text>
+    <text x="422" y="165" fill="#10b981" font-family="system-ui" font-size="11">● Healthy</text>
+    
+    <!-- Card 4 -->
+    <rect x="608" y="80" width="172" height="100" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <rect x="608" y="80" width="172" height="4" rx="6" fill="#a855f7"/>
+    <text x="618" y="105" fill="#8b949e" font-family="system-ui" font-size="11">Pending</text>
+    <text x="618" y="145" fill="#e6edf3" font-family="system-ui" font-size="28" font-weight="bold">847</text>
+    <text x="618" y="165" fill="#f59e0b" font-family="system-ui" font-size="11">In queue</text>
+  </g>
+  
+  <!-- Row 2: 2/3 + 1/3 split -->
+  <g id="row2">
+    <!-- Wide card (2/3) -->
+    <rect x="20" y="196" width="572" height="160" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <text x="30" y="221" fill="#e6edf3" font-family="system-ui" font-size="13" font-weight="600">Recent Activity</text>
+    <!-- Table header -->
+    <rect x="30" y="235" width="552" height="28" rx="4" fill="#161b22"/>
+    <text x="40" y="254" fill="#8b949e" font-family="system-ui" font-size="11">URL</text>
+    <text x="300" y="254" fill="#8b949e" font-family="system-ui" font-size="11">Status</text>
+    <text x="420" y="254" fill="#8b949e" font-family="system-ui" font-size="11">Time</text>
+    <!-- Table rows -->
+    <text x="40" y="282" fill="#e6edf3" font-family="system-ui" font-size="11">example.com/article/123</text>
+    <text x="300" y="282" fill="#10b981" font-family="system-ui" font-size="11">● Success</text>
+    <text x="420" y="282" fill="#8b949e" font-family="system-ui" font-size="11">2 min ago</text>
+    <text x="40" y="306" fill="#e6edf3" font-family="system-ui" font-size="11">news.site/world/events</text>
+    <text x="300" y="306" fill="#10b981" font-family="system-ui" font-size="11">● Success</text>
+    <text x="420" y="306" fill="#8b949e" font-family="system-ui" font-size="11">5 min ago</text>
+    <text x="40" y="330" fill="#e6edf3" font-family="system-ui" font-size="11">blog.dev/posts/2024</text>
+    <text x="300" y="330" fill="#ef4444" font-family="system-ui" font-size="11">● Failed</text>
+    <text x="420" y="330" fill="#8b949e" font-family="system-ui" font-size="11">8 min ago</text>
+    
+    <!-- Narrow card (1/3) -->
+    <rect x="608" y="196" width="172" height="160" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <text x="618" y="221" fill="#e6edf3" font-family="system-ui" font-size="13" font-weight="600">Quick Actions</text>
+    <!-- Buttons -->
+    <rect x="618" y="240" width="152" height="32" rx="4" fill="#238636"/>
+    <text x="694" y="261" text-anchor="middle" fill="#ffffff" font-family="system-ui" font-size="12">+ New Crawl</text>
+    <rect x="618" y="282" width="152" height="32" rx="4" fill="#21262d" stroke="#30363d"/>
+    <text x="694" y="303" text-anchor="middle" fill="#e6edf3" font-family="system-ui" font-size="12">View Reports</text>
+    <rect x="618" y="324" width="152" height="32" rx="4" fill="#21262d" stroke="#30363d"/>
+    <text x="694" y="345" text-anchor="middle" fill="#e6edf3" font-family="system-ui" font-size="12">Settings</text>
+  </g>
+  
+  <!-- Row 3: 3 equal cards -->
+  <g id="row3">
+    <rect x="20" y="372" width="250" height="90" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <text x="30" y="397" fill="#e6edf3" font-family="system-ui" font-size="12" font-weight="600">By Domain Type</text>
+    <text x="30" y="420" fill="#8b949e" font-family="system-ui" font-size="11">News: 45% • Blog: 30% • Other: 25%</text>
+    
+    <rect x="286" y="372" width="250" height="90" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <text x="296" y="397" fill="#e6edf3" font-family="system-ui" font-size="12" font-weight="600">Response Times</text>
+    <text x="296" y="420" fill="#8b949e" font-family="system-ui" font-size="11">Avg: 1.2s • P95: 3.4s • P99: 8.1s</text>
+    
+    <rect x="552" y="372" width="228" height="90" rx="6" fill="url(#cardBgGood)" stroke="#30363d"/>
+    <text x="562" y="397" fill="#e6edf3" font-family="system-ui" font-size="12" font-weight="600">System Health</text>
+    <text x="562" y="420" fill="#10b981" font-family="system-ui" font-size="11">All systems operational</text>
+  </g>
+  
+  <!-- Grid spacing annotations -->
+  <line x1="200" y1="180" x2="216" y2="180" stroke="#3b82f6" stroke-width="1"/>
+  <text x="208" y="192" text-anchor="middle" fill="#3b82f6" font-family="system-ui" font-size="9">16px</text>
+  
+  <!-- Footer -->
+  <text x="400" y="485" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">
+    Consistent 16px gap • Card heights: 100px, 160px, 90px (row-based) • CSS Grid: auto-fit, minmax()
+  </text>
+</svg>

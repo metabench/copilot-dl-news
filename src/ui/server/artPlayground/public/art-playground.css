@@ -23,6 +23,21 @@
   --ap-selection: #4A90D9;
   --ap-selection-light: rgba(74, 144, 217, 0.2);
   --ap-danger: #D94A4A;
+  
+  /* === DESIGN TOKENS (Layout) === */
+  /* Spacing scale */
+  --ap-space-xs: 4px;
+  --ap-space-s: 8px;
+  --ap-space-m: 16px;
+  --ap-space-l: 24px;
+  
+  /* Panel sizes */
+  --ap-panel-narrow: 60px;
+  --ap-panel-medium: 160px;
+  
+  /* Heights */
+  --ap-toolbar-height: 40px;
+  --ap-statusbar-height: 24px;
 }
 
 * {
@@ -36,6 +51,44 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--ap-cream);
   color: var(--ap-obsidian);
+}
+
+/* === LAYOUT PRIMITIVES === */
+
+/* Cover: full viewport height, vertical flex */
+.ap-cover {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar layout: horizontal flex with fixed + fluid regions */
+.ap-sidebar-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Panel widths */
+.ap-panel-narrow {
+  width: var(--ap-panel-narrow);
+  flex-shrink: 0;
+}
+
+.ap-panel-medium {
+  width: var(--ap-panel-medium);
+  flex-shrink: 0;
+}
+
+/* Flex utilities */
+.ap-flex-grow {
+  flex-grow: 1;
+  min-width: 0; /* Prevent overflow */
+}
+
+.ap-flex-shrink-0 {
+  flex-shrink: 0;
 }
 
 /* Main App Layout */
@@ -115,6 +168,8 @@ html, body {
   position: relative;
   overflow: hidden;
   background: var(--ap-white);
+  width: 100%;
+  height: 100%;
 }
 
 .art-canvas__svg-wrapper {
@@ -197,4 +252,178 @@ html, body {
 
 .art-canvas[data-tool="pan"]:active {
   cursor: grabbing;
+}
+
+/* === TOOL PANEL (Left 60px) === */
+.ap-tool-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ap-space-xs);
+  padding: var(--ap-space-s);
+  background: var(--ap-obsidian);
+  border-right: 1px solid var(--ap-obsidian-mid);
+}
+
+.ap-tool-panel__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 36px;
+  background: var(--ap-obsidian-soft);
+  border: 1px solid var(--ap-obsidian-mid);
+  border-radius: 4px;
+  color: var(--ap-leather);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ap-tool-panel__btn:hover {
+  background: var(--ap-obsidian-mid);
+  border-color: var(--ap-gold);
+  color: var(--ap-cream);
+}
+
+.ap-tool-panel__btn--active {
+  background: var(--ap-selection);
+  border-color: var(--ap-selection);
+  color: var(--ap-white);
+}
+
+.ap-tool-panel__divider {
+  height: 1px;
+  background: var(--ap-obsidian-mid);
+  margin: var(--ap-space-xs) 0;
+}
+
+/* === PROPERTIES PANEL (Right 160px) === */
+.ap-properties-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--ap-obsidian);
+  border-left: 1px solid var(--ap-obsidian-mid);
+  overflow-y: auto;
+}
+
+.ap-properties-panel__header {
+  padding: var(--ap-space-s) var(--ap-space-m);
+  background: var(--ap-obsidian-soft);
+  border-bottom: 1px solid var(--ap-obsidian-mid);
+  color: var(--ap-cream);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ap-properties-panel__section {
+  padding: var(--ap-space-s) var(--ap-space-m);
+  border-bottom: 1px solid var(--ap-obsidian-mid);
+}
+
+.ap-properties-panel__label {
+  display: block;
+  margin-bottom: var(--ap-space-xs);
+  color: var(--ap-leather);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ap-properties-panel__row {
+  display: flex;
+  gap: var(--ap-space-s);
+}
+
+.ap-properties-panel__input {
+  flex: 1;
+  padding: var(--ap-space-xs) var(--ap-space-s);
+  background: var(--ap-obsidian);
+  border: 1px solid var(--ap-obsidian-mid);
+  border-radius: 3px;
+  color: var(--ap-cream);
+  font-size: 11px;
+}
+
+.ap-properties-panel__input:focus {
+  outline: none;
+  border-color: var(--ap-selection);
+}
+
+.ap-properties-panel__color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1px solid var(--ap-obsidian-mid);
+  flex-shrink: 0;
+}
+
+/* Layers section */
+.ap-layers {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ap-layers__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-s);
+  padding: var(--ap-space-s) var(--ap-space-m);
+  color: var(--ap-leather);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.ap-layers__item:hover {
+  background: var(--ap-obsidian-soft);
+}
+
+.ap-layers__item--selected {
+  background: var(--ap-obsidian-soft);
+  border-left: 2px solid var(--ap-selection);
+  color: var(--ap-cream);
+}
+
+.ap-layers__icon {
+  width: 16px;
+  text-align: center;
+}
+
+/* === STATUS BAR (Bottom 24px) === */
+.ap-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--ap-statusbar-height);
+  padding: 0 var(--ap-space-m);
+  background: var(--ap-obsidian);
+  border-top: 1px solid var(--ap-obsidian-mid);
+  color: var(--ap-leather);
+  font-size: 10px;
+}
+
+.ap-status-bar__left,
+.ap-status-bar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--ap-space-m);
+}
+
+.ap-status-bar__separator {
+  color: var(--ap-obsidian-mid);
+}
+
+/* === WORKSPACE === */
+.ap-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ap-canvas-wrapper {
+  flex: 1;
+  min-width: 0;
+  position: relative;
 }

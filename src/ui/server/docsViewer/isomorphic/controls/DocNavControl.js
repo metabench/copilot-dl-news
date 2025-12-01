@@ -12,6 +12,11 @@
  * - Optional columns (Last Modified)
  * - Sorting by name or date (asc/desc)
  * - Right-click header menu for column selection
+ * 
+ * Performance optimizations:
+ * - Only renders folders that are expanded or contain selected doc
+ * - Collapsed folders don't render children until expanded (client-side)
+ * - Simplified control structure for file items
  */
 
 const jsgui = require("../jsgui");
@@ -249,6 +254,13 @@ class DocNavControl extends jsgui.Control {
 
   /**
    * Build a nested list for a set of tree nodes
+   * 
+   * Performance: Only renders children for folders that:
+   * - Are at depth 0 (top-level)
+   * - Contain the selected document
+   * - Are explicitly marked as expanded
+   * 
+   * Other folders get a placeholder that loads via client-side JS
    */
   _buildTreeList(nodes, depth = 0) {
     const list = new jsgui.Control({ context: this.context, tagName: "ul" });
@@ -295,6 +307,27 @@ class DocNavControl extends jsgui.Control {
   }
   
   /**
+   * Count visible children in a folder (for badge display)
+   */
+  _countVisibleChildren(node) {
+    if (!node.children || node.children.length === 0) return 0;
+    
+    let count = 0;
+    for (const child of node.children) {
+      if (child.type === "file") {
+        const ext = (child.name || "").split(".").pop().toLowerCase();
+        if (ext === "md" && this.filters.md) count++;
+        else if (ext === "svg" && this.filters.svg) count++;
+        else if (ext !== "md" && ext !== "svg") count++;
+      } else if (child.type === "folder") {
+        // Count folders that have visible content
+        if (this._hasVisibleChildren(child)) count++;
+      }
+    }
+    return count;
+  }
+  
+  /**
    * Build URL with current filter, column, and sort state preserved
    */
   _buildUrl(docPath) {
@@ -319,6 +352,11 @@ class DocNavControl extends jsgui.Control {
 
   /**
    * Build a single tree item (file or folder)
+   * 
+   * Performance optimization: Folders only render children if:
+   * - They contain the selected document path
+   * - They are top-level (depth 0) - for initial visibility
+   * Other folders render collapsed with children loaded on-demand
    */
   _buildTreeItem(node, depth = 0) {
     const item = new jsgui.Control({ context: this.context, tagName: "li" });
@@ -340,9 +378,13 @@ class DocNavControl extends jsgui.Control {
       // Folder with collapsible content
       const details = new jsgui.Control({ context: this.context, tagName: "details" });
       details.add_class("doc-nav__folder");
+      details.dom.attributes["data-folder-path"] = node.path;
       
-      // Auto-expand first level folders, or if selected doc is inside
-      if (depth === 0 || this._containsSelected(node)) {
+      // Determine if folder should be expanded
+      const containsSelected = this._containsSelected(node);
+      const shouldExpand = containsSelected; // Only expand if contains selected doc
+      
+      if (shouldExpand) {
         details.dom.attributes.open = "open";
       }
       
@@ -368,6 +410,14 @@ class DocNavControl extends jsgui.Control {
       label.add(new StringControl({ context: this.context, text: node.name }));
       nameCell.add(label);
       
+      // Show child count badge for collapsed folders
+      if (!shouldExpand && node.children && node.children.length > 0) {
+        const badge = new jsgui.Control({ context: this.context, tagName: "span" });
+        badge.add_class("doc-nav__count-badge");
+        badge.add(new StringControl({ context: this.context, text: String(this._countVisibleChildren(node)) }));
+        nameCell.add(badge);
+      }
+      
       rowContainer.add(nameCell);
       
       // Always render mtime cell for instant client-side column toggling
@@ -386,9 +436,22 @@ class DocNavControl extends jsgui.Control {
       summary.add(rowContainer);
       details.add(summary);
       
+      // PERFORMANCE: Aggressive lazy loading
+      // Only render children immediately for folders that contain the selected doc
+      // All other folders use lazy loading to minimize initial HTML size
       if (node.children && node.children.length > 0) {
-        const childList = this._buildTreeList(node.children, depth + 1);
-        details.add(childList);
+        if (shouldExpand) {
+          // Folder contains selected doc - render full tree to selected item
+          const childList = this._buildTreeList(node.children, depth + 1);
+          details.add(childList);
+          details.dom.attributes.open = "open";
+        } else {
+          // Placeholder for lazy loading - client JS will populate on expand
+          const placeholder = new jsgui.Control({ context: this.context, tagName: "div" });
+          placeholder.add_class("doc-nav__lazy-placeholder");
+          placeholder.dom.attributes["data-lazy-children"] = "true";
+          details.add(placeholder);
+        }
       }
       
       item.add(details);

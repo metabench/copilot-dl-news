@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" style="background: #0d1117;">
+  <defs>
+    <linearGradient id="tableBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#161b22"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="25" text-anchor="middle" fill="#c9a227" font-family="system-ui" font-size="16" font-weight="bold">
+    ❌ BEFORE: Dense Table Layout Problems
+  </text>
+  
+  <text x="20" y="50" fill="#8b949e" font-family="system-ui" font-size="11">
+    Problems: Too much whitespace • Poor column sizing • Truncated content • No visual rhythm
+  </text>
+  
+  <!-- Table container -->
+  <rect x="20" y="65" width="760" height="340" rx="6" fill="url(#tableBg)" stroke="#30363d"/>
+  
+  <!-- Header row -->
+  <rect x="20" y="65" width="760" height="36" rx="6" fill="#21262d"/>
+  <text x="40" y="88" fill="#8b949e" font-family="system-ui" font-size="11" font-weight="600">ID</text>
+  <text x="120" y="88" fill="#8b949e" font-family="system-ui" font-size="11" font-weight="600">URL</text>
+  <text x="450" y="88" fill="#8b949e" font-family="system-ui" font-size="11" font-weight="600">Status</text>
+  <text x="550" y="88" fill="#8b949e" font-family="system-ui" font-size="11" font-weight="600">Domain</text>
+  <text x="680" y="88" fill="#8b949e" font-family="system-ui" font-size="11" font-weight="600">Date</text>
+  
+  <!-- Row 1 - ID column wastes space -->
+  <line x1="20" y1="101" x2="780" y2="101" stroke="#30363d"/>
+  <text x="40" y="126" fill="#e6edf3" font-family="system-ui" font-size="12">1</text>
+  <text x="120" y="126" fill="#e6edf3" font-family="system-ui" font-size="12">https://example.com/very-long-article-url-that-gets-trunc...</text>
+  <text x="450" y="126" fill="#10b981" font-family="system-ui" font-size="12">Success</text>
+  <text x="550" y="126" fill="#e6edf3" font-family="system-ui" font-size="12">example.com</text>
+  <text x="680" y="126" fill="#8b949e" font-family="system-ui" font-size="12">2024-11-30</text>
+  
+  <!-- Problem annotation: truncated URL -->
+  <rect x="370" y="112" width="70" height="20" rx="3" fill="none" stroke="#ef4444" stroke-width="2"/>
+  <text x="445" y="125" fill="#ef4444" font-family="system-ui" font-size="9">truncated!</text>
+  
+  <!-- Row 2 -->
+  <line x1="20" y1="141" x2="780" y2="141" stroke="#30363d"/>
+  <text x="40" y="166" fill="#e6edf3" font-family="system-ui" font-size="12">2</text>
+  <text x="120" y="166" fill="#e6edf3" font-family="system-ui" font-size="12">https://news-site.org/breaking/world-events-2024-import...</text>
+  <text x="450" y="166" fill="#ef4444" font-family="system-ui" font-size="12">Failed</text>
+  <text x="550" y="166" fill="#e6edf3" font-family="system-ui" font-size="12">news-site.org</text>
+  <text x="680" y="166" fill="#8b949e" font-family="system-ui" font-size="12">2024-11-29</text>
+  
+  <!-- Row 3 -->
+  <line x1="20" y1="181" x2="780" y2="181" stroke="#30363d"/>
+  <text x="40" y="206" fill="#e6edf3" font-family="system-ui" font-size="12">3</text>
+  <text x="120" y="206" fill="#e6edf3" font-family="system-ui" font-size="12">https://blog.dev/</text>
+  <text x="450" y="206" fill="#f59e0b" font-family="system-ui" font-size="12">Pending</text>
+  <text x="550" y="206" fill="#e6edf3" font-family="system-ui" font-size="12">blog.dev</text>
+  <text x="680" y="206" fill="#8b949e" font-family="system-ui" font-size="12">2024-11-29</text>
+  
+  <!-- Problem: inconsistent row heights due to content -->
+  <line x1="20" y1="221" x2="780" y2="221" stroke="#30363d"/>
+  <text x="40" y="246" fill="#e6edf3" font-family="system-ui" font-size="12">4</text>
+  <text x="120" y="246" fill="#e6edf3" font-family="system-ui" font-size="12">https://tech-news.io/articles/ai-advances-machine-learni...</text>
+  <text x="450" y="246" fill="#10b981" font-family="system-ui" font-size="12">Success</text>
+  <text x="550" y="246" fill="#e6edf3" font-family="system-ui" font-size="12">tech-news.io</text>
+  <text x="680" y="246" fill="#8b949e" font-family="system-ui" font-size="12">2024-11-28</text>
+  
+  <!-- Problem annotations -->
+  <!-- ID column too wide -->
+  <rect x="30" y="105" width="70" height="160" rx="0" fill="none" stroke="#f59e0b" stroke-dasharray="4,4"/>
+  <text x="65" y="285" text-anchor="middle" fill="#f59e0b" font-family="system-ui" font-size="9">80px for 1-digit!</text>
+  
+  <!-- Date column could be smarter -->
+  <rect x="670" y="105" width="100" height="160" rx="0" fill="none" stroke="#f59e0b" stroke-dasharray="4,4"/>
+  <text x="720" y="285" text-anchor="middle" fill="#f59e0b" font-family="system-ui" font-size="9">full date needed?</text>
+  
+  <!-- Summary problems -->
+  <text x="40" y="330" fill="#ef4444" font-family="system-ui" font-size="11">
+    ✗ ID column: 80px (only needs 30px)
+  </text>
+  <text x="40" y="350" fill="#ef4444" font-family="system-ui" font-size="11">
+    ✗ URL column: truncated, no tooltip
+  </text>
+  <text x="40" y="370" fill="#ef4444" font-family="system-ui" font-size="11">
+    ✗ Domain: redundant (in URL)
+  </text>
+  <text x="40" y="390" fill="#ef4444" font-family="system-ui" font-size="11">
+    ✗ Date: full format wastes space
+  </text>
+  
+  <text x="400" y="330" fill="#8b949e" font-family="system-ui" font-size="11">
+    Only 4 rows visible above fold
+  </text>
+  <text x="400" y="350" fill="#8b949e" font-family="system-ui" font-size="11">
+    Row height: 40px (could be 32px)
+  </text>
+  <text x="400" y="370" fill="#8b949e" font-family="system-ui" font-size="11">
+    Total table height: 340px
+  </text>
+</svg>

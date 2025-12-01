@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" style="background: #0d1117;">
+  <defs>
+    <linearGradient id="panelBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#161b22"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="25" text-anchor="middle" fill="#c9a227" font-family="system-ui" font-size="16" font-weight="bold">
+    Art Playground - Ideal Layout
+  </text>
+  
+  <text x="400" y="50" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">
+    Tool panels on sides, maximized canvas in center, status bar at bottom
+  </text>
+  
+  <!-- Main container -->
+  <rect x="20" y="65" width="760" height="500" rx="6" fill="#0d1117" stroke="#30363d"/>
+  
+  <!-- Top toolbar -->
+  <rect x="20" y="65" width="760" height="40" fill="#161b22" stroke="#30363d"/>
+  <text x="35" y="90" fill="#e6edf3" font-family="system-ui" font-size="12" font-weight="600">🎨 Art Playground</text>
+  
+  <!-- Tool buttons in toolbar -->
+  <rect x="180" y="73" width="32" height="24" rx="4" fill="#21262d" stroke="#3b82f6" stroke-width="2"/>
+  <text x="196" y="90" text-anchor="middle" fill="#3b82f6" font-family="system-ui" font-size="11">▢</text>
+  
+  <rect x="220" y="73" width="32" height="24" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="236" y="90" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">○</text>
+  
+  <rect x="260" y="73" width="32" height="24" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="276" y="90" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">T</text>
+  
+  <rect x="300" y="73" width="32" height="24" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="316" y="90" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">✎</text>
+  
+  <!-- Divider -->
+  <line x1="345" y1="73" x2="345" y2="97" stroke="#30363d"/>
+  
+  <rect x="360" y="73" width="32" height="24" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="376" y="90" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">↺</text>
+  
+  <rect x="400" y="73" width="32" height="24" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="416" y="90" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="11">↻</text>
+  
+  <!-- Right side toolbar items -->
+  <rect x="680" y="73" width="80" height="24" rx="4" fill="#238636"/>
+  <text x="720" y="89" text-anchor="middle" fill="#ffffff" font-family="system-ui" font-size="10">Export SVG</text>
+  
+  <!-- Left panel - Tools/Layers -->
+  <rect x="20" y="105" width="60" height="430" fill="url(#panelBg)" stroke="#30363d"/>
+  
+  <!-- Tool icons -->
+  <rect x="30" y="115" width="40" height="36" rx="4" fill="#21262d" stroke="#3b82f6" stroke-width="2"/>
+  <text x="50" y="138" text-anchor="middle" fill="#3b82f6" font-family="system-ui" font-size="14">↖</text>
+  
+  <rect x="30" y="160" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="183" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">▢</text>
+  
+  <rect x="30" y="205" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="228" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">○</text>
+  
+  <rect x="30" y="250" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="273" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">△</text>
+  
+  <rect x="30" y="295" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="318" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">⟋</text>
+  
+  <rect x="30" y="340" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="363" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">T</text>
+  
+  <line x1="30" y1="390" x2="70" y2="390" stroke="#30363d"/>
+  
+  <rect x="30" y="405" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="428" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">✋</text>
+  
+  <rect x="30" y="450" width="40" height="36" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="50" y="473" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="14">🔍</text>
+  
+  <!-- Canvas area -->
+  <rect x="80" y="105" width="540" height="430" fill="#1a1f2e" stroke="#30363d"/>
+  
+  <!-- Grid pattern hint -->
+  <g stroke="#30363d" stroke-width="0.5" opacity="0.3">
+    <line x1="80" y1="155" x2="620" y2="155"/>
+    <line x1="80" y1="205" x2="620" y2="205"/>
+    <line x1="80" y1="255" x2="620" y2="255"/>
+    <line x1="80" y1="305" x2="620" y2="305"/>
+    <line x1="80" y1="355" x2="620" y2="355"/>
+    <line x1="80" y1="405" x2="620" y2="405"/>
+    <line x1="80" y1="455" x2="620" y2="455"/>
+    <line x1="80" y1="505" x2="620" y2="505"/>
+    <line x1="130" y1="105" x2="130" y2="535"/>
+    <line x1="180" y1="105" x2="180" y2="535"/>
+    <line x1="230" y1="105" x2="230" y2="535"/>
+    <line x1="280" y1="105" x2="280" y2="535"/>
+    <line x1="330" y1="105" x2="330" y2="535"/>
+    <line x1="380" y1="105" x2="380" y2="535"/>
+    <line x1="430" y1="105" x2="430" y2="535"/>
+    <line x1="480" y1="105" x2="480" y2="535"/>
+    <line x1="530" y1="105" x2="530" y2="535"/>
+    <line x1="580" y1="105" x2="580" y2="535"/>
+  </g>
+  
+  <!-- Sample shapes on canvas -->
+  <!-- Rectangle with selection handles -->
+  <rect x="150" y="180" width="160" height="100" rx="4" fill="#4A90D9" stroke="#58a6ff" stroke-width="2"/>
+  
+  <!-- Selection handles -->
+  <rect x="145" y="175" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="225" y="175" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="305" y="175" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="305" y="225" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="305" y="275" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="225" y="275" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="145" y="275" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  <rect x="145" y="225" width="8" height="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1"/>
+  
+  <!-- Ellipse -->
+  <ellipse cx="450" cy="350" rx="70" ry="50" fill="#D94A4A"/>
+  
+  <!-- Text element -->
+  <text x="200" y="420" fill="#1A1A1A" font-family="system-ui" font-size="24" font-weight="bold">Hello World</text>
+  
+  <!-- Right panel - Properties -->
+  <rect x="620" y="105" width="160" height="430" fill="url(#panelBg)" stroke="#30363d"/>
+  
+  <!-- Properties header -->
+  <rect x="620" y="105" width="160" height="30" fill="#21262d"/>
+  <text x="635" y="125" fill="#e6edf3" font-family="system-ui" font-size="11" font-weight="600">Properties</text>
+  
+  <!-- Position section -->
+  <text x="635" y="155" fill="#8b949e" font-family="system-ui" font-size="10">Position</text>
+  <rect x="635" y="165" width="60" height="24" rx="3" fill="#0d1117" stroke="#30363d"/>
+  <text x="645" y="182" fill="#e6edf3" font-family="system-ui" font-size="10">X: 150</text>
+  <rect x="705" y="165" width="60" height="24" rx="3" fill="#0d1117" stroke="#30363d"/>
+  <text x="715" y="182" fill="#e6edf3" font-family="system-ui" font-size="10">Y: 180</text>
+  
+  <!-- Size section -->
+  <text x="635" y="210" fill="#8b949e" font-family="system-ui" font-size="10">Size</text>
+  <rect x="635" y="220" width="60" height="24" rx="3" fill="#0d1117" stroke="#30363d"/>
+  <text x="645" y="237" fill="#e6edf3" font-family="system-ui" font-size="10">W: 160</text>
+  <rect x="705" y="220" width="60" height="24" rx="3" fill="#0d1117" stroke="#30363d"/>
+  <text x="715" y="237" fill="#e6edf3" font-family="system-ui" font-size="10">H: 100</text>
+  
+  <!-- Fill section -->
+  <text x="635" y="270" fill="#8b949e" font-family="system-ui" font-size="10">Fill</text>
+  <rect x="635" y="280" width="24" height="24" rx="3" fill="#4A90D9" stroke="#30363d"/>
+  <rect x="665" y="280" width="100" height="24" rx="3" fill="#0d1117" stroke="#30363d"/>
+  <text x="675" y="297" fill="#e6edf3" font-family="system-ui" font-size="10">#4A90D9</text>
+  
+  <!-- Stroke section -->
+  <text x="635" y="325" fill="#8b949e" font-family="system-ui" font-size="10">Stroke</text>
+  <rect x="635" y="335" width="24" height="24" rx="3" fill="none" stroke="#58a6ff" stroke-width="2"/>
+  <rect x="665" y="335" width="100" height="24" rx="3" fill="#0d1117" stroke="#30363d"/>
+  <text x="675" y="352" fill="#e6edf3" font-family="system-ui" font-size="10">#58a6ff</text>
+  
+  <!-- Layers section -->
+  <rect x="620" y="385" width="160" height="30" fill="#21262d"/>
+  <text x="635" y="405" fill="#e6edf3" font-family="system-ui" font-size="11" font-weight="600">Layers</text>
+  
+  <rect x="635" y="420" width="130" height="24" rx="3" fill="#21262d" stroke="#3b82f6" stroke-width="1"/>
+  <text x="650" y="437" fill="#e6edf3" font-family="system-ui" font-size="10">▢ Rectangle</text>
+  
+  <rect x="635" y="450" width="130" height="24" rx="3" fill="none"/>
+  <text x="650" y="467" fill="#8b949e" font-family="system-ui" font-size="10">○ Ellipse</text>
+  
+  <rect x="635" y="480" width="130" height="24" rx="3" fill="none"/>
+  <text x="650" y="497" fill="#8b949e" font-family="system-ui" font-size="10">T "Hello World"</text>
+  
+  <!-- Status bar -->
+  <rect x="20" y="535" width="760" height="30" fill="#161b22" stroke="#30363d"/>
+  <text x="35" y="555" fill="#8b949e" font-family="system-ui" font-size="10">Selected: Rectangle | 150, 180 | 160 × 100</text>
+  <text x="680" y="555" fill="#8b949e" font-family="system-ui" font-size="10">Zoom: 100%</text>
+  
+  <!-- Dimension annotations -->
+  <text x="50" y="585" fill="#3b82f6" font-family="system-ui" font-size="9">60px</text>
+  <text x="350" y="585" fill="#10b981" font-family="system-ui" font-size="9">flex: 1 (canvas)</text>
+  <text x="700" y="585" fill="#a855f7" font-family="system-ui" font-size="9">160px</text>
+</svg>

@@ -36,7 +36,13 @@ _Last updated: 2025-11-04_
 
 **Comprehensive AI-generated references** for complex subsystems. These in-depth documents (500–1000+ lines) capture architecture, patterns, gotchas, and working examples discovered through hands-on implementation. Consult before working on an unfamiliar subsystem.
 
-- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, and verification scripts for jsgui3-html UIs.
+- [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
+
+## Designs
+
+Architecture and system design documents for proposed or implemented features.
+
+- [NPM Link Development Nexus](designs/NPM_LINK_DEVELOPMENT_NEXUS.md) - Using npm link for cross-module AI agent development across jsgui3 stack.
 
 ## Reference
 - [Adapters Overview](reference/adapters_overview.md)

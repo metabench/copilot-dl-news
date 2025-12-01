@@ -82,7 +82,7 @@ class CanvasControl extends Control {
     
     this._selectionHandles.on("resize-start", (d) => this._startResize(d));
     this._selectionHandles.on("resize-move", (d) => this._doResize(d));
-    this._selectionHandles.on("resize-end", () => { this._resizeState = null; });
+    this._selectionHandles.on("resize-end", () => this._endResize());
   }
   
   _onMouseDown(e) {
@@ -191,6 +191,7 @@ class CanvasControl extends Control {
       const hEl = this._selectionHandles.dom?.el;
       if (hEl) hEl.style.display = "block";
     }
+    this.raise("selection-change", this._getSelectionData());
   }
   
   _deselectAll() {
@@ -200,6 +201,27 @@ class CanvasControl extends Control {
     this._selectedId = null;
     const hEl = this._selectionHandles.dom?.el;
     if (hEl) hEl.style.display = "none";
+    this.raise("selection-change", null);
+  }
+  
+  /**
+   * Get current selection data for external consumers.
+   * @returns {object|null}
+   */
+  _getSelectionData() {
+    if (!this._selectedId) return null;
+    const c = this._components.get(this._selectedId);
+    if (!c) return null;
+    return {
+      id: this._selectedId,
+      type: c.type,
+      x: c.x,
+      y: c.y,
+      width: c.width,
+      height: c.height,
+      fill: c.fill,
+      stroke: c.stroke
+    };
   }
   
   _updateHandles() {
@@ -247,6 +269,10 @@ class CanvasControl extends Control {
       c.el.setAttribute("rx", c.rx); c.el.setAttribute("ry", c.ry);
     }
     this._updateHandles();
+  }
+  
+  _endResize() {
+    this._resizeState = null;
   }
   
   // === Public API ===

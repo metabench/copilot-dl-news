@@ -23,7 +23,7 @@ const jsgui = require("jsgui3-html");
 const { Command } = require("commander");
 
 const { DocAppControl } = require("./isomorphic/controls");
-const { buildDocTree, sortTree } = require("./utils/docTree");
+const { buildDocTree, sortTree, findNodeByPath } = require("./utils/docTree");
 const { renderMarkdown } = require("./utils/markdownRenderer");
 const { renderSvgContent } = require("./utils/svgRenderer");
 
@@ -176,9 +176,11 @@ function createDocsViewerServer(options = {}) {
 
   // Build documentation tree on startup
   let docTree = buildDocTree(docsPath);
+  console.log(`📚 Doc tree built: ${countDocs(docTree)} files`);
 
   // Main page route - renders the doc viewer app
   app.get("/", (req, res) => {
+    const startTime = Date.now();
     try {
       const selectedPath = req.query.doc || null;
       
@@ -228,6 +230,12 @@ function createDocsViewerServer(options = {}) {
         sortBy,
         sortOrder
       });
+      
+      const renderTime = Date.now() - startTime;
+      if (renderTime > 100) {
+        console.log(`📚 Page rendered in ${renderTime}ms (doc: ${selectedPath || 'none'})`);
+      }
+      
       res.type("html").send(html);
     } catch (err) {
       console.error("Docs viewer error:", err);
@@ -259,6 +267,61 @@ function createDocsViewerServer(options = {}) {
     }
     
     res.json(content);
+  });
+
+  // API endpoint to get folder children (for lazy loading)
+  // Returns HTML for folder contents to insert into the tree
+  app.get("/api/folder", (req, res) => {
+    const folderPath = req.query.path;
+    if (!folderPath) {
+      return res.status(400).json({ error: "Missing path parameter" });
+    }
+    
+    // Find folder in tree
+    const folder = findNodeByPath(docTree, folderPath);
+    if (!folder || folder.type !== "folder") {
+      return res.status(404).json({ error: "Folder not found" });
+    }
+    
+    // Parse current filter/sort state
+    const filters = {
+      md: req.query.show_md !== "0",
+      svg: req.query.show_svg !== "0"
+    };
+    const columns = {
+      mtime: req.query.col_mtime === "1"
+    };
+    const sortBy = req.query.sort_by || 'name';
+    const sortOrder = req.query.sort_order || 'asc';
+    
+    // Sort children
+    const sortedChildren = sortTree(JSON.parse(JSON.stringify(folder.children || [])), sortBy, sortOrder);
+    
+    // Render children HTML
+    const context = new jsgui.Page_Context();
+    const { DocNavControl } = require("./isomorphic/controls");
+    
+    // Create a temporary nav control to render just the children
+    const tempNav = new DocNavControl({
+      context,
+      docTree: sortedChildren,
+      selectedPath: req.query.doc || null,
+      basePath: "/",
+      filters,
+      columns,
+      sortBy,
+      sortOrder
+    });
+    
+    // Get just the tree list HTML
+    const treeContainer = tempNav._buildTreeList(sortedChildren, 1); // depth 1 since we're inside a folder
+    const html = treeContainer.all_html_render();
+    
+    res.json({ 
+      path: folderPath,
+      html,
+      childCount: sortedChildren.length
+    });
   });
 
   // API endpoint to refresh doc tree

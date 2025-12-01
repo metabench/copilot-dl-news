@@ -39,6 +39,46 @@ This creates `docs/sessions/YYYY-MM-DD-<slug>/` with PLAN.md, WORKING_NOTES.md, 
 
 **When in doubt, create a session.** The 30 seconds it takes will save hours of context reconstruction later.
 
+## 🔗 LINKED MODULE EDITS — ELEVATED REQUIREMENTS
+
+**If npm link is active**, editing files in `node_modules/` may modify SHARED LIBRARY SOURCE CODE that affects multiple projects.
+
+### Before ANY Linked Module Edit
+
+1. **SESSION IS MANDATORY** — No exceptions, no "quick fixes"
+   ```bash
+   node tools/dev/session-init.js --slug "jsgui3-<change>" --type "linked-module" --title "<Title>" --objective "<goal>"
+   ```
+
+2. **Verify link status first**:
+   ```powershell
+   Get-Item node_modules/jsgui3-html | Select-Object LinkType
+   # If LinkType is empty → normal npm install (safe to ignore)
+   # If LinkType is "SymbolicLink" → YOU ARE EDITING SHARED SOURCE
+   ```
+
+3. **DISCUSS before creating branches** — Do NOT create git branches in linked repos without explicit user approval. Direct edits to main are acceptable for safe, well-documented changes.
+
+4. **Document everything in session**:
+   - What file(s) you're changing
+   - Why the change is needed
+   - Test results before/after
+   - Both repos' test results
+
+5. **Run BOTH test suites** (when available):
+   - Linked module's own tests
+   - This repo's integration tests
+
+### Why This Matters
+
+Linked module changes:
+- ❌ Cannot be easily reverted with `git checkout`
+- ❌ Affect every project using that module
+- ❌ Are invisible to `git status` in this repo
+- ✅ Must be tracked via session documentation
+
+**See**: `docs/designs/NPM_LINK_DEVELOPMENT_NEXUS.md` for full workflow.
+
 **Common mistakes to avoid:**
 - ❌ Creating plans in `docs/plans/` instead of session directory
 - ❌ Putting notes in `tmp/` (not searchable, not persistent)
@@ -298,6 +338,65 @@ searchWrapper.add(icon);
 ```
 
 See `docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md` for complete patterns.
+
+### jsgui3 Performance (Critical)
+
+**Control count is THE dominant performance factor in jsgui3.**
+
+Each Control creates multiple objects and string operations. This compounds:
+- 100 items × 10 controls each = 1,000 control objects
+- 850 items × 10 controls each = 8,500 control objects → **883ms render time**
+
+**Performance Decision Matrix:**
+
+| Dataset Size | Pattern | Example |
+|--------------|---------|---------|
+| <50 items | Render all | Simple lists, small menus |
+| 50-200 items | Conditional complexity | Use simpler controls for non-critical items |
+| 200-1000 items | **Lazy rendering** | Load children on demand |
+| 1000+ items | Virtual scrolling | Only render visible viewport |
+
+**Lazy Rendering Pattern (Validated - 55% faster):**
+
+```javascript
+// Server-side: Only render expanded/visible content
+compose() {
+  this.items.forEach(item => {
+    if (this._shouldRenderNow(item)) {
+      this.add(new ItemControl({ context: this.context, item }));
+    } else {
+      // Placeholder for lazy loading
+      const placeholder = new jsgui.Control({ context: this.context, tagName: 'div' });
+      placeholder.dom.attributes['data-lazy-id'] = item.id;
+      this.add(placeholder);
+    }
+  });
+}
+
+// API endpoint for lazy loading
+app.get('/api/lazy/:id', (req, res) => {
+  const ctrl = new ItemControl({ context, item: findById(req.params.id) });
+  res.send(ctrl.all_html_render());
+});
+
+// Client-side: Load on demand
+async function loadLazy(el) {
+  const html = await fetch(`/api/lazy/${el.dataset.lazyId}`).then(r => r.text());
+  el.outerHTML = html;
+}
+```
+
+**Before optimizing, ALWAYS measure:**
+```javascript
+// Create diagnostic script first
+const start = performance.now();
+const page = buildPage(data);
+console.log(`Tree: ${performance.now() - start}ms`);
+const html = page.all_html_render();
+console.log(`HTML: ${(html.length / 1024).toFixed(0)}KB`);
+```
+
+**Real-world result**: Docs viewer 850 files: 1256ms → 565ms (55% faster), 1489KB → 382KB HTML (74% smaller).
 
 > **Never stop mid-plan**: When a task list exists, continue executing items back-to-back. Record blockers, then immediately pivot to the next actionable task instead of waiting for new instructions.
 

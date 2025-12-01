@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" style="background: #0d1117;">
+  <defs>
+    <linearGradient id="tableBgGood" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#161b22"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="25" text-anchor="middle" fill="#10b981" font-family="system-ui" font-size="16" font-weight="bold">
+    ✅ AFTER: Optimized Table Density
+  </text>
+  
+  <text x="20" y="50" fill="#8b949e" font-family="system-ui" font-size="11">
+    Improvements: Compact rows • Smart column widths • URL expands • Relative dates • 8 rows visible
+  </text>
+  
+  <!-- Table container -->
+  <rect x="20" y="65" width="760" height="300" rx="6" fill="url(#tableBgGood)" stroke="#30363d"/>
+  
+  <!-- Header row - more compact -->
+  <rect x="20" y="65" width="760" height="28" rx="6" fill="#21262d"/>
+  <text x="35" y="84" fill="#8b949e" font-family="system-ui" font-size="10" font-weight="600">#</text>
+  <text x="60" y="84" fill="#8b949e" font-family="system-ui" font-size="10" font-weight="600">URL</text>
+  <text x="580" y="84" fill="#8b949e" font-family="system-ui" font-size="10" font-weight="600">Status</text>
+  <text x="680" y="84" fill="#8b949e" font-family="system-ui" font-size="10" font-weight="600">When</text>
+  
+  <!-- Data rows - 32px each instead of 40px -->
+  <!-- Row 1 -->
+  <line x1="20" y1="93" x2="780" y2="93" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="112" fill="#7d8590" font-family="system-ui" font-size="11">1</text>
+  <text x="60" y="112" fill="#58a6ff" font-family="system-ui" font-size="11">example.com/very-long-article-url-that-now-has-more-room-to-breathe</text>
+  <circle cx="590" cy="108" r="4" fill="#10b981"/>
+  <text x="600" y="112" fill="#10b981" font-family="system-ui" font-size="11">OK</text>
+  <text x="680" y="112" fill="#8b949e" font-family="system-ui" font-size="11">2m ago</text>
+  
+  <!-- Row 2 -->
+  <line x1="20" y1="125" x2="780" y2="125" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="144" fill="#7d8590" font-family="system-ui" font-size="11">2</text>
+  <text x="60" y="144" fill="#58a6ff" font-family="system-ui" font-size="11">news-site.org/breaking/world-events-2024-important-story-details</text>
+  <circle cx="590" cy="140" r="4" fill="#ef4444"/>
+  <text x="600" y="144" fill="#ef4444" font-family="system-ui" font-size="11">Err</text>
+  <text x="680" y="144" fill="#8b949e" font-family="system-ui" font-size="11">1d ago</text>
+  
+  <!-- Row 3 -->
+  <line x1="20" y1="157" x2="780" y2="157" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="176" fill="#7d8590" font-family="system-ui" font-size="11">3</text>
+  <text x="60" y="176" fill="#58a6ff" font-family="system-ui" font-size="11">blog.dev/posts/getting-started-with-nodejs-and-express</text>
+  <circle cx="590" cy="172" r="4" fill="#f59e0b"/>
+  <text x="600" y="176" fill="#f59e0b" font-family="system-ui" font-size="11">Pnd</text>
+  <text x="680" y="176" fill="#8b949e" font-family="system-ui" font-size="11">1d ago</text>
+  
+  <!-- Row 4 -->
+  <line x1="20" y1="189" x2="780" y2="189" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="208" fill="#7d8590" font-family="system-ui" font-size="11">4</text>
+  <text x="60" y="208" fill="#58a6ff" font-family="system-ui" font-size="11">tech-news.io/articles/ai-advances-machine-learning-breakthroughs</text>
+  <circle cx="590" cy="204" r="4" fill="#10b981"/>
+  <text x="600" y="208" fill="#10b981" font-family="system-ui" font-size="11">OK</text>
+  <text x="680" y="208" fill="#8b949e" font-family="system-ui" font-size="11">2d ago</text>
+  
+  <!-- Row 5 -->
+  <line x1="20" y1="221" x2="780" y2="221" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="240" fill="#7d8590" font-family="system-ui" font-size="11">5</text>
+  <text x="60" y="240" fill="#58a6ff" font-family="system-ui" font-size="11">news.ycombinator.com/item?id=123456789</text>
+  <circle cx="590" cy="236" r="4" fill="#10b981"/>
+  <text x="600" y="240" fill="#10b981" font-family="system-ui" font-size="11">OK</text>
+  <text x="680" y="240" fill="#8b949e" font-family="system-ui" font-size="11">3d ago</text>
+  
+  <!-- Row 6 -->
+  <line x1="20" y1="253" x2="780" y2="253" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="272" fill="#7d8590" font-family="system-ui" font-size="11">6</text>
+  <text x="60" y="272" fill="#58a6ff" font-family="system-ui" font-size="11">medium.com/@author/understanding-distributed-systems</text>
+  <circle cx="590" cy="268" r="4" fill="#10b981"/>
+  <text x="600" y="272" fill="#10b981" font-family="system-ui" font-size="11">OK</text>
+  <text x="680" y="272" fill="#8b949e" font-family="system-ui" font-size="11">3d ago</text>
+  
+  <!-- Row 7 -->
+  <line x1="20" y1="285" x2="780" y2="285" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="304" fill="#7d8590" font-family="system-ui" font-size="11">7</text>
+  <text x="60" y="304" fill="#58a6ff" font-family="system-ui" font-size="11">dev.to/article/building-scalable-web-applications</text>
+  <circle cx="590" cy="300" r="4" fill="#10b981"/>
+  <text x="600" y="304" fill="#10b981" font-family="system-ui" font-size="11">OK</text>
+  <text x="680" y="304" fill="#8b949e" font-family="system-ui" font-size="11">4d ago</text>
+  
+  <!-- Row 8 -->
+  <line x1="20" y1="317" x2="780" y2="317" stroke="#30363d" stroke-width="0.5"/>
+  <text x="35" y="336" fill="#7d8590" font-family="system-ui" font-size="11">8</text>
+  <text x="60" y="336" fill="#58a6ff" font-family="system-ui" font-size="11">github.blog/changelog/2024-new-features-announcement</text>
+  <circle cx="590" cy="332" r="4" fill="#10b981"/>
+  <text x="600" y="332" fill="#10b981" font-family="system-ui" font-size="11">OK</text>
+  <text x="680" y="332" fill="#8b949e" font-family="system-ui" font-size="11">1w ago</text>
+  
+  <!-- Pagination -->
+  <rect x="640" y="350" width="130" height="24" rx="4" fill="#21262d" stroke="#30363d"/>
+  <text x="705" y="366" text-anchor="middle" fill="#8b949e" font-family="system-ui" font-size="10">‹ 1 2 3 ... 128 ›</text>
+  
+  <!-- Summary improvements -->
+  <text x="40" y="385" fill="#10b981" font-family="system-ui" font-size="11">
+    ✓ # column: 25px (was 80px)
+  </text>
+  <text x="40" y="405" fill="#10b981" font-family="system-ui" font-size="11">
+    ✓ URL: flex-grow, shows ~65 chars
+  </text>
+  <text x="40" y="425" fill="#10b981" font-family="system-ui" font-size="11">
+    ✓ Domain: removed (shown in URL)
+  </text>
+  
+  <text x="300" y="385" fill="#10b981" font-family="system-ui" font-size="11">
+    ✓ Status: icon + 3-char text
+  </text>
+  <text x="300" y="405" fill="#10b981" font-family="system-ui" font-size="11">
+    ✓ When: relative time (compact)
+  </text>
+  <text x="300" y="425" fill="#10b981" font-family="system-ui" font-size="11">
+    ✓ Row height: 32px (was 40px)
+  </text>
+  
+  <text x="560" y="385" fill="#c9a227" font-family="system-ui" font-size="11" font-weight="bold">
+    Result: 8 rows visible (was 4)
+  </text>
+  <text x="560" y="405" fill="#c9a227" font-family="system-ui" font-size="11" font-weight="bold">
+    100% more data above fold!
+  </text>
+</svg>

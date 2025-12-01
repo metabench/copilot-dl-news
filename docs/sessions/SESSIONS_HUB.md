@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-12-01: Art Playground Layout Improvement
+
+**Duration**: Active
+**Type**: ui-improvement
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement ideal layout with tool panels, properties panel, and status bar using layout primitives methodology
+
+**Location**: `docs/sessions/2025-12-01-art-playground-layout-improvement/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-01-art-playground-layout-improvement/INDEX.md)
+- 🗺️ [Plan](./2025-12-01-art-playground-layout-improvement/PLAN.md)
+- 📝 [Working Notes](./2025-12-01-art-playground-layout-improvement/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-01-art-playground-layout-improvement/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-01-art-playground-layout-improvement/FOLLOW_UPS.md)
+
+
+### Session 2025-11-30: Gazetteer ingestion review
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review gazetteer ingestion pipeline/tooling and document findings
+
+**Location**: `docs/sessions/2025-11-30-gaz-ingest-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-11-30-gaz-ingest-review/INDEX.md)
+- 🗺️ [Plan](./2025-11-30-gaz-ingest-review/PLAN.md)
+- 📝 [Working Notes](./2025-11-30-gaz-ingest-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-11-30-gaz-ingest-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-11-30-gaz-ingest-review/FOLLOW_UPS.md)
+
+
 ### Session 2025-11-30: Art Playground - Interactive SVG Component Editor
 
 **Duration**: Active

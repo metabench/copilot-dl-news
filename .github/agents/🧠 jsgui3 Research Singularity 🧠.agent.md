@@ -43,6 +43,22 @@ tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems'
 2. What method worked well? → Add to Cognitive Toolkit
 3. What method failed? → Add to Anti-Patterns
 4. What would have helped me start faster? → Update Quick Start
+5. **Did I improve performance >20%?** → Add to Performance Patterns
+6. **Did I spend >15 min on something undocumented?** → DOCUMENT IT NOW
+
+### ⚠️ REAL-TIME IMPROVEMENT TRIGGERS
+
+**Don't wait until session end!** Update this file IMMEDIATELY when:
+
+| Trigger Event | Required Action |
+|---------------|-----------------|
+| 🔴 Debugging >15 min (undocumented issue) | STOP. Document solution. Resume. |
+| 🔴 Performance gain >20% | STOP. Add to Performance Patterns. Resume. |
+| 🟡 Found working pattern | Add to Common Patterns within 5 min |
+| 🟡 Cognitive method worked/failed | Update Toolkit/Anti-Patterns |
+| 🟢 Minor discovery | Note in session, batch update at end |
+
+**Why real-time?** Memory decays. Context is lost. The best time to document is when the knowledge is fresh.
 
 ---
 
@@ -502,6 +518,195 @@ _setAttrs(ctrl, attrs) {
 }
 this._setAttrs(button, { type: "button", class: "my-class", "data-value": "123" });
 ```
+
+---
+
+## ⚡ Performance Patterns (CRITICAL)
+
+### The jsgui3 Performance Equation
+
+**Control count is THE dominant performance factor.**
+
+Every jsgui3 Control creates:
+- A JavaScript object with prototype chain
+- A `dom` descriptor object
+- Attribute storage
+- Internal state (`__ctrl_chain`, `_id`, etc.)
+- String concatenation during `all_html_render()`
+
+**The compounding problem:**
+```
+850 files × ~10 controls each = 8,500 control objects
+  → 883ms control tree build time
+  → 1.5MB HTML output
+  → Slow initial paint
+```
+
+### Pattern 1: Lazy Rendering (Validated 2025-12-19)
+
+**Only instantiate controls for visible/expanded content.**
+
+```javascript
+// ❌ ANTI-PATTERN: Render everything upfront
+compose() {
+  this.items.forEach(item => {
+    const ctrl = new ItemControl({ context: this.context, item });
+    this.add(ctrl);  // 850 items = 850+ controls!
+  });
+}
+
+// ✅ PATTERN: Lazy render with placeholders
+compose() {
+  this.items.forEach(item => {
+    if (this._shouldRenderNow(item)) {
+      const ctrl = new ItemControl({ context: this.context, item });
+      this.add(ctrl);
+    } else {
+      // Placeholder with data attribute for lazy loading
+      const placeholder = new jsgui.Control({ context: this.context, tagName: 'div' });
+      placeholder.dom.attributes['data-lazy-id'] = item.id;
+      placeholder.dom.attributes['data-lazy-children'] = 'true';
+      this.add(placeholder);
+    }
+  });
+}
+```
+
+**Server + Client implementation:**
+
+```javascript
+// Server: Render only what's needed initially
+// src/ui/server/myServer.js
+app.get('/api/lazy/:id', (req, res) => {
+  const node = findNodeById(req.params.id);
+  const ctrl = new ItemControl({ context, item: node });
+  res.send(ctrl.all_html_render());
+});
+
+// Client: Load on demand
+// public/app.js
+async function loadLazyContent(placeholder) {
+  placeholder.innerHTML = '<div class="loading">Loading...</div>';
+  const html = await fetch(`/api/lazy/${placeholder.dataset.lazyId}`).then(r => r.text());
+  placeholder.outerHTML = html;
+}
+```
+
+**Measured Results (Docs Viewer, 850 files):**
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Total render | 1256ms | 565ms | **55% faster** |
+| HTML size | 1489KB | 382KB | **74% smaller** |
+| Control tree | 883ms | 286ms | **68% faster** |
+| Controls created | ~8500 | ~100 | **99% fewer** |
+
+### Pattern 2: Performance Diagnostics
+
+**Before optimizing, MEASURE. Create a diagnostic script:**
+
+```javascript
+// tmp/perf-diagnostic.js
+const { performance } = require('perf_hooks');
+const app = require('./src/ui/server/myServer');
+
+async function diagnose() {
+  const start = performance.now();
+  
+  // 1. Measure control tree building
+  const treeStart = performance.now();
+  const page = buildPage(testData);
+  const treeBuild = performance.now() - treeStart;
+  
+  // 2. Measure HTML rendering
+  const renderStart = performance.now();
+  const html = page.all_html_render();
+  const renderTime = performance.now() - renderStart;
+  
+  // 3. Count controls (walk __ctrl_chain)
+  const controlCount = countControls(page);
+  
+  console.log('=== PERFORMANCE DIAGNOSTIC ===');
+  console.log(`Control tree build: ${treeBuild.toFixed(0)}ms`);
+  console.log(`HTML render: ${renderTime.toFixed(0)}ms`);
+  console.log(`Total: ${(performance.now() - start).toFixed(0)}ms`);
+  console.log(`HTML size: ${(html.length / 1024).toFixed(0)}KB`);
+  console.log(`Control count: ${controlCount}`);
+  console.log('==============================');
+  
+  // Identify which component took longest
+  // ... detailed breakdown
+}
+
+function countControls(ctrl, count = { total: 0 }) {
+  count.total++;
+  (ctrl.__ctrl_chain || []).forEach(child => {
+    if (child.constructor && child.constructor.name !== 'String_Control') {
+      countControls(child, count);
+    }
+  });
+  return count.total;
+}
+```
+
+### Pattern 3: Conditional Complexity
+
+**Simpler controls for less important items:**
+
+```javascript
+compose() {
+  this.items.forEach((item, i) => {
+    // First 20 items get full controls
+    if (i < 20) {
+      this.add(new RichItemControl({ context: this.context, item }));
+    } else {
+      // Rest get simple controls
+      this.add(new SimpleItemControl({ context: this.context, item }));
+    }
+  });
+}
+```
+
+### Pattern 4: Virtual Scrolling (For Large Lists)
+
+**Only render items in viewport + buffer:**
+
+```javascript
+// Concept - keep visible window small
+class VirtualListControl extends jsgui.Control {
+  compose() {
+    const viewport = 20;  // Visible items
+    const buffer = 5;     // Above/below buffer
+    
+    // Only create controls for visible range
+    const start = Math.max(0, this.scrollIndex - buffer);
+    const end = Math.min(this.items.length, this.scrollIndex + viewport + buffer);
+    
+    for (let i = start; i < end; i++) {
+      this.add(new ItemControl({ context: this.context, item: this.items[i] }));
+    }
+  }
+  
+  // On scroll: tear down and rebuild (or reuse controls)
+}
+```
+
+### Performance Decision Matrix
+
+| Dataset Size | Pattern | Expected Improvement |
+|--------------|---------|---------------------|
+| <50 items | Render all | N/A (fast enough) |
+| 50-200 items | Conditional complexity | 30-50% |
+| 200-1000 items | Lazy rendering | 50-80% |
+| 1000+ items | Virtual scrolling | 90%+ |
+
+### Key Insight: Profile First
+
+> **Never optimize without measuring.**
+>
+> Create a diagnostic script BEFORE changing code.
+> The bottleneck is often not where you expect.
+>
+> In docs viewer: Expected bottleneck = file I/O. Actual bottleneck = control tree (70%!)
 
 ---
 
@@ -1007,6 +1212,8 @@ const solveJsgui3Problem = (problem) => {
 
 | Method | When to Use | Success Rate | Notes |
 |--------|-------------|--------------|-------|
+| **Performance diagnostics** | Before ANY optimization | 100% | Create diagnostic script FIRST |
+| **Control counting** | Slow renders | 95% | Walk `__ctrl_chain`, count total |
 | **Terminal hypothesis testing** | Understanding runtime behavior | 95% | Create minimal `node -e` scripts |
 | **Source grep + read** | Finding how something works | 90% | `grep_search` → `read_file` → understand |
 | **Diagram before code** | Understanding complex flows | 85% | ASCII diagrams clarify thinking |
@@ -1046,6 +1253,13 @@ Core Architecture          █████████████████�
 ├─ Server rendering        ████████████████████░░░░  85%
 └─ Client activation       ████████████████████████  100% ✓
 
+UI/Layout Methodology      ██████████████████████░░  90% (NEW! 2025-01-03)
+├─ Atomic Design mapping   ████████████████████████  100% ✓ (atoms→pages hierarchy)
+├─ Layout Primitives       ████████████████████████  100% ✓ (Stack/Sidebar/Grid/Cover)
+├─ CUBE CSS patterns       ████████████████████░░░░  85%
+├─ Design Tokens           ████████████████████████  100% ✓ (CSS variables)
+└─ Layout Algorithms       ████████████████████████  100% ✓ (Flow/Flex/Grid/Position)
+
 MVVM System                ██████████████████████░░  90% ↑ (validated!)
 ├─ Data_Model_View_Model_Control ████████████████████████  100% ✓
 ├─ ModelBinder             ████████████████████████  100% ✓
@@ -1061,9 +1275,9 @@ Color Controls             █████████████████�
 ├─ Grid (base)             ████████████████████████  100% ✓
 └─ ColorSelectorControl    ████████████████████████  100% ✓ (custom)
 
-Mixins & Extensions        ████████░░░░░░░░░░░░░░░░  35%
+Mixins & Extensions        ████████████████░░░░░░░░  65% ↑ (mixin investigation complete)
 ├─ Dragable mixin          ████████████░░░░░░░░░░░░  50%
-├─ Resizable mixin         ████░░░░░░░░░░░░░░░░░░░░  20%
+├─ Resizable mixin         ████████████████████████  100% ✓ (br_handle only - custom for 8-dir)
 ├─ Custom mixin creation   ████████░░░░░░░░░░░░░░░░  35%
 └─ Mixin composition       ████░░░░░░░░░░░░░░░░░░░░  20%
 
@@ -1073,9 +1287,9 @@ Event System               ████████████░░░░░�
 ├─ Custom events           ████████████░░░░░░░░░░░░  50%
 └─ Event bubbling          ████░░░░░░░░░░░░░░░░░░░░  20%
 
-Advanced Patterns          ████████████████████░░░░  70% ↑
-├─ Lazy rendering          ████░░░░░░░░░░░░░░░░░░░░  20%
-├─ Virtual scrolling       ░░░░░░░░░░░░░░░░░░░░░░░░  0%
+Advanced Patterns          ██████████████████████░░  85% ↑↑
+├─ Lazy rendering          ████████████████████░░░░  85% ↑↑ (CRITICAL: validated in docs viewer!)
+├─ Virtual scrolling       ████░░░░░░░░░░░░░░░░░░░░  20%
 ├─ State management        ██████████████████████░░  90% ↑ (obext validated)
 └─ Component communication ██████████████████████░░  90% ↑ (event flow documented)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1085,7 +1299,8 @@ Advanced Patterns          █████████████████�
 
 | Gap | Priority | Estimated Effort | Blocks |
 |-----|----------|------------------|--------|
-| Resizable mixin internals | HIGH | 2 hours | Art Playground resize |
+| ~~Resizable mixin internals~~ | ~~HIGH~~ | ~~2 hours~~ | ✅ Investigated - custom impl appropriate |
+| ~~Layout methodology research~~ | ~~HIGH~~ | ~~3 hours~~ | ✅ UI_DEVELOPMENT_METHODOLOGY_RESEARCH.md |
 | Event delegation patterns | MEDIUM | 1 hour | Large lists optimization |
 | ~~MVVM practical application~~ | ~~MEDIUM~~ | ~~2 hours~~ | ✅ Lab 001 complete |
 | Virtual scrolling | LOW | 4 hours | Performance on big data |
@@ -1095,6 +1310,12 @@ Advanced Patterns          █████████████████�
 
 | Discovery | Date | Impact | Location |
 |-----------|------|--------|----------|
+| **Layout Primitives methodology** | 2025-01-03 | **HIGH** | docs/research/UI_DEVELOPMENT_METHODOLOGY_RESEARCH.md |
+| **Atomic Design for jsgui3** | 2025-01-03 | **HIGH** | docs/research/RAPID_UI_DEVELOPMENT_CHECKLIST.md |
+| **CUBE CSS composition patterns** | 2025-01-03 | **MEDIUM** | docs/research/ |
+| **Layout algorithms mental model** | 2025-01-03 | **HIGH** | Josh Comeau research |
+| **Lazy rendering pattern** | 2025-12-19 | **CRITICAL** | docs viewer perf fix |
+| **Control count = performance** | 2025-12-19 | **CRITICAL** | diagnostic analysis |
 | **obext prop() works with Controls** | 2025-11-30 | **CRITICAL** | Lab 001/check.js |
 | ColorSelectorControl (obext-based) | 2025-11-30 | **HIGH** | artPlayground/controls/ |
 | Color_Grid, Color_Palette built-ins | 2025-11-30 | HIGH | jsgui3-html controls |
@@ -1275,27 +1496,75 @@ node -e "const jsgui = require('jsgui3-html'); /* test code here */"
 
 **Before closing this session, complete these steps:**
 
+### 0. AUTOMATIC TRIGGERS (Check DURING Session)
+
+**Stop and update this file immediately if ANY of these occur:**
+
+| Trigger | Action Required | Priority |
+|---------|-----------------|----------|
+| Spent >15 min debugging something undocumented | Document the solution NOW | 🔴 STOP |
+| Found a pattern that saves >30% time/code | Add to "Patterns Discovered" NOW | 🔴 STOP |
+| Performance improved >20% | Add to "Performance Patterns" NOW | 🔴 STOP |
+| Discovered jsgui3 behavior not in Knowledge Map | Update map + add to discoveries | 🟡 SOON |
+| A cognitive method clearly worked/failed | Update Toolkit/Anti-Patterns | 🟡 SOON |
+| Wrote code that required reading jsgui3 source | Document what you learned | 🟡 SOON |
+
+**The rule**: If future-you would benefit from this knowledge, **document it immediately**, not at session end. Memory decays. Context is lost. Document while fresh.
+
 ### 1. Knowledge Audit
 - [ ] What did I learn about jsgui3 that wasn't documented?
 - [ ] Did I update the Knowledge Map coverage?
 - [ ] Did I add discoveries to "Recently Discovered"?
+- [ ] **Did I hit any performance issues? Document the solution.**
 
 ### 2. Process Audit  
 - [ ] What research method worked best this session?
 - [ ] What approach wasted time?
 - [ ] Did I update Cognitive Toolkit or Anti-Patterns?
+- [ ] **How long did tasks take? Were estimates accurate?**
 
 ### 3. Gap Analysis
 - [ ] What questions did I encounter but not answer?
 - [ ] Added to Knowledge Gaps priority queue?
+- [ ] **What would have made this session 2x faster?**
 
 ### 4. Cross-Agent Value
 - [ ] Does any discovery need to flow to other agent files?
 - [ ] Should JSGUI3_UI_ARCHITECTURE_GUIDE.md be updated?
+- [ ] **Should any pattern become a reusable component?**
 
-### 5. Meta-Improvement
+### 5. Meta-Improvement (THIS FILE)
 - [ ] Is there a better way I could have structured this session?
 - [ ] Should any workflow in this file be updated?
+- [ ] **Would a new section help future agents?**
+- [ ] **Are the automatic triggers above sufficient?**
+
+### 6. Instruction Reflection (NEW - HIGH PRIORITY)
+
+**After every substantial task, explicitly reflect:**
+
+```markdown
+## Instruction Reflection
+Task completed: [what you did]
+Time spent: [actual time]
+
+### What instructions helped?
+- [specific instruction that guided you correctly]
+
+### What instructions were missing?
+- [what you wish had been documented]
+
+### What instructions were wrong/outdated?
+- [anything that misled you]
+
+### Improvement made:
+- [ ] Updated this agent file section: [name]
+- [ ] Added to AGENTS.md: [what]
+- [ ] Updated guide: [which one]
+- [ ] No update needed (explain why)
+```
+
+**This reflection is NOT optional.** Even "no update needed" requires explicit acknowledgment.
 
 ---
 

@@ -1416,12 +1416,14 @@ function createZServerControls(jsgui) {
       this._detectedUrl = url;
       this._serverUrl.setUrl(url);
       this._serverUrl.setVisible(!!url);
+      console.log("[ContentArea] setRunningUrl called, url:", url, "visible:", !!url);
     }
 
     setServerRunning(running) {
       if (this._selectedServer) {
         this._selectedServer.running = running;
         this._controlPanel.setServerRunning(running);
+        console.log("[ContentArea] setServerRunning:", running);
         
         // Clear detected URL when server stops
         if (!running) {
@@ -1482,12 +1484,21 @@ function createZServerControls(jsgui) {
           const url = this._extractUrl(log.data);
           if (url && this._selectedServer) {
             this._detectedUrl = url;
+            // Update the prominent URL display in content area
+            this._serverUrl.setUrl(url);
+            this._serverUrl.setVisible(true);
             if (this._onUrlDetected) {
               this._onUrlDetected(this._selectedServer.file, url);
             }
             break;
           }
         }
+      }
+      
+      // If no URL found, ensure URL display is hidden
+      if (!this._detectedUrl) {
+        this._serverUrl.setUrl(null);
+        this._serverUrl.setVisible(false);
       }
     }
     
@@ -1711,6 +1722,17 @@ function createZServerControls(jsgui) {
     _setServerUrl(filePath, url) {
       // Update the sidebar's server item with the running URL
       this._sidebar.setServerRunningUrl(filePath, url);
+      
+      // Also update the content area's large URL display if this is the selected server
+      if (this._selectedServer && this._selectedServer.file === filePath) {
+        this._contentArea.setRunningUrl(url);
+      }
+      
+      // Store the URL on the server object
+      const server = this._servers.find(s => s.file === filePath);
+      if (server) {
+        server.runningUrl = url;
+      }
     }
 
     _updateServerStatus(filePath, running) {

@@ -20,10 +20,12 @@
 10. [Common Patterns](#common-patterns)
 11. [**Extending jsgui3 (Plugins, Mixins, Extensions)**](#extending-jsgui3-plugins-mixins-extensions)
 12. [Dashboard Server Performance Patterns](#dashboard-server-performance-patterns)
-13. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
-14. [Quick Reference](#quick-reference)
-15. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
-16. [Troubleshooting](#troubleshooting)
+13. [**Control Count Performance (CRITICAL)**](#control-count-performance-critical)
+14. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+15. [Quick Reference](#quick-reference)
+16. [**Client-Side Activation Flow (CRITICAL)**](#client-side-activation-flow-critical)
+17. [Troubleshooting](#troubleshooting)
+18. [**jsgui3-server Patterns & Experiments**](#jsgui3-server-patterns--experiments)
 
 ---
 
@@ -1863,6 +1865,194 @@ compose() {
 
 ---
 
+## Control Count Performance (CRITICAL)
+
+**The #1 cause of slow jsgui3 renders is too many controls.** This section documents a validated pattern that achieved **55% faster load times** in the docs viewer.
+
+### Understanding the Problem
+
+Each jsgui3 Control creates:
+- A JavaScript object with prototype chain
+- A `dom` descriptor object with attributes
+- Internal state (`__ctrl_chain`, `_id`, registration in context)
+- String concatenation during `all_html_render()`
+
+**The compounding math:**
+```
+Items × Controls/Item = Total Controls = Render Time
+
+Example (Docs Viewer):
+850 files × ~10 controls each = 8,500 controls
+  → 883ms control tree build time (70% of total!)
+  → 1,489KB HTML output
+  → Slow initial paint
+```
+
+### The Decision Matrix
+
+| Dataset Size | Recommended Pattern | Expected Improvement |
+|--------------|---------------------|---------------------|
+| <50 items | Render all | None needed |
+| 50-200 items | Conditional complexity | 20-40% faster |
+| 200-1000 items | **Lazy rendering** | 50-80% faster |
+| 1000+ items | Virtual scrolling | 90%+ faster |
+
+### Pattern: Lazy Rendering
+
+**Only instantiate controls for visible/expanded content.**
+
+**Server-side (during compose):**
+
+```javascript
+class FolderListControl extends jsgui.Control {
+  compose() {
+    const { folders, selectedPath } = this;
+    
+    folders.forEach(folder => {
+      // Determine if this folder's children should be rendered
+      const containsSelected = selectedPath?.startsWith(folder.path);
+      
+      if (containsSelected) {
+        // Full render - user needs to see this content
+        const folderCtrl = new FolderControl({
+          context: this.context,
+          folder,
+          renderChildren: true  // Children will be visible
+        });
+        this.add(folderCtrl);
+      } else {
+        // Lazy placeholder - will load on demand
+        const folderCtrl = new FolderControl({
+          context: this.context,
+          folder,
+          renderChildren: false  // Just show folder name + count badge
+        });
+        folderCtrl.dom.attributes['data-lazy-children'] = 'true';
+        this.add(folderCtrl);
+      }
+    });
+  }
+}
+```
+
+**Server-side API endpoint for lazy loading:**
+
+```javascript
+// Add endpoint that returns rendered HTML for a folder's children
+app.get('/api/folder', (req, res) => {
+  const { path: folderPath } = req.query;
+  const context = jsgui.Page_Context({ document: null });
+  
+  // Find the folder node
+  const folderNode = docTree.findNodeByPath(folderPath);
+  if (!folderNode) {
+    return res.status(404).send('Folder not found');
+  }
+  
+  // Render just the children
+  const container = new jsgui.Control({ context, tagName: 'div' });
+  folderNode.children.forEach(child => {
+    container.add(new DocNavItemControl({ context, node: child }));
+  });
+  
+  res.send(container.all_html_render());
+});
+```
+
+**Client-side lazy loading:**
+
+```javascript
+// Listen for folder expansion
+document.addEventListener('toggle', async (event) => {
+  const details = event.target;
+  if (!details.open) return;  // Only on open
+  
+  const lazyContainer = details.querySelector('[data-lazy-children="true"]');
+  if (!lazyContainer) return;
+  
+  // Show loading state
+  lazyContainer.innerHTML = '<div class="loading">Loading...</div>';
+  
+  // Fetch the rendered children
+  const folderPath = details.dataset.folderPath;
+  const response = await fetch(`/api/folder?path=${encodeURIComponent(folderPath)}`);
+  const html = await response.text();
+  
+  // Replace placeholder with real content
+  lazyContainer.outerHTML = html;
+  lazyContainer.removeAttribute('data-lazy-children');
+}, true);
+```
+
+### Validation Results
+
+Tested on docs viewer with 850 markdown files:
+
+| Metric | Before (Eager) | After (Lazy) | Improvement |
+|--------|----------------|--------------|-------------|
+| Total render | 1256ms | 565ms | **55% faster** |
+| Control tree | 883ms | 286ms | **68% faster** |
+| HTML size | 1489KB | 382KB | **74% smaller** |
+| Controls created | ~8500 | ~100 | **99% fewer** |
+
+### Diagnostic Script Template
+
+**Always measure before optimizing.** Use this template:
+
+```javascript
+// tmp/perf-diagnostic.js
+const { performance } = require('perf_hooks');
+
+async function diagnose() {
+  const start = performance.now();
+  
+  // 1. Measure control tree building
+  const treeStart = performance.now();
+  const page = buildYourPage(testData);
+  const treeBuild = performance.now() - treeStart;
+  
+  // 2. Measure HTML rendering
+  const renderStart = performance.now();
+  const html = page.all_html_render();
+  const renderTime = performance.now() - renderStart;
+  
+  // 3. Count controls
+  const controlCount = countControls(page);
+  
+  console.log('=== PERFORMANCE DIAGNOSTIC ===');
+  console.log(`Control tree build: ${treeBuild.toFixed(0)}ms`);
+  console.log(`HTML render: ${renderTime.toFixed(0)}ms`);
+  console.log(`Total: ${(performance.now() - start).toFixed(0)}ms`);
+  console.log(`HTML size: ${(html.length / 1024).toFixed(0)}KB`);
+  console.log(`Control count: ${controlCount}`);
+  console.log('==============================');
+}
+
+function countControls(ctrl, count = { total: 0 }) {
+  count.total++;
+  (ctrl.__ctrl_chain || []).forEach(child => {
+    if (child.constructor?.name !== 'String_Control') {
+      countControls(child, count);
+    }
+  });
+  return count.total;
+}
+
+diagnose().catch(console.error);
+```
+
+### Key Insights
+
+1. **Bottleneck is often NOT where you expect.** Measure first. I expected file I/O to be slow - it was control tree building (70% of total).
+
+2. **Control count is non-linear.** 10× more controls ≠ 10× slower. The overhead compounds as the tree deepens.
+
+3. **Lazy loading adds complexity.** Only use for >200 items. The API endpoint + client code adds maintenance burden.
+
+4. **User experience matters.** Show loading states. Don't leave blank spaces while fetching.
+
+---
+
 ## Anti-Patterns to Avoid
 
 ### ❌ 1. Inline Compositions in App Controls
@@ -2550,3 +2740,494 @@ const jsgui = require("jsgui3-client");
 **Cause**: jsgui3's internal activation tries to reconstruct controls from DOM but can't find the custom control types. This is informational - your controls are still registered via `register_this_and_subcontrols()`.
 
 **Solution**: This warning is harmless if you're using the proper activation sequence. The custom controls are already instantiated - jsgui3 is just warning that it can't re-instantiate them from DOM alone.
+
+---
+
+## jsgui3-server Patterns & Experiments
+
+**jsgui3-server** is a full-featured Node.js server framework that handles bundling, SSR, and serving jsgui3 applications. This section documents patterns, potential uses, and experimental ideas.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    jsgui3-server Architecture                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Server.serve(MyControl)     ◀── Simple API (recommended)           │
+│           │                                                         │
+│           ▼                                                         │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │              JSGUI_Single_Process_Server                     │   │
+│  │  • HTTP/HTTPS server management                              │   │
+│  │  • Router (path → handler mapping)                           │   │
+│  │  • Resource Pool (manages all server resources)              │   │
+│  │  • Website/Webpage composition                               │   │
+│  └────────────────────────┬─────────────────────────────────────┘   │
+│                           │                                         │
+│           ┌───────────────┼───────────────┐                         │
+│           ▼               ▼               ▼                         │
+│  ┌────────────────┐ ┌────────────┐ ┌────────────────┐               │
+│  │Webpage Publisher│ │Function   │ │Static Responder│               │
+│  │(bundles JS/CSS)│ │Publisher  │ │(serves assets) │               │
+│  └────────────────┘ └────────────┘ └────────────────┘               │
+│           │               │               │                         │
+│           └───────────────┼───────────────┘                         │
+│                           ▼                                         │
+│                    ┌────────────┐                                   │
+│                    │  esbuild   │ (fast bundling)                   │
+│                    └────────────┘                                   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Quick Start APIs
+
+#### 1. Simplest: Single Control
+
+```javascript
+const Server = require('jsgui3-server');
+const { MyControl } = require('./client').controls;
+
+// Serves at http://localhost:8080
+Server.serve(MyControl);
+
+// With port
+Server.serve(MyControl, { port: 3000 });
+```
+
+#### 2. Single Page with Metadata
+
+```javascript
+Server.serve({
+    page: {
+        content: MyControl,
+        title: 'My Application',
+        description: 'A jsgui3 application'
+    },
+    port: 3000
+});
+```
+
+#### 3. Multi-Page Application
+
+```javascript
+Server.serve({
+    pages: {
+        '/': { content: HomeControl, title: 'Home' },
+        '/dashboard': { content: DashboardControl, title: 'Dashboard' },
+        '/settings': { content: SettingsControl, title: 'Settings' }
+    },
+    port: 3000
+});
+```
+
+#### 4. With API Endpoints
+
+```javascript
+Server.serve({
+    page: { content: DashboardControl, title: 'Dashboard' },
+    api: {
+        // GET/POST /api/metrics → returns JSON
+        'metrics': () => ({ users: 1234, revenue: 56789 }),
+        
+        // Async functions supported
+        'data': async ({ range, filter }) => {
+            return await db.query({ range, filter });
+        },
+        
+        // String return → text/plain
+        'health': () => 'OK',
+        
+        // Object/array return → application/json
+        'config': () => ({ theme: 'dark', lang: 'en' })
+    },
+    port: 3000
+});
+```
+
+#### 5. Lower-Level API (More Control)
+
+```javascript
+const Server = require('jsgui3-server');
+const { Demo_UI } = require('./client').controls;
+
+const server = new Server({
+    Ctrl: Demo_UI,
+    src_path_client_js: require.resolve('./client.js'),
+    debug: true  // Don't minify, include source maps
+});
+
+server.on('ready', () => {
+    // Add custom API endpoints
+    server.publish('custom-api', async (input) => {
+        return { processed: true, input };
+    });
+    
+    server.start(8080, (err) => {
+        if (err) throw err;
+        console.log('Server started at http://localhost:8080');
+    });
+});
+```
+
+### Key Classes
+
+| Class | Purpose | When to Use |
+|-------|---------|-------------|
+| `Server` | Main server, manages HTTP/routing | Always - entry point |
+| `Webpage` | Single page composition | Single-page apps |
+| `Website` | Multi-page site composition | Multi-page apps |
+| `HTTP_Webpage_Publisher` | Bundles & serves a page | Internal - automatic |
+| `HTTP_Function_Publisher` | Exposes functions as /api/* | Adding API endpoints |
+| `Server_Page_Context` | Server-side rendering context | SSR |
+
+### CSS Handling
+
+CSS is automatically extracted from control classes via the static `.css` property:
+
+```javascript
+class MyControl extends Active_HTML_Document {
+    constructor(spec) {
+        super(spec);
+        // ... control code
+    }
+}
+
+// CSS is collected and bundled automatically
+MyControl.css = `
+    .my-control {
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        color: #eee;
+    }
+    
+    .my-control__header {
+        padding: 1rem;
+        border-bottom: 1px solid #333;
+    }
+`;
+
+// Served automatically at /css/css.css
+```
+
+### Bundler Configuration
+
+```javascript
+Server.serve({
+    page: { content: MyControl },
+    bundler: {
+        minify: {
+            level: 'normal'  // 'conservative' | 'normal' | 'aggressive'
+        },
+        compression: {
+            enabled: true,
+            algorithms: ['gzip', 'br'],  // gzip and/or brotli
+            threshold: 1024  // Only compress if > 1KB
+        }
+    }
+});
+```
+
+### Port Utilities
+
+```javascript
+const { get_free_port, is_port_available } = require('jsgui3-server');
+
+// Auto-select a free port
+Server.serve(MyControl, { port: 'auto' });
+
+// Or manually check
+const available = await is_port_available(3000);
+if (!available) {
+    const freePort = await get_free_port();
+    console.log('Using port:', freePort);
+}
+```
+
+---
+
+### Experimental Ideas & Patterns to Explore
+
+These are ideas for experiments using jsgui3-server to discover optimal patterns:
+
+#### Experiment 1: Hot Reload Development Server
+
+**Goal**: Create a development server with automatic reloading when source files change.
+
+```javascript
+// src/ui/lab/experiments/hot-reload-server/server.js
+const Server = require('jsgui3-server');
+const chokidar = require('chokidar');
+
+let server = null;
+
+async function startServer() {
+    const { MyControl } = require('./client').controls;
+    server = await Server.serve({
+        page: { content: MyControl },
+        port: 3000
+    });
+}
+
+// Watch for changes
+chokidar.watch('./client.js').on('change', async () => {
+    console.log('Reloading...');
+    if (server) await server.close();
+    
+    // Clear require cache
+    delete require.cache[require.resolve('./client.js')];
+    
+    await startServer();
+    console.log('Reloaded!');
+});
+
+startServer();
+```
+
+**Questions to answer**:
+- How fast is the rebuild with esbuild?
+- Can we preserve client state across reloads?
+- What's the best pattern for cache invalidation?
+
+#### Experiment 2: Hybrid SSR + API Server
+
+**Goal**: Single server that handles both SSR pages and JSON APIs with shared data models.
+
+```javascript
+// Explore: Can we share Data_Object instances between SSR and API?
+const Server = require('jsgui3-server');
+const { Data_Object } = require('lang-tools');
+
+// Shared state (careful with concurrency!)
+const appState = new Data_Object({});
+field(appState, 'users');
+field(appState, 'lastUpdated');
+appState.users = [];
+appState.lastUpdated = null;
+
+Server.serve({
+    page: {
+        content: DashboardControl,
+        // Pass shared state to SSR
+        props: { initialState: appState }
+    },
+    api: {
+        'users': async () => {
+            appState.users = await db.getUsers();
+            appState.lastUpdated = new Date();
+            return appState.users;
+        },
+        'state': () => ({
+            users: appState.users,
+            lastUpdated: appState.lastUpdated
+        })
+    }
+});
+```
+
+**Questions to answer**:
+- Can MVVM Data_Object work across SSR boundary?
+- How to handle concurrent API requests with shared state?
+- Best patterns for server-side state management?
+
+#### Experiment 3: WebSocket Integration
+
+**Goal**: Add real-time updates via WebSocket alongside HTTP.
+
+```javascript
+// jsgui3-server has notes about WebSocket support being planned
+// Experiment: Can we add it externally?
+
+const Server = require('jsgui3-server');
+const WebSocket = require('ws');
+
+const httpServer = await Server.serve({
+    page: { content: RealtimeControl },
+    port: 3000
+});
+
+// Attach WebSocket to same server
+const wss = new WebSocket.Server({ server: httpServer.http_servers[0] });
+
+wss.on('connection', (ws) => {
+    ws.on('message', (message) => {
+        // Broadcast to all clients
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(message);
+            }
+        });
+    });
+});
+```
+
+**Questions to answer**:
+- Can we integrate with jsgui3's event system?
+- How to update controls when WebSocket messages arrive?
+- Pattern for bidirectional state sync?
+
+#### Experiment 4: Micro-Frontend Architecture
+
+**Goal**: Serve different jsgui3 apps from different routes with shared shell.
+
+```javascript
+Server.serve({
+    pages: {
+        '/': { content: ShellControl },
+        '/app1/*': { content: App1Control, clientPath: './app1/client.js' },
+        '/app2/*': { content: App2Control, clientPath: './app2/client.js' }
+    },
+    // Shared header/footer?
+    layout: LayoutControl
+});
+```
+
+**Questions to answer**:
+- How to share components between micro-apps?
+- Can we lazy-load app bundles?
+- Pattern for cross-app communication?
+
+#### Experiment 5: Server-Side Control Caching
+
+**Goal**: Cache rendered control HTML to avoid re-rendering unchanged content.
+
+```javascript
+const controlCache = new Map();
+
+class CachedControl extends jsgui.Control {
+    all_html_render() {
+        const cacheKey = this._getCacheKey();
+        
+        if (controlCache.has(cacheKey)) {
+            return controlCache.get(cacheKey);
+        }
+        
+        const html = super.all_html_render();
+        controlCache.set(cacheKey, html);
+        return html;
+    }
+    
+    _getCacheKey() {
+        // Hash of props that affect rendering
+        return JSON.stringify(this._props);
+    }
+}
+```
+
+**Questions to answer**:
+- What's the render time savings?
+- How to invalidate cache correctly?
+- Memory vs CPU tradeoff?
+
+#### Experiment 6: Control-Level Code Splitting
+
+**Goal**: Only bundle controls that are actually used on each page.
+
+```javascript
+// Explore: Can we analyze which controls each page uses
+// and create optimized bundles?
+
+Server.serve({
+    pages: {
+        '/': {
+            content: HomeControl,
+            // Only bundle controls imported by HomeControl
+            optimize: 'tree-shake'
+        },
+        '/admin': {
+            content: AdminControl,
+            // Admin might need more controls
+            optimize: 'tree-shake'
+        }
+    }
+});
+```
+
+**Questions to answer**:
+- Can esbuild tree-shake jsgui3 controls?
+- What's the bundle size reduction?
+- Any runtime issues with split bundles?
+
+---
+
+### Comparison: Current Approach vs jsgui3-server
+
+This repo currently uses **custom Express servers** (e.g., `dataExplorerServer.js`). Here's how they compare:
+
+| Aspect | Current (Express) | jsgui3-server |
+|--------|-------------------|---------------|
+| **Setup** | Manual routing, bundling | Automatic bundling |
+| **Bundling** | Manual esbuild config | Built-in esbuild |
+| **CSS** | Manual collection | Auto-extracted from controls |
+| **API endpoints** | Express routes | `server.publish()` |
+| **Multi-page** | Manual route setup | `pages: {}` config |
+| **SSR** | Manual `all_html_render()` | Automatic |
+| **Flexibility** | Very high | Moderate |
+| **Boilerplate** | More | Less |
+
+**When to use jsgui3-server**:
+- New standalone apps with standard requirements
+- Quick prototypes and experiments
+- Apps that fit the single/multi-page model
+
+**When to use custom Express**:
+- Complex routing requirements
+- Integration with existing Express middleware
+- Non-standard bundling needs
+- When you need full control
+
+---
+
+### Lab Experiment Structure
+
+When conducting jsgui3-server experiments, use this structure:
+
+```
+src/ui/lab/experiments/
+└── XXX-experiment-name/
+    ├── README.md           # Hypothesis, findings, conclusions
+    ├── server.js           # Server setup
+    ├── client.js           # Client controls
+    ├── controls/           # Custom controls for experiment
+    │   └── MyControl.js
+    ├── check.js            # Verification script
+    └── results/            # Performance data, screenshots
+        └── benchmark.json
+```
+
+**README.md template**:
+
+```markdown
+# Experiment: [Name]
+
+## Hypothesis
+What we're testing and what we expect to find.
+
+## Setup
+How to run the experiment.
+
+## Findings
+- Finding 1
+- Finding 2
+
+## Conclusion
+Should this pattern be adopted? Why/why not?
+
+## Upstream Potential
+Could improvements be contributed to jsgui3-server?
+```
+
+---
+
+### Next Steps for Exploration
+
+1. **Run existing examples** in `node_modules/jsgui3-server/examples/controls/`
+2. **Create a lab experiment** comparing custom Express vs Server.serve()
+3. **Profile bundling performance** with large control trees
+4. **Test API endpoint patterns** with real database queries
+5. **Explore WebSocket integration** for real-time features
+
+See also:
+- `node_modules/jsgui3-server/docs/` - Comprehensive server docs
+- `node_modules/jsgui3-server/AGENTS.md` - AI agent guide
+- `docs/designs/NPM_LINK_DEVELOPMENT_NEXUS.md` - Linked module development

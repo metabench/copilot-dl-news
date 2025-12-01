@@ -9,8 +9,15 @@
 
 const esbuild = require("esbuild");
 const path = require("path");
+const fs = require("fs");
 
 const srcDir = path.join(__dirname, "../src/ui/server/artPlayground");
+
+// Create a shim file for htmlparser that does nothing in browser
+const shimDir = path.join(__dirname, "../tmp/esbuild-shims");
+fs.mkdirSync(shimDir, { recursive: true });
+fs.writeFileSync(path.join(shimDir, "htmlparser.js"), "module.exports = {};\n");
+fs.writeFileSync(path.join(shimDir, "htmlparser2.js"), "module.exports = {};\n");
 
 async function build() {
   try {
@@ -27,6 +34,12 @@ async function build() {
       // Define environment
       define: {
         "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development")
+      },
+      
+      // Alias server-only modules to empty shims
+      alias: {
+        "htmlparser": path.join(shimDir, "htmlparser.js"),
+        "htmlparser2": path.join(shimDir, "htmlparser2.js")
       },
       
       // Log build info

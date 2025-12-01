@@ -4,13 +4,13 @@
 Build an interactive SVG component editor with click-to-select, resize handles, and drag-to-move as a stepping stone toward the decision tree editor.
 
 ## Done When
-- [ ] Server renders the page correctly (no errors)
-- [ ] Client activates without errors (verified via console capture)
-- [ ] Click on a component selects it (shows resize handles)
-- [ ] Drag a selected component moves it
-- [ ] Resize handles work to resize components
-- [ ] Toolbar buttons add new components (Rectangle, Ellipse, Text)
-- [ ] Delete button removes selected component
+- [x] Server renders the page correctly (no errors)
+- [x] Client activates without errors (verified via console capture)
+- [x] Click on a component selects it (shows resize handles)
+- [x] Drag a selected component moves it
+- [x] Resize handles work to resize components ✅ **FIXED - 248 tests passing**
+- [x] Toolbar buttons add new components (Rectangle, Ellipse, Text)
+- [x] Delete button removes selected component
 - [ ] App appears in z-server scan
 
 ## Architecture

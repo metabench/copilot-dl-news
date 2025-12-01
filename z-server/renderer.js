@@ -26954,12 +26954,13 @@
           return typeof __require == "function" && typeof exports == "object" && typeof module == "object" && typeof __filename == "string" && typeof __dirname == "string";
         }
         if (!runningInNode()) {
-          if (!this.Tautologistics)
-            this.Tautologistics = {};
-          else if (this.Tautologistics.NodeHtmlParser)
+          var _global = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : this;
+          if (!_global.Tautologistics)
+            _global.Tautologistics = {};
+          else if (_global.Tautologistics.NodeHtmlParser)
             return;
-          this.Tautologistics.NodeHtmlParser = {};
-          exports = this.Tautologistics.NodeHtmlParser;
+          _global.Tautologistics.NodeHtmlParser = {};
+          exports = _global.Tautologistics.NodeHtmlParser;
         }
         var ElementType = {
           Text: "text",
@@ -40193,11 +40194,13 @@ body .overlay {
             this._detectedUrl = url;
             this._serverUrl.setUrl(url);
             this._serverUrl.setVisible(!!url);
+            console.log("[ContentArea] setRunningUrl called, url:", url, "visible:", !!url);
           }
           setServerRunning(running) {
             if (this._selectedServer) {
               this._selectedServer.running = running;
               this._controlPanel.setServerRunning(running);
+              console.log("[ContentArea] setServerRunning:", running);
               if (!running) {
                 this._detectedUrl = null;
                 this._serverUrl.setUrl(null);
@@ -40244,12 +40247,18 @@ body .overlay {
                 const url = this._extractUrl(log.data);
                 if (url && this._selectedServer) {
                   this._detectedUrl = url;
+                  this._serverUrl.setUrl(url);
+                  this._serverUrl.setVisible(true);
                   if (this._onUrlDetected) {
                     this._onUrlDetected(this._selectedServer.file, url);
                   }
                   break;
                 }
               }
+            }
+            if (!this._detectedUrl) {
+              this._serverUrl.setUrl(null);
+              this._serverUrl.setVisible(false);
             }
           }
           setScanning(isScanning) {
@@ -40415,6 +40424,13 @@ body .overlay {
           }
           _setServerUrl(filePath, url) {
             this._sidebar.setServerRunningUrl(filePath, url);
+            if (this._selectedServer && this._selectedServer.file === filePath) {
+              this._contentArea.setRunningUrl(url);
+            }
+            const server = this._servers.find((s) => s.file === filePath);
+            if (server) {
+              server.runningUrl = url;
+            }
           }
           _updateServerStatus(filePath, running) {
             const server = this._servers.find((s) => s.file === filePath);

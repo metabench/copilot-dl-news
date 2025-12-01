@@ -145,35 +145,73 @@ function init() {
     console.log("[Art Playground] Activating canvas...");
     const canvasEl = app._canvas.dom.el;
     
+    // Initialize _components Map if not already
+    if (!app._canvas._components) {
+      app._canvas._components = new Map();
+      console.log("[Art Playground] Initialized _components Map");
+    }
+    
     // Get SVG element references
     app._canvas._svg = canvasEl.querySelector(".art-canvas__svg");
     app._canvas._componentsGroup = app._canvas._svg?.querySelector(".art-canvas__components");
     
+    console.log("[Art Playground] SVG found:", !!app._canvas._svg);
+    console.log("[Art Playground] Components group found:", !!app._canvas._componentsGroup);
+    
     if (app._canvas._svg) {
-      // Setup event listeners
-      app._canvas._svg.addEventListener("mousedown", (e) => app._canvas._handleMouseDown(e));
-      document.addEventListener("mousemove", (e) => app._canvas._handleMouseMove(e));
-      document.addEventListener("mouseup", (e) => app._canvas._handleMouseUp(e));
+      // Setup event listeners - using correct method names from CanvasControl
+      app._canvas._svg.addEventListener("mousedown", (e) => app._canvas._onMouseDown(e));
+      document.addEventListener("mousemove", (e) => app._canvas._onMouseMove(e));
+      document.addEventListener("mouseup", () => app._canvas._onMouseUp());
     }
     
-    // Activate selection handles
+    // Activate selection handles - wire resize event flow
     if (app._canvas._selectionHandles) {
       const selEl = app._canvas._selectionHandles.dom.el;
       
-      // Wire resize events
       if (selEl) {
+        // Wire each handle's mousedown to trigger the resize flow
         Object.entries(app._canvas._selectionHandles._handles || {}).forEach(([pos, handle]) => {
           const handleEl = handle.dom?.el;
           if (!handleEl) return;
           
           handleEl.addEventListener("mousedown", (e) => {
             e.stopPropagation();
-            app._canvas._selectionHandles.raise("resize-start", { position: pos, event: e });
+            console.log("[Art Playground] Resize start:", pos, e.clientX, e.clientY);
+            
+            // Raise resize-start with correct format
+            app._canvas._selectionHandles.raise("resize-start", {
+              handle: pos,
+              mouseX: e.clientX,
+              mouseY: e.clientY
+            });
+            
+            // Track mouse movement for resize
+            const onMove = (ev) => {
+              app._canvas._selectionHandles.raise("resize-move", {
+                handle: pos,
+                mouseX: ev.clientX,
+                mouseY: ev.clientY
+              });
+            };
+            
+            const onUp = () => {
+              console.log("[Art Playground] Resize end");
+              app._canvas._selectionHandles.raise("resize-end");
+              document.removeEventListener("mousemove", onMove);
+              document.removeEventListener("mouseup", onUp);
+            };
+            
+            document.addEventListener("mousemove", onMove);
+            document.addEventListener("mouseup", onUp);
           });
         });
         
-        // Listen for resize events from selection handles
-        app._canvas._selectionHandles.on("resize-start", (data) => app._canvas._startResize(data));
+        // Listen for resize events from selection handles and forward to canvas
+        app._canvas._selectionHandles.on("resize-start", (data) => {
+          console.log("[Art Playground] Canvas _startResize:", data);
+          app._canvas._startResize(data);
+        });
         app._canvas._selectionHandles.on("resize-move", (data) => app._canvas._doResize(data));
         app._canvas._selectionHandles.on("resize-end", () => app._canvas._endResize());
       }
@@ -190,7 +228,10 @@ function init() {
     
     app._toolbar.on("add-component", (componentType) => {
       console.log("[Art Playground] Adding component:", componentType);
+      console.log("[Art Playground] Canvas components Map:", app._canvas._components);
+      console.log("[Art Playground] Components group:", app._canvas._componentsGroup);
       app._canvas.addComponent(componentType);
+      console.log("[Art Playground] After addComponent, count:", app._canvas._components?.size);
     });
     
     app._toolbar.on("delete", () => {

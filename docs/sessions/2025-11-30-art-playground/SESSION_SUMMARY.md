@@ -21,6 +21,38 @@
 - ✅ Button state toggles (active highlighting)
 - ✅ Grid pattern background in canvas
 - ✅ jsgui3 eventing via inherited `on()`/`raise()` methods
+- ✅ Click to select components
+- ✅ Drag to move components
+- ✅ **Resize handles fully functional** (248 tests passing!)
+- ✅ Delete selected component
+
+### Resize Handles Fix (2025-12-01)
+
+**Root Cause Identified:**
+1. **Event format mismatch** in `client.js`: Was sending `{position, event}`, should be `{handle, mouseX, mouseY}`
+2. **Method name mismatch**: Called `_handleMouseDown` but method is `_onMouseDown`
+3. **Missing resize flow**: Only wired `mousedown`, not `mousemove`/`mouseup`
+4. **Browser bundle crash**: htmlparser requires Node.js globals not in browser
+
+**Fixes Applied:**
+1. Fixed event format in `client.js` to use `{ handle: pos, mouseX: e.clientX, mouseY: e.clientY }`
+2. Fixed method names to use correct `_onMouseDown`, `_onMouseMove`, `_onMouseUp`
+3. Added complete resize event flow with document-level `mousemove`/`mouseup` listeners
+4. Added `_endResize()` method to CanvasControl
+5. Created htmlparser/htmlparser2 shims in build script for browser compatibility
+
+**Test Coverage Created (248 tests total):**
+| Check Script | Tests | Coverage |
+|--------------|-------|----------|
+| `resize-handles-comprehensive.check.js` | 111 | HTML structure, event system, resize math, client.js code audit |
+| `resize-http-integration.check.js` | 49 | Server endpoints, bundle content, CSS |
+| `canvas-doresize.unit.check.js` | 53 | _doResize with mock DOM, all 8 handles, min size |
+| `event-flow-integration.check.js` | 35 | Full event propagation, state management |
+
+**Files Modified:**
+- `src/ui/server/artPlayground/client.js` - Event format and method names
+- `src/ui/server/artPlayground/isomorphic/controls/CanvasControl.js` - Added `_endResize()` method
+- `scripts/build-art-playground-client.js` - htmlparser shims for browser
 
 ### Key Technical Patterns Discovered
 
@@ -39,22 +71,56 @@
 - Use `add_class()` not direct `className` assignment
 - Use `dom.attributes` for HTML attributes
 
+#### Resize Event Flow Pattern
+```javascript
+// Client-side: Wire resize events on handle elements
+handleEl.addEventListener("mousedown", (e) => {
+  e.stopPropagation();
+  selectionHandlesControl.raise("resize-start", { 
+    handle: pos,           // "nw", "n", "ne", "e", "se", "s", "sw", "w"
+    mouseX: e.clientX, 
+    mouseY: e.clientY 
+  });
+  
+  const onMove = (ev) => selectionHandlesControl.raise("resize-move", { 
+    handle: pos, mouseX: ev.clientX, mouseY: ev.clientY 
+  });
+  const onUp = () => {
+    selectionHandlesControl.raise("resize-end");
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+  };
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onUp);
+});
+
+// Server-side control: Listen to events
+this._selectionHandles.on("resize-start", (d) => this._startResize(d));
+this._selectionHandles.on("resize-move", (d) => this._doResize(d));
+this._selectionHandles.on("resize-end", () => this._endResize());
+```
+
 ## Metrics / Evidence
 - Screenshots saved to `.playwright-mcp/`:
   - `art-playground-initial.png` - Initial toolbar and grid
   - `art-playground-with-rect.png` - Rectangle added with selection handles
   - `art-playground-rect-and-ellipse.png` - Multiple components
+- **248 automated tests** all passing
+- **4 check scripts** covering unit, integration, event flow, and HTTP levels
 
 ## Decisions
 - **Port 4950** for Art Playground (Design Studio at 4900, Facts Server at 4800)
 - **String_Control for SVG** - Only reliable way to render raw SVG in jsgui3-html
 - **Manual client activation** - More reliable than jsgui3 automatic child activation
+- **Document-level listeners for resize** - Required for smooth drag operations beyond element bounds
+- **Test without Playwright** - Node.js check scripts more reliable and faster
 
 ## Next Steps
-- [ ] Implement drag-to-move for components
-- [ ] Implement resize handles interaction
-- [ ] Add Text component rendering
-- [ ] Click to select different components
-- [ ] Delete selected component
+- [x] ~~Implement drag-to-move for components~~
+- [x] ~~Implement resize handles interaction~~
+- [x] ~~Click to select different components~~
+- [x] ~~Delete selected component~~
+- [ ] Add Text component editing (click to edit text)
 - [ ] Component persistence (save/load)
 - [ ] Use this as methodology stepping stone for decision tree editor
+- [ ] App appears in z-server scan
