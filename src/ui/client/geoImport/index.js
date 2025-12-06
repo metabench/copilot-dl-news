@@ -6,6 +6,15 @@ const { registerControlType } = require('../../controls/controlRegistry');
 const { createTwoColumnLayoutControls } = require('../../controls/layouts/TwoColumnLayoutFactory');
 const layoutControls = createTwoColumnLayoutControls(jsgui);
 
+// Import dashboard controls for client-side activation
+const { 
+  GeoImportDashboard, 
+  SourceCard, 
+  ProgressRing, 
+  LiveLog,
+  StagesStepper
+} = require('../../controls/GeoImportDashboard');
+
 // Build a list of controls to register
 const LAYOUT_CONTROLS = [
   { type: 'nav_item', control: layoutControls.NavItem },
@@ -15,8 +24,17 @@ const LAYOUT_CONTROLS = [
   { type: 'detail_header', control: layoutControls.DetailHeader }
 ];
 
-// Register controls on the jsgui module itself
-LAYOUT_CONTROLS.forEach(({ type, control }) => {
+// Dashboard-specific controls
+const DASHBOARD_CONTROLS = [
+  { type: 'geo_import_dashboard', control: GeoImportDashboard },
+  { type: 'source_card', control: SourceCard },
+  { type: 'progress_ring', control: ProgressRing },
+  { type: 'live_log', control: LiveLog },
+  { type: 'stages_stepper', control: StagesStepper }
+];
+
+// Register all controls on the jsgui module itself
+[...LAYOUT_CONTROLS, ...DASHBOARD_CONTROLS].forEach(({ type, control }) => {
   registerControlType(type, control, { jsguiInstance: jsgui });
 });
 
@@ -43,8 +61,8 @@ function injectControlsIntoContext(context) {
     });
   }
   
-  // Ensure our layout controls are in the context
-  LAYOUT_CONTROLS.forEach(({ type, control }) => {
+  // Ensure all our controls (layout + dashboard) are in the context
+  [...LAYOUT_CONTROLS, ...DASHBOARD_CONTROLS].forEach(({ type, control }) => {
     const key = type.toLowerCase();
     if (!map[key]) {
       map[key] = control;
