@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "docs-memory": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["tools/mcp/docs-memory/mcp-server.js"],
+      "workingDirectory": "."
+    }
+  }
+}

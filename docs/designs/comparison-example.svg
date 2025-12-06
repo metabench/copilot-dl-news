@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 530">
+  <defs>
+    <!-- Gold glow filter -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Background gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050508" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#141824" stop-opacity="0.3"/>
+    </linearGradient>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    
+    <marker id="arrowheadGold" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c9a227"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="530" fill="#0a0d14"/>
+  <rect width="1400" height="530" fill="url(#bgGradient)"/>
+  
+  
+  <!-- Header -->
+  <text x="50" y="55" font-family="Georgia, 'Times New Roman', serif" 
+        font-size="32" font-weight="bold" 
+        fill="#c9a227" letter-spacing="2">Database Comparison</text>
+  <text x="50" y="85" font-family="Inter, system-ui, sans-serif" 
+        font-size="14" fill="#64748b">PostgreSQL vs MongoDB Feature Analysis</text>
+  
+  <!-- Gold divider -->
+  <line x1="50" y1="105" x2="1350" y2="105" 
+        stroke="#c9a227" stroke-opacity="0.4" stroke-width="1"/>
+  
+  <!-- Legend -->
+  <g transform="translate(850, 50)">
+      
+        <circle cx="0" cy="0" r="6" fill="#10b981"/>
+        <text x="14" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#10b981">Positive ()</text>
+      
+        <circle cx="140" cy="0" r="6" fill="#64748b"/>
+        <text x="154" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#64748b">Neutral ()</text>
+      
+        <circle cx="280" cy="0" r="6" fill="#e31837"/>
+        <text x="294" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#e31837">Negative ()</text>
+      
+    </g>
+  
+  <!-- Stats -->
+  <g transform="translate(850, 80)">
+      <text x="0" y="4" font-family="JetBrains Mono, monospace" 
+            font-size="11" fill="#475569"> • Last updated: 2025-12-02</text>
+    </g>
+  
+  <!-- Content -->
+  
+    <g transform="translate(50, 160)">
+      <rect width="630" height="60" rx="8" fill="#1a1f2e" stroke="#336791" stroke-width="2"/>
+      <text x="315" y="35" font-family="Georgia, serif" 
+        font-size="18" font-weight="bold" fill="#f0f4f8" text-anchor="middle">
+        🐘 PostgreSQL
+      </text>
+    </g>
+        <g transform="translate(50, 240)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#64748b"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Data Model</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">Relational (SQL)</text>
+        </g>
+        <g transform="translate(50, 300)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#10b981"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Transactions</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">ACID Compliant</text>
+        </g>
+        <g transform="translate(50, 360)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#64748b"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Scalability</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">Vertical (mostly)</text>
+        </g>
+        <g transform="translate(50, 420)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#10b981"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Query Language</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">SQL (Powerful)</text>
+        </g>
+    <g transform="translate(720, 160)">
+      <rect width="630" height="60" rx="8" fill="#1a1f2e" stroke="#47A248" stroke-width="2"/>
+      <text x="315" y="35" font-family="Georgia, serif" 
+        font-size="18" font-weight="bold" fill="#f0f4f8" text-anchor="middle">
+        🍃 MongoDB
+      </text>
+    </g>
+        <g transform="translate(720, 240)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#64748b"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Data Model</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">Document (NoSQL)</text>
+        </g>
+        <g transform="translate(720, 300)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#64748b"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Transactions</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">Multi-document (v4+)</text>
+        </g>
+        <g transform="translate(720, 360)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#10b981"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Scalability</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">Horizontal (Sharding)</text>
+        </g>
+        <g transform="translate(720, 420)">
+          <rect width="630" height="50" rx="4" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          
+          <!-- Status indicator -->
+          <rect x="0" y="0" width="4" height="50" rx="1" fill="#64748b"/>
+          
+          <text x="15" y="20" font-family="Inter, system-ui, sans-serif" 
+            font-size="10" fill="#94a3b8">Query Language</text>
+            
+          <text x="15" y="38" font-family="Inter, system-ui, sans-serif" 
+            font-size="13" font-weight="600" fill="#f0f4f8">MQL (JSON-based)</text>
+        </g>
+</svg>

@@ -1,0 +1,276 @@
+"use strict";
+
+/**
+ * @server Decision Tree Viewer
+ * @description Interactive decision tree visualization with expandable nodes and SVG connections.
+ * @ui true
+ * @port 4960
+ */
+
+/**
+ * Decision Tree Viewer Server
+ * 
+ * Express server for the Decision Tree Viewer UI.
+ * Serves the Luxury Industrial Obsidian themed viewer.
+ * 
+ * Uses jsgui3's standard SSR + client activation pattern:
+ * 1. Server renders HTML with data-jsgui-id attributes
+ * 2. Client bundle reconstructs controls from DOM
+ * 3. Controls are activated (events bound)
+ * 4. Connections are drawn after layout
+ */
+
+const express = require("express");
+const path = require("path");
+const fs = require("fs");
+
+// jsgui context
+const jsgui = require("jsgui3-html");
+const Page_Context = jsgui.Page_Context;
+
+// Controls
+const { DecisionTreeViewerControl } = require("./isomorphic/controls");
+const { createExampleTree } = require("./isomorphic/model/DecisionTree");
+
+// Server configuration
+const PORT = process.env.DECISION_TREE_VIEWER_PORT || 3030;
+const app = express();
+
+// Static files
+app.use("/public", express.static(path.join(__dirname, "public")));
+
+// Check if client bundle exists, build if not
+const clientBundlePath = path.join(__dirname, "public", "decision-tree-client.js");
+if (!fs.existsSync(clientBundlePath)) {
+  console.log("Building client bundle...");
+  try {
+    require("./build-client").build();
+  } catch (e) {
+    console.warn("Could not build client bundle:", e.message);
+  }
+}
+
+/**
+ * Create a page context for rendering.
+ */
+function createContext() {
+  return new Page_Context();
+}
+
+/**
+ * Render the full HTML page with embedded controls.
+ */
+function renderPage(context, trees) {
+  const viewer = new DecisionTreeViewerControl({ context, trees });
+  const html = viewer.all_html_render();
+  
+  // Serialize tree data for client
+  const treeDataJSON = JSON.stringify(trees.map(t => t.toJSON()));
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Tree Viewer - Luxury Industrial Obsidian</title>
+  <link rel="stylesheet" href="/public/decision-tree.css">
+  <style>
+    /* Layout styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--dt-obsidian);
+      color: var(--dt-text);
+      font-family: var(--dt-font-family);
+    }
+    
+    .dt-viewer {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    .dt-viewer__header {
+      flex-shrink: 0;
+      padding: var(--dt-space-md) var(--dt-space-xl);
+    }
+    
+    .dt-viewer__main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      gap: var(--dt-space-lg);
+      padding: 0 var(--dt-space-xl) var(--dt-space-xl);
+    }
+    
+    .dt-viewer__sidebar {
+      width: 280px;
+      flex-shrink: 0;
+    }
+    
+    .dt-viewer__canvas-container {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    /* Tree list panel */
+    .dt-tree-list {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .dt-tree-list .dt-panel__content {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--dt-space-md);
+    }
+    
+    .dt-tree-list-item {
+      display: flex;
+      align-items: center;
+      gap: var(--dt-space-sm);
+      padding: var(--dt-space-sm) var(--dt-space-md);
+      border-radius: var(--dt-radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: var(--dt-space-xs);
+    }
+    
+    .dt-tree-list-item:hover {
+      background: rgba(201, 162, 39, 0.1);
+    }
+    
+    .dt-tree-list-item--selected {
+      background: rgba(201, 162, 39, 0.2);
+      border: 1px solid var(--dt-gold);
+    }
+    
+    .dt-tree-list-item__icon {
+      font-size: 1.2em;
+    }
+    
+    .dt-tree-list-item__name {
+      font-weight: 500;
+      color: var(--dt-text);
+    }
+    
+    .dt-tree-list-item__description {
+      display: none;
+      color: var(--dt-text-dim);
+      font-size: var(--dt-font-xs);
+    }
+    
+    /* Canvas panel */
+    .dt-canvas-panel {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .dt-canvas {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+    
+    /* Tree layout */
+    .dt-tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--dt-space-xl);
+      padding: var(--dt-space-xl);
+      min-width: 100%;
+      min-height: 100%;
+      position: relative;
+    }
+    
+    .dt-level {
+      display: flex;
+      justify-content: center;
+      gap: var(--dt-space-xl);
+      width: 100%;
+    }
+    
+    /* Connections container */
+    .dt-connections {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    /* SVG connection styles */
+    .dt-connection {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    
+    .dt-connection--yes {
+      stroke: var(--dt-success, #22c55e);
+    }
+    
+    .dt-connection--no {
+      stroke: var(--dt-error, #ef4444);
+    }
+    
+    .dt-connection__label {
+      font-family: var(--dt-font-mono);
+      font-size: 10px;
+      font-weight: bold;
+    }
+    
+    .dt-connection__label--yes {
+      fill: var(--dt-success, #22c55e);
+    }
+    
+    .dt-connection__label--no {
+      fill: var(--dt-error, #ef4444);
+    }
+  </style>
+</head>
+<body>
+  ${html}
+  
+  <!-- Embed tree data for client -->
+  <script>
+    window.__DECISION_TREE_DATA__ = ${treeDataJSON};
+  </script>
+  
+  <!-- jsgui3 client activation -->
+  <script src="/public/decision-tree-client.js"></script>
+</body>
+</html>`;
+}
+
+// Routes
+app.get("/", (req, res) => {
+  const context = createContext();
+  const trees = [
+    createExampleTree(),
+    // Could add more example trees here
+  ];
+  
+  const html = renderPage(context, trees);
+  res.type("html").send(html);
+});
+
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", service: "decision-tree-viewer" });
+});
+
+// Start server
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🌲 Decision Tree Viewer running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { app, renderPage, createContext };

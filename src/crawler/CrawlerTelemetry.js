@@ -1,4 +1,6 @@
-'use strict';
+ 'use strict';
+
+const { safeCall } = require('./utils');
 
 class CrawlerTelemetry {
   constructor(options = {}) {
@@ -89,14 +91,14 @@ class CrawlerTelemetry {
       });
     } else {
       // Fallback: emit as console message so it gets picked up
-      try {
+      safeCall(() => {
         console.log('TELEMETRY ' + JSON.stringify({
           ts: new Date().toISOString(),
           source: 'crawler',
           severity: 'info',
           ...entry
         }));
-      } catch (_) {}
+      });
     }
   }
 

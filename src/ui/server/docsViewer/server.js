@@ -3,6 +3,8 @@
 /**
  * @server Docs Viewer
  * @description A jsgui3 + Express web app to view markdown documentation with a 2-column layout.
+ * @ui true
+ * @port 4700
  */
 
 /**

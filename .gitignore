@@ -61,6 +61,9 @@ testlogs/
 # UI review artefacts
 screenshots/
 
+# Agent backup archives
+.github/agentbackups/
+
 # Analysis charts (generated outputs)
 analysis-charts/
 

@@ -1,0 +1,487 @@
+<html data-jsgui-id="control_0" data-jsgui-data-model-id="data_object_0" data-jsgui-type="control" data-jsgui-data-model="data_object_0"><head data-jsgui-id="head_0" data-jsgui-data-model-id="data_object_1" data-jsgui-data-model="data_object_1"><title data-jsgui-id="title_0" data-jsgui-data-model-id="data_object_2" data-jsgui-type="title" data-jsgui-data-model="data_object_2">Goals Explorer Check</title><style data-jsgui-id="control_1" data-jsgui-data-model-id="data_object_5" data-jsgui-type="control" data-jsgui-data-model="data_object_5">
+  :root {
+    --bg-darkest: #050508;
+    --bg-dark: #0a0d14;
+    --bg-medium: #141824;
+    --bg-light: #1a1f2e;
+    --bg-lighter: #252b3d;
+    --gold: #c9a227;
+    --gold-dim: #8b7500;
+    --emerald: #10b981;
+    --sapphire: #3b82f6;
+    --amethyst: #8b5cf6;
+    --ruby: #ef4444;
+    --text-bright: #f0f4f8;
+    --text-medium: #94a3b8;
+    --text-muted: #64748b;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-bright);
+  }
+  
+  .goals-explorer {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  .goals-header {
+    background: var(--bg-medium);
+    border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .goals-header h1 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+  }
+  
+  .status-indicator {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+  }
+  
+  .status-indicator.ready {
+    color: var(--emerald);
+    background: rgba(16, 185, 129, 0.1);
+  }
+  
+  .status-indicator.unavailable {
+    color: var(--text-muted);
+    background: rgba(100, 116, 139, 0.1);
+  }
+  
+  .goals-main {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .goals-left-panel {
+    overflow: auto;
+    padding: 1rem;
+    background: var(--bg-darkest);
+  }
+  
+  .svg-wrapper {
+    min-height: 100%;
+  }
+  
+  .svg-wrapper svg {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .goals-right-panel {
+    background: var(--bg-light);
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: auto;
+    padding: 1.5rem;
+  }
+  
+  .detail-placeholder {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+  
+  .detail-placeholder h2 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .detail-placeholder p {
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  
+  .detail-placeholder .hint {
+    font-size: 0.8rem;
+  }
+  
+  .goal-detail h2 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .detail-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-medium);
+  }
+  
+  .detail-content h3 {
+    color: var(--text-bright);
+    margin: 1.5rem 0 0.5rem;
+  }
+  
+  .detail-content code {
+    background: var(--bg-medium);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+  }
+  
+  .detail-content pre {
+    background: var(--bg-medium);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  
+  .btn-generate {
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    color: var(--bg-darkest);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .btn-generate:hover {
+    filter: brightness(1.1);
+  }
+  
+  .btn-generate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    color: var(--text-muted);
+  }
+  
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--gold-dim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .placeholder-text {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .error {
+    color: var(--ruby);
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+  }
+  
+  /* Goals list sidebar (for quick navigation) */
+  .goals-list {
+    list-style: none;
+  }
+  
+  .goals-list-item {
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-medium);
+    transition: background 0.15s;
+  }
+  
+  .goals-list-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .goals-list-item.active {
+    background: rgba(201, 162, 39, 0.1);
+    color: var(--gold);
+  }
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  
+  .status-dot.active { background: var(--emerald); }
+  .status-dot.planned { background: var(--sapphire); }
+  .status-dot.research { background: var(--amethyst); }
+</style></head><body data-jsgui-id="body_0" data-jsgui-data-model-id="data_object_3" data-jsgui-data-model="data_object_3"><div data-jsgui-id="control_2" data-jsgui-data-model-id="data_object_7" data-jsgui-type="control" data-jsgui-data-model="data_object_7" class="goals-explorer"><header data-jsgui-id="control_3" data-jsgui-data-model-id="data_object_8" data-jsgui-type="control" data-jsgui-data-model="data_object_8" class="goals-header"><h1 data-jsgui-id="control_4" data-jsgui-data-model-id="data_object_9" data-jsgui-type="control" data-jsgui-data-model="data_object_9">🎯 Goals Explorer</h1><div data-jsgui-id="control_5" data-jsgui-data-model-id="data_object_10" data-jsgui-type="control" data-jsgui-data-model="data_object_10" class="status-indicator ready">✓ OpenAI Ready</div></header><main data-jsgui-id="control_6" data-jsgui-data-model-id="data_object_11" data-jsgui-type="control" data-jsgui-data-model="data_object_11" class="goals-main"><div data-jsgui-id="control_7" data-jsgui-data-model-id="data_object_12" data-jsgui-type="control" data-jsgui-data-model="data_object_12" class="goals-left-panel" id="svgContainer"><div data-jsgui-id="control_8" data-jsgui-data-model-id="data_object_13" data-jsgui-type="control" data-jsgui-data-model="data_object_13" class="svg-wrapper" data-svg-src="/api/goals/svg"><p data-jsgui-id="control_9" data-jsgui-data-model-id="data_object_14" data-jsgui-type="control" data-jsgui-data-model="data_object_14" class="placeholder-text">Loading goals overview...</p></div></div><aside data-jsgui-id="control_10" data-jsgui-data-model-id="data_object_15" data-jsgui-type="control" data-jsgui-data-model="data_object_15" class="goals-right-panel" id="detailPanel"><div data-jsgui-id="control_11" data-jsgui-data-model-id="data_object_16" data-jsgui-type="control" data-jsgui-data-model="data_object_16" class="detail-placeholder"><h2 data-jsgui-id="control_12" data-jsgui-data-model-id="data_object_17" data-jsgui-type="control" data-jsgui-data-model="data_object_17">Goal Details</h2><p data-jsgui-id="control_13" data-jsgui-data-model-id="data_object_18" data-jsgui-type="control" data-jsgui-data-model="data_object_18">Click on a goal in the overview to view details.</p><p data-jsgui-id="control_14" data-jsgui-data-model-id="data_object_19" data-jsgui-type="control" data-jsgui-data-model="data_object_19" class="hint">If a detail page doesn&#x27;t exist, you can generate one using OpenAI.</p></div></aside></main><style data-jsgui-id="control_15" data-jsgui-data-model-id="data_object_20" data-jsgui-type="control" data-jsgui-data-model="data_object_20">
+  :root {
+    --bg-darkest: #050508;
+    --bg-dark: #0a0d14;
+    --bg-medium: #141824;
+    --bg-light: #1a1f2e;
+    --bg-lighter: #252b3d;
+    --gold: #c9a227;
+    --gold-dim: #8b7500;
+    --emerald: #10b981;
+    --sapphire: #3b82f6;
+    --amethyst: #8b5cf6;
+    --ruby: #ef4444;
+    --text-bright: #f0f4f8;
+    --text-medium: #94a3b8;
+    --text-muted: #64748b;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: &#x27;Inter&#x27;, system-ui, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-bright);
+  }
+  
+  .goals-explorer {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  .goals-header {
+    background: var(--bg-medium);
+    border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .goals-header h1 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+  }
+  
+  .status-indicator {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+  }
+  
+  .status-indicator.ready {
+    color: var(--emerald);
+    background: rgba(16, 185, 129, 0.1);
+  }
+  
+  .status-indicator.unavailable {
+    color: var(--text-muted);
+    background: rgba(100, 116, 139, 0.1);
+  }
+  
+  .goals-main {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .goals-left-panel {
+    overflow: auto;
+    padding: 1rem;
+    background: var(--bg-darkest);
+  }
+  
+  .svg-wrapper {
+    min-height: 100%;
+  }
+  
+  .svg-wrapper svg {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .goals-right-panel {
+    background: var(--bg-light);
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: auto;
+    padding: 1.5rem;
+  }
+  
+  .detail-placeholder {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+  
+  .detail-placeholder h2 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .detail-placeholder p {
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  
+  .detail-placeholder .hint {
+    font-size: 0.8rem;
+  }
+  
+  .goal-detail h2 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .detail-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-medium);
+  }
+  
+  .detail-content h3 {
+    color: var(--text-bright);
+    margin: 1.5rem 0 0.5rem;
+  }
+  
+  .detail-content code {
+    background: var(--bg-medium);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: &#x27;JetBrains Mono&#x27;, monospace;
+    font-size: 0.85em;
+  }
+  
+  .detail-content pre {
+    background: var(--bg-medium);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  
+  .btn-generate {
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    color: var(--bg-darkest);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .btn-generate:hover {
+    filter: brightness(1.1);
+  }
+  
+  .btn-generate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    color: var(--text-muted);
+  }
+  
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--gold-dim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .placeholder-text {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .error {
+    color: var(--ruby);
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+  }
+  
+  &#x2F;* Goals list sidebar (for quick navigation) *&#x2F;
+  .goals-list {
+    list-style: none;
+  }
+  
+  .goals-list-item {
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-medium);
+    transition: background 0.15s;
+  }
+  
+  .goals-list-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .goals-list-item.active {
+    background: rgba(201, 162, 39, 0.1);
+    color: var(--gold);
+  }
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  
+  .status-dot.active { background: var(--emerald); }
+  .status-dot.planned { background: var(--sapphire); }
+  .status-dot.research { background: var(--amethyst); }
+</style></div></body></html>

@@ -552,6 +552,19 @@ Remove-Item $tempDir.FullName -Recurse -Force
 
 The tool walks each directory breadth-first, skips `.gitkeep`, and reports any Windows locking errors so you can rerun once handles release.
 
+## `what-next` — Active Session Summary
+
+`what-next` parses the `SESSIONS_HUB.md` to identify the primary active session and summarizes its current plan, including completed items, pending tasks, and follow-ups. This helps agents and developers quickly orient themselves to the current project focus.
+
+- `node tools/dev/what-next.js` — display the primary active session, its objective, done criteria, and follow-up tasks.
+
+## `ui-pick` — Interactive Quick Picker
+
+`ui-pick` launches a lightweight Electron window to present a list of options to the user. It returns the selected option to stdout, enabling interactive decision-making within CLI workflows.
+
+- `node tools/dev/ui-pick.js "Option A" "Option B"` — present simple string options.
+- `node tools/dev/ui-pick.js --options '[{"label":"A","description":"Desc A","value":"a"}, ...]'` — present rich options with descriptions.
+
 ## `md-scan` — Markdown Discovery
 
 - `node tools/dev/md-scan.js --径 docs --搜 planner telemetry` — Chinese aliases (`--径`, `--搜`) auto-enable succinct Chinese summaries without explicitly setting `--lang zh`.
@@ -583,3 +596,61 @@ JSON array of log entries:
 ```
 
 Additional examples and guardrail details live in `docs/CLI_REFACTORING_QUICK_START.md`.
+
+## `agent-rename` — Safe Agent File Renaming with Emoji Support
+
+`agent-rename` renames `.agent.md` files in `.github/agents/` using Node.js native filesystem APIs to preserve emojis and Unicode characters. **This tool exists specifically because PowerShell's `Rename-Item` and `Move-Item` corrupt emoji filenames**.
+
+### The PowerShell Emoji Problem
+
+```powershell
+# ❌ NEVER DO THIS - PowerShell corrupts emojis:
+Rename-Item "🧠 Brain.agent.md" "💡 Light.agent.md"
+# Result: ð§  Brain.agent.md (mojibake!)
+
+# ✅ ALWAYS USE THIS TOOL:
+node tools/dev/agent-rename.js --from "Brain" --to "💡 Light 💡"
+```
+
+**Why it happens**: PowerShell 5.1 uses legacy Windows-1252/CP437 encoding for filesystem operations, even when the console is set to UTF-8. Node.js `fs.renameSync()` uses libuv which calls the proper Windows UTF-16 API (`MoveFileExW`).
+
+### Commands
+
+```powershell
+# List all agents (grouped by emoji/no-emoji)
+node tools/dev/agent-rename.js --list
+
+# Search for agents by partial name
+node tools/dev/agent-rename.js --search "Singularity"
+
+# Preview a rename (dry-run)
+node tools/dev/agent-rename.js --from "jsgui3 Research" --to "🔬 jsgui3 Deep Research 🔬" --dry-run
+
+# Execute the rename
+node tools/dev/agent-rename.js --from "jsgui3 Research" --to "🔬 jsgui3 Deep Research 🔬"
+
+# Force rename when multiple agents match
+node tools/dev/agent-rename.js --from "Brain" --to "🧠 Super Brain 🧠" --force
+
+# JSON output for programmatic use
+node tools/dev/agent-rename.js --search "CLI" --json
+```
+
+### Options
+
+| Flag | Description |
+|------|-------------|
+| `-l, --list` | List all agent files |
+| `-s, --search <pattern>` | Search agents by name (case-insensitive partial match) |
+| `-f, --from <name>` | Current agent name to rename (partial match) |
+| `-t, --to <name>` | New agent name |
+| `-d, --dry-run` | Preview changes without executing |
+| `--force` | Force rename when multiple agents match (uses first) |
+| `-j, --json` | Include JSON output for automation |
+
+### After Renaming
+
+The tool reminds you to update references in:
+- `.github/agents/index.json`
+- Other agent files that reference the renamed agent
+- `AGENTS.md` if the agent is mentioned

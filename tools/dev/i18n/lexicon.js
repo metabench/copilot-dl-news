@@ -197,7 +197,32 @@ const RAW_LEXICON = Object.freeze({
   base: Object.freeze(['基']),
   expanded_to: Object.freeze(['扩至']),
   follow_deps: Object.freeze(['依']),
-  dependency_depth: Object.freeze(['层'])
+  dependency_depth: Object.freeze(['层']),
+  
+  // SVG-specific terms (svg-collisions.js)
+  positions: Object.freeze(['位']),
+  position: Object.freeze(['位']),
+  collisions: Object.freeze(['碰']),
+  collision: Object.freeze(['碰']),
+  containment: Object.freeze(['含']),
+  overflow: Object.freeze(['溢']),
+  strict: Object.freeze(['严']),
+  elements: Object.freeze(['元']),
+  element: Object.freeze(['元']),
+  size: Object.freeze(['寸']),
+  dimensions: Object.freeze(['寸']),
+  depth: Object.freeze(['深']),
+  high: Object.freeze(['高']),
+  medium: Object.freeze(['中']),
+  low: Object.freeze(['低']),
+  text_overlap: Object.freeze(['文重']),
+  shape_overlap: Object.freeze(['形重']),
+  left: Object.freeze(['左']),
+  right: Object.freeze(['右']),
+  top: Object.freeze(['上']),
+  bottom: Object.freeze(['下']),
+  passed: Object.freeze(['通']),
+  failed: Object.freeze(['败'])
 });
 
 const PRIMARY_ALIAS = Object.freeze(

@@ -250,6 +250,12 @@ class CanvasControl extends Control {
      * @private
      */
     this._selectedElements = new Set();
+    
+    this.__type_name = 'canvas_control';
+  }
+
+  get class_name() {
+    return 'canvas_control';
   }
   
   /**
@@ -259,6 +265,9 @@ class CanvasControl extends Control {
    * @protected
    */
   compose() {
+    super.compose();
+    this._composed = true;
+    
     // Add base CSS class
     this.add_class('canvas-control');
     
@@ -269,10 +278,16 @@ class CanvasControl extends Control {
     this.style.overflow = 'hidden';
     this.style.backgroundColor = this.backgroundColor;
     
+    console.log('Canvas style:', this.style);
+    
     // Add state classes
     if (this.showGrid) {
       this.add_class('canvas-grid-visible');
     }
+    
+    // Force style attribute for SSR
+    this._updateStyleAttribute();
+    
     if (this.snapToGrid) {
       this.add_class('canvas-snap-enabled');
     }
@@ -283,6 +298,21 @@ class CanvasControl extends Control {
     // Create grid layer (renders behind elements)
     this._createGridLayer();
     
+    // Create SVG layer (for connectors/lines)
+    this.ctrl_svgLayer = new Control({
+      context: this.context,
+      tagName: 'svg'
+    });
+    this.ctrl_svgLayer.add_class('canvas-svg-layer');
+    this.ctrl_svgLayer.style.position = 'absolute';
+    this.ctrl_svgLayer.style.top = '0';
+    this.ctrl_svgLayer.style.left = '0';
+    this.ctrl_svgLayer.style.width = '100%';
+    this.ctrl_svgLayer.style.height = '100%';
+    this.ctrl_svgLayer.style.pointerEvents = 'none'; // Let clicks pass through, children can override
+    this.ctrl_svgLayer.dom.attributes.xmlns = "http://www.w3.org/2000/svg";
+    this.add(this.ctrl_svgLayer);
+
     // Create elements layer (where shapes go)
     this.ctrl_elementsLayer = new Control({ 
       context: this.context,
@@ -294,7 +324,7 @@ class CanvasControl extends Control {
     this.ctrl_elementsLayer.style.left = '0';
     this.ctrl_elementsLayer.style.width = '100%';
     this.ctrl_elementsLayer.style.height = '100%';
-    this.ctrl_elementsLayer.style.pointerEvents = 'none';
+    this.ctrl_elementsLayer.style.pointerEvents = 'auto'; // Allow interactive children (draggable/resizable)
     this.add(this.ctrl_elementsLayer);
     
     // Set up server-side render event
@@ -309,6 +339,23 @@ class CanvasControl extends Control {
     });
   }
   
+  /**
+   * Updates the style attribute from the style object for SSR.
+   * @private
+   */
+  _updateStyleAttribute() {
+      let styleStr = '';
+      // Iterate over own properties of the style object
+      for (const k in this.style) {
+          const v = this.style[k];
+          if (typeof v === 'string' || typeof v === 'number') {
+               const key = k.replace(/([A-Z])/g, '-$1').toLowerCase();
+               styleStr += `${key}:${v};`;
+          }
+      }
+      if (styleStr) this.dom.attributes.style = styleStr;
+  }
+
   /**
    * Creates the grid layer with CSS background pattern.
    * @private
@@ -449,8 +496,16 @@ class CanvasControl extends Control {
     
     // Configure element for canvas placement
     element.style.position = 'absolute';
-    element.style.left = `${x}px`;
-    element.style.top = `${y}px`;
+    
+    if (typeof element.moveTo === 'function') {
+        console.log(`Moving element to ${x}, ${y}`);
+        element.moveTo(x, y);
+    } else {
+        console.log(`Setting element style to ${x}, ${y}`);
+        element.style.left = `${x}px`;
+        element.style.top = `${y}px`;
+    }
+    
     element.style.pointerEvents = 'auto';
     
     // Store reference
@@ -460,6 +515,11 @@ class CanvasControl extends Control {
     
     // Add to elements layer
     this.ctrl_elementsLayer.add(element);
+    
+    // Ensure element is composed if we are already composed
+    if (this._composed && !element._composed) {
+        element.compose();
+    }
     
     // Listen for drag events to snap position
     if (this.snapToGrid) {
@@ -478,6 +538,18 @@ class CanvasControl extends Control {
     });
     
     return element;
+  }
+
+  /**
+   * Adds a connector to the canvas SVG layer.
+   * 
+   * @param {Control} connector - The connector control
+   * @returns {Control} The added connector
+   */
+  addConnector(connector) {
+    this.ctrl_svgLayer.add(connector);
+    connector.style.pointerEvents = 'visibleStroke'; // Allow clicking the line
+    return connector;
   }
   
   /**

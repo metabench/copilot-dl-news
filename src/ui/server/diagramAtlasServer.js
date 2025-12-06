@@ -3,6 +3,8 @@
 /**
  * @server Diagram Atlas
  * @description Visualizes code structure, database schema, and system features.
+ * @ui true
+ * @port 4620
  */
 
 const express = require("express");

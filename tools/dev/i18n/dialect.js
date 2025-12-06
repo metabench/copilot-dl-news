@@ -27,7 +27,10 @@ const CLI_OPTION_ALIASES = {
     { option: '--view', lexKeys: ['view'], aliases: ['--视'] },
     { option: '--fields', lexKeys: ['fields'], aliases: ['--域'] },
     { option: '--follow-deps', lexKeys: ['follow_deps'], aliases: ['--依'] },
-    { option: '--dep-depth', lexKeys: ['dependency_depth'], aliases: ['--层'] }
+    { option: '--dep-depth', lexKeys: ['dependency_depth'], aliases: ['--层'] },
+    { option: '--context-slice', lexKeys: ['context_slice'], aliases: ['--切片', '--切'] },
+    { option: '--impact-preview', lexKeys: ['impact_preview'], aliases: ['--影响', '--影'] },
+    { option: '--include-code', lexKeys: ['include_code'], aliases: ['--含码'] }
   ],
   'js-edit': [
     { option: '--lang', lexKeys: ['lang'] },
@@ -66,6 +69,13 @@ const CLI_OPTION_ALIASES = {
     { option: '--extract-hashes', lexKeys: ['extract_hashes'] },
     { option: '--replace', lexKeys: ['replace'] },
     { option: '--replace-variable', lexKeys: ['replace_variable'] },
+    { option: '--copy', lexKeys: ['copy'], aliases: ['--复'] },
+    { option: '--copy-to-file', lexKeys: ['copy_to'] },
+    { option: '--copy-to-position', lexKeys: ['position'] },
+    { option: '--move', lexKeys: ['move'], aliases: ['--移', '--迁'] },
+    { option: '--move-to-file', lexKeys: ['move_to'] },
+    { option: '--move-add-export', lexKeys: ['add_export'] },
+    { option: '--move-add-import', lexKeys: ['add_import'] },
     { option: '--with', lexKeys: ['with'] },
     { option: '--with-file', lexKeys: ['with_file'] },
     { option: '--with-code', lexKeys: ['with_code'] },
@@ -88,7 +98,14 @@ const CLI_OPTION_ALIASES = {
     { option: '--expect-span', lexKeys: ['expect_span'] },
     { option: '--select', lexKeys: ['select'] },
     { option: '--select-path', lexKeys: ['select_path'] },
-    { option: '--benchmark', lexKeys: ['benchmark'] }
+    { option: '--benchmark', lexKeys: ['benchmark'] },
+    { option: '--transaction', lexKeys: ['transaction'], aliases: ['--事务', '--原'] },
+    { option: '--diff-intent', lexKeys: ['diff_intent'], aliases: ['--意差', '--差意'] },
+    { option: '--rename-symbol', lexKeys: ['rename_symbol'], aliases: ['--改名', '--名换'] },
+    { option: '--to', lexKeys: ['to'], aliases: ['--至', '--为'] },
+    { option: '--scope-aware', lexKeys: ['scope_aware'], aliases: ['--域察'] },
+    { option: '--semantic-extract', lexKeys: ['semantic_extract'], aliases: ['--意取', '--语取'] },
+    { option: '--analyze', lexKeys: ['analyze'], aliases: ['--析', '--语析'] }
   ],
   'md-scan': [
     { option: '--lang', lexKeys: ['lang'] },
@@ -137,6 +154,17 @@ const CLI_OPTION_ALIASES = {
     { option: '--json', lexKeys: ['json'] },
     { option: '--compact', lexKeys: ['compact'] },
     { option: '--verbose', lexKeys: ['verbose'] }
+  ],
+  'svg-collisions': [
+    { option: '--help', lexKeys: ['help'], aliases: ['--助', '--帮', '-h'] },
+    { option: '--json', lexKeys: ['json'], aliases: ['--机读'] },
+    { option: '--positions', lexKeys: ['positions'], aliases: ['--位'] },
+    { option: '--collisions', lexKeys: ['collisions'], aliases: ['--碰'] },
+    { option: '--containment', lexKeys: ['containment'], aliases: ['--含'] },
+    { option: '--strict', lexKeys: ['strict'], aliases: ['--严'] },
+    { option: '--verbose', lexKeys: ['verbose'], aliases: ['--详', '--详尽'] },
+    { option: '--dir', lexKeys: ['path'], aliases: ['--径'] },
+    { option: '--element', lexKeys: ['element'], aliases: ['--元'] }
   ]
 };
 

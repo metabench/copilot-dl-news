@@ -1,10 +1,14 @@
 const mockSleep = jest.fn(() => Promise.resolve());
 let mockNowValue = 0;
 
-jest.mock('../utils', () => ({
-  sleep: (...args) => mockSleep(...args),
-  nowMs: () => mockNowValue
-}));
+jest.mock('../utils', () => {
+  const actual = jest.requireActual('../utils');
+  return {
+    ...actual,
+    sleep: (...args) => mockSleep(...args),
+    nowMs: () => mockNowValue
+  };
+});
 
 const { DomainThrottleManager } = require('../DomainThrottleManager');
 const { CrawlerState } = require('../CrawlerState');

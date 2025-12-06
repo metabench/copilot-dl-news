@@ -3,6 +3,8 @@
 /**
  * @server Data Explorer
  * @description Provides a web interface for exploring crawled URLs, domains, and errors.
+ * @ui true
+ * @port 3001
  */
 
 const fs = require("fs");

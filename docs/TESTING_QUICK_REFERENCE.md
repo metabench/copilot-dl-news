@@ -353,6 +353,7 @@ node tests/analyze-test-logs.js --test "specific-pattern"
 - `docs/TESTING_STATUS.md` ⭐ Current test state
 - `docs/TESTING_ASYNC_CLEANUP_GUIDE.md` ⭐ Async patterns
 - `docs/TEST_TIMEOUT_GUARDS_IMPLEMENTATION.md` ⭐ Timeout prevention
+- `docs/guides/TEST_HANGING_PREVENTION_GUIDE.md` ⭐ **NEW**: Complete guide to preventing "Jest did not exit" warnings
 - `docs/TEST_FIXES_2025-10-10.md` - Recent fix patterns
 
 **Tools**:

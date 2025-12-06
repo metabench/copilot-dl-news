@@ -1,5 +1,6 @@
 const { ConfigManager } = require('../config/ConfigManager');
 const { fp } = require('lang-tools');
+const PriorityCalculator = require('./PriorityCalculator');
 
 /**
  * Polymorphic numeric coercion with recursive object unwrapping.
@@ -61,6 +62,7 @@ class PriorityScorer {
     this.gapPredictions = new Map();
     
     this._refreshConfig();
+    this.priorityCalculator = new PriorityCalculator();
 
     this.configManager.addWatcher((newConfig) => {
       this._refreshConfig(newConfig);
@@ -358,6 +360,14 @@ class PriorityScorer {
   }
 
   _computeBasePriority({ type, depth, discoveredAt, bias = 0 }) {
+    // Delegate base priority calculation to PriorityCalculator
+    try {
+      if (this.priorityCalculator && typeof this.priorityCalculator.computeBase === 'function') {
+        return this.priorityCalculator.computeBase({ type, depth, discoveredAt, bias });
+      }
+    } catch (err) {
+      // Fallback to the original logic
+    }
     let kind = type;
     if (type && typeof type === 'object') {
       kind = type.kind || type.type || type.intent;
@@ -365,7 +375,7 @@ class PriorityScorer {
     const normalizedKind = typeof kind === 'string' ? kind : 'nav';
 
     // Use configurable weights
-  let typeWeight = this.typeWeights[normalizedKind];
+    let typeWeight = this.typeWeights[normalizedKind];
     if (typeWeight === undefined) {
       // Fallback to hardcoded weights for backward compatibility
       switch (normalizedKind) {
@@ -380,7 +390,6 @@ class PriorityScorer {
 
     const depthPenalty = depth;
     const tieBreaker = discoveredAt || 0;
-    
     return typeWeight + depthPenalty + bias + tieBreaker * 1e-9;
   }
 

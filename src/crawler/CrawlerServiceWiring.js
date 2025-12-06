@@ -1,0 +1,223 @@
+"use strict";
+
+const ArticleSignalsService = require('./ArticleSignalsService');
+const { EnhancedFeaturesManager } = require('./EnhancedFeaturesManager');
+const { ArticleCache } = require('../cache');
+const HubFreshnessController = require('./HubFreshnessController');
+const { UrlPolicy } = require('./urlPolicy');
+const { DeepUrlAnalyzer } = require('./deepUrlAnalysis');
+const { UrlDecisionService } = require('./UrlDecisionService');
+const { LinkExtractor } = require('./LinkExtractor');
+const { CrawlerEvents } = require('./CrawlerEvents');
+const { CrawlerTelemetry } = require('./CrawlerTelemetry');
+const ProblemResolutionHandler = require('./ProblemResolutionHandler');
+const ExitManager = require('./ExitManager');
+const { MilestoneTracker } = require('./MilestoneTracker');
+const { ErrorTracker } = require('./ErrorTracker');
+const { DomainThrottleManager } = require('./DomainThrottleManager');
+const { ArticleProcessor } = require('./ArticleProcessor');
+const { NavigationDiscoveryService } = require('./NavigationDiscoveryService');
+const { ContentAcquisitionService } = require('./ContentAcquisitionService');
+const { FetchPipeline } = require('./FetchPipeline');
+const { PageExecutionService } = require('./PageExecutionService');
+const PriorityCalculator = require('./PriorityCalculator');
+const { GazetteerManager } = require('./components/GazetteerManager');
+const ConfigManager = require('../config/ConfigManager');
+const { setPriorityConfigProfile, resolvePriorityProfileFromCrawlType } = require('../utils/priorityConfig');
+const { is_array } = require('lang-tools');
+const { parseRetryAfter } = require('./utils');
+
+function resolvePriorityProfileFromCrawlTypeLocal(crawlType) {
+  if (typeof crawlType !== 'string') return 'basic';
+  const normalized = crawlType.trim().toLowerCase();
+  if (!normalized) return 'basic';
+  if (normalized.startsWith('intelligent')) return 'intelligent';
+  if (normalized === 'geography' || normalized === 'gazetteer') return 'geography';
+  if (normalized === 'wikidata') return 'wikidata';
+  return 'basic';
+}
+
+function wireCrawlerServices(crawler, { rawOptions = {}, resolvedOptions = {} } = {}) {
+  const options = rawOptions || {};
+  const opts = Object.keys(resolvedOptions || {}).length ? resolvedOptions : (crawler._resolvedOptions || {});
+
+  crawler.articleSignals = new ArticleSignalsService({ baseUrl: crawler.baseUrl, logger: console });
+  crawler.enhancedFeatures = new EnhancedFeaturesManager({
+    ConfigManager,
+    EnhancedDatabaseAdapter: require('../db/EnhancedDatabaseAdapter'),
+    PriorityScorer: require('./PriorityScorer'),
+    ProblemClusteringService: require('./ProblemClusteringService'),
+    PlannerKnowledgeService: require('./PlannerKnowledgeService'),
+    ProblemResolutionService: require('./ProblemResolutionService'),
+    CrawlPlaybookService: require('./CrawlPlaybookService'),
+    CountryHubGapService: require('./CountryHubGapService'),
+    CountryHubBehavioralProfile: require('./CountryHubBehavioralProfile'),
+    logger: console
+  });
+  crawler.busyWorkers = 0;
+  crawler.workerRunner = null;
+  crawler.intelligentPlanRunner = null;
+  crawler._startupSequenceRunner = null;
+  crawler._lastSequenceError = null;
+  crawler.cache = new ArticleCache({ db: null, dataDir: crawler.dataDir, normalizeUrl: (u) => crawler.normalizeUrl(u) });
+  crawler.hubFreshnessController = new HubFreshnessController({ getEnhancedConfigManager: () => crawler.enhancedFeatures?.configManager, ConfigManager, logger: console });
+  Object.defineProperty(crawler, 'hubFreshnessConfig', { get() { return crawler.hubFreshnessController.getConfig(); }, set(value) { crawler.hubFreshnessController.config = value; } });
+  crawler._domainWindowMs = 60 * 1000;
+  crawler.requestTimeoutMs = opts.requestTimeoutMs;
+  crawler.pacerJitterMinMs = opts.pacerJitterMinMs;
+  crawler.pacerJitterMaxMs = Math.max(crawler.pacerJitterMinMs, opts.pacerJitterMaxMs);
+  crawler.crawlType = opts.crawlType;
+  crawler.outputVerbosity = opts.outputVerbosity;
+  crawler.priorityProfile = setPriorityConfigProfile(resolvePriorityProfileFromCrawlTypeLocal(crawler.crawlType));
+  crawler.priorityCalculator = new PriorityCalculator();
+  crawler.gazetteerManager = new GazetteerManager(crawler);
+  crawler.gazetteerVariant = crawler.gazetteerManager.resolveVariant(crawler.crawlType);
+  crawler.isGazetteerMode = !!crawler.gazetteerVariant;
+  crawler.countryHubExclusiveMode = Boolean(opts.exhaustiveCountryHubMode || opts.countryHubExclusiveMode || (typeof opts.priorityMode === 'string' && opts.priorityMode.toLowerCase() === 'country-hubs-only'));
+  const structureOnlyFromCrawlType = crawler.crawlType === 'discover-structure';
+  if (opts.structureOnly != null) { crawler.structureOnly = !!opts.structureOnly; } else { crawler.structureOnly = structureOnlyFromCrawlType || crawler.countryHubExclusiveMode; }
+  if (options.concurrency == null && crawler.structureOnly && crawler.concurrency < 4) { crawler.concurrency = 4; crawler.usePriorityQueue = crawler.concurrency > 1; }
+  crawler.plannerEnabled = crawler.crawlType.startsWith('intelligent') || crawler.structureOnly;
+  crawler.skipQueryUrls = opts.skipQueryUrls;
+  crawler.seedStartFromCache = !!opts.seedStartFromCache;
+  crawler.cachedSeedUrls = Array.isArray(opts.cachedSeedUrls) ? opts.cachedSeedUrls.filter((value) => typeof value === 'string' && value.trim().length > 0) : [];
+  if (crawler.isGazetteerMode) { crawler.gazetteerManager.applyDefaults(options); }
+  crawler._gazetteerPipelineConfigured = false;
+  crawler.gazetteerPlanner = null;
+  crawler.urlPolicy = new UrlPolicy({ baseUrl: crawler.baseUrl, skipQueryUrls: crawler.skipQueryUrls });
+  crawler.deepUrlAnalyzer = new DeepUrlAnalyzer({ getDb: () => crawler.dbAdapter?.getDb(), policy: crawler.urlPolicy });
+  crawler.urlDecisionService = new UrlDecisionService({ urlPolicy: crawler.urlPolicy, urlDecisionCache: crawler.urlDecisionCache, urlAnalysisCache: crawler.urlAnalysisCache, getDbAdapter: () => crawler.dbAdapter });
+  crawler.connectionResetWindowMs = opts.connectionResetWindowMs;
+  crawler.connectionResetThreshold = opts.connectionResetThreshold;
+  crawler.useSequenceRunner = opts.useSequenceRunner !== false;
+  crawler.linkExtractor = new LinkExtractor({ normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), isOnDomain: (url) => crawler.isOnDomain(url), looksLikeArticle: (url) => crawler.looksLikeArticle(url) });
+  crawler.events = new CrawlerEvents({ domain: crawler.domain, getStats: () => crawler.state.getStats(), getQueueSize: () => (crawler.queue?.size?.() || 0), getCurrentDownloads: () => crawler.state.currentDownloads, getDomainLimits: () => crawler.state.getDomainLimitsSnapshot(), getRobotsInfo: () => crawler.robotsCoordinator?.getRobotsInfo() || { robotsLoaded: false }, getSitemapInfo: () => crawler.robotsCoordinator?.getSitemapInfo() || { urls: [], discovered: 0 }, getFeatures: () => crawler.featuresEnabled, getEnhancedDbAdapter: () => crawler.enhancedDbAdapter, getProblemClusteringService: () => crawler.problemClusteringService, getProblemResolutionService: () => crawler.problemResolutionService, getJobId: () => crawler.jobId, plannerScope: () => crawler.domain, isPlannerEnabled: () => crawler.plannerEnabled, isPaused: () => crawler.state.isPaused(), getGoalSummary: () => crawler.milestoneTracker ? crawler.milestoneTracker.getGoalsSummary() : [], getQueueHeatmap: () => (crawler.queue && typeof crawler.queue.getHeatmapSnapshot === 'function') ? crawler.queue.getHeatmapSnapshot() : null, getCoverageSummary: () => crawler._getCoverageSummary(), logger: console, outputVerbosity: crawler.outputVerbosity, loggingQueue: crawler.loggingQueue });
+  crawler.telemetry = new CrawlerTelemetry({ events: crawler.events });
+  crawler.problemResolutionHandler = new ProblemResolutionHandler({ telemetry: crawler.telemetry, state: crawler.state, normalizeUrl: (u, ctx) => crawler.normalizeUrl(u, ctx), domain: crawler.domain, domainNormalized: crawler.domainNormalized });
+  crawler.exitManager = new ExitManager({ telemetry: crawler.telemetry });
+  crawler.milestoneTracker = new MilestoneTracker({ telemetry: crawler.telemetry, state: crawler.state, domain: crawler.domain, getStats: () => crawler.stats, getPlanSummary: () => ({ ...(crawler._plannerSummary || {}), ...(crawler._intelligentPlanSummary || {}) }), plannerEnabled: crawler.plannerEnabled, scheduleWideHistoryCheck: (payload) => { if (typeof crawler.scheduleWideHistoryCheck === 'function') { crawler.scheduleWideHistoryCheck(payload); } }, goalPlanExecutor: ({ plan }) => { if (!plan || !is_array(plan.actions)) { return; } for (const action of plan.actions) { if (!action || typeof action !== 'object') continue; if (action.type === 'enqueue-hub-fetch' && action.url) { crawler.enqueueRequest({ url: action.url, depth: typeof action.depth === 'number' ? action.depth : 1, type: action.typeHint || 'nav' }); } } }, logger: console });
+  crawler.errorTracker = new ErrorTracker({ state: crawler.state, telemetry: crawler.telemetry, logger: console, maxAgeMs: crawler.maxAgeMs, connectionResetWindowMs: crawler.connectionResetWindowMs, connectionResetThreshold: crawler.connectionResetThreshold, log: (...args) => console.log('[Crawler:ErrorTracker]', ...args) });
+  crawler.domainThrottle = new DomainThrottleManager({ state: crawler.state, pacerJitterMinMs: crawler.pacerJitterMinMs, pacerJitterMaxMs: crawler.pacerJitterMaxMs, getDbAdapter: () => crawler.dbAdapter });
+  crawler.articleProcessor = new ArticleProcessor({ linkExtractor: crawler.linkExtractor, normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), looksLikeArticle: (url) => crawler.looksLikeArticle(url), computeUrlSignals: (url) => crawler._computeUrlSignals(url), computeContentSignals: ($, html) => crawler._computeContentSignals($, html), combineSignals: (urlSignals, contentSignals, opts) => crawler._combineSignals(urlSignals, contentSignals, opts), dbAdapter: () => crawler.dbAdapter, articleHeaderCache: crawler.state.getArticleHeaderCache(), knownArticlesCache: crawler.state.getKnownArticlesCache(), events: crawler.events, logger: console });
+  crawler.navigationDiscoveryService = new NavigationDiscoveryService({ linkExtractor: crawler.linkExtractor, normalizeUrl: (url, ctx) => crawler.normalizeUrl(url, ctx), looksLikeArticle: (url) => crawler.looksLikeArticle(url), logger: console });
+  crawler.contentAcquisitionService = new ContentAcquisitionService({ articleProcessor: crawler.articleProcessor, logger: console });
+  crawler.fetchPipeline = new FetchPipeline({
+    getUrlDecision: (targetUrl, ctx) => crawler._getUrlDecision(targetUrl, ctx),
+    normalizeUrl: (targetUrl, ctx) => crawler.normalizeUrl(targetUrl, ctx),
+    isOnDomain: (targetUrl) => crawler.isOnDomain(targetUrl),
+    isAllowed: (targetUrl) => crawler.isAllowed(targetUrl),
+    hasVisited: (normalized) => crawler.state.hasVisited(normalized),
+    getCachedArticle: (targetUrl) => crawler.getCachedArticle(targetUrl),
+    looksLikeArticle: (targetUrl) => crawler.looksLikeArticle(targetUrl),
+    cache: crawler.cache,
+    preferCache: crawler.preferCache,
+    maxAgeMs: crawler.maxAgeMs,
+    maxAgeArticleMs: crawler.maxAgeArticleMs,
+    maxAgeHubMs: crawler.maxAgeHubMs,
+    acquireDomainToken: (host) => crawler.acquireDomainToken(host),
+    acquireRateToken: () => crawler.acquireRateToken(),
+    rateLimitMs: crawler.rateLimitMs,
+    requestTimeoutMs: crawler.requestTimeoutMs,
+    httpAgent: crawler.httpAgent,
+    httpsAgent: crawler.httpsAgent,
+    currentDownloads: crawler.state.currentDownloads,
+    emitProgress: () => crawler.telemetry.progress(),
+    note429: (host, retryAfterMs) => crawler.note429(host, retryAfterMs),
+    noteSuccess: (host) => crawler.noteSuccess(host),
+    recordError: (info) => crawler._recordError(info),
+    handleConnectionReset: (normalized, err) => crawler._handleConnectionReset(normalized, err),
+    telemetry: crawler.telemetry,
+    articleHeaderCache: crawler.state.getArticleHeaderCache(),
+    knownArticlesCache: crawler.state.getKnownArticlesCache(),
+    getDbAdapter: () => crawler.dbAdapter,
+    parseRetryAfter,
+    handlePolicySkip: (decision, extras) => {
+      const depth = extras?.depth || 0;
+      const queueSize = crawler.queue?.size?.() || 0;
+      crawler._handlePolicySkip(decision, { depth, queueSize });
+    },
+    onCacheServed: (info) => {
+      if (!info) return;
+      if (info.forced) {
+        crawler.state.incrementCacheRateLimitedServed();
+        const milestoneUrl = info.url;
+        const host = info.rateLimitedHost || crawler._safeHostFromUrl(milestoneUrl);
+        const milestoneDetails = { url: milestoneUrl };
+        if (host) milestoneDetails.host = host;
+        crawler.telemetry.milestoneOnce(`cache-priority:${host || milestoneUrl}`, {
+          kind: 'cache-priority-hit',
+          message: 'Served cached page while rate limited',
+          details: milestoneDetails
+        });
+      }
+    },
+    logger: {
+      info: (...args) => {
+        const [msg, meta] = args;
+        if (meta && meta.type === 'FETCHING' && crawler.loggingFetching === false) return;
+        if (meta && meta.type === 'NETWORK' && crawler.loggingNetwork === false) return;
+        if (meta && (meta.type === 'FETCHING' || meta.type === 'NETWORK')) {
+          console.log(msg);
+          return;
+        }
+        const strMsg = typeof msg === 'string' ? msg : '';
+        if (crawler.loggingNetwork === false && strMsg.includes('[network]')) return;
+        console.log(...args);
+      },
+      warn: (...args) => {
+        const [msg, meta] = args;
+        if (meta && meta.type === 'NETWORK' && crawler.loggingNetwork === false) return;
+        if (meta && meta.type === 'NETWORK') {
+          console.warn(msg);
+          return;
+        }
+        const strMsg = typeof msg === 'string' ? msg : '';
+        if (crawler.loggingNetwork === false && strMsg.includes('[network]')) return;
+        console.warn(...args);
+      },
+      error: (...args) => {
+        const [msg, meta] = args;
+        if (meta && meta.type === 'NETWORK' && crawler.loggingNetwork === false) return;
+        if (meta && meta.type === 'NETWORK') {
+          console.error(msg);
+          return;
+        }
+        const strMsg = typeof msg === 'string' ? msg : '';
+        if (crawler.loggingNetwork === false && strMsg.includes('[network]')) return;
+        console.error(...args);
+      }
+    }
+  });
+  crawler.pageExecutionService = new PageExecutionService({
+    maxDepth: crawler.maxDepth,
+    maxDownloads: crawler.maxDownloads,
+    outputVerbosity: crawler.outputVerbosity,
+    getStats: () => crawler.stats,
+    state: crawler.state,
+    fetchPipeline: crawler.fetchPipeline,
+    navigationDiscoveryService: crawler.navigationDiscoveryService,
+    contentAcquisitionService: crawler.contentAcquisitionService,
+    articleProcessor: crawler.articleProcessor,
+    milestoneTracker: crawler.milestoneTracker,
+    adaptiveSeedPlanner: crawler.adaptiveSeedPlanner,
+    enqueueRequest: (request) => crawler.enqueueRequest(request),
+    telemetry: crawler.telemetry,
+    recordError: (info) => crawler._recordError(info),
+    normalizeUrl: (targetUrl) => crawler.normalizeUrl(targetUrl),
+    looksLikeArticle: (targetUrl) => crawler.looksLikeArticle(targetUrl),
+    noteDepthVisit: (normalized, depth) => crawler._noteDepthVisit(normalized, depth),
+    emitProgress: () => crawler.emitProgress(),
+    getDbAdapter: () => crawler.dbAdapter,
+    computeContentSignals: ($, html) => crawler._computeContentSignals($, html),
+    computeUrlSignals: (rawUrl) => crawler._computeUrlSignals(rawUrl),
+    combineSignals: (urlSignals, contentSignals, opts) => crawler._combineSignals(urlSignals, contentSignals, opts),
+    countryHubGapService: () => crawler.enhancedFeatures?.getCountryHubGapService?.(),
+    jobId: crawler.jobId,
+    domain: crawler.domain,
+    structureOnly: crawler.countryHubExclusiveMode,
+    hubOnlyMode: crawler.countryHubExclusiveMode,
+    getCountryHubBehavioralProfile: () => crawler.countryHubBehavioralProfile
+  });
+}
+
+module.exports = { wireCrawlerServices };

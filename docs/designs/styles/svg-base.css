@@ -1,0 +1,213 @@
+/**
+ * SVG Base Stylesheet
+ * 
+ * Shared styles for project documentation SVGs.
+ * Reference from SVG with: <?xml-stylesheet type="text/css" href="styles/svg-base.css"?>
+ * 
+ * Note: External CSS works when SVGs are viewed directly in browser.
+ * When embedded in HTML or markdown, styles may need to be inlined.
+ */
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+.title {
+  font: bold 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #1a1a2e;
+}
+
+.subtitle {
+  font: 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #666;
+}
+
+.category-title {
+  font: bold 16px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #1a1a2e;
+}
+
+.goal-title {
+  font: 600 13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #2d3748;
+}
+
+.goal-desc {
+  font: 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #4a5568;
+}
+
+.count {
+  font: bold 11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #718096;
+}
+
+.label {
+  font: 12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #4a5568;
+}
+
+.code {
+  font: 12px "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  fill: #2d3748;
+}
+
+/* ==========================================================================
+   Status Indicators
+   ========================================================================== */
+
+.status {
+  font: bold 10px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.status-active { fill: #38a169; }
+.status-planned { fill: #3182ce; }
+.status-research { fill: #805ad5; }
+.status-blocked { fill: #e53e3e; }
+.status-complete { fill: #2f855a; }
+
+/* ==========================================================================
+   Boxes & Containers
+   ========================================================================== */
+
+.category-box {
+  fill: #fff;
+  stroke: #e2e8f0;
+  stroke-width: 1;
+  rx: 8;
+}
+
+.goal-row {
+  fill: #f7fafc;
+  rx: 4;
+}
+
+.goal-row:hover {
+  fill: #edf2f7;
+}
+
+.card {
+  fill: #fff;
+  stroke: #e2e8f0;
+  stroke-width: 1;
+  rx: 6;
+}
+
+.panel {
+  fill: #f8fafc;
+  stroke: #e2e8f0;
+  stroke-width: 1;
+  rx: 4;
+}
+
+/* ==========================================================================
+   Progress Bars
+   ========================================================================== */
+
+.progress-bg {
+  fill: #e2e8f0;
+  rx: 2;
+}
+
+.progress-fill {
+  rx: 2;
+}
+
+.progress-active { fill: #38a169; }
+.progress-planned { fill: #3182ce; }
+.progress-research { fill: #805ad5; }
+
+/* ==========================================================================
+   Lines & Dividers
+   ========================================================================== */
+
+.divider {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.connector {
+  stroke: #a0aec0;
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.connector-active {
+  stroke: #38a169;
+  stroke-width: 2;
+}
+
+/* ==========================================================================
+   Category Header Colors (Light Theme)
+   ========================================================================== */
+
+.header-crawler { fill: #ebf8ff; }      /* Blue-50 */
+.header-ui { fill: #f0fff4; }           /* Green-50 */
+.header-gazetteer { fill: #fffaf0; }    /* Orange-50 */
+.header-decision { fill: #faf5ff; }     /* Purple-50 */
+.header-zserver { fill: #fff5f5; }      /* Red-50 */
+.header-tooling { fill: #e6fffa; }      /* Teal-50 */
+.header-testing { fill: #fffff0; }      /* Yellow-50 */
+.header-arch { fill: #edf2f7; }         /* Gray-100 */
+.header-classify { fill: #fef3c7; }     /* Amber-100 */
+.header-design { fill: #fce7f3; }       /* Pink-100 */
+.header-neutral { fill: #f1f5f9; }      /* Slate-100 */
+.header-priority { fill: #fef2f2; }     /* Red-50 */
+
+/* ==========================================================================
+   Interactive States (when SVG is interactive)
+   ========================================================================== */
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  opacity: 0.9;
+}
+
+.focusable:focus {
+  outline: 2px solid #3182ce;
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.text-muted { fill: #718096; }
+.text-emphasis { fill: #1a202c; }
+.text-success { fill: #38a169; }
+.text-warning { fill: #d69e2e; }
+.text-error { fill: #e53e3e; }
+.text-info { fill: #3182ce; }
+
+.bg-white { fill: #ffffff; }
+.bg-light { fill: #f8fafc; }
+.bg-muted { fill: #edf2f7; }
+
+.border-light { stroke: #e2e8f0; }
+.border-medium { stroke: #cbd5e0; }
+.border-dark { stroke: #a0aec0; }
+
+/* ==========================================================================
+   Animation Classes (for interactive SVGs)
+   ========================================================================== */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}

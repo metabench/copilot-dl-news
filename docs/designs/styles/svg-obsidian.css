@@ -1,0 +1,230 @@
+/**
+ * Industrial Luxury Obsidian Theme for SVGs
+ * 
+ * Dark theme with gold/emerald/ruby accents.
+ * Reference from SVG with: <?xml-stylesheet type="text/css" href="styles/svg-obsidian.css"?>
+ * 
+ * Use AFTER svg-base.css for theme overrides:
+ *   <?xml-stylesheet type="text/css" href="styles/svg-base.css"?>
+ *   <?xml-stylesheet type="text/css" href="styles/svg-obsidian.css"?>
+ */
+
+/* ==========================================================================
+   Color Palette
+   ========================================================================== */
+
+:root {
+  /* Obsidian Backgrounds */
+  --obsidian-bg-darkest: #050508;
+  --obsidian-bg-dark: #0a0d14;
+  --obsidian-bg-medium: #141824;
+  --obsidian-bg-light: #1a1f2e;
+  --obsidian-bg-lighter: #252b3d;
+  
+  /* Gold Accents */
+  --gold-light: #fffacd;
+  --gold-medium: #c9a227;
+  --gold-dark: #8b7500;
+  
+  /* Emerald Accents */
+  --emerald-light: #34d399;
+  --emerald-medium: #10b981;
+  --emerald-dark: #059669;
+  
+  /* Ruby Accents */
+  --ruby-light: #f87171;
+  --ruby-medium: #ef4444;
+  --ruby-dark: #b91c1c;
+  
+  /* Sapphire Accents */
+  --sapphire-light: #60a5fa;
+  --sapphire-medium: #3b82f6;
+  --sapphire-dark: #1d4ed8;
+  
+  /* Amethyst Accents */
+  --amethyst-light: #a78bfa;
+  --amethyst-medium: #8b5cf6;
+  --amethyst-dark: #6d28d9;
+  
+  /* Text Colors */
+  --text-bright: #f0f4f8;
+  --text-medium: #94a3b8;
+  --text-muted: #64748b;
+  --text-dim: #475569;
+}
+
+/* ==========================================================================
+   Typography Overrides
+   ========================================================================== */
+
+.title {
+  font-family: Georgia, "Times New Roman", serif;
+  fill: var(--gold-medium, #c9a227);
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  font-family: "Inter", system-ui, sans-serif;
+  fill: var(--text-muted, #64748b);
+}
+
+.category-title {
+  font-family: Georgia, "Times New Roman", serif;
+  fill: var(--gold-medium, #c9a227);
+}
+
+.goal-title {
+  font-family: "Inter", system-ui, sans-serif;
+  fill: var(--text-bright, #f0f4f8);
+}
+
+.goal-desc {
+  font-family: "Inter", system-ui, sans-serif;
+  fill: var(--text-medium, #94a3b8);
+}
+
+.count {
+  font-family: "JetBrains Mono", monospace;
+  fill: var(--text-muted, #64748b);
+}
+
+.code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  fill: var(--text-medium, #94a3b8);
+}
+
+/* ==========================================================================
+   Status Indicators (Obsidian)
+   ========================================================================== */
+
+.status-active { fill: var(--emerald-medium, #10b981); }
+.status-planned { fill: var(--sapphire-medium, #3b82f6); }
+.status-research { fill: var(--amethyst-medium, #8b5cf6); }
+.status-blocked { fill: var(--ruby-medium, #ef4444); }
+.status-complete { fill: var(--emerald-dark, #059669); }
+
+/* ==========================================================================
+   Boxes & Containers (Obsidian)
+   ========================================================================== */
+
+.category-box {
+  fill: var(--obsidian-bg-light, #1a1f2e);
+  stroke: rgba(255, 255, 255, 0.06);
+}
+
+.goal-row {
+  fill: rgba(26, 31, 46, 0.6);
+}
+
+.goal-row:hover {
+  fill: rgba(37, 43, 61, 0.8);
+}
+
+.card {
+  fill: var(--obsidian-bg-light, #1a1f2e);
+  stroke: rgba(255, 255, 255, 0.06);
+}
+
+.panel {
+  fill: var(--obsidian-bg-medium, #141824);
+  stroke: rgba(255, 255, 255, 0.04);
+}
+
+/* ==========================================================================
+   Progress Bars (Obsidian)
+   ========================================================================== */
+
+.progress-bg {
+  fill: rgba(255, 255, 255, 0.1);
+}
+
+.progress-active { fill: var(--emerald-medium, #10b981); }
+.progress-planned { fill: var(--sapphire-medium, #3b82f6); }
+.progress-research { fill: var(--amethyst-medium, #8b5cf6); }
+
+/* ==========================================================================
+   Lines & Dividers (Obsidian)
+   ========================================================================== */
+
+.divider {
+  stroke: var(--gold-medium, #c9a227);
+  stroke-opacity: 0.3;
+}
+
+.connector {
+  stroke: var(--text-muted, #64748b);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.connector-active {
+  stroke: var(--gold-medium, #c9a227);
+  stroke-width: 2;
+}
+
+/* ==========================================================================
+   Category Header Colors (Obsidian - Dark Tints)
+   ========================================================================== */
+
+.header-crawler { fill: rgba(59, 130, 246, 0.12); }    /* Blue */
+.header-ui { fill: rgba(16, 185, 129, 0.12); }         /* Emerald */
+.header-gazetteer { fill: rgba(245, 158, 11, 0.12); }  /* Amber */
+.header-decision { fill: rgba(139, 92, 246, 0.12); }   /* Violet */
+.header-zserver { fill: rgba(239, 68, 68, 0.12); }     /* Red */
+.header-tooling { fill: rgba(20, 184, 166, 0.12); }    /* Teal */
+.header-testing { fill: rgba(234, 179, 8, 0.12); }     /* Yellow */
+.header-arch { fill: rgba(100, 116, 139, 0.12); }      /* Slate */
+.header-classify { fill: rgba(201, 162, 39, 0.12); }   /* Gold */
+.header-design { fill: rgba(236, 72, 153, 0.12); }     /* Pink */
+.header-neutral { fill: rgba(148, 163, 184, 0.08); }   /* Slate */
+.header-priority { fill: rgba(239, 68, 68, 0.15); }    /* Red */
+
+/* ==========================================================================
+   Text Utilities (Obsidian)
+   ========================================================================== */
+
+.text-muted { fill: var(--text-muted, #64748b); }
+.text-emphasis { fill: var(--text-bright, #f0f4f8); }
+.text-success { fill: var(--emerald-medium, #10b981); }
+.text-warning { fill: var(--gold-medium, #c9a227); }
+.text-error { fill: var(--ruby-medium, #ef4444); }
+.text-info { fill: var(--sapphire-medium, #3b82f6); }
+.text-gold { fill: var(--gold-medium, #c9a227); }
+
+/* ==========================================================================
+   Background Utilities (Obsidian)
+   ========================================================================== */
+
+.bg-obsidian-darkest { fill: var(--obsidian-bg-darkest, #050508); }
+.bg-obsidian-dark { fill: var(--obsidian-bg-dark, #0a0d14); }
+.bg-obsidian-medium { fill: var(--obsidian-bg-medium, #141824); }
+.bg-obsidian-light { fill: var(--obsidian-bg-light, #1a1f2e); }
+
+/* ==========================================================================
+   Special Effects (Obsidian)
+   ========================================================================== */
+
+/* Gold glow filter - define in SVG defs, use class to trigger */
+.gold-glow {
+  filter: url(#goldGlow);
+}
+
+/* Subtle card shadow */
+.shadow-card {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+/* Borders */
+.border-gold { 
+  stroke: var(--gold-medium, #c9a227); 
+  stroke-opacity: 0.6;
+}
+
+.border-emerald { 
+  stroke: var(--emerald-medium, #10b981); 
+  stroke-opacity: 0.6;
+}
+
+.border-subtle {
+  stroke: rgba(255, 255, 255, 0.06);
+}

@@ -2,6 +2,18 @@
 
 ---
 
+## TL;DR routing (start here)
+- Need commands? [docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md)
+- Running tests? [docs/TESTING_QUICK_REFERENCE.md](docs/TESTING_QUICK_REFERENCE.md)
+- DB changes? [docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)
+- UI/jsgui3? [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md)
+- SVGs? [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md)
+- Refactor tooling (js-scan/js-edit)? [tools/dev/README.md](tools/dev/README.md) and Gap-4 session summary
+- Facts vs classifications? [docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md](docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md)
+
+Mode/persona rules
+- If a persona or mode is active, note it in your plan and read the matching file under `.github/agents/` (or the current mode file noted by the system) for any extra constraints.
+
 ## ⚠️ SESSION FIRST — NON-NEGOTIABLE
 
 **Before writing ANY code**, create a session directory:
@@ -39,6 +51,12 @@ See `docs/sessions/SESSIONS_HUB.md` for the full session system documentation.
 
 Purpose. This file is the hub for all agent work. Treat AGENTS.md as a concise, living playbook: it tells you what to do next, where to look, and how to improve this playbook itself as you learn. All source lives under /src (e.g., /src/modules, /src/db, /src/models, /src/utils), with /tests and /docs at the root. The north star: reduce tech debt, preserve reliability, and evolve a modular, high-performance data layer via swappable /src/db adapters (Postgres, Mongo, etc.) and clean service boundaries—documenting the why and how as you go with JSDoc and brief decision notes.
 
+Operational guardrails (authoritative here; Copilot file is only a pointer)
+- Platform: Windows with PowerShell; prefer Node.js commands over PowerShell-specific tricks. Set UTF-8 if you hit encoding issues.
+- No Python invocations; use Node.js or PowerShell-native tooling for quick scripts.
+- Linked modules (npm link): treat symlinked packages as shared source. Always open a session first, verify link status (e.g., Get-Item node_modules/jsgui3-html | Select-Object LinkType), and follow [docs/designs/NPM_LINK_DEVELOPMENT_NEXUS.md](docs/designs/NPM_LINK_DEVELOPMENT_NEXUS.md).
+- Command execution reference lives in [docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md); consult it before running servers or long-lived processes.
+
 Doc topology. Keep this file focused and actionable. Heavier guidance lives in /docs and is indexed from /docs/INDEX.md. When you add or change workflows, first update AGENTS.md (short, prescriptive steps), then create/modify deeper guides:
 
 - **Session folders are mandatory.** Every session (analysis, implementation, validation) gets a dedicated directory under `docs/sessions/<yyyy-mm-dd>-<short-slug>/`. Park your summaries, roadmaps, follow-ups, and guidance there—never in `tmp/`—and add the folder to `docs/sessions/SESSIONS_HUB.md` as soon as it exists.
@@ -75,6 +93,15 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
 Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
+
+**🚨 Server Verification (CRITICAL FOR AGENTS)**. Servers are long-running processes that **block forever**. NEVER run `node server.js` directly—it will hang the terminal indefinitely. Instead:
+- ✅ Use `--check` flag: `node src/ui/server/myServer.js --check` — starts, verifies, then exits (~500ms)
+- ✅ Use `isBackground: true` in run_in_terminal if you need the server running
+- ✅ Run check scripts: `node src/ui/server/checks/myServer.check.js`
+- ✅ Run E2E tests that manage their own server lifecycle
+- ❌ NEVER: `node server.js` without --check or isBackground
+
+See `docs/COMMAND_EXECUTION_GUIDE.md` for implementation details and the `src/ui/server/utils/serverStartupCheck.js` utility.
 
 Server Restart After Changes. When modifying server-side code (Express routes, jsgui3 controls, renderers, utilities), always restart the relevant server after applying changes. For the docs viewer: `node src/ui/server/docsViewer/server.js --stop; node src/ui/server/docsViewer/server.js --detached`. For other UI servers, use `Stop-Process -Name node -Force` followed by the appropriate start command. The user cannot see your changes until the server picks up the new code.
 
@@ -200,40 +227,9 @@ npm run schema:stats
 
 See `tools/schema-sync.js --help` for all options.
 
-## Facts vs Classifications (Critical Distinction)
+## Facts vs Classifications (pointer)
 
-**This is a foundational principle for all classification work in this repository.**
-
-| Concept | Facts | Classifications |
-|---------|-------|------------------|
-| **Nature** | Objective observations | Subjective judgments |
-| **Question** | "Does it have X?" | "What is it?" |
-| **Example** | "URL contains /2024/01/15/" | "This is a news article" |
-| **Mutability** | Fixed once computed | Can change with rule updates |
-| **Storage** | `url_facts` table | `url_classifications` table |
-
-**Key Principles:**
-
-1. **Facts are NEUTRAL** — They observe structure without judging it as good/bad, positive/negative
-2. **Facts are OBJECTIVE** — Verifiable, reproducible, same input = same output
-3. **Classifications CONSUME facts** — Rules combine facts with boolean logic to make decisions
-4. **No weighted signals** — Pure boolean TRUE/FALSE, no scores or confidence levels
-
-**Example: Pagination**
-- ✅ **Fact**: `url.hasPaginationPattern: true` — URL contains `?page=2`
-- ❌ **Wrong**: Treating pagination as a "negative signal"
-- ✅ **Right**: Pagination is neutral data; classification rules decide if it matters
-
-**Fact Categories** (all neutral observations):
-- `url.*` — URL string patterns (cheapest)
-- `document.*` — HTML/DOM structure
-- `schema.*` — JSON-LD/Microdata
-- `meta.*` — Meta tags
-- `response.*` — HTTP response characteristics
-- `page.*` — Page structure observations
-
-See `docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md` for full architecture.
-See `src/facts/` for implementation.
+Keep facts neutral and boolean; classifications consume facts. For rules, rationale, and implementation, read [docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md](docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md) and browse [src/facts/](src/facts/).
 
 How AGENTS.md stays small (and smart)
 
@@ -434,83 +430,9 @@ See `/docs/` for detailed guides:
 
 ---
 
-## Completed Tooling Improvements (Gap 2, Gap 3, Gap 4)
+## Tooling improvements (pointer)
 
-**Strategic Initiative**: Three focused enhancements to js-scan/js-edit for 75-80% faster agent refactoring.
-
-**Current Status**: 
-- ✅ **Gap 2 complete** - Semantic relationship queries fully implemented and tested (26 tests passing)
-- ✅ **Gap 3 complete** - Batch dry-run & recovery fully implemented and tested (8 tests passing, CLI integrated)
-- ✅ **Gap 4 complete** - Multi-step workflow threading with guard verification fully implemented and tested
-
-### The Three Improvements
-
-1. **Gap 2: Semantic Relationship Queries** ✅ COMPLETE
-   - `--what-imports`, `--what-calls`, `--export-usage` queries live in js-scan.js
-   - **Status**: All 26 tests passing, CLI working and verified
-   - **Benefit**: Discovery time 20-30 min → <2 min (90% faster)
-
-2. **Gap 3: Batch Dry-Run + Recovery** ✅ COMPLETE (CLI integrated)
-   - `--dry-run`, `--recalculate-offsets`, `--from-plan` flags in js-edit.js
-   - **Status**: All 8 core tests passing, CLI fully integrated and working
-   - **Benefit**: Batch failure 60% → 95%+, recovery 15-20 min → <2 min
-   - **Available now**: `node tools/dev/js-edit.js --dry-run --changes batch.json --json`
-
-3. **Gap 4: Plans Integration** ✅ COMPLETE
-   - `--emit-plan`, `--from-plan` CLI dispatch ready, core logic complete
-   - **Status**: Guard verification system fully implemented and tested (Unit + Integration)
-   - **Benefit**: Enables safe, resumable multi-step refactoring workflows
-
-### How to Use (Available Now)
-
-Agents should follow: **Discover → Dry-Run → Apply → Verify**
-
-```bash
-# 1. Discover (Gap 2) — <2 min [AVAILABLE NOW]
-node js-scan.js --what-calls "processData" --recursive --json
-
-# 2. Prepare batch changes (manual or scripted)
-
-# 3. Dry-run (Gap 3) — <1 min [AVAILABLE NOW]
-node js-edit.js --dry-run --changes batch.json --json
-
-# 4. Apply (Gap 3+4) — <2 min [AVAILABLE NOW]
-node js-edit.js --from-plan saved-plan.json --fix
-
-# 5. Verify (Gap 2) — <1 min [AVAILABLE NOW]
-node js-scan.js --search targetFunction --json
-```
-
-**Total Refactoring Time**: 10-15 minutes (vs. 60-90 min currently) = **80% faster**
-
-### Documentation Hub
-
-Start here for comprehensive guidance:
-
-- **`.github/agents/Singularity Engineer.agent.md`** — Agent-specific tool guidance
-- **`.github/instructions/GitHub Copilot.instructions.md`** — Copilot tool guidance
-- **`docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md`** — Gap 4 implementation details (NEW!)
-- **`/docs/AGENT_REFACTORING_PLAYBOOK.md`** — How agents use the tools (with examples)
-- **`/docs/GAZETTEER_DEDUPLICATION_SUMMARY.md`** — Guide for the Gazetteer Deduplication Tool (v2 Algorithm)
-- **`/tools/dev/README.md`** — CLI reference for both tools
-
-### Key Metrics
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| Gap 2 Implementation | ✅ Complete | 26/26 tests |
-| Gap 3 Implementation | ✅ Complete | 8/8 tests |
-| Gap 4 Implementation | ✅ Complete | Unit + Integration tests |
-| Discovery Speed | 20-30 min → <2 min | 90% faster |
-| Batch Success | 60% → 95%+ | 58% safer |
-| Recovery Time | 15-20 min → <2 min | 87% faster |
-| Annual Savings | 2,500+ hours | 4-6 team |
-| ROI | 62:1 | Break-even: 1 week |
-
-### Implementation Path
-
-**Phase 1** ✅ Complete: Gap 2 — Semantic relationship queries  
-**Phase 2** ✅ Complete: Gap 3 — Batch dry-run + recovery (core + CLI)  
-**Phase 3** ✅ Complete: Gap 4 — Plans workflow threading  
-
-See `docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md` for detailed implementation report.
+Gap 2/3/4 for js-scan/js-edit are complete. For commands, metrics, and usage examples see:
+- [tools/dev/README.md](tools/dev/README.md)
+- [docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md](docs/sessions/2025-11-22-gap4-plans-integration/SESSION_SUMMARY.md)
+- [docs/AGENT_REFACTORING_PLAYBOOK.md](docs/AGENT_REFACTORING_PLAYBOOK.md)

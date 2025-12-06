@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" style="background: linear-gradient(#0f0f13, #1a1a20); border: 2px solid #2b2b33; border-radius: 26px;">
+  <defs>
+    <style>
+      .title { font-family: "Segoe UI", Arial, sans-serif; font-size: 28px; font-weight: 700; fill: #f6f0e6; letter-spacing: 0.5px; }
+      .label { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; font-weight: 600; fill: #f6f0e6; }
+      .note { font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; fill: #d7d0c4; }
+      .chip { font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; fill: #0e0d0b; font-weight: 700; }
+    </style>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f0f13" />
+      <stop offset="100%" stop-color="#1a1a20" />
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f1f27" />
+      <stop offset="100%" stop-color="#131318" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0c674" />
+      <stop offset="100%" stop-color="#d4a742" />
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f0c674" />
+    </marker>
+  </defs>
+
+  <!-- Atmospheric background handled via root style to avoid collision noise -->
+  <text x="600" y="110" class="title" text-anchor="middle">MCP Stdio Flow — Industrial Obsidian</text>
+
+  <!-- Client -->
+  <rect x="90" y="170" width="230" height="150" rx="14" ry="14" fill="#15151b" stroke="#f0c674" stroke-width="2" />
+  <text x="205" y="210" class="label" text-anchor="middle">Client (Copilot)</text>
+  <text x="205" y="235" class="note" text-anchor="middle">Sends JSON-RPC</text>
+  <text x="205" y="255" class="note" text-anchor="middle">Content-Length framing</text>
+  <rect x="130" y="270" width="150" height="26" rx="13" ry="13" fill="#f0c674" />
+  <text x="205" y="288" class="chip" text-anchor="middle">Headers: length + type</text>
+
+  <!-- Transport -->
+  <rect x="360" y="170" width="260" height="150" rx="14" ry="14" fill="#15151b" stroke="#f0c674" stroke-width="2" />
+  <text x="490" y="210" class="label" text-anchor="middle">Stdio Transport</text>
+  <text x="490" y="235" class="note" text-anchor="middle">Accepts \r\n\r\n or \n\n</text>
+  <text x="490" y="255" class="note" text-anchor="middle">Content-Type: vscode-jsonrpc</text>
+  <text x="490" y="275" class="note" text-anchor="middle">Tolerates headerless init</text>
+
+  <!-- svg-editor server -->
+  <rect x="660" y="150" width="260" height="150" rx="14" ry="14" fill="#15151b" stroke="#f0c674" stroke-width="2" />
+  <text x="790" y="190" class="label" text-anchor="middle">SVG Editor MCP</text>
+  <text x="790" y="215" class="note" text-anchor="middle">create_new • add_element • align</text>
+  <text x="790" y="235" class="note" text-anchor="middle">detect_collisions • set_position</text>
+  <text x="790" y="255" class="note" text-anchor="middle">stdio + HTTP modes</text>
+
+  <!-- docs-memory server -->
+  <rect x="660" y="330" width="260" height="150" rx="14" ry="14" fill="#15151b" stroke="#f0c674" stroke-width="2" />
+  <text x="790" y="370" class="label" text-anchor="middle">Docs Memory MCP</text>
+  <text x="790" y="395" class="note" text-anchor="middle">getLessons • listSessions</text>
+  <text x="790" y="415" class="note" text-anchor="middle">appendLessons • appendToSession</text>
+  <text x="790" y="435" class="note" text-anchor="middle">Workflows • patterns • knowledge</text>
+
+  <!-- Outputs -->
+  <rect x="960" y="250" width="180" height="150" rx="14" ry="14" fill="#15151b" stroke="#f0c674" stroke-width="2" />
+  <text x="1050" y="290" class="label" text-anchor="middle">Tool Responses</text>
+  <text x="1050" y="315" class="note" text-anchor="middle">JSON-RPC results</text>
+  <text x="1050" y="335" class="note" text-anchor="middle">Content-Length framed</text>
+  <rect x="990" y="345" width="120" height="22" rx="11" ry="11" fill="#f0c674" />
+  <text x="1050" y="361" class="chip" text-anchor="middle">200 OK</text>
+
+  <!-- Arrows -->
+  <line x1="320" y1="235" x2="360" y2="235" stroke="#f0c674" stroke-width="2.5" marker-end="url(#arrow)" />
+  <line x1="620" y1="205" x2="660" y2="205" stroke="#f0c674" stroke-width="2.5" marker-end="url(#arrow)" />
+  <line x1="620" y1="255" x2="660" y2="365" stroke="#f0c674" stroke-width="2.5" marker-end="url(#arrow)" />
+  <line x1="920" y1="205" x2="960" y2="290" stroke="#f0c674" stroke-width="2.5" marker-end="url(#arrow)" />
+  <line x1="920" y1="395" x2="960" y2="330" stroke="#f0c674" stroke-width="2.5" marker-end="url(#arrow)" />
+
+  <!-- Footer notes -->
+  <text x="600" y="640" class="note" text-anchor="middle">Industrial Luxury Obsidian palette: obsidian panels, gold strokes, subtle gradients.</text>
+  <text x="600" y="662" class="note" text-anchor="middle">Stdio framing: Content-Length + Content-Type; tolerant to headerless initialize; tools exposed via MCP.</text>
+</svg>

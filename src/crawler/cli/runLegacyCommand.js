@@ -4,8 +4,7 @@ const { createPauseResumeControls } = require('./pauseControls');
 
 const chalk = require('chalk');
 const path = require('path');
-const { CrawlerFactory } = require('../CrawlerFactory');
-let NewsCrawler;
+const NewsCrawler = require('../NewsCrawler');
 
 const { ensureDatabase } = require('../../db/sqlite');
 const { createCliLogger } = require('./progressReporter');
@@ -302,10 +301,6 @@ async function runLegacyCommand({
     log.debug(`Config arguments loaded from ${cliMetadata.configPath}`);
   }
 
-  if (!NewsCrawler) {
-    NewsCrawler = require('../NewsCrawler');
-  }
-
   if (sequenceConfig) {
     const resolvedStartForLog = startUrlExplicit ? startUrl : undefined;
     log.info(`Sequence config: ${chalk.bold(sequenceConfig.name)}`);
@@ -365,10 +360,7 @@ async function runLegacyCommand({
 
   const interactiveToggle = interactiveControls || { enabled: true, explicit: false };
 
-  const crawler = CrawlerFactory.create({
-    ...(crawlerOptions || {}),
-    startUrl
-  });
+  const crawler = new NewsCrawler(startUrl, crawlerOptions || {});
 
   if (crawlerOptions.loggingQueue === false) {
     log.info('Queue logging explicitly disabled');

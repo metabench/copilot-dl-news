@@ -1,4 +1,5 @@
 const { URL } = require('url');
+const { processTaskResult } = require('./WorkerTaskProcessor');
 
 class WorkerRunner {
   constructor({
@@ -88,6 +89,7 @@ class WorkerRunner {
         this._emitExitReason(reason, workerId, details);
       }
     };
+    const { processTaskResult } = require('./WorkerTaskProcessor');
     while (true) {
       if (this.isAbortRequested()) {
         signalExit('abort-requested', { phase: 'pre-loop' });
@@ -211,39 +213,21 @@ class WorkerRunner {
 
       this.onBusyChange(-1);
 
-      if (result && result.status === 'failed') {
-        const currentRetries = typeof item.retries === 'number' ? item.retries : 0;
-        const retriable = !!result.retriable && currentRetries < this.retryLimit;
-        if (retriable) {
-          item.retries = currentRetries + 1;
-          const baseDelay = result.retryAfterMs != null ? result.retryAfterMs : Math.min(this.backoffBaseMs * Math.pow(2, item.retries - 1), this.backoffMaxMs);
-          item.nextEligibleAt = this.nowMs() + this.jitter(baseDelay);
-          item.priority = this.computePriority({
-            type: item.type,
-            depth: item.depth,
-            discoveredAt: item.discoveredAt,
-            bias: item.priorityBias || 0
-          });
-          this.queue.reschedule(item);
-          try {
-            const host = (() => {
-              try {
-                return new URL(item.url).hostname;
-              } catch (_) {
-                return null;
-              }
-            })();
-            const sizeNow = this.getQueueSize();
-            this.telemetry?.queueEvent({
-              action: 'retry',
-              url: item.url,
-              depth: item.depth,
-              host,
-              reason: 'retriable-error',
-              queueSize: sizeNow
-            });
-          } catch (_) {}
-        }
+      if (result) {
+        const { processTaskResult } = require('./WorkerTaskProcessor');
+        await processTaskResult({
+          result,
+          item,
+          queue: this.queue,
+          getQueueSize: this.getQueueSize,
+          retryLimit: this.retryLimit,
+          backoffBaseMs: this.backoffBaseMs,
+          backoffMaxMs: this.backoffMaxMs,
+          computePriority: this.computePriority,
+          nowMs: this.nowMs,
+          jitter: this.jitter,
+          telemetry: this.telemetry
+        });
       }
     }
   }

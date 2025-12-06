@@ -123,6 +123,8 @@ function updateElements(selectors, className) {
 
 **Source**: `lang-mini` (via lang-tools)
 
+**Update (December 2025)**: The implementation now uses `Object.keys()` for object iteration instead of `for...in`. This ensures robust iteration over DOM-like objects (e.g., `map_jsgui_els`) where `for...in` can fail in some browser environments.
+
 ```javascript
 const {each} = require('lang-tools');
 

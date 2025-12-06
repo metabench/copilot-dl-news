@@ -22,17 +22,13 @@ jest.mock('../../NewsCrawler', () => {
       this.options = options;
       this.dbPath = options?.dbPath || 'data/news.db';
       this.crawl = mockCrawl;
+      // Track constructor calls for test assertions
+      mockCreateCrawler({ startUrl, ...options });
     }
   }
   MockNewsCrawler.loadAndRunSequence = mockLoadAndRunSequence;
   return MockNewsCrawler;
 });
-
-jest.mock('../../CrawlerFactory', () => ({
-  CrawlerFactory: {
-    create: jest.fn((config) => mockCreateCrawler(config))
-  }
-}));
 
 // Mock database module
 jest.mock('../../../db/sqlite', () => ({
@@ -102,7 +98,6 @@ jest.mock('../argumentNormalizer', () => ({
 }));
 
 const { runLegacyCommand, HELP_TEXT } = require('../runLegacyCommand');
-const { CrawlerFactory } = require('../../CrawlerFactory');
 const { createCliLogger } = require('../progressReporter');
 const { createPauseResumeControls } = require('../pauseControls');
 const { setupLegacyCliEnvironment } = require('../bootstrap');
@@ -280,7 +275,7 @@ describe('runLegacyCommand.js', () => {
       expect(mockRestore).toHaveBeenCalled();
     });
 
-    it('creates crawler through CrawlerFactory with normalized arguments', async () => {
+    it('creates crawler through NewsCrawler constructor with normalized arguments', async () => {
       normalizeLegacyArguments.mockReturnValueOnce({
         startUrl: 'https://news.example.com',
         options: { maxPages: 50, crawlType: 'intelligent' },
@@ -293,7 +288,7 @@ describe('runLegacyCommand.js', () => {
         argv: ['https://news.example.com', '--max-pages=50']
       });
 
-      expect(CrawlerFactory.create).toHaveBeenCalledWith({
+      expect(mockCreateCrawler).toHaveBeenCalledWith({
         maxPages: 50,
         crawlType: 'intelligent',
         startUrl: 'https://news.example.com'
@@ -362,8 +357,10 @@ describe('runLegacyCommand.js', () => {
       expect(createPauseResumeControls).toHaveBeenCalledTimes(1);
       const pauseArgs = createPauseResumeControls.mock.calls[0][0];
       expect(pauseArgs.stdin).toBe(fakeStdin);
-      const createdCrawler = mockCreateCrawler.mock.results[0]?.value;
-      expect(pauseArgs.crawler).toBe(createdCrawler);
+      // Verify crawler was passed (it's a MockNewsCrawler instance)
+      expect(pauseArgs.crawler).toBeDefined();
+      expect(pauseArgs.crawler.startUrl).toBe('https://example.com');
+      expect(pauseArgs.crawler.crawl).toBe(mockCrawl);
       expect(pauseArgs.logger).toBeTruthy();
 
       expect(mockPauseControls.attach).toHaveBeenCalledWith({

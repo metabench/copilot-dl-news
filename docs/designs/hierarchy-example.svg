@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 650">
+  <defs>
+    <!-- Gold glow filter -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Drop shadow -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Background gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050508" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#141824" stop-opacity="0.3"/>
+    </linearGradient>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    
+    <marker id="arrowheadGold" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c9a227"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="650" fill="#0a0d14"/>
+  <rect width="1400" height="650" fill="url(#bgGradient)"/>
+  
+  
+  <!-- Header -->
+  <text x="50" y="55" font-family="Georgia, 'Times New Roman', serif" 
+        font-size="32" font-weight="bold" 
+        fill="#c9a227" letter-spacing="2">Organization Hierarchy</text>
+  <text x="50" y="85" font-family="Inter, system-ui, sans-serif" 
+        font-size="14" fill="#64748b">Department Structure &amp; Reporting Lines</text>
+  
+  <!-- Gold divider -->
+  <line x1="50" y1="105" x2="1350" y2="105" 
+        stroke="#c9a227" stroke-opacity="0.4" stroke-width="1"/>
+  
+  <!-- Legend -->
+  <g transform="translate(850, 50)">
+      
+        <circle cx="0" cy="0" r="6" fill="#c9a227"/>
+        <text x="14" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#c9a227">Executive ()</text>
+      
+        <circle cx="140" cy="0" r="6" fill="#3b82f6"/>
+        <text x="154" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#3b82f6">Management ()</text>
+      
+        <circle cx="280" cy="0" r="6" fill="#10b981"/>
+        <text x="294" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#10b981">Lead ()</text>
+      
+        <circle cx="420" cy="0" r="6" fill="#1a1f2e"/>
+        <text x="434" y="4" font-family="Inter, system-ui, sans-serif" 
+              font-size="11" font-weight="bold" fill="#1a1f2e">Individual ()</text>
+      
+    </g>
+  
+  <!-- Stats -->
+  <g transform="translate(850, 80)">
+      <text x="0" y="4" font-family="JetBrains Mono, monospace" 
+            font-size="11" fill="#475569"> • Last updated: 2025-12-02</text>
+    </g>
+  
+  <!-- Content -->
+  <path d="M943.75,240 V260 H645.8333333333334 V280" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M645.8333333333334,360 V380 H375 V400" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M375,480 V500 H158.33333333333331 V520" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M375,480 V500 H374.99999999999994 V520" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M375,480 V500 H591.6666666666666 V520" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M645.8333333333334,360 V380 H916.6666666666667 V400" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M916.6666666666667,480 V500 H808.3333333333334 V520" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M916.6666666666667,480 V500 H1025 V520" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M943.75,240 V260 H1241.6666666666665 V280" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M1241.6666666666665,360 V380 H1241.6666666666665 V400" 
+            fill="none" stroke="#64748b" stroke-width="1"/><path d="M1241.6666666666665,480 V500 H1241.6666666666665 V520" 
+            fill="none" stroke="#64748b" stroke-width="1"/>
+      <g transform="translate(853.75, 160)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="#c9a227" stroke-width="2"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#c9a227"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Chief Executive Officer</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Executive</text>
+      </g>
+      <g transform="translate(555.8333333333334, 280)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="#c9a227" stroke-width="2"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#c9a227"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Chief Technology Officer</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Technology</text>
+      </g>
+      <g transform="translate(285, 400)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#3b82f6"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Director of Engineering</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Engineering</text>
+      </g>
+      <g transform="translate(68.33333333333331, 520)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#10b981"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Frontend Lead</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Engineering</text>
+      </g>
+      <g transform="translate(284.99999999999994, 520)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#10b981"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Backend Lead</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Engineering</text>
+      </g>
+      <g transform="translate(501.66666666666663, 520)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#10b981"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">QA Lead</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Engineering</text>
+      </g>
+      <g transform="translate(826.6666666666667, 400)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#3b82f6"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Director of Product</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Product</text>
+      </g>
+      <g transform="translate(718.3333333333334, 520)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#1a1f2e"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Product Manager A</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Product</text>
+      </g>
+      <g transform="translate(935, 520)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#1a1f2e"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Product Manager B</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Product</text>
+      </g>
+      <g transform="translate(1151.6666666666665, 280)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="#c9a227" stroke-width="2"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#c9a227"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Chief Financial Officer</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Finance</text>
+      </g>
+      <g transform="translate(1151.6666666666665, 400)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#3b82f6"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Financial Controller</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Finance</text>
+      </g>
+      <g transform="translate(1151.6666666666665, 520)">
+        <rect width="180" height="80" rx="4" 
+          fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        
+        <!-- Top accent bar -->
+        <rect x="0" y="0" width="180" height="4" rx="1" fill="#1a1f2e"/>
+        
+        <text x="90" y="30" font-family="Inter, system-ui, sans-serif" 
+          font-size="13" font-weight="bold" 
+          fill="#f0f4f8" text-anchor="middle">Senior Accountant</text>
+          
+        <text x="90" y="50" font-family="Inter, system-ui, sans-serif" 
+          font-size="11" fill="#94a3b8" text-anchor="middle">Finance</text>
+      </g>
+</svg>

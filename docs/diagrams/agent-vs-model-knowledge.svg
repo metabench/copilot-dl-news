@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1100">
+  <defs>
+    <!-- Obsidian Background Gradient -->
+    <linearGradient id="obsidianBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050508"/>
+      <stop offset="25%" style="stop-color:#0a0d14"/>
+      <stop offset="50%" style="stop-color:#0f1420"/>
+      <stop offset="75%" style="stop-color:#0a0d14"/>
+      <stop offset="100%" style="stop-color:#080c12"/>
+    </linearGradient>
+    
+    <!-- White Leather Texture Pattern -->
+    <pattern id="leatherTexture" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="#f8f6f3"/>
+      <circle cx="15" cy="15" r="0.5" fill="rgba(0,0,0,0.03)"/>
+      <circle cx="45" cy="25" r="0.4" fill="rgba(0,0,0,0.02)"/>
+      <circle cx="75" cy="45" r="0.6" fill="rgba(0,0,0,0.03)"/>
+      <circle cx="25" cy="65" r="0.3" fill="rgba(0,0,0,0.02)"/>
+      <circle cx="55" cy="85" r="0.5" fill="rgba(0,0,0,0.03)"/>
+      <circle cx="85" cy="75" r="0.4" fill="rgba(0,0,0,0.02)"/>
+      <path d="M0 50 Q25 48 50 50 T100 50" stroke="rgba(0,0,0,0.015)" fill="none" stroke-width="0.5"/>
+      <path d="M0 70 Q25 72 50 70 T100 70" stroke="rgba(0,0,0,0.01)" fill="none" stroke-width="0.5"/>
+    </pattern>
+    
+    <!-- White Leather Fill -->
+    <linearGradient id="leatherGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf9f7"/>
+      <stop offset="50%" style="stop-color:#f5f3f0"/>
+      <stop offset="100%" style="stop-color:#ebe8e4"/>
+    </linearGradient>
+    
+    <!-- Gold Accent -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#a07d00"/>
+    </linearGradient>
+    
+    <!-- Card Surface (Obsidian) -->
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f2e"/>
+      <stop offset="50%" style="stop-color:#141824"/>
+      <stop offset="100%" style="stop-color:#0f1420"/>
+    </linearGradient>
+    
+    <!-- Model Knowledge Zone (Deep Obsidian) -->
+    <linearGradient id="modelZone" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    
+    <!-- Agent Knowledge Zone (Warmer Obsidian) -->
+    <linearGradient id="agentZone" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1c2128"/>
+      <stop offset="100%" style="stop-color:#252c38"/>
+    </linearGradient>
+    
+    <!-- Emerald Glow (Active/Runtime) -->
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    
+    <!-- Sapphire Glow (Baked/Static) -->
+    <linearGradient id="sapphireGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+    
+    <!-- Flow Arrow Gradient -->
+    <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a227;stop-opacity:0.2"/>
+      <stop offset="50%" style="stop-color:#c9a227;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#c9a227;stop-opacity:0.2"/>
+    </linearGradient>
+    
+    <!-- Gold Glow Effect -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Soft Shadow -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Leather Stitch Pattern -->
+    <pattern id="stitchPattern" x="0" y="0" width="20" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="2" x2="8" y2="2" stroke="#c9a227" stroke-width="1" stroke-linecap="round"/>
+      <line x1="12" y1="2" x2="20" y2="2" stroke="#c9a227" stroke-width="1" stroke-linecap="round"/>
+    </pattern>
+    
+    <!-- Arrow Marker -->
+    <marker id="arrowGold" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c9a227"/>
+    </marker>
+    
+    <marker id="arrowEmerald" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+    
+    <marker id="arrowSapphire" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="1100" fill="url(#obsidianBg)"/>
+  
+  <!-- Subtle Grid Pattern -->
+  <g opacity="0.03">
+    <line x1="0" y1="200" x2="1400" y2="200" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="400" x2="1400" y2="400" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="600" x2="1400" y2="600" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="800" x2="1400" y2="800" stroke="#fff" stroke-width="1"/>
+    <line x1="700" y1="0" x2="700" y2="1100" stroke="#fff" stroke-width="1"/>
+  </g>
+  
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- TITLE SECTION -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(700, 50)">
+    <!-- Title with gold glow -->
+    <text x="0" y="0" text-anchor="middle" font-family="Georgia, serif" font-size="36" font-weight="bold" fill="#c9a227" filter="url(#goldGlow)">
+      Agent Knowledge vs Model Knowledge
+    </text>
+    <text x="0" y="35" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="16" fill="#94a3b8">
+      Understanding the Two Layers of AI Intelligence
+    </text>
+    
+    <!-- Decorative line -->
+    <line x1="-300" y1="55" x2="300" y2="55" stroke="url(#goldAccent)" stroke-width="2"/>
+    <circle cx="-300" cy="55" r="4" fill="#c9a227"/>
+    <circle cx="300" cy="55" r="4" fill="#c9a227"/>
+  </g>
+  
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- TWO MAIN ZONES -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  
+  <!-- MODEL KNOWLEDGE ZONE (Left) -->
+  <g transform="translate(50, 140)">
+    <!-- White Leather Card -->
+    <rect x="0" y="0" width="620" height="440" rx="16" fill="url(#leatherGradient)" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="620" height="440" rx="16" fill="url(#leatherTexture)" opacity="0.5"/>
+    
+    <!-- Gold stitching border -->
+    <rect x="8" y="8" width="604" height="424" rx="12" fill="none" stroke="url(#stitchPattern)" stroke-width="3"/>
+    
+    <!-- Header -->
+    <rect x="20" y="20" width="580" height="60" rx="8" fill="url(#modelZone)"/>
+    <text x="40" y="58" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#3b82f6">
+      🧠 Model Knowledge
+    </text>
+    <text x="580" y="55" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">
+      STATIC · BAKED-IN · TRAINING-TIME
+    </text>
+    
+    <!-- Content Items -->
+    <g transform="translate(30, 100)">
+      <!-- Item 1: Weights -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#sapphireGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Neural Weights</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Billions of parameters encoding</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">patterns from training data</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">~175B params (GPT-4 class)</text>
+      </g>
+      
+      <!-- Item 2: Language Understanding -->
+      <g transform="translate(280, 0)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#sapphireGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Language Patterns</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Syntax, semantics, grammar</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">across 100+ languages</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Immutable at inference</text>
+      </g>
+      
+      <!-- Item 3: Reasoning Patterns -->
+      <g transform="translate(0, 110)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#sapphireGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Reasoning Circuits</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Chain-of-thought, logic,</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">mathematical operations</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Learned from examples</text>
+      </g>
+      
+      <!-- Item 4: World Knowledge -->
+      <g transform="translate(280, 110)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#sapphireGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">World Knowledge</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Facts, concepts, entities</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">frozen at training cutoff</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Cutoff: ~April 2024</text>
+      </g>
+    </g>
+    
+    <!-- Key Characteristic Box -->
+    <g transform="translate(30, 330)">
+      <rect x="0" y="0" width="560" height="80" rx="8" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.3)" stroke-width="1"/>
+      <text x="20" y="28" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#3b82f6">Key Characteristic</text>
+      <text x="20" y="50" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Cannot be modified at runtime. Same for every agent instance.</text>
+      <text x="20" y="68" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Represents the &quot;base intelligence&quot; — what the model knows before any context.</text>
+    </g>
+  </g>
+  
+  <!-- AGENT KNOWLEDGE ZONE (Right) -->
+  <g transform="translate(730, 140)">
+    <!-- White Leather Card -->
+    <rect x="0" y="0" width="620" height="440" rx="16" fill="url(#leatherGradient)" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="620" height="440" rx="16" fill="url(#leatherTexture)" opacity="0.5"/>
+    
+    <!-- Gold stitching border -->
+    <rect x="8" y="8" width="604" height="424" rx="12" fill="none" stroke="url(#stitchPattern)" stroke-width="3"/>
+    
+    <!-- Header -->
+    <rect x="20" y="20" width="580" height="60" rx="8" fill="url(#agentZone)"/>
+    <text x="40" y="58" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#10b981">
+      🤖 Agent Knowledge
+    </text>
+    <text x="580" y="55" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">
+      DYNAMIC · RUNTIME · CONTEXT-AWARE
+    </text>
+    
+    <!-- Content Items -->
+    <g transform="translate(30, 100)">
+      <!-- Item 1: Tool Descriptions -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#emeraldGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Tool Descriptions</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">MCP tools, functions, APIs</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">visible in tool inventory</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">PUSH discovery</text>
+      </g>
+      
+      <!-- Item 2: Context Window -->
+      <g transform="translate(280, 0)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#emeraldGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Context Window</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Current conversation, files,</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">system prompts, attachments</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">~128K tokens</text>
+      </g>
+      
+      <!-- Item 3: Session Memory -->
+      <g transform="translate(0, 110)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#emeraldGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Session Memory</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">LESSONS.md, session folders,</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">working notes, follow-ups</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#f59e0b">PULL discovery</text>
+      </g>
+      
+      <!-- Item 4: Instructions -->
+      <g transform="translate(280, 110)">
+        <rect x="0" y="0" width="260" height="90" rx="8" fill="url(#cardGradient)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+        <circle cx="20" cy="20" r="8" fill="url(#emeraldGlow)"/>
+        <text x="38" y="24" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#f0f4f8">Agent Instructions</text>
+        <text x="16" y="48" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">AGENTS.md, .instructions.md,</text>
+        <text x="16" y="64" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">mode-specific rules</text>
+        <text x="16" y="80" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">PUSH discovery</text>
+      </g>
+    </g>
+    
+    <!-- Key Characteristic Box -->
+    <g transform="translate(30, 330)">
+      <rect x="0" y="0" width="560" height="80" rx="8" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+      <text x="20" y="28" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#10b981">Key Characteristic</text>
+      <text x="20" y="50" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Can be modified, extended, and improved during runtime.</text>
+      <text x="20" y="68" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Unique per agent session. Enables learning and adaptation.</text>
+    </g>
+  </g>
+  
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- DISCOVERY MODES SECTION -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(50, 620)">
+    <!-- Section Header -->
+    <text x="650" y="0" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#c9a227">
+      Knowledge Discovery Modes
+    </text>
+    <line x1="350" y1="15" x2="950" y2="15" stroke="rgba(201,162,39,0.3)" stroke-width="1"/>
+    
+    <!-- PUSH Discovery Card -->
+    <g transform="translate(0, 40)">
+      <rect x="0" y="0" width="420" height="180" rx="12" fill="url(#cardGradient)" stroke="rgba(16,185,129,0.4)" stroke-width="2" filter="url(#softShadow)"/>
+      
+      <rect x="0" y="0" width="420" height="45" rx="12" fill="rgba(16,185,129,0.15)"/>
+      <text x="20" y="30" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#10b981">📤 PUSH Discovery</text>
+      <text x="400" y="28" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">Automatic</text>
+      
+      <g transform="translate(20, 60)">
+        <text x="0" y="15" font-family="Inter, system-ui, sans-serif" font-size="13" fill="#f0f4f8">Agent sees this WITHOUT asking</text>
+        
+        <g transform="translate(0, 30)">
+          <circle cx="8" cy="8" r="4" fill="#10b981"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Tool descriptions (MCP inventory)</text>
+        </g>
+        <g transform="translate(0, 52)">
+          <circle cx="8" cy="8" r="4" fill="#10b981"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">System prompts &amp; instructions</text>
+        </g>
+        <g transform="translate(0, 74)">
+          <circle cx="8" cy="8" r="4" fill="#10b981"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Response hints from previous calls</text>
+        </g>
+        <g transform="translate(0, 96)">
+          <circle cx="8" cy="8" r="4" fill="#10b981"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Current file context &amp; attachments</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- PULL Discovery Card -->
+    <g transform="translate(490, 40)">
+      <rect x="0" y="0" width="420" height="180" rx="12" fill="url(#cardGradient)" stroke="rgba(245,158,11,0.4)" stroke-width="2" filter="url(#softShadow)"/>
+      
+      <rect x="0" y="0" width="420" height="45" rx="12" fill="rgba(245,158,11,0.15)"/>
+      <text x="20" y="30" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#f59e0b">📥 PULL Discovery</text>
+      <text x="400" y="28" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">On Request</text>
+      
+      <g transform="translate(20, 60)">
+        <text x="0" y="15" font-family="Inter, system-ui, sans-serif" font-size="13" fill="#f0f4f8">Agent must remember to fetch this</text>
+        
+        <g transform="translate(0, 30)">
+          <circle cx="8" cy="8" r="4" fill="#f59e0b"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">LESSONS.md (via getLessons)</text>
+        </g>
+        <g transform="translate(0, 52)">
+          <circle cx="8" cy="8" r="4" fill="#f59e0b"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Session files (via getSession)</text>
+        </g>
+        <g transform="translate(0, 74)">
+          <circle cx="8" cy="8" r="4" fill="#f59e0b"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">File contents (via read_file)</text>
+        </g>
+        <g transform="translate(0, 96)">
+          <circle cx="8" cy="8" r="4" fill="#f59e0b"/>
+          <text x="20" y="12" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#94a3b8">Search results (via grep/semantic)</text>
+        </g>
+      </g>
+    </g>
+    
+    <!-- Connection Arrow -->
+    <g transform="translate(455, 130)">
+      <text x="0" y="0" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="28" fill="#64748b">→</text>
+      <text x="0" y="22" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">requires action</text>
+    </g>
+    
+    <!-- Implication Card -->
+    <g transform="translate(980, 40)">
+      <rect x="0" y="0" width="320" height="180" rx="12" fill="url(#cardGradient)" stroke="rgba(201,162,39,0.4)" stroke-width="2" filter="url(#softShadow)"/>
+      
+      <rect x="0" y="0" width="320" height="45" rx="12" fill="rgba(201,162,39,0.15)"/>
+      <text x="20" y="30" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#c9a227">💡 Implication</text>
+      
+      <g transform="translate(20, 60)">
+        <text x="0" y="15" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#f0f4f8" font-weight="600">Put guidance where it will be seen:</text>
+        
+        <text x="0" y="45" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">1. Tool descriptions (always visible)</text>
+        <text x="0" y="65" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">2. Response hints (seen after calls)</text>
+        <text x="0" y="85" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">3. Lessons (must be fetched)</text>
+        
+        <text x="0" y="115" font-family="JetBrains Mono, monospace" font-size="10" fill="#c9a227">Priority: 1 &gt; 2 &gt; 3</text>
+      </g>
+    </g>
+  </g>
+  
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  <!-- DATA FLOW DIAGRAM -->
+  <!-- ══════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(50, 870)">
+    <!-- Section Header -->
+    <text x="650" y="0" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#c9a227">
+      Knowledge Flow at Runtime
+    </text>
+    <line x1="400" y1="15" x2="900" y2="15" stroke="rgba(201,162,39,0.3)" stroke-width="1"/>
+    
+    <!-- Flow Diagram -->
+    <g transform="translate(0, 40)">
+      <!-- Model Box -->
+      <rect x="0" y="30" width="180" height="100" rx="8" fill="url(#modelZone)" stroke="rgba(59,130,246,0.4)" stroke-width="2"/>
+      <text x="90" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#3b82f6">Model</text>
+      <text x="90" y="90" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Base Intelligence</text>
+      <text x="90" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">(frozen weights)</text>
+      
+      <!-- Arrow 1 -->
+      <line x1="190" y1="80" x2="280" y2="80" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+      <text x="235" y="70" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#94a3b8">powers</text>
+      
+      <!-- Agent Box -->
+      <rect x="290" y="30" width="180" height="100" rx="8" fill="url(#agentZone)" stroke="rgba(16,185,129,0.4)" stroke-width="2"/>
+      <text x="380" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#10b981">Agent</text>
+      <text x="380" y="90" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Runtime Context</text>
+      <text x="380" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">(tools + memory)</text>
+      
+      <!-- Arrow 2 -->
+      <line x1="480" y1="80" x2="570" y2="80" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+      <text x="525" y="70" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#94a3b8">uses</text>
+      
+      <!-- Tools Box -->
+      <rect x="580" y="30" width="180" height="100" rx="8" fill="url(#cardGradient)" stroke="rgba(201,162,39,0.4)" stroke-width="2"/>
+      <text x="670" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#c9a227">Tools</text>
+      <text x="670" y="90" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">MCP + CLI</text>
+      <text x="670" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">(capabilities)</text>
+      
+      <!-- Arrow 3 -->
+      <line x1="770" y1="80" x2="860" y2="80" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+      <text x="815" y="70" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#94a3b8">accesses</text>
+      
+      <!-- Memory Box -->
+      <rect x="870" y="30" width="180" height="100" rx="8" fill="url(#cardGradient)" stroke="rgba(139,92,246,0.4)" stroke-width="2"/>
+      <text x="960" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#8b5cf6">Memory</text>
+      <text x="960" y="90" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">Sessions + Lessons</text>
+      <text x="960" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#64748b">(persistent state)</text>
+      
+      <!-- Feedback Loop Arrow -->
+      <path d="M960 140 L960 160 L380 160 L380 140" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowGold)"/>
+      <text x="670" y="175" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#8b5cf6">feedback loop (self-improvement)</text>
+      
+      <!-- Output Box -->
+      <rect x="1060" y="30" width="180" height="100" rx="8" fill="url(#leatherGradient)" stroke="rgba(201,162,39,0.6)" stroke-width="2"/>
+      <text x="1150" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#1a1f2e">Output</text>
+      <text x="1150" y="90" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#475569">Code + Docs</text>
+      <text x="1150" y="108" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#475569">(artifacts)</text>
+      
+      <!-- Final Arrow -->
+      <line x1="1055" y1="80" x2="1055" y2="80" stroke="#c9a227" stroke-width="2"/>
+      <text x="1010" y="70" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#94a3b8">produces</text>
+      <line x1="1050" y1="80" x2="1050" y2="80" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+    </g>
+  </g>
+  
+  <!-- Footer -->
+  <g transform="translate(700, 1070)">
+    <text x="0" y="0" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">
+      copilot-dl-news · Agent Knowledge Architecture · 2025-12-03
+    </text>
+  </g>
+</svg>

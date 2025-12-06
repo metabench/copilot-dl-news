@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" width="900" height="700">
+  <defs>
+    <!-- Obsidian Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050508"/>
+      <stop offset="50%" style="stop-color:#0a0d14"/>
+      <stop offset="100%" style="stop-color:#141824"/>
+    </linearGradient>
+    
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fffacd"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#8b7500"/>
+    </linearGradient>
+    
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399"/>
+      <stop offset="50%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f2e"/>
+      <stop offset="100%" style="stop-color:#141824"/>
+    </linearGradient>
+    
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.4"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="dropShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="700" fill="url(#bgGrad)"/>
+  
+  <!-- Grid Pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" stroke-width="1"/>
+  </pattern>
+  <rect width="900" height="700" fill="url(#grid)"/>
+  
+  <!-- Title Bar -->
+  <rect x="0" y="0" width="900" height="50" fill="#0a0d14"/>
+  <line x1="0" y1="50" x2="900" y2="50" stroke="#c9a227" stroke-opacity="0.3"/>
+  <text x="30" y="32" font-family="Georgia, serif" font-size="18" fill="#c9a227" filter="url(#goldGlow)" letter-spacing="2">
+    UPCOMING IMPROVEMENTS
+  </text>
+  <text x="870" y="32" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b" text-anchor="end">
+    docs/plans/improvements/
+  </text>
+  
+  <!-- Main Content Area -->
+  <rect x="30" y="70" width="840" height="600" rx="12" fill="url(#cardGrad)" filter="url(#dropShadow)"/>
+  <rect x="30" y="70" width="840" height="600" rx="12" fill="none" stroke="rgba(255,255,255,0.06)"/>
+  
+  <!-- Section Header -->
+  <text x="60" y="110" font-family="Inter, sans-serif" font-size="12" fill="#64748b" letter-spacing="2">
+    SELECT NEXT PRIORITY
+  </text>
+  
+  <!-- Improvement Item 1 - Selected/Prioritized -->
+  <g transform="translate(50, 130)">
+    <rect x="0" y="0" width="800" height="80" rx="8" fill="rgba(16,185,129,0.12)" stroke="#10b981" stroke-width="2"/>
+    
+    <!-- Priority Star (selected) -->
+    <g transform="translate(25, 40)">
+      <polygon points="0,-12 4,-4 12,-4 6,2 8,10 0,6 -8,10 -6,2 -12,-4 -4,-4" fill="#10b981" stroke="#34d399" stroke-width="1"/>
+    </g>
+    
+    <!-- Content -->
+    <text x="55" y="30" font-family="Georgia, serif" font-size="16" fill="#f0f4f8">Database Query Optimization</text>
+    <text x="55" y="50" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Batch operations, N+1 elimination, index improvements</text>
+    <text x="55" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#10b981">Est: 3 sessions • Impact: High</text>
+    
+    <!-- Status Badge -->
+    <rect x="680" y="25" width="100" height="28" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981"/>
+    <text x="730" y="44" font-family="Inter, sans-serif" font-size="11" fill="#10b981" text-anchor="middle">★ NEXT UP</text>
+  </g>
+  
+  <!-- Improvement Item 2 -->
+  <g transform="translate(50, 225)">
+    <rect x="0" y="0" width="800" height="80" rx="8" fill="rgba(26,31,46,0.6)" stroke="rgba(255,255,255,0.08)"/>
+    
+    <!-- Priority Star (unselected) -->
+    <g transform="translate(25, 40)">
+      <polygon points="0,-12 4,-4 12,-4 6,2 8,10 0,6 -8,10 -6,2 -12,-4 -4,-4" fill="none" stroke="#64748b" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Content -->
+    <text x="55" y="30" font-family="Georgia, serif" font-size="16" fill="#f0f4f8">AI Planning Interface</text>
+    <text x="55" y="50" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Build the planner UI for reviewing agent-generated plans</text>
+    <text x="55" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">Est: 5 sessions • Impact: Medium</text>
+    
+    <!-- Click to prioritize hint -->
+    <rect x="680" y="25" width="100" height="28" rx="4" fill="transparent" stroke="#64748b" stroke-dasharray="4,2"/>
+    <text x="730" y="44" font-family="Inter, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Click ★</text>
+  </g>
+  
+  <!-- Improvement Item 3 -->
+  <g transform="translate(50, 320)">
+    <rect x="0" y="0" width="800" height="80" rx="8" fill="rgba(26,31,46,0.6)" stroke="rgba(255,255,255,0.08)"/>
+    
+    <!-- Priority Star (unselected) -->
+    <g transform="translate(25, 40)">
+      <polygon points="0,-12 4,-4 12,-4 6,2 8,10 0,6 -8,10 -6,2 -12,-4 -4,-4" fill="none" stroke="#64748b" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Content -->
+    <text x="55" y="30" font-family="Georgia, serif" font-size="16" fill="#f0f4f8">jsgui3 Virtual Scrolling</text>
+    <text x="55" y="50" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Handle 10,000+ item lists without performance degradation</text>
+    <text x="55" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">Est: 4 sessions • Impact: High</text>
+    
+    <rect x="680" y="25" width="100" height="28" rx="4" fill="transparent" stroke="#64748b" stroke-dasharray="4,2"/>
+    <text x="730" y="44" font-family="Inter, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Click ★</text>
+  </g>
+  
+  <!-- Improvement Item 4 -->
+  <g transform="translate(50, 415)">
+    <rect x="0" y="0" width="800" height="80" rx="8" fill="rgba(26,31,46,0.6)" stroke="rgba(255,255,255,0.08)"/>
+    
+    <!-- Priority Star (unselected) -->
+    <g transform="translate(25, 40)">
+      <polygon points="0,-12 4,-4 12,-4 6,2 8,10 0,6 -8,10 -6,2 -12,-4 -4,-4" fill="none" stroke="#64748b" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Content -->
+    <text x="55" y="30" font-family="Georgia, serif" font-size="16" fill="#f0f4f8">Test Coverage Dashboard</text>
+    <text x="55" y="50" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Visual coverage metrics, gap identification, trend tracking</text>
+    <text x="55" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">Est: 2 sessions • Impact: Medium</text>
+    
+    <rect x="680" y="25" width="100" height="28" rx="4" fill="transparent" stroke="#64748b" stroke-dasharray="4,2"/>
+    <text x="730" y="44" font-family="Inter, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Click ★</text>
+  </g>
+  
+  <!-- Improvement Item 5 -->
+  <g transform="translate(50, 510)">
+    <rect x="0" y="0" width="800" height="80" rx="8" fill="rgba(26,31,46,0.6)" stroke="rgba(255,255,255,0.08)"/>
+    
+    <!-- Priority Star (unselected) -->
+    <g transform="translate(25, 40)">
+      <polygon points="0,-12 4,-4 12,-4 6,2 8,10 0,6 -8,10 -6,2 -12,-4 -4,-4" fill="none" stroke="#64748b" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Content -->
+    <text x="55" y="30" font-family="Georgia, serif" font-size="16" fill="#f0f4f8">Multi-Agent Session Handoff</text>
+    <text x="55" y="50" font-family="Inter, sans-serif" font-size="12" fill="#94a3b8">Clean state transfer between different AI models in sessions</text>
+    <text x="55" y="68" font-family="JetBrains Mono, monospace" font-size="10" fill="#94a3b8">Est: 3 sessions • Impact: High</text>
+    
+    <rect x="680" y="25" width="100" height="28" rx="4" fill="transparent" stroke="#64748b" stroke-dasharray="4,2"/>
+    <text x="730" y="44" font-family="Inter, sans-serif" font-size="10" fill="#64748b" text-anchor="middle">Click ★</text>
+  </g>
+  
+  <!-- Bottom Action Bar -->
+  <rect x="30" y="610" width="840" height="60" rx="0 0 12 12" fill="rgba(10,13,20,0.8)"/>
+  
+  <!-- Add New Button -->
+  <rect x="60" y="625" width="140" height="32" rx="4" fill="transparent" stroke="#c9a227" stroke-opacity="0.6"/>
+  <text x="130" y="646" font-family="Inter, sans-serif" font-size="12" fill="#c9a227" text-anchor="middle">+ Add Improvement</text>
+  
+  <!-- Start Working Button -->
+  <rect x="700" y="625" width="150" height="32" rx="4" fill="url(#emeraldGrad)"/>
+  <text x="775" y="646" font-family="Inter, sans-serif" font-size="12" fill="#050508" text-anchor="middle" font-weight="600">▶ START SESSION</text>
+  
+  <!-- Item Count -->
+  <text x="450" y="646" font-family="Inter, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">
+    5 improvements queued • 1 prioritized
+  </text>
+</svg>

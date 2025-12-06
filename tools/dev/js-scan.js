@@ -19,6 +19,8 @@ const { runPatternSearch } = require('./js-scan/operations/patterns');
 const { runDependencySummary } = require('./js-scan/operations/dependencies');
 const { analyzeRipple } = require('./js-scan/operations/rippleAnalysis');
 const RelationshipAnalyzer = require('./js-scan/operations/relationships');
+const { contextSlice } = require('./js-scan/operations/contextSlice');
+const { impactPreview } = require('./js-scan/operations/impactPreview');
 const {
   buildCallGraph,
   selectNode,
@@ -674,6 +676,10 @@ function createParser() {
     .add('--hot-paths', '[Gap 6] List functions with highest inbound call counts', false, 'boolean')
     .add('--dead-code', '[Gap 6] Detect functions with zero inbound calls', false, 'boolean')
     .add('--dead-code-include-exported', 'Include exported functions when reporting dead code', false, 'boolean')
+    .add('--context-slice <function>', '[NEW] Extract minimal context for a function (function + deps)')
+    .add('--impact-preview <file>', '[NEW] Analyze risk of modifying a file (usage counts per export)')
+    .add('--include-code', 'Include assembled code in context-slice output', true, 'boolean')
+    .add('--file <path>', 'Target file for context-slice operation')
     .add('--build-index', 'Build module index', false, 'boolean')
     .add('--ai-mode', '[AI-Native] Include continuation tokens in JSON output', false, 'boolean')
     .add('--continuation <token>', '[AI-Native] Resume from continuation token');
@@ -696,6 +702,8 @@ function ensureSingleOperation(options) {
   if (options.callGraph) provided.push('call-graph');
   if (options.hotPaths) provided.push('hot-paths');
   if (options.deadCode) provided.push('dead-code');
+  if (options.contextSlice) provided.push('context-slice');
+  if (options.impactPreview) provided.push('impact-preview');
   if (options.buildIndex) provided.push('build-index');
   if (provided.length > 1) {
     throw new Error(`Only one operation can be specified at a time. Provided: ${provided.join(', ')}`);
@@ -2187,6 +2195,315 @@ function printExportUsage(result, options) {
   fmt.footer();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW PRINT FUNCTIONS: Context Slice & Impact Preview
+// ═══════════════════════════════════════════════════════════════════════════
+
+function printContextSlice(result, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '上下文切片' : 'Context Slice';
+  fmt.header(`${headerLabel}: ${result.target}`);
+
+  if (result.error) {
+    fmt.error(result.error);
+    return;
+  }
+
+  const slice = result.slice;
+  
+  // Show reduction stats
+  const reductionLabel = isChinese ? '减少' : 'Reduction';
+  const linesLabel = isChinese ? '行' : 'lines';
+  console.log(`\n${fmt.COLORS.success(`✓ ${slice.sliceLines} ${linesLabel} / ${slice.totalLines} ${linesLabel} (${slice.reduction} ${reductionLabel})`)}`);
+
+  // Target function
+  const targetLabel = isChinese ? '目标函数' : 'Target Function';
+  fmt.stat(targetLabel, `${result.target} (lines ${slice.targetFunction.startLine}-${slice.targetFunction.endLine})`);
+
+  // Imports
+  if (slice.imports.length > 0) {
+    const importsLabel = isChinese ? '相关导入' : 'Relevant Imports';
+    console.log(`\n${fmt.COLORS.accent(importsLabel)}:`);
+    slice.imports.forEach(imp => {
+      const specs = imp.specifiers.map(s => s.local).join(', ');
+      console.log(`  ${fmt.COLORS.cyan(imp.source)} → { ${specs} }`);
+    });
+  }
+
+  // Constants
+  if (slice.constants.length > 0) {
+    const constantsLabel = isChinese ? '使用的常量' : 'Used Constants';
+    console.log(`\n${fmt.COLORS.accent(constantsLabel)}:`);
+    slice.constants.forEach(c => {
+      console.log(`  ${fmt.COLORS.muted(`line ${c.startLine}:`)} ${c.name}`);
+    });
+  }
+
+  // Called functions
+  if (slice.functions.length > 0) {
+    const functionsLabel = isChinese ? '调用的函数' : 'Called Functions';
+    console.log(`\n${fmt.COLORS.accent(functionsLabel)}:`);
+    slice.functions.forEach(fn => {
+      console.log(`  ${fmt.COLORS.muted(`lines ${fn.startLine}-${fn.endLine}:`)} ${fn.name}`);
+    });
+  }
+
+  // Dependencies summary
+  if (result.dependencies.externalImports.length > 0) {
+    const externalLabel = isChinese ? '外部依赖' : 'External Dependencies';
+    console.log(`\n${fmt.COLORS.accent(externalLabel)}: ${result.dependencies.externalImports.join(', ')}`);
+  }
+
+  // Optional: show code
+  if (result.code && options.includeCode !== false) {
+    const codeLabel = isChinese ? '组装代码' : 'Assembled Code';
+    console.log(`\n${'─'.repeat(70)}`);
+    console.log(fmt.COLORS.muted(codeLabel + ':'));
+    console.log(result.code);
+  }
+
+  fmt.footer();
+}
+
+function printImpactPreview(result, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '影响预览' : 'Impact Preview';
+  fmt.header(`${headerLabel}: ${result.file}`);
+
+  if (result.error) {
+    fmt.error(result.error);
+    return;
+  }
+
+  const summary = result.summary;
+  
+  // Risk summary
+  const riskLabel = isChinese ? '风险摘要' : 'Risk Summary';
+  console.log(`\n${fmt.COLORS.accent(riskLabel)}:`);
+  console.log(`  ${fmt.COLORS.error('🔴 HIGH')}: ${summary.highRisk} exports`);
+  console.log(`  ${fmt.COLORS.accent('🟡 MEDIUM')}: ${summary.mediumRisk} exports`);
+  console.log(`  ${fmt.COLORS.success('🟢 LOW')}: ${summary.lowRisk} exports`);
+  console.log(`  ${fmt.COLORS.muted('⚪ NONE')}: ${summary.safeToModify.length} exports`);
+
+  // Exports detail
+  if (result.exports.length > 0) {
+    const exportsLabel = isChinese ? '导出详情' : 'Export Details';
+    console.log(`\n${fmt.COLORS.accent(exportsLabel)}:`);
+    
+    // Sort by risk level
+    const sortedExports = [...result.exports].sort((a, b) => {
+      const riskOrder = { HIGH: 0, MEDIUM: 1, LOW: 2, NONE: 3 };
+      return (riskOrder[a.risk] || 99) - (riskOrder[b.risk] || 99);
+    });
+
+    for (const exp of sortedExports) {
+      const riskIcon = exp.risk === 'HIGH' ? '🔴' : exp.risk === 'MEDIUM' ? '🟡' : exp.risk === 'LOW' ? '🟢' : '⚪';
+      const usageLabel = isChinese ? '使用' : 'usages';
+      console.log(`  ${riskIcon} ${fmt.COLORS.cyan(exp.name)} (${exp.type}) - ${exp.usageCount} ${usageLabel}`);
+      
+      if (exp.usedBy && exp.usedBy.length > 0 && exp.usedBy.length <= 5) {
+        exp.usedBy.forEach(file => {
+          console.log(`      ${fmt.COLORS.muted('→')} ${file}`);
+        });
+      } else if (exp.usedBy && exp.usedBy.length > 5) {
+        exp.usedBy.slice(0, 3).forEach(file => {
+          console.log(`      ${fmt.COLORS.muted('→')} ${file}`);
+        });
+        console.log(`      ${fmt.COLORS.muted(`... and ${exp.usedBy.length - 3} more`)}`);
+      }
+    }
+  }
+
+  // Recommendations
+  if (result.recommendations.length > 0) {
+    const recLabel = isChinese ? '建议' : 'Recommendations';
+    console.log(`\n${fmt.COLORS.accent(recLabel)}:`);
+    result.recommendations.forEach(rec => {
+      const icon = rec.type === 'warning' ? '⚠️' : 'ℹ️';
+      console.log(`  ${icon} ${rec.message}`);
+    });
+  }
+
+  // Safe to modify
+  if (summary.safeToModify.length > 0) {
+    const safeLabel = isChinese ? '可安全修改' : 'Safe to Modify';
+    console.log(`\n${fmt.COLORS.success(safeLabel)}: ${summary.safeToModify.join(', ')}`);
+  }
+
+  fmt.footer();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GAP 6 PRINT FUNCTIONS: Call Graph, Hot Paths, Dead Code
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Print call graph traversal results in human-readable format
+ * @param {Object} result - Result from traverseCallGraph
+ * @param {Object} startNode - The starting node for the traversal
+ * @param {Object} options - CLI options
+ */
+function printCallGraph(result, startNode, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '调用图' : 'Call Graph';
+  fmt.header(`${headerLabel}: ${startNode.id}`);
+
+  // Start node info
+  const startLabel = isChinese ? '起始函数' : 'Start Function';
+  console.log(`\n${fmt.COLORS.accent(startLabel)}:`);
+  console.log(`  ${fmt.COLORS.cyan(startNode.name)} @ ${startNode.file}:${startNode.line}`);
+  if (startNode.exported) {
+    console.log(`  ${fmt.COLORS.success('✓ exported')}`);
+  }
+  if (startNode.isAsync) {
+    console.log(`  ${fmt.COLORS.muted('async')}`);
+  }
+
+  // Stats
+  const statsLabel = isChinese ? '统计' : 'Stats';
+  console.log(`\n${fmt.COLORS.accent(statsLabel)}:`);
+  console.log(`  ${isChinese ? '节点' : 'Nodes'}: ${result.nodes.length}`);
+  console.log(`  ${isChinese ? '边' : 'Edges'}: ${result.edges.length}`);
+  if (result.depth > 0) {
+    console.log(`  ${isChinese ? '深度限制' : 'Depth limit'}: ${result.depth}`);
+  }
+
+  // Edges (calls)
+  if (result.edges.length > 0) {
+    const callsLabel = isChinese ? '调用关系' : 'Call Relationships';
+    console.log(`\n${fmt.COLORS.accent(callsLabel)}:`);
+    
+    const limit = options.limit || 50;
+    const edgesToShow = result.edges.slice(0, limit);
+    
+    edgesToShow.forEach(edge => {
+      const sourceShort = edge.sourceId.split('::').pop();
+      const targetShort = edge.targetId.split('::').pop();
+      console.log(`  ${fmt.COLORS.muted(sourceShort)} → ${fmt.COLORS.cyan(targetShort)} (${edge.count}x)`);
+    });
+
+    if (result.edges.length > limit) {
+      console.log(`  ${fmt.COLORS.muted(`... and ${result.edges.length - limit} more`)}`);
+    }
+  }
+
+  // Unresolved calls
+  if (result.unresolved && result.unresolved.length > 0) {
+    const unresolvedLabel = isChinese ? '未解析调用' : 'Unresolved Calls';
+    console.log(`\n${fmt.COLORS.accent(unresolvedLabel)}:`);
+    const unresolvedToShow = result.unresolved.slice(0, 10);
+    unresolvedToShow.forEach(entry => {
+      console.log(`  ${fmt.COLORS.muted('?')} ${entry.call} (${entry.count}x from ${entry.sourceId.split('::').pop()})`);
+    });
+    if (result.unresolved.length > 10) {
+      console.log(`  ${fmt.COLORS.muted(`... and ${result.unresolved.length - 10} more`)}`);
+    }
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print hot paths (most called functions) in human-readable format
+ * @param {Array} hotPaths - Result from computeHotPaths
+ * @param {Object} stats - Graph stats
+ * @param {Object} options - CLI options
+ */
+function printHotPaths(hotPaths, stats, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '热路径' : 'Hot Paths';
+  fmt.header(headerLabel);
+
+  // Stats
+  console.log(`\n${fmt.COLORS.muted(isChinese 
+    ? `总节点: ${stats.nodeCount} | 总边: ${stats.edgeCount}` 
+    : `Total nodes: ${stats.nodeCount} | Total edges: ${stats.edgeCount}`)}`);
+
+  if (hotPaths.length === 0) {
+    console.log(`\n${fmt.COLORS.muted(isChinese ? '未发现热路径' : 'No hot paths found.')}`);
+    fmt.footer();
+    return;
+  }
+
+  // Hot paths list
+  const listLabel = isChinese ? '最常调用函数' : 'Most Called Functions';
+  console.log(`\n${fmt.COLORS.accent(listLabel)}:`);
+
+  hotPaths.forEach((entry, index) => {
+    const rank = index + 1;
+    const exportedTag = entry.exported ? fmt.COLORS.success(' [exported]') : '';
+    const countLabel = isChinese ? '次调用' : 'calls';
+    console.log(`  ${rank}. ${fmt.COLORS.cyan(entry.name)} - ${entry.count} ${countLabel}${exportedTag}`);
+    console.log(`     ${fmt.COLORS.muted(entry.file)}`);
+  });
+
+  fmt.footer();
+}
+
+/**
+ * Print dead code (functions with zero inbound calls) in human-readable format
+ * @param {Array} deadCode - Result from findDeadCode
+ * @param {Object} stats - Graph stats
+ * @param {Object} options - CLI options
+ */
+function printDeadCode(deadCode, stats, options) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+
+  const headerLabel = isChinese ? '死代码' : 'Dead Code';
+  fmt.header(headerLabel);
+
+  // Stats
+  const includeExported = options.deadCodeIncludeExported;
+  console.log(`\n${fmt.COLORS.muted(isChinese 
+    ? `总节点: ${stats.nodeCount} | 包含导出: ${includeExported ? '是' : '否'}` 
+    : `Total nodes: ${stats.nodeCount} | Include exported: ${includeExported ? 'yes' : 'no'}`)}`);
+
+  if (deadCode.length === 0) {
+    console.log(`\n${fmt.COLORS.success(isChinese ? '✓ 未发现死代码' : '✓ No dead code found.')}`);
+    fmt.footer();
+    return;
+  }
+
+  // Summary
+  const exportedCount = deadCode.filter(d => d.exported).length;
+  const internalCount = deadCode.length - exportedCount;
+  
+  console.log(`\n${fmt.COLORS.accent(isChinese ? '摘要' : 'Summary')}:`);
+  console.log(`  ${isChinese ? '未调用函数' : 'Uncalled functions'}: ${deadCode.length}`);
+  if (exportedCount > 0) {
+    console.log(`  ${fmt.COLORS.accent(isChinese ? '导出(可能是API)' : 'Exported (possibly API)')}: ${exportedCount}`);
+  }
+  console.log(`  ${isChinese ? '内部' : 'Internal'}: ${internalCount}`);
+
+  // Dead code list
+  const listLabel = isChinese ? '未调用函数列表' : 'Uncalled Functions';
+  console.log(`\n${fmt.COLORS.accent(listLabel)}:`);
+
+  deadCode.forEach((entry, index) => {
+    const exportedTag = entry.exported ? fmt.COLORS.accent(' [exported]') : '';
+    console.log(`  ${index + 1}. ${fmt.COLORS.cyan(entry.name)}${exportedTag}`);
+    console.log(`     ${fmt.COLORS.muted(entry.file)}`);
+  });
+
+  // Guidance
+  if (internalCount > 0) {
+    console.log(`\n${fmt.COLORS.muted(isChinese 
+      ? '💡 内部未调用函数可能可以安全删除' 
+      : '💡 Internal uncalled functions may be safely removable')}`);
+  }
+
+  fmt.footer();
+}
+
 async function main() {
   const parser = createParser();
   let options;
@@ -2531,6 +2848,148 @@ async function main() {
         }
       } else {
         printExportUsage(result, options);
+      }
+      return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NEW OPERATIONS: Context Slice & Impact Preview
+    // ═══════════════════════════════════════════════════════════════════════
+
+    if (operation === 'context-slice') {
+      // Parse target: --context-slice functionName --file path
+      // Or: --context-slice path:functionName
+      let targetFile = options.file || options.dir;
+      let targetFunction = options.contextSlice;
+
+      // Handle path:function format
+      if (targetFunction && targetFunction.includes(':')) {
+        const parts = targetFunction.split(':');
+        targetFile = parts[0];
+        targetFunction = parts[1];
+      }
+
+      if (!targetFile) {
+        fmt.error('--context-slice requires --file <path> or use format: --context-slice path:functionName');
+        process.exitCode = 1;
+        return;
+      }
+
+      const result = await contextSlice(targetFile, targetFunction, {
+        includeCode: options.includeCode !== false,
+        workspaceRoot: options.dir
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printContextSlice(result, options);
+      }
+      return;
+    }
+
+    if (operation === 'impact-preview') {
+      const result = await impactPreview(options.impactPreview, {
+        workspaceRoot: options.dir
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printImpactPreview(result, options);
+      }
+      return;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // GAP 6 OPERATIONS: Call Graph, Hot Paths, Dead Code
+    // ═══════════════════════════════════════════════════════════════════════
+
+    if (operation === 'call-graph') {
+      const callGraph = buildCallGraph(scanResult.files);
+      const startNode = selectNode(callGraph, options.callGraph);
+      const result = traverseCallGraph(callGraph, startNode.id, options.depDepth || 0);
+
+      if (options.json) {
+        console.log(JSON.stringify({
+          operation: 'call-graph',
+          target: options.callGraph,
+          startNode: {
+            id: startNode.id,
+            name: startNode.name,
+            file: startNode.file,
+            line: startNode.line,
+            exported: startNode.exported,
+            hash: startNode.hash
+          },
+          stats: {
+            nodes: result.nodes.length,
+            edges: result.edges.length,
+            depth: result.depth,
+            unresolvedCalls: result.unresolved.length
+          },
+          nodes: result.nodes.map(n => ({
+            id: n.id,
+            name: n.name,
+            file: n.file,
+            line: n.line,
+            exported: n.exported,
+            hash: n.hash
+          })),
+          edges: result.edges,
+          unresolved: result.unresolved
+        }, null, 2));
+      } else {
+        printCallGraph(result, startNode, options);
+      }
+      return;
+    }
+
+    if (operation === 'hot-paths') {
+      const callGraph = buildCallGraph(scanResult.files);
+      const limit = typeof options.limit === 'number' && options.limit > 0 ? options.limit : 20;
+      const hotPaths = computeHotPaths(callGraph, limit);
+
+      if (options.json) {
+        console.log(JSON.stringify({
+          operation: 'hot-paths',
+          stats: {
+            nodeCount: callGraph.stats.nodeCount,
+            edgeCount: callGraph.stats.edgeCount,
+            limit
+          },
+          hotPaths
+        }, null, 2));
+      } else {
+        printHotPaths(hotPaths, callGraph.stats, options);
+      }
+      return;
+    }
+
+    if (operation === 'dead-code') {
+      const callGraph = buildCallGraph(scanResult.files);
+      const limit = typeof options.limit === 'number' && options.limit > 0 ? options.limit : 50;
+      const includeExported = options.deadCodeIncludeExported || false;
+      const deadCode = findDeadCode(callGraph, { includeExported, limit });
+
+      if (options.json) {
+        console.log(JSON.stringify({
+          operation: 'dead-code',
+          stats: {
+            nodeCount: callGraph.stats.nodeCount,
+            edgeCount: callGraph.stats.edgeCount,
+            includeExported,
+            limit
+          },
+          summary: {
+            total: deadCode.length,
+            exported: deadCode.filter(d => d.exported).length,
+            internal: deadCode.filter(d => !d.exported).length
+          },
+          deadCode
+        }, null, 2));
+      } else {
+        printDeadCode(deadCode, callGraph.stats, options);
       }
       return;
     }

@@ -1,4 +1,4 @@
-const { sleep, nowMs } = require('./utils');
+const { sleep, nowMs, safeHostFromUrl, safeCall, safeCallAsync } = require('./utils');
 
 class DomainThrottleManager {
   constructor({
@@ -20,13 +20,13 @@ class DomainThrottleManager {
     this._limiterInitialized = false;
   }
 
+  /**
+   * Safely extract hostname from URL. Delegates to shared utility.
+   * @param {string} url - URL to parse
+   * @returns {string|null} Hostname or null if invalid
+   */
   safeHostFromUrl(url) {
-    if (!url) return null;
-    try {
-      return new URL(url).hostname;
-    } catch (_) {
-      return null;
-    }
+    return safeHostFromUrl(url);
   }
 
   getDomainState(host) {
@@ -75,15 +75,16 @@ class DomainThrottleManager {
   async acquireToken(host) {
     const state = this.getDomainState(host);
     if (!state) return;
-    try {
-      const limiter = this._ensureLimiter();
-      if (limiter) {
+    const limiter = safeCall(() => this._ensureLimiter(), null);
+    if (limiter) {
+      const acquired = await safeCallAsync(async () => {
         await limiter.acquire(host);
         this._syncFromLimiter(limiter, host, state);
+        return true;
+      }, false);
+      if (acquired) {
         return;
       }
-    } catch (_) {
-      // Fallback logic handled below
     }
     const now = nowMs();
     if ((state.backoffUntil || 0) > now) {
@@ -96,15 +97,16 @@ class DomainThrottleManager {
   note429(host, retryAfterMs) {
     const state = this.getDomainState(host);
     if (!state) return;
-    try {
-      const limiter = this._ensureLimiter();
-      if (limiter) {
+    const limiter = safeCall(() => this._ensureLimiter(), null);
+    if (limiter) {
+      const handled = safeCall(() => {
         limiter.note429(host, retryAfterMs);
         this._syncFromLimiter(limiter, host, state);
+        return true;
+      }, false);
+      if (handled) {
         return;
       }
-    } catch (_) {
-      // Fallback logic handled below
     }
     const now = nowMs();
     state.isLimited = true;
@@ -128,15 +130,16 @@ class DomainThrottleManager {
   noteSuccess(host) {
     const state = this.getDomainState(host);
     if (!state) return;
-    try {
-      const limiter = this._ensureLimiter();
-      if (limiter) {
+    const limiter = safeCall(() => this._ensureLimiter(), null);
+    if (limiter) {
+      const handled = safeCall(() => {
         limiter.noteSuccess(host);
         this._syncFromLimiter(limiter, host, state);
+        return true;
+      }, false);
+      if (handled) {
         return;
       }
-    } catch (_) {
-      // Fallback logic handled below
     }
     const now = nowMs();
     state.lastSuccessAt = now;
@@ -163,26 +166,20 @@ class DomainThrottleManager {
     }
     this._limiterInitialized = true;
     if (this.limiterFactory) {
-      try {
-        this._domainLimiter = this.limiterFactory({
-          pacerJitterMinMs: this.pacerJitterMinMs,
-          pacerJitterMaxMs: this.pacerJitterMaxMs
-        }) || null;
-      } catch (_) {
-        this._domainLimiter = null;
-      }
+      this._domainLimiter = safeCall(() => this.limiterFactory({
+        pacerJitterMinMs: this.pacerJitterMinMs,
+        pacerJitterMaxMs: this.pacerJitterMaxMs
+      }) || null, null);
       return this._domainLimiter;
     }
-    try {
+    this._domainLimiter = safeCall(() => {
       // Lazy require to avoid circular timing
       const { DomainLimiter } = require('./limiter');
-      this._domainLimiter = new DomainLimiter({
+      return new DomainLimiter({
         pacerJitterMinMs: this.pacerJitterMinMs,
         pacerJitterMaxMs: this.pacerJitterMaxMs
       });
-    } catch (_) {
-      this._domainLimiter = null;
-    }
+    }, null);
     return this._domainLimiter;
   }
 
@@ -207,7 +204,7 @@ class DomainThrottleManager {
     if (!adapter || typeof adapter.isEnabled !== 'function' || !adapter.isEnabled()) {
       return;
     }
-    try {
+    safeCall(() => {
       const payload = {
         host,
         isLimited: !!state.isLimited,
@@ -226,9 +223,8 @@ class DomainThrottleManager {
         recordedAt: new Date().toISOString()
       };
       adapter.upsertDomain(host, JSON.stringify(payload));
-    } catch (_) {
-      // Persisting domain state is best effort
-    }
+      return true;
+    });
   }
 }
 

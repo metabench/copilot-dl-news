@@ -1,0 +1,43 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="0" y="0" width="800" height="400" fill="#f0f4f8"/>
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold" fill="#333">MCP Protocol Fix: Header Termination</text>
+  
+  <!-- Copilot Client Box -->
+  <rect id="client-box" x="50" y="100" width="200" height="150" rx="10" fill="#fff" stroke="#0078d4" stroke-width="2"/>
+  <text id="client-label" x="150" y="130" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold" fill="#0078d4">Copilot Client</text>
+  <text id="client-desc" x="150" y="160" font-family="Arial" font-size="14" text-anchor="middle" fill="#555">Sends JSON-RPC</text>
+  <text id="client-detail" x="150" y="180" font-family="Arial" font-size="14" text-anchor="middle" fill="#555">over stdio</text>
+  
+  <!-- MCP Server Box -->
+  <rect id="server-box" x="550" y="100" width="200" height="150" rx="10" fill="#fff" stroke="#107c10" stroke-width="2"/>
+  <text id="server-label" x="650" y="130" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold" fill="#107c10">MCP Server</text>
+  <text id="server-desc" x="650" y="160" font-family="Arial" font-size="14" text-anchor="middle" fill="#555">Node.js Process</text>
+  
+  <!-- The Problem (Overlapping elements to test collision detection) -->
+  <g id="problem-group" transform="translate(300, 120)">
+    <rect id="msg-box" x="0" y="0" width="200" height="60" rx="5" fill="#ffcccc" stroke="#d13438" stroke-width="1"/>
+    <text id="msg-text" x="100" y="25" font-family="Consolas" font-size="14" text-anchor="middle" fill="#d13438">Header\n\nBody</text>
+    <!-- This text overlaps with the box above -->
+    <text id="error-text" x="100" y="55" font-family="Arial" font-size="12" text-anchor="middle" fill="#d13438" font-weight="bold">Server expected \r\n\r\n</text>
+  </g>
+  
+  <!-- The Solution -->
+  <g id="solution-group" transform="translate(200, 300)">
+    <rect id="fix-box" x="0" y="0" width="400" height="60" rx="5" fill="#dff6dd" stroke="#107c10" stroke-width="1"/>
+    <text id="fix-title" x="200" y="25" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold" fill="#107c10">The Fix</text>
+    <text id="fix-detail" x="200" y="45" font-family="Consolas" font-size="14" text-anchor="middle" fill="#333">buffer.indexOf("\n\n") || buffer.indexOf("\r\n\r\n")</text>
+  </g>
+  
+  <!-- Arrows -->
+  <line x1="250" y1="150" x2="300" y2="150" stroke="#999" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="500" y1="150" x2="550" y2="150" stroke="#999" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#999"/>
+    </marker>
+  </defs>
+</svg>

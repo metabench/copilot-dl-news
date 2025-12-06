@@ -113,6 +113,7 @@ function createZServerControls(jsgui) {
     }
 
     _syncState() {
+      // Update jsgui internal state
       if (this._selected) {
         this.add_class("zs-server-item--selected");
       } else {
@@ -123,6 +124,21 @@ function createZServerControls(jsgui) {
         this.add_class("zs-server-item--running");
       } else {
         this.remove_class("zs-server-item--running");
+      }
+      
+      // Sync to actual DOM if rendered
+      if (this.dom.el) {
+        if (this._selected) {
+          this.dom.el.classList.add("zs-server-item--selected");
+        } else {
+          this.dom.el.classList.remove("zs-server-item--selected");
+        }
+        
+        if (this._server.running) {
+          this.dom.el.classList.add("zs-server-item--running");
+        } else {
+          this.dom.el.classList.remove("zs-server-item--running");
+        }
       }
       
       // Sync URL visibility to DOM if rendered
@@ -643,23 +659,37 @@ function createZServerControls(jsgui) {
     setLogs(logs) {
       this._logs = logs;
       this._renderLogs();
+      // Update DOM for client-side rendering
+      if (this.dom.el) {
+        this.dom.el.innerHTML = this.all_html_render_inner();
+      }
       this._scrollToBottom();
     }
 
     addLog(type, data) {
       this._logs.push({ type, data });
       
-      // If we were showing empty state, re-render
+      // If we were showing empty state, re-render completely
       if (this._logs.length === 1) {
         this._renderLogs();
+        // Also update DOM for client-side re-render
+        if (this.dom.el) {
+          this.dom.el.innerHTML = this.all_html_render_inner();
+        }
       } else {
-        // Just append
+        // Just append - create new entry control
         const entry = new LogEntryControl({
           context: this.context,
           type,
           text: data
         });
         this.add(entry);
+        
+        // Also append to DOM for client-side rendering
+        if (this.dom.el) {
+          const entryHtml = entry.all_html_render();
+          this.dom.el.insertAdjacentHTML('beforeend', entryHtml);
+        }
       }
       this._scrollToBottom();
     }
@@ -1210,6 +1240,11 @@ function createZServerControls(jsgui) {
     _updateProgress() {
       const percent = this._total > 0 ? (this._current / this._total) * 100 : 0;
       
+      // Ensure DOM refs are available (they might not be if we were hidden)
+      if (!this._progressFillEl?.dom?.el && this.dom.el) {
+        this.ensureDomRefs();
+      }
+      
       // Update progress bar fill
       if (this._progressFillEl && this._progressFillEl.dom.el) {
         this._progressFillEl.dom.el.style.width = `${percent}%`;
@@ -1247,6 +1282,38 @@ function createZServerControls(jsgui) {
       if (this._subtitleEl && this._subtitleEl.dom.el) {
         this._subtitleEl.dom.el.textContent = "Analyzing JavaScript files in repository";
       }
+    }
+
+    /**
+     * Ensure all child DOM refs are linked.
+     * Call this when the indicator becomes visible to link any elements
+     * that weren't linked because they were inside a hidden container.
+     */
+    ensureDomRefs() {
+      const rootEl = this.dom.el;
+      if (!rootEl) return;
+      
+      // Link progress fill by class
+      if (this._progressFillEl && !this._progressFillEl.dom.el) {
+        const fillEl = rootEl.querySelector('.zs-scanning__progress-fill');
+        if (fillEl) this._progressFillEl.dom.el = fillEl;
+      }
+      
+      // Link progress text
+      if (this._progressTextEl && !this._progressTextEl.dom.el) {
+        const textEl = rootEl.querySelector('.zs-scanning__progress-text');
+        if (textEl) this._progressTextEl.dom.el = textEl;
+      }
+      
+      // Link subtitle
+      if (this._subtitleEl && !this._subtitleEl.dom.el) {
+        const subEl = rootEl.querySelector('.zs-scanning__subtitle');
+        if (subEl) this._subtitleEl.dom.el = subEl;
+      }
+      
+      console.log("[ScanningIndicator] ensureDomRefs: progressFill=", !!this._progressFillEl?.dom?.el,
+                  "progressText=", !!this._progressTextEl?.dom?.el,
+                  "subtitle=", !!this._subtitleEl?.dom?.el);
     }
   }
 
@@ -1516,6 +1583,9 @@ function createZServerControls(jsgui) {
         if (isScanning) {
           this._scanningIndicator.dom.el.classList.remove("zs-hidden");
           this._logViewer.dom.el.classList.add("zs-hidden");
+          
+          // Ensure child control DOM refs are linked (they may not be if initially hidden)
+          this._scanningIndicator.ensureDomRefs();
         } else {
           this._scanningIndicator.dom.el.classList.add("zs-hidden");
           this._logViewer.dom.el.classList.remove("zs-hidden");
@@ -1692,13 +1762,20 @@ function createZServerControls(jsgui) {
     }
 
     _addLog(filePath, type, data) {
+      console.log("[ZServerApp] _addLog called:", { filePath, type, dataLen: data?.length });
+      
       if (!this._logs.has(filePath)) {
         this._logs.set(filePath, []);
       }
       this._logs.get(filePath).push({ type, data });
       
       // If this is the selected server, show the log
-      if (this._selectedServer && this._selectedServer.file === filePath) {
+      const isSelectedServer = this._selectedServer && this._selectedServer.file === filePath;
+      console.log("[ZServerApp] _addLog isSelectedServer:", isSelectedServer, 
+        "selected:", this._selectedServer?.file, 
+        "incoming:", filePath);
+      
+      if (isSelectedServer) {
         this._contentArea.addLog(type, data);
         
         // Detect EADDRINUSE error (port already in use)

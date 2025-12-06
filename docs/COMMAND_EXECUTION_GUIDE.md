@@ -163,6 +163,88 @@ Terminal ID: abc123
 
 ---
 
+## 🚨 Server Verification - CRITICAL FOR AGENTS 🚨
+
+### The Problem
+
+Servers are **long-running processes**. Running `node server.js` blocks the terminal forever until manually stopped. This causes agents to **hang indefinitely** waiting for the command to complete.
+
+### The Solution: `--check` Flag
+
+All servers in this codebase should support `--check`:
+
+```bash
+# ✅ CORRECT: Verify server starts, then exit immediately
+node src/ui/server/goalsExplorer/server.js --check  # Exits in ~500ms
+node src/ui/server/dataExplorerServer.js --check
+
+# ❌ WRONG: Starts server and hangs forever
+node src/ui/server/goalsExplorer/server.js  # Never returns!
+```
+
+**What `--check` does:**
+1. Starts the server normally
+2. Verifies the server responds on its port (HTTP request to `/`)
+3. Shuts down the server immediately
+4. Exits with code 0 (success) or 1 (failure)
+
+### Implementation
+
+Use the server startup check utility:
+
+```javascript
+// src/ui/server/utils/serverStartupCheck.js
+const { wrapServerForCheck } = require("./utils/serverStartupCheck");
+
+// In your server's CLI section:
+if (require.main === module) {
+  const args = parseArgs(process.argv.slice(2));
+  
+  if (args.check) {
+    process.env.SERVER_NAME = "My Server";
+  }
+  
+  // wrapServerForCheck handles --check mode automatically
+  const server = wrapServerForCheck(app, port, host, () => {
+    if (!args.check) {
+      console.log("Server started on port " + port);
+    }
+  });
+}
+```
+
+### Agent Workflow for Server Work
+
+1. **Verify server starts**: Run with `--check` flag (finishes quickly)
+2. **Run tests**: Use E2E tests that manage their own server lifecycle
+3. **Check script**: Run the check script (e.g., `node checks/server.check.js`)
+4. **Never start servers directly** unless using `--detached` or `isBackground: true`
+
+```bash
+# Agent workflow example:
+node src/ui/server/myServer.js --check           # Step 1: Verify startup
+node src/ui/server/checks/myServer.check.js     # Step 2: Verify rendering
+npm run test:by-path tests/server/myServer.e2e.test.js  # Step 3: Full E2E
+```
+
+### When You MUST Run a Long-Running Server
+
+Use `isBackground: true` in run_in_terminal:
+
+```javascript
+// This returns immediately, server runs in background
+run_in_terminal({
+  command: "node src/ui/server/myServer.js",
+  isBackground: true,
+  explanation: "Start server in background for E2E testing"
+});
+
+// Later, check output with get_terminal_output
+// Stop with: Stop-Process -Name node -Force
+```
+
+---
+
 ## PowerShell curl Is NOT Unix curl
 
 PowerShell has a `curl` alias that points to `Invoke-WebRequest` with **completely different syntax**:

@@ -220,6 +220,8 @@ class DraggableControl extends Control {
      */
     this._condition = condition || null;
     
+    this.__type_name = 'draggable_control';
+    
     /**
      * The drag handle control (if different from this)
      * @type {Control|null}
@@ -238,6 +240,10 @@ class DraggableControl extends Control {
      * @type {[number, number]}
      */
     this.position = this._initialPosition ? [...this._initialPosition] : [0, 0];
+  }
+
+  get class_name() {
+    return 'draggable_control';
   }
   
   /**
@@ -260,9 +266,12 @@ class DraggableControl extends Control {
     }
     
     // Set initial position if specified
-    if (this._initialPosition) {
-      this._applyPosition(this._initialPosition);
+    if (this.position) {
+        this._applyPosition(this.position);
     }
+    
+    // Force style attribute for SSR
+    this._updateStyleAttribute();
     
     // Set up server-side render event for state persistence
     this.on('server-pre-render', () => {
@@ -364,6 +373,22 @@ class DraggableControl extends Control {
   }
   
   /**
+   * Updates the style attribute from the style object for SSR.
+   * @private
+   */
+  _updateStyleAttribute() {
+      let styleStr = '';
+      for (const k in this.style) {
+          const v = this.style[k];
+          if (typeof v === 'string' || typeof v === 'number') {
+               const key = k.replace(/([A-Z])/g, '-$1').toLowerCase();
+               styleStr += `${key}:${v};`;
+          }
+      }
+      if (styleStr) this.dom.attributes.style = styleStr;
+  }
+
+  /**
    * Applies position to the control based on drag mode.
    * @param {[number, number]} pos - [x, y] position
    * @private
@@ -384,6 +409,7 @@ class DraggableControl extends Control {
         this.style.transform = `translateX(${x}px)`;
         break;
     }
+    this._updateStyleAttribute();
   }
   
   // ============================================
@@ -485,6 +511,21 @@ class DraggableControl extends Control {
    */
   getPosition() {
     return [...this.position];
+  }
+  
+  /**
+   * Alias for jsgui dragable mixin compatibility.
+   * Underlying mixin reads/writes `pos`, so keep it in sync with `position`.
+   */
+  get pos() {
+    return this.getPosition();
+  }
+
+  set pos(value) {
+    if (Array.isArray(value) && value.length === 2) {
+      this.position = [...value];
+      this._applyPosition(this.position);
+    }
   }
   
   /**

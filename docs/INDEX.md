@@ -36,7 +36,32 @@ _Last updated: 2025-11-04_
 
 **Comprehensive AI-generated references** for complex subsystems. These in-depth documents (500–1000+ lines) capture architecture, patterns, gotchas, and working examples discovered through hands-on implementation. Consult before working on an unfamiliar subsystem.
 
+### jsgui3 Satellite Guides (Domain-Specific Knowledge)
+
+These guides are **authoritative sources** for their domains. When working in these areas, **read the relevant guide first** — they take precedence over general agent instructions.
+
 - [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
+- [jsgui3 Performance Patterns](guides/JSGUI3_PERFORMANCE_PATTERNS.md) - **🔴 CRITICAL for optimization**: Lazy rendering, control counting, performance diagnostics, decision matrix by dataset size.
+- [jsgui3 MVVM Patterns](guides/JSGUI3_MVVM_PATTERNS.md) - Data binding, computed properties, validators, transformations. Use for forms and complex state.
+- [jsgui3 Cognitive Toolkit](guides/JSGUI3_COGNITIVE_TOOLKIT.md) - Research methods, OODA loop, confidence calibration, anti-patterns. Consult when stuck.
+- [Anti-Pattern Catalog](guides/ANTI_PATTERN_CATALOG.md) - **Quick lookup** for common mistakes across all domains. Searchable by symptom.
+
+### Agent Hierarchy & Delegation
+
+- [Brain-to-Robot Delegation](guides/BRAIN_TO_ROBOT_DELEGATION.md) - How 🧠 brain agents create plans for 🤖 robot agents. Plan templates, step formats, error handling.
+
+### Meta-Planning (Planning-Planning)
+
+- [Planning Planning Strategies](guides/PLANNING_PLANNING_STRATEGIES.md) - **Core meta-planning guide**: How to design planning systems, the CLEAR criteria, multi-agent planning hierarchy.
+- [Central Planner Protocol](guides/CENTRAL_PLANNER_PROTOCOL.md) - Review process for plan proposals, decision categories, escalation rules.
+
+### Testing Guides
+
+- [Test Hanging Prevention Guide](guides/TEST_HANGING_PREVENTION_GUIDE.md) - **CRITICAL for E2E tests**: Preventing "Jest did not exit" warnings, server cleanup patterns, timeout strategies, and reliable async test structure.
+
+### Visualization & Diagrams
+
+- [SVG Creation Methodology](guides/SVG_CREATION_METHODOLOGY.md) - **6-stage pipeline** for AI agents to create complex SVG diagrams. JSON-first structure, layout algorithms, component library, Industrial Luxury Obsidian theme.
 
 ## Designs
 
@@ -62,6 +87,10 @@ Architecture and system design documents for proposed or implemented features.
 ## Sessions
 - [Session Documentation Hub](sessions/SESSIONS_HUB.md) - Entry point for current/archived session folders.
 - [2025-11-18 Crawl Output Refresh](sessions/2025-11-18-crawl-output-refresh/INDEX.md) - Trim crawl output, cached seed handling, 10-minute hub refresh default.
+
+## Plans
+- [Project Plans Index](plans/INDEX.md) - AI-generated long-term plans for human review. File-based, links to sessions.
+- [Plan Proposals](plans/proposals/README.md) - Pending proposals awaiting Central Planner review.
 
 ## Reports
 - [20-Session Retrospective (Nov 29, 2025)](reports/20-SESSION-RETROSPECTIVE-2025-11-29.md) - **REQUIRED READING**: Analysis of 20 recent sessions with patterns, solutions, and agent instruction improvements. Covers UI hydration fixes, tooling enhancements, and workflow violations.

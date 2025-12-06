@@ -1,3 +1,5 @@
+const { safeCall } = require('./utils');
+
 class ErrorTracker {
   constructor({
     state,
@@ -29,11 +31,7 @@ class ErrorTracker {
     }
     const classification = sample.classification || sample.strategy || null;
     let host = null;
-    try {
-      if (sample.url) {
-        host = new URL(sample.url).hostname;
-      }
-    } catch (_) {}
+    host = safeCall(() => sample.url ? new URL(sample.url).hostname : null, null);
     const normalized = {
       kind: sample.kind || 'unknown',
       code: sample.code != null ? sample.code : null,
@@ -45,7 +43,7 @@ class ErrorTracker {
     };
     this.state.setLastError(normalized);
     this.state.addErrorSample(normalized);
-    try {
+    safeCall(() => {
       if (this.telemetry && typeof this.telemetry.telemetry === 'function') {
         this.telemetry.telemetry({
           severity: 'error',
@@ -60,15 +58,13 @@ class ErrorTracker {
           maxAttempts
         });
       }
-    } catch (_) {}
+    });
   }
 
   handleConnectionReset(url, error) {
     if (this.state.hasEmittedConnectionResetProblem()) return;
     let host = this.domain;
-    try {
-      if (url) host = new URL(url).hostname || host;
-    } catch (_) {}
+    host = safeCall(() => url ? new URL(url).hostname || host : host, host);
     const now = Date.now();
     const windowMs = this.connectionResetWindowMs;
     const threshold = this.connectionResetThreshold;
@@ -97,15 +93,13 @@ class ErrorTracker {
         errorCode: error && error.code ? error.code : null,
         errorMessage: error && error.message ? error.message : null
       };
-      try {
-        this.telemetry?.problem({
-          kind: 'connection-reset',
-          scope: this.domain,
-          target: host,
-          message: `${message}; crawl aborted`,
-          details
-        });
-      } catch (_) {}
+      safeCall(() => this.telemetry?.problem({
+        kind: 'connection-reset',
+        scope: this.domain,
+        target: host,
+        message: `${message}; crawl aborted`,
+        details
+      }));
       this.requestAbort('connection-reset', {
         ...details,
         message: `${message} for ${host}`

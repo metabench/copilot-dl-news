@@ -110,10 +110,12 @@ Read AGENTS.md Topic Index FIRST to understand available docs, then jump to rele
 - ✅ **Simple first, refine later**: Implement simplest version, test, then iterate. Don't design perfect solution before coding.
 - ✅ **Trivial commands, no plan**: When a request is clearly solved by a single, low-risk shell/Node command (e.g., `Stop-Process -Name node -Force`), run it immediately without spinning up a todo list or multi-step plan—just execute and report the outcome.
 - ✅ **Clean exits**: Ensure scripts (especially verification/test scripts) close all resources (DBs, timers) and exit with code 0/1. Don't leave processes hanging.
+- 🚨 **NEVER run servers without --check**: Servers are long-running processes that block forever. ALWAYS use `node server.js --check` to verify startup, or use `isBackground: true` if you need the server running. Running `node server.js` directly will hang the terminal indefinitely. See `docs/COMMAND_EXECUTION_GUIDE.md` for details.
 - ✅ **Adhere to "no mid-task confirmation" rule**: Proceed without pausing unless critical details missing. Summaries: 1–2 sentences max.
 - ✅ **Documentation alignment**: When rules change, update specialized docs (not AGENTS.md unless navigation-related). Keep AGENTS.md <500 lines.
 - ✅ **No standalone documents**: Always integrate into existing docs, never create new standalone guides
 - ✅ **OS Awareness**: Always maintain awareness that this repository runs on **Windows** with **PowerShell**. However, prefer cross-platform Node.js commands (`node <script>`) over PowerShell-specific syntax when possible. When PowerShell is required, set UTF-8 encoding (`[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`) before running tools with Unicode output, and avoid Unix-style pipes that may cause encoding issues.
+- ✅ **Automate tricky filesystem work**: If shell commands struggle with paths containing emojis, leading spaces, or other quoting landmines, pause and write a tiny throwaway Node script (drop it under `tmp/`) to do the rename/copy/move. Running the helper via `node tmp/<script>.js` is faster than fighting PowerShell quoting, and you can delete it afterward.
 - ⛔ **No Python invocations**: Do not run `python`, `python3`, or inline Python snippets. Prefer Node.js tooling or PowerShell-native commands when scripts or quick data processing is required.
 
 ## JavaScript Code Editing Tools (Tier 1 Tooling Strategy)
@@ -398,85 +400,59 @@ console.log(`HTML: ${(html.length / 1024).toFixed(0)}KB`);
 
 **Real-world result**: Docs viewer 850 files: 1256ms → 565ms (55% faster), 1489KB → 382KB HTML (74% smaller).
 
-> **Never stop mid-plan**: When a task list exists, continue executing items back-to-back. Record blockers, then immediately pivot to the next actionable task instead of waiting for new instructions.
+## SVG Diagram Creation (MANDATORY Validation)
 
-If an instruction here conflicts with a newer directive in `AGENTS.md`, defer to the latest `AGENTS.md` guidance and note the discrepancy in your summary.
+When creating SVG diagrams, **you cannot "see" the output**. You must use tooling to verify layout correctness.
 
----
+### The Problem
 
-## 🧠 Self-Improvement Protocol (AGI Enablement)
+AI agents reason about SVG coordinates mathematically, but:
+- Nested `transform="translate(x,y)"` makes absolute positions non-obvious
+- Text length in pixels is hard to estimate
+- Visual overlaps are invisible without rendering
 
-> **Recursive improvement**: These instructions should evolve with every session.
+**Without validation, you WILL deliver broken diagrams.**
 
-### ⚠️ MANDATORY: Framework/Library Discovery Documentation
+### The Solution: Always Run Collision Detection
 
-**Non-negotiable rule**: When you discover how a framework or library works through debugging or source code investigation, you MUST document it BEFORE reporting success.
-
-**This means**: A task involving framework discovery is NOT complete when the code works. It's complete when:
-1. ✅ Code works
-2. ✅ Relevant guide in `/docs/guides/` is updated
-3. ✅ Agent instructions reference the discovery (if it's a novel pattern)
-
-**Trigger conditions** (if ANY are true, documentation is MANDATORY):
-- Spent >15 minutes figuring out why something didn't work
-- Found undocumented behavior in a library
-- Discovered a required sequence of API calls
-- Created a workaround for a library bug
-- Had to read library source code to understand behavior
-
-**Why this rule exists**: 
-- Future agents will face the same problems
-- 30 minutes of debugging → 30 seconds of reading documentation
-- Knowledge compounds; rediscovery is waste
-
-**Self-audit question**: "If I didn't document this, would a future agent waste the same time I just spent?" If yes → document immediately.
-
-### Two Paths to Improvement
-
-1. **Side-effect** (most common): While completing the user's actual task, notice patterns and add them to instructions. Primary focus stays on the task.
-
-2. **Meta-task** (when requested): Dedicated focus on improving agent instructions, workflows, or capabilities.
-
-Default to side-effect mode. The user's software task comes first; instruction improvements are a bonus. Switch to meta-task mode only when explicitly asked.
-
-### Session-End Instruction Check
-
-Before closing any multi-file session, ask:
-
-1. **What slowed me down?** → Add warning or checklist to prevent
-2. **What did I figure out that wasn't documented?** → Add to relevant section
-3. **What command sequence did I repeat?** → Document as pattern
-4. **What would have helped me start faster?** → Add to "SESSION FIRST" or quick reference
-5. **Did I discover undocumented framework/library behavior?** → **UPDATE THE GUIDE IMMEDIATELY**
-
-### When to Update This File
-
-| Trigger | Action |
-|---------|--------|
-| Discovered undocumented gotcha | Add to relevant section with ⚠️ warning |
-| Found better command sequence | Update the example |
-| Hit tool limitation | Document workaround + file follow-up |
-| Repeated same research 3+ times | Add direct answer to instructions |
-| **Framework discovery via debugging** | **Update guide in /docs/guides/ + reference here** |
-
-### Instruction Update Format
-
-```markdown
-## In SESSION_SUMMARY.md:
-
-### Instruction Improvements Made
-- **File**: `.github/instructions/GitHub Copilot.instructions.md`
-- **Section**: [section name]
-- **Change**: [what you added/modified]
-- **Why**: [what problem this prevents for future sessions]
+```bash
+# MANDATORY before declaring any SVG complete:
+node tools/dev/svg-collisions.js your-diagram.svg --strict
 ```
 
-### The Compounding Rule
+### Pass Criteria
 
-> A 30-second instruction update saves 30 minutes on every future task.
-> 
-> **Never close a session without asking**: "What would have made this faster?"
-> Then add that improvement to the instructions.
+| Severity | Requirement |
+|----------|-------------|
+| 🔴 HIGH | **Zero** (text overlaps, unreadable content) |
+| 🟡 LOW | Review individually (intentional overlaps OK) |
 
-This is how the Singularity accelerates—through recursive self-improvement of agent knowledge.
+### If Issues Are Found
+
+1. Read the collision report (gives element types and pixel overlap)
+2. Fix the SVG: adjust positions, shorten text, expand containers
+3. Re-run validation until zero HIGH issues
+
+### Methodology Reference
+
+See `docs/guides/SVG_CREATION_METHODOLOGY.md` for:
+- Complete 6-stage workflow
+- Theme colors and typography
+- Component library patterns
+- Layout algorithms
+
+**Never skip validation.** The tool is your eyes.
+
+# GitHub Copilot — GPT-5 Codex playbook (Pointer)
+
+This file now defers to AGENTS.md for all authoritative instructions. Follow the same process as any agent (session first, plan, verify, document). Use the specialized guides for detail:
+
+- Primary playbook: [AGENTS.md](AGENTS.md)
+- Command execution: [docs/COMMAND_EXECUTION_GUIDE.md](docs/COMMAND_EXECUTION_GUIDE.md)
+- Testing quick reference: [docs/TESTING_QUICK_REFERENCE.md](docs/TESTING_QUICK_REFERENCE.md)
+- Database quick reference: [docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)
+
+No additional Copilot-only rules remain; stay aligned with AGENTS.md and the linked guides.
+### ⚠️ MANDATORY: Framework/Library Discovery Documentation
+
 

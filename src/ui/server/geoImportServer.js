@@ -3,6 +3,8 @@
 /**
  * @server Geo Import Dashboard
  * @description Provides a dashboard for managing and monitoring geographical data imports.
+ * @ui true
+ * @port 4850
  */
 
 /**

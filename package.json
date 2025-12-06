@@ -47,6 +47,10 @@
     "diagram:server": "node src/ui/server/diagramAtlasServer.js",
     "diagram:check": "node src/ui/server/checks/diagramAtlas.check.js",
     "diagram:screenshot": "node scripts/ui/capture-diagram-atlas-screenshot.js",
+    "mcp:docs-memory": "node tools/mcp/docs-memory/mcp-server.js",
+    "mcp:docs-memory:http": "node tools/mcp/docs-memory/mcp-server.js --http",
+    "mcp:svg-editor": "node tools/mcp/svg-editor/mcp-server.js",
+    "mcp:svg-editor:http": "node tools/mcp/svg-editor/mcp-server.js --http",
     "z-server": "powershell -Command \"Get-Process -Name electron -EA SilentlyContinue | Stop-Process -Force -EA SilentlyContinue; Push-Location z-server; npm run build; npm start; Pop-Location\"",
     "populate:gazetteer": "node src/tools/populate-gazetteer.js --import-adm1=1 --import-cities=1 --cities-per-country=50 --include-blocs=ALL",
     "cleanup:gazetteer": "node src/tools/gazetteer-cleanup.js",
@@ -58,7 +62,8 @@
     "schema:stats": "node tools/schema-sync.js --stats --verbose",
     "md:edit": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; node tools/dev/md-edit.js\"",
     "js:edit": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; node tools/dev/js-edit.js\"",
-    "tmp:prune": "node tools/dev/tmp-prune.js"
+    "tmp:prune": "node tools/dev/tmp-prune.js",
+    "agent:backup": "node tools/agent-backup.js"
   },
   "keywords": [
     "crawler",
@@ -71,6 +76,7 @@
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "@swc/core": "^1.14.0",
+    "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.4.1",
     "chalk": "^4.1.2",
     "cheerio": "^1.1.2",
@@ -86,6 +92,7 @@
     "lang-tools": "^0.0.41",
     "ndjson": "^2.0.0",
     "node-fetch": "^3.3.2",
+    "openai": "^6.9.1",
     "robots-parser": "^3.0.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

@@ -13,6 +13,7 @@ Describe how this repository can host an AGI-style, tool-enabled workflow where 
 - Tier-1 JavaScript tooling:
   - `node tools/dev/js-scan.js` for semantic code discovery.
   - `node tools/dev/js-edit.js` for guarded batch modifications.
+- Minimal MCP surface: `node tools/mcp/docs-memory/server.js` streams SELF_MODEL, LESSONS, and session excerpts for agent memory priming.
 - Established directives in `AGENTS.md` enforcing Plan → Implement → Verify loops.
 - Data-oriented adapters and service layering (per AGENTS.md) enabling clean abstraction points for future automation.
 - Canonical agent governance captured in `docs/agents/agent_policy.md` and companions (e.g., `docs_indexer_and_agents_refactorer.md`), which define research-first behavior and documentation upkeep.

@@ -561,6 +561,7 @@ function createCliParser() {
     // Filters
     .add('--priority-only', 'Show only documents with priority markers (⭐)', false, 'boolean')
     .add('--case-sensitive', 'Use case-sensitive search', false, 'boolean')
+    .add('--guide', 'Search only in docs/guides/ (fast satellite lookup)', false, 'boolean')
     
     // Output
     .add('--search-limit <n>', 'Maximum search results to display', 20, 'number')
@@ -628,17 +629,34 @@ async function main() {
   // Find all markdown files
   const dirPath = path.resolve(options.dir);
   
-  if (!fs.existsSync(dirPath)) {
-    fmt.error(`Directory not found: ${dirPath}`);
+  // Handle --guide shortcut: search only in docs/guides/
+  if (options.guide) {
+    const guidesPath = path.resolve(process.cwd(), 'docs', 'guides');
+    if (fs.existsSync(guidesPath)) {
+      options.dir = guidesPath;
+      if (options.verbose) {
+        fmt.info(`--guide flag: Restricting search to ${guidesPath}`);
+      }
+    } else {
+      fmt.warn(`docs/guides/ not found, searching in ${dirPath} instead`);
+    }
+  }
+  
+  const effectiveDirPath = options.guide && fs.existsSync(path.resolve(process.cwd(), 'docs', 'guides')) 
+    ? path.resolve(process.cwd(), 'docs', 'guides')
+    : dirPath;
+  
+  if (!fs.existsSync(effectiveDirPath)) {
+    fmt.error(`Directory not found: ${effectiveDirPath}`);
     process.exitCode = 1;
     return;
   }
 
   if (options.verbose) {
-    fmt.info(`Scanning directory: ${dirPath}`);
+    fmt.info(`Scanning directory: ${effectiveDirPath}`);
   }
 
-  const files = findMarkdownFiles(dirPath, options);
+  const files = findMarkdownFiles(effectiveDirPath, options);
   
   if (files.length === 0) {
     fmt.warn('No markdown files found');

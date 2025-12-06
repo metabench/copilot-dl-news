@@ -39208,6 +39208,18 @@ body .overlay {
             } else {
               this.remove_class("zs-server-item--running");
             }
+            if (this.dom.el) {
+              if (this._selected) {
+                this.dom.el.classList.add("zs-server-item--selected");
+              } else {
+                this.dom.el.classList.remove("zs-server-item--selected");
+              }
+              if (this._server.running) {
+                this.dom.el.classList.add("zs-server-item--running");
+              } else {
+                this.dom.el.classList.remove("zs-server-item--running");
+              }
+            }
             if (this._urlContainer && this._urlContainer.dom.el) {
               if (this._runningUrl) {
                 this._urlContainer.dom.el.classList.remove("zs-server-item__url-container--hidden");
@@ -39607,12 +39619,18 @@ body .overlay {
           setLogs(logs) {
             this._logs = logs;
             this._renderLogs();
+            if (this.dom.el) {
+              this.dom.el.innerHTML = this.all_html_render_inner();
+            }
             this._scrollToBottom();
           }
           addLog(type, data) {
             this._logs.push({ type, data });
             if (this._logs.length === 1) {
               this._renderLogs();
+              if (this.dom.el) {
+                this.dom.el.innerHTML = this.all_html_render_inner();
+              }
             } else {
               const entry = new LogEntryControl({
                 context: this.context,
@@ -39620,6 +39638,10 @@ body .overlay {
                 text: data
               });
               this.add(entry);
+              if (this.dom.el) {
+                const entryHtml = entry.all_html_render();
+                this.dom.el.insertAdjacentHTML("beforeend", entryHtml);
+              }
             }
             this._scrollToBottom();
           }
@@ -40046,6 +40068,9 @@ body .overlay {
           }
           _updateProgress() {
             const percent = this._total > 0 ? this._current / this._total * 100 : 0;
+            if (!this._progressFillEl?.dom?.el && this.dom.el) {
+              this.ensureDomRefs();
+            }
             if (this._progressFillEl && this._progressFillEl.dom.el) {
               this._progressFillEl.dom.el.style.width = `${percent}%`;
             }
@@ -40074,6 +40099,35 @@ body .overlay {
             if (this._subtitleEl && this._subtitleEl.dom.el) {
               this._subtitleEl.dom.el.textContent = "Analyzing JavaScript files in repository";
             }
+          }
+          /**
+           * Ensure all child DOM refs are linked.
+           * Call this when the indicator becomes visible to link any elements
+           * that weren't linked because they were inside a hidden container.
+           */
+          ensureDomRefs() {
+            const rootEl = this.dom.el;
+            if (!rootEl) return;
+            if (this._progressFillEl && !this._progressFillEl.dom.el) {
+              const fillEl = rootEl.querySelector(".zs-scanning__progress-fill");
+              if (fillEl) this._progressFillEl.dom.el = fillEl;
+            }
+            if (this._progressTextEl && !this._progressTextEl.dom.el) {
+              const textEl = rootEl.querySelector(".zs-scanning__progress-text");
+              if (textEl) this._progressTextEl.dom.el = textEl;
+            }
+            if (this._subtitleEl && !this._subtitleEl.dom.el) {
+              const subEl = rootEl.querySelector(".zs-scanning__subtitle");
+              if (subEl) this._subtitleEl.dom.el = subEl;
+            }
+            console.log(
+              "[ScanningIndicator] ensureDomRefs: progressFill=",
+              !!this._progressFillEl?.dom?.el,
+              "progressText=",
+              !!this._progressTextEl?.dom?.el,
+              "subtitle=",
+              !!this._subtitleEl?.dom?.el
+            );
           }
         }
         class SidebarControl extends jsgui2.Control {
@@ -40274,6 +40328,7 @@ body .overlay {
               if (isScanning) {
                 this._scanningIndicator.dom.el.classList.remove("zs-hidden");
                 this._logViewer.dom.el.classList.add("zs-hidden");
+                this._scanningIndicator.ensureDomRefs();
               } else {
                 this._scanningIndicator.dom.el.classList.add("zs-hidden");
                 this._logViewer.dom.el.classList.remove("zs-hidden");
@@ -40402,11 +40457,21 @@ body .overlay {
             }
           }
           _addLog(filePath, type, data) {
+            console.log("[ZServerApp] _addLog called:", { filePath, type, dataLen: data?.length });
             if (!this._logs.has(filePath)) {
               this._logs.set(filePath, []);
             }
             this._logs.get(filePath).push({ type, data });
-            if (this._selectedServer && this._selectedServer.file === filePath) {
+            const isSelectedServer = this._selectedServer && this._selectedServer.file === filePath;
+            console.log(
+              "[ZServerApp] _addLog isSelectedServer:",
+              isSelectedServer,
+              "selected:",
+              this._selectedServer?.file,
+              "incoming:",
+              filePath
+            );
+            if (isSelectedServer) {
               this._contentArea.addLog(type, data);
               if (type === "stderr" && data.includes("EADDRINUSE")) {
                 const portMatch = data.match(/(?:port\s+)?(\d{4,5})/i);

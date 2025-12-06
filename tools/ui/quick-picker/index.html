@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Quick Picker</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: #cccccc;
+      margin: 0;
+      padding: 10px;
+      overflow: hidden;
+      border: 1px solid #333;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      height: 95vh;
+    }
+    
+    h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #007acc;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      -webkit-app-region: drag; /* Allow dragging by header */
+      padding-bottom: 5px;
+      border-bottom: 1px solid #333;
+    }
+
+    #options-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .option-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 3px;
+      margin-bottom: 2px;
+      transition: background-color 0.1s;
+      font-size: 13px;
+    }
+
+    .option-item:hover {
+      background-color: #2a2d2e;
+    }
+
+    .option-item.selected {
+      background-color: #094771;
+      color: white;
+    }
+
+    .option-item .description {
+      display: block;
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+    }
+    
+    .option-item.selected .description {
+      color: #ccc;
+    }
+
+    #footer {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #666;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <h3>Select an Option</h3>
+  <ul id="options-list"></ul>
+  <div id="footer">Double-click to select • Esc to cancel</div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const list = document.getElementById('options-list');
+    let currentOptions = [];
+    let selectedIndex = -1;
+
+    ipcRenderer.on('set-options', (event, options) => {
+      currentOptions = options;
+      renderOptions();
+    });
+
+    function renderOptions() {
+      list.innerHTML = '';
+      currentOptions.forEach((opt, index) => {
+        const li = document.createElement('li');
+        li.className = 'option-item';
+        li.dataset.index = index;
+        
+        // Handle string options or object options { label, description, value }
+        const label = typeof opt === 'string' ? opt : (opt.label || opt.value);
+        const description = typeof opt === 'object' ? opt.description : null;
+
+        let html = `<span class="label">${label}</span>`;
+        if (description) {
+          html += `<span class="description">${description}</span>`;
+        }
+        li.innerHTML = html;
+
+        li.addEventListener('click', () => {
+          selectItem(index);
+        });
+
+        li.addEventListener('dblclick', () => {
+          confirmSelection(index);
+        });
+
+        list.appendChild(li);
+      });
+      
+      // Select first by default
+      if (currentOptions.length > 0) {
+        selectItem(0);
+      }
+    }
+
+    function selectItem(index) {
+      if (selectedIndex !== -1) {
+        list.children[selectedIndex].classList.remove('selected');
+      }
+      selectedIndex = index;
+      if (selectedIndex !== -1) {
+        const el = list.children[selectedIndex];
+        el.classList.add('selected');
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function confirmSelection(index) {
+      if (index >= 0 && index < currentOptions.length) {
+        const opt = currentOptions[index];
+        const value = typeof opt === 'object' ? (opt.value || opt.label) : opt;
+        ipcRenderer.send('selection-made', value);
+      }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectItem(Math.min(selectedIndex + 1, currentOptions.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectItem(Math.max(selectedIndex - 1, 0));
+      } else if (e.key === 'Enter') {
+        confirmSelection(selectedIndex);
+      } else if (e.key === 'Escape') {
+        ipcRenderer.send('cancel');
+      }
+    });
+  </script>
+</body>
+</html>

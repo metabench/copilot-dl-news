@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const { recordPlaceHubSeed } = require('./data/placeHubs');
 const NewsWebsiteService = require('../services/NewsWebsiteService');
+const { safeCall } = require('./utils');
 
 let NewsDatabase = null;
 
@@ -48,6 +49,20 @@ class CrawlerDb {
     }
   }
 
+  _callDb(methodName, fallback = null, ...args) {
+    if (!this.db || typeof this.db[methodName] !== 'function') {
+      return fallback;
+    }
+    return safeCall(() => this.db[methodName](...args), fallback);
+  }
+
+  _callNewsService(methodName, fallback = null, ...args) {
+    if (!this.newsWebsiteService || typeof this.newsWebsiteService[methodName] !== 'function') {
+      return fallback;
+    }
+    return safeCall(() => this.newsWebsiteService[methodName](...args), fallback);
+  }
+
   async _collectStats() {
     try {
       const stat = await fs.stat(this.dbPath).catch(() => null);
@@ -82,7 +97,7 @@ class CrawlerDb {
       }
       
       if (this.cache && typeof this.cache.setDb === 'function') {
-        try { this.cache.setDb(this.db); } catch (_) {}
+        safeCall(() => this.cache.setDb(this.db));
       }
       if (this.fastStart) {
         this._log(`SQLite DB initialized at: ${this.dbPath} (fast-start)`);
@@ -98,17 +113,15 @@ class CrawlerDb {
       this._log(`SQLite not available, continuing without DB: ${err?.message || err}`);
       this.db = null;
       if (this.onFatalIssue) {
-        try { this.onFatalIssue({ kind: 'db-open-failed', message: err?.message || String(err) }); } catch (_) {}
+        safeCall(() => this.onFatalIssue({ kind: 'db-open-failed', message: err?.message || String(err) }));
       }
       if (this.emitProblem) {
-        try {
-          this.emitProblem({
-            kind: 'db-open-failed',
-            scope: this.domain,
-            message: 'SQLite unavailable',
-            details: { error: err?.message || String(err) }
-          });
-        } catch (_) {}
+        safeCall(() => this.emitProblem({
+          kind: 'db-open-failed',
+          scope: this.domain,
+          message: 'SQLite unavailable',
+          details: { error: err?.message || String(err) }
+        }));
       }
       return null;
     }
@@ -127,92 +140,72 @@ class CrawlerDb {
   }
 
   getArticleHeaders(url) {
-    if (!this.db || typeof this.db.getArticleHeaders !== 'function') return null;
-    try { return this.db.getArticleHeaders(url); } catch (_) { return null; }
+    return this._callDb('getArticleHeaders', null, url);
   }
 
   getArticleRowByUrl(url) {
-    if (!this.db || typeof this.db.getArticleRowByUrl !== 'function') return null;
-    try { return this.db.getArticleRowByUrl(url); } catch (_) { return null; }
+    return this._callDb('getArticleRowByUrl', null, url);
   }
 
   getArticleByUrlOrCanonical(url) {
-    if (!this.db || typeof this.db.getArticleByUrlOrCanonical !== 'function') return null;
-    try { return this.db.getArticleByUrlOrCanonical(url); } catch (_) { return null; }
+    return this._callDb('getArticleByUrlOrCanonical', null, url);
   }
 
   upsertArticle(article) {
     // Use service facade if available (handles cache updates)
     if (this.newsWebsiteService) {
-      try { return this.newsWebsiteService.upsertArticle(article); } catch (_) { return null; }
+      return this._callNewsService('upsertArticle', null, article);
     }
     // Fallback to direct DB access (no cache updates)
-    if (!this.db || typeof this.db.upsertArticle !== 'function') return null;
-    try { return this.db.upsertArticle(article); } catch (_) { return null; }
+    return this._callDb('upsertArticle', null, article);
   }
 
   insertFetch(fetchRow) {
     // Use service facade if available (handles cache updates)
     if (this.newsWebsiteService) {
-      try { return this.newsWebsiteService.insertFetch(fetchRow); } catch (_) { return null; }
+      return this._callNewsService('insertFetch', null, fetchRow);
     }
     // Fallback to direct DB access (no cache updates)
-    if (!this.db || typeof this.db.insertFetch !== 'function') return null;
-    try { return this.db.insertFetch(fetchRow); } catch (_) { return null; }
+    return this._callDb('insertFetch', null, fetchRow);
   }
 
   insertLink(linkRow) {
-    if (!this.db || typeof this.db.insertLink !== 'function') return null;
-    try { return this.db.insertLink(linkRow); } catch (_) { return null; }
+    return this._callDb('insertLink', null, linkRow);
   }
 
   insertError(err) {
-    if (!this.db || typeof this.db.insertError !== 'function') return null;
-    try { return this.db.insertError(err); } catch (_) { return null; }
+    return this._callDb('insertError', null, err);
   }
 
   insertHttpResponse(httpResponseData) {
-    if (!this.db || typeof this.db.insertHttpResponse !== 'function') return null;
-    try { return this.db.insertHttpResponse(httpResponseData); } catch (_) { return null; }
+    return this._callDb('insertHttpResponse', null, httpResponseData);
   }
 
   upsertUrl(url, canonical = null, analysis = null) {
-    if (!this.db || typeof this.db.upsertUrl !== 'function') return null;
-    try { return this.db.upsertUrl(url, canonical, analysis); } catch (_) { return null; }
+    return this._callDb('upsertUrl', null, url, canonical, analysis);
   }
 
   upsertDomain(host, analysis = null) {
-    if (!this.db || typeof this.db.upsertDomain !== 'function') return null;
-    try { return this.db.upsertDomain(host, analysis); } catch (_) { return null; }
+    return this._callDb('upsertDomain', null, host, analysis);
   }
 
   recordPlaceHubSeed({ host, url, evidence = null }) {
     if (!this.db) return false;
-    try {
-      return !!recordPlaceHubSeed(this.db, { host, url, evidence });
-    } catch (_) {
-      return false;
-    }
+    return safeCall(() => !!recordPlaceHubSeed(this.db, { host, url, evidence }), false);
   }
 
   getTopCountrySlugs(limit = 50) {
-    if (!this.db || typeof this.db.getTopCountrySlugs !== 'function') return null;
-    try {
-      const slugs = this.db.getTopCountrySlugs(limit);
-      return Array.isArray(slugs) ? slugs : null;
-    } catch (_) {
-      return null;
-    }
+    const slugs = this._callDb('getTopCountrySlugs', null, limit);
+    return Array.isArray(slugs) ? slugs : null;
   }
 
   getArticleCount() {
-    if (!this.db || typeof this.db.getCount !== 'function') return 0;
-    try { return this.db.getCount(); } catch (_) { return 0; }
+    return this._callDb('getCount', 0);
   }
 
   close() {
     if (!this.db) return;
-    try { this.db.close(); } catch (_) {}
+    safeCall(() => this.db.close());
     this.db = null;
   }
 }

@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1764">
+  <defs>
+    <!-- Gold glow filter -->
+    <filter id="goldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1400" height="1764" fill="#0a0d14"/>
+  
+  <!-- Subtle gradient overlay -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050508" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#141824" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="1764" fill="url(#bgGradient)"/>
+  
+  <!-- Header -->
+  <text x="50" y="55" font-family="Georgia, 'Times New Roman', serif" font-size="32" font-weight="bold" fill="#c9a227" letter-spacing="2">Project Goals Overview</text>
+  <text x="50" y="85" font-family="Inter, system-ui, sans-serif" font-size="14" fill="#64748b">copilot-dl-news — 34 goals across 10 categories • Extracted from 100+ development sessions</text>
+  
+  <!-- Gold divider -->
+  <line x1="50" y1="105" x2="1350" y2="105" stroke="#c9a227" stroke-opacity="0.4" stroke-width="1"/>
+  
+  <!-- Legend -->
+  <g transform="translate(850, 50)">
+    <circle cx="0" cy="0" r="6" fill="#10b981"/>
+    <text x="14" y="4" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="bold" fill="#10b981">Active (24)</text>
+    
+    <circle cx="120" cy="0" r="6" fill="#3b82f6"/>
+    <text x="134" y="4" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="bold" fill="#3b82f6">Planned (8)</text>
+    
+    <circle cx="260" cy="0" r="6" fill="#8b5cf6"/>
+    <text x="274" y="4" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="bold" fill="#8b5cf6">Research (2)</text>
+  </g>
+  
+  <!-- Stats bar -->
+  <g transform="translate(850, 80)">
+    <text x="0" y="4" font-family="JetBrains Mono, monospace" font-size="11" fill="#475569">Sessions: 100+ • Last updated: December 2, 2025</text>
+  </g>
+
+  <!-- Crawler & Data Pipeline -->
+  <g transform="translate(50, 140)">
+    <rect x="0" y="0" width="420" height="356" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(59, 130, 246, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🌐 Crawler &amp; Data Pipeline</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">4</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Crawler Architecture Refactor</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="52" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">65%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">ConfigurationService for CLI + runner config merging</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">CrawlerFactory with dependency injection</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Swappable URL selectors &amp; queue strategies</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Intelligent Crawling</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="24" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">30%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Priority-based URL selection via decision trees</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Place-hub awareness for geography-focused crawls</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Adaptive rate limiting per domain</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">URL Classification Pipeline</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="36" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">45%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">URL-only vs content-verified classifications</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Pattern learning from verified documents</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Classification type normalization (news_article, hub, etc.)</text>
+      </g>
+      <g transform="translate(0, 270)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Crawl Sequences &amp; Scheduling</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="16" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">20%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Multi-step crawl sequences with dependencies</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Scheduled recurring crawls</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Cross-domain coordination</text>
+      </g>
+    </g>
+  </g>
+  <!-- Data Explorer UI (jsgui3) -->
+  <g transform="translate(50, 516)">
+    <rect x="0" y="0" width="420" height="430" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(16, 185, 129, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🖥️ Data Explorer UI (jsgui3)</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">5</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Complete Data Explorer Views</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="64" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">80%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">/urls, /urls/:id, /domains/:host routes</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Crawls history, errors, queue views</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Pagination, filtering, real-time updates</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">jsgui3 Isomorphic Architecture</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="72" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">90%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Server-side rendering → client hydration</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Control factories pattern, SSR check scripts</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">4-step activation sequence documented</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Premium Theme System</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="60" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">75%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Industrial Luxury Obsidian dark theme</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Gold/emerald/ruby accent system</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">CSS variables, external stylesheets</text>
+      </g>
+      <g transform="translate(0, 270)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Diagram Atlas</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="72" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">90%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Visual codebase structure with byte-size scaling</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Async loading, tooltips, interactive exploration</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Screenshot capture automation</text>
+      </g>
+      <g transform="translate(0, 344)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Dashboard &amp; Home Grid</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="56" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">70%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Unified dashboard with card-based layout</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Quick stats, recent activity, server health</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">CLI-driven card configuration</text>
+      </g>
+    </g>
+  </g>
+  <!-- Gazetteer & Geography -->
+  <g transform="translate(50, 966)">
+    <rect x="0" y="0" width="420" height="282" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(245, 158, 11, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🌍 Gazetteer &amp; Geography</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">3</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Gazetteer Tooling Suite</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="64" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">80%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">CLI: gazetteer-scan.js, gazetteer.search.js</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Wikidata/GeoNames integration</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Place deduplication (v2 algorithm)</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Ingestion Pipeline</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="56" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">70%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">populate-gazetteer.js robustness</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">SPARQL result caching, consolidated helpers</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Batch import with progress tracking</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Gazetteer UI &amp; Context Menu</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="40" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">50%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Interactive place selection in importer</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">jsgui3 context menu integration</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Place hierarchy visualization</text>
+      </g>
+    </g>
+  </g>
+  <!-- Decision Tree System -->
+  <g transform="translate(510, 140)">
+    <rect x="0" y="0" width="420" height="282" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(139, 92, 246, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🌳 Decision Tree System</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">3</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Decision Tree Viewer</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="48" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">60%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Styled jsgui3 controls for tree display</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Node inspection, path highlighting</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Themed with Obsidian styling</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">WYSIWYG Decision Tree Editor</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="20" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">25%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Built on Art Playground foundation</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Drag nodes, connect with edges</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Shared controls: Canvas, Shape, Connector</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#8b5cf6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Decision Tree Studio</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="12" height="6" rx="2" fill="#8b5cf6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">15%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Full editor with sample browser</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Live preview against URL samples</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Version control, audit trails</text>
+      </g>
+    </g>
+  </g>
+  <!-- Z-Server (Electron App) -->
+  <g transform="translate(510, 442)">
+    <rect x="0" y="0" width="420" height="208" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(239, 68, 68, 0.12)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">⚡ Z-Server (Electron App)</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">2</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Z-Server jsgui3 Refactor</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="68" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">85%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Convert to jsgui3-client components</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Industrial Obsidian theme applied</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">esbuild bundling, hot reload</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Z-Server Features</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="72" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">90%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Scanning progress bar with SVG indicator</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Server start/stop/restart controls</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Log capture and display panel</text>
+      </g>
+    </g>
+  </g>
+  <!-- AI Agent Tooling -->
+  <g transform="translate(510, 670)">
+    <rect x="0" y="0" width="420" height="356" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(20, 184, 166, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🛠️ AI Agent Tooling</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">4</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">js-scan / js-edit CLI Tools</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="60" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">75%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Gap 2-4: Semantic queries, batch ops, plans ✓</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Gap 5-6: Transitive deps, call graph analysis</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Gap 7-8: Conflict resolution, plan versioning</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Agent Session System</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="76" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">95%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Mandatory session dirs: PLAN/NOTES/SUMMARY</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Memory hierarchy: current → recent → historical</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">100+ documented sessions, searchable archive</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Agent Persona Framework</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="64" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">80%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">UI Singularity, Dashboard Singularity, Research agents</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Persona-specific tooling, satellite files</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Handoff protocols, context preservation</text>
+      </g>
+      <g transform="translate(0, 270)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">VS Code Extension (Gap 9)</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="8" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">10%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Real-time code relationship visualization</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">One-click refactoring UI</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">IDE-integrated agent assistance</text>
+      </g>
+    </g>
+  </g>
+  <!-- Testing & Validation -->
+  <g transform="translate(510, 1046)">
+    <rect x="0" y="0" width="420" height="282" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(234, 179, 8, 0.12)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🧪 Testing &amp; Validation</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">3</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">UI E2E Testing</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="56" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">70%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Puppeteer tests for all Data Explorer routes</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Event-based waiting (no polling)</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Screenshot capture for visual regression</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Production Data Testing</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="32" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">40%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Tests against production-sized SQLite</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Graceful skip logic for missing fixtures</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Performance benchmarks with thresholds</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Check Scripts Pattern</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="64" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">80%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Bite-sized Node scripts per control</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Render representative data, assert structure</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Fast validation without full test runner</text>
+      </g>
+    </g>
+  </g>
+  <!-- Architecture & Build -->
+  <g transform="translate(970, 140)">
+    <rect x="0" y="0" width="420" height="356" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(100, 116, 139, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">📐 Architecture &amp; Build</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">4</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">CSS/JS Separation</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="24" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">30%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Extract inline CSS/JS from server files</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">esbuild bundling for client code</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">External static file serving</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Shared Controls Library</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="48" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">60%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Structure: interactive/, canvas/, ui/, layout/</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Direct instantiation pattern</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Mixin wrapping for jsgui3 integration</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Performance &amp; Reliability</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="56" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">70%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Lazy rendering pattern (55% perf gain)</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Process cleanup, server restart protocols</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Database query optimization</text>
+      </g>
+      <g transform="translate(0, 270)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#8b5cf6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Advanced Planning Suite (GOFAI)</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="16" height="6" rx="2" fill="#8b5cf6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">20%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">90% architecture complete, 80% unused</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">PlannerHost, goal plugins, cost estimation</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Integration with agent workflows pending</text>
+      </g>
+    </g>
+  </g>
+  <!-- Fact-Based Classification -->
+  <g transform="translate(970, 516)">
+    <rect x="0" y="0" width="420" height="282" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(201, 162, 39, 0.15)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🏷️ Fact-Based Classification</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">3</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Fact Extraction System</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="48" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">60%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">URL facts, document facts, schema facts</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Computed once → stored → reused</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Neutral observations, no weighted signals</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Classification Engine</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="28" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">35%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Decision trees operate on stored facts</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Pure boolean logic (AND/OR/NOT)</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Auditable decision paths</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#3b82f6"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Domain Classification Profiles</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="20" height="6" rx="2" fill="#3b82f6"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">25%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Per-domain accuracy tracking</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Pattern learning from verified examples</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Confidence scoring per domain</text>
+      </g>
+    </g>
+  </g>
+  <!-- Design Studio -->
+  <g transform="translate(970, 818)">
+    <rect x="0" y="0" width="420" height="282" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="420" height="40" rx="8" fill="rgba(236, 72, 153, 0.12)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#c9a227">🎨 Design Studio</text>
+    <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b" text-anchor="end">3</text>
+    <g transform="translate(12, 0)">
+      <g transform="translate(0, 48)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Design Studio App</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="44" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">55%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Based on docsViewer architecture</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Targets /design directory</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Luxury White Leather theme variant</text>
+      </g>
+      <g transform="translate(0, 122)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Industrial Obsidian Glyphs</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="52" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">65%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Reusable SVG primitives library</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Consistent iconography across apps</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Gold accent variants</text>
+      </g>
+      <g transform="translate(0, 196)">
+        <rect x="0" y="0" width="396" height="62" rx="4" fill="rgba(26, 31, 46, 0.6)"/>
+        <circle cx="12" cy="12" r="5" fill="#10b981"/>
+        <text x="26" y="14" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">Art Playground</text>
+        <rect x="300" y="6" width="80" height="6" rx="2" fill="rgba(255,255,255,0.1)"/>
+        <rect x="300" y="6" width="56" height="6" rx="2" fill="#10b981"/>
+        <text x="385" y="14" font-family="JetBrains Mono, monospace" font-size="9" fill="#64748b" text-anchor="end">70%</text>
+        <text x="26" y="28" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Interactive SVG component editor</text>
+        <text x="26" y="42" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Click-select, resize handles, drag-move</text>
+        <text x="26" y="56" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Foundation for decision tree editor</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Priority Follow-ups -->
+  <g transform="translate(50, 1368)">
+    <rect x="0" y="0" width="1300" height="316" rx="8" fill="#1a1f2e" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    <rect x="0" y="0" width="1300" height="40" rx="8" fill="rgba(239, 68, 68, 0.18)"/>
+    <text x="16" y="26" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#ef4444">🔥 Priority Follow-ups</text>
+    <text x="20" y="52" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">1. Stabilize UI E2E tests</text>
+    <text x="34" y="66" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Replace DOM polling with event-based waiting</text>
+    <text x="20" y="84" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">2. Complete CrawlerFactory DI</text>
+    <text x="34" y="98" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Migrate remaining direct NewsCrawler instantiations</text>
+    <text x="20" y="116" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">3. Gazetteer ingestion fixes</text>
+    <text x="34" y="130" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">populate-gazetteer.js robustness and consolidation</text>
+    <text x="20" y="148" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">4. Integrate CrawlConfigWorkspace</text>
+    <text x="34" y="162" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Expose config drawer/timeline in Data Explorer</text>
+    <text x="660" y="52" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">5. Decision tree editor foundation</text>
+    <text x="674" y="66" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Build on Art Playground shared controls</text>
+    <text x="660" y="84" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">6. js-scan Gap 5-6</text>
+    <text x="674" y="98" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Transitive dependencies and call graph analysis</text>
+    <text x="660" y="116" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">7. Production test fixtures</text>
+    <text x="674" y="130" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">Deterministic data that ships with repo</text>
+    <text x="660" y="148" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="600" fill="#f0f4f8">8. Theme system completion</text>
+    <text x="674" y="162" font-family="Inter, system-ui, sans-serif" font-size="11" fill="#94a3b8">External CSS, theme switching, documentation</text>
+  </g>
+  
+  <!-- Footer -->
+  <line x1="50" y1="1714" x2="1350" y2="1714" stroke="#c9a227" stroke-opacity="0.3" stroke-width="1"/>
+  <text x="50" y="1739" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#475569">Generated December 2, 2025 • github.com/metabench/copilot-dl-news • Industrial Luxury Obsidian Theme</text>
+  
+</svg>

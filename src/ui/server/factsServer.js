@@ -3,6 +3,8 @@
 /**
  * @server Facts Server
  * @description Fact Determination Layer - Industrial Luxury Obsidian themed server for exploring URL facts.
+ * @ui true
+ * @port 4800
  */
 
 /**

@@ -26,37 +26,135 @@
  *   node tools/dev/svg-collisions.js --dir <directory>
  *   node tools/dev/svg-collisions.js <svg-file> --json
  *   node tools/dev/svg-collisions.js <svg-file> --strict  (report more issues)
+ *   node tools/dev/svg-collisions.js <svg-file> --positions  (output element positions)
  * 
  * Options:
  *   --json        Output results as JSON
  *   --strict      Lower thresholds, report more potential issues
  *   --dir <path>  Scan all SVG files in a directory
  *   --verbose     Show analysis details
+ *   --positions   Output absolute positions for all elements
  */
 
 const fs = require("fs");
 const path = require("path");
 const puppeteer = require("puppeteer");
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 简令 Bilingual Support (双语支持)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Chinese flag aliases for terse bilingual CLI
+ * 中文标志别名
+ */
+const FLAG_ALIASES = {
+  // Core flags (核心标志)
+  '--位': '--positions',     // positions → 位置
+  '--碰': '--collisions',    // collisions (implicit)
+  '--严': '--strict',        // strict → 严格
+  '--容': '--containment',   // containment → 容纳
+  '--元': '--element',       // element → 元素
+  '--目': '--dir',           // directory → 目录
+  '--详': '--verbose',       // verbose → 详细
+  '--静': '--quiet',         // quiet → 静默
+  '--助': '--help',          // help → 帮助
+  '--帮': '--help',
+  '-助': '-h',
+  '-帮': '-h',
+};
+
+/**
+ * Terse Chinese output labels
+ * 简洁中文输出标签
+ */
+const TERSE_LABELS = {
+  // Status (状态)
+  'analysis': '析',
+  'file': '文',
+  'elements': '元',
+  'pairs': '对',
+  'checked': '验',
+  'skipped': '略',
+  'collisions': '碰',
+  'issues': '题',
+  'error': '错',
+  'warning': '警',
+  'success': '成',
+  
+  // Severity (严重程度)
+  'high': '高',
+  'medium': '中',
+  'low': '低',
+  
+  // Types (类型)
+  'text-overlap': '文重',
+  'shape-overlap': '形重',
+  'text-clipped': '文切',
+  'general-overlap': '重叠',
+  
+  // Actions (动作)
+  'fix': '修',
+  'move': '移',
+  'spacing': '距',
+  'found': '找',
+  'at': '于',
+  'overlap': '重',
+  'position': '位',
+  'size': '寸',
+  
+  // Results (结果)
+  'no_issues': '无碰撞',
+  'found_issues': '发现问题',
+};
+
+/**
+ * Detect if Chinese mode should be used
+ * 检测是否使用中文模式
+ */
+function detectChineseMode(args) {
+  return args.some(arg => /[\u4e00-\u9fff]/.test(arg) || Object.keys(FLAG_ALIASES).includes(arg));
+}
+
+/**
+ * Translate Chinese flags to English
+ * 翻译中文标志
+ */
+function translateArgs(args) {
+  return args.map(arg => FLAG_ALIASES[arg] || arg);
+}
+
+// Detect language mode before parsing
+const rawArgs = process.argv.slice(2);
+const chineseMode = detectChineseMode(rawArgs);
+const args = translateArgs(rawArgs);
+
 // Parse command line arguments
-const args = process.argv.slice(2);
 const flags = {
   json: args.includes("--json"),
   verbose: args.includes("--verbose"),
   strict: args.includes("--strict"),
-  help: args.includes("--help") || args.includes("-h")
+  positions: args.includes("--positions"),
+  containment: args.includes("--containment"),
+  help: args.includes("--help") || args.includes("-h"),
+  terse: chineseMode  // Enable terse mode when Chinese flags detected
 };
+
+// Extract --element selector
+const elementIdx = args.indexOf("--element");
+const elementSelector = elementIdx !== -1 ? args[elementIdx + 1] : null;
 
 // Extract directory
 const dirIdx = args.indexOf("--dir");
 const scanDir = dirIdx !== -1 ? args[dirIdx + 1] : null;
 
 // Get file path (first non-flag argument)
-const filePath = args.find(arg => !arg.startsWith("--") && arg !== scanDir);
+const filePath = args.find(arg => !arg.startsWith("--") && arg !== scanDir && !Object.keys(FLAG_ALIASES).includes(arg));
 
 if (flags.help || (!filePath && !scanDir)) {
   console.log(`
 SVG Collision Detector - Find PROBLEMATIC overlaps in SVG files
+SVG 碰撞检测器 - 发现SVG文件中的问题重叠
 
 This tool focuses on actual visual problems, ignoring common design patterns
 like text on colored backgrounds or labels near shapes.
@@ -65,12 +163,19 @@ Usage:
   node svg-collisions.js <svg-file> [options]
   node svg-collisions.js --dir <directory> [options]
 
-Options:
-  --json          Output results as JSON
-  --strict        Lower thresholds, report more potential issues
-  --dir <path>    Scan all SVG files in a directory  
-  --verbose       Show analysis details
-  --help, -h      Show this help message
+Options (English/简令):
+  --json              Output results as JSON
+  --strict   | --严   Lower thresholds, report more potential issues
+  --positions| --位   Output absolute positions for all elements
+  --containment|--含  Check if elements overflow their parent bounds
+  --element <sel>     Query position of a specific element (id or CSS selector)
+  --dir <path>        Scan all SVG files in a directory  
+  --verbose  | --详   Show analysis details
+  --help, -h          Show this help message
+
+简令 Mode (Terse Output):
+  Using any Chinese flag (--位, --碰, --严, --含, --详) automatically 
+  enables terse output mode with compact Chinese labels.
 
 What gets reported:
   🔴 Text overlapping other text (always a problem)
@@ -88,6 +193,14 @@ Examples:
   node svg-collisions.js docs/diagrams/CRAWLER_PIPELINE_FLOW.svg
   node svg-collisions.js --dir docs/diagrams --json
   node svg-collisions.js diagram.svg --strict
+  node svg-collisions.js diagram.svg --positions --json
+  node svg-collisions.js diagram.svg --containment
+  node svg-collisions.js diagram.svg --element "#my-label" --json
+  
+简令 Examples (Terse Mode):
+  node svg-collisions.js diagram.svg --位            # Positions, terse output
+  node svg-collisions.js diagram.svg --严 --含       # Strict + containment
+  node svg-collisions.js --dir docs/designs --碰    # Scan dir, collisions
 `);
   process.exit(0);
 }
@@ -372,6 +485,75 @@ function classifyCollision(el1, el2, intersection, strict) {
 }
 
 /**
+ * Generate repair suggestions for a collision
+ * @param {Object} el1 - First element
+ * @param {Object} el2 - Second element
+ * @param {Object} intersection - Intersection bounds
+ * @param {string} type - Collision type
+ * @returns {Object} - Repair suggestion
+ */
+function generateRepairSuggestion(el1, el2, intersection, type) {
+  // Determine which element to move (prefer smaller, later in doc order)
+  const area1 = el1.bbox.width * el1.bbox.height;
+  const area2 = el2.bbox.width * el2.bbox.height;
+  const moveEl = area2 <= area1 ? el2 : el1;
+  const fixedEl = moveEl === el2 ? el1 : el2;
+  const moveId = moveEl.id || moveEl.path.split(" > ").pop();
+  const fixedId = fixedEl.id || fixedEl.path.split(" > ").pop();
+  
+  // Calculate minimum separation needed (overlap + 5px padding)
+  const padding = 5;
+  const horizontalSep = intersection.width + padding;
+  const verticalSep = intersection.height + padding;
+  
+  // Determine best direction based on overlap shape
+  const isHorizontalOverlap = intersection.width > intersection.height;
+  
+  let suggestion, strategy, alternatives = [];
+  
+  if (type === "text-overlap") {
+    if (isHorizontalOverlap) {
+      // Elements side by side - move one horizontally
+      const moveDir = moveEl.bbox.x > fixedEl.bbox.x ? "right" : "left";
+      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(horizontalSep)}px`;
+      strategy = "separate-horizontal";
+      alternatives = [
+        `Move "${fixedId}" ${moveDir === "right" ? "left" : "right"} by ${Math.ceil(horizontalSep)}px`,
+        `Reduce "${moveId}" text by ~${Math.ceil(intersection.width / 8)} characters`
+      ];
+    } else {
+      // Elements stacked - move one vertically
+      const moveDir = moveEl.bbox.y > fixedEl.bbox.y ? "down" : "up";
+      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(verticalSep)}px`;
+      strategy = "separate-vertical";
+      alternatives = [
+        `Move "${fixedId}" ${moveDir === "down" ? "up" : "down"} by ${Math.ceil(verticalSep)}px`
+      ];
+    }
+  } else if (type === "shape-overlap") {
+    if (isHorizontalOverlap) {
+      const moveDir = moveEl.bbox.x > fixedEl.bbox.x ? "right" : "left";
+      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(horizontalSep)}px`;
+      strategy = "separate-horizontal";
+    } else {
+      const moveDir = moveEl.bbox.y > fixedEl.bbox.y ? "down" : "up";
+      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(verticalSep)}px`;
+      strategy = "separate-vertical";
+    }
+    alternatives = [`Reduce "${moveId}" size by ${Math.ceil(Math.max(horizontalSep, verticalSep))}px`];
+  } else if (type === "text-clipped") {
+    suggestion = `Expand container width by ${Math.ceil(horizontalSep)}px`;
+    strategy = "expand-container";
+    alternatives = [`Reduce text "${moveId}" by ~${Math.ceil(intersection.width / 8)} characters`];
+  } else {
+    suggestion = `Increase spacing by ${Math.ceil(Math.max(horizontalSep, verticalSep))}px`;
+    strategy = "increase-spacing";
+  }
+  
+  return { strategy, suggestion, alternatives };
+}
+
+/**
  * Analyze an SVG file for collisions
  */
 async function analyzeSvg(browser, svgPath) {
@@ -550,27 +732,57 @@ async function analyzeSvg(browser, svgPath) {
           continue;
         }
         
+        // Generate repair suggestion for this collision
+        const repair = generateRepairSuggestion(el1, el2, intersection, classification.type);
+        
         collisions.push({
           element1: {
             tagName: el1.tagName,
             id: el1.id,
             path: el1.path,
             textContent: el1.textContent,
-            bbox: el1.bbox,
-            description: describeElement(el1)
+            description: describeElement(el1),
+            absolutePosition: {
+              x: Math.round(el1.bbox.x * 10) / 10,
+              y: Math.round(el1.bbox.y * 10) / 10
+            },
+            size: {
+              width: Math.round(el1.bbox.width * 10) / 10,
+              height: Math.round(el1.bbox.height * 10) / 10
+            },
+            bounds: {
+              left: Math.round(el1.bbox.x * 10) / 10,
+              top: Math.round(el1.bbox.y * 10) / 10,
+              right: Math.round((el1.bbox.x + el1.bbox.width) * 10) / 10,
+              bottom: Math.round((el1.bbox.y + el1.bbox.height) * 10) / 10
+            }
           },
           element2: {
             tagName: el2.tagName,
             id: el2.id,
             path: el2.path,
             textContent: el2.textContent,
-            bbox: el2.bbox,
-            description: describeElement(el2)
+            description: describeElement(el2),
+            absolutePosition: {
+              x: Math.round(el2.bbox.x * 10) / 10,
+              y: Math.round(el2.bbox.y * 10) / 10
+            },
+            size: {
+              width: Math.round(el2.bbox.width * 10) / 10,
+              height: Math.round(el2.bbox.height * 10) / 10
+            },
+            bounds: {
+              left: Math.round(el2.bbox.x * 10) / 10,
+              top: Math.round(el2.bbox.y * 10) / 10,
+              right: Math.round((el2.bbox.x + el2.bbox.width) * 10) / 10,
+              bottom: Math.round((el2.bbox.y + el2.bbox.height) * 10) / 10
+            }
           },
           intersection: intersection,
           type: classification.type,
           severity: classification.severity,
-          reason: classification.reason
+          reason: classification.reason,
+          repair: repair
         });
       }
     }
@@ -584,7 +796,8 @@ async function analyzeSvg(browser, svgPath) {
       return b.intersection.area - a.intersection.area;
     });
     
-    return {
+    // Build result object
+    const result = {
       file: svgPath,
       totalElements: elements.length,
       pairsAnalyzed: analyzed.total,
@@ -597,6 +810,169 @@ async function analyzeSvg(browser, svgPath) {
         low: collisions.filter(c => c.severity === "low").length
       }
     };
+    
+    // Add element positions if --positions flag is set
+    if (flags.positions) {
+      result.elements = elements.map(el => ({
+        tagName: el.tagName,
+        id: el.id,
+        textContent: el.textContent,
+        path: el.path,
+        absolutePosition: {
+          x: Math.round(el.bbox.x * 10) / 10,
+          y: Math.round(el.bbox.y * 10) / 10
+        },
+        size: {
+          width: Math.round(el.bbox.width * 10) / 10,
+          height: Math.round(el.bbox.height * 10) / 10
+        },
+        bounds: {
+          left: Math.round(el.bbox.x * 10) / 10,
+          top: Math.round(el.bbox.y * 10) / 10,
+          right: Math.round((el.bbox.x + el.bbox.width) * 10) / 10,
+          bottom: Math.round((el.bbox.y + el.bbox.height) * 10) / 10
+        },
+        depth: el.depth,
+        docOrder: el.docOrder
+      }));
+    }
+    
+    // Check containment if --containment flag is set
+    if (flags.containment) {
+      const containmentIssues = [];
+      
+      // For each element, check if it overflows its parent group
+      for (const el of elements) {
+        // Skip the SVG root and groups themselves
+        if (el.tagName === "svg" || el.depth === 0) continue;
+        
+        // Find the parent group (element with depth = current depth - 1 and is an ancestor in path)
+        const parentPath = el.path.split(" > ").slice(0, -1).join(" > ");
+        const parent = elements.find(p => p.path === parentPath && (p.tagName === "g" || p.tagName === "svg"));
+        
+        if (!parent) continue;
+        
+        // Check if element overflows parent
+        const overflow = {
+          left: Math.max(0, parent.bbox.x - el.bbox.x),
+          top: Math.max(0, parent.bbox.y - el.bbox.y),
+          right: Math.max(0, (el.bbox.x + el.bbox.width) - (parent.bbox.x + parent.bbox.width)),
+          bottom: Math.max(0, (el.bbox.y + el.bbox.height) - (parent.bbox.y + parent.bbox.height))
+        };
+        
+        const hasOverflow = overflow.left > 2 || overflow.top > 2 || overflow.right > 2 || overflow.bottom > 2;
+        
+        if (hasOverflow) {
+          const elId = el.id || el.path.split(" > ").pop();
+          const parentId = parent.id || parent.path.split(" > ").pop();
+          
+          // Determine repair strategy
+          let suggestion, strategy;
+          const maxOverflow = Math.max(overflow.left, overflow.top, overflow.right, overflow.bottom);
+          
+          if (overflow.right > 0 && overflow.right >= maxOverflow) {
+            suggestion = `Move "${elId}" left by ${Math.ceil(overflow.right)}px`;
+            strategy = "move-inward";
+          } else if (overflow.left > 0 && overflow.left >= maxOverflow) {
+            suggestion = `Move "${elId}" right by ${Math.ceil(overflow.left)}px`;
+            strategy = "move-inward";
+          } else if (overflow.bottom > 0 && overflow.bottom >= maxOverflow) {
+            suggestion = `Move "${elId}" up by ${Math.ceil(overflow.bottom)}px`;
+            strategy = "move-inward";
+          } else {
+            suggestion = `Move "${elId}" down by ${Math.ceil(overflow.top)}px`;
+            strategy = "move-inward";
+          }
+          
+          containmentIssues.push({
+            element: {
+              id: el.id,
+              tagName: el.tagName,
+              textContent: el.textContent,
+              path: el.path,
+              absolutePosition: { x: Math.round(el.bbox.x * 10) / 10, y: Math.round(el.bbox.y * 10) / 10 },
+              size: { width: Math.round(el.bbox.width * 10) / 10, height: Math.round(el.bbox.height * 10) / 10 },
+              bounds: {
+                left: Math.round(el.bbox.x * 10) / 10,
+                top: Math.round(el.bbox.y * 10) / 10,
+                right: Math.round((el.bbox.x + el.bbox.width) * 10) / 10,
+                bottom: Math.round((el.bbox.y + el.bbox.height) * 10) / 10
+              }
+            },
+            parent: {
+              id: parent.id,
+              tagName: parent.tagName,
+              path: parent.path,
+              absolutePosition: { x: Math.round(parent.bbox.x * 10) / 10, y: Math.round(parent.bbox.y * 10) / 10 },
+              size: { width: Math.round(parent.bbox.width * 10) / 10, height: Math.round(parent.bbox.height * 10) / 10 },
+              bounds: {
+                left: Math.round(parent.bbox.x * 10) / 10,
+                top: Math.round(parent.bbox.y * 10) / 10,
+                right: Math.round((parent.bbox.x + parent.bbox.width) * 10) / 10,
+                bottom: Math.round((parent.bbox.y + parent.bbox.height) * 10) / 10
+              }
+            },
+            overflow: {
+              left: Math.round(overflow.left * 10) / 10,
+              top: Math.round(overflow.top * 10) / 10,
+              right: Math.round(overflow.right * 10) / 10,
+              bottom: Math.round(overflow.bottom * 10) / 10
+            },
+            repair: {
+              strategy: strategy,
+              suggestion: suggestion,
+              alternatives: [
+                `Expand "${parentId}" by ${Math.ceil(maxOverflow)}px`,
+                `Reduce "${elId}" size by ${Math.ceil(maxOverflow)}px`
+              ]
+            }
+          });
+        }
+      }
+      
+      result.containmentIssues = containmentIssues;
+    }
+    
+    // Query specific element if --element flag is set
+    if (elementSelector) {
+      const selector = elementSelector.startsWith("#") ? elementSelector.slice(1) : elementSelector;
+      const found = elements.find(el => 
+        el.id === selector || 
+        el.id === elementSelector ||
+        el.path.includes(elementSelector)
+      );
+      
+      if (found) {
+        result.query = {
+          selector: elementSelector,
+          found: true,
+          element: {
+            id: found.id,
+            tagName: found.tagName,
+            textContent: found.textContent,
+            path: found.path,
+            absolutePosition: { x: Math.round(found.bbox.x * 10) / 10, y: Math.round(found.bbox.y * 10) / 10 },
+            size: { width: Math.round(found.bbox.width * 10) / 10, height: Math.round(found.bbox.height * 10) / 10 },
+            bounds: {
+              left: Math.round(found.bbox.x * 10) / 10,
+              top: Math.round(found.bbox.y * 10) / 10,
+              right: Math.round((found.bbox.x + found.bbox.width) * 10) / 10,
+              bottom: Math.round((found.bbox.y + found.bbox.height) * 10) / 10
+            },
+            depth: found.depth,
+            docOrder: found.docOrder
+          }
+        };
+      } else {
+        result.query = {
+          selector: elementSelector,
+          found: false,
+          message: `No element found matching "${elementSelector}"`
+        };
+      }
+    }
+    
+    return result;
     
   } finally {
     await page.close();
@@ -634,8 +1010,13 @@ function formatReport(result) {
     const icon = collision.severity === "high" ? "🔴" : collision.severity === "medium" ? "🟠" : "🟡";
     lines.push(`\n${icon} #${idx + 1} [${collision.type}] ${collision.reason}`);
     lines.push(`   → ${collision.element1.description}`);
+    lines.push(`     at (${collision.element1.absolutePosition.x}, ${collision.element1.absolutePosition.y})`);
     lines.push(`   → ${collision.element2.description}`);
+    lines.push(`     at (${collision.element2.absolutePosition.x}, ${collision.element2.absolutePosition.y})`);
     lines.push(`   Overlap: ${Math.round(collision.intersection.width)}×${Math.round(collision.intersection.height)}px at (${Math.round(collision.intersection.x)}, ${Math.round(collision.intersection.y)})`);
+    if (collision.repair) {
+      lines.push(`   💡 Fix: ${collision.repair.suggestion}`);
+    }
   });
   
   // Suggestions based on issue types
@@ -659,6 +1040,312 @@ function formatReport(result) {
   
   return lines.join("\n");
 }
+
+/**
+ * Format positions report for console output (--positions flag)
+ */
+function formatPositionsReport(result) {
+  const lines = [];
+  
+  lines.push(`\n${"═".repeat(70)}`);
+  lines.push(`Element Positions: ${path.basename(result.file)}`);
+  lines.push(`${"═".repeat(70)}`);
+  
+  if (result.error) {
+    lines.push(`\n❌ Error: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  if (!result.elements || result.elements.length === 0) {
+    lines.push(`\nNo elements found.`);
+    return lines.join("\n");
+  }
+  
+  lines.push(`\nFound ${result.elements.length} elements:\n`);
+  
+  // Group by tag name for easier reading
+  const byTag = {};
+  result.elements.forEach(el => {
+    const tag = el.tagName;
+    if (!byTag[tag]) byTag[tag] = [];
+    byTag[tag].push(el);
+  });
+  
+  for (const [tag, elements] of Object.entries(byTag)) {
+    lines.push(`\n📦 ${tag.toUpperCase()} (${elements.length})`);
+    lines.push(`${"─".repeat(40)}`);
+    
+    elements.slice(0, 20).forEach(el => {  // Limit to first 20 per type
+      const id = el.id ? `#${el.id}` : `[${el.docOrder}]`;
+      const text = el.textContent ? ` "${el.textContent.slice(0, 20)}${el.textContent.length > 20 ? '...' : ''}"` : "";
+      const pos = `(${el.absolutePosition.x}, ${el.absolutePosition.y})`;
+      const size = `${el.size.width}×${el.size.height}`;
+      lines.push(`  ${id}${text}`);
+      lines.push(`    pos: ${pos}  size: ${size}`);
+    });
+    
+    if (elements.length > 20) {
+      lines.push(`  ... and ${elements.length - 20} more`);
+    }
+  }
+  
+  return lines.join("\n");
+}
+
+/**
+ * Format containment report for console output (--containment flag)
+ */
+function formatContainmentReport(result) {
+  const lines = [];
+  
+  lines.push(`\n${"═".repeat(70)}`);
+  lines.push(`Containment Check: ${path.basename(result.file)}`);
+  lines.push(`${"═".repeat(70)}`);
+  
+  if (result.error) {
+    lines.push(`\n❌ Error: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  if (!result.containmentIssues || result.containmentIssues.length === 0) {
+    lines.push(`\n✅ All elements contained within their parents!`);
+    return lines.join("\n");
+  }
+  
+  lines.push(`\n⚠️  Found ${result.containmentIssues.length} containment issue(s):\n`);
+  
+  result.containmentIssues.forEach((issue, idx) => {
+    const elId = issue.element.id || issue.element.path.split(" > ").pop();
+    const parentId = issue.parent.id || issue.parent.path.split(" > ").pop();
+    
+    lines.push(`\n📦 #${idx + 1} Element overflows parent`);
+    lines.push(`   Element: ${issue.element.tagName}${issue.element.id ? "#" + issue.element.id : ""}`);
+    lines.push(`     bounds: (${issue.element.bounds.left}, ${issue.element.bounds.top}) → (${issue.element.bounds.right}, ${issue.element.bounds.bottom})`);
+    lines.push(`   Parent: ${issue.parent.tagName}${issue.parent.id ? "#" + issue.parent.id : ""}`);
+    lines.push(`     bounds: (${issue.parent.bounds.left}, ${issue.parent.bounds.top}) → (${issue.parent.bounds.right}, ${issue.parent.bounds.bottom})`);
+    
+    const overflows = [];
+    if (issue.overflow.left > 0) overflows.push(`left: ${issue.overflow.left}px`);
+    if (issue.overflow.top > 0) overflows.push(`top: ${issue.overflow.top}px`);
+    if (issue.overflow.right > 0) overflows.push(`right: ${issue.overflow.right}px`);
+    if (issue.overflow.bottom > 0) overflows.push(`bottom: ${issue.overflow.bottom}px`);
+    lines.push(`   Overflow: ${overflows.join(", ")}`);
+    
+    if (issue.repair) {
+      lines.push(`   💡 Fix: ${issue.repair.suggestion}`);
+    }
+  });
+  
+  return lines.join("\n");
+}
+
+/**
+ * Format element query report for console output (--element flag)
+ */
+function formatElementQueryReport(result) {
+  const lines = [];
+  
+  lines.push(`\n${"═".repeat(70)}`);
+  lines.push(`Element Query: ${path.basename(result.file)}`);
+  lines.push(`${"═".repeat(70)}`);
+  
+  if (result.error) {
+    lines.push(`\n❌ Error: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  if (!result.query) {
+    lines.push(`\nNo query specified.`);
+    return lines.join("\n");
+  }
+  
+  lines.push(`\nQuery: "${result.query.selector}"`);
+  
+  if (!result.query.found) {
+    lines.push(`\n❌ ${result.query.message}`);
+    return lines.join("\n");
+  }
+  
+  const el = result.query.element;
+  lines.push(`\n✅ Found element:`);
+  lines.push(`   Tag: ${el.tagName}`);
+  if (el.id) lines.push(`   ID: #${el.id}`);
+  if (el.textContent) lines.push(`   Text: "${el.textContent.slice(0, 50)}${el.textContent.length > 50 ? '...' : ''}"`);
+  lines.push(`   Path: ${el.path}`);
+  lines.push(`\n   Position:`);
+  lines.push(`     absolute: (${el.absolutePosition.x}, ${el.absolutePosition.y})`);
+  lines.push(`     size: ${el.size.width} × ${el.size.height}`);
+  lines.push(`     bounds: (${el.bounds.left}, ${el.bounds.top}) → (${el.bounds.right}, ${el.bounds.bottom})`);
+  lines.push(`\n   Hierarchy:`);
+  lines.push(`     depth: ${el.depth}`);
+  lines.push(`     doc order: ${el.docOrder}`);
+  
+  return lines.join("\n");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TERSE OUTPUT FORMATTERS (简令 mode)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Format collision report in terse 简令 mode
+ * 碰撞报告 - 简洁模式
+ */
+function formatReportTerse(result) {
+  const lines = [];
+  const fname = path.basename(result.file);
+  
+  if (result.error) {
+    lines.push(`❌ ${fname}: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  const h = result.summary?.high || 0;
+  const m = result.summary?.medium || 0;
+  const l = result.summary?.low || 0;
+  const total = h + m + l;
+  
+  if (total === 0) {
+    lines.push(`✅ ${fname} 元${result.totalElements} 碰0`);
+    return lines.join("\n");
+  }
+  
+  // Header: filename elements collisions severity-breakdown
+  lines.push(`⚠️ ${fname} 元${result.totalElements} 碰${total} [高${h}中${m}低${l}]`);
+  
+  // Each collision in terse format
+  result.collisions.forEach((c, i) => {
+    const sev = c.severity === "high" ? "高" : c.severity === "medium" ? "中" : "低";
+    const type = c.type === "text-overlap" ? "文重" : c.type === "shape-overlap" ? "形重" : "溢出";
+    const pos1 = `${Math.round(c.element1.absolutePosition.x)},${Math.round(c.element1.absolutePosition.y)}`;
+    const pos2 = `${Math.round(c.element2.absolutePosition.x)},${Math.round(c.element2.absolutePosition.y)}`;
+    const overlap = `${Math.round(c.intersection.width)}×${Math.round(c.intersection.height)}`;
+    lines.push(`  ${i+1}.${sev}${type} (${pos1})↔(${pos2}) 重${overlap}`);
+  });
+  
+  return lines.join("\n");
+}
+
+/**
+ * Format positions report in terse 简令 mode
+ * 位置报告 - 简洁模式
+ */
+function formatPositionsReportTerse(result) {
+  const lines = [];
+  const fname = path.basename(result.file);
+  
+  if (result.error) {
+    lines.push(`❌ ${fname}: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  if (!result.elements || result.elements.length === 0) {
+    lines.push(`${fname} 元0`);
+    return lines.join("\n");
+  }
+  
+  lines.push(`📍 ${fname} 元${result.elements.length}`);
+  
+  // Group by tag name
+  const byTag = {};
+  result.elements.forEach(el => {
+    const tag = el.tagName;
+    if (!byTag[tag]) byTag[tag] = [];
+    byTag[tag].push(el);
+  });
+  
+  for (const [tag, elements] of Object.entries(byTag)) {
+    lines.push(`${tag}(${elements.length}):`);
+    
+    elements.slice(0, 15).forEach(el => {
+      const id = el.id ? `#${el.id}` : `[${el.docOrder}]`;
+      const pos = `${Math.round(el.absolutePosition.x)},${Math.round(el.absolutePosition.y)}`;
+      const size = `${Math.round(el.size.width)}×${Math.round(el.size.height)}`;
+      const text = el.textContent ? ` "${el.textContent.slice(0, 15)}${el.textContent.length > 15 ? '..' : ''}"` : "";
+      lines.push(`  ${id}${text} 位(${pos}) 寸${size}`);
+    });
+    
+    if (elements.length > 15) {
+      lines.push(`  ...余${elements.length - 15}`);
+    }
+  }
+  
+  return lines.join("\n");
+}
+
+/**
+ * Format containment report in terse 简令 mode  
+ * 包含检查 - 简洁模式
+ */
+function formatContainmentReportTerse(result) {
+  const lines = [];
+  const fname = path.basename(result.file);
+  
+  if (result.error) {
+    lines.push(`❌ ${fname}: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  if (!result.containmentIssues || result.containmentIssues.length === 0) {
+    lines.push(`✅ ${fname} 溢0`);
+    return lines.join("\n");
+  }
+  
+  lines.push(`⚠️ ${fname} 溢${result.containmentIssues.length}`);
+  
+  result.containmentIssues.forEach((issue, i) => {
+    const elId = issue.element.id ? `#${issue.element.id}` : issue.element.tagName;
+    const parentId = issue.parent.id ? `#${issue.parent.id}` : issue.parent.tagName;
+    
+    const overflows = [];
+    if (issue.overflow.left > 0) overflows.push(`左${Math.round(issue.overflow.left)}`);
+    if (issue.overflow.top > 0) overflows.push(`上${Math.round(issue.overflow.top)}`);
+    if (issue.overflow.right > 0) overflows.push(`右${Math.round(issue.overflow.right)}`);
+    if (issue.overflow.bottom > 0) overflows.push(`下${Math.round(issue.overflow.bottom)}`);
+    
+    lines.push(`  ${i+1}.${elId}⊄${parentId} 溢${overflows.join(",")}`);
+  });
+  
+  return lines.join("\n");
+}
+
+/**
+ * Format element query report in terse 简令 mode
+ * 元素查询 - 简洁模式
+ */
+function formatElementQueryReportTerse(result) {
+  const lines = [];
+  const fname = path.basename(result.file);
+  
+  if (result.error) {
+    lines.push(`❌ ${fname}: ${result.error}`);
+    return lines.join("\n");
+  }
+  
+  if (!result.query) {
+    lines.push(`${fname} 无查询`);
+    return lines.join("\n");
+  }
+  
+  if (!result.query.found) {
+    lines.push(`❌ 查"${result.query.selector}" 无果`);
+    return lines.join("\n");
+  }
+  
+  const el = result.query.element;
+  const pos = `${Math.round(el.absolutePosition.x)},${Math.round(el.absolutePosition.y)}`;
+  const size = `${Math.round(el.size.width)}×${Math.round(el.size.height)}`;
+  const id = el.id ? `#${el.id}` : el.tagName;
+  const text = el.textContent ? ` "${el.textContent.slice(0, 20)}${el.textContent.length > 20 ? '..' : ''}"` : "";
+  
+  lines.push(`✅ ${id}${text} 位(${pos}) 寸${size} 深${el.depth}`);
+  
+  return lines.join("\n");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Main entry point
@@ -704,31 +1391,62 @@ async function main() {
     if (flags.json) {
       console.log(JSON.stringify(results.length === 1 ? results[0] : results, null, 2));
     } else {
+      // Select formatters based on terse mode
+      const fmtReport = flags.terse ? formatReportTerse : formatReport;
+      const fmtPositions = flags.terse ? formatPositionsReportTerse : formatPositionsReport;
+      const fmtContainment = flags.terse ? formatContainmentReportTerse : formatContainmentReport;
+      const fmtElement = flags.terse ? formatElementQueryReportTerse : formatElementQueryReport;
+      
       for (const result of results) {
-        console.log(formatReport(result));
+        // Show element query report if --element flag is set
+        if (elementSelector) {
+          console.log(fmtElement(result));
+        }
+        // Show containment report if --containment flag is set
+        if (flags.containment) {
+          console.log(fmtContainment(result));
+        }
+        // Show positions report if --positions flag is set
+        if (flags.positions) {
+          console.log(fmtPositions(result));
+        }
+        // Always show collision report (unless just doing element query)
+        if (!elementSelector || flags.positions || flags.containment) {
+          console.log(fmtReport(result));
+        }
       }
       
       // Summary for multiple files
       if (results.length > 1) {
-        console.log(`\n${"═".repeat(70)}`);
-        console.log("SUMMARY");
-        console.log(`${"═".repeat(70)}`);
-        
-        const totalIssues = results.reduce((sum, r) => sum + (r.collisions?.length || 0), 0);
-        const highSeverity = results.reduce((sum, r) => sum + (r.summary?.high || 0), 0);
-        
-        console.log(`Files scanned: ${results.length}`);
-        console.log(`Total issues: ${totalIssues}`);
-        console.log(`High severity: ${highSeverity}`);
-        
-        if (totalIssues === 0) {
-          console.log("\n✅ All SVGs look good!");
+        if (flags.terse) {
+          // Terse summary
+          const totalIssues = results.reduce((sum, r) => sum + (r.collisions?.length || 0), 0);
+          const highSeverity = results.reduce((sum, r) => sum + (r.summary?.high || 0), 0);
+          console.log(`\n总计: 文${results.length} 碰${totalIssues} 高${highSeverity}`);
+          if (totalIssues === 0) {
+            console.log("✅ 全通过");
+          }
         } else {
-          const problemFiles = results.filter(r => (r.collisions?.length || 0) > 0);
-          console.log(`\nFiles with issues:`);
-          problemFiles.forEach(r => {
-            console.log(`  - ${path.basename(r.file)}: ${r.collisions.length} issue(s)`);
-          });
+          console.log(`\n${"═".repeat(70)}`);
+          console.log("SUMMARY");
+          console.log(`${"═".repeat(70)}`);
+          
+          const totalIssues = results.reduce((sum, r) => sum + (r.collisions?.length || 0), 0);
+          const highSeverity = results.reduce((sum, r) => sum + (r.summary?.high || 0), 0);
+          
+          console.log(`Files scanned: ${results.length}`);
+          console.log(`Total issues: ${totalIssues}`);
+          console.log(`High severity: ${highSeverity}`);
+          
+          if (totalIssues === 0) {
+            console.log("\n✅ All SVGs look good!");
+          } else {
+            const problemFiles = results.filter(r => (r.collisions?.length || 0) > 0);
+            console.log(`\nFiles with issues:`);
+            problemFiles.forEach(r => {
+              console.log(`  - ${path.basename(r.file)}: ${r.collisions.length} issue(s)`);
+            });
+          }
         }
       }
     }

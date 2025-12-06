@@ -1,6 +1,7 @@
 "use strict";
 
 const { isTotalPrioritisationEnabled } = require('../utils/priorityConfig');
+const { safeCall, safeCallAsync } = require('./utils');
 
 function nowMs() { return Date.now(); }
 
@@ -473,7 +474,7 @@ class QueueManager {
             break;
           }
           if (this.onRateLimitDeferred) {
-            try { this.onRateLimitDeferred(item, { host }); } catch (_) {}
+              safeCall(() => this.onRateLimitDeferred(item, { host }));
           }
           const wakeTime = earliest > now ? earliest : now + 1000;
           item.nextEligibleAt = wakeTime;
@@ -528,7 +529,7 @@ class QueueManager {
           break;
         }
         if (this.onRateLimitDeferred) {
-          try { this.onRateLimitDeferred(item, { host }); } catch (_) {}
+          safeCall(() => this.onRateLimitDeferred(item, { host }));
         }
         const wakeTime = earliest > now ? earliest : now + 1000;
         item.deferredUntil = wakeTime;
@@ -645,11 +646,7 @@ class QueueManager {
   }
 
   _isTotalPrioritisationEnabled() {
-    try {
-      return !!this.isTotalPrioritisationEnabledFn();
-    } catch (_) {
-      return false;
-    }
+    return !!safeCall(() => this.isTotalPrioritisationEnabledFn(), false);
   }
 
   _applyTotalPrioritisationPriority(currentPriority, classification) {
@@ -706,13 +703,9 @@ class QueueManager {
     }
 
     if (typeof url === 'string' && url) {
-      try {
-        const pathname = new URL(url).pathname.toLowerCase();
-        if (/\/world\//.test(pathname) || /\/international\//.test(pathname)) {
-          return 'country-related';
-        }
-      } catch (_) {
-        // ignore URL parsing errors
+      const pathname = safeCall(() => new URL(url).pathname.toLowerCase(), null);
+      if (pathname && (/\/world\//.test(pathname) || /\/international\//.test(pathname))) {
+        return 'country-related';
       }
     }
 
@@ -771,11 +764,7 @@ class QueueManager {
     }
 
     let cached = null;
-    try {
-      cached = await this.cache.get(item.url);
-    } catch (_) {
-      cached = null;
-    }
+    cached = await safeCallAsync(async () => this.cache.get(item.url), null);
 
     if (!cached) {
       return nextContext;

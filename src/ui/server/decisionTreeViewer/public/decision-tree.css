@@ -1,0 +1,834 @@
+/**
+ * Decision Tree Viewer - CSS Design System
+ * 
+ * Theme: Luxury Industrial Obsidian
+ * 
+ * A premium dark theme with gold accents, inspired by high-end
+ * industrial design with mechanical details.
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Core Colors ─── */
+  --dt-obsidian: #0a0f1a;
+  --dt-obsidian-light: #0d1320;
+  --dt-slate: #1a1f2e;
+  --dt-slate-light: #252b3d;
+  --dt-panel: #1e232c;
+  --dt-panel-dark: #10131a;
+  
+  /* ─── Gold Accent ─── */
+  --dt-gold: #c9a227;
+  --dt-gold-light: #e8c252;
+  --dt-gold-dark: #9a7b1c;
+  --dt-gold-glow: rgba(201, 162, 39, 0.3);
+  --dt-gold-subtle: rgba(201, 162, 39, 0.1);
+  
+  /* ─── Semantic Colors ─── */
+  --dt-success: #22c55e;
+  --dt-success-dark: #166534;
+  --dt-success-bg: rgba(34, 197, 94, 0.15);
+  
+  --dt-error: #ef4444;
+  --dt-error-dark: #7f1d1d;
+  --dt-error-bg: rgba(239, 68, 68, 0.15);
+  
+  --dt-warning: #f59e0b;
+  --dt-warning-dark: #78350f;
+  
+  --dt-info: #3b82f6;
+  --dt-info-dark: #1e40af;
+  
+  /* ─── Text Colors ─── */
+  --dt-text-primary: #e2e8f0;
+  --dt-text-secondary: #94a3b8;
+  --dt-text-muted: #64748b;
+  --dt-text-dim: #475569;
+  
+  /* ─── Borders ─── */
+  --dt-border: #2d3548;
+  --dt-border-light: #3d4558;
+  --dt-border-gold: rgba(201, 162, 39, 0.4);
+  
+  /* ─── Spacing Scale ─── */
+  --dt-space-xs: 4px;
+  --dt-space-sm: 8px;
+  --dt-space-md: 12px;
+  --dt-space-lg: 16px;
+  --dt-space-xl: 24px;
+  --dt-space-2xl: 32px;
+  --dt-space-3xl: 48px;
+  
+  /* ─── Typography ─── */
+  --dt-font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --dt-font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  
+  --dt-text-xs: 11px;
+  --dt-text-sm: 12px;
+  --dt-text-base: 14px;
+  --dt-text-lg: 16px;
+  --dt-text-xl: 18px;
+  --dt-text-2xl: 24px;
+  
+  /* ─── Node Dimensions ─── */
+  --dt-node-branch-size: 120px;
+  --dt-node-result-width: 140px;
+  --dt-node-result-height: 60px;
+  --dt-node-spacing-h: 80px;
+  --dt-node-spacing-v: 60px;
+  
+  /* ─── Shadows ─── */
+  --dt-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --dt-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --dt-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --dt-shadow-gold: 0 0 20px rgba(201, 162, 39, 0.2);
+  
+  /* ─── Transitions ─── */
+  --dt-transition-fast: 0.15s ease;
+  --dt-transition-normal: 0.25s ease;
+  --dt-transition-slow: 0.4s ease;
+  
+  /* ─── Z-Index Scale ─── */
+  --dt-z-canvas: 1;
+  --dt-z-connections: 5;
+  --dt-z-nodes: 10;
+  --dt-z-selected: 20;
+  --dt-z-tooltip: 100;
+  --dt-z-modal: 1000;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE VIEWER CONTAINER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-viewer {
+  font-family: var(--dt-font-sans);
+  font-size: var(--dt-text-base);
+  color: var(--dt-text-primary);
+  background: var(--dt-obsidian);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dt-viewer * {
+  box-sizing: border-box;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--dt-space-md) var(--dt-space-xl);
+  background: linear-gradient(180deg, var(--dt-slate) 0%, var(--dt-panel-dark) 100%);
+  border-bottom: 1px solid var(--dt-border);
+  min-height: 56px;
+}
+
+.dt-header__title {
+  display: flex;
+  align-items: center;
+  gap: var(--dt-space-md);
+}
+
+.dt-header__icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dt-gold-subtle);
+  border: 1px solid var(--dt-border-gold);
+  border-radius: 6px;
+  color: var(--dt-gold);
+  font-size: 18px;
+}
+
+.dt-header__name {
+  font-size: var(--dt-text-xl);
+  font-weight: 600;
+  color: var(--dt-text-primary);
+}
+
+.dt-header__description {
+  font-size: var(--dt-text-sm);
+  color: var(--dt-text-secondary);
+  margin-left: var(--dt-space-lg);
+}
+
+.dt-header__stats {
+  display: flex;
+  align-items: center;
+  gap: var(--dt-space-xl);
+}
+
+.dt-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--dt-space-sm);
+}
+
+.dt-stat__label {
+  font-size: var(--dt-text-sm);
+  color: var(--dt-text-muted);
+}
+
+.dt-stat__value {
+  font-size: var(--dt-text-base);
+  font-weight: 600;
+  color: var(--dt-gold);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CANVAS CONTAINER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-canvas {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background: 
+    /* Industrial grid pattern */
+    linear-gradient(90deg, var(--dt-gold-subtle) 1px, transparent 1px),
+    linear-gradient(var(--dt-gold-subtle) 1px, transparent 1px),
+    var(--dt-obsidian-light);
+  background-size: 40px 40px;
+}
+
+.dt-canvas__inner {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+  padding: var(--dt-space-3xl);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TREE LAYOUT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.dt-level {
+  display: flex;
+  justify-content: center;
+  gap: var(--dt-node-spacing-h);
+  margin-bottom: var(--dt-node-spacing-v);
+  position: relative;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NODE BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-node {
+  position: relative;
+  cursor: pointer;
+  transition: transform var(--dt-transition-fast), box-shadow var(--dt-transition-fast);
+}
+
+.dt-node:hover {
+  transform: translateY(-2px);
+  z-index: var(--dt-z-selected);
+}
+
+.dt-node--selected {
+  z-index: var(--dt-z-selected);
+}
+
+/* Dragging state */
+.dt-node--dragging {
+  z-index: calc(var(--dt-z-selected) + 10);
+  cursor: grabbing !important;
+  opacity: 0.9;
+}
+
+.dt-node--dragging .dt-node__content {
+  border-color: var(--dt-gold-light);
+  box-shadow: var(--dt-shadow-lg), 0 0 30px var(--dt-gold-glow);
+}
+
+/* Make nodes show grab cursor */
+.dt-node {
+  cursor: grab;
+}
+
+.dt-node__content {
+  position: relative;
+  background: var(--dt-panel);
+  border: 2px solid var(--dt-border);
+  transition: all var(--dt-transition-fast);
+}
+
+.dt-node:hover .dt-node__content {
+  border-color: var(--dt-gold);
+  box-shadow: var(--dt-shadow-gold);
+}
+
+.dt-node--selected .dt-node__content {
+  border-color: var(--dt-gold);
+  box-shadow: var(--dt-shadow-gold), 0 0 0 3px var(--dt-gold-subtle);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BRANCH NODE (Diamond)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-node--branch {
+  width: var(--dt-node-branch-size);
+  height: var(--dt-node-branch-size);
+}
+
+.dt-node--branch .dt-node__content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70.7%;  /* sqrt(2)/2 * 100% for diamond inscribed in square */
+  height: 70.7%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--dt-slate) 0%, var(--dt-panel-dark) 100%);
+}
+
+.dt-node--branch .dt-node__inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  width: 100%;
+  text-align: center;
+  padding: var(--dt-space-sm);
+}
+
+.dt-node--branch .dt-node__label {
+  font-size: var(--dt-text-sm);
+  font-weight: 500;
+  color: var(--dt-text-primary);
+  line-height: 1.3;
+  max-width: 90px;
+  word-wrap: break-word;
+}
+
+.dt-node--branch .dt-node__id {
+  font-size: var(--dt-text-xs);
+  color: var(--dt-text-muted);
+  font-family: var(--dt-font-mono);
+  margin-top: var(--dt-space-xs);
+}
+
+/* Corner rivets for industrial aesthetic */
+.dt-node--branch .dt-node__content::before,
+.dt-node--branch .dt-node__content::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--dt-slate-light);
+  border: 1px solid var(--dt-border-light);
+  border-radius: 50%;
+}
+
+.dt-node--branch .dt-node__content::before {
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-45deg);
+}
+
+.dt-node--branch .dt-node__content::after {
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-45deg);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESULT NODE (Rounded Rectangle)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-node--result {
+  width: var(--dt-node-result-width);
+  height: var(--dt-node-result-height);
+}
+
+.dt-node--result .dt-node__content {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--dt-space-sm) var(--dt-space-md);
+  text-align: center;
+}
+
+/* True/Match result - Green */
+.dt-node--result-true .dt-node__content {
+  background: linear-gradient(135deg, var(--dt-success-dark) 0%, #0f3d22 100%);
+  border-color: var(--dt-success);
+}
+
+.dt-node--result-true .dt-node__icon {
+  color: var(--dt-success);
+}
+
+/* False/No-Match result - Red */
+.dt-node--result-false .dt-node__content {
+  background: linear-gradient(135deg, var(--dt-error-dark) 0%, #3d0f0f 100%);
+  border-color: var(--dt-error);
+}
+
+.dt-node--result-false .dt-node__icon {
+  color: var(--dt-error);
+}
+
+.dt-node--result .dt-node__icon {
+  font-size: 18px;
+  margin-bottom: var(--dt-space-xs);
+}
+
+.dt-node--result .dt-node__label {
+  font-size: var(--dt-text-sm);
+  font-weight: 600;
+  color: var(--dt-text-primary);
+  line-height: 1.2;
+}
+
+.dt-node--result .dt-node__reason {
+  font-size: var(--dt-text-xs);
+  color: var(--dt-text-secondary);
+  font-family: var(--dt-font-mono);
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONNECTIONS (SVG Lines)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: var(--dt-z-connections);
+}
+
+.dt-connection {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.dt-connection--yes {
+  stroke: var(--dt-success);
+}
+
+.dt-connection--no {
+  stroke: var(--dt-error);
+}
+
+.dt-connection__label {
+  font-size: var(--dt-text-xs);
+  font-weight: 600;
+  font-family: var(--dt-font-sans);
+}
+
+.dt-connection__label--yes {
+  fill: var(--dt-success);
+}
+
+.dt-connection__label--no {
+  fill: var(--dt-error);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NODE CONNECTOR POINTS (Explicit ConnectionPointControl)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Base connection point styling */
+.dt-connection-point {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  z-index: 15;
+  /* Center the dot */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dt-connection-point__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dt-panel);
+  border: 2px solid var(--dt-border);
+  transition: all var(--dt-transition-fast);
+}
+
+/* Input point (top center of all nodes) */
+.dt-connection-point--input-top {
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* YES output (bottom-left of branch nodes) */
+.dt-connection-point--output-yes {
+  bottom: -7px;
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.dt-connection-point--output-yes .dt-connection-point__dot {
+  border-color: var(--dt-success);
+  background: var(--dt-success-bg);
+}
+
+/* NO output (bottom-right of branch nodes) */
+.dt-connection-point--output-no {
+  bottom: -7px;
+  right: 0;
+  transform: translateX(50%);
+}
+
+.dt-connection-point--output-no .dt-connection-point__dot {
+  border-color: var(--dt-error);
+  background: var(--dt-error-bg);
+}
+
+/* Hover/active states */
+.dt-node:hover .dt-connection-point__dot {
+  transform: scale(1.2);
+}
+
+.dt-connection-point--output-yes:hover .dt-connection-point__dot {
+  box-shadow: 0 0 8px var(--dt-success);
+}
+
+.dt-connection-point--output-no:hover .dt-connection-point__dot {
+  box-shadow: 0 0 8px var(--dt-error);
+}
+
+/* Legacy connector styles (for compatibility) */
+.dt-connector {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--dt-panel);
+  border: 2px solid var(--dt-border);
+  z-index: 15;
+}
+
+.dt-connector--top {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dt-connector--bottom {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dt-connector--yes {
+  border-color: var(--dt-success);
+  background: var(--dt-success-bg);
+}
+
+.dt-connector--no {
+  border-color: var(--dt-error);
+  background: var(--dt-error-bg);
+}
+
+/* Branch node connectors - positioned on diamond corners */
+.dt-node--branch .dt-connector--bottom-left {
+  bottom: 0;
+  left: 0;
+  transform: translate(-50%, 50%);
+}
+
+.dt-node--branch .dt-connector--bottom-right {
+  bottom: 0;
+  right: 0;
+  transform: translate(50%, 50%);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOLTIP
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-tooltip {
+  position: absolute;
+  z-index: var(--dt-z-tooltip);
+  background: var(--dt-slate);
+  border: 1px solid var(--dt-border-gold);
+  border-radius: 8px;
+  padding: var(--dt-space-md);
+  max-width: 280px;
+  box-shadow: var(--dt-shadow-lg), var(--dt-shadow-gold);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--dt-transition-fast), transform var(--dt-transition-fast);
+}
+
+.dt-tooltip--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dt-tooltip__title {
+  font-weight: 600;
+  color: var(--dt-gold);
+  margin-bottom: var(--dt-space-sm);
+}
+
+.dt-tooltip__description {
+  font-size: var(--dt-text-sm);
+  color: var(--dt-text-secondary);
+  line-height: 1.4;
+}
+
+.dt-tooltip__condition {
+  margin-top: var(--dt-space-sm);
+  padding-top: var(--dt-space-sm);
+  border-top: 1px solid var(--dt-border);
+  font-family: var(--dt-font-mono);
+  font-size: var(--dt-text-xs);
+  color: var(--dt-text-muted);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEGEND
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-legend {
+  position: fixed;
+  bottom: var(--dt-space-xl);
+  right: var(--dt-space-xl);
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  padding: var(--dt-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dt-space-sm);
+}
+
+.dt-legend__title {
+  font-size: var(--dt-text-xs);
+  font-weight: 600;
+  color: var(--dt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--dt-space-xs);
+}
+
+.dt-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--dt-space-sm);
+  font-size: var(--dt-text-sm);
+  color: var(--dt-text-secondary);
+}
+
+.dt-legend__icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dt-legend__icon--branch {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--dt-gold);
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.dt-legend__icon--true {
+  width: 20px;
+  height: 12px;
+  border: 2px solid var(--dt-success);
+  border-radius: 4px;
+  background: var(--dt-success-bg);
+}
+
+.dt-legend__icon--false {
+  width: 20px;
+  height: 12px;
+  border: 2px solid var(--dt-error);
+  border-radius: 4px;
+  background: var(--dt-error-bg);
+}
+
+.dt-legend__line {
+  width: 20px;
+  height: 2px;
+}
+
+.dt-legend__line--yes {
+  background: var(--dt-success);
+}
+
+.dt-legend__line--no {
+  background: var(--dt-error);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MINIMAP (for large trees)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-minimap {
+  position: fixed;
+  bottom: var(--dt-space-xl);
+  left: var(--dt-space-xl);
+  width: 180px;
+  height: 120px;
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dt-minimap__viewport {
+  position: absolute;
+  border: 2px solid var(--dt-gold);
+  background: var(--dt-gold-subtle);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ZOOM CONTROLS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-zoom {
+  position: fixed;
+  bottom: var(--dt-space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--dt-space-xs);
+  background: var(--dt-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 24px;
+  padding: var(--dt-space-xs);
+}
+
+.dt-zoom__btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--dt-text-secondary);
+  cursor: pointer;
+  transition: all var(--dt-transition-fast);
+}
+
+.dt-zoom__btn:hover {
+  background: var(--dt-slate);
+  color: var(--dt-gold);
+}
+
+.dt-zoom__level {
+  min-width: 50px;
+  text-align: center;
+  font-size: var(--dt-text-sm);
+  font-weight: 500;
+  color: var(--dt-text-primary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes dt-pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 var(--dt-gold-glow); }
+  50% { box-shadow: 0 0 20px 4px var(--dt-gold-glow); }
+}
+
+.dt-node--highlight .dt-node__content {
+  animation: dt-pulse-gold 1.5s ease-in-out infinite;
+}
+
+@keyframes dt-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dt-node {
+  animation: dt-fade-in 0.3s ease-out backwards;
+}
+
+.dt-node:nth-child(1) { animation-delay: 0ms; }
+.dt-node:nth-child(2) { animation-delay: 50ms; }
+.dt-node:nth-child(3) { animation-delay: 100ms; }
+.dt-node:nth-child(4) { animation-delay: 150ms; }
+.dt-node:nth-child(5) { animation-delay: 200ms; }
+.dt-node:nth-child(6) { animation-delay: 250ms; }
+.dt-node:nth-child(7) { animation-delay: 300ms; }
+.dt-node:nth-child(8) { animation-delay: 350ms; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  :root {
+    --dt-node-branch-size: 100px;
+    --dt-node-result-width: 120px;
+    --dt-node-result-height: 50px;
+    --dt-node-spacing-h: 60px;
+    --dt-node-spacing-v: 50px;
+  }
+  
+  .dt-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--dt-space-md);
+  }
+  
+  .dt-legend,
+  .dt-minimap {
+    display: none;
+  }
+}

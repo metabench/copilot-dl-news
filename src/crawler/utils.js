@@ -14,6 +14,50 @@ function parseRetryAfter(headerVal) {
   }
   return null;
 }
+
+/**
+ * Safely execute a function, swallowing any errors.
+ * Useful for non-critical operations like telemetry or logging.
+ * @param {Function} fn - Function to execute
+ * @param {*} [fallback=undefined] - Value to return if function throws
+ * @returns {*} Result of fn() or fallback on error
+ */
+function safeCall(fn, fallback = undefined) {
+  try {
+    return fn();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+/**
+ * Safely execute an async function, swallowing any errors.
+ * @param {Function} fn - Async function to execute
+ * @param {*} [fallback=undefined] - Value to return if function throws
+ * @returns {Promise<*>} Result of fn() or fallback on error
+ */
+async function safeCallAsync(fn, fallback = undefined) {
+  try {
+    return await fn();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+/**
+ * Safely extract hostname from a URL string.
+ * @param {string} url - URL to parse
+ * @returns {string|null} Hostname or null if parsing fails
+ */
+function safeHostFromUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    return new URL(url).hostname;
+  } catch (_) {
+    return null;
+  }
+}
+
 class MinHeap {
   constructor(compare) { this.data = []; this.compare = compare; }
   size() { return this.data.length; }
@@ -27,4 +71,4 @@ class MinHeap {
   _siftUp(i) { const d = this.data; const cmp = this.compare; let idx = i; while (idx > 0) { const p = Math.floor((idx - 1) / 2); if (cmp(d[idx], d[p]) < 0) { [d[idx], d[p]] = [d[p], d[idx]]; idx = p; } else break; } }
   _siftDown(i) { const d = this.data; const cmp = this.compare; let idx = i; const n = d.length; while (true) { let left = 2 * idx + 1, right = 2 * idx + 2, smallest = idx; if (left < n && cmp(d[left], d[smallest]) < 0) smallest = left; if (right < n && cmp(d[right], d[smallest]) < 0) smallest = right; if (smallest !== idx) { [d[idx], d[smallest]] = [d[smallest], d[idx]]; idx = smallest; } else break; } }
 }
-module.exports = { sleep, nowMs, jitter, parseRetryAfter, MinHeap };
+module.exports = { sleep, nowMs, jitter, parseRetryAfter, safeCall, safeCallAsync, safeHostFromUrl, MinHeap };

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900">
+  <defs>
+    <style>
+      .title { font-family: "Segoe UI", Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #f6f0e6; }
+      .subtitle { font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; fill: #d7d0c4; }
+      .card-title { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #f6f0e6; }
+      .item { font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; fill: #d7d0c4; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="900" fill="#0f0f13" />
+  <text x="600" y="50" class="title" text-anchor="middle">NPM Scripts and Apps Map</text>
+  <text x="600" y="72" class="subtitle" text-anchor="middle">Flat layout, no gradients, Industrial Obsidian palette</text>
+
+  <!-- Column 1 -->
+  <rect x="50" y="100" width="520" height="200" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="70" y="125" class="card-title">Core CLI</text>
+  <text x="70" y="150" class="item">start -> src/crawl.js (crawler)</text>
+  <text x="70" y="170" class="item">analysis:run -> src/tools/analysis-run.js</text>
+  <text x="70" y="190" class="item">analyze:domains | analyze:pages</text>
+  <text x="70" y="210" class="item">backfill:dates | backfill:dates:redo</text>
+  <text x="70" y="230" class="item">benchmarks -> tools/benchmarks/run.js</text>
+  <text x="70" y="250" class="item">tmp:prune -> tools/dev/tmp-prune.js</text>
+
+  <rect x="50" y="320" width="520" height="220" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="70" y="345" class="card-title">Tests</text>
+  <text x="70" y="370" class="item">test, test:by-path, test:suite | unit | integration | e2e</text>
+  <text x="70" y="390" class="item">tests:status | tests:review | test:list</text>
+  <text x="70" y="410" class="item">test:api | test:related | test:name | test:proj</text>
+  <text x="70" y="430" class="item">test:timing | test:legacy:* variants</text>
+  <text x="70" y="450" class="item">test:dev-geography | test:dev-geography-monitor</text>
+  <text x="70" y="470" class="item">test:legacy:geography-full | test:legacy:all</text>
+
+  <rect x="50" y="560" width="520" height="260" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="70" y="585" class="card-title">Data, Schema, Gazetteer</text>
+  <text x="70" y="610" class="item">schema:sync | schema:check | schema:stats</text>
+  <text x="70" y="630" class="item">populate:gazetteer | cleanup:gazetteer</text>
+  <text x="70" y="650" class="item">export:gazetteer | validate:gazetteer</text>
+  <text x="70" y="670" class="item">analysis:run | analyze:domains | analyze:pages</text>
+  <text x="70" y="690" class="item">backfill:dates | backfill:dates:redo</text>
+  <text x="70" y="710" class="item">benchmarks (perf) | tmp:prune</text>
+
+  <!-- Column 2 -->
+  <rect x="640" y="100" width="510" height="240" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="660" y="125" class="card-title">UI Servers (npm run)</text>
+  <text x="660" y="150" class="item">ui:data-explorer | ui:urls-server -> dataExplorerServer.js</text>
+  <text x="660" y="170" class="item">ui:gazetteer -> gazetteerInfoServer.js</text>
+  <text x="660" y="190" class="item">ui:docs -> docsViewer/server.js</text>
+  <text x="660" y="210" class="item">ui:design -> designStudio/server.js</text>
+  <text x="660" y="230" class="item">diagram:server -> diagramAtlasServer.js</text>
+  <text x="660" y="250" class="item">ui:design:dev | ui:docs:dev (build then serve)</text>
+  <text x="660" y="270" class="item">z-server (Electron helper)</text>
+
+  <rect x="640" y="360" width="510" height="200" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="660" y="385" class="card-title">UI Builds</text>
+  <text x="660" y="410" class="item">ui:client-build -> build-ui-client.js</text>
+  <text x="660" y="430" class="item">ui:docs:build | ui:docs:dev -> build-docs-viewer-client.js</text>
+  <text x="660" y="450" class="item">ui:design:build | ui:design:dev -> build-design-studio-client.js</text>
+  <text x="660" y="470" class="item">build-art-playground-client.js | build-facts-client.js</text>
+  <text x="660" y="490" class="item">build-geo-import-client.js | build-wysiwyg-client.js</text>
+
+  <rect x="640" y="580" width="510" height="220" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="660" y="605" class="card-title">Capture, Checks, MCP, Utilities</text>
+  <text x="660" y="630" class="item">diagram:check -> diagramAtlas.check.js</text>
+  <text x="660" y="650" class="item">diagram:screenshot -> capture-diagram-atlas-screenshot.js</text>
+  <text x="660" y="670" class="item">ui:urls-screenshots -> capture-url-table-screenshots.js</text>
+  <text x="660" y="690" class="item">capture-data-explorer-screenshots.js | capture-domain-detail-screenshot.js</text>
+  <text x="660" y="710" class="item">ui:metrics-worker -> run-aggregate-worker.js</text>
+  <text x="660" y="730" class="item">mcp:docs-memory | mcp:docs-memory:http</text>
+  <text x="660" y="750" class="item">mcp:svg-editor | mcp:svg-editor:http</text>
+  <text x="660" y="770" class="item">md:edit | js:edit launchers</text>
+
+  <!-- Manual servers note -->
+  <rect x="50" y="840" width="1100" height="40" fill="#1b1f27" stroke="#f0c674" stroke-width="2" />
+  <text x="70" y="865" class="item">Manual servers (node): geoImportServer.js, decisionTreeViewer/server.js, goalsExplorer/server.js, artPlayground/server.js, factsServer.js, wysiwyg-demo/server.js</text>
+</svg>

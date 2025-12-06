@@ -31,6 +31,386 @@
 
 ## Current Session
 
+### Session 2025-12-06: Consolidate agent instructions
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Move key guidance into AGENTS and slim Copilot file
+
+**Location**: `docs/sessions/2025-12-06-instructions-consolidation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-instructions-consolidation/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-instructions-consolidation/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-instructions-consolidation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-instructions-consolidation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-instructions-consolidation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-05: Agent backups app
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- CLI to backup/list/restore agent files to zip
+
+**Location**: `docs/sessions/2025-12-05-agent-backups/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-05-agent-backups/INDEX.md)
+- 🗺️ [Plan](./2025-12-05-agent-backups/PLAN.md)
+- 📝 [Working Notes](./2025-12-05-agent-backups/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-05-agent-backups/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-05-agent-backups/FOLLOW_UPS.md)
+
+
+### Session 2025-12-05: NPM Scripts Catalog
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Catalog runnable apps and render SVG overview
+
+**Location**: `docs/sessions/2025-12-05-npm-scripts-map/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-05-npm-scripts-map/INDEX.md)
+- 🗺️ [Plan](./2025-12-05-npm-scripts-map/PLAN.md)
+- 📝 [Working Notes](./2025-12-05-npm-scripts-map/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-05-npm-scripts-map/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-05-npm-scripts-map/FOLLOW_UPS.md)
+
+
+### Session 2025-12-04: Investigate MCP reduce undefined error
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Find MCP bug causing Copilot reduce undefined failure
+
+**Location**: `docs/sessions/2025-12-04-mcp-reduce-error/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-04-mcp-reduce-error/INDEX.md)
+- 🗺️ [Plan](./2025-12-04-mcp-reduce-error/PLAN.md)
+- 📝 [Working Notes](./2025-12-04-mcp-reduce-error/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-04-mcp-reduce-error/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-04-mcp-reduce-error/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Extract service wiring to new module
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Reduce NewsCrawler.js by moving service wiring into dedicated module and keep compatibility
+
+**Location**: `docs/sessions/2025-12-03-news-crawler-wiring-extract/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-news-crawler-wiring-extract/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-news-crawler-wiring-extract/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-news-crawler-wiring-extract/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-news-crawler-wiring-extract/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-news-crawler-wiring-extract/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Crawler SafeCall Expansion
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Extend safeCall utilities, add tests, and continue crawler cleanup
+
+**Location**: `docs/sessions/2025-12-03-crawler-safecall-expansion/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-crawler-safecall-expansion/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-crawler-safecall-expansion/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-crawler-safecall-expansion/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-crawler-safecall-expansion/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-crawler-safecall-expansion/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Codex MCP memory wiring
+
+**Duration**: Active
+**Type**: config
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Enable Codex CLI to reach docs-memory MCP server
+
+**Location**: `docs/sessions/2025-12-03-mcp-memory-codex/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-mcp-memory-codex/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-mcp-memory-codex/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-mcp-memory-codex/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-mcp-memory-codex/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-mcp-memory-codex/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: NewsCrawler Code Cleanup
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Clean up error handling, extract utilities, improve code quality
+
+**Location**: `docs/sessions/2025-12-03-crawler-cleanup/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-crawler-cleanup/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-crawler-cleanup/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-crawler-cleanup/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-crawler-cleanup/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-crawler-cleanup/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Docs Memory MCP
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Prototype MCP server that exposes AGI doc excerpts
+
+**Location**: `docs/sessions/2025-12-03-mcp-docs-memory/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-mcp-docs-memory/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-mcp-docs-memory/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-mcp-docs-memory/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-mcp-docs-memory/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-mcp-docs-memory/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Enable js-edit file rename support
+
+**Duration**: Active
+**Type**: cli
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Allow js-edit to rename files and continue editing pipelines
+
+**Location**: `docs/sessions/2025-12-03-js-edit-rename/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-js-edit-rename/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-js-edit-rename/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-js-edit-rename/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-js-edit-rename/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-js-edit-rename/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Create AGI Brainstorm agent
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add new AGI brainstorming coordinator agent file with proper rules
+
+**Location**: `docs/sessions/2025-12-03-agi-brainstorm-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-agi-brainstorm-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-agi-brainstorm-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-agi-brainstorm-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-agi-brainstorm-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-agi-brainstorm-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Guide: jsgui3 debugging
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document workflow and techniques for debugging jsgui3 controls/activation
+
+**Location**: `docs/sessions/2025-12-03-jsgui3-debug-guide/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-jsgui3-debug-guide/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-jsgui3-debug-guide/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-jsgui3-debug-guide/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-jsgui3-debug-guide/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-jsgui3-debug-guide/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Fix WYSIWYG demo e2e
+
+**Duration**: Active
+**Type**: bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Stabilize WYSIWYG demo server and Puppeteer test
+
+**Location**: `docs/sessions/2025-12-03-wysiwyg-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-wysiwyg-fix/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-wysiwyg-fix/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-wysiwyg-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-wysiwyg-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-wysiwyg-fix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Inspect AGI agent system context
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Review AGI Singularity agent docs and latest session related to wysiwyg demo
+
+**Location**: `docs/sessions/2025-12-03-wysiwyg-context/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-wysiwyg-context/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-wysiwyg-context/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-wysiwyg-context/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-wysiwyg-context/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-wysiwyg-context/FOLLOW_UPS.md)
+
+
+### Session 2025-12-03: Deep jsgui3 Research for UI Singularity
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Deepen jsgui3 research to enable self-building UI capabilities (UI Singularity) via advanced shared controls and WYSIWYG foundations
+
+**Location**: `docs/sessions/2025-12-03-jsgui3-deep-research-singularity/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-03-jsgui3-deep-research-singularity/INDEX.md)
+- 🗺️ [Plan](./2025-12-03-jsgui3-deep-research-singularity/PLAN.md)
+- 📝 [Working Notes](./2025-12-03-jsgui3-deep-research-singularity/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-03-jsgui3-deep-research-singularity/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-03-jsgui3-deep-research-singularity/FOLLOW_UPS.md)
+
+
+### Session 2025-12-02: SVG Templates Expansion
+
+**Duration**: Closed
+**Type**: feature
+**Completion**: ✅ Completed
+
+**Focus**:
+- Add architecture, flowchart, and timeline templates to the SVG generation system
+
+**Location**: `docs/sessions/2025-12-02-svg-templates/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-02-svg-templates/INDEX.md)
+- 🗺️ [Plan](./2025-12-02-svg-templates/PLAN.md)
+- 📝 [Working Notes](./2025-12-02-svg-templates/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-02-svg-templates/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-02-svg-templates/FOLLOW_UPS.md)
+
+
+### Session 2025-12-02: Implement Gap 5 and Gap 6 CLI Operations
+
+**Duration**: Closed
+**Type**: implementation
+**Completion**: ✅ Completed
+
+**Focus**:
+- Add missing operation handlers for --call-graph, --hot-paths, --dead-code (Gap 6) in js-scan.js
+
+**Location**: `docs/sessions/2025-12-02-gap5-gap6-cli-implementation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-02-gap5-gap6-cli-implementation/INDEX.md)
+- 🗺️ [Plan](./2025-12-02-gap5-gap6-cli-implementation/PLAN.md)
+- 📝 [Working Notes](./2025-12-02-gap5-gap6-cli-implementation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-02-gap5-gap6-cli-implementation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-02-gap5-gap6-cli-implementation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-02: AI SVG Creation Methodology & Multi-Stage Tooling
+
+**Duration**: Closed
+**Type**: tooling
+**Completion**: ✅ Completed
+
+**Focus**:
+- Design and build tooling for AI agents to create complex, beautiful SVG diagrams through structured multi-stage processes
+
+**Location**: `docs/sessions/2025-12-02-svg-creation-methodology/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-02-svg-creation-methodology/INDEX.md)
+- 🗺️ [Plan](./2025-12-02-svg-creation-methodology/PLAN.md)
+- 📝 [Working Notes](./2025-12-02-svg-creation-methodology/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-02-svg-creation-methodology/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-02-svg-creation-methodology/FOLLOW_UPS.md)
+
+
+### Session 2025-12-01: Fix Z-Server Green SVG
+
+**Duration**: Closed
+**Type**: bugfix
+**Completion**: ✅ Completed
+
+**Focus**:
+- Restore styles for running server indicator
+
+**Location**: `docs/sessions/2025-12-01-zserver-green-svg/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-01-zserver-green-svg/INDEX.md)
+- 🗺️ [Plan](./2025-12-01-zserver-green-svg/PLAN.md)
+- 📝 [Working Notes](./2025-12-01-zserver-green-svg/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-01-zserver-green-svg/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-01-zserver-green-svg/FOLLOW_UPS.md)
+
+
+### Session 2025-12-01: Decision Tree Viewer Controls
+
+**Duration**: Active
+**Type**: ui-development
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create beautifully styled jsgui3 controls for viewing decision trees
+
+**Location**: `docs/sessions/2025-12-01-decision-tree-viewer-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-01-decision-tree-viewer-controls/INDEX.md)
+- 🗺️ [Plan](./2025-12-01-decision-tree-viewer-controls/PLAN.md)
+- 📝 [Working Notes](./2025-12-01-decision-tree-viewer-controls/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-01-decision-tree-viewer-controls/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-01-decision-tree-viewer-controls/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-01: Art Playground Layout Improvement
 
 **Duration**: Active
@@ -465,9 +845,9 @@
 
 ### Session 2025-11-21: Crawler Factory DI
 
-**Duration**: Active
+**Duration**: Closed
 **Type**: Backend architecture
-**Completion**: 🔄 In progress
+**Completion**: ✅ Completed
 
 **Focus**:
 - Teach `NewsCrawler` to accept injected service bundles and expose reusable wiring helpers.

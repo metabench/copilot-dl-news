@@ -696,7 +696,7 @@ function normalizeOptions(raw) {
 
   // Recipe mode and batch operations don't require --file
   let filePath = null;
-  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan || resolved.copyBatch || (resolved.changes && resolved.emitPlan));
+  const isBatchOperation = Boolean(resolved.dryRun || resolved.recalculateOffsets || resolved.fromPlan || resolved.copyBatch || resolved.transaction || (resolved.changes && resolved.emitPlan));
   const isSnapshotIngest = Boolean(matchSnapshotInput || fromTokenInput);
   if (!resolved.recipe && !isBatchOperation && !isSnapshotIngest) {
     const fileInput = resolved.file ? String(resolved.file).trim() : '';
@@ -825,6 +825,7 @@ function normalizeOptions(raw) {
     ['--scan-targets', resolved.scanTargets !== undefined && resolved.scanTargets !== null],
     ['--extract', resolved.extract !== undefined && resolved.extract !== null],
     ['--copy', resolved.copy !== undefined && resolved.copy !== null],
+    ['--move', resolved.move !== undefined && resolved.move !== null],
     ['--replace', resolved.replace !== undefined && resolved.replace !== null],
     ['--locate', resolved.locate !== undefined && resolved.locate !== null],
     ['--locate-variable', resolved.locateVariable !== undefined && resolved.locateVariable !== null],
@@ -836,6 +837,10 @@ function normalizeOptions(raw) {
     ['--match-snapshot', hasMatchSnapshotOperation],
     ['--from-token', hasTokenIngestOperation],
     ['--copy-batch', resolved.copyBatch !== undefined && resolved.copyBatch !== null],
+    ['--transaction', resolved.transaction !== undefined && resolved.transaction !== null],
+    ['--rename-symbol', resolved.renameSymbol !== undefined && resolved.renameSymbol !== null],
+    ['--semantic-extract', resolved.semanticExtract !== undefined && resolved.semanticExtract !== null],
+    ['--analyze', Boolean(resolved.analyze)],
     ['--emit-plan', resolved.emitPlan !== undefined && resolved.emitPlan !== null && resolved.changes !== undefined && resolved.changes !== null && !resolved.dryRun && !resolved.recalculateOffsets]
   ];
 
@@ -959,6 +964,7 @@ function normalizeOptions(raw) {
   const extractVariableSelector = parseSelector(resolved.extractVariable, '--extract-variable');
   const replaceVariableSelector = parseSelector(resolved.replaceVariable, '--replace-variable');
   const copySelector = parseSelector(resolved.copy, '--copy');
+  const moveSelector = parseSelector(resolved.move, '--move');
   const previewSelector = parseSelector(resolved.preview, '--preview');
   const previewVariableSelector = parseSelector(resolved.previewVariable, '--preview-variable');
   const scanTargetsSelector = parseSelector(resolved.scanTargets, '--scan-targets');
@@ -1154,6 +1160,24 @@ function normalizeOptions(raw) {
     throw new Error('--copy requires --copy-to-file option.');
   }
 
+  // Move validation
+  const hasMove = Boolean(moveSelector);
+  if (hasMove && !resolved.moveToFile) {
+    throw new Error('--move requires --move-to-file option.');
+  }
+
+  let moveToFile = null;
+  if (resolved.moveToFile !== undefined && resolved.moveToFile !== null) {
+    const raw = String(resolved.moveToFile).trim();
+    if (!raw) {
+      throw new Error('--move-to-file requires a file path.');
+    }
+    moveToFile = path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  }
+
+  const moveAddExport = resolved.moveAddExport !== false; // default true
+  const moveAddImport = resolved.moveAddImport !== false; // default true
+
   let copyToFile = null;
   let copyToPosition = null;
   if (resolved.copyToFile !== undefined && resolved.copyToFile !== null) {
@@ -1303,6 +1327,10 @@ function normalizeOptions(raw) {
     copyToFile,
     copyToPosition,
     copyBatch,
+    moveSelector,
+    moveToFile,
+    moveAddExport,
+    moveAddImport,
     previewChars,
     scanTargetKind,
     variableTarget,
@@ -1323,6 +1351,13 @@ function normalizeOptions(raw) {
     recalculateOffsets: Boolean(resolved.recalculateOffsets),
     changes: resolved.changes,
     fromPlan: resolved.fromPlan, // Keep as string (file path), not boolean
+    transaction: resolved.transaction, // Keep as string (file path) for transaction mode
+    diffIntent: Boolean(resolved.diffIntent), // Human-readable diff preview
+    renameSymbol: resolved.renameSymbol, // Symbol name to rename
+    renameTo: resolved.to, // New name for rename-symbol
+    scopeAware: resolved.scopeAware !== false, // Default true
+    semanticExtract: resolved.semanticExtract, // Intent pattern for extraction
+    analyze: Boolean(resolved.analyze), // Show semantic analysis
     matchSnapshotInput,
     fromTokenInput
   };
@@ -1381,6 +1416,10 @@ function parseCliArgs(argv) {
     .add('--copy <selector>', 'Copy a function from one file to another')
     .add('--copy-to-file <path>', 'Target file to copy the function to')
     .add('--copy-to-position <position>', 'Position to insert the function: number, "after-last-import", "before-first-function" (default: end of file)')
+    .add('--move <selector>', 'Move a function from source to target file (copy + delete + import)')
+    .add('--move-to-file <path>', 'Target file to move the function to')
+    .add('--move-add-export', 'Add export statement in target file after move (default: true)', true, 'boolean')
+    .add('--move-add-import', 'Add import statement in source file after move (default: true)', true, 'boolean')
     .add('--with <path>', 'Path to the file containing the replacement code snippet (absolute)')
     .add('--with-file <path>', 'Path to the replacement code snippet (relative to the target file)')
     .add('--with-code <code>', 'Inline code snippet for replacement')
@@ -1424,7 +1463,14 @@ function parseCliArgs(argv) {
     .add('--recalculate-offsets', 'Recompute line/column offsets after batch changes (Gap 3)', false, 'boolean')
     .add('--changes <path>', 'JSON file containing batch changes: [{ file, startLine, endLine, replacement }]')
     .add('--copy-batch <path>', 'JSON plan file containing copy operations for batch insertion')
-    .add('--from-plan <path>', 'Load and apply a saved operation plan with guard verification (Gap 4)');
+    .add('--from-plan <path>', 'Load and apply a saved operation plan with guard verification (Gap 4)')
+    .add('--transaction <path>', 'Execute atomic multi-file edits from transaction JSON with rollback on failure')
+    .add('--diff-intent', 'Show human-readable diff preview of changes (combines with --dry-run or --transaction)', false, 'boolean')
+    .add('--rename-symbol <name>', 'Rename a symbol (function, variable, class) across all references in scope')
+    .add('--to <newName>', 'New name for --rename-symbol')
+    .add('--scope-aware', 'Respect lexical scoping when renaming (default: true)', true, 'boolean')
+    .add('--semantic-extract <intent>', 'Extract functions by intent (e.g., "validators", "handlers", or regex pattern)')
+    .add('--analyze', 'Show semantic analysis of file structure and patterns', false, 'boolean');
 
   const helpSections = [
     '',
@@ -1478,9 +1524,23 @@ function parseCliArgs(argv) {
  */
 function printDryRunResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
   
   if (options.json) {
     outputJson(result);
+    return;
+  }
+
+  // Terse mode: single-line summary (简令 style)
+  if (terse) {
+    const status = result.success ? '✓' : '✗';
+    const conflicts = result.conflicts.length;
+    console.log(`${status} 干运 改${result.changeCount} 冲${conflicts}${conflicts > 0 ? ' ⚠️' : ''}`);
+    if (conflicts > 0) {
+      result.conflicts.forEach((c, i) => {
+        console.log(`  ${i+1}.${c.file}:${c.startLine}-${c.endLine} ${c.reason}`);
+      });
+    }
     return;
   }
 
@@ -1519,9 +1579,17 @@ function printDryRunResult(result, options) {
  */
 function printRecalculateOffsetsResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
   
   if (options.json) {
     outputJson(result);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const status = result.success ? '✓' : '✗';
+    console.log(`${status} 偏移 调${result.adjustedCount} 行偏${result.totalLineShift} 列偏${result.maxColumnShift}`);
     return;
   }
 
@@ -1548,9 +1616,22 @@ function printRecalculateOffsetsResult(result, options) {
  */
 function printPlanResult(result, options) {
   const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
   
   if (options.json) {
     outputJson(result);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const status = result.success ? '✓' : '✗';
+    console.log(`${status} 计划 用${result.applied} 败${result.failed}${result.resultPlan ? ' 续可' : ''}`);
+    if (result.failed > 0 && result.changes) {
+      result.changes.filter(c => c.status !== 'applied').forEach((c, i) => {
+        console.log(`  ${i+1}.${c.error || '失败'}`);
+      });
+    }
     return;
   }
 
@@ -1578,6 +1659,353 @@ function printPlanResult(result, options) {
     console.log();
     const planLabel = isChinese ? '结果计划' : 'Result Plan Emitted';
     fmt.stat(planLabel, 'Ready for next operation', 'success');
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print transaction preview (human-readable diff intent)
+ * Shows what changes will be made across multiple files
+ */
+function printTransactionPreview(preview, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
+  
+  if (options.json) {
+    outputJson(preview);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const status = preview.valid ? '✓' : '✗';
+    console.log(`${status} 事务 文件${preview.fileCount} 改${preview.editCount}${preview.valid ? '' : ' ⚠️'}`);
+    if (!preview.valid && preview.errors) {
+      preview.errors.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+    }
+    if (options.diffIntent && preview.diffs) {
+      console.log('--- 意差 ---');
+      preview.diffs.forEach(d => {
+        console.log(`📁 ${d.file}`);
+        console.log(`  - ${d.before ? d.before.substring(0, 60) : '(新)'}...`);
+        console.log(`  + ${d.after ? d.after.substring(0, 60) : '(删)'}...`);
+      });
+    }
+    return;
+  }
+
+  fmt.header(isChinese ? '事务预览' : 'Transaction Preview');
+  fmt.stat('Status', preview.valid ? fmt.COLORS.success('✓ Valid') : fmt.COLORS.error('✗ Invalid'));
+  fmt.stat('Files', preview.fileCount, 'number');
+  fmt.stat('Edits', preview.editCount, 'number');
+
+  if (!preview.valid && preview.errors) {
+    console.log();
+    fmt.header(isChinese ? '错误' : 'Errors');
+    preview.errors.forEach((error, idx) => {
+      fmt.warn(`  [${idx + 1}] ${error}`);
+    });
+  }
+
+  if (preview.diffs && preview.diffs.length > 0) {
+    console.log();
+    fmt.header(isChinese ? '变更差异' : 'Diff Intent');
+    preview.diffs.forEach((diff, idx) => {
+      console.log();
+      fmt.section(`[${idx + 1}] ${diff.file}`);
+      if (diff.before) {
+        console.log(fmt.COLORS.error(`  - ${diff.before.substring(0, 80)}${diff.before.length > 80 ? '...' : ''}`));
+      }
+      if (diff.after) {
+        console.log(fmt.COLORS.success(`  + ${diff.after.substring(0, 80)}${diff.after.length > 80 ? '...' : ''}`));
+      }
+    });
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print transaction execution result
+ * Shows success/failure and any rollback information
+ */
+function printTransactionResult(result, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
+  
+  if (options.json) {
+    outputJson(result);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const status = result.success ? '✓' : '✗';
+    console.log(`${status} 事务 用${result.applied} 败${result.failed}${result.rolledBack ? ' 回滚' : ''}`);
+    if (result.failed > 0 && result.errors) {
+      result.errors.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+    }
+    return;
+  }
+
+  fmt.header(isChinese ? '事务结果' : 'Transaction Result');
+  fmt.stat('Status', result.success ? fmt.COLORS.success('✓ Success') : fmt.COLORS.error('✗ Failed'));
+  fmt.stat('Applied', result.applied, 'number');
+  fmt.stat('Failed', result.failed, 'number');
+  
+  if (result.rolledBack) {
+    fmt.stat('Rollback', fmt.COLORS.warn('✓ Restored original files'));
+  }
+
+  if (result.errors && result.errors.length > 0) {
+    console.log();
+    fmt.header(isChinese ? '错误' : 'Errors');
+    result.errors.forEach((error, idx) => {
+      fmt.warn(`  [${idx + 1}] ${error}`);
+    });
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print rename preview
+ * Shows what symbols will be renamed and where
+ */
+function printRenamePreview(preview, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
+  
+  if (options.json) {
+    outputJson(preview);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const status = preview.valid ? '✓' : '✗';
+    console.log(`${status} 改名 ${preview.symbol}→${preview.newName} 引${preview.referenceCount}处 域${preview.scope || '?'}`);
+    if (!preview.valid && preview.errors) {
+      preview.errors.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+    }
+    return;
+  }
+
+  fmt.header(isChinese ? '重命名预览' : 'Rename Preview');
+  fmt.stat('Status', preview.valid ? fmt.COLORS.success('✓ Valid') : fmt.COLORS.error('✗ Invalid'));
+  fmt.stat('Symbol', `${preview.symbol} → ${preview.newName}`);
+  fmt.stat('References', preview.referenceCount, 'number');
+  fmt.stat('Scope', preview.scope || 'unknown');
+
+  if (preview.definition) {
+    console.log();
+    fmt.section(isChinese ? '定义位置' : 'Definition');
+    fmt.stat('Type', preview.definition.type);
+    fmt.stat('Line', preview.definition.line, 'number');
+  }
+
+  if (preview.references && preview.references.length > 0) {
+    console.log();
+    fmt.section(isChinese ? '引用位置' : 'References');
+    preview.references.slice(0, 10).forEach((ref, idx) => {
+      console.log(`  ${idx + 1}. Line ${ref.line}, Col ${ref.column} (${ref.context})`);
+    });
+    if (preview.references.length > 10) {
+      console.log(`  ... and ${preview.references.length - 10} more`);
+    }
+  }
+
+  if (!preview.valid && preview.errors) {
+    console.log();
+    fmt.header(isChinese ? '错误' : 'Errors');
+    preview.errors.forEach((e, i) => fmt.warn(`  ${i+1}. ${e}`));
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print rename result
+ * Shows what was renamed and any errors
+ */
+function printRenameResult(result, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
+  
+  if (options.json) {
+    outputJson({
+      success: result.success,
+      changes: result.changes?.length || 0,
+      errors: result.errors || (result.error ? [result.error] : [])
+    });
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const status = result.success ? '✓' : '✗';
+    const count = result.changes?.length || 0;
+    console.log(`${status} 改名 改${count}处`);
+    if (!result.success) {
+      const errs = result.errors || (result.error ? [result.error] : []);
+      errs.forEach((e, i) => console.log(`  ${i+1}.${e}`));
+    }
+    return;
+  }
+
+  fmt.header(isChinese ? '重命名结果' : 'Rename Result');
+  fmt.stat('Status', result.success ? fmt.COLORS.success('✓ Applied') : fmt.COLORS.error('✗ Failed'));
+  fmt.stat('Changes', result.changes?.length || 0, 'number');
+
+  if (result.changes && result.changes.length > 0) {
+    console.log();
+    fmt.section(isChinese ? '变更' : 'Changes');
+    result.changes.slice(0, 10).forEach((change, idx) => {
+      const defMarker = change.isDefinition ? ' [definition]' : '';
+      console.log(`  ${idx + 1}. Line ${change.line}: ${change.before} → ${change.after}${defMarker}`);
+    });
+    if (result.changes.length > 10) {
+      console.log(`  ... and ${result.changes.length - 10} more`);
+    }
+  }
+
+  if (!result.success) {
+    const errs = result.errors || (result.error ? [result.error] : []);
+    if (errs.length > 0) {
+      console.log();
+      fmt.header(isChinese ? '错误' : 'Errors');
+      errs.forEach((e, i) => fmt.warn(`  ${i+1}. ${e}`));
+    }
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print semantic analysis results
+ * Shows file structure, patterns, and refactoring suggestions
+ */
+function printSemanticAnalysis(analysis, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
+  
+  if (options.json) {
+    // Convert Map to object for JSON
+    const output = {
+      ...analysis,
+      dependencies: Object.fromEntries(analysis.dependencies || new Map())
+    };
+    outputJson(output);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    const fn = analysis.functions?.length || 0;
+    const cls = analysis.classes?.length || 0;
+    const sug = analysis.suggestions?.length || 0;
+    console.log(`📊 语义 函${fn} 类${cls} 建议${sug}`);
+    
+    // Show pattern counts
+    const p = analysis.patterns || {};
+    console.log(`  类别: 验${p.validators?.length || 0} 处${p.handlers?.length || 0} 换${p.transformers?.length || 0} 助${p.helpers?.length || 0}`);
+    
+    // Show suggestions
+    if (analysis.suggestions?.length > 0) {
+      console.log('  建议:');
+      analysis.suggestions.forEach((s, i) => {
+        console.log(`    ${i+1}. ${s.reason}`);
+      });
+    }
+    return;
+  }
+
+  fmt.header(isChinese ? '语义分析' : 'Semantic Analysis');
+  fmt.stat('Functions', analysis.functions?.length || 0, 'number');
+  fmt.stat('Classes', analysis.classes?.length || 0, 'number');
+  fmt.stat('Exports', analysis.exports?.length || 0, 'number');
+
+  // Pattern breakdown
+  console.log();
+  fmt.section(isChinese ? '函数分类' : 'Function Categories');
+  const p = analysis.patterns || {};
+  fmt.stat('Validators', p.validators?.length || 0, 'number');
+  fmt.stat('Handlers', p.handlers?.length || 0, 'number');
+  fmt.stat('Transformers', p.transformers?.length || 0, 'number');
+  fmt.stat('Helpers', p.helpers?.length || 0, 'number');
+  fmt.stat('Tests', p.tests?.length || 0, 'number');
+
+  // Suggestions
+  if (analysis.suggestions?.length > 0) {
+    console.log();
+    fmt.section(isChinese ? '重构建议' : 'Refactoring Suggestions');
+    analysis.suggestions.forEach((sug, idx) => {
+      console.log();
+      fmt.stat(`[${idx + 1}] ${sug.type.toUpperCase()}`, sug.reason);
+      console.log(`    → ${sug.action}`);
+      if (sug.functions) {
+        console.log(`    Functions: ${sug.functions.slice(0, 5).join(', ')}${sug.functions.length > 5 ? '...' : ''}`);
+      }
+    });
+  }
+
+  fmt.footer();
+}
+
+/**
+ * Print semantic extraction results
+ * Shows matched functions by intent
+ */
+function printSemanticExtract(result, options) {
+  const isChinese = fmt.getLanguageMode() === 'zh';
+  const terse = options.terse || isChinese;
+  
+  if (options.json) {
+    outputJson(result);
+    return;
+  }
+
+  // Terse mode (简令 style)
+  if (terse) {
+    console.log(`🎯 意取 "${result.intent}" 匹${result.matched}个`);
+    if (result.functions?.length > 0) {
+      result.functions.forEach((fn, i) => {
+        console.log(`  ${i+1}. ${fn.name} (行${fn.line})`);
+      });
+    }
+    if (result.relatedDependencies?.length > 0) {
+      console.log(`  依赖: ${result.relatedDependencies.join(', ')}`);
+    }
+    return;
+  }
+
+  fmt.header(isChinese ? '意图提取' : 'Semantic Extract');
+  fmt.stat('Intent', result.intent);
+  fmt.stat('Matched', result.matched, 'number');
+
+  if (result.functions?.length > 0) {
+    console.log();
+    fmt.section(isChinese ? '匹配函数' : 'Matched Functions');
+    result.functions.forEach((fn, idx) => {
+      console.log();
+      fmt.stat(`[${idx + 1}] ${fn.name}`, `Line ${fn.line}`);
+      if (fn.dependencies?.length > 0) {
+        console.log(`    Uses: ${fn.dependencies.join(', ')}`);
+      }
+      // Show first few lines of code
+      const preview = fn.code?.split('\n').slice(0, 3).join('\n    ') || '';
+      if (preview) {
+        console.log(`    ${preview}${fn.code?.split('\n').length > 3 ? '\n    ...' : ''}`);
+      }
+    });
+  }
+
+  if (result.relatedDependencies?.length > 0) {
+    console.log();
+    fmt.section(isChinese ? '相关依赖' : 'Related Dependencies');
+    console.log(`  ${result.relatedDependencies.join(', ')}`);
+    console.log(fmt.COLORS.muted('  (These functions are called by matched functions but not matched themselves)'));
   }
 
   fmt.footer();
@@ -1618,6 +2046,10 @@ async function main() {
   options.lang = langOverride || rawOptions.lang || 'auto';
   options.languageMode = fmt.getLanguageMode();
   options._i18n = translation;
+  
+  // Auto-enable terse output when Chinese flags are used (简令 mode)
+  const chineseInputDetected = translation.aliasUsed || translation.glyphDetected;
+  options.terse = chineseInputDetected || options.languageMode === 'zh';
 
   try {
     await hydrateMatchSnapshotContext(options);
@@ -1630,6 +2062,122 @@ async function main() {
   // Handle recipe mode first (doesn't need file processing)
   if (options.recipe) {
     return handleRecipeMode(options, fmt);
+  }
+
+  // Handle atomic transaction mode (multi-file edits with rollback)
+  if (options.transaction) {
+    try {
+      const TransactionManager = require('./js-edit/operations/transaction');
+      const transactionPath = path.isAbsolute(options.transaction)
+        ? options.transaction
+        : path.resolve(process.cwd(), options.transaction);
+      
+      const transactionData = JSON.parse(fs.readFileSync(transactionPath, 'utf8'));
+      const txManager = new TransactionManager(transactionData, {
+        verbose: options.verbose,
+        baseDir: path.dirname(transactionPath)
+      });
+      
+      // Preview mode (--diff-intent or default)
+      if (options.diffIntent || !options.fix) {
+        const preview = txManager.preview();
+        printTransactionPreview(preview, options);
+        return;
+      }
+      
+      // Execute mode (--fix)
+      const result = await txManager.execute();
+      printTransactionResult(result, options);
+      return;
+    } catch (error) {
+      fmt.error(`Transaction error: ${error.message}`);
+      if (process.env.DEBUG) {
+        console.error(error);
+      }
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Handle rename-symbol (requires --file, but handles its own file reading)
+  if (options.renameSymbol) {
+    try {
+      const { previewRename, applyRename } = require('./js-edit/operations/renameSymbol');
+      
+      if (!options.filePath) {
+        fmt.error('--rename-symbol requires --file <path>');
+        process.exitCode = 1;
+        return;
+      }
+      
+      if (!options.renameTo) {
+        fmt.error('--rename-symbol requires --to <newName>');
+        process.exitCode = 1;
+        return;
+      }
+      
+      const source = fs.readFileSync(options.filePath, 'utf-8');
+      
+      // Preview mode (default)
+      if (!options.fix) {
+        const preview = previewRename(source, options.renameSymbol, options.renameTo);
+        printRenamePreview(preview, options);
+        return;
+      }
+      
+      // Apply mode (--fix)
+      const result = applyRename(source, options.renameSymbol, options.renameTo, {
+        force: options.force
+      });
+      
+      if (result.success) {
+        fs.writeFileSync(options.filePath, result.source, 'utf-8');
+      }
+      
+      printRenameResult(result, options);
+      return;
+    } catch (error) {
+      fmt.error(`Rename error: ${error.message}`);
+      if (process.env.DEBUG) {
+        console.error(error);
+      }
+      process.exitCode = 1;
+      return;
+    }
+  }
+
+  // Handle semantic extraction and analysis
+  if (options.semanticExtract || options.analyze) {
+    try {
+      const { analyzeSemantics, extractByIntent } = require('./js-edit/operations/semanticExtract');
+      
+      if (!options.filePath) {
+        fmt.error('--semantic-extract and --analyze require --file <path>');
+        process.exitCode = 1;
+        return;
+      }
+      
+      const source = fs.readFileSync(options.filePath, 'utf-8');
+      
+      if (options.analyze) {
+        // Analysis mode: show file semantics and suggestions
+        const analysis = analyzeSemantics(source, options.filePath);
+        printSemanticAnalysis(analysis, options);
+        return;
+      }
+      
+      // Extraction mode: find functions by intent
+      const result = extractByIntent(source, options.semanticExtract);
+      printSemanticExtract(result, options);
+      return;
+    } catch (error) {
+      fmt.error(`Semantic operation error: ${error.message}`);
+      if (process.env.DEBUG) {
+        console.error(error);
+      }
+      process.exitCode = 1;
+      return;
+    }
   }
 
   // Handle batch operations (Gap 3 & 4)
@@ -2162,6 +2710,34 @@ async function main() {
     if (options.copySelector) {
       const [record] = resolveMatches(functionRecords, options.copySelector, options, { operation: 'copy-function' });
       return mutationOperations.copyFunction(options, source, record, options.copySelector);
+    }
+
+    if (options.moveSelector) {
+      // Move operation - use dedicated module
+      const moveOperations = require('./js-edit/operations/move');
+      moveOperations.init({
+        parseModule,
+        collectFunctions,
+        extractCode,
+        replaceSpan,
+        writeOutputFile,
+        outputJson,
+        fmt,
+        computeNewlineStats,
+        prepareNormalizedSnippet
+      });
+
+      return moveOperations.moveFunction({
+        fromPath: options.filePath,
+        toPath: options.moveToFile,
+        functionName: options.moveSelector,
+        addExport: options.moveAddExport,
+        addImport: options.moveAddImport,
+        fix: options.fix,
+        insertPosition: options.copyToPosition || 'end',
+        json: options.json,
+        quiet: options.quiet
+      });
     }
   } catch (error) {
     if (error.name === 'MultipleMatchesError' && options.suggestSelectors) {

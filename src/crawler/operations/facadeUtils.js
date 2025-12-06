@@ -2,12 +2,12 @@
 
 const path = require('path');
 
-let CachedCrawlerFactory = null;
-const loadCrawlerFactory = () => {
-  if (!CachedCrawlerFactory) {
-    CachedCrawlerFactory = require('../CrawlerFactory');
+let CachedNewsCrawler = null;
+const loadNewsCrawler = () => {
+  if (!CachedNewsCrawler) {
+    CachedNewsCrawler = require('../NewsCrawler');
   }
-  return CachedCrawlerFactory;
+  return CachedNewsCrawler;
 };
 
 const buildFacadeDefaults = (defaults = {}) => {
@@ -26,15 +26,20 @@ const buildFacadeDefaults = (defaults = {}) => {
   });
 };
 
+/**
+ * Creates a crawler factory function.
+ * If a custom factory is provided, uses that; otherwise creates NewsCrawler instances directly.
+ * @param {Function} [crawlerFactory] - Optional custom factory function
+ * @returns {Function} Factory function (startUrl, options) => crawler
+ */
 const createCrawlerFactory = (crawlerFactory) => {
   if (typeof crawlerFactory === 'function') {
     return crawlerFactory;
   }
 
   return (startUrl, options) => {
-    const { CrawlerFactory } = loadCrawlerFactory();
-    const config = { ...(options || {}), startUrl };
-    return CrawlerFactory.create(config);
+    const NewsCrawler = loadNewsCrawler();
+    return new NewsCrawler(startUrl, options || {});
   };
 };
 
