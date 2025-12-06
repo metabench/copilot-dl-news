@@ -9,10 +9,12 @@ Move key guidance into AGENTS and slim Copilot file
 - [ ] Follow-ups are recorded in `FOLLOW_UPS.md`.
 
 ## Change Set (initial sketch)
-- _List expected files or directories to touch._
+- AGENTS.md (add missing guidance migrated from Copilot file)
+- .github/instructions/GitHub Copilot.instructions.md (slim to pointer)
 
 ## Risks & Mitigations
-- _Note potential risks and how to mitigate them._
+- Risk: Duplicating content or losing critical rules during consolidation.
+	- Mitigation: Add concise pointers in AGENTS.md; keep Copilot file as redirect; self-review diff for omissions.
 
 ## Tests / Validation
-- _Describe tests to run or evidence required before completion._
+- None (documentation-only); self-review for clarity.

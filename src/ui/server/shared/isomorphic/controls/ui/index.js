@@ -9,6 +9,7 @@
  * | Control | Description |
  * |---------|-------------|
  * | `ToolboxControl` | Tool palette with draggable items and grouping |
+ * | `ContextMenuControl` | Context menu with keyboard/click support |
  * 
  * ## Usage
  * ```javascript
@@ -28,7 +29,9 @@
  */
 
 const ToolboxControl = require('./ToolboxControl');
+const ContextMenuControl = require('./ContextMenuControl');
 
 module.exports = {
-  ToolboxControl
+  ToolboxControl,
+  ContextMenuControl
 };

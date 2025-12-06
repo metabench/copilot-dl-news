@@ -31,6 +31,272 @@
 
 ## Current Session
 
+### Session 2025-12-06: NewsCrawler & DomainProcessor slicing
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Break down large crawler/orchestration files into smaller pipeline modules
+
+**Location**: `docs/sessions/2025-12-06-crawler-modularization/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-crawler-modularization/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-crawler-modularization/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-crawler-modularization/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-crawler-modularization/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-crawler-modularization/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: js-scan longest files
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add capability to list longest JS files via js-scan
+
+**Location**: `docs/sessions/2025-12-06-js-scan-longest/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-js-scan-longest/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-js-scan-longest/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-js-scan-longest/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-js-scan-longest/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-js-scan-longest/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Crawl CLI logger wiring
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Inject structured CLI logger so crawl.js honors verbosity/quiet/json uniformly
+
+**Location**: `docs/sessions/2025-12-06-crawl-logger-routing/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-crawl-logger-routing/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-crawl-logger-routing/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-crawl-logger-routing/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-crawl-logger-routing/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-crawl-logger-routing/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Layout masks DB schema
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add layout_masks migration + schema definition for template masking
+
+**Location**: `docs/sessions/2025-12-06-structural-diffing-phase2/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-structural-diffing-phase2/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-structural-diffing-phase2/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-structural-diffing-phase2/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-structural-diffing-phase2/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-structural-diffing-phase2/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Repair MCP servers to spec
+
+**Duration**: Active
+**Type**: maintenance
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Align docs-memory and svg-editor MCP servers with latest MCP framing/version and restore functionality
+
+**Location**: `docs/sessions/2025-12-06-mcp-servers-fix/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-mcp-servers-fix/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-mcp-servers-fix/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-mcp-servers-fix/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-mcp-servers-fix/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-mcp-servers-fix/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Implement SkeletonDiff core logic
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add SkeletonDiff mask generator with unit tests
+
+**Location**: `docs/sessions/2025-12-06-structural-diffing-phase1/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-structural-diffing-phase1/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-structural-diffing-phase1/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-structural-diffing-phase1/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-structural-diffing-phase1/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-structural-diffing-phase1/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Structure Mining Implementation
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement the SkeletonHash algorithm and Structure Miner tool for static analysis of page layouts.
+
+**Location**: `docs/sessions/2025-12-06-structure-mining-implementation/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-structure-mining-implementation/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-structure-mining-implementation/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-structure-mining-implementation/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-structure-mining-implementation/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-structure-mining-implementation/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Hybrid Crawler Architecture Design
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design the Teacher/Worker model for hybrid crawling.
+
+**Location**: `docs/sessions/2025-12-06-hybrid-crawler-architecture-design/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-hybrid-crawler-architecture-design/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-hybrid-crawler-architecture-design/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-hybrid-crawler-architecture-design/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-hybrid-crawler-architecture-design/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-hybrid-crawler-architecture-design/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Project Direction: Reliable News Crawler Scope
+
+**Duration**: Active
+**Type**: planning
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Define scope and roadmap for a reliable, domain-aware news crawler system.
+
+**Location**: `docs/sessions/2025-12-06-project-direction-reliable-news-crawler/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-project-direction-reliable-news-crawler/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-project-direction-reliable-news-crawler/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-project-direction-reliable-news-crawler/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-project-direction-reliable-news-crawler/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-project-direction-reliable-news-crawler/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Improve ui-pick Electron picker
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Enhance ui-pick UX/output and agent usability
+
+**Location**: `docs/sessions/2025-12-06-ui-pick-improve/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-ui-pick-improve/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-ui-pick-improve/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-ui-pick-improve/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-ui-pick-improve/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-ui-pick-improve/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Past/Present/Future view for what-next
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add past-present-future view and feature history surfacing in what-next output
+
+**Location**: `docs/sessions/2025-12-06-what-next-past-present-future/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-what-next-past-present-future/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-what-next-past-present-future/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-what-next-past-present-future/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-what-next-past-present-future/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-what-next-past-present-future/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Improve what-next CLI
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add json output, session selection, sections filter
+
+**Location**: `docs/sessions/2025-12-06-what-next-upgrade/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-what-next-upgrade/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-what-next-upgrade/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-what-next-upgrade/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-what-next-upgrade/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-what-next-upgrade/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Shared Context Menu Control
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add isomorphic context menu control usable in Electron + SSR
+
+**Location**: `docs/sessions/2025-12-06-context-menu-control/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-context-menu-control/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-context-menu-control/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-context-menu-control/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-context-menu-control/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-context-menu-control/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Interactive SVG Editor in Electron with jsgui3 Windows
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Build Electron app for SVG element selection, right-click context menu, AI generation, and jsgui3 window display
+
+**Location**: `docs/sessions/2025-12-06-svg-editor-electron/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-svg-editor-electron/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-svg-editor-electron/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-svg-editor-electron/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-svg-editor-electron/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-svg-editor-electron/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-06: Consolidate agent instructions
 
 **Duration**: Active

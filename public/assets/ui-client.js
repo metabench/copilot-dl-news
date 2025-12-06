@@ -59,7 +59,9 @@
             return res2;
           } else {
             let name, res2 = {};
-            for (name in collection) {
+            const keys = Object.keys(collection);
+            for (let i = 0; i < keys.length; i++) {
+              name = keys[i];
               if (ctu === false) break;
               if (context2) {
                 res2[name] = fn.call(context2, collection[name], name, stop);
@@ -27913,9 +27915,6 @@
                 }
                 map_jsgui_els[jsgui_id] = el;
                 var jsgui_type = el.getAttribute("data-jsgui-type");
-                if (jsgui_type === "draggable_control" || jsgui_id === "control_6") {
-                  console.log("Found TARGET element id:", jsgui_id, "tag:", el.tagName, "type:", jsgui_type);
-                }
                 if (jsgui_type) map_jsgui_types[jsgui_id] = jsgui_type;
               }
             }
@@ -27929,10 +27928,6 @@
             var type = map_jsgui_types[jsgui_id];
             if (!map_controls[jsgui_id]) {
               var Cstr = context2.map_Controls[type];
-              if (type === "draggable_control") {
-                console.log("Lookup for draggable_control. Cstr found:", !!Cstr);
-                console.log("Available keys:", Object.keys(context2.map_Controls));
-              }
               if (Cstr) {
                 const parent_jsgui_id = map_ctrl_parent_ids_by_ctrl_ids[jsgui_id];
                 const ctrl_spec = {
@@ -27956,7 +27951,6 @@
                 }
                 map_controls[jsgui_id] = ctrl2;
               } else {
-                console.log("Missing context.map_Controls for type " + type + ", using generic Control");
                 var ctrl2 = new Control2({
                   "context": context2,
                   "__type_name": type,

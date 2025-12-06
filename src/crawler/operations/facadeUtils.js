@@ -29,17 +29,21 @@ const buildFacadeDefaults = (defaults = {}) => {
 /**
  * Creates a crawler factory function.
  * If a custom factory is provided, uses that; otherwise creates NewsCrawler instances directly.
+ * 
+ * The factory signature is: (startUrl, options, services?) => crawler
+ * - services is an optional object of pre-wired dependencies to inject into NewsCrawler
+ * 
  * @param {Function} [crawlerFactory] - Optional custom factory function
- * @returns {Function} Factory function (startUrl, options) => crawler
+ * @returns {Function} Factory function (startUrl, options, services?) => crawler
  */
 const createCrawlerFactory = (crawlerFactory) => {
   if (typeof crawlerFactory === 'function') {
     return crawlerFactory;
   }
 
-  return (startUrl, options) => {
+  return (startUrl, options, services) => {
     const NewsCrawler = loadNewsCrawler();
-    return new NewsCrawler(startUrl, options || {});
+    return new NewsCrawler(startUrl, options || {}, services || null);
   };
 };
 

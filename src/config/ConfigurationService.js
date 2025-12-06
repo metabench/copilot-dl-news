@@ -4,6 +4,7 @@ const yaml = require('js-yaml');
 const { buildOptions } = require('../utils/optionsBuilder');
 const { crawlerOptionsSchema } = require('./defaults');
 const { normalizeOutputVerbosity, OUTPUT_VERBOSITY_LEVELS } = require('../utils/outputVerbosity');
+const { buildSharedOverridesFromFlags, parsePositiveInteger } = require('./overrideHelpers');
 
 const DEFAULT_SEQUENCE_PRESET = 'basicArticleDiscovery';
 const DEFAULT_START_URL = 'https://www.theguardian.com';
@@ -146,6 +147,15 @@ class ConfigurationService {
     const crawlDefaults = defaultConfig.crawlDefaults || {};
     const runnerConfig = layers.runnerConfig?.config || {};
 
+    const crawlDefaultOverrides = mergeOverrideObjects(
+      crawlDefaults.sharedOverrides,
+      extractLegacyOverrides(crawlDefaults)
+    );
+    const runnerOverrides = mergeOverrideObjects(
+      runnerConfig.sharedOverrides,
+      extractLegacyOverrides(runnerConfig)
+    );
+
     const sharedOverrides = cleanUndefined(
       mergeOverrideObjects(
         {
@@ -153,8 +163,8 @@ class ConfigurationService {
           maxDownloads: DEFAULT_MAX_DOWNLOADS,
           outputVerbosity: DEFAULT_BASIC_OUTPUT_VERBOSITY
         },
-        crawlDefaults.sharedOverrides,
-        runnerConfig.sharedOverrides,
+        crawlDefaultOverrides,
+        runnerOverrides,
         this._parseJsonFlag(tokens.rawFlags, 'sharedOverrides'),
         this._extractCliOverrideFlags(tokens.flags)
       )
@@ -201,29 +211,7 @@ class ConfigurationService {
   }
 
   _extractCliOverrideFlags(flags) {
-    const overrides = {};
-    if (flags.concurrency != null) {
-      overrides.concurrency = this._ensurePositiveInteger(flags.concurrency, 'concurrency');
-    }
-    const maxDownloads = this._firstDefined(flags.maxDownloads, flags.limit);
-    if (maxDownloads != null) {
-      overrides.maxDownloads = this._ensurePositiveInteger(maxDownloads, 'max-downloads');
-    }
-    if (flags.loggingQueue !== undefined) {
-      overrides.loggingQueue = Boolean(flags.loggingQueue);
-    }
-    if (flags.outputVerbosity) {
-      overrides.outputVerbosity = flags.outputVerbosity;
-    }
-    return overrides;
-  }
-
-  _ensurePositiveInteger(value, label) {
-    const parsed = parsePositiveInteger(value);
-    if (parsed === undefined) {
-      throw new Error(`Invalid numeric value for ${label}: ${value}`);
-    }
-    return parsed;
+    return buildSharedOverridesFromFlags(flags);
   }
 
   _loadRunnerConfig(candidatePath, strict) {
@@ -422,6 +410,20 @@ function mergeOverrideObjects(...sources) {
   return result;
 }
 
+function extractLegacyOverrides(config = {}) {
+  const legacy = {};
+  if (config.maxDownloads != null) {
+    legacy.maxDownloads = config.maxDownloads;
+  }
+  if (config.concurrency != null) {
+    legacy.concurrency = config.concurrency;
+  }
+  if (config.outputVerbosity != null) {
+    legacy.outputVerbosity = config.outputVerbosity;
+  }
+  return legacy;
+}
+
 function cleanUndefined(value) {
   if (!value || typeof value !== 'object') {
     return value;
@@ -433,17 +435,6 @@ function cleanUndefined(value) {
     }
   }
   return cleaned;
-}
-
-function parsePositiveInteger(value) {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  const numeric = typeof value === 'number' ? value : Number.parseInt(String(value), 10);
-  if (!Number.isFinite(numeric) || !Number.isInteger(numeric) || numeric <= 0) {
-    return undefined;
-  }
-  return numeric;
 }
 
 module.exports = {

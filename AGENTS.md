@@ -14,6 +14,12 @@
 Mode/persona rules
 - If a persona or mode is active, note it in your plan and read the matching file under `.github/agents/` (or the current mode file noted by the system) for any extra constraints.
 
+Quick anchors (UI/tooling)
+- jsgui3 controls: extract interactive/stateful pieces into controls, use emoji icons for actions (🔍/⚙️/➕/🗑️/✏️/🔄), and keep control counts lean—lazy load or virtualise when lists exceed ~200 items. See [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md).
+- SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
+- Tier-1 JS tooling: prefer `js-scan` for discovery and `js-edit` for guarded batch edits (dry-run → fix). Reference [tools/dev/README.md](tools/dev/README.md).
+- Present choices with `ui-pick`: `node tools/dev/ui-pick.js <options…>` (or `--options '[{"label":"A","value":"a","icon":"✨","phase":"implement"}]'`). Treat the selection as consent to proceed; use `--json` to capture `{selection, option, phase}` and auto-advance without re-asking.
+
 ## ⚠️ SESSION FIRST — NON-NEGOTIABLE
 
 **Before writing ANY code**, create a session directory:

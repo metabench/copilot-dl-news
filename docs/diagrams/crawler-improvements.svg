@@ -1,0 +1,380 @@
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-size: 32px; font-weight: 800; fill: #e8edf5; letter-spacing: -0.5px; font-family: "Inter", "Segoe UI", system-ui, sans-serif; }
+      .subtitle { font-size: 14px; font-weight: 400; fill: #6b7a94; letter-spacing: 0.5px; font-family: "Inter", system-ui, sans-serif; }
+      .section-title { font-size: 13px; font-weight: 700; fill: #5eccc3; text-transform: uppercase; letter-spacing: 1.5px; font-family: "Inter", system-ui, sans-serif; }
+      .box { fill: #0d1220; stroke: #1e2d42; stroke-width: 1; }
+      .box-glow { fill: #0d1220; stroke: #3d5a80; stroke-width: 1.5; filter: url(#glow); }
+      .box-header { fill: #141d30; stroke: #2a3f5a; stroke-width: 1; }
+      .text { font-size: 12px; fill: #a8b8cc; font-family: "Inter", system-ui, sans-serif; }
+      .text-bold { font-size: 12px; fill: #c8d4e4; font-weight: 600; font-family: "Inter", system-ui, sans-serif; }
+      .label { font-size: 10px; fill: #6b7a94; font-family: "Inter", system-ui, sans-serif; letter-spacing: 0.3px; }
+      .accent-text { font-size: 14px; fill: #5eccc3; font-weight: 600; font-family: "Inter", system-ui, sans-serif; }
+      .highlight { fill: #0f2030; stroke: #5eccc3; stroke-width: 2; }
+      .highlight-glow { fill: #0f2030; stroke: #5eccc3; stroke-width: 2; filter: url(#tealGlow); }
+      .highlight-text { fill: #5eccc3; font-weight: 700; font-size: 13px; }
+      .metric { font-size: 24px; fill: #5eccc3; font-weight: 800; font-family: "Inter", system-ui, sans-serif; }
+      .arrow { stroke: url(#arrowGradient); stroke-width: 3; fill: none; stroke-linecap: round; }
+      .connector { stroke: #2a3f5a; stroke-width: 1; stroke-dasharray: 4,4; opacity: 0.6; }
+      svg { background-color: #080c18; }
+    </style>
+    
+    <!-- Glow filters -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="tealGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feFlood flood-color="#5eccc3" flood-opacity="0.3"/>
+      <feComposite in2="coloredBlur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <!-- Gradients -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1020;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#080c18;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0c1428;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#5eccc3;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#5eccc3;stop-opacity:0" />
+    </linearGradient>
+    <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3d5a80" />
+      <stop offset="100%" style="stop-color:#5eccc3" />
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#141d30" />
+      <stop offset="100%" style="stop-color:#0d1220" />
+    </linearGradient>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto">
+      <path d="M0,0 L12,4 L0,8 L3,4 Z" fill="#5eccc3" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#bgGradient)"/>
+  
+  <!-- Subtle grid pattern -->
+  <g opacity="0.03">
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#5eccc3" stroke-width="0.5"/>
+    </pattern>
+    <rect width="1200" height="800" fill="url(#grid)"/>
+  </g>
+
+  <!-- Header section with gradient bar -->
+  <rect x="0" y="0" width="1200" height="70" fill="url(#headerGradient)"/>
+  <line x1="0" y1="70" x2="1200" y2="70" stroke="#1e2d42" stroke-width="1"/>
+  
+  <!-- Title Group -->
+  <g filter="url(#softShadow)">
+    <text x="40" y="42" class="title">Crawler Architecture Roadmap</text>
+    <text x="42" y="58" class="subtitle">Performance optimization strategy • 3 improvement tracks • Modular design</text>
+  </g>
+
+  <!-- Large metric callouts in header -->
+  <g>
+    <text x="750" y="35" class="label">TARGET THROUGHPUT</text>
+    <text x="750" y="55" class="metric">3–5×</text>
+    <text x="880" y="35" class="label">BANDWIDTH SAVINGS</text>
+    <text x="880" y="55" class="metric">40%</text>
+    <text x="1010" y="35" class="label">RECOVERY TIME</text>
+    <text x="1010" y="55" class="metric">0ms</text>
+  </g>
+
+  <!-- Current Architecture Column -->
+  <g filter="url(#softShadow)">
+    <text x="50" y="105" class="section-title">Current State</text>
+    
+    <!-- Main container -->
+    <rect x="30" y="120" width="200" height="310" class="box" rx="12"/>
+    
+    <!-- Stage boxes with icons -->
+    <rect x="40" y="130" width="180" height="55" class="box-header" rx="8"/>
+    <text x="130" y="152" text-anchor="middle" class="accent-text">📥 Queue</text>
+    <text x="130" y="172" text-anchor="middle" class="label">In-memory FIFO buffer</text>
+    
+    <rect x="40" y="195" width="180" height="55" class="box-header" rx="8"/>
+    <text x="130" y="217" text-anchor="middle" class="accent-text">🌐 Fetch</text>
+    <text x="130" y="237" text-anchor="middle" class="label">Single-thread HTTP</text>
+    
+    <rect x="40" y="260" width="180" height="55" class="box-header" rx="8"/>
+    <text x="130" y="282" text-anchor="middle" class="accent-text">🔍 Parse</text>
+    <text x="130" y="302" text-anchor="middle" class="label">Extract links &amp; data</text>
+    
+    <rect x="40" y="325" width="180" height="55" class="box-header" rx="8"/>
+    <text x="130" y="347" text-anchor="middle" class="accent-text">💾 Store</text>
+    <text x="130" y="367" text-anchor="middle" class="label">Persist to database</text>
+    
+    <!-- Baseline metric -->
+    <rect x="40" y="390" width="180" height="30" class="highlight" rx="6"/>
+    <text x="130" y="410" text-anchor="middle" class="highlight-text">~1–2 req/sec</text>
+  </g>
+
+  <!-- Arrow from Current to Track 1 -->
+  <path d="M 235 250 C 255 250, 255 250, 275 250" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Track 1: Parallelization -->
+  <g filter="url(#softShadow)">
+    <text x="295" y="105" class="section-title">Track 1: Parallelization</text>
+    
+    <rect x="275" y="120" width="200" height="310" class="box-glow" rx="12"/>
+    
+    <rect x="285" y="130" width="180" height="55" class="highlight-glow" rx="8"/>
+    <text x="375" y="152" text-anchor="middle" class="highlight-text">⚡ Worker Pool</text>
+    <text x="375" y="172" text-anchor="middle" class="label">3–5 concurrent threads</text>
+    
+    <rect x="285" y="195" width="180" height="55" class="box-header" rx="8"/>
+    <text x="375" y="217" text-anchor="middle" class="text-bold">✓ Batch fetches</text>
+    <text x="375" y="237" text-anchor="middle" class="label">10–50 URLs per cycle</text>
+    
+    <rect x="285" y="260" width="180" height="55" class="box-header" rx="8"/>
+    <text x="375" y="282" text-anchor="middle" class="text-bold">✓ Parallel parsing</text>
+    <text x="375" y="302" text-anchor="middle" class="label">Non-blocking enrichment</text>
+    
+    <rect x="285" y="325" width="180" height="55" class="box-header" rx="8"/>
+    <text x="375" y="347" text-anchor="middle" class="text-bold">✓ Bulk DB inserts</text>
+    <text x="375" y="367" text-anchor="middle" class="label">1000+ rows per transaction</text>
+    
+    <rect x="285" y="390" width="180" height="30" class="highlight-glow" rx="6"/>
+    <text x="375" y="410" text-anchor="middle" class="highlight-text">3–5× faster</text>
+  </g>
+
+  <!-- Arrow from Track 1 to Track 2 -->
+  <path d="M 480 250 C 500 250, 500 250, 520 250" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Track 2: Adaptive Strategy -->
+  <g filter="url(#softShadow)">
+    <text x="540" y="105" class="section-title">Track 2: Adaptive</text>
+    
+    <rect x="520" y="120" width="200" height="310" class="box-glow" rx="12"/>
+    
+    <rect x="530" y="130" width="180" height="55" class="highlight-glow" rx="8"/>
+    <text x="620" y="152" text-anchor="middle" class="highlight-text">🎯 Site Profiler</text>
+    <text x="620" y="172" text-anchor="middle" class="label">Per-domain latency tracking</text>
+    
+    <rect x="530" y="195" width="180" height="55" class="box-header" rx="8"/>
+    <text x="620" y="217" text-anchor="middle" class="text-bold">✓ Robots.txt</text>
+    <text x="620" y="237" text-anchor="middle" class="label">Automatic compliance</text>
+    
+    <rect x="530" y="260" width="180" height="55" class="box-header" rx="8"/>
+    <text x="620" y="282" text-anchor="middle" class="text-bold">✓ Smart queueing</text>
+    <text x="620" y="302" text-anchor="middle" class="label">Defer slow domains</text>
+    
+    <rect x="530" y="325" width="180" height="55" class="box-header" rx="8"/>
+    <text x="620" y="347" text-anchor="middle" class="text-bold">✓ Backoff logic</text>
+    <text x="620" y="367" text-anchor="middle" class="label">Exponential on 429</text>
+    
+    <rect x="530" y="390" width="180" height="30" class="highlight-glow" rx="6"/>
+    <text x="620" y="410" text-anchor="middle" class="highlight-text">Better QoS</text>
+  </g>
+
+  <!-- Arrow from Track 2 to Track 3 -->
+  <path d="M 725 250 C 745 250, 745 250, 765 250" class="arrow" marker-end="url(#arrowhead)"/>
+
+  <!-- Track 3: Resilience -->
+  <g filter="url(#softShadow)">
+    <text x="785" y="105" class="section-title">Track 3: Resilience</text>
+    
+    <rect x="765" y="120" width="200" height="310" class="box-glow" rx="12"/>
+    
+    <rect x="775" y="130" width="180" height="55" class="highlight-glow" rx="8"/>
+    <text x="865" y="152" text-anchor="middle" class="highlight-text">💾 HTTP Cache</text>
+    <text x="865" y="172" text-anchor="middle" class="label">ETag &amp; If-Modified</text>
+    
+    <rect x="775" y="195" width="180" height="55" class="box-header" rx="8"/>
+    <text x="865" y="217" text-anchor="middle" class="text-bold">✓ 304 responses</text>
+    <text x="865" y="237" text-anchor="middle" class="label">Skip unchanged content</text>
+    
+    <rect x="775" y="260" width="180" height="55" class="box-header" rx="8"/>
+    <text x="865" y="282" text-anchor="middle" class="text-bold">✓ Checkpoints</text>
+    <text x="865" y="302" text-anchor="middle" class="label">Save progress snapshots</text>
+    
+    <rect x="775" y="325" width="180" height="55" class="box-header" rx="8"/>
+    <text x="865" y="347" text-anchor="middle" class="text-bold">✓ Crash recovery</text>
+    <text x="865" y="367" text-anchor="middle" class="label">Resume from last point</text>
+    
+    <rect x="775" y="390" width="180" height="30" class="highlight-glow" rx="6"/>
+    <text x="865" y="410" text-anchor="middle" class="highlight-text">Zero downtime</text>
+  </g>
+
+  <!-- Priority Column -->
+  <g filter="url(#softShadow)">
+    <text x="1010" y="105" class="section-title">Priority</text>
+    
+    <rect x="990" y="120" width="180" height="310" class="box" rx="12"/>
+    
+    <rect x="1000" y="130" width="160" height="65" class="highlight-glow" rx="8"/>
+    <text x="1080" y="152" text-anchor="middle" class="highlight-text">🟢 Quick Wins</text>
+    <text x="1080" y="170" text-anchor="middle" class="label">Weeks 1–2</text>
+    <text x="1080" y="185" text-anchor="middle" class="label">Bulk inserts, caching</text>
+    
+    <rect x="1000" y="205" width="160" height="65" class="box-header" rx="8"/>
+    <text x="1080" y="227" text-anchor="middle" class="text-bold">🟡 Medium Term</text>
+    <text x="1080" y="245" text-anchor="middle" class="label">Weeks 3–4</text>
+    <text x="1080" y="260" text-anchor="middle" class="label">Worker pool, profiler</text>
+    
+    <rect x="1000" y="280" width="160" height="65" class="box-header" rx="8"/>
+    <text x="1080" y="302" text-anchor="middle" class="text-bold">🔵 Strategic</text>
+    <text x="1080" y="320" text-anchor="middle" class="label">Phase 2</text>
+    <text x="1080" y="335" text-anchor="middle" class="label">Full adaptive system</text>
+    
+    <rect x="1000" y="355" width="160" height="65" class="highlight" rx="8"/>
+    <text x="1080" y="377" text-anchor="middle" class="highlight-text">🎯 Modular</text>
+    <text x="1080" y="395" text-anchor="middle" class="label">Pluggable architecture</text>
+    <text x="1080" y="410" text-anchor="middle" class="label">Independent tracks</text>
+  </g>
+
+  <!-- Separator line -->
+  <line x1="30" y1="455" x2="1170" y2="455" stroke="#1e2d42" stroke-width="1"/>
+
+  <!-- Integration Touchpoints Section -->
+  <g>
+    <text x="50" y="490" class="section-title">Integration Touchpoints</text>
+    
+    <!-- Data Explorer -->
+    <g filter="url(#softShadow)">
+      <rect x="30" y="510" width="140" height="90" class="box" rx="10"/>
+      <rect x="30" y="510" width="140" height="25" fill="url(#cardGradient)" rx="10" ry="10"/>
+      <rect x="30" y="525" width="140" height="10" fill="#141d30"/>
+      <text x="100" y="528" text-anchor="middle" class="accent-text">📊 Data Explorer</text>
+      <text x="100" y="555" text-anchor="middle" class="text">Realtime metrics</text>
+      <text x="100" y="572" text-anchor="middle" class="label">crawl progress &amp; status</text>
+      <text x="100" y="590" text-anchor="middle" class="label">performance dashboards</text>
+    </g>
+    
+    <!-- Diagram Atlas -->
+    <g filter="url(#softShadow)">
+      <rect x="190" y="510" width="140" height="90" class="box" rx="10"/>
+      <rect x="190" y="510" width="140" height="25" fill="url(#cardGradient)" rx="10" ry="10"/>
+      <rect x="190" y="525" width="140" height="10" fill="#141d30"/>
+      <text x="260" y="528" text-anchor="middle" class="accent-text">🗺️ Diagram Atlas</text>
+      <text x="260" y="555" text-anchor="middle" class="text">Visual pipeline</text>
+      <text x="260" y="572" text-anchor="middle" class="label">workflow diagrams</text>
+      <text x="260" y="590" text-anchor="middle" class="label">state visualization</text>
+    </g>
+    
+    <!-- Fact Engine -->
+    <g filter="url(#softShadow)">
+      <rect x="350" y="510" width="140" height="90" class="box" rx="10"/>
+      <rect x="350" y="510" width="140" height="25" fill="url(#cardGradient)" rx="10" ry="10"/>
+      <rect x="350" y="525" width="140" height="10" fill="#141d30"/>
+      <text x="420" y="528" text-anchor="middle" class="accent-text">🧠 Fact Engine</text>
+      <text x="420" y="555" text-anchor="middle" class="text">Crawl signals</text>
+      <text x="420" y="572" text-anchor="middle" class="label">track &amp; classify facts</text>
+      <text x="420" y="590" text-anchor="middle" class="label">boolean assertions</text>
+    </g>
+    
+    <!-- Database Layer -->
+    <g filter="url(#softShadow)">
+      <rect x="510" y="510" width="140" height="90" class="box" rx="10"/>
+      <rect x="510" y="510" width="140" height="25" fill="url(#cardGradient)" rx="10" ry="10"/>
+      <rect x="510" y="525" width="140" height="10" fill="#141d30"/>
+      <text x="580" y="528" text-anchor="middle" class="accent-text">🗄️ Database</text>
+      <text x="580" y="555" text-anchor="middle" class="text">Optimized layer</text>
+      <text x="580" y="572" text-anchor="middle" class="label">bulk inserts &amp; indexes</text>
+      <text x="580" y="590" text-anchor="middle" class="label">query optimization</text>
+    </g>
+    
+    <!-- Monitoring -->
+    <g filter="url(#softShadow)">
+      <rect x="670" y="510" width="140" height="90" class="box" rx="10"/>
+      <rect x="670" y="510" width="140" height="25" fill="url(#cardGradient)" rx="10" ry="10"/>
+      <rect x="670" y="525" width="140" height="10" fill="#141d30"/>
+      <text x="740" y="528" text-anchor="middle" class="accent-text">📈 Monitoring</text>
+      <text x="740" y="555" text-anchor="middle" class="text">Performance</text>
+      <text x="740" y="572" text-anchor="middle" class="label">telemetry &amp; alerts</text>
+      <text x="740" y="590" text-anchor="middle" class="label">error tracking</text>
+    </g>
+    
+    <!-- Background Tasks -->
+    <g filter="url(#softShadow)">
+      <rect x="830" y="510" width="140" height="90" class="box" rx="10"/>
+      <rect x="830" y="510" width="140" height="25" fill="url(#cardGradient)" rx="10" ry="10"/>
+      <rect x="830" y="525" width="140" height="10" fill="#141d30"/>
+      <text x="900" y="528" text-anchor="middle" class="accent-text">⚙️ Background</text>
+      <text x="900" y="555" text-anchor="middle" class="text">Task runner</text>
+      <text x="900" y="572" text-anchor="middle" class="label">long-running jobs</text>
+      <text x="900" y="590" text-anchor="middle" class="label">queue management</text>
+    </g>
+  </g>
+
+  <!-- Separator line -->
+  <line x1="30" y1="625" x2="1170" y2="625" stroke="#1e2d42" stroke-width="1"/>
+
+  <!-- Implementation Timeline -->
+  <g>
+    <text x="50" y="660" class="section-title">Implementation Timeline</text>
+    
+    <!-- Timeline track -->
+    <line x1="50" y1="710" x2="1150" y2="710" stroke="#2a3f5a" stroke-width="3" stroke-linecap="round"/>
+    
+    <!-- Phase 1: Quick Wins -->
+    <g filter="url(#softShadow)">
+      <circle cx="150" cy="710" r="12" class="highlight-glow"/>
+      <text x="150" y="715" text-anchor="middle" class="highlight-text" font-size="10">1</text>
+      <rect x="80" y="730" width="140" height="55" class="highlight" rx="8"/>
+      <text x="150" y="750" text-anchor="middle" class="highlight-text">Quick Wins</text>
+      <text x="150" y="768" text-anchor="middle" class="label">Weeks 1–2</text>
+      <text x="150" y="780" text-anchor="middle" class="label">Bulk inserts, HTTP cache</text>
+    </g>
+    
+    <!-- Phase 2: Adaptive -->
+    <g filter="url(#softShadow)">
+      <circle cx="400" cy="710" r="12" class="box-header" stroke="#5eccc3" stroke-width="2"/>
+      <text x="400" y="715" text-anchor="middle" class="text-bold" font-size="10">2</text>
+      <rect x="330" y="730" width="140" height="55" class="box" rx="8"/>
+      <text x="400" y="750" text-anchor="middle" class="text-bold">Adaptive</text>
+      <text x="400" y="768" text-anchor="middle" class="label">Weeks 3–4</text>
+      <text x="400" y="780" text-anchor="middle" class="label">Site profiler, scheduling</text>
+    </g>
+    
+    <!-- Phase 3: Resilience -->
+    <g filter="url(#softShadow)">
+      <circle cx="650" cy="710" r="12" class="box-header" stroke="#5eccc3" stroke-width="2"/>
+      <text x="650" y="715" text-anchor="middle" class="text-bold" font-size="10">3</text>
+      <rect x="580" y="730" width="140" height="55" class="box" rx="8"/>
+      <text x="650" y="750" text-anchor="middle" class="text-bold">Resilience</text>
+      <text x="650" y="768" text-anchor="middle" class="label">Phase 2</text>
+      <text x="650" y="780" text-anchor="middle" class="label">Checkpoint, recovery</text>
+    </g>
+    
+    <!-- Phase 4: Full System -->
+    <g filter="url(#softShadow)">
+      <circle cx="900" cy="710" r="12" class="highlight-glow"/>
+      <text x="900" y="715" text-anchor="middle" class="highlight-text" font-size="10">✓</text>
+      <rect x="830" y="730" width="140" height="55" class="highlight-glow" rx="8"/>
+      <text x="900" y="750" text-anchor="middle" class="highlight-text">Production</text>
+      <text x="900" y="768" text-anchor="middle" class="label">Full system online</text>
+      <text x="900" y="780" text-anchor="middle" class="label">3–5× throughput</text>
+    </g>
+    
+    <!-- ROI Summary Box -->
+    <g filter="url(#softShadow)">
+      <rect x="990" y="680" width="170" height="105" class="highlight-glow" rx="10"/>
+      <text x="1075" y="705" text-anchor="middle" class="section-title">Expected ROI</text>
+      <text x="1075" y="730" text-anchor="middle" class="metric" font-size="20">3–5×</text>
+      <text x="1075" y="750" text-anchor="middle" class="label">throughput increase</text>
+      <text x="1075" y="770" text-anchor="middle" class="text-bold">40% bandwidth saved</text>
+      <text x="1075" y="785" text-anchor="middle" class="label">zero-downtime recovery</text>
+    </g>
+  </g>
+
+  <!-- Bottom accent -->
+  <line x1="0" y1="798" x2="1200" y2="798" stroke="#5eccc3" stroke-width="2" opacity="0.4"/>
+</svg>

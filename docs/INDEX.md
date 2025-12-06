@@ -41,6 +41,7 @@ _Last updated: 2025-11-04_
 These guides are **authoritative sources** for their domains. When working in these areas, **read the relevant guide first** — they take precedence over general agent instructions.
 
 - [jsgui3 UI Architecture Guide](guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md) - Isomorphic component architecture, control composition, SSR/hydration patterns, **jsgui3-server experiments**, and verification scripts for jsgui3-html UIs.
+- [jsgui3 Window Control Guide](guides/JSGUI3_WINDOW_CONTROL_GUIDE.md) - **Built-in floating window**: Draggable, resizable, minimize/maximize/close, z-index management. Use for tool panels, dialogs, result viewers.
 - [jsgui3 Performance Patterns](guides/JSGUI3_PERFORMANCE_PATTERNS.md) - **🔴 CRITICAL for optimization**: Lazy rendering, control counting, performance diagnostics, decision matrix by dataset size.
 - [jsgui3 MVVM Patterns](guides/JSGUI3_MVVM_PATTERNS.md) - Data binding, computed properties, validators, transformations. Use for forms and complex state.
 - [jsgui3 Cognitive Toolkit](guides/JSGUI3_COGNITIVE_TOOLKIT.md) - Research methods, OODA loop, confidence calibration, anti-patterns. Consult when stuck.

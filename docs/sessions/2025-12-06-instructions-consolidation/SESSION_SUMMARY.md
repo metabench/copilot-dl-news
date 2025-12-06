@@ -1,13 +1,14 @@
 # Session Summary – Consolidate agent instructions
 
 ## Accomplishments
-- _Fill in key deliverables and outcomes._
+- Added concise UI/SVG/tooling quick anchors to AGENTS.md so jsgui3 rules, collision checks, and tier-1 tooling are visible in the main playbook.
+- Slimmed `.github/instructions/GitHub Copilot.instructions.md` to a minimal pointer back to AGENTS.md plus tooling link and validation reminder.
 
 ## Metrics / Evidence
-- _Link to tests, benchmarks, or telemetry supporting the results._
+- Docs-only change; no tests required.
 
 ## Decisions
-- _Reference entries inside `DECISIONS.md`._
+- Copilot-specific guidance now routes through AGENTS.md; keep Copilot file lean going forward.
 
 ## Next Steps
-- _Summarize remaining work or follow-ups._
+- Monitor for instruction drift; update AGENTS.md first when adding guidance.

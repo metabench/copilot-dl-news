@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -47,9 +47,14 @@ function createWindow() {
   }
 
   // Handle selection
-  ipcMain.on('selection-made', (event, selection) => {
-    // Print selection to stdout as JSON
-    console.log(JSON.stringify({ selection }));
+  ipcMain.on('selection-made', (event, payload) => {
+    // Allow payload to be a string or structured object
+    const data = (payload && typeof payload === 'object' && !Array.isArray(payload)) ? payload : { selection: payload };
+    const option = data.option || null;
+    const selection = data.selection ?? (option ? option.value || option.label : null);
+    const phase = data.phase || (option && option.phase) || null;
+
+    console.log(JSON.stringify({ selection, option, phase }));
     app.quit();
   });
 
@@ -57,6 +62,26 @@ function createWindow() {
   ipcMain.on('cancel', () => {
     console.log(JSON.stringify({ selection: null, cancelled: true }));
     app.quit();
+  });
+
+  // Context menu per option
+  ipcMain.on('context-menu', (event, payload) => {
+    if (!payload || !payload.option) return;
+    const option = payload.option;
+    const targetWindow = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+
+    const sendAction = (action) => {
+      event.sender.send('context-action', { action, option });
+    };
+
+    const menu = Menu.buildFromTemplate([
+      { label: '🔍 Explore', click: () => sendAction('explore') },
+      { label: '🧪 Test', click: () => sendAction('test') },
+      { label: '🛠️ Implement', click: () => sendAction('implement') },
+      { label: '🛡️ Fix', click: () => sendAction('fix') }
+    ]);
+
+    menu.popup({ window: targetWindow });
   });
 }
 

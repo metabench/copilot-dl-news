@@ -64,6 +64,7 @@ Human developers might run these tools, but **agents are the primary consumer**.
 - **Actionable information** — Include coordinates, line numbers, file paths
 - **Predictable behavior** — Same input always produces same output structure
 - **Clear errors** — Exit code 2, structured error in JSON
+- **Agent-aligned prompts** — When you need a user choice, launch `ui-pick` (plain args or `--options` JSON). Treat the user’s selection as consent to proceed; use `--json` to capture `{selection, option, phase}` so workflows auto-advance without a second confirmation.
 
 ### 2. Consistency Is King
 

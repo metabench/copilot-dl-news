@@ -28,6 +28,7 @@ const CLI_OPTION_ALIASES = {
     { option: '--fields', lexKeys: ['fields'], aliases: ['--域'] },
     { option: '--follow-deps', lexKeys: ['follow_deps'], aliases: ['--依'] },
     { option: '--dep-depth', lexKeys: ['dependency_depth'], aliases: ['--层'] },
+    { option: '--longest-files', lexKeys: ['byte_length'], aliases: ['--长'] },
     { option: '--context-slice', lexKeys: ['context_slice'], aliases: ['--切片', '--切'] },
     { option: '--impact-preview', lexKeys: ['impact_preview'], aliases: ['--影响', '--影'] },
     { option: '--include-code', lexKeys: ['include_code'], aliases: ['--含码'] }

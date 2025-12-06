@@ -10,6 +10,17 @@ const {
   normalizeOutputVerbosity,
   DEFAULT_OUTPUT_VERBOSITY
 } = require('../utils/outputVerbosity');
+
+// Modularized config and mode imports
+const {
+  normalizeHost: normalizeHostFromConfig,
+  isGazetteerMode: isGazetteerModeFromConfig,
+  isIntelligentMode: isIntelligentModeFromConfig,
+  isBasicMode: isBasicModeFromConfig,
+  DEFAULT_FEATURE_FLAGS: DEFAULT_FEATURE_FLAGS_FROM_CONFIG
+} = require('./config');
+const { createModeStrategy } = require('./modes');
+
 const {
   URL
 } = require('url');
@@ -86,49 +97,18 @@ const { wireCrawlerServices } = require('./CrawlerServiceWiring');
 
 const log = createCliLogger();
 
-const DEFAULT_FEATURE_FLAGS = Object.freeze({
-  gapDrivenPrioritization: false,
-  plannerKnowledgeReuse: false,
-  realTimeCoverageAnalytics: false,
-  problemClustering: false,
-  problemResolution: false,
-  crawlPlaybooks: false,
-  patternDiscovery: false,
-  countryHubGaps: false,
-  countryHubBehavioralProfile: false,
-  advancedPlanningSuite: false,
-  graphReasonerPlugin: false,
-  gazetteerAwareReasoner: false,
-  totalPrioritisation: false
-});
+// DEFAULT_FEATURE_FLAGS imported from ./config as DEFAULT_FEATURE_FLAGS_FROM_CONFIG
+const DEFAULT_FEATURE_FLAGS = DEFAULT_FEATURE_FLAGS_FROM_CONFIG;
 
-function normalizeHost(host) {
-  if (!host && host !== 0) return null;
-  const value = String(host).trim().toLowerCase();
-  if (!value) return null;
-  const withoutScheme = value.replace(/^https?:\/\//, '');
-  return withoutScheme.replace(/\/.*$/, '');
-}
+// normalizeHost is imported from ./config as normalizeHostFromConfig
+// Keeping local alias for backward compatibility
+const normalizeHost = normalizeHostFromConfig;
 
-function resolvePriorityProfileFromCrawlType(crawlType) {
-  if (typeof crawlType !== 'string') {
-    return 'basic';
-  }
-  const normalized = crawlType.trim().toLowerCase();
-  if (!normalized) {
-    return 'basic';
-  }
-  if (normalized.startsWith('intelligent')) {
-    return 'intelligent';
-  }
-  if (normalized === 'geography' || normalized === 'gazetteer') {
-    return 'geography';
-  }
-  if (normalized === 'wikidata') {
-    return 'wikidata';
-  }
-  return 'basic';
-}
+// resolvePriorityProfileFromCrawlType is imported from ../utils/priorityConfig
+// The config module also provides mode detection utilities:
+// - isGazetteerModeFromConfig(crawlType)
+// - isIntelligentModeFromConfig(crawlType)
+// - isBasicModeFromConfig(crawlType)
 const {
   loadSitemaps
 } = require('./sitemap');
@@ -2002,7 +1982,32 @@ class NewsCrawler extends Crawler {
     }
   }
 
-
+  /**
+   * Create a mode strategy object for the current crawl type.
+   * This is the new modular approach - mode strategies encapsulate
+   * crawl-type-specific logic (gazetteer, intelligent, basic).
+   * 
+   * @returns {import('./modes').CrawlModeStrategy} Mode strategy instance
+   * @see ./modes/CrawlModeStrategy.js for the base class
+   * @see ./modes/BasicCrawlMode.js, GazetteerCrawlMode.js, IntelligentCrawlMode.js
+   */
+  createModeStrategy() {
+    const context = {
+      config: this._resolvedOptions,
+      logger: console,
+      services: {
+        gazetteerManager: this.gazetteerManager,
+        planner: this.adaptiveSeedPlanner,
+        queue: this.queue,
+        telemetry: this.telemetry,
+        dbAdapter: this.dbAdapter,
+        fetchPipeline: this.fetchPipeline,
+        pageExecutionService: this.pageExecutionService,
+        workerRunner: this.workerRunner
+      }
+    };
+    return createModeStrategy(this.crawlType, context);
+  }
 
   /**
    * Initialize enhanced features (gap-driven prioritization, knowledge reuse, coverage analytics)

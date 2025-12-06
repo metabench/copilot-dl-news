@@ -554,16 +554,24 @@ The tool walks each directory breadth-first, skips `.gitkeep`, and reports any W
 
 ## `what-next` — Active Session Summary
 
-`what-next` parses the `SESSIONS_HUB.md` to identify the primary active session and summarizes its current plan, including completed items, pending tasks, and follow-ups. This helps agents and developers quickly orient themselves to the current project focus.
+`what-next` parses the `SESSIONS_HUB.md` to identify active sessions and summarize the current plan, now with a past/present/future view that surfaces related sessions and next actions.
 
-- `node tools/dev/what-next.js` — display the primary active session, its objective, done criteria, and follow-up tasks.
+- `node tools/dev/what-next.js` — show active sessions, the primary session summary, and a past/present/future block (objective, next task, next test, follow-ups, related sessions by slug stem).
+- `--json` — emit machine-friendly payload (`activeSessions`, `primary`, `plan`, `timeline`, requested `sections`).
+- `--session <slug|index>` — pick a specific session (falls back to historical sessions when the slug is not currently active).
+- `--sections objective,done,change,risks,tests,followups` — limit which PLAN sections render in human output and are listed in JSON.
+- Exit codes: `0` success, `1` no active sessions / no match, `2` error.
 
 ## `ui-pick` — Interactive Quick Picker
 
-`ui-pick` launches a lightweight Electron window to present a list of options to the user. It returns the selected option to stdout, enabling interactive decision-making within CLI workflows.
+`ui-pick` launches a lightweight Electron window to present a list of options to the user. It returns the selected option to stdout (plain) or JSON when requested, enabling interactive decision-making within CLI workflows.
 
-- `node tools/dev/ui-pick.js "Option A" "Option B"` — present simple string options.
+- `node tools/dev/ui-pick.js "Option A" "Option B"` — present simple string options (stdout emits the selection, exit 0; cancel exits 1 and prints `Cancelled`).
 - `node tools/dev/ui-pick.js --options '[{"label":"A","description":"Desc A","value":"a"}, ...]'` — present rich options with descriptions.
+- `--json` — emit `{success, selection, cancelled, raw}` on stdout; exit code remains `0` for selection, `1` for cancel, `2` on argument/parse errors.
+- Right-click any item to open a context menu (🔍 Explore, 🧪 Test, 🛠️ Implement, 🛡️ Fix); selections display transient footer hints.
+- Options may include `icon`/`emoji` and `phase` fields; structured JSON output echoes the chosen option and phase so agents can auto-advance without re-prompting.
+- If no icon is provided, ui-pick falls back to a phase emoji when present (plan/design 🧭, explore 🔍, implement 🛠️, test 🧪, validate ✅, fix 🛡️).
 
 ## `md-scan` — Markdown Discovery
 

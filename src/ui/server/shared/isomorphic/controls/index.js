@@ -12,7 +12,7 @@
  * |----------|---------|----------|
  * | **interactive** | User interaction | DraggableControl, SelectableControl |
  * | **canvas** | WYSIWYG/diagram building | CanvasControl, ShapeControl, shapes |
- * | **ui** | General UI patterns | ToolboxControl |
+ * | **ui** | General UI patterns | ToolboxControl, ContextMenuControl |
  * | **layout** | Spatial organization | ResizableSplitLayoutControl |
  * 
  * ## Isomorphic Pattern
@@ -56,7 +56,7 @@ const {
 } = require("./canvas");
 
 // UI controls (general patterns)
-const { ToolboxControl } = require("./ui");
+const { ToolboxControl, ContextMenuControl } = require("./ui");
 
 module.exports = {
   // Layout
@@ -75,5 +75,6 @@ module.exports = {
   ParallelogramShape,
   
   // UI
-  ToolboxControl
+  ToolboxControl,
+  ContextMenuControl
 };

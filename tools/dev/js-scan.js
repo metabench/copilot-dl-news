@@ -43,6 +43,7 @@ const CHINESE_HELP_ROWS = Object.freeze([
   { lexKey: 'lang', alias: '语', summary: '设模', params: '[英 中 双 自]' },
   { lexKey: 'source_language', alias: '码', summary: '码模', params: '[js ts 自]' },
   { lexKey: 'view', alias: '视', summary: '视模', params: '[详 简 概]' },
+  { lexKey: 'byte_length', alias: '长', summary: '长档', params: '[限数]' },
   { lexKey: 'fields', alias: '域', summary: '简列', params: '[location name hash]'},
   { lexKey: 'follow_deps', alias: '依', summary: '依扫', params: '' },
     { lexKey: 'dependency_depth', alias: '层', summary: '层限', params: '[数]' },
@@ -82,6 +83,10 @@ const CHINESE_HELP_DETAILS = Object.freeze({
   view: [
     '视 要: 详 简 概',
     '示: node tools/dev/js-scan.js --视 简'
+  ],
+  byte_length: [
+    '长档: 输出最长的文件 (按行或字节)',
+    '示: node tools/dev/js-scan.js --longest-files --length-metric bytes --limit 10'
   ],
   source_language: [
     '码要: js/ts/自',
@@ -204,6 +209,46 @@ function normalizeBooleanOption(value) {
     return value !== 0;
   }
   return Boolean(value);
+}
+
+function normalizeLengthMetric(value) {
+  if (typeof value !== 'string') {
+    return 'lines';
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'bytes' || normalized === 'byte' || normalized === 'size') {
+    return 'bytes';
+  }
+  return 'lines';
+}
+
+function isBuiltClientPath(relativePath, absolutePath) {
+  const candidate = (relativePath || absolutePath || '').replace(/\\/g, '/').toLowerCase();
+  if (!candidate) {
+    return false;
+  }
+
+  // Common built asset locations and bundle naming patterns
+  const bundleLike = candidate.endsWith('bundle.js') || candidate.endsWith('bundle.min.js');
+  const clientLike = candidate.endsWith('client.js') || candidate.endsWith('client.min.js');
+  const clientBundleLike = candidate.endsWith('client.bundle.js') || candidate.includes('/client.bundle.js');
+  const inPublic = candidate.includes('/public/');
+  const generatedDirs = candidate.includes('/dist/') || candidate.includes('/build/') || candidate.includes('/public/assets/');
+
+  if (generatedDirs) {
+    return true;
+  }
+
+  if (bundleLike || clientBundleLike) {
+    return true;
+  }
+
+  // Fallback: obvious large UI bundles scattered under public
+  if (inPublic && candidate.endsWith('.js')) {
+    return true;
+  }
+
+  return false;
 }
 
 function normalizeViewMode(raw) {
@@ -659,6 +704,8 @@ function createParser() {
     .add('--show-parse-errors', 'Display parse error details after results', false, 'boolean')
     .add('--deps-parse-errors', 'Display parse error details after dependency summaries', false, 'boolean')
     .add('--view <mode>', 'Output view (detailed, terse, summary)', 'detailed')
+    .add('--longest-files', 'List longest files (sorted by lines or bytes)', false, 'boolean')
+    .add('--length-metric <mode>', 'Metric for --longest-files (lines, bytes)', 'lines')
     .add('--fields <list>', 'Comma-separated fields for terse view', '')
     .add('--follow-deps', 'Follow relative dependencies discovered in scanned files', false, 'boolean')
     .add('--dep-depth <n>', 'Maximum dependency depth when following dependencies (0 = unlimited)', 0, 'number')
@@ -704,6 +751,7 @@ function ensureSingleOperation(options) {
   if (options.deadCode) provided.push('dead-code');
   if (options.contextSlice) provided.push('context-slice');
   if (options.impactPreview) provided.push('impact-preview');
+  if (options.longestFiles) provided.push('longest-files');
   if (options.buildIndex) provided.push('build-index');
   if (provided.length > 1) {
     throw new Error(`Only one operation can be specified at a time. Provided: ${provided.join(', ')}`);
@@ -932,6 +980,122 @@ function printIndex(result) {
     if (Array.isArray(entry.dependencies.requires) && entry.dependencies.requires.length > 0) {
       console.log(`  ${requireLabel}: ${entry.dependencies.requires.join(', ')}`);
     }
+  });
+
+  fmt.footer();
+}
+
+function summarizeLongestFiles(files, options = {}) {
+  const metric = normalizeLengthMetric(options.metric);
+  const limit = typeof options.limit === 'number' ? options.limit : 20;
+  const rootDir = options.rootDir || process.cwd();
+  const entries = (Array.isArray(files) ? files : [])
+    .filter((file) => {
+      const relativePath = file && file.relativePath ? file.relativePath : null;
+      const filePath = file && file.filePath ? file.filePath : null;
+      return !isBuiltClientPath(relativePath, filePath);
+    })
+    .map((file) => {
+      const stats = file && typeof file === 'object' ? (file.stats || {}) : {};
+      const lines = Number(stats.lines) || 0;
+      const functions = Number(stats.functions) || 0;
+      const exports = Number(stats.exports) || 0;
+      const classes = Number(stats.classes) || 0;
+      const bytes = Buffer.byteLength((file && file.source) || '', 'utf8');
+      const relativePath = (file && file.relativePath)
+        || (file && file.filePath ? path.relative(rootDir, file.filePath).replace(/\\/g, '/') : '')
+        || '';
+
+      return {
+        file: relativePath || (file && file.filePath) || 'unknown',
+        lines,
+        bytes,
+        functions,
+        exports,
+        classes,
+        entryPoint: Boolean(file && file.entryPoint),
+        priority: Boolean(file && file.priority)
+      };
+    });
+
+  entries.sort((a, b) => {
+    if (b[metric] !== a[metric]) {
+      return b[metric] - a[metric];
+    }
+    if (b.bytes !== a.bytes) {
+      return b.bytes - a.bytes;
+    }
+    if (b.lines !== a.lines) {
+      return b.lines - a.lines;
+    }
+    return a.file.localeCompare(b.file);
+  });
+
+  const limited = limit > 0 ? entries.slice(0, limit) : entries;
+
+  return {
+    operation: 'longest-files',
+    metric,
+    limit,
+    totalFiles: entries.length,
+    rootDir,
+    entries: limited
+  };
+}
+
+function printLongestFiles(result) {
+  const language = resolveLanguageContext(fmt);
+  const { isChinese } = language;
+  const headerTitle = isChinese
+    ? joinTranslatedLabels(fmt, language, [
+        { key: 'byte_length', fallback: '长度' },
+        { key: 'file', fallback: '文件' }
+      ])
+    : 'Longest Files';
+
+  fmt.header(headerTitle);
+
+  const metricLabel = result.metric === 'bytes'
+    ? (isChinese ? '字节' : 'Bytes')
+    : (isChinese ? '行数' : 'Lines');
+
+  fmt.stat(isChinese ? '统计口径' : 'Metric', metricLabel);
+  fmt.stat(translateLabelWithMode(fmt, language, 'limit', 'Limit'), formatLimitValue(result.limit, isChinese));
+  fmt.stat(translateLabelWithMode(fmt, language, 'files_total', 'Files'), result.totalFiles, 'number');
+
+  if (!Array.isArray(result.entries) || result.entries.length === 0) {
+    const message = isChinese ? '未找到可排序的文件。' : 'No files available to rank.';
+    fmt.warn(message);
+    fmt.footer();
+    return;
+  }
+
+  const arrowIcon = fmt.ICONS && fmt.ICONS.arrow ? fmt.ICONS.arrow : '→';
+
+  result.entries.forEach((entry, index) => {
+    const rankLabel = fmt.COLORS.accent(String(index + 1).padStart(2, ' '));
+    const primary = result.metric === 'bytes'
+      ? `${entry.bytes.toLocaleString()} bytes`
+      : `${entry.lines.toLocaleString()} lines`;
+    const secondary = result.metric === 'bytes'
+      ? `${entry.lines.toLocaleString()} lines`
+      : `${entry.bytes.toLocaleString()} bytes`;
+
+    const statsBits = [
+      entry.functions ? `fn:${entry.functions}` : null,
+      entry.exports ? `exp:${entry.exports}` : null,
+      entry.classes ? `cls:${entry.classes}` : null
+    ].filter(Boolean);
+
+    const markers = [];
+    if (entry.entryPoint) markers.push(arrowIcon);
+    if (entry.priority) markers.push('⭐');
+    const markerDisplay = markers.length > 0 ? `${markers.join(' ')} ` : '';
+
+    const sizeDisplay = `${primary} (${secondary})`;
+    const statsDisplay = statsBits.length > 0 ? ` ${fmt.COLORS.muted(`[${statsBits.join(' ')}]`)}` : '';
+
+    console.log(`${rankLabel}. ${markerDisplay}${fmt.COLORS.cyan(entry.file)} ${fmt.COLORS.muted(sizeDisplay)}${statsDisplay}`);
   });
 
   fmt.footer();
@@ -2586,6 +2750,7 @@ async function main() {
     return;
   }
   options.view = resolvedView;
+  options.lengthMetric = normalizeLengthMetric(options.lengthMetric);
   options.terseFields = parseTerseFields(options.fields);
   options.sourceLanguage = typeof options.sourceLanguage === 'string'
     ? options.sourceLanguage.trim().toLowerCase()
@@ -2779,6 +2944,21 @@ async function main() {
         console.log(JSON.stringify(result, null, 2));
       } else {
         printIndex(result, options);
+      }
+      return;
+    }
+
+    if (operation === 'longest-files') {
+      const result = summarizeLongestFiles(scanResult.files, {
+        limit: options.limit,
+        metric: options.lengthMetric,
+        rootDir: scanResult.rootDir
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        printLongestFiles(result, options);
       }
       return;
     }

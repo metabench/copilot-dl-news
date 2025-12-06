@@ -885,7 +885,7 @@ const tools = {
 // MCP Protocol (stdio transport)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MCP_VERSION = "2024-11-05";
+const MCP_VERSION = "2025-11-25";
 
 const createResponse = (id, result) => ({
     jsonrpc: "2.0",

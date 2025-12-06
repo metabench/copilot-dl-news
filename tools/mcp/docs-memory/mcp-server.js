@@ -1526,7 +1526,7 @@ const tools = {
 // MCP Protocol (stdio transport)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MCP_VERSION = "2024-11-05";
+const MCP_VERSION = "2025-11-25";
 
 const createResponse = (id, result) => ({
     jsonrpc: "2.0",
@@ -1557,6 +1557,7 @@ const handleRequest = (request) => {
             });
 
         case "notifications/initialized":
+        case "notifications/cancelled":
             // No response needed for notifications
             return null;
 
@@ -1602,6 +1603,16 @@ const sendStdioMessage = (messageObj) => {
     process.stdout.write(payload);
 };
 
+// Send either framed or headerless JSON. Default to framed; fall back to
+// headerless only when the request arrived headerless (best-effort compatibility).
+const sendMessage = (messageObj, { headerless = false } = {}) => {
+    if (headerless) {
+        process.stdout.write(`${JSON.stringify(messageObj)}\n`);
+        return;
+    }
+    sendStdioMessage(messageObj);
+};
+
 // Debug log file for MCP troubleshooting
 const debugLogPath = path.join(repoRoot, "tmp", "mcp-debug.log");
 const debugLog = (msg) => {
@@ -1636,8 +1647,8 @@ const runStdioServer = () => {
                         debugLog("Parsed headerless JSON message");
                         const response = handleRequest(request);
                         if (response) {
-                            debugLog(`Sending response for id: ${response.id}`);
-                            sendStdioMessage(response);
+                            debugLog(`Sending headerless response for id: ${response.id}`);
+                            sendMessage(response, { headerless: true });
                         }
                         continue;
                     } catch (e) {
@@ -1682,8 +1693,8 @@ const runStdioServer = () => {
             debugLog(`Request method: ${request.method}, id: ${request.id}`);
             const response = handleRequest(request);
             if (response) {
-                debugLog(`Sending response for id: ${response.id}`);
-                sendStdioMessage(response);
+                debugLog(`Sending framed response for id: ${response.id}`);
+                sendMessage(response, { headerless: false });
             } else {
                 debugLog("No response (notification)");
             }

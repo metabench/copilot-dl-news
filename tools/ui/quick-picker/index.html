@@ -62,6 +62,11 @@
       color: #888;
       margin-top: 2px;
     }
+
+    .option-item .icon {
+      margin-right: 8px;
+      font-size: 14px;
+    }
     
     .option-item.selected .description {
       color: #ccc;
@@ -84,6 +89,9 @@
     const { ipcRenderer } = require('electron');
 
     const list = document.getElementById('options-list');
+    const footer = document.getElementById('footer');
+    const footerDefault = 'Double-click to select • Esc to cancel';
+    let footerTimer = null;
     let currentOptions = [];
     let selectedIndex = -1;
 
@@ -102,8 +110,23 @@
         // Handle string options or object options { label, description, value }
         const label = typeof opt === 'string' ? opt : (opt.label || opt.value);
         const description = typeof opt === 'object' ? opt.description : null;
+        const phase = typeof opt === 'object' ? opt.phase : null;
+        const phaseIcon = {
+          plan: '🧭',
+          explore: '🔍',
+          design: '🧭',
+          implement: '🛠️',
+          test: '🧪',
+          validate: '✅',
+          fix: '🛡️'
+        }[phase];
+        const icon = typeof opt === 'object' ? (opt.icon || opt.emoji || phaseIcon) : null;
 
-        let html = `<span class="label">${label}</span>`;
+        let html = '';
+        if (icon) {
+          html += `<span class="icon">${icon}</span>`;
+        }
+        html += `<span class="label">${label}</span>`;
         if (description) {
           html += `<span class="description">${description}</span>`;
         }
@@ -117,6 +140,12 @@
           confirmSelection(index);
         });
 
+        li.addEventListener('contextmenu', (event) => {
+          event.preventDefault();
+          selectItem(index);
+          ipcRenderer.send('context-menu', { option: opt });
+        });
+
         list.appendChild(li);
       });
       
@@ -124,6 +153,30 @@
       if (currentOptions.length > 0) {
         selectItem(0);
       }
+    }
+
+    ipcRenderer.on('context-action', (event, payload) => {
+      if (!payload || !payload.option) return;
+      const option = payload.option;
+      const action = payload.action;
+      const label = option.label || option.value;
+      const actionLabel = {
+        explore: '🔍 Explore',
+        test: '🧪 Test',
+        implement: '🛠️ Implement',
+        fix: '🛡️ Fix'
+      }[action] || action;
+      setFooter(`${actionLabel}: ${label}`);
+    });
+
+    function setFooter(message) {
+      footer.textContent = message;
+      if (footerTimer) {
+        clearTimeout(footerTimer);
+      }
+      footerTimer = setTimeout(() => {
+        footer.textContent = footerDefault;
+      }, 3000);
     }
 
     function selectItem(index) {
@@ -142,7 +195,7 @@
       if (index >= 0 && index < currentOptions.length) {
         const opt = currentOptions[index];
         const value = typeof opt === 'object' ? (opt.value || opt.label) : opt;
-        ipcRenderer.send('selection-made', value);
+        ipcRenderer.send('selection-made', { selection: value, option: opt, phase: opt.phase });
       }
     }
 

@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" style="font-family: 'Segoe UI', sans-serif;">
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#f8f9fa" />
+  
+  <!-- Title -->
+  <text x="600" y="40" text-anchor="middle" font-size="24" font-weight="bold" fill="#333">Crawler Refactoring Plan: Configuration &amp; Orchestration</text>
+  <text x="600" y="70" text-anchor="middle" font-size="16" fill="#666">Phase A (Config) &amp; Phase B (Orchestration without Factories)</text>
+
+  <!-- Legend -->
+  <g transform="translate(50, 50)">
+    <rect x="0" y="0" width="20" height="20" fill="#ffebee" stroke="#d32f2f" rx="4" />
+    <text x="30" y="15" font-size="14" fill="#333">Legacy / To Remove</text>
+    <rect x="0" y="30" width="20" height="20" fill="#e8f5e9" stroke="#2e7d32" rx="4" />
+    <text x="30" y="45" font-size="14" fill="#333">New / Refactored</text>
+    <rect x="0" y="60" width="20" height="20" fill="#e3f2fd" stroke="#1565c0" rx="4" />
+    <text x="30" y="75" font-size="14" fill="#333">Data Flow</text>
+  </g>
+
+  <!-- ==================== PHASE A: CENTRALIZED CONFIGURATION ==================== -->
+  <g transform="translate(50, 150)">
+    <text x="0" y="-20" font-size="18" font-weight="bold" fill="#1565c0">Phase A: Centralize Configuration</text>
+    
+    <!-- Input Sources -->
+    <g transform="translate(0, 40)">
+      <rect x="0" y="0" width="120" height="40" fill="#fff" stroke="#999" rx="4" />
+      <text x="60" y="25" text-anchor="middle" font-size="14">process.argv</text>
+      
+      <rect x="0" y="60" width="120" height="40" fill="#fff" stroke="#999" rx="4" />
+      <text x="60" y="85" text-anchor="middle" font-size="14">config.json</text>
+      
+      <rect x="0" y="120" width="120" height="40" fill="#fff" stroke="#999" rx="4" />
+      <text x="60" y="145" text-anchor="middle" font-size="14">runner.yaml</text>
+    </g>
+
+    <!-- Old crawl.js Logic (To Remove) -->
+    <g transform="translate(200, 0)">
+      <rect x="0" y="0" width="250" height="180" fill="#ffebee" stroke="#d32f2f" stroke-dasharray="5,5" rx="8" />
+      <text x="125" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#d32f2f">crawl.js (Legacy)</text>
+      <line x1="20" y1="50" x2="230" y2="50" stroke="#d32f2f" stroke-width="1" />
+      <text x="20" y="80" font-size="12" fill="#d32f2f" font-family="monospace">readFlag()</text>
+      <text x="20" y="100" font-size="12" fill="#d32f2f" font-family="monospace">readIntegerFlag()</text>
+      <text x="20" y="120" font-size="12" fill="#d32f2f" font-family="monospace">mergeOverrideObjects()</text>
+      <text x="20" y="140" font-size="12" fill="#d32f2f" font-family="monospace">Manual Validation</text>
+    </g>
+
+    <!-- New ConfigurationService -->
+    <g transform="translate(200, 220)">
+      <rect x="0" y="0" width="250" height="100" fill="#e8f5e9" stroke="#2e7d32" rx="8" />
+      <text x="125" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2e7d32">ConfigurationService</text>
+      <line x1="20" y1="40" x2="230" y2="40" stroke="#2e7d32" stroke-width="1" />
+      <text x="20" y="65" font-size="12" fill="#333">.createContext(argv)</text>
+      <text x="20" y="85" font-size="12" fill="#333">Merge Layers &amp; Validate</text>
+    </g>
+
+    <!-- Arrows -->
+    <path d="M 120 60 L 160 60 L 160 90 L 200 90" fill="none" stroke="#d32f2f" stroke-width="2" marker-end="url(#arrow-red)" />
+    <path d="M 120 60 L 160 60 L 160 270 L 200 270" fill="none" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrow-green)" />
+    <path d="M 120 80 L 160 80 L 160 270" fill="none" stroke="#2e7d32" stroke-width="2" />
+    <path d="M 120 140 L 160 140 L 160 270" fill="none" stroke="#2e7d32" stroke-width="2" />
+
+  </g>
+
+  <!-- ==================== COMPOSITION ROOT (Wiring) ==================== -->
+  <g transform="translate(550, 150)">
+    <text x="0" y="-20" font-size="18" font-weight="bold" fill="#1565c0">Composition Root (crawl.js)</text>
+    
+    <!-- The Config Object -->
+    <g transform="translate(0, 245)">
+      <path d="M -100 25 L 0 25" fill="none" stroke="#2e7d32" stroke-width="3" marker-end="url(#arrow-green)" />
+      <rect x="0" y="0" width="140" height="50" fill="#fff9c4" stroke="#fbc02d" rx="4" />
+      <text x="70" y="30" text-anchor="middle" font-size="14" font-weight="bold">Config Object</text>
+    </g>
+
+    <!-- Wiring Logic -->
+    <g transform="translate(0, 350)">
+      <rect x="0" y="0" width="280" height="180" fill="#e3f2fd" stroke="#1565c0" rx="8" />
+      <text x="140" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1565c0">Service Instantiation</text>
+      <text x="140" y="50" text-anchor="middle" font-size="12" fill="#666">(No Factory Class)</text>
+      <line x1="20" y1="60" x2="260" y2="60" stroke="#1565c0" stroke-width="1" />
+      
+      <text x="20" y="85" font-size="12" fill="#333" font-family="monospace">const queue = new Queue(cfg)</text>
+      <text x="20" y="105" font-size="12" fill="#333" font-family="monospace">const fetcher = new Fetcher(cfg)</text>
+      <text x="20" y="125" font-size="12" fill="#333" font-family="monospace">const robots = new Robots(cfg)</text>
+      <text x="20" y="145" font-size="12" fill="#333" font-family="monospace">const services = { ... }</text>
+    </g>
+
+    <!-- Flow from Config to Wiring -->
+    <path d="M 70 50 L 70 350" fill="none" stroke="#fbc02d" stroke-width="2" marker-end="url(#arrow-yellow)" />
+
+  </g>
+
+  <!-- ==================== PHASE B: ORCHESTRATOR ==================== -->
+  <g transform="translate(900, 150)">
+    <text x="0" y="-20" font-size="18" font-weight="bold" fill="#1565c0">Phase B: Pure Orchestrator</text>
+
+    <!-- Old NewsCrawler (To Remove) -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="0" width="250" height="180" fill="#ffebee" stroke="#d32f2f" stroke-dasharray="5,5" rx="8" />
+      <text x="125" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#d32f2f">NewsCrawler (Legacy)</text>
+      <line x1="20" y1="50" x2="230" y2="50" stroke="#d32f2f" stroke-width="1" />
+      <text x="20" y="80" font-size="12" fill="#d32f2f" font-family="monospace">constructor(options)</text>
+      <text x="20" y="110" font-size="12" fill="#d32f2f" font-weight="bold">Internal Wiring:</text>
+      <text x="30" y="130" font-size="12" fill="#d32f2f" font-family="monospace">new FetchPipeline()</text>
+      <text x="30" y="150" font-size="12" fill="#d32f2f" font-family="monospace">new QueueManager()</text>
+    </g>
+
+    <!-- New NewsCrawler -->
+    <g transform="translate(0, 350)">
+      <rect x="0" y="0" width="250" height="180" fill="#e8f5e9" stroke="#2e7d32" rx="8" />
+      <text x="125" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#2e7d32">NewsCrawler (Refactored)</text>
+      <line x1="20" y1="50" x2="230" y2="50" stroke="#2e7d32" stroke-width="1" />
+      <text x="20" y="80" font-size="12" fill="#333" font-family="monospace">constructor(cfg, services)</text>
+      <text x="20" y="110" font-size="12" fill="#333" font-weight="bold">Dependency Injection:</text>
+      <text x="30" y="130" font-size="12" fill="#333" font-family="monospace">this.fetcher = services.fetcher</text>
+      <text x="30" y="150" font-size="12" fill="#333" font-family="monospace">this.queue = services.queue</text>
+    </g>
+
+    <!-- Injection Arrow -->
+    <path d="M -70 440 L 0 440" fill="none" stroke="#1565c0" stroke-width="3" marker-end="url(#arrow-blue)" />
+    <text x="-50" y="430" font-size="12" fill="#1565c0">Inject</text>
+
+  </g>
+
+  <!-- Definitions for markers -->
+  <defs>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#d32f2f" />
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2e7d32" />
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#1565c0" />
+    </marker>
+    <marker id="arrow-yellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#fbc02d" />
+    </marker>
+  </defs>
+</svg>
