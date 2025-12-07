@@ -1620,6 +1620,56 @@ const debugLog = (msg) => {
     fs.appendFileSync(debugLogPath, `[${timestamp}] ${msg}\n`);
 };
 
+// Extract the first complete JSON object from a headerless buffer so the
+// stdio server can process concatenated MCP messages without blocking.
+// Returns an object describing the state of the buffer so the caller can
+// decide whether to keep waiting, skip junk, or handle the parsed payload.
+const extractFirstJsonMessage = (buffer) => {
+    const startIdx = buffer.search(/\S/);
+    if (startIdx === -1) return { type: "empty" };
+    if (buffer[startIdx] !== "{") {
+        return { type: "skip", remove: startIdx + 1 };
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = startIdx; i < buffer.length; i++) {
+        const ch = buffer[i];
+
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (ch === "\\") {
+            escaped = true;
+            continue;
+        }
+
+        if (ch === "\"") {
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) continue;
+
+        if (ch === "{") depth += 1;
+        if (ch === "}") depth -= 1;
+
+        if (depth === 0) {
+            return {
+                type: "message",
+                jsonText: buffer.slice(startIdx, i + 1),
+                rest: buffer.slice(i + 1)
+            };
+        }
+    }
+
+    return { type: "partial" };
+};
+
 const runStdioServer = () => {
     debugLog("Server starting - stdio mode");
     let buffer = "";
@@ -1639,25 +1689,43 @@ const runStdioServer = () => {
 
             // Fallback: some clients occasionally send raw JSON without headers.
             if (headerEnd === -1) {
-                const trimmed = buffer.trimStart();
-                if (trimmed.startsWith("{")) {
-                    try {
-                        const request = JSON.parse(trimmed);
-                        buffer = "";
-                        debugLog("Parsed headerless JSON message");
-                        const response = handleRequest(request);
-                        if (response) {
-                            debugLog(`Sending headerless response for id: ${response.id}`);
-                            sendMessage(response, { headerless: true });
-                        }
-                        continue;
-                    } catch (e) {
-                        debugLog(`Headerless parse pending: ${e.message}`);
-                        return;
-                    }
+                const headerlessResult = extractFirstJsonMessage(buffer);
+
+                if (headerlessResult.type === "empty") {
+                    buffer = "";
+                    debugLog("Headerless buffer empty after trimming");
+                    return;
                 }
-                debugLog("No complete header yet");
-                return;
+
+                if (headerlessResult.type === "skip") {
+                    debugLog("Discarding leading non-JSON data in headerless buffer");
+                    buffer = buffer.slice(headerlessResult.remove);
+                    continue;
+                }
+
+                if (headerlessResult.type === "partial") {
+                    debugLog("Headerless parse pending: incomplete JSON message");
+                    return;
+                }
+
+                try {
+                    const request = JSON.parse(headerlessResult.jsonText);
+                    buffer = headerlessResult.rest;
+                    debugLog("Parsed headerless JSON message");
+                    const response = handleRequest(request);
+                    if (response) {
+                        debugLog(`Sending headerless response for id: ${response.id}`);
+                        sendMessage(response, { headerless: true });
+                    } else {
+                        debugLog("No response (notification)");
+                    }
+                    continue;
+                } catch (e) {
+                    debugLog(`Headerless parse error: ${e.message}`);
+                    buffer = headerlessResult.rest;
+                    sendMessage(createError(null, -32700, "Parse error"), { headerless: true });
+                    continue;
+                }
             }
 
             const header = buffer.slice(0, headerEnd);

@@ -22,7 +22,8 @@ describe('UrlEligibilityService', () => {
       looksLikeArticle: overrides.looksLikeArticle || jest.fn().mockReturnValue(true),
       knownArticlesCache,
       getDbAdapter: overrides.getDbAdapter || (() => adapter),
-      maxAgeHubMs: overrides.maxAgeHubMs
+      maxAgeHubMs: overrides.maxAgeHubMs,
+      urlDecisionOrchestrator: overrides.urlDecisionOrchestrator || null
     });
   };
 
@@ -123,6 +124,58 @@ describe('UrlEligibilityService', () => {
     });
     expect(result.status).toBe('drop');
     expect(result.reason).toBe('robots-disallow');
+  });
+
+  describe('orchestrator gating', () => {
+    it('short-circuits with orchestrator drop (query mapped) before legacy decision', () => {
+      const getUrlDecision = jest.fn();
+      const handlePolicySkip = jest.fn();
+      const urlDecisionOrchestrator = {
+        shouldQueue: jest.fn(() => ({ shouldQueue: false, reason: 'has-query-string' }))
+      };
+
+      const service = createService({ getUrlDecision, handlePolicySkip, urlDecisionOrchestrator });
+
+      const url = 'https://example.com/?q=foo';
+      const result = service.evaluate({
+        url,
+        depth: 1,
+        type: 'article',
+        queueSize: 3,
+        isDuplicate: () => false
+      });
+
+      expect(urlDecisionOrchestrator.shouldQueue).toHaveBeenCalledWith(url, { depth: 1, classification: 'article' });
+      expect(getUrlDecision).not.toHaveBeenCalled();
+      expect(handlePolicySkip).toHaveBeenCalledTimes(1);
+      expect(result.status).toBe('drop');
+      expect(result.handled).toBe(true);
+      expect(result.reason).toBe('query-superfluous');
+    });
+
+    it('maps orchestrator drop reasons without invoking legacy decision', () => {
+      const getUrlDecision = jest.fn();
+      const handlePolicySkip = jest.fn();
+      const urlDecisionOrchestrator = {
+        shouldQueue: jest.fn(() => ({ shouldQueue: false, reason: 'off-domain' }))
+      };
+
+      const service = createService({ getUrlDecision, handlePolicySkip, urlDecisionOrchestrator });
+      const url = 'https://other.test/page';
+      const result = service.evaluate({
+        url,
+        depth: 0,
+        type: 'nav',
+        queueSize: 1,
+        isDuplicate: () => false
+      });
+
+      expect(urlDecisionOrchestrator.shouldQueue).toHaveBeenCalledWith(url, { depth: 0, classification: 'nav' });
+      expect(getUrlDecision).not.toHaveBeenCalled();
+      expect(handlePolicySkip).not.toHaveBeenCalled();
+      expect(result.status).toBe('drop');
+      expect(result.reason).toBe('off-domain');
+    });
   });
 
   describe('hub freshness with maxAgeHubMs', () => {

@@ -1,0 +1,413 @@
+<svg width="1400" height="1100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e3a5f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="basicGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="intelligentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6d28d9;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="gazetteerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+
+    <filter id="shadowSmall" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.1"/>
+    </filter>
+
+    <!-- Arrow markers -->
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#059669"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#d97706"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1100" fill="#f8fafc"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1400" height="70" fill="url(#headerGrad)"/>
+  <text x="700" y="45" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="white">
+    News Crawler - Mode Architecture
+  </text>
+
+  <!-- Central Crawler Core -->
+  <g id="crawler-core" filter="url(#shadow)">
+    <rect x="560" y="95" width="280" height="120" rx="12" fill="url(#coreGrad)"/>
+    <text x="700" y="135" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="white">
+      NewsCrawler
+    </text>
+    <text x="700" y="160" font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#bfdbfe">
+      CrawlModeStrategy.create()
+    </text>
+    <text x="700" y="180" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#93c5fd">
+      Delegates to mode-specific strategy
+    </text>
+
+    <!-- Input arrow -->
+    <path d="M 700 70 L 700 95" stroke="#1e40af" stroke-width="3" marker-end="url(#arrowBlue)"/>
+    <text x="720" y="85" font-family="Arial, sans-serif" font-size="10" fill="#475569">startUrl / crawlType</text>
+  </g>
+
+  <!-- Mode Selection Arrows -->
+  <path d="M 600 215 Q 400 280 250 330" stroke="#059669" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#arrowGreen)"/>
+  <path d="M 700 215 L 700 330" stroke="#7c3aed" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#arrowPurple)"/>
+  <path d="M 800 215 Q 1000 280 1150 330" stroke="#d97706" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#arrowOrange)"/>
+
+  <!-- ============================================ -->
+  <!-- BASIC MODE (Left) -->
+  <!-- ============================================ -->
+  <g id="basic-mode">
+    <rect x="40" y="330" width="420" height="720" rx="16" fill="white" stroke="#059669" stroke-width="3" filter="url(#shadow)"/>
+
+    <!-- Header -->
+    <rect x="40" y="330" width="420" height="55" rx="16" fill="url(#basicGrad)"/>
+    <rect x="40" y="365" width="420" height="20" fill="url(#basicGrad)"/>
+    <text x="250" y="365" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="white">
+      BasicCrawlMode
+    </text>
+
+    <!-- Mode description -->
+    <text x="250" y="410" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#6b7280">
+      Standard web crawling with optional sitemap support
+    </text>
+
+    <!-- Crawl Types Section -->
+    <text x="60" y="445" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#065f46">
+      Crawl Types
+    </text>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="60" y="460" width="180" height="40" rx="6" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+      <text x="150" y="485" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#065f46">basic</text>
+    </g>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="260" y="460" width="180" height="40" rx="6" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+      <text x="350" y="485" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#065f46">sitemap-only</text>
+    </g>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="60" y="515" width="180" height="40" rx="6" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+      <text x="150" y="540" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#065f46">basic-with-sitemap</text>
+    </g>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="260" y="515" width="180" height="40" rx="6" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+      <text x="350" y="540" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#065f46">discover-structure</text>
+    </g>
+
+    <!-- Startup Sequence -->
+    <text x="60" y="590" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#065f46">
+      Startup Sequence
+    </text>
+
+    <rect x="60" y="605" width="380" height="35" rx="4" fill="#ecfdf5"/>
+    <text x="75" y="627" font-family="monospace" font-size="11" fill="#047857">
+      init -&gt; sitemaps -&gt; seedStartUrl -&gt; markStartupComplete
+    </text>
+
+    <!-- Crawl Sequence -->
+    <text x="60" y="665" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#065f46">
+      Crawl Sequence
+    </text>
+
+    <rect x="60" y="680" width="180" height="35" rx="4" fill="#ecfdf5"/>
+    <text x="75" y="702" font-family="monospace" font-size="11" fill="#047857">
+      runSequentialLoop
+    </text>
+    <text x="250" y="702" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">or</text>
+    <rect x="270" y="680" width="170" height="35" rx="4" fill="#ecfdf5"/>
+    <text x="285" y="702" font-family="monospace" font-size="11" fill="#047857">
+      runConcurrentWorkers
+    </text>
+
+    <!-- Key Features -->
+    <text x="60" y="745" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#065f46">
+      Key Features
+    </text>
+
+    <circle cx="75" cy="770" r="4" fill="#10b981"/>
+    <text x="90" y="775" font-family="Arial, sans-serif" font-size="12" fill="#374151">Starts from seed URL</text>
+
+    <circle cx="75" cy="795" r="4" fill="#10b981"/>
+    <text x="90" y="800" font-family="Arial, sans-serif" font-size="12" fill="#374151">Optional sitemap loading</text>
+
+    <circle cx="75" cy="820" r="4" fill="#10b981"/>
+    <text x="90" y="825" font-family="Arial, sans-serif" font-size="12" fill="#374151">Sequential or concurrent processing</text>
+
+    <circle cx="75" cy="845" r="4" fill="#10b981"/>
+    <text x="90" y="850" font-family="Arial, sans-serif" font-size="12" fill="#374151">Depth-based link following</text>
+
+    <circle cx="75" cy="870" r="4" fill="#10b981"/>
+    <text x="90" y="875" font-family="Arial, sans-serif" font-size="12" fill="#374151">No intelligent planning</text>
+
+    <!-- Config Options -->
+    <text x="60" y="910" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#065f46">
+      Config Options
+    </text>
+
+    <rect x="60" y="925" width="380" height="110" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="75" y="945" font-family="monospace" font-size="10" fill="#166534">--depth=N</text>
+    <text x="200" y="945" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Max crawl depth</text>
+    <text x="75" y="962" font-family="monospace" font-size="10" fill="#166534">--concurrency=N</text>
+    <text x="200" y="962" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Parallel workers</text>
+    <text x="75" y="979" font-family="monospace" font-size="10" fill="#166534">--max-pages=N</text>
+    <text x="200" y="979" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Limit downloads</text>
+    <text x="75" y="996" font-family="monospace" font-size="10" fill="#166534">--no-sitemap</text>
+    <text x="200" y="996" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Disable sitemap discovery</text>
+    <text x="75" y="1013" font-family="monospace" font-size="10" fill="#166534">--sitemap-only</text>
+    <text x="200" y="1013" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Only crawl sitemap URLs</text>
+    <text x="75" y="1030" font-family="monospace" font-size="10" fill="#166534">--max-age=6h</text>
+    <text x="200" y="1030" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Cache freshness window</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- INTELLIGENT MODE (Center) -->
+  <!-- ============================================ -->
+  <g id="intelligent-mode">
+    <rect x="490" y="330" width="420" height="720" rx="16" fill="white" stroke="#7c3aed" stroke-width="3" filter="url(#shadow)"/>
+
+    <!-- Header -->
+    <rect x="490" y="330" width="420" height="55" rx="16" fill="url(#intelligentGrad)"/>
+    <rect x="490" y="365" width="420" height="20" fill="url(#intelligentGrad)"/>
+    <text x="700" y="365" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="white">
+      IntelligentCrawlMode
+    </text>
+
+    <!-- Mode description -->
+    <text x="700" y="410" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#6b7280">
+      AI-driven planning with adaptive hub discovery
+    </text>
+
+    <!-- Crawl Types Section -->
+    <text x="510" y="445" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#5b21b6">
+      Crawl Types
+    </text>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="510" y="460" width="380" height="40" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="700" y="485" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#5b21b6">intelligent</text>
+    </g>
+
+    <!-- Startup Sequence -->
+    <text x="510" y="535" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#5b21b6">
+      Startup Sequence
+    </text>
+
+    <rect x="510" y="550" width="380" height="50" rx="4" fill="#f5f3ff"/>
+    <text x="525" y="572" font-family="monospace" font-size="11" fill="#6d28d9">
+      init -&gt; planner -&gt; sitemaps -&gt; seedStartUrl
+    </text>
+    <text x="525" y="590" font-family="monospace" font-size="11" fill="#6d28d9">
+           -&gt; markStartupComplete
+    </text>
+
+    <!-- Crawl Sequence -->
+    <text x="510" y="630" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#5b21b6">
+      Crawl Sequence
+    </text>
+
+    <rect x="510" y="645" width="380" height="35" rx="4" fill="#f5f3ff"/>
+    <text x="525" y="667" font-family="monospace" font-size="11" fill="#6d28d9">
+      runConcurrentWorkers (always concurrent)
+    </text>
+
+    <!-- Key Features -->
+    <text x="510" y="710" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#5b21b6">
+      Key Features
+    </text>
+
+    <circle cx="525" cy="735" r="4" fill="#8b5cf6"/>
+    <text x="540" y="740" font-family="Arial, sans-serif" font-size="12" fill="#374151">Pre-crawl planning phase</text>
+
+    <circle cx="525" cy="760" r="4" fill="#8b5cf6"/>
+    <text x="540" y="765" font-family="Arial, sans-serif" font-size="12" fill="#374151">Analyzes site structure before crawling</text>
+
+    <circle cx="525" cy="785" r="4" fill="#8b5cf6"/>
+    <text x="540" y="790" font-family="Arial, sans-serif" font-size="12" fill="#374151">Prioritizes high-value pages (hubs)</text>
+
+    <circle cx="525" cy="810" r="4" fill="#8b5cf6"/>
+    <text x="540" y="815" font-family="Arial, sans-serif" font-size="12" fill="#374151">Adaptive seed selection</text>
+
+    <circle cx="525" cy="835" r="4" fill="#8b5cf6"/>
+    <text x="540" y="840" font-family="Arial, sans-serif" font-size="12" fill="#374151">Priority-weighted queue ordering</text>
+
+    <circle cx="525" cy="860" r="4" fill="#8b5cf6"/>
+    <text x="540" y="865" font-family="Arial, sans-serif" font-size="12" fill="#374151">Pattern learning from previous crawls</text>
+
+    <circle cx="525" cy="885" r="4" fill="#8b5cf6"/>
+    <text x="540" y="890" font-family="Arial, sans-serif" font-size="12" fill="#374151">Saves plan summary for future reference</text>
+
+    <!-- Config Options -->
+    <text x="510" y="925" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#5b21b6">
+      Config Options
+    </text>
+
+    <rect x="510" y="940" width="380" height="95" rx="6" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1"/>
+    <text x="525" y="960" font-family="monospace" font-size="10" fill="#5b21b6">--hub-max-pages=N</text>
+    <text x="680" y="960" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Limit pages per hub</text>
+    <text x="525" y="977" font-family="monospace" font-size="10" fill="#5b21b6">--hub-max-days=N</text>
+    <text x="680" y="977" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Hub age limit (days)</text>
+    <text x="525" y="994" font-family="monospace" font-size="10" fill="#5b21b6">--int-max-seeds=N</text>
+    <text x="680" y="994" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Max initial seeds (default: 50)</text>
+    <text x="525" y="1011" font-family="monospace" font-size="10" fill="#5b21b6">--int-target-hosts=...</text>
+    <text x="680" y="1011" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Focus on specific domains</text>
+    <text x="525" y="1028" font-family="monospace" font-size="10" fill="#5b21b6">--planner-verbosity=0..3</text>
+    <text x="680" y="1028" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Debug level</text>
+  </g>
+
+  <!-- ============================================ -->
+  <!-- GAZETTEER MODE (Right) -->
+  <!-- ============================================ -->
+  <g id="gazetteer-mode">
+    <rect x="940" y="330" width="420" height="720" rx="16" fill="white" stroke="#d97706" stroke-width="3" filter="url(#shadow)"/>
+
+    <!-- Header -->
+    <rect x="940" y="330" width="420" height="55" rx="16" fill="url(#gazetteerGrad)"/>
+    <rect x="940" y="365" width="420" height="20" fill="url(#gazetteerGrad)"/>
+    <text x="1150" y="365" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="white">
+      GazetteerCrawlMode
+    </text>
+
+    <!-- Mode description -->
+    <text x="1150" y="410" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#6b7280">
+      Geography-based crawling using location database
+    </text>
+
+    <!-- Crawl Types Section -->
+    <text x="960" y="445" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#92400e">
+      Crawl Types
+    </text>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="960" y="460" width="120" height="40" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+      <text x="1020" y="485" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#92400e">geography</text>
+    </g>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="1095" y="460" width="120" height="40" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+      <text x="1155" y="485" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#92400e">gazetteer</text>
+    </g>
+
+    <g filter="url(#shadowSmall)">
+      <rect x="1230" y="460" width="110" height="40" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+      <text x="1285" y="485" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#92400e">geo</text>
+    </g>
+
+    <!-- Startup Sequence -->
+    <text x="960" y="535" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#92400e">
+      Startup Sequence
+    </text>
+
+    <rect x="960" y="550" width="380" height="35" rx="4" fill="#fffbeb"/>
+    <text x="975" y="572" font-family="monospace" font-size="11" fill="#b45309">
+      init -&gt; markStartupComplete (no sitemap/seed)
+    </text>
+
+    <!-- Crawl Sequence -->
+    <text x="960" y="610" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#92400e">
+      Crawl Sequence
+    </text>
+
+    <rect x="960" y="625" width="380" height="35" rx="4" fill="#fffbeb"/>
+    <text x="975" y="647" font-family="monospace" font-size="11" fill="#b45309">
+      runGazetteerMode (via GazetteerManager)
+    </text>
+
+    <!-- Processing Stages -->
+    <text x="960" y="690" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#92400e">
+      Processing Pipeline
+    </text>
+
+    <rect x="960" y="705" width="85" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="1002" y="724" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#92400e">Countries</text>
+
+    <path d="M 1050 720 L 1065 720" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+
+    <rect x="1070" y="705" width="85" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="1112" y="724" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#92400e">Regions</text>
+
+    <path d="M 1160 720 L 1175 720" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+
+    <rect x="1180" y="705" width="70" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="1215" y="724" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#92400e">Cities</text>
+
+    <path d="M 1255 720 L 1270 720" stroke="#d97706" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+
+    <rect x="1275" y="705" width="80" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="1315" y="724" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#92400e">Boundaries</text>
+
+    <!-- Key Features -->
+    <text x="960" y="765" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#92400e">
+      Key Features
+    </text>
+
+    <circle cx="975" cy="790" r="4" fill="#f59e0b"/>
+    <text x="990" y="795" font-family="Arial, sans-serif" font-size="12" fill="#374151">Uses gazetteer (place name database)</text>
+
+    <circle cx="975" cy="815" r="4" fill="#f59e0b"/>
+    <text x="990" y="820" font-family="Arial, sans-serif" font-size="12" fill="#374151">Crawls country/region-specific hubs</text>
+
+    <circle cx="975" cy="840" r="4" fill="#f59e0b"/>
+    <text x="990" y="845" font-family="Arial, sans-serif" font-size="12" fill="#374151">Stage-based processing</text>
+
+    <circle cx="975" cy="865" r="4" fill="#f59e0b"/>
+    <text x="990" y="870" font-family="Arial, sans-serif" font-size="12" fill="#374151">Per-country statistics and coverage</text>
+
+    <circle cx="975" cy="890" r="4" fill="#f59e0b"/>
+    <text x="990" y="895" font-family="Arial, sans-serif" font-size="12" fill="#374151">Geographic priority scoring</text>
+
+    <circle cx="975" cy="915" r="4" fill="#f59e0b"/>
+    <text x="990" y="920" font-family="Arial, sans-serif" font-size="12" fill="#374151">No URL required (fetches from APIs)</text>
+
+    <!-- Config Options -->
+    <text x="960" y="955" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#92400e">
+      Config Options
+    </text>
+
+    <rect x="960" y="970" width="380" height="75" rx="6" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/>
+    <text x="975" y="990" font-family="monospace" font-size="10" fill="#92400e">--limit-countries=N</text>
+    <text x="1140" y="990" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Max countries to process</text>
+    <text x="975" y="1007" font-family="monospace" font-size="10" fill="#92400e">--target-countries=US,CA</text>
+    <text x="1175" y="1007" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Specific countries</text>
+    <text x="975" y="1024" font-family="monospace" font-size="10" fill="#92400e">--gazetteer-stages=...</text>
+    <text x="1170" y="1024" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Filter stages</text>
+    <text x="975" y="1041" font-family="monospace" font-size="10" fill="#92400e">--concurrency=2</text>
+    <text x="1140" y="1041" font-family="Arial, sans-serif" font-size="10" fill="#6b7280">Max workers (API limited)</text>
+  </g>
+
+  <!-- Footer: Data Sources -->
+  <rect x="940" y="1055" width="420" height="35" rx="6" fill="#fefce8" stroke="#facc15" stroke-width="1"/>
+  <text x="960" y="1077" font-family="Arial, sans-serif" font-size="11" fill="#854d0e">
+    Data Sources: Wikidata SPARQL, Overpass API, RestCountries
+  </text>
+</svg>

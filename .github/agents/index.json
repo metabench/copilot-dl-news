@@ -70,5 +70,13 @@
     "tags": ["crawls", "startup", "analysis"],
     "last_review": "2025-10-19",
     "path": "docs/agents/intelligent-crawl-startup.md"
+  },
+  {
+    "doc_slug": "crawler-singularity",
+    "title": "🕷️ Crawler Singularity 🕷️",
+    "purpose": "Specialist agent for reliable crawler engineering and resilience",
+    "tags": ["crawler", "resilience", "singularity"],
+    "last_review": "2025-11-22",
+    "path": ".github/agents/🕷️ Crawler Singularity 🕷️.agent.md"
   }
 ]

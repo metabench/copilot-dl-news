@@ -5,8 +5,18 @@ jest.mock('jsdom', () => ({ JSDOM: class { constructor() {} }, VirtualConsole: f
 const NewsCrawler = require('../../../src/crawler/NewsCrawler');
 
 describe('CrawlerServiceWiring', () => {
+  let crawler;
+
+  afterEach(() => {
+    // Phase 1: Clean up resilience service timers
+    if (crawler?.resilienceService) {
+      crawler.resilienceService.stop();
+    }
+    crawler = null;
+  });
+
   it('wires basic services onto a new crawler instance', async () => {
-    const crawler = new NewsCrawler('https://example.com', { enableDb: false, concurrency: 1 });
+    crawler = new NewsCrawler('https://example.com', { enableDb: false, concurrency: 1 });
 
     expect(crawler.hubFreshnessController).toBeDefined();
     expect(crawler.articleSignals).toBeDefined();
@@ -15,5 +25,9 @@ describe('CrawlerServiceWiring', () => {
     expect(typeof crawler.urlPolicy === 'object').toBeTruthy();
     expect(typeof crawler.deepUrlAnalyzer === 'object').toBeTruthy();
     expect(crawler._finalizer).toBeUndefined();
+
+    // Phase 1: Resilience services should be wired
+    expect(crawler.resilienceService).toBeDefined();
+    expect(crawler.contentValidationService).toBeDefined();
   });
 });

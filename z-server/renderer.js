@@ -39117,15 +39117,11 @@ body .overlay {
     }
   });
 
-  // ui/controls/zServerControlsFactory.js
-  var require_zServerControlsFactory = __commonJS({
-    "ui/controls/zServerControlsFactory.js"(exports, module) {
+  // ui/controls/serverItemControl.js
+  var require_serverItemControl = __commonJS({
+    "ui/controls/serverItemControl.js"(exports, module) {
       "use strict";
-      function createZServerControls2(jsgui2) {
-        if (!jsgui2) {
-          throw new Error("jsgui instance is required to build Z-Server controls");
-        }
-        const StringControl = jsgui2.String_Control;
+      function createServerItemControl(jsgui2, { StringControl }) {
         class ServerItemControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39187,7 +39183,7 @@ body .overlay {
               return this._server.metadata.name;
             }
             if (this._server.relativeFile) {
-              return this._server.relativeFile.split(/[\\/]/).pop();
+              return this._server.relativeFile.split(/[\\/\\\\]/).pop();
             }
             return "Unknown Server";
           }
@@ -39276,6 +39272,17 @@ body .overlay {
             }
           }
         }
+        return ServerItemControl;
+      }
+      module.exports = { createServerItemControl };
+    }
+  });
+
+  // ui/controls/serverListControl.js
+  var require_serverListControl = __commonJS({
+    "ui/controls/serverListControl.js"(exports, module) {
+      "use strict";
+      function createServerListControl(jsgui2, { ServerItemControl }) {
         class ServerListControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39370,6 +39377,17 @@ body .overlay {
             });
           }
         }
+        return ServerListControl;
+      }
+      module.exports = { createServerListControl };
+    }
+  });
+
+  // ui/controls/serverUrlControl.js
+  var require_serverUrlControl = __commonJS({
+    "ui/controls/serverUrlControl.js"(exports, module) {
+      "use strict";
+      function createServerUrlControl(jsgui2, { StringControl }) {
         class ServerUrlControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39507,10 +39525,6 @@ body .overlay {
               this.add_class("zs-server-url--hidden");
             }
           }
-          /**
-           * Ensure click handler is attached to the DOM element.
-           * Called during activate() and also when URL/visibility changes.
-           */
           _ensureClickHandler() {
             if (this._clickHandlerAttached) return;
             if (!this.dom.el || !this._onClick) return;
@@ -39561,6 +39575,17 @@ body .overlay {
             this._ensureClickHandler();
           }
         }
+        return ServerUrlControl;
+      }
+      module.exports = { createServerUrlControl };
+    }
+  });
+
+  // ui/controls/logControls.js
+  var require_logControls = __commonJS({
+    "ui/controls/logControls.js"(exports, module) {
+      "use strict";
+      function createLogControls(jsgui2, { StringControl }) {
         class LogEntryControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39656,6 +39681,17 @@ body .overlay {
             }
           }
         }
+        return { LogEntryControl, LogViewerControl };
+      }
+      module.exports = { createLogControls };
+    }
+  });
+
+  // ui/controls/serverLogWindowControl.js
+  var require_serverLogWindowControl = __commonJS({
+    "ui/controls/serverLogWindowControl.js"(exports, module) {
+      "use strict";
+      function createServerLogWindowControl(jsgui2, { LogViewerControl }) {
         class ServerLogWindowControl extends jsgui2.Window {
           constructor(spec = {}) {
             const normalized = {
@@ -39872,6 +39908,17 @@ body .overlay {
             }
           }
         }
+        return ServerLogWindowControl;
+      }
+      module.exports = { createServerLogWindowControl };
+    }
+  });
+
+  // ui/controls/controlButtonControl.js
+  var require_controlButtonControl = __commonJS({
+    "ui/controls/controlButtonControl.js"(exports, module) {
+      "use strict";
+      function createControlButtonControl(jsgui2, { StringControl }) {
         class ControlButtonControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39926,6 +39973,17 @@ body .overlay {
             }
           }
         }
+        return ControlButtonControl;
+      }
+      module.exports = { createControlButtonControl };
+    }
+  });
+
+  // ui/controls/controlPanelControl.js
+  var require_controlPanelControl = __commonJS({
+    "ui/controls/controlPanelControl.js"(exports, module) {
+      "use strict";
+      function createControlPanelControl(jsgui2, { ControlButtonControl }) {
         class ControlPanelControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -39991,6 +40049,17 @@ body .overlay {
             this._stopBtn.activate();
           }
         }
+        return ControlPanelControl;
+      }
+      module.exports = { createControlPanelControl };
+    }
+  });
+
+  // ui/controls/scanningIndicatorControl.js
+  var require_scanningIndicatorControl = __commonJS({
+    "ui/controls/scanningIndicatorControl.js"(exports, module) {
+      "use strict";
+      function createScanningIndicatorControl(jsgui2, { StringControl }) {
         class ScanningIndicatorControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -40100,11 +40169,6 @@ body .overlay {
               this._subtitleEl.dom.el.textContent = "Analyzing JavaScript files in repository";
             }
           }
-          /**
-           * Ensure all child DOM refs are linked.
-           * Call this when the indicator becomes visible to link any elements
-           * that weren't linked because they were inside a hidden container.
-           */
           ensureDomRefs() {
             const rootEl = this.dom.el;
             if (!rootEl) return;
@@ -40130,6 +40194,17 @@ body .overlay {
             );
           }
         }
+        return ScanningIndicatorControl;
+      }
+      module.exports = { createScanningIndicatorControl };
+    }
+  });
+
+  // ui/controls/sidebarControl.js
+  var require_sidebarControl = __commonJS({
+    "ui/controls/sidebarControl.js"(exports, module) {
+      "use strict";
+      function createSidebarControl(jsgui2, { ServerListControl, StringControl }) {
         class SidebarControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -40175,6 +40250,23 @@ body .overlay {
             this._serverList.activate();
           }
         }
+        return SidebarControl;
+      }
+      module.exports = { createSidebarControl };
+    }
+  });
+
+  // ui/controls/contentAreaControl.js
+  var require_contentAreaControl = __commonJS({
+    "ui/controls/contentAreaControl.js"(exports, module) {
+      "use strict";
+      function createContentAreaControl(jsgui2, {
+        ControlPanelControl,
+        ServerUrlControl,
+        ScanningIndicatorControl,
+        LogViewerControl,
+        StringControl
+      }) {
         class ContentAreaControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -40232,7 +40324,7 @@ body .overlay {
             this._detectedUrl = null;
             this._serverUrl.setUrl(null);
             this._serverUrl.setVisible(false);
-            const displayName = server.metadata && server.metadata.name ? server.metadata.name : server.relativeFile.split(/[\\/]/).pop();
+            const displayName = server.metadata && server.metadata.name ? server.metadata.name : server.relativeFile.split(/[\\/\\\\]/).pop();
             if (this._title.dom.el) {
               this._title.dom.el.textContent = displayName;
             }
@@ -40346,6 +40438,17 @@ body .overlay {
             this._serverUrl.activate();
           }
         }
+        return ContentAreaControl;
+      }
+      module.exports = { createContentAreaControl };
+    }
+  });
+
+  // ui/controls/titleBarControl.js
+  var require_titleBarControl = __commonJS({
+    "ui/controls/titleBarControl.js"(exports, module) {
+      "use strict";
+      function createTitleBarControl(jsgui2, { StringControl }) {
         class TitleBarControl extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -40366,6 +40469,17 @@ body .overlay {
             this.add(title);
           }
         }
+        return TitleBarControl;
+      }
+      module.exports = { createTitleBarControl };
+    }
+  });
+
+  // ui/controls/zServerAppControl.js
+  var require_zServerAppControl = __commonJS({
+    "ui/controls/zServerAppControl.js"(exports, module) {
+      "use strict";
+      function createZServerAppControl(jsgui2, { TitleBarControl, SidebarControl, ContentAreaControl }) {
         class ZServerAppControl2 extends jsgui2.Control {
           constructor(spec = {}) {
             const normalized = {
@@ -40568,6 +40682,55 @@ body .overlay {
             this._contentArea.activate();
           }
         }
+        return ZServerAppControl2;
+      }
+      module.exports = { createZServerAppControl };
+    }
+  });
+
+  // ui/controls/zServerControlsFactory.js
+  var require_zServerControlsFactory = __commonJS({
+    "ui/controls/zServerControlsFactory.js"(exports, module) {
+      "use strict";
+      var { createServerItemControl } = require_serverItemControl();
+      var { createServerListControl } = require_serverListControl();
+      var { createServerUrlControl } = require_serverUrlControl();
+      var { createLogControls } = require_logControls();
+      var { createServerLogWindowControl } = require_serverLogWindowControl();
+      var { createControlButtonControl } = require_controlButtonControl();
+      var { createControlPanelControl } = require_controlPanelControl();
+      var { createScanningIndicatorControl } = require_scanningIndicatorControl();
+      var { createSidebarControl } = require_sidebarControl();
+      var { createContentAreaControl } = require_contentAreaControl();
+      var { createTitleBarControl } = require_titleBarControl();
+      var { createZServerAppControl } = require_zServerAppControl();
+      function createZServerControls2(jsgui2) {
+        if (!jsgui2) {
+          throw new Error("jsgui instance is required to build Z-Server controls");
+        }
+        const StringControl = jsgui2.String_Control;
+        const ServerItemControl = createServerItemControl(jsgui2, { StringControl });
+        const ServerListControl = createServerListControl(jsgui2, { ServerItemControl });
+        const ServerUrlControl = createServerUrlControl(jsgui2, { StringControl });
+        const { LogEntryControl, LogViewerControl } = createLogControls(jsgui2, { StringControl });
+        const ServerLogWindowControl = createServerLogWindowControl(jsgui2, { LogViewerControl });
+        const ControlButtonControl = createControlButtonControl(jsgui2, { StringControl });
+        const ControlPanelControl = createControlPanelControl(jsgui2, { ControlButtonControl });
+        const ScanningIndicatorControl = createScanningIndicatorControl(jsgui2, { StringControl });
+        const SidebarControl = createSidebarControl(jsgui2, { ServerListControl, StringControl });
+        const ContentAreaControl = createContentAreaControl(jsgui2, {
+          ControlPanelControl,
+          ServerUrlControl,
+          ScanningIndicatorControl,
+          LogViewerControl,
+          StringControl
+        });
+        const TitleBarControl = createTitleBarControl(jsgui2, { StringControl });
+        const ZServerAppControl2 = createZServerAppControl(jsgui2, {
+          TitleBarControl,
+          SidebarControl,
+          ContentAreaControl
+        });
         function buildZServerStyles() {
           return `
 /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */

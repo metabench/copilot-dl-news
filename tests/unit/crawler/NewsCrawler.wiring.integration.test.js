@@ -3,8 +3,21 @@ jest.mock('jsdom', () => ({ JSDOM: class { constructor() {} }, VirtualConsole: f
 const NewsCrawler = require('../../../src/crawler/NewsCrawler');
 
 describe('NewsCrawler wiring integration', () => {
+  let crawler;
+
+  afterEach(() => {
+    // Clean up adapter and any timers
+    if (crawler?._newAbstractionsAdapter) {
+      crawler._newAbstractionsAdapter.dispose();
+    }
+    if (crawler?.dispose) {
+      crawler.dispose();
+    }
+    crawler = null;
+  });
+
   test('NewsCrawler wires fetchPipeline and pageExecution services correctly', async () => {
-    const crawler = new NewsCrawler('https://example.com', { enableDb: false, concurrency: 1, maxDepth: 0, preferCache: false });
+    crawler = new NewsCrawler('https://example.com', { enableDb: false, concurrency: 1, maxDepth: 0, preferCache: false });
     expect(crawler.fetchPipeline).toBeDefined();
     expect(crawler.pageExecutionService).toBeDefined();
     // FetchPipeline should have a networkRetryPolicy and host retry manager
@@ -12,5 +25,8 @@ describe('NewsCrawler wiring integration', () => {
     expect(crawler.fetchPipeline._hostRetryManager).toBeDefined();
     // Basic services wired
     expect(crawler.articleProcessor).toBeDefined();
+    // New abstractions adapter should be installed
+    expect(crawler._newAbstractionsAdapter).toBeDefined();
+    expect(crawler._shadowContext).toBeDefined();
   });
 });

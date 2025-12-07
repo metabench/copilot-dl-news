@@ -16,7 +16,8 @@ class UrlEligibilityService {
       looksLikeArticle,
       knownArticlesCache,
       getDbAdapter,
-      maxAgeHubMs
+      maxAgeHubMs,
+      urlDecisionOrchestrator
     } = options;
     if (typeof getUrlDecision !== 'function') {
       throw new Error('UrlEligibilityService requires getUrlDecision function');
@@ -39,14 +40,54 @@ class UrlEligibilityService {
     this.knownArticlesCache = knownArticlesCache || new Map();
     this.getDbAdapter = typeof getDbAdapter === 'function' ? getDbAdapter : null;
     this.maxAgeHubMs = Number.isFinite(maxAgeHubMs) && maxAgeHubMs >= 0 ? maxAgeHubMs : null;
+    this.urlDecisionOrchestrator = urlDecisionOrchestrator || null;
   }
 
   evaluate({ url, depth = 0, type, queueSize = 0, isDuplicate }) {
     const meta = type && typeof type === 'object' ? type : null;
+    let normalized = null;
+
+    const orchestratorGate = this._orchestratorQueueDecision({
+      url,
+      normalized,
+      depth,
+      kind: meta?.kind || meta?.type || meta?.intent || (typeof type === 'string' ? type : null)
+    });
+
+    if (orchestratorGate && orchestratorGate.shouldDrop) {
+      const mappedReason = orchestratorGate.reason;
+      const normalizedFallback = normalized || url;
+      const hostFallback = this._safeHost(normalizedFallback);
+      const syntheticDecision = {
+        allow: false,
+        reason: mappedReason,
+        analysis: { normalized: normalizedFallback, raw: url }
+      };
+
+      if (mappedReason === 'query-superfluous') {
+        this.handlePolicySkip(syntheticDecision, { depth, queueSize });
+        return {
+          status: 'drop',
+          handled: true,
+          reason: mappedReason,
+          normalized: normalizedFallback,
+          host: hostFallback,
+          decision: syntheticDecision
+        };
+      }
+
+      return {
+        status: 'drop',
+        reason: mappedReason,
+        normalized: normalizedFallback,
+        host: hostFallback,
+        decision: syntheticDecision
+      };
+    }
 
     const decision = this.getUrlDecision(url, { phase: 'enqueue', depth });
     const analysis = decision?.analysis || {};
-    const normalized = analysis && !analysis.invalid ? analysis.normalized : null;
+    normalized = analysis && !analysis.invalid ? analysis.normalized : null;
     const host = this._safeHost(normalized || url);
 
     if (!decision?.allow) {
@@ -310,6 +351,50 @@ class UrlEligibilityService {
       return new URL(url).hostname;
     } catch (_) {
       return null;
+    }
+  }
+
+  _orchestratorQueueDecision({ url, normalized, depth, kind }) {
+    if (!this.urlDecisionOrchestrator || typeof this.urlDecisionOrchestrator.shouldQueue !== 'function') {
+      return null;
+    }
+
+    const targetUrl = normalized || url;
+    if (!targetUrl) return null;
+
+    try {
+      const result = this.urlDecisionOrchestrator.shouldQueue(targetUrl, {
+        depth,
+        classification: typeof kind === 'string' ? kind : null
+      });
+      if (!result || result.shouldQueue !== false) return null;
+      return {
+        shouldDrop: true,
+        reason: this._mapOrchestratorReason(result.reason || 'policy-blocked')
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _mapOrchestratorReason(reason) {
+    if (!reason) return 'policy-blocked';
+    switch (reason) {
+      case 'has-query-string':
+        return 'query-superfluous';
+      case 'invalid-url':
+      case 'invalid-protocol':
+      case 'blocked-extension':
+        return 'bad-url';
+      case 'off-domain':
+      case 'domain-not-allowed':
+        return 'off-domain';
+      case 'max-depth-exceeded':
+        return 'max-depth';
+      case 'domain-blocked':
+        return 'domain-blocked';
+      default:
+        return reason;
     }
   }
 }

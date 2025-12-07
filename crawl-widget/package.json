@@ -1,0 +1,27 @@
+{
+  "name": "crawl-widget",
+  "version": "1.0.0",
+  "description": "Compact Crawl Control Widget - Industrial Luxury Obsidian Theme",
+  "main": "main.js",
+  "scripts": {
+    "build": "esbuild renderer.src.js --bundle --outfile=renderer.js --platform=browser --format=iife --define:global=window",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron ."
+  },
+  "keywords": [
+    "crawl",
+    "electron",
+    "jsgui3",
+    "widget"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "esbuild": "^0.27.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0",
+    "jsgui3-client": "^0.0.121"
+  }
+}

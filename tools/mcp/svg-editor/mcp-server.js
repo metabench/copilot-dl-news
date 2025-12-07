@@ -907,6 +907,15 @@ const sendStdioMessage = (messageObj) => {
     process.stdout.write(payload);
 };
 
+// Send framed by default; if the incoming request was headerless, respond headerless for compatibility.
+const sendMessage = (messageObj, { headerless = false } = {}) => {
+    if (headerless) {
+        process.stdout.write(`${JSON.stringify(messageObj)}\n`);
+        return;
+    }
+    sendStdioMessage(messageObj);
+};
+
 const handleRequest = (request) => {
     const { id, method, params } = request;
 
@@ -974,7 +983,7 @@ const runStdioServer = () => {
                         const request = JSON.parse(trimmed);
                         buffer = "";
                         const response = handleRequest(request);
-                        if (response) sendStdioMessage(response);
+                        if (response) sendMessage(response, { headerless: true });
                         continue;
                     } catch {
                         // Not enough data yet; wait for more.
@@ -1003,13 +1012,13 @@ const runStdioServer = () => {
             try {
                 request = JSON.parse(message);
             } catch {
-                sendStdioMessage(createError(null, -32700, "Parse error"));
+                sendMessage(createError(null, -32700, "Parse error"));
                 continue;
             }
 
             const response = handleRequest(request);
             if (response) {
-                sendStdioMessage(response);
+                sendMessage(response, { headerless: false });
             }
         }
     };

@@ -1635,6 +1635,122 @@ class NewsDatabase {
     
     return this.db.prepare(query).all();
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // News Website Favicon Methods
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Get a news website's favicon data
+   * @param {number} id - Website ID
+   * @returns {Object|null} - { faviconData, faviconContentType, faviconUpdatedAt } or null
+   */
+  getNewsWebsiteFavicon(id) {
+    const row = this.db.prepare(`
+      SELECT favicon_data, favicon_content_type, favicon_updated_at, favicon_fetch_error
+      FROM news_websites WHERE id = ?
+    `).get(id);
+    if (!row) return null;
+    return {
+      faviconData: row.favicon_data,
+      faviconContentType: row.favicon_content_type,
+      faviconUpdatedAt: row.favicon_updated_at,
+      faviconFetchError: row.favicon_fetch_error
+    };
+  }
+
+  /**
+   * Store a news website's favicon data
+   * @param {number} id - Website ID
+   * @param {string} faviconData - Base64-encoded data (without data URL prefix)
+   * @param {string} contentType - MIME type (e.g., 'image/png')
+   * @returns {boolean} - True if updated
+   */
+  setNewsWebsiteFavicon(id, faviconData, contentType) {
+    const stmt = this.db.prepare(`
+      UPDATE news_websites 
+      SET favicon_data = ?, favicon_content_type = ?, favicon_updated_at = ?, favicon_fetch_error = NULL
+      WHERE id = ?
+    `);
+    const result = stmt.run(faviconData, contentType, new Date().toISOString(), id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Mark a favicon fetch as failed
+   * @param {number} id - Website ID
+   * @param {string} errorMessage - Error message
+   * @returns {boolean} - True if updated
+   */
+  setNewsWebsiteFaviconError(id, errorMessage) {
+    const stmt = this.db.prepare(`
+      UPDATE news_websites 
+      SET favicon_fetch_error = ?, favicon_updated_at = ?
+      WHERE id = ?
+    `);
+    const result = stmt.run(errorMessage, new Date().toISOString(), id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get news websites with their favicons for the widget dropdown
+   * Returns enriched data including favicon as data URL
+   * @param {boolean} [enabledOnly=true] - Only return enabled websites
+   * @returns {Array<Object>} - List with id, url, label, icon, faviconUrl
+   */
+  getNewsWebsitesForWidget(enabledOnly = true) {
+    const query = enabledOnly
+      ? `SELECT id, url, label, metadata, favicon_data, favicon_content_type, favicon_updated_at 
+         FROM news_websites WHERE enabled = 1 ORDER BY label, url`
+      : `SELECT id, url, label, metadata, favicon_data, favicon_content_type, favicon_updated_at 
+         FROM news_websites ORDER BY label, url`;
+    
+    const rows = this.db.prepare(query).all();
+    
+    return rows.map(row => {
+      // Parse metadata for icon emoji
+      let icon = '🌐';
+      try {
+        if (row.metadata) {
+          const meta = JSON.parse(row.metadata);
+          if (meta.icon) icon = meta.icon;
+        }
+      } catch {}
+      
+      // Build favicon data URL if available
+      let faviconUrl = null;
+      if (row.favicon_data && row.favicon_content_type) {
+        faviconUrl = `data:${row.favicon_content_type};base64,${row.favicon_data}`;
+      }
+      
+      return {
+        id: row.id,
+        url: row.url,
+        label: row.label || new URL(row.url).hostname,
+        icon,
+        faviconUrl,
+        hasFavicon: !!row.favicon_data,
+        faviconUpdatedAt: row.favicon_updated_at
+      };
+    });
+  }
+
+  /**
+   * Get websites that need favicon fetching
+   * @param {number} [maxAge=86400000] - Max age in ms before refetch (default 24h)
+   * @returns {Array<Object>} - Websites needing favicon fetch
+   */
+  getWebsitesNeedingFavicons(maxAge = 86400000) {
+    const cutoff = new Date(Date.now() - maxAge).toISOString();
+    const rows = this.db.prepare(`
+      SELECT id, url, label
+      FROM news_websites 
+      WHERE enabled = 1 
+        AND (favicon_updated_at IS NULL OR favicon_updated_at < ?)
+      ORDER BY favicon_updated_at ASC NULLS FIRST
+    `).all(cutoff);
+    return rows;
+  }
 }
 
 module.exports = NewsDatabase;

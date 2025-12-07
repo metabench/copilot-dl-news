@@ -34,3 +34,18 @@ AGI-accumulated knowledge catalog.
 **Example**: Moving NewsCrawler.crawlConcurrent to a separate file but changing its signature or requiring callers to import the new module
 
 ---
+
+## InnerHTML log rendering
+
+**Added**: 2025-12-07
+**Context**: crawl-widget/ui/controls/CrawlLogViewerControl.js
+
+**When to use**: Symptoms: UI components render log lines via innerHTML templates to rebuild lists
+
+**Steps/Details**:
+1. Why it's bad: innerHTML bypasses jsgui control lifecycle, risks injection, and breaks control-level event wiring expectations
+1. Better approach: Construct line elements via jsgui controls or safe DOM createElement/textContent; avoid innerHTML for dynamic log/output rendering
+
+**Example**: Previous implementation used containerEl.innerHTML = ... with string interpolation to render log lines
+
+---

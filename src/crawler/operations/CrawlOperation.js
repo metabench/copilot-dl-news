@@ -40,7 +40,8 @@ class CrawlOperation {
     overrides = {},
     defaults = {},
     logger = console,
-    createCrawler
+    createCrawler,
+    onProgress
   } = {}) {
     if (!createCrawler) {
       throw new Error('CrawlOperation run requires a createCrawler function');
@@ -51,11 +52,51 @@ class CrawlOperation {
 
     const normalizedStartUrl = String(startUrl).trim();
     const options = this.buildOptions(defaults, overrides);
-    console.log('[DEBUG] CrawlOperation options:', JSON.stringify(options, null, 2));
     const startedAt = Date.now();
     logger.info?.(`[CrawlOperations] ${this.name} starting: ${normalizedStartUrl}`);
 
     const crawler = createCrawler(normalizedStartUrl, options);
+
+    // Hook into crawler progress events if callback provided
+    if (typeof onProgress === 'function' && crawler && typeof crawler.on === 'function') {
+      crawler.on('progress', (data) => {
+        try {
+          onProgress({
+            type: 'progress',
+            operation: this.name,
+            startUrl: normalizedStartUrl,
+            timestamp: new Date().toISOString(),
+            stats: data.stats || {},
+            paused: data.paused || false,
+            abortRequested: data.abortRequested || false
+          });
+        } catch (err) {
+          // Ignore callback errors
+        }
+      });
+    }
+
+    // Output progress JSON to stdout when progressJson option is enabled
+    // This allows external processes (like Electron widget) to parse progress
+    if (options.progressJson && crawler && typeof crawler.on === 'function') {
+      crawler.on('progress', (data) => {
+        try {
+          const stats = data.stats || {};
+          const progressLine = JSON.stringify({
+            type: 'progress',
+            visited: stats.pagesVisited || stats.visited || 0,
+            queued: stats.queueSize || stats.queue || stats.queued || 0,
+            errors: stats.errorCount || stats.errors || 0,
+            articles: stats.articlesSaved || stats.articlesFound || stats.articles || 0,
+            downloaded: stats.pagesDownloaded || stats.downloaded || 0
+          });
+          process.stdout.write(progressLine + '\n');
+        } catch (err) {
+          // Ignore JSON serialization errors
+        }
+      });
+    }
+
     const response = {
       operation: this.name,
       startUrl: normalizedStartUrl,

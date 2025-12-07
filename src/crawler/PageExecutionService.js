@@ -35,7 +35,8 @@ class PageExecutionService {
     structureOnly = false,
     hubOnlyMode = false,
     getCountryHubBehavioralProfile = null,
-    outputVerbosity = DEFAULT_OUTPUT_VERBOSITY
+    outputVerbosity = DEFAULT_OUTPUT_VERBOSITY,
+    paginationPredictorService = null
   } = {}) {
     if (!fetchPipeline) {
       throw new Error('PageExecutionService requires a fetch pipeline');
@@ -86,6 +87,8 @@ class PageExecutionService {
       ? getCountryHubBehavioralProfile
       : () => null;
     this.outputVerbosity = normalizeOutputVerbosity(outputVerbosity);
+    // Phase 1: Pagination prediction for speculative crawling
+    this.paginationPredictorService = paginationPredictorService || null;
   }
 
   async processPage({ url, depth = 0, context = {} }) {
@@ -517,6 +520,19 @@ class PageExecutionService {
     let allLinks = processorResult?.allLinks || [];
     if (discoveryAllLinks && discoveryAllLinks.length > 0) {
       allLinks = discoveryAllLinks;
+    }
+
+    // Phase 1: Record page visit for pagination prediction
+    if (this.paginationPredictorService && allLinks.length > 0) {
+      try {
+        const linkUrls = allLinks
+          .filter(l => l && l.url)
+          .map(l => l.url);
+        this.paginationPredictorService.recordVisit(resolvedUrl, {
+          hasContent: !!(processorResult?.isArticle || allLinks.length > 5),
+          links: linkUrls
+        });
+      } catch (_) {}
     }
 
     if (this.hubOnlyMode && isCountryHubPage && typeof this.state?.recordCountryHubLinks === 'function') {

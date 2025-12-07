@@ -4,11 +4,12 @@
 
 ## Phase 1: Foundation & Reliability (The "Tenacious" Crawler)
 *Focus: Ensure the crawler never gives up and recovers from failures.*
+*Spec: [RELIABLE_CRAWLER_PHASE_1_SPEC.md](../designs/RELIABLE_CRAWLER_PHASE_1_SPEC.md)*
 
-- [ ] **Resilience Monitor**: A background loop that watches queue depth and throughput. If it stalls, it diagnoses why (network, blocking, empty queue).
-- [ ] **Archive Discovery**: Explicit logic to find and traverse `/archive`, `/sitemap`, and calendar-based navigation when the "fresh" news runs dry.
-- [ ] **Pagination Predictor**: Heuristic to detect and speculatively crawl pagination (`?page=N`, `/page/N`).
-- [ ] **Strict Validation**: A pipeline step that rejects "empty" or "garbage" articles (e.g., "Please enable JS to view this site") before they hit the DB.
+- [x] **Internal Resilience**: The crawler process monitors its own health (heartbeat), handles network drops by pausing, and implements domain-level circuit breakers for 429/403 errors. ✅ `ResilienceService` (16 tests)
+- [x] **Archive Discovery**: Explicit logic to find and traverse `/archive`, `/sitemap`, and calendar-based navigation when the "fresh" news runs dry. ✅ `ArchiveDiscoveryStrategy` (25 tests)
+- [x] **Pagination Predictor**: Heuristic to detect and speculatively crawl pagination (`?page=N`, `/page/N`). ✅ `PaginationPredictorService` (33 tests)
+- [x] **Strict Validation**: A pipeline step that rejects "empty" or "garbage" articles (e.g., "Please enable JS to view this site") before they hit the DB. ✅ `ContentValidationService` (16 tests)
 
 ## Phase 2: The Hybrid Architecture (The "Smart" Crawler)
 *Focus: Integrate headless browsing for layout learning and static analysis.*

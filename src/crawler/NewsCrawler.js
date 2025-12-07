@@ -248,7 +248,8 @@ const crawlerOptionsSchema = {
   cachedSeedUrls: { type: 'array', default: () => [] },
   loggingQueue: { type: 'boolean', default: true },
   loggingNetwork: { type: 'boolean', default: true },
-  loggingFetching: { type: 'boolean', default: true }
+  loggingFetching: { type: 'boolean', default: true },
+  progressJson: { type: 'boolean', default: false }
 };
 
 class NewsCrawler extends Crawler {
@@ -637,7 +638,50 @@ class NewsCrawler extends Crawler {
   }
 
   _getUrlDecision(rawUrl, context = {}) {
-    return this.urlDecisionService.getDecision(rawUrl, context);
+    const orchestration = this.urlDecisionOrchestrator;
+    const cachedOrchestration = orchestration && typeof orchestration._getCachedDecision === 'function'
+      ? orchestration._getCachedDecision(rawUrl)
+      : null;
+
+    const decision = this.urlDecisionService.getDecision(rawUrl, context);
+
+    if (cachedOrchestration) {
+      const merged = this._mergeOrchestrationDecision(cachedOrchestration, decision);
+      return merged;
+    }
+
+    // Seed orchestrator cache with legacy decision to keep pipelines aligned and avoid re-deciding.
+    if (orchestration && typeof orchestration._cacheDecision === 'function') {
+      const synthetic = this._synthesizeOrchestration(decision);
+      if (synthetic) {
+        orchestration._cacheDecision(rawUrl, synthetic);
+        return { ...decision, orchestration: synthetic };
+      }
+    }
+
+    return decision;
+  }
+
+  _mergeOrchestrationDecision(orchestration, legacyDecision) {
+    if (!legacyDecision) return null;
+    const allow = orchestration.action === 'fetch' || orchestration.action === 'cache' || orchestration.action === 'queue';
+    return {
+      ...legacyDecision,
+      allow,
+      reason: orchestration.reason || legacyDecision.reason || (allow ? 'eligible' : 'policy'),
+      orchestration,
+      analysis: legacyDecision.analysis || null
+    };
+  }
+
+  _synthesizeOrchestration(decision) {
+    if (!decision) return null;
+    const action = decision.allow ? 'fetch' : 'skip';
+    return {
+      action,
+      reason: decision.reason || (decision.allow ? 'eligible' : 'policy'),
+      analysis: decision.analysis || null
+    };
   }
 
   // --- Per-domain rate limiter state management ---
@@ -1531,6 +1575,16 @@ class NewsCrawler extends Crawler {
   }
 
   async _runCrawlSequence(mode) {
+    // Start Phase 1 resilience monitoring
+    if (this.resilienceService) {
+      this.resilienceService.start();
+    }
+
+    // Start the new abstractions context if installed
+    if (this._newAbstractionsAdapter?.context) {
+      this._newAbstractionsAdapter.context.start();
+    }
+
     const { runner, buildStartupSequence } = this._ensureStartupSequenceController();
     this._lastSequenceError = null;
     const sequence = buildStartupSequence(mode);
@@ -1693,6 +1747,34 @@ class NewsCrawler extends Crawler {
       if (!pick || !pick.item) {
         const queueSize = this.queue.size();
         if (queueSize === 0 && !this.isPaused()) {
+          // Phase 1: Try archive discovery and pagination speculation before declaring exhausted
+          let discovered = 0;
+          try {
+            if (this.archiveDiscoveryStrategy && typeof this.archiveDiscoveryStrategy.shouldTrigger === 'function') {
+              if (this.archiveDiscoveryStrategy.shouldTrigger(this.domain)) {
+                const archiveUrls = await this.archiveDiscoveryStrategy.discover(this.baseUrl, this.domain);
+                for (const url of archiveUrls) {
+                  if (!this.state.hasVisited(url)) {
+                    this.enqueueRequest({ url, depth: 1, type: 'discovery', source: 'archive-discovery' });
+                    discovered++;
+                  }
+                }
+              }
+            }
+            if (this.paginationPredictorService && typeof this.paginationPredictorService.generateAllSpeculative === 'function') {
+              const specUrls = this.paginationPredictorService.generateAllSpeculative();
+              for (const url of specUrls) {
+                if (!this.state.hasVisited(url)) {
+                  this.enqueueRequest({ url, depth: 1, type: 'discovery', source: 'pagination-speculation' });
+                  discovered++;
+                }
+              }
+            }
+          } catch (_) { /* discovery errors shouldn't halt crawl */ }
+          if (discovered > 0) {
+            this.telemetry.event?.('phase1-discovery-triggered', { discovered, source: 'queue-exhausted' });
+            continue; // retry pullNext with newly discovered URLs
+          }
           this._recordExit('queue-exhausted', {
             downloads: this.stats.pagesDownloaded,
             visited: this.stats.pagesVisited
@@ -1759,6 +1841,11 @@ class NewsCrawler extends Crawler {
   }
 
   async _finalizeRun({ includeCleanup = false } = {}) {
+    // Stop Phase 1 resilience monitoring
+    if (this.resilienceService) {
+      this.resilienceService.stop();
+    }
+
     const outcomeErr = this._determineOutcomeError();
     if (!this.exitSummary) {
       this._recordExit(outcomeErr ? 'failed' : 'completed', {
@@ -1781,6 +1868,25 @@ class NewsCrawler extends Crawler {
     log.stat('Articles saved', this.stats.articlesSaved);
     this.emitProgress(true);
     this.milestoneTracker.emitCompletionMilestone({ outcomeErr });
+
+    // Finish the new abstractions context and log consistency report
+    if (this._newAbstractionsAdapter) {
+      const adapter = this._newAbstractionsAdapter;
+      const ctx = adapter.context;
+      if (ctx) {
+        ctx.finish(outcomeErr ? 'failed' : 'completed', outcomeErr?.message);
+      }
+      const report = adapter.getConsistencyReport();
+      if (report.inconsistencies.length > 0) {
+        log.warn(`[NewAbstractions] Found ${report.inconsistencies.length} state inconsistencies`);
+        if (this.outputVerbosity >= 2) {
+          log.info('[NewAbstractions] Consistency report:', JSON.stringify(report.summary, null, 2));
+        }
+      } else if (this.outputVerbosity >= 1) {
+        log.info('[NewAbstractions] Shadow mode: State tracking consistent');
+      }
+      adapter.dispose();
+    }
 
     if (this.dbAdapter && this.dbAdapter.isEnabled()) {
       const count = this.dbAdapter.getArticleCount();

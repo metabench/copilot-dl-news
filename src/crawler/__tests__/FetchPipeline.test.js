@@ -260,4 +260,107 @@ describe('FetchPipeline', () => {
       host: 'retry.test'
     }));
   });
+
+  describe('orchestrator integration', () => {
+    it('skips via orchestrator decision without calling legacy decision and triggers policy skip', async () => {
+      const deps = baseDeps();
+      deps.getUrlDecision = jest.fn();
+      const handlePolicySkip = jest.fn();
+      const urlDecisionOrchestrator = {
+        decide: jest.fn(async () => ({
+          action: 'skip',
+          reason: 'query-superfluous',
+          analysis: { normalized: 'https://example.com/?q=foo' }
+        }))
+      };
+
+      const pipeline = new FetchPipeline({
+        ...deps,
+        handlePolicySkip,
+        getUrlDecision: deps.getUrlDecision,
+        urlDecisionOrchestrator,
+        fetchFn: deps.fetchFn
+      });
+
+      const result = await pipeline.fetch({
+        url: 'https://example.com/?q=foo',
+        context: { depth: 0 }
+      });
+
+      expect(urlDecisionOrchestrator.decide).toHaveBeenCalledWith(
+        'https://example.com/?q=foo',
+        expect.objectContaining({ phase: 'fetch', depth: 0 })
+      );
+      expect(deps.getUrlDecision).not.toHaveBeenCalled();
+      expect(handlePolicySkip).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'query-superfluous' }),
+        expect.objectContaining({ depth: 0, normalizedUrl: 'https://example.com/?q=foo' })
+      );
+      expect(result.source).toBe('skipped');
+      expect(result.meta.status).toBe('skipped-policy');
+      expect(result.meta.reason).toBe('query-superfluous');
+    });
+
+    it('forces cache via orchestrator decision and skips network when cache is served', async () => {
+      const deps = baseDeps();
+      deps.getUrlDecision = jest.fn();
+      const cached = { html: '<html></html>', crawledAt: new Date().toISOString(), source: 'db' };
+      deps.getCachedArticle.mockResolvedValue(cached);
+      const urlDecisionOrchestrator = {
+        decide: jest.fn(async () => ({
+          action: 'cache',
+          reason: 'rate-limit',
+          analysis: { normalized: 'https://example.com/page' }
+        }))
+      };
+
+      const pipeline = new FetchPipeline({
+        ...deps,
+        getUrlDecision: deps.getUrlDecision,
+        urlDecisionOrchestrator,
+        fetchFn: deps.fetchFn
+      });
+
+      const result = await pipeline.fetch({
+        url: 'https://example.com/page',
+        context: { depth: 1 }
+      });
+
+      expect(urlDecisionOrchestrator.decide).toHaveBeenCalled();
+      expect(deps.getUrlDecision).not.toHaveBeenCalled();
+      expect(deps.acquireDomainToken).not.toHaveBeenCalled();
+      expect(result.source).toBe('cache');
+      expect(result.meta.cacheInfo.reason).toBe('rate-limit');
+    });
+
+    it('defers via orchestrator decision and returns a skipped result', async () => {
+      const deps = baseDeps();
+      deps.getUrlDecision = jest.fn();
+      const urlDecisionOrchestrator = {
+        decide: jest.fn(async () => ({
+          action: 'defer',
+          reason: 'domain-throttled',
+          analysis: { normalized: 'https://example.com/page' }
+        }))
+      };
+
+      const pipeline = new FetchPipeline({
+        ...deps,
+        getUrlDecision: deps.getUrlDecision,
+        urlDecisionOrchestrator,
+        fetchFn: deps.fetchFn
+      });
+
+      const result = await pipeline.fetch({
+        url: 'https://example.com/page',
+        context: { depth: 2 }
+      });
+
+      expect(urlDecisionOrchestrator.decide).toHaveBeenCalled();
+      expect(deps.getUrlDecision).not.toHaveBeenCalled();
+      expect(result.source).toBe('skipped');
+      expect(result.meta.status).toBe('skipped-deferred');
+      expect(result.meta.reason).toBe('domain-throttled');
+    });
+  });
 });

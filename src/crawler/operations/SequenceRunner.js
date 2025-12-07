@@ -2,7 +2,7 @@
 
 const { cloneOptions } = require('./CrawlOperation');
 const { normalizeSequence } = require('./sequenceUtils');
-const { createSequenceRunner } = require('../../orchestration/SequenceRunner');
+const { createSequenceRunner } = require('../sequence/SequenceRunner');
 
 const createOperationsFacade = (invokeOperation, listOperations) => new Proxy({}, {
   get(_, prop) {

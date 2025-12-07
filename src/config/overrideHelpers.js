@@ -32,7 +32,8 @@ function parseSharedOverrides(argv, { allowUnknown = true } = {}) {
     .add('--logging-queue', 'Enable queue logging', undefined, 'boolean')
     .add('--output-verbosity <level>', 'Output verbosity level')
     .add('--concurrency <number>', 'Crawler concurrency', undefined, 'number')
-    .add('--planner-verbosity <number>', 'Planner verbosity', undefined, 'number');
+    .add('--planner-verbosity <number>', 'Planner verbosity', undefined, 'number')
+    .add('--progress-json', 'Output progress stats as JSON to stdout', undefined, 'boolean');
 
   const parsed = parser.parse(['node', 'crawl.js', ...argv]);
 
@@ -69,6 +70,9 @@ function buildSharedOverridesFromFlags(flags = {}) {
     }
     overrides.plannerVerbosity = parsed;
   }
+  if (flags.progressJson !== undefined) {
+    overrides.progressJson = Boolean(flags.progressJson);
+  }
   return overrides;
 }
 
@@ -93,6 +97,10 @@ function applyContextOverrideFlags(baseOverrides, context) {
   const plannerVerbosity = context.getIntegerFlag('--planner-verbosity');
   if (plannerVerbosity !== undefined) {
     overrides.plannerVerbosity = plannerVerbosity;
+  }
+  const progressJson = context.getBooleanFlag('--progress-json');
+  if (progressJson !== undefined) {
+    overrides.progressJson = progressJson;
   }
   return overrides;
 }

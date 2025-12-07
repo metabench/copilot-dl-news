@@ -68,6 +68,7 @@ class FetchPipeline {
    */
   constructor(opts) {
     this.getUrlDecision = opts.getUrlDecision;
+    this.urlDecisionOrchestrator = opts.urlDecisionOrchestrator || null;
     this.normalizeUrl = opts.normalizeUrl;
     this.isOnDomain = opts.isOnDomain;
     this.isAllowed = opts.isAllowed;
@@ -92,6 +93,9 @@ class FetchPipeline {
     this.recordError = opts.recordError;
     this.handleConnectionReset = opts.handleConnectionReset;
     this.telemetry = opts.telemetry || null;
+    // Phase 1: Resilience services
+    this.resilienceService = opts.resilienceService || null;
+    this.contentValidationService = opts.contentValidationService || null;
     this.articleHeaderCache = opts.articleHeaderCache;
     this.knownArticlesCache = opts.knownArticlesCache;
     this.getDbAdapter = typeof opts.getDbAdapter === 'function'
@@ -160,7 +164,17 @@ class FetchPipeline {
     if (Object.prototype.hasOwnProperty.call(decisionContext, '__networkRetry')) {
       delete decisionContext.__networkRetry;
     }
-    const decision = this.getUrlDecision(url, { ...decisionContext, phase: 'fetch', depth });
+    const orchestration = this.urlDecisionOrchestrator
+      ? await this.urlDecisionOrchestrator.decide(url, { ...decisionContext, phase: 'fetch', depth })
+      : null;
+    const decision = orchestration
+      ? {
+          allow: orchestration.action === 'fetch' || orchestration.action === 'cache',
+          reason: orchestration.reason || null,
+          analysis: orchestration.analysis || null,
+          orchestration
+        }
+      : this.getUrlDecision(url, { ...decisionContext, phase: 'fetch', depth });
     const analysis = decision?.analysis || {};
     const normalizedUrl = analysis && !analysis.invalid ? analysis.normalized : null;
 
@@ -169,6 +183,30 @@ class FetchPipeline {
         status: 'skipped',
         source: 'skipped',
         reason: 'normalize-failed'
+      });
+    }
+
+    if (orchestration && orchestration.action === 'skip') {
+      const reason = orchestration.reason || decision?.reason || 'policy';
+      if (this.handlePolicySkip && reason === 'query-superfluous') {
+        safeCall(() => this.handlePolicySkip(decision, { depth, context, normalizedUrl }));
+      }
+      return this._buildResult({
+        status: 'skipped-policy',
+        source: 'skipped',
+        reason,
+        url: normalizedUrl,
+        decision
+      });
+    }
+
+    if (orchestration && orchestration.action === 'defer') {
+      return this._buildResult({
+        status: 'skipped-deferred',
+        source: 'skipped',
+        reason: orchestration.reason || 'deferred',
+        url: normalizedUrl,
+        decision
       });
     }
 
@@ -205,17 +243,29 @@ class FetchPipeline {
       });
     }
 
+    const forceCache = orchestration && orchestration.action === 'cache';
+    const cacheContext = forceCache ? { ...context, forceCache: true } : context;
     const looksArticle = this.looksLikeArticle(normalizedUrl);
     const cacheResult = await this._tryCache({
       originalUrl: url,
       normalizedUrl,
       looksArticle,
-      context,
+      context: cacheContext,
       decision
     });
 
     if (cacheResult) {
       return cacheResult;
+    }
+
+    if (forceCache) {
+      return this._buildResult({
+        status: 'skipped-cache-miss',
+        source: 'skipped',
+        reason: orchestration.reason || 'cache-miss',
+        url: normalizedUrl,
+        decision
+      });
     }
 
     return this._performNetworkFetch({
@@ -702,6 +752,46 @@ class FetchPipeline {
       this._noteHostSuccess(this._safeHost(finalUrl, host));
       this.noteSuccess(host);
 
+      // Phase 1: Record activity and validate content
+      if (this.resilienceService) {
+        this.resilienceService.recordActivity();
+        this.resilienceService.recordSuccess(host);
+      }
+
+      // Phase 1: Content validation - reject garbage content before processing
+      if (this.contentValidationService && html) {
+        const validation = this.contentValidationService.validate({
+          url: finalUrl,
+          html,
+          statusCode: status,
+          headers: actualResponse.headers
+        });
+        if (!validation.valid) {
+          this.logger.warn(`[content-validation] Rejected ${finalUrl}: ${validation.reason}`, { type: 'VALIDATION' });
+          if (this.telemetry) {
+            this.telemetry.problem({
+              kind: 'content-validation-failed',
+              scope: host,
+              message: validation.reason,
+              details: { url: finalUrl, failureType: validation.failureType, pattern: validation.details?.matchedPattern }
+            });
+          }
+          // Hard failures (bot protection, rate limits) should trigger circuit breaker
+          if (validation.failureType === 'hard' && this.resilienceService) {
+            this.resilienceService.recordFailure(host, 'content-rejection', validation.reason);
+          }
+          return this._buildResult({
+            status: 'skipped',
+            source: 'validation-failed',
+            url: finalUrl,
+            html: null,
+            fetchMeta,
+            decision,
+            reason: validation.reason
+          });
+        }
+      }
+
       return this._buildResult({
         status: 'success',
         source: 'network',
@@ -740,6 +830,12 @@ class FetchPipeline {
       const isConnectionReset = strategy === 'connection-reset';
       const isRetryableCode = strategy === 'network-code';
       this.logger.error(`[network] Failed ${normalizedUrl} after ${attempt}/${totalAttempts} attempts${errorCode ? ` (code=${errorCode})` : ''}: ${errorMessage}`, { type: 'NETWORK' });
+
+      // Phase 1: Record failure with resilience service for circuit breaker tracking
+      if (this.resilienceService) {
+        this.resilienceService.recordFailure(host, strategy, errorMessage);
+      }
+
       this.recordError({
         kind: 'exception',
         classification: strategy,

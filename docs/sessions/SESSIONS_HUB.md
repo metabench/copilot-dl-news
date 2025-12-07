@@ -31,6 +31,177 @@
 
 ## Current Session
 
+### Session 2025-12-07: Crawler compact app jsgui3 binding
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Use jsgui3 controls for event binding in crawler compact electron app
+
+**Location**: `docs/sessions/2025-12-07-crawler-compact-jsgui3/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-crawler-compact-jsgui3/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-crawler-compact-jsgui3/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-crawler-compact-jsgui3/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-crawler-compact-jsgui3/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-crawler-compact-jsgui3/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Investigate memory MCP server responsiveness
+
+**Duration**: Active
+**Type**: investigation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Find why memory MCP server not responding and ensure error handling
+
+**Location**: `docs/sessions/2025-12-07-memory-mcp-check/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-memory-mcp-check/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-memory-mcp-check/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-memory-mcp-check/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-memory-mcp-check/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-memory-mcp-check/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Split crawl widget controls into modules
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Modularize crawl widget controls for reuse and SSR
+
+**Location**: `docs/sessions/2025-12-07-crawl-controls-split/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-crawl-controls-split/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-crawl-controls-split/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-crawl-controls-split/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-crawl-controls-split/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-crawl-controls-split/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Reliable Crawler Phase 1 Implementation
+
+**Duration**: Active
+**Type**: implementation
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Implement ResilienceService, ContentValidationService, and wire them into the crawler
+
+**Location**: `docs/sessions/2025-12-07-reliable-crawler-phase1-impl/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-reliable-crawler-phase1-impl/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-reliable-crawler-phase1-impl/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-reliable-crawler-phase1-impl/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-reliable-crawler-phase1-impl/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-reliable-crawler-phase1-impl/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Reliable Crawler Phase 1 Planning
+
+**Duration**: Active
+**Type**: planning
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Create detailed specification for Phase 1 of the Reliable News Crawler
+
+**Location**: `docs/sessions/2025-12-07-reliable-crawler-phase1-planning/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-reliable-crawler-phase1-planning/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-reliable-crawler-phase1-planning/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-reliable-crawler-phase1-planning/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-reliable-crawler-phase1-planning/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-reliable-crawler-phase1-planning/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Increase crawl widget log area
+
+**Duration**: Active
+**Type**: ui-fix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Give crawling logs more space in crawl electron app
+
+**Location**: `docs/sessions/2025-12-07-crawl-widget-log-space/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-crawl-widget-log-space/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-crawl-widget-log-space/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-crawl-widget-log-space/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-crawl-widget-log-space/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-crawl-widget-log-space/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: UrlDecision orchestrator wiring
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Finish orchestrator integration and run focused queue/fetch tests
+
+**Location**: `docs/sessions/2025-12-07-orchestrator-wiring/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-orchestrator-wiring/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-orchestrator-wiring/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-orchestrator-wiring/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-orchestrator-wiring/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-orchestrator-wiring/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Wire UrlDecisionOrchestrator
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Replace legacy decision flow with orchestrator in queue/fetch
+
+**Location**: `docs/sessions/2025-12-07-phase3-url-decisions/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-phase3-url-decisions/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-phase3-url-decisions/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-phase3-url-decisions/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-phase3-url-decisions/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-phase3-url-decisions/FOLLOW_UPS.md)
+
+
+### Session 2025-12-07: Phase 2 SequenceRunner unification
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Integrate unified sequence runner and finalize crawler abstraction integration
+
+**Location**: `docs/sessions/2025-12-07-crawler-abstraction-phase2/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-crawler-abstraction-phase2/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-crawler-abstraction-phase2/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-crawler-abstraction-phase2/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-crawler-abstraction-phase2/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-crawler-abstraction-phase2/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-07: Split z-server control factory
 
 **Duration**: Active

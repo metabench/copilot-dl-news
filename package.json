@@ -101,6 +101,7 @@
   "devDependencies": {
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
+    "@electron/rebuild": "^4.0.1",
     "@xmldom/xmldom": "^0.8.11",
     "babel-jest": "^30.2.0",
     "cross-env": "^10.1.0",
@@ -137,6 +138,9 @@
     "transform": {
       "^.+\\.js$": "babel-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(parse5|entities|jsdom)/)"
+    ],
     "watchman": false,
     "watch": false,
     "watchAll": false
