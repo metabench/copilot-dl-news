@@ -8,7 +8,6 @@
  * @module src/ui/server/dataExplorer/views/crawls
  */
 
-const { formatDateTime } = require("../utils/formatting");
 const { listRecentCrawls } = require("../../../../db/sqlite/v1/queries/ui/crawls");
 const {
   buildCrawlJobColumns,
@@ -16,7 +15,7 @@ const {
 } = require("../../../controls/CrawlJobsTable");
 
 // Import shared constants (DRY)
-const { CRAWL_LIMIT } = require("./shared");
+const { CRAWL_LIMIT, buildViewMeta } = require("./shared");
 
 /**
  * Render crawl jobs view
@@ -33,13 +32,13 @@ function renderCrawlJobsView({ db, relativeDb, now }) {
     title: "Recent Crawl Jobs",
     columns: buildCrawlJobColumns(),
     rows,
-    meta: {
+    meta: buildViewMeta({
       rowCount: rows.length,
       limit: CRAWL_LIMIT,
-      dbLabel: relativeDb,
-      generatedAt: formatDateTime(now, true),
+      relativeDb,
+      now,
       subtitle
-    }
+    })
   };
 }
 

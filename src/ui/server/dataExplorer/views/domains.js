@@ -20,7 +20,8 @@ const { buildBackLinkTarget } = require("../../navigation");
 const {
   attachBackLink,
   DOMAIN_WINDOW_SIZE,
-  DOMAIN_LIMIT
+  DOMAIN_LIMIT,
+  buildViewMeta
 } = require("./shared");
 
 /**
@@ -63,26 +64,27 @@ function renderDomainSummaryView({ req, db, relativeDb, now }) {
   const subtitle = rows.length === 0
     ? `No recent domain saves found in ${relativeDb}`
     : buildDomainSubtitle(rows.length, snapshot);
+  const metrics = snapshot.cache
+    ? {
+        statKey: snapshot.cache.statKey,
+        generatedAt: snapshot.cache.generatedAt,
+        stale: snapshot.cache.stale,
+        maxAgeMs: snapshot.cache.maxAgeMs,
+        source: snapshot.source
+      }
+    : undefined;
   return {
     title: "Recent Domain Activity",
     columns: buildDomainSummaryColumns(),
     rows,
-    meta: {
+    meta: buildViewMeta({
       rowCount: rows.length,
       limit: DOMAIN_LIMIT,
-      dbLabel: relativeDb,
-      generatedAt: formatDateTime(now, true),
+      relativeDb,
+      now,
       subtitle,
-      metrics: snapshot.cache
-        ? {
-            statKey: snapshot.cache.statKey,
-            generatedAt: snapshot.cache.generatedAt,
-            stale: snapshot.cache.stale,
-            maxAgeMs: snapshot.cache.maxAgeMs,
-            source: snapshot.source
-          }
-        : undefined
-    }
+      extra: metrics ? { metrics } : {}
+    })
   };
 }
 

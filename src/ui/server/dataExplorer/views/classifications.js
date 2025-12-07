@@ -8,7 +8,8 @@
  * @module src/ui/server/dataExplorer/views/classifications
  */
 
-const { formatDateTime, formatCount } = require("../utils/formatting");
+const { formatCount } = require("../utils/formatting");
+const { buildViewMeta } = require("./shared");
 const { listClassificationsWithCounts } = require("../../../../db/sqlite/v1/queries/ui/classificationTypes");
 
 /**
@@ -61,13 +62,13 @@ function renderClassificationsView({ db, relativeDb, now }) {
     title: "Document Classifications",
     columns: buildClassificationColumns(),
     rows: buildClassificationRows(classifications),
-    meta: {
+    meta: buildViewMeta({
       rowCount: classifications.length,
       limit: classifications.length,
-      dbLabel: relativeDb,
-      generatedAt: formatDateTime(now, true),
+      relativeDb,
+      now,
       subtitle
-    }
+    })
   };
 }
 

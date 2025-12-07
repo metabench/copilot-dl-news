@@ -51,11 +51,11 @@ const {
   ensureGazetteer,
 } = require('../db/sqlite');
 const {
-  createSequenceRunner
-} = require('../orchestration/SequenceRunner');
-const {
   createSequenceResolverMap
 } = require('../orchestration/createSequenceResolvers');
+const {
+  createStartupSequenceController
+} = require('./startupSequence');
 // Enhanced features (optional)
 const {
   ConfigManager
@@ -1523,154 +1523,17 @@ class NewsCrawler extends Crawler {
     return false;
   }
 
-  _ensureStartupSequenceRunner() {
-    if (this._startupSequenceRunner) {
-      return this._startupSequenceRunner;
+  _ensureStartupSequenceController() {
+    if (!this._startupSequenceController) {
+      this._startupSequenceController = createStartupSequenceController({ crawler: this, log });
     }
-
-    const wrap = (handler) => async (_startUrl, overrides = {}) => {
-      try {
-        const result = await handler.call(this, overrides || {});
-        if (result && typeof result === 'object' && typeof result.status === 'string') {
-          return result;
-        }
-        if (result && typeof result === 'object') {
-          return { status: 'ok', ...result };
-        }
-        return { status: 'ok' };
-      } catch (error) {
-        this._lastSequenceError = error;
-        throw error;
-      }
-    };
-
-    const operations = {
-      init: wrap(async () => {
-        await this.init();
-      }),
-      planner: wrap(async () => {
-        await this._runPlannerStage();
-      }),
-      sitemaps: wrap(async () => {
-        await this._runSitemapStage();
-      }),
-      seedStartUrl: wrap(async (overrides) => {
-        this._seedInitialRequest(overrides);
-      }),
-      markStartupComplete: wrap(async (overrides) => {
-        const message = overrides && typeof overrides.message === 'string'
-          ? overrides.message
-          : overrides && typeof overrides.statusText === 'string'
-            ? overrides.statusText
-            : null;
-        this._markStartupComplete(message);
-      }),
-      runSequentialLoop: wrap(async () => {
-        await this._runSequentialLoop();
-      }),
-      runConcurrentWorkers: wrap(async () => {
-        await this._runConcurrentWorkers();
-      }),
-      runGazetteerMode: wrap(async () => {
-        await this._runGazetteerMode();
-      })
-    };
-
-    operations.listOperations = () => [
-      'init',
-      'planner',
-      'sitemaps',
-      'seedStartUrl',
-      'markStartupComplete',
-      'runSequentialLoop',
-      'runConcurrentWorkers',
-      'runGazetteerMode'
-    ];
-
-    const telemetryAdapter = {
-      onSequenceStart: (payload) => {
-        if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
-          this.telemetry.milestoneOnce(`sequence:start:${payload.sequence?.sequenceName || 'unknown'}`, {
-            kind: 'sequence-start',
-            message: `Starting sequence ${payload.sequence?.sequenceName || 'unknown'}`,
-            details: payload
-          });
-        }
-      },
-      onSequenceComplete: (payload) => {
-        if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
-          this.telemetry.milestoneOnce(`sequence:complete:${payload.sequence?.sequenceName || 'unknown'}`, {
-            kind: 'sequence-complete',
-            message: `Completed sequence ${payload.sequence?.sequenceName || 'unknown'}`,
-            details: payload
-          });
-        }
-      },
-      onStepEvent: (payload) => {
-        if (this.telemetry && typeof this.telemetry.milestoneOnce === 'function') {
-          this.telemetry.milestoneOnce(`sequence:step:${payload.step?.id || 'unknown'}`, {
-            kind: 'sequence-step',
-            message: `Step ${payload.step?.id || 'unknown'}: ${payload.event}`,
-            details: payload
-          });
-        }
-      }
-    };
-
-    this._startupSequenceRunner = createSequenceRunner({
-      operations,
-      logger: log,
-      telemetry: telemetryAdapter
-    });
-
-    return this._startupSequenceRunner;
-  }
-
-  _buildStartupSequence(mode) {
-    const metadata = {
-      sequenceName: `newsCrawler:${mode}`,
-      mode
-    };
-
-    if (mode === 'gazetteer') {
-      return {
-        metadata,
-        startUrl: this.startUrl,
-        steps: [
-          { id: 'init', operation: 'init', label: 'Initialize crawler' },
-          { id: 'gazetteer', operation: 'runGazetteerMode', label: 'Run gazetteer mode' }
-        ]
-      };
-    }
-
-    const steps = [
-      { id: 'init', operation: 'init', label: 'Initialize crawler' },
-      { id: 'planner', operation: 'planner', label: 'Run planner' },
-      { id: 'sitemaps', operation: 'sitemaps', label: 'Load sitemaps' },
-      {
-        id: 'seed-start-url',
-        operation: 'seedStartUrl',
-        label: 'Seed start URL',
-        overrides: { respectSitemapOnly: mode !== 'sequential' }
-      },
-      { id: 'startup-complete', operation: 'markStartupComplete', label: 'Mark startup complete' }
-    ];
-
-    steps.push(mode === 'sequential'
-      ? { id: 'sequential-loop', operation: 'runSequentialLoop', label: 'Process crawl queue' }
-      : { id: 'concurrent-workers', operation: 'runConcurrentWorkers', label: 'Run crawl workers' });
-
-    return {
-      metadata,
-      startUrl: this.startUrl,
-      steps
-    };
+    return this._startupSequenceController;
   }
 
   async _runCrawlSequence(mode) {
-    const runner = this._ensureStartupSequenceRunner();
-    const sequence = this._buildStartupSequence(mode);
+    const { runner, buildStartupSequence } = this._ensureStartupSequenceController();
     this._lastSequenceError = null;
+    const sequence = buildStartupSequence(mode);
 
     const summary = await runner.run({
       sequenceConfig: sequence,

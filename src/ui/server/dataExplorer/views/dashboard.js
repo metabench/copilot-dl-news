@@ -11,7 +11,7 @@
 const jsgui = require("jsgui3-html");
 const StringControl = jsgui.String_Control;
 
-const { formatCount, formatDateTime } = require("../utils/formatting");
+const { formatCount } = require("../utils/formatting");
 const { createHomeCardLoaders } = require("../../../homeCardData");
 const { buildHomeCards: buildSharedHomeCards } = require("../../../homeCards");
 
@@ -22,7 +22,8 @@ const {
   DOMAIN_WINDOW_SIZE,
   DOMAIN_LIMIT,
   HOME_CARD_CRAWL_LIMIT,
-  HOME_CARD_ERROR_LIMIT
+  HOME_CARD_ERROR_LIMIT,
+  buildViewMeta
 } = require("./shared");
 
 /**
@@ -164,13 +165,13 @@ function renderDashboardView({ db, relativeDb, now }) {
     title: "Crawler Operations Dashboard",
     columns: [],
     rows: [],
-    meta: {
+    meta: buildViewMeta({
       rowCount: 0,
       limit: 0,
-      dbLabel: relativeDb,
-      generatedAt: formatDateTime(now, true),
+      relativeDb,
+      now,
       subtitle
-    },
+    }),
     renderOptions: {
       homeCards,
       layoutMode: "dashboard",

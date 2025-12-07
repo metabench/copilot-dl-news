@@ -11,6 +11,7 @@
 const { formatDateTime } = require("../utils/formatting");
 const { listConfiguration } = require("../../../../db/sqlite/v1/queries/ui/configuration");
 const { ConfigMatrixControl } = require("../../../controls/ConfigMatrixControl");
+const { buildViewMeta } = require("./shared");
 
 /**
  * Render the configuration view
@@ -40,13 +41,13 @@ function renderConfigView({ db, relativeDb, now }) {
     title: "Configuration",
     columns: [],
     rows: [],
-    meta: {
+    meta: buildViewMeta({
       rowCount: settings.length,
       limit: settings.length,
-      dbLabel: relativeDb,
-      generatedAt: formatDateTime(now, true),
+      relativeDb,
+      now,
       subtitle: `${settings.length} settings loaded from ${relativeDb}`
-    },
+    }),
     renderOptions: {
       layoutMode: "single-control",
       mainControl: control

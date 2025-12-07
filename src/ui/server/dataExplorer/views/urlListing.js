@@ -24,7 +24,8 @@ const { buildBackLinkTarget } = require("../../navigation");
 // Import shared utilities (DRY)
 const {
   attachBackLinks,
-  buildUrlTotals
+  buildUrlTotals,
+  buildViewMeta
 } = require("./shared");
 
 /**
@@ -123,13 +124,17 @@ function buildUrlListingPayload({ req, db, relativeDb, pageSize, now, basePathOv
       filters
     });
   const meta = {
-    rowCount: rows.length,
-    limit: pageSize,
-    dbLabel: relativeDb,
-    generatedAt: formatDateTime(now, true),
-    subtitle,
-    pagination,
-    filters: { ...filters }
+    ...buildViewMeta({
+      rowCount: rows.length,
+      limit: pageSize,
+      relativeDb,
+      now,
+      subtitle,
+      extra: {
+        pagination,
+        filters: { ...filters }
+      }
+    })
   };
   return {
     rows,

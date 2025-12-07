@@ -31,6 +31,44 @@
 
 ## Current Session
 
+### Session 2025-12-07: Split z-server control factory
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Modularize z-server controls into separate files with shared index
+
+**Location**: `docs/sessions/2025-12-07-zserver-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-zserver-controls/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-zserver-controls/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-zserver-controls/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-zserver-controls/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-zserver-controls/FOLLOW_UPS.md)
+
+
+### Session 2025-12-06: Post-push code structure review
+
+**Duration**: Active
+**Type**: analysis
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify structural improvements after recent additions
+
+**Location**: `docs/sessions/2025-12-06-structure-review/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-06-structure-review/INDEX.md)
+- 🗺️ [Plan](./2025-12-06-structure-review/PLAN.md)
+- 📝 [Working Notes](./2025-12-06-structure-review/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-06-structure-review/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-06-structure-review/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-06: NewsCrawler & DomainProcessor slicing
 
 **Duration**: Active

@@ -8,7 +8,6 @@
  * @module src/ui/server/dataExplorer/views/errors
  */
 
-const { formatDateTime } = require("../utils/formatting");
 const { listRecentErrors } = require("../../../../db/sqlite/v1/queries/ui/errors");
 const {
   buildErrorLogColumns,
@@ -17,7 +16,13 @@ const {
 const { buildBackLinkTarget } = require("../../navigation");
 
 // Import shared utilities (DRY)
-const { attachBackLinks, ERROR_LIMIT } = require("./shared");
+const {
+  attachBackLinks,
+  ERROR_LIMIT,
+  buildViewMeta,
+  buildCountSubtitle,
+  buildEmptySubtitle
+} = require("./shared");
 
 /**
  * Render error log view
@@ -30,19 +35,19 @@ function renderErrorLogView({ req, db, relativeDb, now }) {
   const backTarget = buildBackLinkTarget(req, { defaultLabel: "Errors" });
   attachBackLinks(rows, ["host", "url"], backTarget);
   const subtitle = rows.length === 0
-    ? `No recent errors recorded in ${relativeDb}`
-    : `Latest ${rows.length} error rows captured from ${relativeDb}`;
+    ? buildEmptySubtitle("recent errors", relativeDb)
+    : buildCountSubtitle(rows.length, "error rows", relativeDb);
   return {
     title: "Recent Crawl Errors",
     columns: buildErrorLogColumns(),
     rows,
-    meta: {
+    meta: buildViewMeta({
       rowCount: rows.length,
       limit: ERROR_LIMIT,
-      dbLabel: relativeDb,
-      generatedAt: formatDateTime(now, true),
+      relativeDb,
+      now,
       subtitle
-    }
+    })
   };
 }
 
