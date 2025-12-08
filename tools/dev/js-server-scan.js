@@ -211,8 +211,19 @@ const DEFAULT_EXCLUDES = [
   'screenshots'
 ];
 
-function discoverJsFiles(rootDir, excludes = DEFAULT_EXCLUDES, extensions = DEFAULT_EXTENSIONS) {
+function discoverJsFiles(rootDir, excludes = DEFAULT_EXCLUDES, extensions = DEFAULT_EXTENSIONS, progressEmitter = null) {
   const files = [];
+  let lastEmit = Date.now();
+  const emitIntervalMs = 125;
+  
+  function maybeEmitCount(relativePath) {
+    if (!progressEmitter) return;
+    const now = Date.now();
+    if (now - lastEmit >= emitIntervalMs) {
+      progressEmitter.emit({ type: 'count-progress', current: files.length, file: relativePath });
+      lastEmit = now;
+    }
+  }
   
   function walk(dir) {
     let entries;
@@ -240,12 +251,17 @@ function discoverJsFiles(rootDir, excludes = DEFAULT_EXCLUDES, extensions = DEFA
         const ext = path.extname(entry.name).toLowerCase();
         if (extensions.includes(ext)) {
           files.push(fullPath);
+          maybeEmitCount(relativePath);
         }
       }
     }
   }
   
   walk(rootDir);
+  // Emit a final count-progress in case the tree was small and never emitted
+  if (progressEmitter) {
+    progressEmitter.emit({ type: 'count-progress', current: files.length, file: null });
+  }
   return files;
 }
 
@@ -268,8 +284,9 @@ function main() {
   if (options.progress) {
     const emitter = new ProgressEmitter(17); // 17ms = ~60fps
     
-    // Phase 1: Count files first
-    const files = discoverJsFiles(rootDir);
+    // Phase 1: Count files first (with live progress)
+    emitter.emit({ type: 'count-start' });
+    const files = discoverJsFiles(rootDir, DEFAULT_EXCLUDES, DEFAULT_EXTENSIONS, emitter);
     emitter.emit({ type: 'count', total: files.length });
     
     // Phase 2: Scan and analyze each file with progress

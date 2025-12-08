@@ -83,7 +83,19 @@ ipcMain.handle('scan-servers', async () => {
         try {
           const msg = JSON.parse(line);
           
-          if (msg.type === 'count') {
+          if (msg.type === 'count-start') {
+            if (mainWindow) {
+              mainWindow.webContents.send('scan-progress', { type: 'count-start' });
+            }
+          } else if (msg.type === 'count-progress') {
+            if (mainWindow) {
+              mainWindow.webContents.send('scan-progress', {
+                type: 'count-progress',
+                current: msg.current,
+                file: msg.file || null
+              });
+            }
+          } else if (msg.type === 'count') {
             // Initial count - send to renderer
             if (mainWindow) {
               mainWindow.webContents.send('scan-progress', { type: 'count', total: msg.total });

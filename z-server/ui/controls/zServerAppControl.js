@@ -62,7 +62,11 @@ function createZServerAppControl(jsgui, { TitleBarControl, SidebarControl, Conte
         
         this._api.onScanProgress((progress) => {
           console.log("[ZServerApp] Scan progress:", progress);
-          if (progress.type === 'count') {
+          if (progress.type === 'count-start') {
+            this._contentArea.setScanCounting();
+          } else if (progress.type === 'count-progress') {
+            this._contentArea.setScanCountingProgress(progress.current, progress.file);
+          } else if (progress.type === 'count') {
             this._contentArea.setScanTotal(progress.total);
           } else if (progress.type === 'progress') {
             this._contentArea.setScanProgress(progress.current, progress.total, progress.file);

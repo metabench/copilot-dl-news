@@ -201,6 +201,14 @@ function createContentAreaControl(jsgui, {
       this._scanningIndicator.setProgress(current, total, file);
     }
 
+    setScanCounting() {
+      this._scanningIndicator.startCounting();
+    }
+
+    setScanCountingProgress(current, file) {
+      this._scanningIndicator.setCountingProgress(current, file);
+    }
+
     setScanTotal(total) {
       this._scanningIndicator.setTotal(total);
     }

@@ -14,6 +14,8 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
       this._total = 0;
       this._current = 0;
       this._currentFile = "";
+      this._isCounting = false;
+      this._countTick = 0;
       
       if (!spec.el) {
         this.compose();
@@ -89,7 +91,25 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
       this._updateProgress();
     }
 
+    startCounting() {
+      this._isCounting = true;
+      this._current = 0;
+      this._total = 0;
+      this._currentFile = "";
+      this._countTick = 0;
+      this._updateCountingProgress();
+    }
+
+    setCountingProgress(current, file) {
+      this._isCounting = true;
+      this._current = current;
+      this._currentFile = file || "";
+      this._countTick++;
+      this._updateCountingProgress();
+    }
+
     setProgress(current, total, file) {
+      this._isCounting = false;
       this._current = current;
       this._total = total || this._total;
       this._currentFile = file || "";
@@ -97,6 +117,10 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
     }
 
     _updateProgress() {
+      if (this._isCounting) {
+        this._updateCountingProgress();
+        return;
+      }
       const percent = this._total > 0 ? (this._current / this._total) * 100 : 0;
       
       if (!this._progressFillEl?.dom?.el && this.dom.el) {
@@ -120,6 +144,30 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
           ? "..." + this._currentFile.slice(-47) 
           : this._currentFile;
         this._subtitleEl.dom.el.textContent = displayFile;
+      } else if (this._subtitleEl && this._subtitleEl.dom.el && !this._currentFile) {
+        this._subtitleEl.dom.el.textContent = "Analyzing JavaScript files in repository";
+      }
+    }
+
+    _updateCountingProgress() {
+      // Indeterminate-style progress during counting with a pulsing width
+      const percent = ((this._countTick % 40) / 40) * 100;
+      if (this._progressFillEl && this._progressFillEl.dom.el) {
+        this._progressFillEl.dom.el.style.width = `${percent}%`;
+      }
+      if (this._progressTextEl && this._progressTextEl.dom.el) {
+        const countLabel = this._current > 0 ? `Counting files (${this._current})...` : "Counting files...";
+        this._progressTextEl.dom.el.textContent = countLabel;
+      }
+      if (this._subtitleEl && this._subtitleEl.dom.el) {
+        if (this._currentFile) {
+          const displayFile = this._currentFile.length > 50 
+            ? "..." + this._currentFile.slice(-47) 
+            : this._currentFile;
+          this._subtitleEl.dom.el.textContent = displayFile;
+        } else {
+          this._subtitleEl.dom.el.textContent = "Scanning repository...";
+        }
       }
     }
 
@@ -127,6 +175,8 @@ function createScanningIndicatorControl(jsgui, { StringControl }) {
       this._total = 0;
       this._current = 0;
       this._currentFile = "";
+      this._isCounting = false;
+      this._countTick = 0;
       
       if (this._progressFillEl && this._progressFillEl.dom.el) {
         this._progressFillEl.dom.el.style.width = "0%";

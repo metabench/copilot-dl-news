@@ -31,6 +31,25 @@
 
 ## Current Session
 
+### Session 2025-12-07: Z-server scan counting
+
+**Duration**: Active
+**Type**: ui-dashboard
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Expose counting progress and messaging in z-server scan UI
+
+**Location**: `docs/sessions/2025-12-07-z-server-counting/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-07-z-server-counting/INDEX.md)
+- 🗺️ [Plan](./2025-12-07-z-server-counting/PLAN.md)
+- 📝 [Working Notes](./2025-12-07-z-server-counting/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-07-z-server-counting/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-07-z-server-counting/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-07: Crawler compact app jsgui3 binding
 
 **Duration**: Active
