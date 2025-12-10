@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" width="1400" height="1000">
+  <title>Interactive Crawl Observatory - Architecture</title>
+  <desc>Sandboxed decision editing with step-by-step crawl confirmation</desc>
+  
+  <!-- Stage 1: Raw information layout - minimal styling -->
+  <style>
+    text { font-family: monospace; font-size: 12px; fill: #333; }
+    .title { font-size: 18px; font-weight: bold; }
+    .section { font-size: 14px; font-weight: bold; }
+    .label { font-size: 11px; }
+    .small { font-size: 10px; fill: #666; }
+    rect { fill: none; stroke: #333; stroke-width: 1; }
+  </style>
+
+  <!-- TITLE -->
+  <text x="700" y="30" text-anchor="middle" class="title">🔬 Interactive Crawl Observatory — Architecture</text>
+  <text x="700" y="50" text-anchor="middle" class="small">Sandboxed Rule Editing • Step-by-Step Confirmation • AI-Operable APIs</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: PRODUCTION FILES (left column, top) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="50" y="90" class="section">📁 PRODUCTION FILES (read-only during session)</text>
+  
+  <rect x="50" y="100" width="300" height="180"/>
+  
+  <text x="60" y="120" class="label">config/decision-trees/</text>
+  <text x="70" y="135" class="small">├── page-categories.json</text>
+  <text x="70" y="148" class="small">├── url-classification.json</text>
+  <text x="70" y="161" class="small">└── hub-detection.json</text>
+  
+  <text x="60" y="185" class="label">config/priority-config.json</text>
+  <text x="70" y="200" class="small">├── bonuses: { hub: 15, article: 10, ... }</text>
+  <text x="70" y="213" class="small">├── weights: { depth: 0.2, freshness: 0.3 }</text>
+  <text x="70" y="226" class="small">└── thresholds: { minConfidence: 0.5 }</text>
+  
+  <text x="60" y="250" class="label">config/classification-patterns.json</text>
+  <text x="70" y="265" class="small">└── URL regexes, content signals</text>
+
+  <!-- Arrow: Production -> Sandbox (clone on start) -->
+  <line x1="350" y1="190" x2="420" y2="190" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="360" y="180" class="small">clone on</text>
+  <text x="360" y="192" class="small">session start</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: SANDBOX (center, top) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="430" y="90" class="section">🧪 SESSION SANDBOX (in-memory)</text>
+  
+  <rect x="430" y="100" width="350" height="180" stroke="#0066cc" stroke-width="2" stroke-dasharray="5,3"/>
+  
+  <text x="440" y="120" class="label">Working copies of all rules</text>
+  <text x="450" y="138" class="small">• Cloned from production at session start</text>
+  <text x="450" y="153" class="small">• ALL edits apply here (never to disk)</text>
+  <text x="450" y="168" class="small">• Crawler uses sandbox during session</text>
+  <text x="450" y="183" class="small">• Re-evaluate pending decisions on edit</text>
+  
+  <text x="440" y="205" class="label">Sandbox State:</text>
+  <text x="450" y="220" class="small">{ dirty: true, edits: 5, lastEdit: "bonuses.hub = 20" }</text>
+  
+  <text x="440" y="245" class="label">Diff from production:</text>
+  <text x="450" y="260" class="small">- bonuses.hub: 15 → 20</text>
+  <text x="450" y="273" class="small">- thresholds.minConfidence: 0.5 → 0.6</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: DISPOSITION OPTIONS (right, top) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="820" y="90" class="section">💾 SESSION END: DISPOSITION</text>
+  
+  <rect x="820" y="100" width="280" height="180"/>
+  
+  <text x="830" y="125" class="label">When session ends, choose:</text>
+  
+  <text x="840" y="150" class="small">🗑️ DISCARD</text>
+  <text x="860" y="163" class="small">   Sandbox evaporates, production unchanged</text>
+  
+  <text x="840" y="185" class="small">📝 SAVE AS VARIANT</text>
+  <text x="860" y="198" class="small">   → priority-config.experimental.json</text>
+  <text x="860" y="211" class="small">   → page-categories.aggressive.json</text>
+  
+  <text x="840" y="233" class="small">⚠️ REPLACE PRODUCTION</text>
+  <text x="860" y="246" class="small">   Overwrite original (auto-backup created)</text>
+  
+  <text x="840" y="268" class="small">📤 EXPORT JSON</text>
+  <text x="860" y="281" class="small">   Download file for offline analysis</text>
+
+  <!-- Arrow: Sandbox -> Disposition -->
+  <line x1="780" y1="190" x2="820" y2="190" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: OBSERVATORY CONTROLLER (center) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="50" y="320" class="section">🎛️ OBSERVATORY CONTROLLER</text>
+  
+  <rect x="50" y="330" width="730" height="200"/>
+  
+  <!-- Controller internals -->
+  <text x="60" y="355" class="label">Wraps NewsCrawler in step-by-step mode</text>
+  
+  <rect x="60" y="365" width="220" height="150" stroke="#999"/>
+  <text x="70" y="385" class="label">Decision Queue</text>
+  <text x="80" y="400" class="small">Pending decisions awaiting confirmation</text>
+  <text x="80" y="415" class="small">┌─────────────────────────┐</text>
+  <text x="80" y="428" class="small">│ dec_001: /world/uk  ⏳  │</text>
+  <text x="80" y="441" class="small">│ dec_002: /world/fr  ⏳  │</text>
+  <text x="80" y="454" class="small">│ dec_003: /article   ⏳  │</text>
+  <text x="80" y="467" class="small">└─────────────────────────┘</text>
+  <text x="80" y="485" class="small">status: pending|confirmed|rejected</text>
+  <text x="80" y="500" class="small">Pauses until user/AI confirms</text>
+  
+  <rect x="290" y="365" width="230" height="150" stroke="#999"/>
+  <text x="300" y="385" class="label">Decision Explainer</text>
+  <text x="310" y="400" class="small">Why this URL? What rules applied?</text>
+  <text x="310" y="420" class="small">┌─────────────────────────────┐</text>
+  <text x="310" y="433" class="small">│ URL: /world/uk              │</text>
+  <text x="310" y="446" class="small">│ Confidence: 85%             │</text>
+  <text x="310" y="459" class="small">│ Priority: 72                │</text>
+  <text x="310" y="472" class="small">│ Factors:                    │</text>
+  <text x="310" y="485" class="small">│   hub_tree: +27 (0.9×0.3)   │</text>
+  <text x="310" y="498" class="small">│   depth: +12 (0.6×0.2)      │</text>
+  <text x="310" y="511" class="small">└─────────────────────────────┘</text>
+  
+  <rect x="530" y="365" width="240" height="150" stroke="#999"/>
+  <text x="540" y="385" class="label">Confirmation API</text>
+  <text x="550" y="405" class="small">confirm(decisionId, { note })</text>
+  <text x="550" y="420" class="small">reject(decisionId, { reason })</text>
+  <text x="550" y="435" class="small">skip(decisionId)</text>
+  <text x="550" y="455" class="small">confirmBatch(ids)  // AI batch mode</text>
+  <text x="550" y="470" class="small">rejectBatch(ids)</text>
+  <text x="550" y="490" class="small">flagForReview(id)  // AI → Human</text>
+  <text x="550" y="510" class="small">getDecisionHistory({ limit, filter })</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: DECISION CHAIN (right side) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="820" y="320" class="section">⛓️ DECISION CHAIN</text>
+  
+  <rect x="820" y="330" width="280" height="200"/>
+  
+  <text x="830" y="355" class="label">Active rule files (ordered)</text>
+  <text x="830" y="375" class="small">Saving a variant ≠ adding to chain</text>
+  
+  <text x="840" y="400" class="small">1. page-categories.json [primary]</text>
+  <text x="840" y="415" class="small">2. page-categories.news.json [overlay]</text>
+  <text x="840" y="430" class="small">3. (your new variant here?)</text>
+  
+  <text x="830" y="460" class="label">Chain Management:</text>
+  <text x="840" y="478" class="small">addToChain(variant, position)</text>
+  <text x="840" y="493" class="small">removeFromChain(variant)</text>
+  <text x="840" y="508" class="small">reorderChain([...])</text>
+  <text x="840" y="523" class="small">setAsPrimary(variant)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6: UI LAYER (bottom left) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="50" y="560" class="section">🖥️ OBSERVATORY UI (jsgui3 controls)</text>
+  
+  <rect x="50" y="570" width="500" height="180"/>
+  
+  <text x="60" y="590" class="label">Dashboard Controls:</text>
+  
+  <rect x="60" y="600" width="150" height="60" stroke="#999"/>
+  <text x="70" y="620" class="small">DecisionQueueControl</text>
+  <text x="70" y="635" class="small">• List pending decisions</text>
+  <text x="70" y="650" class="small">• [✓] [✗] buttons</text>
+  
+  <rect x="220" y="600" width="150" height="60" stroke="#999"/>
+  <text x="230" y="620" class="small">DecisionDetailControl</text>
+  <text x="230" y="635" class="small">• Rationale display</text>
+  <text x="230" y="650" class="small">• Factor breakdown</text>
+  
+  <rect x="380" y="600" width="160" height="60" stroke="#999"/>
+  <text x="390" y="620" class="small">RuleEditorControl</text>
+  <text x="390" y="635" class="small">• Edit sandbox rules</text>
+  <text x="390" y="650" class="small">• See diff from prod</text>
+  
+  <rect x="60" y="670" width="150" height="60" stroke="#999"/>
+  <text x="70" y="690" class="small">DecisionHistoryControl</text>
+  <text x="70" y="705" class="small">• Past decisions log</text>
+  <text x="70" y="720" class="small">• Searchable/filterable</text>
+  
+  <rect x="220" y="670" width="150" height="60" stroke="#999"/>
+  <text x="230" y="690" class="small">SessionSummaryControl</text>
+  <text x="230" y="705" class="small">• Stats: 24✓ 8✗</text>
+  <text x="230" y="720" class="small">• Avg confidence: 0.76</text>
+  
+  <rect x="380" y="670" width="160" height="60" stroke="#999"/>
+  <text x="390" y="690" class="small">DecisionTreeViewerCtrl</text>
+  <text x="390" y="705" class="small">• Visualize tree</text>
+  <text x="390" y="720" class="small">• Highlight path taken</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 7: API LAYER (bottom center) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="580" y="560" class="section">🔌 OBSERVATORY SERVER API</text>
+  
+  <rect x="580" y="570" width="270" height="180"/>
+  
+  <text x="590" y="590" class="label">Express Routes:</text>
+  <text x="600" y="608" class="small">GET  /                 → Dashboard HTML</text>
+  <text x="600" y="623" class="small">GET  /api/decisions    → Pending queue</text>
+  <text x="600" y="638" class="small">POST /api/decisions/:id/confirm</text>
+  <text x="600" y="653" class="small">POST /api/decisions/:id/reject</text>
+  <text x="600" y="668" class="small">POST /api/decisions/batch</text>
+  <text x="600" y="683" class="small">GET  /api/sandbox      → Current sandbox state</text>
+  <text x="600" y="698" class="small">PATCH /api/sandbox     → Edit sandbox rule</text>
+  <text x="600" y="713" class="small">POST /api/sandbox/save → Save as variant</text>
+  <text x="600" y="728" class="small">WS   /ws               → Real-time updates</text>
+  <text x="600" y="743" class="small">GET  /api/chain        → Decision chain</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 8: AI OPERABILITY (bottom right) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="870" y="560" class="section">🤖 AI OPERABILITY</text>
+  
+  <rect x="870" y="570" width="230" height="180"/>
+  
+  <text x="880" y="590" class="label">AI agents can:</text>
+  <text x="890" y="610" class="small">• Poll /api/decisions for queue</text>
+  <text x="890" y="625" class="small">• Analyze rationale programmatically</text>
+  <text x="890" y="640" class="small">• Approve/reject via API</text>
+  <text x="890" y="655" class="small">• Batch confirm low-risk items</text>
+  <text x="890" y="670" class="small">• Flag uncertain → human review</text>
+  <text x="890" y="685" class="small">• Edit sandbox rules via API</text>
+  <text x="890" y="700" class="small">• Export session as training data</text>
+  
+  <text x="880" y="725" class="label">confirmedBy field tracks:</text>
+  <text x="890" y="740" class="small">"user" | "ai:agent-name" | "auto:rule"</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 9: UNDERLYING CRAWLER (bottom) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="50" y="780" class="section">🕷️ UNDERLYING CRAWLER INFRASTRUCTURE</text>
+  
+  <rect x="50" y="790" width="1050" height="100"/>
+  
+  <rect x="60" y="800" width="180" height="80" stroke="#999"/>
+  <text x="70" y="820" class="small">NewsCrawler</text>
+  <text x="70" y="835" class="small">The actual crawler</text>
+  <text x="70" y="850" class="small">Wrapped by Observatory</text>
+  <text x="70" y="865" class="small">Controller</text>
+  
+  <rect x="250" y="800" width="180" height="80" stroke="#999"/>
+  <text x="260" y="820" class="small">UrlDecisionOrchestrator</text>
+  <text x="260" y="835" class="small">Makes URL decisions</text>
+  <text x="260" y="850" class="small">Observatory intercepts</text>
+  <text x="260" y="865" class="small">before execution</text>
+  
+  <rect x="440" y="800" width="180" height="80" stroke="#999"/>
+  <text x="450" y="820" class="small">PriorityScorer</text>
+  <text x="450" y="835" class="small">Calculates priority</text>
+  <text x="450" y="850" class="small">Uses sandbox config</text>
+  <text x="450" y="865" class="small">during observatory mode</text>
+  
+  <rect x="630" y="800" width="180" height="80" stroke="#999"/>
+  <text x="640" y="820" class="small">DecisionExplainer</text>
+  <text x="640" y="835" class="small">Generates rationale</text>
+  <text x="640" y="850" class="small">Factor breakdown</text>
+  <text x="640" y="865" class="small">Counterfactual analysis</text>
+  
+  <rect x="820" y="800" width="180" height="80" stroke="#999"/>
+  <text x="830" y="820" class="small">CrawlContext</text>
+  <text x="830" y="835" class="small">pause() / resume()</text>
+  <text x="830" y="850" class="small">Status tracking</text>
+  <text x="830" y="865" class="small">Event emission</text>
+  
+  <rect x="1010" y="800" width="80" height="80" stroke="#999"/>
+  <text x="1020" y="835" class="small">Decision</text>
+  <text x="1020" y="850" class="small">Trees</text>
+  <text x="1020" y="865" class="small">(JSON)</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ARROWS / FLOW INDICATORS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+    </marker>
+  </defs>
+  
+  <!-- Sandbox -> Controller -->
+  <line x1="605" y1="280" x2="605" y2="330" stroke="#0066cc" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="610" y="305" class="small" fill="#0066cc">uses sandbox rules</text>
+  
+  <!-- Controller -> UI -->
+  <line x1="300" y1="530" x2="300" y2="570" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="305" y="555" class="small">renders</text>
+  
+  <!-- Controller -> API -->
+  <line x1="700" y1="530" x2="700" y2="570" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="705" y="555" class="small">exposes</text>
+  
+  <!-- Controller -> Crawler -->
+  <line x1="400" y1="530" x2="400" y2="790" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="405" y="660" class="small">wraps &amp; intercepts</text>
+  
+  <!-- API -> AI -->
+  <line x1="850" y1="650" x2="870" y2="650" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- LEGEND -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <text x="50" y="920" class="section">LEGEND</text>
+  <rect x="50" y="930" width="100" height="20" stroke="#333" stroke-width="1" fill="none"/>
+  <text x="160" y="945" class="small">Component box</text>
+  
+  <rect x="280" y="930" width="100" height="20" stroke="#0066cc" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+  <text x="390" y="945" class="small">Sandbox (ephemeral, in-memory)</text>
+  
+  <line x1="550" y1="940" x2="600" y2="940" stroke="#333" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="610" y="945" class="small">Data/control flow</text>
+  
+  <text x="750" y="945" class="small">⏳ = pending  ✓ = confirmed  ✗ = rejected</text>
+  
+  <text x="50" y="975" class="small">Key insight: Sandbox isolates experimentation. Production files are read-only until explicit save.</text>
+  <text x="50" y="990" class="small">Decision chain is separate from saving — you control when/if a variant becomes active.</text>
+
+</svg>

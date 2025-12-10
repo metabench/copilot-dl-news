@@ -1,0 +1,612 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200">
+  <title>Decision Sandbox — Deep Architecture</title>
+  <desc>The sandbox is the safe experimentation layer where rules are edited without touching production. Luxury Industrial Obsidian theme.</desc>
+  
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="obsidianGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1320"/>
+      <stop offset="100%" style="stop-color:#0a0f1a"/>
+    </linearGradient>
+    
+    <linearGradient id="panelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e232c"/>
+      <stop offset="100%" style="stop-color:#14181f"/>
+    </linearGradient>
+    
+    <linearGradient id="sandboxGradDeep" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a2a40"/>
+      <stop offset="50%" style="stop-color:#0f1a28"/>
+      <stop offset="100%" style="stop-color:#1a2a40"/>
+    </linearGradient>
+    
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#9a7b1c"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#9a7b1c"/>
+    </linearGradient>
+    
+    <linearGradient id="productionGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1f2937"/>
+      <stop offset="100%" style="stop-color:#111827"/>
+    </linearGradient>
+    
+    <linearGradient id="variantGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a5f"/>
+      <stop offset="100%" style="stop-color:#0f1f33"/>
+    </linearGradient>
+    
+    <!-- Glow filters -->
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="#c9a227" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="sandboxGlow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feFlood flood-color="#3b82f6" flood-opacity="0.3"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="5" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+    
+    <filter id="insetShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feOffset dx="2" dy="2"/>
+      <feGaussianBlur stdDeviation="3"/>
+      <feComposite operator="out" in="SourceGraphic"/>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowGold" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#c9a227"/>
+    </marker>
+    
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6"/>
+    </marker>
+    
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#22c55e"/>
+    </marker>
+    
+    <marker id="arrowSlate" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#64748b"/>
+    </marker>
+    
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ef4444"/>
+    </marker>
+    
+    <!-- Grid pattern -->
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#c9a227" stroke-width="0.3" opacity="0.05"/>
+    </pattern>
+    
+    <!-- Sandbox texture -->
+    <pattern id="sandboxTexture" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="transparent"/>
+      <circle cx="4" cy="4" r="0.5" fill="#3b82f6" opacity="0.1"/>
+    </pattern>
+  </defs>
+  
+  <style>
+    .title { font-family: 'Inter', sans-serif; font-size: 32px; font-weight: 700; fill: #e2e8f0; }
+    .subtitle { font-family: 'Inter', sans-serif; font-size: 15px; fill: #94a3b8; }
+    .section-title { font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 600; fill: #c9a227; }
+    .section-subtitle { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; fill: #94a3b8; }
+    .label { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; fill: #e2e8f0; }
+    .text { font-family: 'Inter', sans-serif; font-size: 12px; fill: #94a3b8; }
+    .text-small { font-family: 'Inter', sans-serif; font-size: 11px; fill: #64748b; }
+    .code { font-family: 'JetBrains Mono', monospace; font-size: 11px; fill: #64748b; }
+    .code-bright { font-family: 'JetBrains Mono', monospace; font-size: 11px; fill: #94a3b8; }
+    .highlight { fill: #c9a227; }
+    .sandbox-blue { fill: #3b82f6; }
+    .success { fill: #22c55e; }
+    .error { fill: #ef4444; }
+    .warning { fill: #f59e0b; }
+    .info { fill: #3b82f6; }
+    .production { fill: #6b7280; }
+  </style>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- BACKGROUND -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <rect width="1600" height="1200" fill="url(#obsidianGrad)"/>
+  <rect width="1600" height="1200" fill="url(#grid)"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <rect x="30" y="20" width="1540" height="70" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+  <rect x="30" y="20" width="1540" height="70" rx="6" fill="none" stroke="#2d3548" stroke-width="1"/>
+  
+  <!-- Decorative rivets -->
+  <circle cx="55" cy="55" r="5" fill="#2d3548"/><circle cx="55" cy="55" r="3" fill="#3d4558"/>
+  <circle cx="80" cy="55" r="5" fill="#2d3548"/><circle cx="80" cy="55" r="3" fill="#3d4558"/>
+  <circle cx="1545" cy="55" r="5" fill="#2d3548"/><circle cx="1545" cy="55" r="3" fill="#3d4558"/>
+  <circle cx="1520" cy="55" r="5" fill="#2d3548"/><circle cx="1520" cy="55" r="3" fill="#3d4558"/>
+  
+  <text x="800" y="50" text-anchor="middle" class="title">🧪 Decision Sandbox — Deep Architecture</text>
+  <text x="800" y="76" text-anchor="middle" class="subtitle">Safe Experimentation • No-Risk Rule Editing • Explicit Disposition • Version Control for Decision Logic</text>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- CENTRAL HERO: THE SANDBOX -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(450, 110)">
+    <!-- Outer glow container -->
+    <rect width="700" height="360" rx="12" fill="url(#sandboxGradDeep)" filter="url(#sandboxGlow)"/>
+    <rect width="700" height="360" rx="12" fill="url(#sandboxTexture)"/>
+    <rect width="700" height="360" rx="12" fill="none" stroke="#3b82f6" stroke-width="3" stroke-dasharray="12,6"/>
+    
+    <!-- Header -->
+    <rect width="700" height="44" rx="12" fill="#0f1a28"/>
+    <rect y="36" width="700" height="8" fill="#0f1a28"/>
+    <text x="24" y="30" class="section-title" fill="#3b82f6" filter="url(#goldGlow)">🧪 SESSION SANDBOX</text>
+    <text x="220" y="30" class="section-subtitle">The ephemeral experimentation layer</text>
+    <text x="560" y="30" class="code sandbox-blue">in-memory only</text>
+    
+    <!-- Core principle box -->
+    <rect x="20" y="56" width="660" height="56" rx="6" fill="#0a1018" stroke="#3b82f6" stroke-opacity="0.4"/>
+    <text x="35" y="78" class="label">Core Principle:</text>
+    <text x="140" y="78" class="text">All edits happen here. Production files are never touched until you explicitly save.</text>
+    <text x="35" y="98" class="code-bright">sandbox.setRule("bonuses.hub", 20)</text>
+    <text x="310" y="98" class="text">→ Immediate effect on pending decisions</text>
+    <text x="550" y="98" class="text">→ Zero disk writes</text>
+    
+    <!-- What's inside the sandbox -->
+    <text x="24" y="135" class="label">Contents (cloned at session start):</text>
+    
+    <!-- Priority Config -->
+    <rect x="20" y="148" width="200" height="90" rx="4" fill="#0a1018" stroke="#2d3548"/>
+    <text x="32" y="168" class="label highlight">Priority Config</text>
+    <text x="32" y="186" class="code">bonuses: { hub: 15→20 }</text>
+    <text x="32" y="202" class="code">weights: { depth: 0.2 }</text>
+    <text x="32" y="218" class="code">thresholds: { min: 0.5→0.6 }</text>
+    <text x="32" y="232" class="code success">✎ 2 edits</text>
+    
+    <!-- Decision Trees -->
+    <rect x="230" y="148" width="220" height="90" rx="4" fill="#0a1018" stroke="#2d3548"/>
+    <text x="242" y="168" class="label highlight">Decision Trees</text>
+    <text x="242" y="186" class="code">page-categories.json</text>
+    <text x="242" y="202" class="code">url-classification.json</text>
+    <text x="242" y="218" class="code">hub-detection.json</text>
+    <text x="242" y="232" class="code success">✎ 1 edit (new branch)</text>
+    
+    <!-- Classification Patterns -->
+    <rect x="460" y="148" width="220" height="90" rx="4" fill="#0a1018" stroke="#2d3548"/>
+    <text x="472" y="168" class="label highlight">Classification Patterns</text>
+    <text x="472" y="186" class="code">url-patterns/*.json</text>
+    <text x="472" y="202" class="code">content-signals.json</text>
+    <text x="472" y="218" class="code">domain-rules.json</text>
+    <text x="472" y="232" class="code production">○ no edits</text>
+    
+    <!-- Sandbox State -->
+    <rect x="20" y="250" width="660" height="95" rx="6" fill="#0a1018" stroke="#c9a227" stroke-opacity="0.4"/>
+    <text x="35" y="272" class="label">Sandbox State Object:</text>
+    
+    <text x="35" y="295" class="code-bright">{</text>
+    <text x="50" y="310" class="code">sessionId: "obs_2025-12-08_10-30",</text>
+    <text x="50" y="325" class="code">dirty: true,</text>
+    <text x="200" y="325" class="code">editCount: 3,</text>
+    <text x="320" y="325" class="code">createdAt: "2025-12-08T10:30:00Z",</text>
+    <text x="50" y="340" class="code">files: { "priority-config.json": {...}, "page-categories.json": {...} }</text>
+    <text x="640" y="295" class="code-bright">}</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- LEFT COLUMN: PRODUCTION FILES (source) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(30, 110)">
+    <rect width="400" height="360" rx="6" fill="url(#productionGrad)" filter="url(#softShadow)"/>
+    <rect width="400" height="360" rx="6" fill="none" stroke="#4b5563" stroke-width="1"/>
+    
+    <!-- Header -->
+    <rect width="400" height="40" rx="6" fill="#111827"/>
+    <rect y="34" width="400" height="6" fill="#111827"/>
+    <text x="20" y="27" class="section-title production">📁 PRODUCTION FILES</text>
+    <text x="260" y="27" class="code production">(read-only in session)</text>
+    
+    <!-- Lock icon -->
+    <text x="370" y="27" class="text production">🔒</text>
+    
+    <text x="20" y="65" class="label production">config/</text>
+    
+    <!-- File list -->
+    <rect x="16" y="78" width="368" height="110" rx="4" fill="#0d1117" stroke="#2d3548"/>
+    <text x="28" y="98" class="code">├── priority-config.json</text>
+    <text x="260" y="98" class="text-small production">bonuses, weights, thresholds</text>
+    <text x="28" y="116" class="code">├── priority-config.news.json</text>
+    <text x="260" y="116" class="text-small production">domain overlay</text>
+    <text x="28" y="134" class="code">├── classification-patterns.json</text>
+    <text x="260" y="134" class="text-small production">URL patterns</text>
+    <text x="28" y="152" class="code">└── priority-presets/</text>
+    <text x="260" y="152" class="text-small production">named profiles</text>
+    <text x="44" y="170" class="code">├── aggressive.json</text>
+    <text x="44" y="182" class="code">└── conservative.json</text>
+    
+    <text x="20" y="210" class="label production">config/decision-trees/</text>
+    
+    <rect x="16" y="222" width="368" height="75" rx="4" fill="#0d1117" stroke="#2d3548"/>
+    <text x="28" y="242" class="code">├── page-categories.json</text>
+    <text x="260" y="242" class="text-small production">hub/article/nav...</text>
+    <text x="28" y="260" class="code">├── url-classification.json</text>
+    <text x="260" y="260" class="text-small production">path patterns</text>
+    <text x="28" y="278" class="code">└── hub-detection.json</text>
+    <text x="260" y="278" class="text-small production">index page rules</text>
+    
+    <!-- Backup note -->
+    <rect x="16" y="308" width="368" height="40" rx="4" fill="#0d1117" stroke="#374151"/>
+    <text x="28" y="328" class="text-small">💾 Backups: data/backups/config-snapshots/</text>
+    <text x="28" y="342" class="text-small production">Auto-created before any Replace Production operation</text>
+  </g>
+
+  <!-- Arrow: Production → Sandbox -->
+  <g>
+    <path d="M 430 290 Q 445 290 445 250 L 445 200 L 450 200" stroke="#c9a227" stroke-width="2.5" fill="none" marker-end="url(#arrowGold)"/>
+    <rect x="395" y="230" width="70" height="36" rx="4" fill="#0a0f1a" stroke="#c9a227" stroke-opacity="0.5"/>
+    <text x="402" y="248" class="code highlight">clone</text>
+    <text x="402" y="262" class="code highlight">on start</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- RIGHT COLUMN: DISPOSITION OPTIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(1170, 110)">
+    <rect width="400" height="360" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="400" height="360" rx="6" fill="none" stroke="#2d3548" stroke-width="1"/>
+    
+    <!-- Header -->
+    <rect width="400" height="40" rx="6" fill="#1a1f2e"/>
+    <rect y="34" width="400" height="6" fill="#1a1f2e"/>
+    <text x="20" y="27" class="section-title">💾 DISPOSITION</text>
+    <text x="160" y="27" class="section-subtitle">What happens when session ends</text>
+    
+    <text x="20" y="65" class="label">Choose exactly one:</text>
+    
+    <!-- Option 1: Discard -->
+    <rect x="16" y="80" width="368" height="55" rx="6" fill="#14181f" stroke="#374151"/>
+    <text x="30" y="102" class="text">🗑️</text>
+    <text x="55" y="102" class="label">DISCARD</text>
+    <text x="30" y="120" class="text">Sandbox evaporates. Production unchanged. Session forgotten.</text>
+    <text x="30" y="132" class="code production">→ No disk writes, no traces</text>
+    
+    <!-- Option 2: Save as Variant (highlighted) -->
+    <rect x="16" y="145" width="368" height="70" rx="6" fill="#14181f" stroke="#22c55e" stroke-width="2"/>
+    <text x="30" y="167" class="text">📝</text>
+    <text x="55" y="167" class="label success">SAVE AS VARIANT</text>
+    <text x="200" y="167" class="code success">(recommended)</text>
+    <text x="30" y="187" class="text">Creates new file alongside production, e.g.:</text>
+    <text x="30" y="203" class="code success">priority-config.experimental-2025-12-08.json</text>
+    <text x="30" y="217" class="code production">→ Production untouched, new variant on disk</text>
+    
+    <!-- Option 3: Replace Production -->
+    <rect x="16" y="225" width="368" height="55" rx="6" fill="#14181f" stroke="#ef4444" stroke-opacity="0.6"/>
+    <text x="30" y="247" class="text">⚠️</text>
+    <text x="55" y="247" class="label error">REPLACE PRODUCTION</text>
+    <text x="30" y="265" class="text">Overwrites original file. Auto-backup created first.</text>
+    <text x="30" y="277" class="code error">→ config/priority-config.json modified</text>
+    
+    <!-- Option 4: Export -->
+    <rect x="16" y="290" width="368" height="55" rx="6" fill="#14181f" stroke="#3b82f6" stroke-opacity="0.6"/>
+    <text x="30" y="312" class="text">📤</text>
+    <text x="55" y="312" class="label info">EXPORT JSON</text>
+    <text x="30" y="330" class="text">Download sandbox state as a file for offline analysis</text>
+    <text x="30" y="342" class="code info">→ sandbox-export-2025-12-08.json (local download)</text>
+  </g>
+
+  <!-- Arrow: Sandbox → Disposition -->
+  <g>
+    <path d="M 1150 290 Q 1160 290 1160 250 L 1160 200 L 1170 200" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arrowSlate)"/>
+    <rect x="1130" y="230" width="60" height="36" rx="4" fill="#0a0f1a" stroke="#64748b" stroke-opacity="0.5"/>
+    <text x="1138" y="248" class="code">session</text>
+    <text x="1145" y="262" class="code">ends</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ROW 2: SANDBOX API + EDIT FLOW + DECISION CHAIN -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- SANDBOX API -->
+  <g transform="translate(30, 490)">
+    <rect width="480" height="280" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="480" height="280" rx="6" fill="none" stroke="#2d3548" stroke-width="1"/>
+    
+    <rect width="480" height="36" rx="6" fill="#1a1f2e"/>
+    <rect y="30" width="480" height="6" fill="#1a1f2e"/>
+    <text x="20" y="25" class="section-title">🔌 RuleSandbox API</text>
+    <text x="200" y="25" class="section-subtitle">src/crawler/observatory/RuleSandbox.js</text>
+    
+    <text x="20" y="60" class="label">Initialization:</text>
+    <text x="24" y="80" class="code-bright">const sandbox = new RuleSandbox(productionConfig);</text>
+    <text x="24" y="96" class="code">// Clones all config files into memory</text>
+    
+    <text x="20" y="120" class="label">Read / Write:</text>
+    <text x="24" y="140" class="code-bright">sandbox.getRule("priority-config.json:bonuses.hub")</text>
+    <text x="24" y="156" class="code">→ 15 (current value)</text>
+    <text x="24" y="176" class="code-bright">sandbox.setRule("priority-config.json:bonuses.hub", 20)</text>
+    <text x="24" y="192" class="code">→ Updates sandbox, emits 'rule:edited' event</text>
+    
+    <text x="20" y="216" class="label">Diff / Export:</text>
+    <text x="24" y="236" class="code-bright">sandbox.getDiff()</text>
+    <text x="24" y="252" class="code">→ [{ file, path, oldValue, newValue }, ...]</text>
+    <text x="24" y="270" class="code-bright">sandbox.exportToJSON()</text>
+    <text x="24" y="286" class="code">→ Full sandbox state as serializable object</text>
+    
+    <text x="20" y="310" class="label">Disposition:</text>
+    <text x="24" y="330" class="code-bright">sandbox.discard()</text>
+    <text x="165" y="330" class="code-bright">sandbox.saveAsVariant("my-experiment")</text>
+    <text x="24" y="346" class="code-bright">sandbox.replaceProduction({ backup: true })</text>
+  </g>
+  
+  <!-- EDIT FLOW DIAGRAM -->
+  <g transform="translate(530, 490)">
+    <rect width="520" height="280" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="520" height="280" rx="6" fill="none" stroke="#2d3548" stroke-width="1"/>
+    
+    <rect width="520" height="36" rx="6" fill="#1a1f2e"/>
+    <rect y="30" width="520" height="6" fill="#1a1f2e"/>
+    <text x="20" y="25" class="section-title">🔄 Edit Flow — The Safe Experimentation Loop</text>
+    
+    <!-- Step boxes -->
+    <rect x="20" y="50" width="90" height="50" rx="6" fill="#0a1018" stroke="#22c55e"/>
+    <text x="65" y="72" text-anchor="middle" class="label success">1. Edit</text>
+    <text x="65" y="88" text-anchor="middle" class="code">setRule()</text>
+    
+    <line x1="115" y1="75" x2="145" y2="75" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)"/>
+    
+    <rect x="150" y="50" width="100" height="50" rx="6" fill="#0a1018" stroke="#3b82f6"/>
+    <text x="200" y="72" text-anchor="middle" class="label info">2. Sandbox</text>
+    <text x="200" y="88" text-anchor="middle" class="code">updates</text>
+    
+    <line x1="255" y1="75" x2="285" y2="75" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    
+    <rect x="290" y="50" width="100" height="50" rx="6" fill="#0a1018" stroke="#c9a227"/>
+    <text x="340" y="72" text-anchor="middle" class="label highlight">3. Re-eval</text>
+    <text x="340" y="88" text-anchor="middle" class="code">decisions</text>
+    
+    <line x1="395" y1="75" x2="425" y2="75" stroke="#c9a227" stroke-width="2" marker-end="url(#arrowGold)"/>
+    
+    <rect x="430" y="50" width="70" height="50" rx="6" fill="#0a1018" stroke="#64748b"/>
+    <text x="465" y="72" text-anchor="middle" class="label">4. See</text>
+    <text x="465" y="88" text-anchor="middle" class="code">effect</text>
+    
+    <!-- Loop arrow back -->
+    <path d="M 465 105 L 465 125 L 65 125 L 65 105" stroke="#64748b" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arrowSlate)"/>
+    <text x="265" y="140" text-anchor="middle" class="text-small">Iterate until satisfied (or discard)</text>
+    
+    <!-- Explanation -->
+    <rect x="20" y="155" width="480" height="110" rx="6" fill="#0a1018" stroke="#2d3548"/>
+    <text x="35" y="178" class="label">What happens on each edit:</text>
+    <text x="35" y="198" class="text">1. sandbox.setRule() modifies the in-memory copy</text>
+    <text x="35" y="216" class="text">2. ObservatoryController detects change, emits 'sandbox:dirty'</text>
+    <text x="35" y="234" class="text">3. All pending decisions in the queue are re-evaluated using new rules</text>
+    <text x="35" y="252" class="text">4. UI updates: scores change, classifications shift, alternatives rerank</text>
+    
+    <text x="35" y="276" class="code highlight">Production files: unchanged. Disk: untouched. Risk: zero.</text>
+  </g>
+  
+  <!-- DECISION CHAIN -->
+  <g transform="translate(1070, 490)">
+    <rect width="500" height="280" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="500" height="280" rx="6" fill="none" stroke="#c9a227" stroke-opacity="0.5" stroke-width="1"/>
+    
+    <rect width="500" height="36" rx="6" fill="#1a1f2e"/>
+    <rect y="30" width="500" height="6" fill="#1a1f2e"/>
+    <text x="20" y="25" class="section-title">⛓️ DECISION CHAIN</text>
+    <text x="180" y="25" class="section-subtitle">Active rule files (separate from saving)</text>
+    
+    <text x="20" y="60" class="label">The chain is the ordered list of which configs/trees are ACTIVE:</text>
+    
+    <!-- Chain visualization -->
+    <rect x="20" y="75" width="460" height="80" rx="6" fill="#0a1018" stroke="#2d3548"/>
+    
+    <rect x="35" y="90" width="130" height="50" rx="4" fill="#14181f" stroke="#22c55e"/>
+    <text x="100" y="110" text-anchor="middle" class="code success">1. page-categories</text>
+    <text x="100" y="128" text-anchor="middle" class="code">[primary]</text>
+    
+    <text x="175" y="115" class="label">→</text>
+    
+    <rect x="195" y="90" width="140" height="50" rx="4" fill="#14181f" stroke="#3b82f6"/>
+    <text x="265" y="110" text-anchor="middle" class="code info">2. page-cats.news</text>
+    <text x="265" y="128" text-anchor="middle" class="code">[overlay]</text>
+    
+    <text x="345" y="115" class="label">→</text>
+    
+    <rect x="365" y="90" width="100" height="50" rx="4" fill="#14181f" stroke="#64748b" stroke-dasharray="4,2"/>
+    <text x="415" y="110" text-anchor="middle" class="code production">3. (empty)</text>
+    <text x="415" y="128" text-anchor="middle" class="code">[your variant?]</text>
+    
+    <!-- Key insight -->
+    <rect x="20" y="165" width="460" height="100" rx="6" fill="#0a1018" stroke="#c9a227" stroke-opacity="0.4"/>
+    <text x="35" y="188" class="label highlight">Key Insight: Saving ≠ Activating</text>
+    <text x="35" y="210" class="text">saveAsVariant("my-experiment") → Creates file on disk</text>
+    <text x="35" y="228" class="text">DecisionChain.add("my-experiment", pos) → Makes it active in the chain</text>
+    <text x="35" y="250" class="text-small">This separation lets you: save experiments, compare side-by-side, promote gradually</text>
+    
+    <!-- Chain API -->
+    <text x="20" y="286" class="label">Chain API:</text>
+    <text x="24" y="306" class="code-bright">DecisionChain.add(variant, position)</text>
+    <text x="270" y="306" class="code-bright">.remove(variant)</text>
+    <text x="24" y="322" class="code-bright">DecisionChain.reorder(newOrder)</text>
+    <text x="270" y="322" class="code-bright">.getActive()</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- ROW 3: SAVED VARIANTS + UI CONTROLS + AI OPERABILITY -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <!-- SAVED VARIANTS -->
+  <g transform="translate(30, 790)">
+    <rect width="400" height="220" rx="6" fill="url(#variantGrad)" filter="url(#softShadow)"/>
+    <rect width="400" height="220" rx="6" fill="none" stroke="#3b82f6" stroke-opacity="0.5" stroke-width="1"/>
+    
+    <rect width="400" height="36" rx="6" fill="#0f1f33"/>
+    <rect y="30" width="400" height="6" fill="#0f1f33"/>
+    <text x="20" y="25" class="section-title info">📚 SAVED VARIANTS</text>
+    <text x="180" y="25" class="section-subtitle">Named alternative configurations</text>
+    
+    <text x="20" y="60" class="label">Variants live alongside production:</text>
+    
+    <rect x="16" y="75" width="368" height="110" rx="4" fill="#0a1520" stroke="#2d3548"/>
+    <text x="28" y="95" class="code">config/</text>
+    <text x="40" y="113" class="code">├── priority-config.json</text>
+    <text x="280" y="113" class="code production">[production]</text>
+    <text x="40" y="131" class="code info">├── priority-config.aggressive.json</text>
+    <text x="280" y="131" class="code info">[variant]</text>
+    <text x="40" y="149" class="code info">├── priority-config.conservative.json</text>
+    <text x="280" y="149" class="code info">[variant]</text>
+    <text x="40" y="167" class="code success">└── priority-config.my-experiment.json</text>
+    <text x="280" y="167" class="code success">[NEW]</text>
+    
+    <text x="20" y="200" class="text">Variants can be added/removed from the decision chain independently.</text>
+    <text x="20" y="218" class="text">Compare variants side-by-side. Promote good ones. Delete bad ones.</text>
+  </g>
+  
+  <!-- UI CONTROLS -->
+  <g transform="translate(450, 790)">
+    <rect width="520" height="220" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="520" height="220" rx="6" fill="none" stroke="#2d3548" stroke-width="1"/>
+    
+    <rect width="520" height="36" rx="6" fill="#1a1f2e"/>
+    <rect y="30" width="520" height="6" fill="#1a1f2e"/>
+    <text x="20" y="25" class="section-title">🖥️ SANDBOX UI CONTROLS</text>
+    <text x="240" y="25" class="section-subtitle">jsgui3 isomorphic components</text>
+    
+    <!-- Control grid -->
+    <rect x="16" y="50" width="155" height="75" rx="4" fill="#14181f" stroke="#c9a227" stroke-opacity="0.5"/>
+    <text x="28" y="70" class="label highlight">RuleEditorControl</text>
+    <text x="28" y="88" class="code">• JSON tree editor</text>
+    <text x="28" y="104" class="code">• Path navigation</text>
+    <text x="28" y="120" class="code">• Inline validation</text>
+    
+    <rect x="180" y="50" width="155" height="75" rx="4" fill="#14181f" stroke="#2d3548"/>
+    <text x="192" y="70" class="label">DiffViewerControl</text>
+    <text x="192" y="88" class="code">• Sandbox vs prod</text>
+    <text x="192" y="104" class="code">• Highlight changes</text>
+    <text x="192" y="120" class="code">• Revert per-path</text>
+    
+    <rect x="344" y="50" width="160" height="75" rx="4" fill="#14181f" stroke="#2d3548"/>
+    <text x="356" y="70" class="label">DispositionControl</text>
+    <text x="356" y="88" class="code">• Discard/Save/Replace</text>
+    <text x="356" y="104" class="code">• Variant name input</text>
+    <text x="356" y="120" class="code">• Confirmation modal</text>
+    
+    <rect x="16" y="135" width="155" height="75" rx="4" fill="#14181f" stroke="#2d3548"/>
+    <text x="28" y="155" class="label">ChainManagerControl</text>
+    <text x="28" y="173" class="code">• Drag-reorder</text>
+    <text x="28" y="189" class="code">• Add/remove variant</text>
+    <text x="28" y="205" class="code">• Preview effect</text>
+    
+    <rect x="180" y="135" width="155" height="75" rx="4" fill="#14181f" stroke="#2d3548"/>
+    <text x="192" y="155" class="label">VariantBrowserControl</text>
+    <text x="192" y="173" class="code">• List all variants</text>
+    <text x="192" y="189" class="code">• Compare two</text>
+    <text x="192" y="205" class="code">• Delete / rename</text>
+    
+    <rect x="344" y="135" width="160" height="75" rx="4" fill="#14181f" stroke="#2d3548"/>
+    <text x="356" y="155" class="label">SessionSummaryControl</text>
+    <text x="356" y="173" class="code">• Edit count</text>
+    <text x="356" y="189" class="code">• Decision stats</text>
+    <text x="356" y="205" class="code">• Session duration</text>
+  </g>
+  
+  <!-- AI OPERABILITY -->
+  <g transform="translate(990, 790)">
+    <rect width="580" height="220" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="580" height="220" rx="6" fill="none" stroke="#3b82f6" stroke-width="1"/>
+    
+    <rect width="580" height="36" rx="6" fill="#1a1f2e"/>
+    <rect y="30" width="580" height="6" fill="#1a1f2e"/>
+    <text x="20" y="25" class="section-title info">🤖 AI OPERABILITY — Sandbox Edition</text>
+    
+    <text x="20" y="58" class="label">AI agents can manipulate the sandbox via API:</text>
+    
+    <rect x="16" y="70" width="548" height="135" rx="4" fill="#0a1018" stroke="#2d3548"/>
+    <text x="28" y="92" class="code-bright">// AI suggests a rule tweak</text>
+    <text x="28" y="110" class="code-bright">POST /api/sandbox/edit</text>
+    <text x="28" y="128" class="code">{ "path": "bonuses.hub", "value": 25, "reason": "Increase hub priority for news sites" }</text>
+    
+    <text x="28" y="152" class="code-bright">// AI checks the diff</text>
+    <text x="28" y="170" class="code-bright">GET /api/sandbox/diff</text>
+    <text x="28" y="188" class="code">→ [{ file: "priority-config.json", path: "bonuses.hub", old: 15, new: 25 }]</text>
+    
+    <text x="28" y="212" class="code-bright">// AI proposes disposition</text>
+    <text x="28" y="230" class="code-bright">POST /api/sandbox/save { "name": "ai-optimized-v1", "reason": "ML-suggested improvements" }</text>
+    
+    <text x="20" y="262" class="text">All edits are tracked with</text>
+    <text x="165" y="262" class="code info">editedBy: "ai:agent-name"</text>
+    <text x="340" y="262" class="text">for audit trail.</text>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- BOTTOM: KEY PRINCIPLES -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(30, 1030)">
+    <rect width="1540" height="150" rx="6" fill="url(#panelGrad)" filter="url(#softShadow)"/>
+    <rect width="1540" height="150" rx="6" fill="none" stroke="#c9a227" stroke-opacity="0.4" stroke-width="1"/>
+    
+    <rect width="1540" height="32" rx="6" fill="#1a1f2e"/>
+    <rect y="26" width="1540" height="6" fill="#1a1f2e"/>
+    <text x="20" y="22" class="section-title">🎯 CORE PRINCIPLES — Why the Sandbox Matters</text>
+    
+    <!-- Principle 1 -->
+    <rect x="20" y="45" width="290" height="90" rx="6" fill="#0a1018" stroke="#22c55e" stroke-opacity="0.5"/>
+    <text x="35" y="68" class="label success">1. Zero-Risk Experimentation</text>
+    <text x="35" y="88" class="text">Try anything. Break nothing.</text>
+    <text x="35" y="106" class="text">Production files are read-only.</text>
+    <text x="35" y="124" class="text">Iterate freely until satisfied.</text>
+    
+    <!-- Principle 2 -->
+    <rect x="325" y="45" width="290" height="90" rx="6" fill="#0a1018" stroke="#3b82f6" stroke-opacity="0.5"/>
+    <text x="340" y="68" class="label info">2. Immediate Feedback</text>
+    <text x="340" y="88" class="text">Edit a rule → see effect instantly.</text>
+    <text x="340" y="106" class="text">Pending decisions re-evaluate.</text>
+    <text x="340" y="124" class="text">No restart, no reload, no wait.</text>
+    
+    <!-- Principle 3 -->
+    <rect x="630" y="45" width="290" height="90" rx="6" fill="#0a1018" stroke="#c9a227" stroke-opacity="0.5"/>
+    <text x="645" y="68" class="label highlight">3. Explicit Disposition</text>
+    <text x="645" y="88" class="text">Nothing is auto-saved.</text>
+    <text x="645" y="106" class="text">YOU choose: discard, variant, replace.</text>
+    <text x="645" y="124" class="text">Full control over what persists.</text>
+    
+    <!-- Principle 4 -->
+    <rect x="935" y="45" width="290" height="90" rx="6" fill="#0a1018" stroke="#64748b" stroke-opacity="0.5"/>
+    <text x="950" y="68" class="label">4. Versioned Variants</text>
+    <text x="950" y="88" class="text">Save experiments as named files.</text>
+    <text x="950" y="106" class="text">Compare, promote, or delete.</text>
+    <text x="950" y="124" class="text">Git-friendly, diffable configs.</text>
+    
+    <!-- Principle 5 -->
+    <rect x="1240" y="45" width="290" height="90" rx="6" fill="#0a1018" stroke="#3b82f6" stroke-opacity="0.5"/>
+    <text x="1255" y="68" class="label info">5. AI-Ready</text>
+    <text x="1255" y="88" class="text">All operations are API-callable.</text>
+    <text x="1255" y="106" class="text">Agents can propose, edit, save.</text>
+    <text x="1255" y="124" class="text">Human-in-the-loop optional.</text>
+    
+    <!-- Footer tagline -->
+    <text x="770" y="158" text-anchor="middle" class="subtitle">The Sandbox is the safe space where decision logic evolves — tested on real data, saved only when proven.</text>
+  </g>
+
+</svg>

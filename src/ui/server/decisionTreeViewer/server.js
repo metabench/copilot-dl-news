@@ -31,6 +31,15 @@ const Page_Context = jsgui.Page_Context;
 // Controls
 const { DecisionTreeViewerControl } = require("./isomorphic/controls");
 const { createExampleTree } = require("./isomorphic/model/DecisionTree");
+const { loadAllTrees, loadFromConfigSet } = require("./isomorphic/model/DecisionTreeLoader");
+
+// Optional: DecisionConfigSet for loading from saved sets
+let DecisionConfigSet;
+try {
+  DecisionConfigSet = require("../../../../crawler/observatory/DecisionConfigSet").DecisionConfigSet;
+} catch (e) {
+  // DecisionConfigSet not available, will use file-based loading
+}
 
 // Server configuration
 const PORT = process.env.DECISION_TREE_VIEWER_PORT || 3030;
@@ -252,13 +261,73 @@ function renderPage(context, trees) {
 // Routes
 app.get("/", (req, res) => {
   const context = createContext();
-  const trees = [
-    createExampleTree(),
-    // Could add more example trees here
-  ];
+  
+  // Load real decision trees from config
+  let trees = loadAllTrees();
+  
+  // If no real trees found, use example
+  if (trees.length === 0) {
+    console.log("No decision trees found in config, using example tree");
+    trees = [createExampleTree()];
+  } else {
+    console.log(`Loaded ${trees.length} decision trees from config`);
+  }
   
   const html = renderPage(context, trees);
   res.type("html").send(html);
+});
+
+// Load from a specific config set
+app.get("/set/:slug", async (req, res) => {
+  if (!DecisionConfigSet) {
+    return res.status(501).json({ error: "DecisionConfigSet not available" });
+  }
+  
+  try {
+    const configSet = await DecisionConfigSet.load(req.params.slug);
+    const trees = loadFromConfigSet(configSet);
+    
+    if (trees.length === 0) {
+      return res.status(404).json({ error: "No decision trees in config set" });
+    }
+    
+    const context = createContext();
+    const html = renderPage(context, trees);
+    res.type("html").send(html);
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+// API: List available config sets
+app.get("/api/config-sets", async (req, res) => {
+  if (!DecisionConfigSet) {
+    return res.json({ sets: [], available: false });
+  }
+  
+  try {
+    const sets = await DecisionConfigSet.list();
+    res.json({ sets, available: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Get decision trees as JSON
+app.get("/api/trees", (req, res) => {
+  const trees = loadAllTrees();
+  res.json({
+    count: trees.length,
+    trees: trees.map(t => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      nodeCount: t.nodeCount,
+      depth: t.depth,
+      results: t.results.length,
+      branches: t.branches.length
+    }))
+  });
 });
 
 // Health check

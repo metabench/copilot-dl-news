@@ -78,5 +78,13 @@
     "tags": ["crawler", "resilience", "singularity"],
     "last_review": "2025-11-22",
     "path": ".github/agents/🕷️ Crawler Singularity 🕷️.agent.md"
+  },
+  {
+    "doc_slug": "interactive-crawl-observatory",
+    "title": "🔬 Interactive Crawl Observatory 🔬",
+    "purpose": "Step-by-step intelligent crawl execution with decision transparency, user confirmation, and live rule editing",
+    "tags": ["crawler", "observatory", "debugging", "decision-trees", "interactive", "ai-operable"],
+    "last_review": "2025-12-08",
+    "path": ".github/agents/🔬 Interactive Crawl Observatory 🔬.agent.md"
   }
 ]
