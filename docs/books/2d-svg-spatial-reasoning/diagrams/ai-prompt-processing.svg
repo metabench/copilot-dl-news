@@ -1,0 +1,421 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <defs>
+    <!-- Gradients for white leather and obsidian theme -->
+    <linearGradient id="leatherBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#faf9f7"/>
+      <stop offset="50%" style="stop-color:#f5f3ef"/>
+      <stop offset="100%" style="stop-color:#ebe8e2"/>
+    </linearGradient>
+    
+    <linearGradient id="obsidianBox" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d2d2d"/>
+      <stop offset="100%" style="stop-color:#1a1a1a"/>
+    </linearGradient>
+    
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c9a962"/>
+      <stop offset="100%" style="stop-color:#e8d5a3"/>
+    </linearGradient>
+    
+    <linearGradient id="inputGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a9eff"/>
+      <stop offset="100%" style="stop-color:#2d7dd2"/>
+    </linearGradient>
+    
+    <linearGradient id="processGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c5cbf"/>
+      <stop offset="100%" style="stop-color:#5a3d96"/>
+    </linearGradient>
+    
+    <linearGradient id="outputGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2ecc71"/>
+      <stop offset="100%" style="stop-color:#27ae60"/>
+    </linearGradient>
+    
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+    
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+      <feOffset in="blur" dx="0" dy="0" result="offsetBlur"/>
+      <feFlood flood-color="#c9a962" flood-opacity="0.3"/>
+      <feComposite in2="offsetBlur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow marker -->
+    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c9a962"/>
+    </marker>
+    
+    <marker id="arrowHeadDark" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2d2d2d"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="900" fill="url(#leatherBg)"/>
+  
+  <!-- Subtle texture pattern -->
+  <g opacity="0.03">
+    <pattern id="texture" patternUnits="userSpaceOnUse" width="20" height="20">
+      <circle cx="10" cy="10" r="1" fill="#000"/>
+    </pattern>
+    <rect width="1200" height="900" fill="url(#texture)"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="600" y="50" font-family="Georgia, serif" font-size="32" fill="#2d2d2d" text-anchor="middle" font-weight="bold">
+    AI Prompt Processing: Cognitive Flow
+  </text>
+  <line x1="300" y1="65" x2="900" y2="65" stroke="url(#goldAccent)" stroke-width="2"/>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- STAGE 1: INPUT RECEPTION -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(50, 90)">
+    <!-- Stage label -->
+    <rect x="0" y="0" width="200" height="30" rx="15" fill="url(#inputGlow)" filter="url(#softShadow)"/>
+    <text x="100" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      1. INPUT RECEPTION
+    </text>
+    
+    <!-- Input components -->
+    <g transform="translate(0, 45)">
+      <!-- User Request (main input) -->
+      <rect x="0" y="0" width="180" height="60" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="2" width="176" height="56" rx="6" fill="none" stroke="url(#goldAccent)" stroke-width="1"/>
+      <text x="90" y="25" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">User Request</text>
+      <text x="90" y="45" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Your actual message</text>
+      
+      <!-- Context -->
+      <rect x="0" y="75" width="180" height="50" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="100" font-family="Arial, sans-serif" font-size="11" fill="#aaa" text-anchor="middle">Context: Terminals, Files</text>
+      <text x="90" y="115" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">Current state snapshot</text>
+      
+      <!-- Workspace Info -->
+      <rect x="0" y="135" width="180" height="50" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="160" font-family="Arial, sans-serif" font-size="11" fill="#aaa" text-anchor="middle">Workspace Structure</text>
+      <text x="90" y="175" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">Folder tree, tasks</text>
+      
+      <!-- Conversation Summary -->
+      <rect x="0" y="195" width="180" height="50" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="220" font-family="Arial, sans-serif" font-size="11" fill="#aaa" text-anchor="middle">Conversation Summary</text>
+      <text x="90" y="235" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">Prior context compressed</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- STAGE 2: TOOL AWARENESS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(270, 90)">
+    <rect x="0" y="0" width="200" height="30" rx="15" fill="url(#inputGlow)" filter="url(#softShadow)"/>
+    <text x="100" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      2. TOOL AWARENESS
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <!-- MCP Tools Box -->
+      <rect x="0" y="0" width="180" height="100" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="2" width="176" height="96" rx="6" fill="none" stroke="#4a9eff" stroke-width="1.5"/>
+      <text x="90" y="22" font-family="Arial, sans-serif" font-size="12" fill="#4a9eff" text-anchor="middle" font-weight="bold">MCP Server Tools</text>
+      <text x="90" y="42" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">svg-editor: svg_open, svg_list...</text>
+      <text x="90" y="56" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">docs-memory: sessions, lessons...</text>
+      <text x="90" y="70" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">Each with JSON schema</text>
+      <text x="90" y="90" font-family="Arial, sans-serif" font-size="10" fill="#4a9eff" text-anchor="middle">⚡ Live capabilities</text>
+      
+      <!-- Built-in Tools -->
+      <rect x="0" y="115" width="180" height="80" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="137" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Built-in Tools</text>
+      <text x="90" y="155" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">read_file, replace_string_in_file</text>
+      <text x="90" y="169" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">run_in_terminal, grep_search</text>
+      <text x="90" y="183" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">semantic_search, runSubagent</text>
+      
+      <!-- Mode Instructions -->
+      <rect x="0" y="210" width="180" height="50" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="212" width="176" height="46" rx="6" fill="none" stroke="#7c5cbf" stroke-width="1"/>
+      <text x="90" y="232" font-family="Arial, sans-serif" font-size="11" fill="#7c5cbf" text-anchor="middle">📐 Active Mode</text>
+      <text x="90" y="250" font-family="Arial, sans-serif" font-size="9" fill="#888" text-anchor="middle">SVG Spatial Specialist</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- STAGE 3: PARSING & UNDERSTANDING -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(490, 90)">
+    <rect x="0" y="0" width="200" height="30" rx="15" fill="url(#processGlow)" filter="url(#softShadow)"/>
+    <text x="100" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      3. UNDERSTANDING
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <!-- Intent Recognition -->
+      <rect x="0" y="0" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="22" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Intent Recognition</text>
+      <text x="90" y="42" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">What does user want?</text>
+      <text x="90" y="58" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Question? Task? Creation?</text>
+      
+      <!-- Context Integration -->
+      <rect x="0" y="85" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="107" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Context Integration</text>
+      <text x="90" y="127" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Merge prior conversation</text>
+      <text x="90" y="143" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">with current request</text>
+      
+      <!-- Constraint Check -->
+      <rect x="0" y="170" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="192" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Constraint Check</text>
+      <text x="90" y="212" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Mode rules, AGENTS.md</text>
+      <text x="90" y="228" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Safety, content policies</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- STAGE 4: PLANNING -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(710, 90)">
+    <rect x="0" y="0" width="200" height="30" rx="15" fill="url(#processGlow)" filter="url(#softShadow)"/>
+    <text x="100" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      4. PLANNING
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <!-- Tool Selection -->
+      <rect x="0" y="0" width="180" height="80" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="2" width="176" height="76" rx="6" fill="none" stroke="url(#goldAccent)" stroke-width="1"/>
+      <text x="90" y="22" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Tool Selection</text>
+      <text x="90" y="42" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Match task → tools</text>
+      <text x="90" y="58" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Check dependencies</text>
+      <text x="90" y="74" font-family="Arial, sans-serif" font-size="10" fill="#c9a962" text-anchor="middle">Parallel when possible</text>
+      
+      <!-- Sequence Design -->
+      <rect x="0" y="95" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="117" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Sequence Design</text>
+      <text x="90" y="137" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Order operations</text>
+      <text x="90" y="153" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Handle dependencies</text>
+      
+      <!-- Parameter Prep -->
+      <rect x="0" y="180" width="180" height="60" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="202" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Parameter Prep</text>
+      <text x="90" y="222" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Fill required fields</text>
+      <text x="90" y="238" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Use exact user values</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- STAGE 5: EXECUTION -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(930, 90)">
+    <rect x="0" y="0" width="200" height="30" rx="15" fill="url(#outputGlow)" filter="url(#softShadow)"/>
+    <text x="100" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      5. EXECUTION
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <!-- Tool Invocation -->
+      <rect x="0" y="0" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="2" width="176" height="66" rx="6" fill="none" stroke="#2ecc71" stroke-width="1.5"/>
+      <text x="90" y="22" font-family="Arial, sans-serif" font-size="12" fill="#2ecc71" text-anchor="middle" font-weight="bold">Tool Invocation</text>
+      <text x="90" y="42" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">&lt;antml:function_calls&gt;</text>
+      <text x="90" y="58" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Execute and wait</text>
+      
+      <!-- Result Processing -->
+      <rect x="0" y="85" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="107" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Result Processing</text>
+      <text x="90" y="127" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Parse response</text>
+      <text x="90" y="143" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Check for errors</text>
+      
+      <!-- Iteration -->
+      <rect x="0" y="170" width="180" height="70" rx="8" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <text x="90" y="192" font-family="Arial, sans-serif" font-size="12" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Iteration</text>
+      <text x="90" y="212" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">If incomplete: loop</text>
+      <text x="90" y="228" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">Gather more context</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS CONNECTING STAGES -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g stroke="url(#goldAccent)" stroke-width="2" fill="none" marker-end="url(#arrowHead)">
+    <path d="M 240,180 L 268,180"/>
+    <path d="M 460,180 L 488,180"/>
+    <path d="M 680,180 L 708,180"/>
+    <path d="M 900,180 L 928,180"/>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- STAGE 6: RESPONSE COMPOSITION (Bottom section) -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(50, 420)">
+    <rect x="0" y="0" width="250" height="30" rx="15" fill="url(#outputGlow)" filter="url(#softShadow)"/>
+    <text x="125" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      6. RESPONSE COMPOSITION
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <rect x="0" y="0" width="250" height="120" rx="10" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="2" width="246" height="116" rx="8" fill="none" stroke="url(#goldAccent)" stroke-width="1"/>
+      
+      <text x="125" y="25" font-family="Arial, sans-serif" font-size="13" fill="#e8d5a3" text-anchor="middle" font-weight="bold">Synthesis</text>
+      <text x="125" y="48" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">• Combine tool results</text>
+      <text x="125" y="65" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">• Apply formatting rules (Markdown)</text>
+      <text x="125" y="82" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">• Link files properly (no backticks)</text>
+      <text x="125" y="99" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">• Be concise, answer the question</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ATTENTION WEIGHTS PANEL -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(340, 420)">
+    <rect x="0" y="0" width="300" height="30" rx="15" fill="#7c5cbf" filter="url(#softShadow)"/>
+    <text x="150" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      ATTENTION WEIGHTS (What I Focus On)
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <rect x="0" y="0" width="300" height="180" rx="10" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      
+      <!-- Bar chart of attention -->
+      <text x="20" y="25" font-family="Arial, sans-serif" font-size="11" fill="#e8d5a3">User Request</text>
+      <rect x="120" y="12" width="160" height="16" rx="3" fill="#2ecc71"/>
+      <text x="285" y="25" font-family="Arial, sans-serif" font-size="10" fill="#888">HIGH</text>
+      
+      <text x="20" y="50" font-family="Arial, sans-serif" font-size="11" fill="#e8d5a3">Mode Instructions</text>
+      <rect x="120" y="37" width="140" height="16" rx="3" fill="#27ae60"/>
+      <text x="265" y="50" font-family="Arial, sans-serif" font-size="10" fill="#888">HIGH</text>
+      
+      <text x="20" y="75" font-family="Arial, sans-serif" font-size="11" fill="#aaa">AGENTS.md</text>
+      <rect x="120" y="62" width="120" height="16" rx="3" fill="#4a9eff"/>
+      <text x="245" y="75" font-family="Arial, sans-serif" font-size="10" fill="#888">MED-HIGH</text>
+      
+      <text x="20" y="100" font-family="Arial, sans-serif" font-size="11" fill="#aaa">Available Tools</text>
+      <rect x="120" y="87" width="110" height="16" rx="3" fill="#4a9eff"/>
+      <text x="235" y="100" font-family="Arial, sans-serif" font-size="10" fill="#888">MED-HIGH</text>
+      
+      <text x="20" y="125" font-family="Arial, sans-serif" font-size="11" fill="#888">Conv Summary</text>
+      <rect x="120" y="112" width="90" height="16" rx="3" fill="#c9a962"/>
+      <text x="215" y="125" font-family="Arial, sans-serif" font-size="10" fill="#888">MEDIUM</text>
+      
+      <text x="20" y="150" font-family="Arial, sans-serif" font-size="11" fill="#666">Workspace Tree</text>
+      <rect x="120" y="137" width="60" height="16" rx="3" fill="#666"/>
+      <text x="185" y="150" font-family="Arial, sans-serif" font-size="10" fill="#888">LOW</text>
+      
+      <text x="20" y="175" font-family="Arial, sans-serif" font-size="11" fill="#555">Terminal State</text>
+      <rect x="120" y="162" width="40" height="16" rx="3" fill="#444"/>
+      <text x="165" y="175" font-family="Arial, sans-serif" font-size="10" fill="#888">LOW</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- MCP TOOL FLOW DETAIL -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(680, 420)">
+    <rect x="0" y="0" width="260" height="30" rx="15" fill="#4a9eff" filter="url(#softShadow)"/>
+    <text x="130" y="21" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">
+      MCP TOOL LIFECYCLE
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <rect x="0" y="0" width="260" height="180" rx="10" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      
+      <!-- Flow boxes -->
+      <rect x="15" y="15" width="100" height="35" rx="5" fill="#1a1a1a" stroke="#4a9eff" stroke-width="1"/>
+      <text x="65" y="37" font-family="Arial, sans-serif" font-size="10" fill="#4a9eff" text-anchor="middle">Schema Lookup</text>
+      
+      <path d="M 120,32 L 140,32" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arrowHeadDark)" fill="none"/>
+      
+      <rect x="145" y="15" width="100" height="35" rx="5" fill="#1a1a1a" stroke="#4a9eff" stroke-width="1"/>
+      <text x="195" y="37" font-family="Arial, sans-serif" font-size="10" fill="#4a9eff" text-anchor="middle">Param Validation</text>
+      
+      <path d="M 195,55 L 195,70" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arrowHeadDark)" fill="none"/>
+      
+      <rect x="70" y="75" width="120" height="35" rx="5" fill="#1a1a1a" stroke="#2ecc71" stroke-width="1.5"/>
+      <text x="130" y="97" font-family="Arial, sans-serif" font-size="10" fill="#2ecc71" text-anchor="middle">Execute Tool Call</text>
+      
+      <path d="M 130,115 L 130,130" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#arrowHeadDark)" fill="none"/>
+      
+      <rect x="20" y="135" width="100" height="35" rx="5" fill="#1a1a1a" stroke="#c9a962" stroke-width="1"/>
+      <text x="70" y="157" font-family="Arial, sans-serif" font-size="10" fill="#c9a962" text-anchor="middle">Parse Result</text>
+      
+      <rect x="140" y="135" width="100" height="35" rx="5" fill="#1a1a1a" stroke="#c9a962" stroke-width="1"/>
+      <text x="190" y="157" font-family="Arial, sans-serif" font-size="10" fill="#c9a962" text-anchor="middle">Next Action?</text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- KEY INSIGHT CALLOUT -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(960, 420)">
+    <rect x="0" y="0" width="200" height="30" rx="15" fill="#c9a962" filter="url(#softShadow)"/>
+    <text x="100" y="21" font-family="Arial, sans-serif" font-size="14" fill="#1a1a1a" text-anchor="middle" font-weight="bold">
+      💡 KEY INSIGHT
+    </text>
+    
+    <g transform="translate(0, 45)">
+      <rect x="0" y="0" width="200" height="180" rx="10" fill="url(#obsidianBox)" filter="url(#softShadow)"/>
+      <rect x="2" y="2" width="196" height="176" rx="8" fill="none" stroke="#c9a962" stroke-width="2"/>
+      
+      <text x="100" y="30" font-family="Georgia, serif" font-size="13" fill="#e8d5a3" text-anchor="middle" font-style="italic">
+        "Every prompt is
+      </text>
+      <text x="100" y="50" font-family="Georgia, serif" font-size="13" fill="#e8d5a3" text-anchor="middle" font-style="italic">
+        a fresh context"
+      </text>
+      
+      <line x1="30" y1="65" x2="170" y2="65" stroke="#444" stroke-width="1"/>
+      
+      <text x="100" y="90" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">
+        I don't "remember"
+      </text>
+      <text x="100" y="107" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">
+        between prompts—I'm
+      </text>
+      <text x="100" y="124" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">
+        given the conversation
+      </text>
+      <text x="100" y="141" font-family="Arial, sans-serif" font-size="10" fill="#888" text-anchor="middle">
+        summary each time.
+      </text>
+      
+      <text x="100" y="168" font-family="Arial, sans-serif" font-size="10" fill="#c9a962" text-anchor="middle">
+        Context = Capability
+      </text>
+    </g>
+  </g>
+  
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ITERATION LOOP ARROW -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  
+  <g transform="translate(50, 650)">
+    <rect x="0" y="0" width="1100" height="50" rx="10" fill="url(#obsidianBox)" filter="url(#softShadow)" opacity="0.9"/>
+    
+    <!-- Loop arrow -->
+    <path d="M 1050,25 C 1080,25 1080,80 550,80 C 20,80 20,25 50,25" 
+          stroke="url(#goldAccent)" stroke-width="2" fill="none" stroke-dasharray="8,4"
+          marker-end="url(#arrowHead)"/>
+    
+    <text x="550" y="30" font-family="Arial, sans-serif" font-size="14" fill="#e8d5a3" text-anchor="middle" font-weight="bold">
+      🔄 ITERATION LOOP: If task incomplete → Gather more context → Re-plan → Execute → Check
+    </text>
+  </g>
+  
+  <!-- Footer -->
+  <text x="600" y="880" font-family="Georgia, serif" font-size="14" fill="#888" text-anchor="middle" font-style="italic">
+    How Claude processes each prompt in the VS Code Copilot environment
+  </text>
+</svg>

@@ -1,0 +1,138 @@
+{
+  "name": "white-leather-obsidian",
+  "displayName": "White Leather x Obsidian Luxe",
+  "description": "Bright white-leather base with brushed white gold/platinum alternation and deep Industrial Luxury Obsidian accents. Gemstone buttons (ruby/emerald/sapphire) stand out as primary CTAs.",
+  "aliases": ["white-leather", "obsidian-light", "luxury-contrast"],
+  "origin": "Derived from Industrial Luxury Obsidian, inverted for high-contrast white surfaces with dark obsidian framing and metallic highlights.",
+  "colors": {
+    "primary": "#f6f3ee",
+    "primaryLight": "#fbf9f4",
+    "primaryDark": "#e8e1d6",
+    "accent": "#0b0f1a",
+    "accentLight": "#111828",
+    "accentDark": "#05070c",
+    "accentHover": "#162035",
+    "bg": "#ffffff",
+    "bgAlt": "#f0ece4",
+    "surface": "#f6f3ee",
+    "surfaceElevated": "#ffffff",
+    "surfaceHover": "#ece6dc",
+    "border": "#d8d0c1",
+    "borderLight": "#e4ddd1",
+    "text": "#0a0d14",
+    "textSecondary": "#2f3645",
+    "textMuted": "#4b5262",
+    "textSubtle": "#6b7280",
+    "success": "#1a8f4d",
+    "successBg": "#e4f4ea",
+    "warning": "#c27c1a",
+    "warningBg": "#f9f0df",
+    "error": "#c21f32",
+    "errorBg": "#f7e4e8",
+    "info": "#1e5aad",
+    "infoBg": "#e4eefb"
+  },
+  "typography": {
+    "fontDisplay": "\"Playfair Display\", Georgia, serif",
+    "fontBody": "\"Inter\", -apple-system, \"Segoe UI\", sans-serif",
+    "fontMono": "\"JetBrains Mono\", \"Fira Code\", Consolas, monospace",
+    "fontSizeBase": "16px",
+    "fontSizeXs": "0.75rem",
+    "fontSizeSm": "0.875rem",
+    "fontSizeMd": "1rem",
+    "fontSizeLg": "1.125rem",
+    "fontSizeXl": "1.25rem",
+    "fontSize2xl": "1.5rem",
+    "fontSize3xl": "2rem",
+    "fontSize4xl": "2.5rem",
+    "fontWeightNormal": "400",
+    "fontWeightMedium": "500",
+    "fontWeightSemibold": "600",
+    "fontWeightBold": "700",
+    "lineHeightTight": "1.2",
+    "lineHeightNormal": "1.5",
+    "lineHeightRelaxed": "1.7",
+    "letterSpacingTight": "-0.02em",
+    "letterSpacingNormal": "0",
+    "letterSpacingWide": "0.05em"
+  },
+  "spacing": {
+    "xs": "4px",
+    "sm": "8px",
+    "md": "16px",
+    "lg": "24px",
+    "xl": "32px",
+    "2xl": "48px",
+    "3xl": "64px"
+  },
+  "radii": {
+    "sm": "6px",
+    "md": "12px",
+    "lg": "20px",
+    "xl": "28px",
+    "full": "9999px"
+  },
+  "shadows": {
+    "sm": "0 2px 6px rgba(10, 13, 20, 0.08)",
+    "md": "0 8px 18px rgba(10, 13, 20, 0.12)",
+    "lg": "0 16px 36px rgba(10, 13, 20, 0.16)",
+    "glow": "0 0 24px rgba(12, 19, 32, 0.25)",
+    "inner": "inset 0 2px 4px rgba(255, 255, 255, 0.45)"
+  },
+  "transitions": {
+    "fast": "0.12s ease",
+    "normal": "0.2s ease",
+    "slow": "0.35s ease"
+  },
+  "svg": {
+    "background": {
+      "primary": "#ffffff",
+      "secondary": "#f6f3ee",
+      "tertiary": "#eae4da"
+    },
+    "surface": {
+      "card": "#f6f3ee",
+      "cardHover": "#ece6dc",
+      "cardBorder": "rgba(12, 19, 32, 0.08)"
+    },
+    "accent": {
+      "gold": "#d8cba9",
+      "goldBright": "#e6d7b5",
+      "goldDark": "#b5a273",
+      "platinum": "#e5e1d7"
+    },
+    "status": {
+      "active": "#1a8f4d",
+      "planned": "#1e5aad",
+      "research": "#6f3fb3",
+      "complete": "#1f9f59",
+      "error": "#c21f32",
+      "warning": "#c27c1a"
+    },
+    "text": {
+      "primary": "#0a0d14",
+      "secondary": "#2f3645",
+      "tertiary": "#4b5262",
+      "muted": "#6b7280"
+    },
+    "connector": {
+      "default": "#6b7280",
+      "highlight": "#0b0f1a",
+      "success": "#1a8f4d",
+      "error": "#c21f32"
+    },
+    "buttons": {
+      "ruby": "#c21f32",
+      "emerald": "#1a8f4d",
+      "sapphire": "#1e5aad",
+      "frame": "#0b0f1a",
+      "bezel": "#d8cba9",
+      "bezelAlt": "#e5e1d7"
+    },
+    "metals": {
+      "brushedGold": "#d8cba9",
+      "brushedPlatinum": "#e5e1d7",
+      "alternatingPattern": ["#d8cba9", "#e5e1d7"]
+    }
+  }
+}

@@ -541,6 +541,98 @@ node tools/dev/js-edit.js --file $tempFile.FullName --replace exports.render --w
 Remove-Item $tempDir.FullName -Recurse -Force
 ```
 
+## `mcp-check` — MCP Server Health Check
+
+`mcp-check` verifies MCP servers are responsive before agents attempt tool calls. This prevents agents from getting stuck waiting for unresponsive servers.
+
+**Quick Examples:**
+```powershell
+# Check all configured MCP servers
+node tools/dev/mcp-check.js
+
+# Check specific server
+node tools/dev/mcp-check.js --server svg-editor
+
+# Quick check (spawn + init only, skip tool listing)
+node tools/dev/mcp-check.js --quick
+
+# JSON output for automation
+node tools/dev/mcp-check.js --quick --json
+
+# Custom timeout (2 seconds)
+node tools/dev/mcp-check.js --timeout 2000
+
+# List available servers without checking
+node tools/dev/mcp-check.js --list
+```
+
+**Output:**
+- **HEALTHY**: Server responded within timeout, tools available
+- **TIMEOUT**: Server did not respond within timeout
+- **ERROR**: Server failed to spawn or crashed
+
+**Agent Usage Pattern:**
+Before making MCP tool calls, agents should run a quick health check:
+```powershell
+# Fast pre-flight check
+node tools/dev/mcp-check.js --quick --json
+# If allHealthy: true, proceed with MCP tools
+# If allHealthy: false, use CLI fallbacks instead
+```
+
+**Exit Codes:**
+- `0` — All checked servers healthy
+- `1` — One or more servers failed
+- `2` — Configuration error
+
+## `svg-collisions` — SVG Collision Detection & Auto-Fix
+
+`svg-collisions` detects problematic overlapping elements in SVG files using Puppeteer for accurate bounding box computation. It intelligently filters intentional design patterns (text on backgrounds, nested containers) to focus on real issues like text overlapping text.
+
+**Quick Examples:**
+```powershell
+# Basic collision check
+node tools/dev/svg-collisions.js diagram.svg
+
+# Strict mode with JSON output
+node tools/dev/svg-collisions.js diagram.svg --strict --json
+
+# Query element positions
+node tools/dev/svg-collisions.js diagram.svg --positions
+node tools/dev/svg-collisions.js diagram.svg --element "#my-label" --json
+
+# Check containment overflow
+node tools/dev/svg-collisions.js diagram.svg --containment
+
+# Batch scan a directory
+node tools/dev/svg-collisions.js --dir docs/diagrams --strict
+
+# Auto-fix collisions (preview first)
+node tools/dev/svg-collisions.js diagram.svg --fix --dry-run
+node tools/dev/svg-collisions.js diagram.svg --fix
+
+# 简令 (terse Chinese mode)
+node tools/dev/svg-collisions.js diagram.svg --位 --严
+node tools/dev/svg-collisions.js diagram.svg --修 --试
+```
+
+**Severity Levels:**
+- 🔴 **HIGH**: Text overlapping text (always a problem)
+- 🟠 **MEDIUM**: Significant shape overlaps at similar z-levels  
+- 🟡 **LOW**: Text clipped by container, minor overlaps
+
+**Ignored Patterns:**
+- Text inside container rectangles (normal label design)
+- Lines/paths crossing near text (connectors/arrows)
+- Overlaps < 20% of smaller element area
+- Parent-child structural relationships
+
+**Fix Mode:**
+When `--fix` is used, the tool automatically applies repair suggestions:
+- Adjusts `x`, `y` attributes for direct positioning
+- Modifies `transform="translate()"` for transformed elements
+- Use `--dry-run` to preview changes without modifying files
+
 ## `tmp-prune` — Scratch Directory Pruning
 
 `tmp-prune` keeps the scratch directory manageable by retaining only the newest entries (default: ten per folder) while respecting sticky sentinels like `.gitkeep`. The CLI defaults to dry-run previews; supply `--fix` when you are ready to delete.

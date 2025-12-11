@@ -92,6 +92,7 @@ function buildConfigMatrixRows(properties = [], options = {}) {
         raw: property.value,
         display: property.displayValue,
         unit: property.unit,
+        edit: property.edit,
         behavior: property.behaviorSummary || property.behavior || null,
         formatHint: property.format,
         type: property.type || typeof property.value
@@ -212,14 +213,47 @@ class ConfigMatrixControl extends jsgui.Control {
   _renderValueCell(value = {}) {
     const fragments = [];
     const displayText = value.display != null ? value.display : formatValue(value.raw, value.formatHint);
-    const valueSpan = new jsgui.Control({ context: this.context, tagName: "span" });
-    valueSpan.add_class("config-matrix__value");
-    if (value.key) {
-      valueSpan.dom.attributes["data-property-key"] = value.key;
+
+    // Editable slot: render a simple inline form when edit metadata is present
+    if (value.edit && value.edit.action) {
+      const form = new jsgui.form({ context: this.context });
+      form.add_class("config-matrix__edit-form");
+      form.dom.attributes.method = value.edit.method || "post";
+      form.dom.attributes.action = value.edit.action;
+
+      const hiddenKey = new jsgui.input({ context: this.context });
+      hiddenKey.dom.attributes.type = "hidden";
+      hiddenKey.dom.attributes.name = value.edit.keyField || "key";
+      hiddenKey.dom.attributes.value = value.key || value.edit.key || "";
+      form.add(hiddenKey);
+
+      const input = new jsgui.input({ context: this.context });
+      input.add_class("config-matrix__edit-input");
+      input.dom.attributes.type = value.edit.type || "text";
+      input.dom.attributes.name = value.edit.valueField || "value";
+      input.dom.attributes.value = value.raw != null ? value.raw : "";
+      if (value.edit.placeholder) input.dom.attributes.placeholder = value.edit.placeholder;
+      if (value.edit.required) input.dom.attributes.required = "required";
+      if (value.edit.maxlength) input.dom.attributes.maxlength = String(value.edit.maxlength);
+      form.add(input);
+
+      const submit = new jsgui.button({ context: this.context });
+      submit.add_class("config-matrix__edit-submit");
+      submit.dom.attributes.type = "submit";
+      submit.add(new StringControl({ context: this.context, text: value.edit.label || "Save" }));
+      form.add(submit);
+
+      fragments.push(form);
+    } else {
+      const valueSpan = new jsgui.Control({ context: this.context, tagName: "span" });
+      valueSpan.add_class("config-matrix__value");
+      if (value.key) {
+        valueSpan.dom.attributes["data-property-key"] = value.key;
+      }
+      valueSpan.dom.attributes["data-editor-slot"] = "value";
+      valueSpan.add(new StringControl({ context: this.context, text: displayText }));
+      fragments.push(valueSpan);
     }
-    valueSpan.dom.attributes["data-editor-slot"] = "value";
-    valueSpan.add(new StringControl({ context: this.context, text: displayText }));
-    fragments.push(valueSpan);
     if (value.unit) {
       const unit = this._createMetaText(value.unit);
       if (unit) fragments.push(unit);

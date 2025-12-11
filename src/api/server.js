@@ -48,6 +48,7 @@ const { createPlaceHubsRouter } = require('./routes/place-hubs');
 const { createBackgroundTasksRouter } = require('./routes/background-tasks');
 const { createAnalysisRouter } = require('./routes/analysis');
 const { createCrawlsRouter } = require('./routes/crawls');
+const { createDecisionConfigSetRoutes } = require('./routes/decisionConfigSetRoutes');
 
 function parseEnvBoolean(value, fallback = false) {
   if (value === undefined || value === null) {
@@ -429,6 +430,7 @@ function createApiServer(options = {}) {
     getDbRW,
     logger
   }));
+  app.use('/api/decision-config-sets', createDecisionConfigSetRoutes({ dbPath }));
   app.use('/api/analysis', createAnalysisRouter({
     getDbRW,
     logger

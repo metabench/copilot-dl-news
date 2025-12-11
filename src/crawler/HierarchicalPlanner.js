@@ -185,11 +185,25 @@ class HierarchicalPlanner {
 
     // Analyze which action sequences performed well
     const successfulSequences = planOutcomes
-      .filter(o => o.success && o.actualValue > o.estimatedValue)
-      .map(o => o.actionSequence);
+      .filter(o => {
+        const expected = o.expectedValue ?? o.estimatedValue ?? 0;
+        const actual = o.actualValue ?? o.value ?? 0;
+        const successFlag = typeof o.success === 'boolean' ? o.success : true;
+        // Treat reasonably good outcomes as successful when explicit flags are missing
+        return successFlag && (expected === 0 || actual >= expected * 0.7);
+      })
+      .map(o => o.actionSequence || (o.action ? [o.action] : []))
+      .filter(seq => seq.length > 0);
+
+    // Fallback: if nothing qualifies as successful, still learn from provided actions
+    const sequences = successfulSequences.length > 0
+      ? successfulSequences
+      : planOutcomes
+          .map(o => o.actionSequence || (o.action ? [o.action] : []))
+          .filter(seq => seq.length > 0);
 
     // Extract common patterns
-    const patterns = this._extractPatterns(successfulSequences);
+    const patterns = this._extractPatterns(sequences);
 
     // Store as heuristics
     const heuristic = {
@@ -250,6 +264,7 @@ class HierarchicalPlanner {
     const queue = [root]; // Priority queue (simulated)
     let bestPlan = null;
     let bestValue = -Infinity;
+    let bestNode = null; // Track best node even if goal not reached
     let nodesExplored = 0;
 
     while (queue.length > 0 && nodesExplored < maxBranches * lookahead) {
@@ -265,6 +280,7 @@ class HierarchicalPlanner {
         if (node.estimatedValue > bestValue) {
           bestValue = node.estimatedValue;
           bestPlan = plan;
+          bestNode = node;
         }
         continue;
       }
@@ -304,6 +320,12 @@ class HierarchicalPlanner {
 
         node.children.push(child);
 
+        // Track best node so we always return a plan even if the goal isn't fully met
+        if (child.estimatedValue > bestValue) {
+          bestValue = child.estimatedValue;
+          bestNode = child;
+        }
+
         // Add to queue if promising
         if (child.probability > 0.1) {
           queue.push(child);
@@ -312,6 +334,11 @@ class HierarchicalPlanner {
     }
 
     this.logger.log?.(`[Plan] Explored ${nodesExplored} nodes, found ${bestPlan ? 'solution' : 'no solution'}`);
+
+    // Fallback to the best partial plan if we never hit the formal goal
+    if (!bestPlan && bestNode) {
+      bestPlan = this._extractPlan(bestNode);
+    }
 
     return bestPlan;
   }
@@ -565,6 +592,13 @@ class HierarchicalPlanner {
     const patterns = new Map();
 
     for (const seq of sequences) {
+      // Handle short sequences by recording single action types
+      if (seq.length === 1) {
+        const key = seq[0]?.type || 'unknown';
+        patterns.set(key, (patterns.get(key) || 0) + 1);
+        continue;
+      }
+
       // Look for 2-3 action subsequences
       for (let len = 2; len <= Math.min(3, seq.length); len++) {
         for (let i = 0; i <= seq.length - len; i++) {

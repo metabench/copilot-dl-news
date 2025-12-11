@@ -22,21 +22,79 @@ function buildInMemoryDb() {
       last_seen_at TEXT,
       analysis TEXT
     );
-    CREATE TABLE fetches (
+    CREATE TABLE http_responses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       url_id INTEGER NOT NULL,
-      fetched_at TEXT,
       request_started_at TEXT,
+      fetched_at TEXT,
       http_status INTEGER,
       content_type TEXT,
-      content_length INTEGER,
+      content_encoding TEXT,
       bytes_downloaded INTEGER,
-      file_path TEXT,
-      file_size INTEGER,
+      transfer_kbps REAL,
+      redirect_chain TEXT,
+      ttfb_ms INTEGER,
+      download_ms INTEGER,
+      total_ms INTEGER,
+      cache_category TEXT,
+      cache_key TEXT,
+      cache_created_at TEXT,
+      cache_expires_at TEXT,
+      request_method TEXT
+    );
+
+    CREATE TABLE content_storage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      http_response_id INTEGER,
+      uncompressed_size INTEGER,
+      compression_type_id INTEGER,
+      content_category TEXT,
+      content_subtype TEXT
+    );
+
+    CREATE TABLE content_analysis (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content_id INTEGER,
       classification TEXT,
-      word_count INTEGER
+      word_count INTEGER,
+      content_category TEXT,
+      content_subtype TEXT
+    );
+
+    CREATE VIEW fetched_urls AS
+    SELECT
+      u.id AS url_id,
+      u.url,
+      u.host,
+      u.canonical_url,
+      u.created_at AS url_created_at,
+      u.last_seen_at AS url_last_seen_at,
+      MAX(hr.fetched_at) AS last_fetched_at,
+      MAX(hr.http_status) AS last_http_status,
+      MAX(ca.classification) AS last_classification,
+      MAX(ca.word_count) AS last_word_count,
+      COUNT(hr.id) AS fetch_count
+    FROM urls u
+    LEFT JOIN http_responses hr ON hr.url_id = u.id
+    LEFT JOIN content_storage cs ON cs.http_response_id = hr.id
+    LEFT JOIN content_analysis ca ON ca.content_id = cs.id
+    GROUP BY u.id, u.url, u.host, u.canonical_url, u.created_at, u.last_seen_at;
+
+    CREATE TABLE crawler_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  db.setSetting = (key, value) => {
+    if (!key) return false;
+    db.prepare(
+      "INSERT INTO crawler_settings(key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')"
+    ).run(key, value != null ? String(value) : null);
+    return true;
+  };
+
   return db;
 }
 
@@ -50,30 +108,38 @@ function seedUrlWithFetches(db, { url = "https://example.com/article", host = "e
   };
   const result = insertUrl.run(url, host, url, timestamps.created, timestamps.lastSeen, null);
   const urlId = Number(result.lastInsertRowid);
-  const insertFetch = db.prepare(
-    "INSERT INTO fetches (url_id, fetched_at, request_started_at, http_status, content_type, content_length, bytes_downloaded, file_path, file_size, classification, word_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  const insertResponse = db.prepare(
+    "INSERT INTO http_responses (url_id, fetched_at, request_started_at, http_status, content_type, bytes_downloaded, ttfb_ms, download_ms, total_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
-  insertFetch.run(
+  const insertStorage = db.prepare(
+    "INSERT INTO content_storage (http_response_id, uncompressed_size, content_category, content_subtype) VALUES (?, ?, ?, ?)"
+  );
+  const insertAnalysis = db.prepare(
+    "INSERT INTO content_analysis (content_id, classification, word_count, content_category, content_subtype) VALUES (?, ?, ?, ?, ?)"
+  );
+
+  const primaryFetch = insertResponse.run(
     urlId,
     "2025-11-02T12:05:00.000Z",
     "2025-11-02T12:05:00.000Z",
     200,
     "text/html",
     2048,
-    2048,
-    null,
-    null,
-    "article",
-    450
+    120,
+    350,
+    470
   );
-  insertFetch.run(
+  const primaryResponseId = Number(primaryFetch.lastInsertRowid);
+  const storageRow = insertStorage.run(primaryResponseId, 4096, "article", "html");
+  const storageId = Number(storageRow.lastInsertRowid);
+  insertAnalysis.run(storageId, "article", 450, "article", "html");
+
+  insertResponse.run(
     urlId,
     "2025-11-02T11:45:00.000Z",
     "2025-11-02T11:45:00.000Z",
     304,
     "text/html",
-    null,
-    null,
     null,
     null,
     null,
@@ -87,11 +153,12 @@ function createServer(seedFn) {
   const payload = typeof seedFn === "function" ? seedFn(db) : {};
   const dbAccess = {
     db,
+    setSetting: (key, value) => db.setSetting(key, value),
     close: jest.fn(() => db.close())
   };
   openNewsDb.mockReturnValueOnce(dbAccess);
   const server = createDataExplorerServer({ dbPath: ":memory:", pageSize: 20 });
-  return { ...payload, app: server.app, shutdown: () => server.close() };
+  return { db, ...payload, app: server.app, shutdown: () => server.close() };
 }
 
 function createBrokenServer() {
@@ -214,6 +281,91 @@ describe("dataExplorerServer /api/urls diagnostics", () => {
     expect(response.body.error.code).toBe("ERR_UI_SERVER");
     expect(response.body.diagnostics.requestId).toBeTruthy();
     expect(response.headers["x-copilot-error"]).toBe("1");
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer config editing", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("renders config view with inline edit forms", async () => {
+    const { app, shutdown } = createServer((db) => {
+      db.setSetting("crawler.delayMs", "250");
+      db.setSetting("crawler.maxDepth", "3");
+      return {};
+    });
+
+    const response = await request(app).get("/config");
+
+    expect(response.status).toBe(200);
+    expect(response.type).toMatch(/html/);
+    expect(response.text).toContain("Crawler Settings");
+    expect(response.text).toContain("config-matrix__edit-form");
+    expect(response.text).toContain('action="/api/config"');
+    expect(response.text).toContain('name="key"');
+    expect(response.text).toContain('name="value"');
+    expect(response.text).toContain('value="crawler.delayMs"');
+    expect(response.text).toContain('value="250"');
+
+    shutdown();
+  });
+
+  test("updates crawler setting via form post and redirects back", async () => {
+    const { app, shutdown, db } = createServer((db) => {
+      db.setSetting("crawler.delayMs", "250");
+      return {};
+    });
+
+    const response = await request(app)
+      .post("/api/config")
+      .set("Referer", "/config?from=test")
+      .type("form")
+      .send({ key: "crawler.delayMs", value: "500" });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.location).toBe("/config?from=test");
+
+    const row = db.prepare("SELECT value FROM crawler_settings WHERE key = ?").get("crawler.delayMs");
+    expect(row.value).toBe("500");
+
+    shutdown();
+  });
+
+  test("returns JSON payload when Accept header requests JSON", async () => {
+    const { app, shutdown, db } = createServer((db) => {
+      db.setSetting("crawler.maxDepth", "3");
+      return {};
+    });
+
+    const response = await request(app)
+      .post("/api/config")
+      .set("Accept", "application/json")
+      .send({ key: "crawler.maxDepth", value: "7" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.key).toBe("crawler.maxDepth");
+    expect(response.body.value).toBe("7");
+
+    const row = db.prepare("SELECT value FROM crawler_settings WHERE key = ?").get("crawler.maxDepth");
+    expect(row.value).toBe("7");
+
+    shutdown();
+  });
+
+  test("rejects missing key when posting config", async () => {
+    const { app, shutdown } = createServer();
+
+    const response = await request(app)
+      .post("/api/config")
+      .set("Accept", "application/json")
+      .send({ value: "noop" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
 
     shutdown();
   });

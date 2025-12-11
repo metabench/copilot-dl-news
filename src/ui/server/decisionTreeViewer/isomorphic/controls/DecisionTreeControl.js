@@ -68,7 +68,49 @@ class DecisionTreeControl extends Control {
     this._tree = value;
     this._nodeControls.clear();
     this._selectedNodeId = null;
-    // Re-render would happen here in a full implementation
+    this._highlightedPath = [];
+
+    if (this._tree) {
+      this.dom.attributes["data-tree-id"] = this._tree.id;
+    } else {
+      delete this.dom.attributes["data-tree-id"];
+    }
+
+    // Dispose existing rendering artifacts
+    this._teardownRender();
+
+    // Re-compose with the new tree and re-activate if already active
+    this.compose();
+    if (this.__active) {
+      this.activate();
+      this._initConnections();
+    }
+  }
+
+  /**
+   * Clear rendered children/observers/renderers before re-composing.
+   */
+  _teardownRender() {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+    if (this._resizeTimeout) {
+      clearTimeout(this._resizeTimeout);
+      this._resizeTimeout = null;
+    }
+    if (this._connectionRenderer) {
+      this._connectionRenderer.dispose();
+      this._connectionRenderer = null;
+    }
+    this._connectionMap.clear();
+
+    // Remove existing child controls / DOM
+    if (this.remove_all) {
+      this.remove_all();
+    } else if (this.dom?.el) {
+      this.dom.el.innerHTML = "";
+    }
   }
   
   compose() {
@@ -391,6 +433,12 @@ class DecisionTreeControl extends Control {
     svg.style.zIndex = "1";
     
     const treeRect = this.dom.el.getBoundingClientRect();
+    const getPointRect = (nodeEl, pointType, branch) => {
+      if (!nodeEl?.querySelector) return null;
+      let selector = `[data-jsgui-control="dt_connection_point"][data-point-type="${pointType}"]`;
+      if (branch) selector += `[data-branch="${branch}"]`;
+      return nodeEl.querySelector(selector)?.getBoundingClientRect?.() || null;
+    };
     
     // Draw connection for each non-root node
     this._nodeControls.forEach((control, nodeId) => {
@@ -405,23 +453,19 @@ class DecisionTreeControl extends Control {
       // Get positions relative to tree container
       const parentRect = parentControl.dom.el.getBoundingClientRect();
       const childRect = control.dom.el.getBoundingClientRect();
+      const startRect = getPointRect(parentControl.dom.el, branch === "yes" ? "output-yes" : "output-no", branch) || parentRect;
+      const endRect = getPointRect(control.dom.el, "input-top") || childRect;
       
       // Calculate start and end points
       let startX, startY, endX, endY;
       
-      if (branch === "yes") {
-        // YES path - from bottom-left of parent
-        startX = parentRect.left + parentRect.width * 0.25 - treeRect.left;
-        startY = parentRect.bottom - treeRect.top;
-      } else {
-        // NO path - from bottom-right of parent
-        startX = parentRect.left + parentRect.width * 0.75 - treeRect.left;
-        startY = parentRect.bottom - treeRect.top;
-      }
+      // Use connector centers when available for precise geometry
+      startX = startRect.left + startRect.width / 2 - treeRect.left;
+      startY = startRect.top + startRect.height / 2 - treeRect.top;
       
-      // End at top center of child
-      endX = childRect.left + childRect.width / 2 - treeRect.left;
-      endY = childRect.top - treeRect.top;
+      // End at input connector or top center of child
+      endX = endRect.left + endRect.width / 2 - treeRect.left;
+      endY = endRect.top + endRect.height / 2 - treeRect.top;
       
       // Calculate bezier control points for smooth S-curve
       const dx = endX - startX;

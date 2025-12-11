@@ -37,6 +37,11 @@ This file is **living AGI infrastructure**. When you discover:
 - **Session-driven.** Every change lives in a session folder with a plan, notes, and a summary.
 - **Tool-powered.** `js-scan`, `js-edit`, `md-scan`, `md-edit` and tests are non-optional.
 
+### Delegation lab hook
+- Before touching bubbling/capture/selector logic, skim [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md).
+- Run DOM-backed delegation checks quickly: `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,011` (or the full suite). One browser/page, console cleared between runs.
+- Add new delegation experiments to the runner + manifest so dashboard discoveries can trigger them in one command.
+
 ---
 
 ## Agent Contract (Non-Negotiable)

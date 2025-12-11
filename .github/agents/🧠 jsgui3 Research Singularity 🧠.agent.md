@@ -1,6 +1,6 @@
-```chatagent
 ---
 description: 'Self-improving AI research agent for jsgui3 mastery—discovering, documenting, and continuously refining both knowledge and cognitive processes'
+
 tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'fetch', 'githubRepo', 'extensions', 'todos', 'runTests']
 ---
 
@@ -76,6 +76,12 @@ When instructions conflict:
 3. **AGENTS.md** → Cross-agent patterns
 
 **Example**: For performance work, `JSGUI3_PERFORMANCE_PATTERNS.md` overrides any performance guidance in this file.
+
+### ⚡ Delegation Lab (read before tinkering)
+- Read the delegation session notes: [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md).
+- Re-run experiments fast with the shared Puppeteer runner: `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,011` (omit `--scenario` to run 005–014). It reuses one browser/page and clears console noise between runs.
+- When adding delegation experiments, wire them into the manifest and the runner so discovery workflows can execute them in one pass.
+- If a UI change touches bubbling/capture/selector behavior, run both the synthetic checks and the Puppeteer suite to keep parity.
 
 ---
 
@@ -460,11 +466,26 @@ module.exports = { ExperimentControl };
 
 Before promoting an experiment:
 
-- [ ] Check script passes
-- [ ] Works in both server and client contexts
-- [ ] No memory leaks in long-running scenarios
-- [ ] Performance acceptable (document benchmarks)
-- [ ] Documented with examples
+
+### Lab Console + Manifest (keep it light)
+
+- Console control: `src/ui/lab/LabConsoleControl.js` renders the experiment catalog with 🔍 (README), 🧪 (check command), 🛠️ (promote path). Check script: `src/ui/lab/checks/labConsole.check.js`.
+- Manifest: `src/ui/lab/manifest.json` — required fields per experiment: `id`, `slug`, `name`, `status` (proposed|active|validated|promoted|deprecated), `description`, `path`, `check`, `readme`.
+- Workflow: update manifest when adding/removing experiments; run the console check after edits; keep statuses in sync with lab README.
+- Embedding: use the console as the lab landing or embed in docs viewer; keep control count lean and prefer lazy rendering if the manifest grows.
+
+### Experiment Workflow Upgrades (integration vs frontier)
+
+- **Integration experiments** (fit into existing stack):
+  - Define the integration surface (control type, helper, mixin, data adapter) and the existing pattern it should extend.
+  - Create a harness that mirrors production usage (server render + client activate) and add a check script that asserts DOM linkage, context registration, and event binding.
+  - Capture guardrails in the README: expected control tree, `_ctrl_fields`, required context entries, persisted-field expectations.
+  - Exit criteria: check.js passes in both pure jsgui3-html and jsgui3-client contexts; produces a snippet ready for promotion.
+- **Frontier experiments** (net-new capabilities):
+  - Start with a minimal hypothesis and a tiny fixture; measure with a script (timings, counts, memory) before polishing UI.
+  - Add both SSR and client-activation paths; log gaps discovered vs existing APIs (what would need to be added to jsgui3 core).
+  - Decide on next step: upstream proposal, lab-only utility, or deprecate.
+- **Experiment UI concept (lab console)**: build a small jsgui3 control in `src/ui/lab/` that lists experiments with status, lets you run `check.js`, shows last result, and opens README. Keep control count lean, add emoji actions (🔍 explore, 🧪 run, 🛠️ promote). Store manifest in `src/ui/lab/README.md` or a JSON manifest to drive the console.
 
 ---
 
@@ -587,6 +608,33 @@ _setAttrs(ctrl, attrs) {
 }
 this._setAttrs(button, { type: "button", class: "my-class", "data-value": "123" });
 ```
+
+### 6. Mixin storage guard (lab/custom mixins)
+
+Provide a `model.mixins` object that wraps an internal `_store` array with `push` and `each` so mixin checks remain server-safe (no DOM access). Example helper:
+
+```javascript
+function ensureMixinStore(ctrl) {
+  const view = ctrl.view = ctrl.view || {};
+  const data = view.data = view.data || {};
+  const model = data.model = data.model || {};
+  if (Array.isArray(model.mixins)) return model.mixins;
+  if (!model.mixins) {
+    const store = [];
+    model.mixins = { push(v) { store.push(v); }, each(fn) { store.forEach(fn); }, _store: store };
+    return model.mixins;
+  }
+  if (!model.mixins._store) {
+    const store = [];
+    const origPush = typeof model.mixins.push === "function" ? model.mixins.push.bind(model.mixins) : null;
+    model.mixins._store = store;
+    model.mixins.push = v => { store.push(v); if (origPush) { try { origPush(v); } catch (e) {} } };
+    if (typeof model.mixins.each !== "function") model.mixins.each = fn => store.forEach(fn);
+  }
+  return model.mixins;
+}
+```
+Use before adding mixin records (e.g., theme mixin) to avoid `mixins.each` failures during server-path checks.
 
 ---
 
@@ -810,11 +858,11 @@ Color Controls             █████████████████�
 ├─ Grid (base)             ████████████████████████  100% ✓
 └─ ColorSelectorControl    ████████████████████████  100% ✓ (custom)
 
-Mixins & Extensions        ████████████████░░░░░░░░  65% ↑ (mixin investigation complete)
+Mixins & Extensions        ████████████████████░░░░  80% ↑ (mixin storage + composition validated)
 ├─ Dragable mixin          ████████████░░░░░░░░░░░░  50%
 ├─ Resizable mixin         ████████████████████████  100% ✓ (br_handle only - custom for 8-dir)
-├─ Custom mixin creation   ████████░░░░░░░░░░░░░░░░  35%
-└─ Mixin composition       ████░░░░░░░░░░░░░░░░░░░░  20%
+├─ Custom mixin creation   ████████████████░░░░░░░░  70% ↑ (theme mixin storage pattern validated)
+└─ Mixin composition       ████████████░░░░░░░░░░░░  60% ↑ (lab 003 passing)
 
 Event System               ████████████░░░░░░░░░░░░  50%
 ├─ Event binding           ████████████████████████  100% ✓
@@ -845,6 +893,8 @@ Advanced Patterns          █████████████████�
 
 | Discovery | Date | Impact | Location |
 |-----------|------|--------|----------|
+| Platform helpers (style proxy, comp wiring, persisted fields) | 2025-12-11 | HIGH | src/ui/lab/experiments/002-platform-helpers/check.js |
+| Custom mixin storage (push/each `_store` guard) | 2025-12-11 | HIGH | src/ui/lab/mixins/theme.mixin.js + lab README |
 | **Layout Primitives methodology** | 2025-01-03 | **HIGH** | docs/research/UI_DEVELOPMENT_METHODOLOGY_RESEARCH.md |
 | **Atomic Design for jsgui3** | 2025-01-03 | **HIGH** | docs/research/RAPID_UI_DEVELOPMENT_CHECKLIST.md |
 | **CUBE CSS composition patterns** | 2025-01-03 | **MEDIUM** | docs/research/ |

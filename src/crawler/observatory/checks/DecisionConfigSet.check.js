@@ -14,9 +14,12 @@
 
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-// Import the module under test
-const { DecisionConfigSet, CONFIG_SETS_DIR } = require('../DecisionConfigSet');
+// Import the modules under test
+const { DecisionConfigSet } = require('../DecisionConfigSet');
+const { DecisionConfigSetRepository } = require('../DecisionConfigSetRepository');
+const { DecisionConfigPromotionService } = require('../DecisionConfigPromotionService');
 
 // Test state
 let passed = 0;
@@ -44,7 +47,17 @@ async function runTests() {
   console.log('🔬 Decision Config Set - Check Script');
   console.log('=====================================\n');
 
-  const rootDir = path.resolve(__dirname, '../../../../');
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dcs-check-'));
+  const repository = new DecisionConfigSetRepository({ rootDir });
+  const promotionService = new DecisionConfigPromotionService({ repository, rootDir, backupDir: path.join(rootDir, 'data/backups/config-snapshots') });
+
+  // Seed production files in temp root
+  const prodPriorityPath = path.join(rootDir, 'config/priority-config.json');
+  const prodTreesDir = path.join(rootDir, 'config/decision-trees');
+  fs.mkdirSync(path.dirname(prodPriorityPath), { recursive: true });
+  fs.mkdirSync(prodTreesDir, { recursive: true });
+  fs.writeFileSync(prodPriorityPath, JSON.stringify({ queue: { bonuses: { alpha: 1 }, weights: { beta: 2 } }, features: { featureA: true } }, null, 2));
+  fs.writeFileSync(path.join(prodTreesDir, 'page-categories.json'), JSON.stringify({ categories: { sample: { tree: { result: 'match' } } } }, null, 2));
   
   // ─────────────────────────────────────────────────────────────────────────
   section('Load from Production');
@@ -52,7 +65,7 @@ async function runTests() {
   
   let baseline;
   try {
-    baseline = await DecisionConfigSet.fromProduction('test-baseline', rootDir);
+    baseline = await repository.fromProduction('test-baseline');
     check('fromProduction() loads successfully', true);
   } catch (err) {
     check('fromProduction() loads successfully', false);
@@ -206,12 +219,12 @@ async function runTests() {
   testSet.setPriorityBonus('test-bonus', 42);
   
   // Save
-  const savedPath = await testSet.save(rootDir);
+  const savedPath = await repository.save(testSet);
   check('save() returns path', typeof savedPath === 'string' && savedPath.length > 0);
   check('Saved file exists', fs.existsSync(savedPath));
   
   // Load
-  const loaded = await DecisionConfigSet.load(testSet.slug, rootDir);
+  const loaded = await repository.load(testSet.slug);
   check('load() returns config set', loaded !== null);
   check('Loaded slug matches', loaded.slug === testSet.slug);
   check('Loaded name matches', loaded.name === testSet.name);
@@ -219,7 +232,7 @@ async function runTests() {
   
   // Clean up test file
   try {
-    await testSet.delete(rootDir);
+    await repository.delete(testSet);
     check('delete() removes file', !fs.existsSync(savedPath));
   } catch (err) {
     check('delete() removes file', false);
@@ -229,7 +242,7 @@ async function runTests() {
   section('List');
   // ─────────────────────────────────────────────────────────────────────────
   
-  const list = await DecisionConfigSet.list(rootDir);
+  const list = await repository.list();
   check('list() returns array', Array.isArray(list));
   console.log(`     (found ${list.length} saved config sets)`);
   
@@ -245,6 +258,18 @@ async function runTests() {
   // ─────────────────────────────────────────────────────────────────────────
   
   const changeLog = baseline.getChangeLog();
+
+  // ─────────────────────────────────────────────────────────────────────────
+  section('Promotion');
+  // ─────────────────────────────────────────────────────────────────────────
+  const promoSet = baseline.clone('promotion-test');
+  const promoResult = await promotionService.promote(promoSet, { backup: true });
+  check('Promotion returns result', promoResult !== null);
+  check('Promotion writes backup', promoResult.backupPath && fs.existsSync(promoResult.backupPath));
+  const prodPriority = JSON.parse(fs.readFileSync(path.join(rootDir, 'config/priority-config.json'), 'utf8'));
+  const alphaBonus = prodPriority.queue?.bonuses?.alpha;
+  const alphaValue = typeof alphaBonus === 'object' ? alphaBonus.value : alphaBonus;
+  check('Promotion writes priority config', alphaValue === 1);
   check('getChangeLog() returns array', Array.isArray(changeLog));
   console.log(`     (${changeLog.length} changes logged)`);
   

@@ -8,6 +8,7 @@
 - DB changes? [docs/DATABASE_QUICK_REFERENCE.md](docs/DATABASE_QUICK_REFERENCE.md)
 - UI/jsgui3? [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md)
 - SVGs? [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md)
+- WLILO style? [docs/guides/WLILO_STYLE_GUIDE.md](docs/guides/WLILO_STYLE_GUIDE.md)
 - Refactor tooling (js-scan/js-edit)? [tools/dev/README.md](tools/dev/README.md) and Gap-4 session summary
 - Facts vs classifications? [docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md](docs/designs/FACT_BASED_CLASSIFICATION_SYSTEM.md)
 
@@ -17,6 +18,7 @@ Mode/persona rules
 Quick anchors (UI/tooling)
 - jsgui3 controls: extract interactive/stateful pieces into controls, use emoji icons for actions (🔍/⚙️/➕/🗑️/✏️/🔄), and keep control counts lean—lazy load or virtualise when lists exceed ~200 items. See [docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md](docs/guides/JSGUI3_UI_ARCHITECTURE_GUIDE.md).
 - SVGs: before shipping, run `node tools/dev/svg-collisions.js <file> --strict` to ensure no overlaps; follow [docs/guides/SVG_CREATION_METHODOLOGY.md](docs/guides/SVG_CREATION_METHODOLOGY.md).
+- MCP pre-flight: before calling MCP tools, run `node tools/dev/mcp-check.js --quick --json` to verify servers are responsive; if unhealthy, use CLI fallbacks.
 - Tier-1 JS tooling: prefer `js-scan` for discovery and `js-edit` for guarded batch edits (dry-run → fix). Reference [tools/dev/README.md](tools/dev/README.md).
 - Present choices with `ui-pick`: `node tools/dev/ui-pick.js <options…>` (or `--options '[{"label":"A","value":"a","icon":"✨","phase":"implement"}]'`). Treat the selection as consent to proceed; use `--json` to capture `{selection, option, phase}` and auto-advance without re-asking.
 
@@ -86,9 +88,19 @@ AGENTS.md should link to these pages and assign follow-ups ("If X arises, consul
 
 Core directives (always-on)
 
+Accuracy-first default. Unless the user explicitly asks for a fast prototype, prioritize correctness over speed:
+- Prefer small, verifiable changes over large refactors.
+- Avoid “fix by vibes”: state a hypothesis, define what would falsify it, and gather evidence.
+- If you spent meaningful time debugging or learned something reusable, document it so future runs start faster.
+
 Plan-first. Before edits, create/refresh a one-screen Plan (see template below). State scope, risks, success criteria, test/benchmark intent, and docs you’ll touch. When the work is truly a one-liner (e.g., running `Stop-Process -Name node -Force` to kill stray tasks), skip the formal plan/todo overhead—execute the command, capture the result, and move on.
 
 Prefer small, reversible steps. Sequence work into short, verifiable changes; keep deltas narrow across /src/modules ↔ /src/db ↔ /src/models.
+
+Evidence contract (recommended). For any non-trivial change, explicitly capture:
+- Hypothesis: what you believe is wrong / what will fix it.
+- Proof: which check/test/script output will confirm success.
+- Failure mode: what output would mean the hypothesis was wrong.
 
 Document the boundaries. Public functions/classes get JSDoc with parameters, returns, invariants, and side-effects. Record non-obvious trade-offs in a short ADR-lite.
 
@@ -98,7 +110,28 @@ Performance by design. Eliminate N+1, batch with joins/IN (...)/eager loading, u
 
 Tests are non-negotiable. For every fix or feature: focused unit/integration tests + a regression test if you killed a bug. Add a tiny benchmark when DB-heavy behavior might shift.
 
+Validation ladder (recommended). Start narrow, then widen confidence:
+- Run the smallest relevant `checks/*.check.js` first (fast feedback).
+- Run the most targeted unit/integration test(s) next.
+- Only then run broader suites / E2E / screenshots if the change touches UI wiring or multi-module behavior.
+
 Process Lifecycle & Cleanup. Ensure all scripts (especially verification tools and one-off checks) exit cleanly. Explicitly close database connections, clear intervals, and unref timers in a `finally` block. Hanging processes block CI and confuse users.
+
+Unexpected issues → research gap protocol. If you hit behavior you didn’t expect (tests fail for unclear reasons, a control lifecycle surprise, a server that hangs, etc.), pause and:
+- Search existing research first: `node tools/dev/md-scan.js --dir docs --search "<topic>" --json` and `node tools/dev/md-scan.js --dir docs/sessions --search "<topic>" --json`.
+- Reduce to a minimal reproduction (a local `checks/*.check.js`, a tiny test, or a lab experiment) before attempting a “fix”.
+- If you can’t find prior art, treat it as a knowledge gap: start a focused research project in a session folder, record findings + evidence, then promote durable guidance into the right doc (guide/workflow/ADR-lite).
+
+Stop & document triggers (accuracy guardrails):
+- Debugging time >15 minutes with no prior art → pause, create a minimal repro, and write a short note in the current session before continuing.
+- Any fix that changes behavior “because it seems right” → stop and add evidence (a check/test) before continuing.
+- Any recurring pitfall discovered → add a durable pointer (AGENTS.md or a guide) so it doesn’t reoccur.
+
+Measuring quality (so accuracy improves over time):
+- Rework rate: count follow-up fixes needed after the “main” change.
+- Evidence rate: did the session/PR record at least one executed check/test that supports the conclusion?
+- Hang rate: how often scripts/tests “pass but don’t exit”.
+- Time-to-confidence: time from first edit to “all relevant validations green”.
 
 **🚨 Server Verification (CRITICAL FOR AGENTS)**. Servers are long-running processes that **block forever**. NEVER run `node server.js` directly—it will hang the terminal indefinitely. Instead:
 - ✅ Use `--check` flag: `node src/ui/server/myServer.js --check` — starts, verifies, then exits (~500ms)

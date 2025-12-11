@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 550">
+  <defs id="definitions">
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0ece4"/>
+    </linearGradient>
+    <linearGradient id="obsidianFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1f2e"/>
+      <stop offset="100%" stop-color="#0a0d14"/>
+    </linearGradient>
+    <linearGradient id="brushedMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e5e1d7"/>
+      <stop offset="25%" stop-color="#d8cba9"/>
+      <stop offset="50%" stop-color="#e5e1d7"/>
+      <stop offset="75%" stop-color="#d8cba9"/>
+      <stop offset="100%" stop-color="#e5e1d7"/>
+    </linearGradient>
+    <linearGradient id="rubyGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e74c5e"/>
+      <stop offset="50%" stop-color="#c21f32"/>
+      <stop offset="100%" stop-color="#8d1424"/>
+    </linearGradient>
+    <linearGradient id="emeraldGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="50%" stop-color="#1a8f4d"/>
+      <stop offset="100%" stop-color="#0f5f33"/>
+    </linearGradient>
+    <linearGradient id="amberGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="sapphireGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#1e5aad"/>
+      <stop offset="100%" stop-color="#123a74"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feOffset dx="0" dy="4" in="SourceAlpha" result="shadowOffset"/>
+      <feGaussianBlur in="shadowOffset" result="shadowBlur" stdDeviation="6"/>
+      <feBlend in="SourceGraphic" in2="shadowBlur" mode="normal"/>
+    </filter>
+    <filter id="gemGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2"/>
+      <feComposite in="blur" in2="SourceGraphic" operator="over"/>
+    </filter>
+    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1a8f4d"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="550" fill="url(#bgGradient)"/>
+  
+  <!-- Main panel -->
+  <rect x="15" y="15" width="870" height="520" rx="16" fill="url(#brushedMetal)" filter="url(#dropShadow)"/>
+  <rect x="20" y="20" width="860" height="510" rx="12" fill="#fdfcfa"/>
+  
+  <!-- Header -->
+  <rect x="20" y="20" width="860" height="50" rx="12" fill="url(#obsidianFrame)"/>
+  <rect x="20" y="50" width="860" height="20" fill="url(#obsidianFrame)"/>
+  <text x="450" y="52" text-anchor="middle" fill="#f0ece4" font-family="Playfair Display, Georgia, serif" font-size="20" font-weight="bold">Repair Vector: How to Fix Collisions</text>
+  
+  <!-- BEFORE panel -->
+  <g transform="translate(50, 90)">
+    <rect width="380" height="200" rx="10" fill="#fff5f5" stroke="#c21f32" stroke-width="2"/>
+    <text x="190" y="25" text-anchor="middle" fill="#c21f32" font-family="Playfair Display, Georgia, serif" font-size="14" font-weight="bold">🔴 BEFORE: Overlapping Labels</text>
+    
+    <!-- Container -->
+    <rect x="30" y="50" width="320" height="110" fill="#f6f3ee" stroke="#d8cba9" stroke-width="2" rx="6"/>
+    
+    <!-- Overlapping labels -->
+    <rect x="60" y="85" width="150" height="35" fill="url(#sapphireGem)" rx="4"/>
+    <text x="135" y="107" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="11" font-weight="bold">Label A: Important</text>
+    
+    <rect x="140" y="85" width="160" height="35" fill="url(#rubyGem)" rx="4"/>
+    <text x="220" y="107" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="11" font-weight="bold">Label B: Also Key</text>
+    
+    <!-- Overlap indicator -->
+    <line x1="140" y1="130" x2="140" y2="145" stroke="#c21f32" stroke-width="2"/>
+    <line x1="210" y1="130" x2="210" y2="145" stroke="#c21f32" stroke-width="2"/>
+    <line x1="140" y1="145" x2="210" y2="145" stroke="#c21f32" stroke-width="2"/>
+    <text x="175" y="168" text-anchor="middle" fill="#c21f32" font-family="JetBrains Mono, monospace" font-size="10">overlap: 70px</text>
+  </g>
+  
+  <!-- AFTER panel -->
+  <g transform="translate(470, 90)">
+    <rect width="380" height="200" rx="10" fill="#f0fff4" stroke="#1a8f4d" stroke-width="2"/>
+    <text x="190" y="25" text-anchor="middle" fill="#1a8f4d" font-family="Playfair Display, Georgia, serif" font-size="14" font-weight="bold">✅ AFTER: Labels Separated</text>
+    
+    <!-- Container -->
+    <rect x="30" y="50" width="320" height="110" fill="#f6f3ee" stroke="#d8cba9" stroke-width="2" rx="6"/>
+    
+    <!-- Separated labels -->
+    <rect x="40" y="85" width="150" height="35" fill="url(#sapphireGem)" rx="4"/>
+    <text x="115" y="107" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="11" font-weight="bold">Label A: Important</text>
+    
+    <rect x="200" y="85" width="140" height="35" fill="url(#emeraldGem)" rx="4"/>
+    <text x="270" y="107" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-size="11" font-weight="bold">Label B: Also Key</text>
+    
+    <!-- Repair arrow -->
+    <line x1="140" y1="65" x2="200" y2="65" stroke="#1a8f4d" stroke-width="3" marker-end="url(#arrowHead)"/>
+    <text x="170" y="57" text-anchor="middle" fill="#1a8f4d" font-family="Inter, sans-serif" font-size="10" font-weight="bold">+75px</text>
+    
+    <!-- Gap indicator -->
+    <text x="180" y="168" text-anchor="middle" fill="#1a8f4d" font-family="JetBrains Mono, monospace" font-size="10">gap: 5px (padding)</text>
+  </g>
+  
+  <!-- Algorithm panel -->
+  <g transform="translate(50, 310)">
+    <rect width="380" height="200" rx="10" fill="url(#obsidianFrame)" stroke="#d8cba9" stroke-width="2"/>
+    <text x="190" y="25" text-anchor="middle" fill="#d8cba9" font-family="Playfair Display, Georgia, serif" font-size="13" font-weight="bold">Repair Vector Algorithm</text>
+    
+    <text x="20" y="55" fill="#f0ece4" font-family="JetBrains Mono, monospace" font-size="10">1. Calculate overlap dimensions:</text>
+    <text x="30" y="75" fill="#2dd4bf" font-family="JetBrains Mono, monospace" font-size="10">overlapX = min(r1.right, r2.right)</text>
+    <text x="30" y="90" fill="#2dd4bf" font-family="JetBrains Mono, monospace" font-size="10">         - max(r1.left, r2.left)</text>
+    
+    <text x="20" y="115" fill="#f0ece4" font-family="JetBrains Mono, monospace" font-size="10">2. Choose minimum movement axis:</text>
+    <text x="30" y="135" fill="#fcd34d" font-family="JetBrains Mono, monospace" font-size="10">if (overlapX &lt; overlapY) moveX</text>
+    <text x="30" y="150" fill="#fcd34d" font-family="JetBrains Mono, monospace" font-size="10">else moveY</text>
+    
+    <text x="20" y="175" fill="#f0ece4" font-family="JetBrains Mono, monospace" font-size="10">3. Add padding to prevent touching:</text>
+    <text x="30" y="192" fill="#e74c5e" font-family="JetBrains Mono, monospace" font-size="10">moveDistance = overlap + padding</text>
+  </g>
+  
+  <!-- Key rules panel -->
+  <g transform="translate(470, 310)">
+    <rect width="380" height="200" rx="10" fill="#f6f3ee" stroke="#d8cba9" stroke-width="2"/>
+    <text x="190" y="25" text-anchor="middle" fill="#1a1f2e" font-family="Playfair Display, Georgia, serif" font-size="13" font-weight="bold">Repair Rules</text>
+    
+    <circle cx="30" cy="55" r="6" fill="url(#emeraldGem)" filter="url(#gemGlow)"/>
+    <text x="45" y="59" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Move element appearing later in document</text>
+    
+    <circle cx="30" cy="85" r="6" fill="url(#emeraldGem)" filter="url(#gemGlow)"/>
+    <text x="45" y="89" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Prefer vertical separation (reading flow)</text>
+    
+    <circle cx="30" cy="115" r="6" fill="url(#emeraldGem)" filter="url(#gemGlow)"/>
+    <text x="45" y="119" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Use minimum movement to resolve</text>
+    
+    <circle cx="30" cy="145" r="6" fill="url(#amberGem)" filter="url(#gemGlow)"/>
+    <text x="45" y="149" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Always add padding (typically 5-10px)</text>
+    
+    <circle cx="30" cy="175" r="6" fill="url(#rubyGem)" filter="url(#gemGlow)"/>
+    <text x="45" y="179" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Re-check for cascade collisions after fix</text>
+  </g>
+</svg>

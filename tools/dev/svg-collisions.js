@@ -60,6 +60,8 @@ const FLAG_ALIASES = {
   '--静': '--quiet',         // quiet → 静默
   '--助': '--help',          // help → 帮助
   '--帮': '--help',
+  '--修': '--fix',           // fix → 修复
+  '--试': '--dry-run',       // dry-run → 试运行
   '-助': '-h',
   '-帮': '-h',
 };
@@ -136,6 +138,8 @@ const flags = {
   strict: args.includes("--strict"),
   positions: args.includes("--positions"),
   containment: args.includes("--containment"),
+  fix: args.includes("--fix"),
+  dryRun: args.includes("--dry-run"),
   help: args.includes("--help") || args.includes("-h"),
   terse: chineseMode  // Enable terse mode when Chinese flags detected
 };
@@ -167,9 +171,11 @@ Options (English/简令):
   --json              Output results as JSON
   --strict   | --严   Lower thresholds, report more potential issues
   --positions| --位   Output absolute positions for all elements
-  --containment|--含  Check if elements overflow their parent bounds
+  --containment|--容  Check if elements overflow their parent bounds
   --element <sel>     Query position of a specific element (id or CSS selector)
   --dir <path>        Scan all SVG files in a directory  
+  --fix      | --修   Auto-apply repair suggestions to fix collisions
+  --dry-run  | --试   Preview fixes without modifying files (use with --fix)
   --verbose  | --详   Show analysis details
   --help, -h          Show this help message
 
@@ -197,10 +203,16 @@ Examples:
   node svg-collisions.js diagram.svg --containment
   node svg-collisions.js diagram.svg --element "#my-label" --json
   
+Fix Mode:
+  node svg-collisions.js diagram.svg --fix --dry-run  # Preview fixes
+  node svg-collisions.js diagram.svg --fix            # Apply fixes
+  node svg-collisions.js --dir docs --fix --dry-run   # Batch preview
+  
 简令 Examples (Terse Mode):
   node svg-collisions.js diagram.svg --位            # Positions, terse output
   node svg-collisions.js diagram.svg --严 --含       # Strict + containment
   node svg-collisions.js --dir docs/designs --碰    # Scan dir, collisions
+  node svg-collisions.js diagram.svg --修 --试       # Preview fixes (dry-run)
 `);
   process.exit(0);
 }
@@ -490,7 +502,7 @@ function classifyCollision(el1, el2, intersection, strict) {
  * @param {Object} el2 - Second element
  * @param {Object} intersection - Intersection bounds
  * @param {string} type - Collision type
- * @returns {Object} - Repair suggestion
+ * @returns {Object} - Repair suggestion with actionable move data
  */
 function generateRepairSuggestion(el1, el2, intersection, type) {
   // Determine which element to move (prefer smaller, later in doc order)
@@ -510,34 +522,39 @@ function generateRepairSuggestion(el1, el2, intersection, type) {
   const isHorizontalOverlap = intersection.width > intersection.height;
   
   let suggestion, strategy, alternatives = [];
+  let dx = 0, dy = 0; // Actionable movement deltas
   
   if (type === "text-overlap") {
     if (isHorizontalOverlap) {
       // Elements side by side - move one horizontally
-      const moveDir = moveEl.bbox.x > fixedEl.bbox.x ? "right" : "left";
-      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(horizontalSep)}px`;
+      const moveRight = moveEl.bbox.x > fixedEl.bbox.x;
+      dx = moveRight ? Math.ceil(horizontalSep) : -Math.ceil(horizontalSep);
+      suggestion = `Move "${moveId}" ${moveRight ? "right" : "left"} by ${Math.ceil(horizontalSep)}px`;
       strategy = "separate-horizontal";
       alternatives = [
-        `Move "${fixedId}" ${moveDir === "right" ? "left" : "right"} by ${Math.ceil(horizontalSep)}px`,
+        `Move "${fixedId}" ${moveRight ? "left" : "right"} by ${Math.ceil(horizontalSep)}px`,
         `Reduce "${moveId}" text by ~${Math.ceil(intersection.width / 8)} characters`
       ];
     } else {
       // Elements stacked - move one vertically
-      const moveDir = moveEl.bbox.y > fixedEl.bbox.y ? "down" : "up";
-      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(verticalSep)}px`;
+      const moveDown = moveEl.bbox.y > fixedEl.bbox.y;
+      dy = moveDown ? Math.ceil(verticalSep) : -Math.ceil(verticalSep);
+      suggestion = `Move "${moveId}" ${moveDown ? "down" : "up"} by ${Math.ceil(verticalSep)}px`;
       strategy = "separate-vertical";
       alternatives = [
-        `Move "${fixedId}" ${moveDir === "down" ? "up" : "down"} by ${Math.ceil(verticalSep)}px`
+        `Move "${fixedId}" ${moveDown ? "up" : "down"} by ${Math.ceil(verticalSep)}px`
       ];
     }
   } else if (type === "shape-overlap") {
     if (isHorizontalOverlap) {
-      const moveDir = moveEl.bbox.x > fixedEl.bbox.x ? "right" : "left";
-      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(horizontalSep)}px`;
+      const moveRight = moveEl.bbox.x > fixedEl.bbox.x;
+      dx = moveRight ? Math.ceil(horizontalSep) : -Math.ceil(horizontalSep);
+      suggestion = `Move "${moveId}" ${moveRight ? "right" : "left"} by ${Math.ceil(horizontalSep)}px`;
       strategy = "separate-horizontal";
     } else {
-      const moveDir = moveEl.bbox.y > fixedEl.bbox.y ? "down" : "up";
-      suggestion = `Move "${moveId}" ${moveDir} by ${Math.ceil(verticalSep)}px`;
+      const moveDown = moveEl.bbox.y > fixedEl.bbox.y;
+      dy = moveDown ? Math.ceil(verticalSep) : -Math.ceil(verticalSep);
+      suggestion = `Move "${moveId}" ${moveDown ? "down" : "up"} by ${Math.ceil(verticalSep)}px`;
       strategy = "separate-vertical";
     }
     alternatives = [`Reduce "${moveId}" size by ${Math.ceil(Math.max(horizontalSep, verticalSep))}px`];
@@ -546,11 +563,241 @@ function generateRepairSuggestion(el1, el2, intersection, type) {
     strategy = "expand-container";
     alternatives = [`Reduce text "${moveId}" by ~${Math.ceil(intersection.width / 8)} characters`];
   } else {
+    // General overlap - move vertically by default
+    dy = Math.ceil(Math.max(horizontalSep, verticalSep));
     suggestion = `Increase spacing by ${Math.ceil(Math.max(horizontalSep, verticalSep))}px`;
     strategy = "increase-spacing";
   }
   
-  return { strategy, suggestion, alternatives };
+  return { 
+    strategy, 
+    suggestion, 
+    alternatives,
+    // Actionable data for --fix mode
+    moveElementId: moveEl.id,
+    moveElementPath: moveEl.path,
+    moveElementTagName: moveEl.tagName,
+    dx,
+    dy
+  };
+}
+
+/**
+ * Apply collision fixes to an SVG file
+ * Uses regex-based editing to adjust element positions
+ * 
+ * @param {string} svgPath - Path to the SVG file
+ * @param {Array} collisions - Array of collision objects with repair info
+ * @param {boolean} dryRun - If true, preview changes without writing
+ * @returns {Object} - Result of the fix operation
+ */
+function applyFixes(svgPath, collisions, dryRun = false) {
+  const absolutePath = path.resolve(svgPath);
+  let svgContent = fs.readFileSync(absolutePath, "utf-8");
+  const originalContent = svgContent;
+  
+  const fixResults = [];
+  const fixableCollisions = collisions.filter(c => 
+    c.repair && 
+    c.repair.moveElementId && 
+    (c.repair.dx !== 0 || c.repair.dy !== 0) &&
+    c.repair.strategy !== "expand-container" // Skip container expansion for now
+  );
+  
+  for (const collision of fixableCollisions) {
+    const { repair } = collision;
+    const elementId = repair.moveElementId;
+    
+    if (!elementId) {
+      fixResults.push({
+        collision: collision.type,
+        success: false,
+        reason: "No element ID available for fix"
+      });
+      continue;
+    }
+    
+    // Find the element by ID and adjust its position
+    // Pattern: id="elementId" ... x="value" or y="value"
+    // Or for transforms: transform="translate(x, y)"
+    
+    const escapedId = elementId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // Try to find element with x/y attributes (text, rect, etc.)
+    const elementPattern = new RegExp(
+      `(<[^>]*\\sid="${escapedId}"[^>]*?)\\s(x)="([^"]+)"`,
+      'g'
+    );
+    
+    let modified = false;
+    
+    if (repair.dx !== 0) {
+      // Adjust x coordinate
+      const xPattern = new RegExp(
+        `(<[^>]*\\sid="${escapedId}"[^>]*?)\\sx="([^"]+)"`,
+        ''
+      );
+      const xMatch = svgContent.match(xPattern);
+      
+      if (xMatch) {
+        const oldX = parseFloat(xMatch[2]);
+        const newX = oldX + repair.dx;
+        svgContent = svgContent.replace(
+          xPattern,
+          `$1 x="${newX}"`
+        );
+        modified = true;
+        fixResults.push({
+          elementId,
+          collision: collision.type,
+          attribute: "x",
+          oldValue: oldX,
+          newValue: newX,
+          delta: repair.dx,
+          success: true
+        });
+      }
+    }
+    
+    if (repair.dy !== 0) {
+      // Adjust y coordinate
+      const yPattern = new RegExp(
+        `(<[^>]*\\sid="${escapedId}"[^>]*?)\\sy="([^"]+)"`,
+        ''
+      );
+      const yMatch = svgContent.match(yPattern);
+      
+      if (yMatch) {
+        const oldY = parseFloat(yMatch[2]);
+        const newY = oldY + repair.dy;
+        svgContent = svgContent.replace(
+          yPattern,
+          `$1 y="${newY}"`
+        );
+        modified = true;
+        fixResults.push({
+          elementId,
+          collision: collision.type,
+          attribute: "y",
+          oldValue: oldY,
+          newValue: newY,
+          delta: repair.dy,
+          success: true
+        });
+      }
+    }
+    
+    // If no direct x/y attributes, try adjusting transform
+    if (!modified && (repair.dx !== 0 || repair.dy !== 0)) {
+      // Look for transform="translate(...)"
+      const transformPattern = new RegExp(
+        `(<[^>]*\\sid="${escapedId}"[^>]*?)\\stransform="translate\\(([^)]+)\\)"`,
+        ''
+      );
+      const transformMatch = svgContent.match(transformPattern);
+      
+      if (transformMatch) {
+        const coords = transformMatch[2].split(/[,\s]+/).map(s => parseFloat(s.trim()));
+        const oldX = coords[0] || 0;
+        const oldY = coords[1] || 0;
+        const newX = oldX + repair.dx;
+        const newY = oldY + repair.dy;
+        
+        svgContent = svgContent.replace(
+          transformPattern,
+          `$1 transform="translate(${newX}, ${newY})"`
+        );
+        modified = true;
+        fixResults.push({
+          elementId,
+          collision: collision.type,
+          attribute: "transform",
+          oldValue: `translate(${oldX}, ${oldY})`,
+          newValue: `translate(${newX}, ${newY})`,
+          delta: { dx: repair.dx, dy: repair.dy },
+          success: true
+        });
+      }
+    }
+    
+    if (!modified) {
+      fixResults.push({
+        elementId,
+        collision: collision.type,
+        success: false,
+        reason: "Could not find element or position attribute to modify"
+      });
+    }
+  }
+  
+  const hasChanges = svgContent !== originalContent;
+  
+  if (hasChanges && !dryRun) {
+    // Write the modified SVG
+    fs.writeFileSync(absolutePath, svgContent, "utf-8");
+  }
+  
+  return {
+    file: svgPath,
+    dryRun,
+    hasChanges,
+    totalCollisions: collisions.length,
+    fixableCollisions: fixableCollisions.length,
+    fixResults,
+    successCount: fixResults.filter(r => r.success).length,
+    failCount: fixResults.filter(r => !r.success).length
+  };
+}
+
+/**
+ * Format fix results for console output
+ */
+function formatFixReport(fixResult, terse = false) {
+  const lines = [];
+  const fname = path.basename(fixResult.file);
+  
+  if (terse) {
+    const status = fixResult.dryRun ? "试" : (fixResult.hasChanges ? "改" : "无");
+    lines.push(`${status} ${fname} 修${fixResult.successCount}/${fixResult.fixableCollisions}`);
+    return lines.join("\n");
+  }
+  
+  lines.push(`\n${"═".repeat(70)}`);
+  lines.push(`Fix Results: ${fname}${fixResult.dryRun ? " (DRY RUN)" : ""}`);
+  lines.push(`${"═".repeat(70)}`);
+  
+  if (!fixResult.hasChanges) {
+    lines.push("\n⚡ No changes needed or possible");
+    return lines.join("\n");
+  }
+  
+  lines.push(`\nCollisions: ${fixResult.totalCollisions} total, ${fixResult.fixableCollisions} fixable`);
+  lines.push(`Applied: ${fixResult.successCount} successful, ${fixResult.failCount} failed`);
+  
+  if (fixResult.fixResults.length > 0) {
+    lines.push(`\n${"─".repeat(70)}`);
+    lines.push("Changes:");
+    
+    for (const fix of fixResult.fixResults) {
+      if (fix.success) {
+        const delta = typeof fix.delta === 'object' 
+          ? `dx=${fix.delta.dx}, dy=${fix.delta.dy}`
+          : (fix.delta > 0 ? `+${fix.delta}` : fix.delta);
+        lines.push(`  ✅ #${fix.elementId} ${fix.attribute}: ${fix.oldValue} → ${fix.newValue} (${delta})`);
+      } else {
+        lines.push(`  ❌ #${fix.elementId || 'unknown'}: ${fix.reason}`);
+      }
+    }
+  }
+  
+  if (fixResult.dryRun && fixResult.hasChanges) {
+    lines.push(`\n💡 Run without --dry-run to apply these changes`);
+  } else if (fixResult.hasChanges) {
+    lines.push(`\n✅ Changes written to ${fname}`);
+    lines.push(`💡 Run collision check again to verify fixes`);
+  }
+  
+  return lines.join("\n");
 }
 
 /**
@@ -1387,9 +1634,29 @@ async function main() {
       results.push(result);
     }
     
+    // Apply fixes if --fix flag is set
+    const fixResults = [];
+    if (flags.fix) {
+      for (const result of results) {
+        if (result.collisions && result.collisions.length > 0) {
+          const fixResult = applyFixes(result.file, result.collisions, flags.dryRun);
+          fixResults.push(fixResult);
+        }
+      }
+    }
+    
     // Output results
     if (flags.json) {
-      console.log(JSON.stringify(results.length === 1 ? results[0] : results, null, 2));
+      const output = results.length === 1 ? results[0] : results;
+      if (flags.fix && fixResults.length > 0) {
+        // Include fix results in JSON output
+        if (results.length === 1) {
+          output.fixResult = fixResults[0];
+        } else {
+          output.fixResults = fixResults;
+        }
+      }
+      console.log(JSON.stringify(output, null, 2));
     } else {
       // Select formatters based on terse mode
       const fmtReport = flags.terse ? formatReportTerse : formatReport;
@@ -1413,6 +1680,13 @@ async function main() {
         // Always show collision report (unless just doing element query)
         if (!elementSelector || flags.positions || flags.containment) {
           console.log(fmtReport(result));
+        }
+      }
+      
+      // Show fix results if --fix flag was used
+      if (flags.fix && fixResults.length > 0) {
+        for (const fixResult of fixResults) {
+          console.log(formatFixReport(fixResult, flags.terse));
         }
       }
       

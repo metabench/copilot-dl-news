@@ -1,6 +1,6 @@
 # Project Documentation Index
 
-_Last updated: 2025-11-04_
+_Last updated: 2025-12-10_
 
 ## Agents
 - [Agent Policy](agents/agent_policy.md)
@@ -63,6 +63,7 @@ These guides are **authoritative sources** for their domains. When working in th
 ### Visualization & Diagrams
 
 - [SVG Creation Methodology](guides/SVG_CREATION_METHODOLOGY.md) - **6-stage pipeline** for AI agents to create complex SVG diagrams. JSON-first structure, layout algorithms, component library, Industrial Luxury Obsidian theme.
+- [WLILO Style Guide](guides/WLILO_STYLE_GUIDE.md) - White Leather + Industrial Luxury Obsidian aesthetic: palette, motifs, references, and validation steps.
 
 ## Designs
 

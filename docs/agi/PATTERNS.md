@@ -96,3 +96,45 @@ AGI-accumulated knowledge catalog.
 **Example**: computePriority() and computeEnhancedPriority() at lines 1073-1130 are pure functions with no side effects
 
 ---
+
+## Luxury Gemstone UI Theme
+
+**Added**: 2025-12-10
+**Context**: White Leather × Obsidian Luxe theme, decision tree editor SVG
+
+**When to use**: Creating premium/luxury UI mockups, decision trees, dashboards, or editor interfaces that need visual polish and brand differentiation
+
+**Steps/Details**:
+1. 1. Define gradient defs: bgGradient (white→cream), obsidianFrame (#1a1f2e→#0a0d14), brushedMetal (5-stop alternating #e5e1d7/#d8cba9), and gemstone gradients (3-stop bright→rich→deep)
+1. 2. Define filters: dropShadow (feOffset dy=4 + feGaussianBlur stdDeviation=8) and gemGlow (feGaussianBlur stdDeviation=3 + feComposite over)
+1. 3. Build layer stack: background rect → mainPanel with shadow → header bar (obsidian + rounded top) → content areas
+1. 4. Create gemstone buttons: outer obsidian frame (stroke: brushed gold #d8cba9) → inner gem rect with gradient + glow → white bold text centered
+1. 5. Use semantic colors: Sapphire for primary/start actions, Emerald for navigation/decision, Ruby for results/destructive
+1. 6. Add polish: Yes/No labels in green/red, property panels with brushedMetal inputs, legend with color swatches, theme attribution badge
+
+**Example**: tmp/decision-tree-editor-v2.svg
+
+---
+
+## SVG MCP Element Construction Order
+
+**Added**: 2025-12-10
+**Context**: svg-editor MCP workflow
+
+**When to use**: Building complex SVGs programmatically via svg-editor MCP tools
+
+**Steps/Details**:
+1. 1. svg_create_new with desired dimensions (1200×700 is good for editors)
+1. 2. Add <defs> element first, then add gradients as children with id attributes
+1. 3. Add gradient <stop> elements as children of each gradient (parallel calls OK)
+1. 4. Add <filter> elements to defs, then filter primitives as children
+1. 5. Add background layers in order: full-canvas rect, panel rects, header bars
+1. 6. Create positioned groups with transform='translate(x,y)' for toolbar, tree, sidebar
+1. 7. Add edges/paths BEFORE nodes so nodes render on top
+1. 8. Add node frames, then gem fills, then text labels (parallel OK for independent elements)
+1. 9. Run svg_detect_collisions with onlyStats:true to verify no HIGH severity issues
+1. 10. svg_save and svg_close when complete
+
+**Example**: tmp/decision-tree-editor-v2.svg creation session
+
+---

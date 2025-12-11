@@ -1,0 +1,124 @@
+{
+  "name": "auto-fix-overlaps",
+  "version": "1.0.0",
+  "description": "Detect and automatically fix overlapping elements using safe nudge strategies",
+  
+  "parameters": {
+    "severity": {
+      "type": "string",
+      "default": "high",
+      "enum": ["high", "medium", "all"],
+      "description": "Minimum severity level to fix"
+    },
+    "maxFixes": {
+      "type": "number",
+      "default": 10,
+      "description": "Maximum number of fixes to apply in one pass"
+    },
+    "padding": {
+      "type": "number",
+      "default": 5,
+      "description": "Minimum separation padding after fix"
+    },
+    "preferDirection": {
+      "type": "string",
+      "default": "auto",
+      "enum": ["auto", "horizontal", "vertical"],
+      "description": "Preferred nudge direction"
+    }
+  },
+  
+  "steps": [
+    {
+      "name": "Detect collisions",
+      "operation": "svg-collisions",
+      "flags": ["--strict", "--positions", "--json"],
+      "emit": "collisions",
+      "description": "Run full collision detection to find overlaps"
+    },
+    {
+      "name": "Check if fixes needed",
+      "operation": "compute",
+      "expression": {
+        "highCount": "${step1.collisions.summary?.high || 0}",
+        "mediumCount": "${step1.collisions.summary?.medium || 0}",
+        "totalToFix": "${parameters.severity === 'all' ? (step1.collisions.summary?.high || 0) + (step1.collisions.summary?.medium || 0) : parameters.severity === 'high' ? (step1.collisions.summary?.high || 0) : 0}",
+        "needsFix": "${step1.collisions.summary?.high > 0 || (parameters.severity !== 'high' && step1.collisions.summary?.medium > 0)}"
+      },
+      "emit": "analysis",
+      "description": "Analyze collision counts and determine if fixes needed"
+    },
+    {
+      "name": "Report no issues",
+      "condition": "${!step2.analysis.needsFix}",
+      "operation": "report",
+      "level": "success",
+      "message": "No overlaps detected at ${parameters.severity} severity level",
+      "description": "Exit early if no fixes needed"
+    },
+    {
+      "name": "Filter collisions to fix",
+      "condition": "${step2.analysis.needsFix}",
+      "operation": "compute",
+      "expression": {
+        "toFix": "${(step1.collisions.collisions || []).filter(c => parameters.severity === 'all' || c.severity === parameters.severity || (parameters.severity === 'medium' && c.severity === 'high')).slice(0, parameters.maxFixes)}"
+      },
+      "emit": "filtered",
+      "description": "Select collisions to fix based on severity and max limit"
+    },
+    {
+      "name": "Apply fixes",
+      "condition": "${step2.analysis.needsFix && step4.filtered.toFix.length > 0}",
+      "operation": "svg-edit",
+      "action": "batch",
+      "operations": "${step4.filtered.toFix.map(c => ({ op: 'move', selector: c.repair?.target || c.elements[1]?.selector, by: c.repair?.vector || { x: parameters.padding + 5, y: 0 } }))}",
+      "emit": "fixes",
+      "description": "Apply computed repair vectors to overlapping elements"
+    },
+    {
+      "name": "Verify fixes",
+      "condition": "${step5.fixes}",
+      "operation": "svg-collisions",
+      "flags": ["--strict", "--json"],
+      "emit": "postFixCollisions",
+      "description": "Re-run collision detection to verify fixes worked"
+    },
+    {
+      "name": "Report results",
+      "operation": "report",
+      "level": "${step6.postFixCollisions?.summary?.high > 0 ? 'warning' : 'success'}",
+      "message": "${step5.fixes ? `Applied ${step5.fixes.count || 0} fixes. ` : ''}Remaining: ${step6.postFixCollisions?.summary?.high || 0} high, ${step6.postFixCollisions?.summary?.medium || 0} medium",
+      "description": "Report fix results and remaining issues"
+    }
+  ],
+  
+  "output": {
+    "success": "${!step6.postFixCollisions || step6.postFixCollisions.summary.high === 0}",
+    "fixesApplied": "${step5.fixes?.count || 0}",
+    "before": "${step1.collisions.summary}",
+    "after": "${step6.postFixCollisions?.summary}",
+    "remaining": "${step6.postFixCollisions?.collisions || []}"
+  },
+  
+  "notes": [
+    "This recipe uses safe nudge strategies that move elements minimally",
+    "Only the 'later' element in document order is moved",
+    "Multiple passes may be needed for complex overlaps",
+    "Use --dry-run first to preview changes"
+  ],
+  
+  "examples": [
+    {
+      "description": "Fix all high-severity overlaps",
+      "command": "node tools/dev/svg-edit.js diagram.svg --recipe svg-recipes/auto-fix-overlaps.json --fix"
+    },
+    {
+      "description": "Fix medium and high overlaps with larger padding",
+      "command": "node tools/dev/svg-edit.js diagram.svg --recipe svg-recipes/auto-fix-overlaps.json --param 'severity=medium' --param 'padding=10' --fix"
+    },
+    {
+      "description": "Preview fixes without applying",
+      "command": "node tools/dev/svg-edit.js diagram.svg --recipe svg-recipes/auto-fix-overlaps.json --json"
+    }
+  ]
+}

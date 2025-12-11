@@ -2165,6 +2165,92 @@ body .overlay {
   font-size: 0.9rem;
   border-bottom: 1px solid var(--obsidian-border-dim);
   color: var(--obsidian-gold);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.log-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-filter {
+  position: relative;
+  margin-left: auto;
+}
+
+.log-filter__trigger {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 6px;
+  background: var(--obsidian-bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--obsidian-text);
+  user-select: none;
+}
+
+.log-filter__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.log-filter__chevron {
+  color: var(--obsidian-text-muted);
+  font-size: 0.85rem;
+}
+
+.log-filter__panel {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--obsidian-bg);
+  border: 1px solid var(--obsidian-border-dim);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 10px;
+  min-width: 200px;
+  z-index: 3;
+}
+
+.log-filter[open] .log-filter__panel {
+  display: block;
+}
+
+.log-filter__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--obsidian-text);
+}
+
+.log-filter__option:hover {
+  background: rgba(201, 162, 39, 0.07);
+}
+
+.log-filter__option input {
+  accent-color: currentColor;
+}
+
+.log-filter__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.log-filter__label {
+  color: var(--obsidian-text);
 }
 
 .log-body {
@@ -2215,6 +2301,10 @@ body .overlay {
 .log-error .log-message {
   color: var(--obsidian-danger);
 }
+.log-filter__option.log-info { color: var(--obsidian-accent); }
+.log-filter__option.log-success { color: var(--obsidian-success); }
+.log-filter__option.log-warning { color: var(--obsidian-warning); }
+.log-filter__option.log-error { color: var(--obsidian-danger); }
 
 /* Custom scrollbar for log - Obsidian style */
 .log-body::-webkit-scrollbar {
@@ -2610,10 +2700,97 @@ body .overlay {
     }
     
     .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       font-weight: 600;
       margin-bottom: 12px;
       padding-bottom: 8px;
       border-bottom: 1px solid var(--border-color);
+      position: relative;
+    }
+    
+    .log-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .log-filter {
+      position: relative;
+      margin-left: auto;
+    }
+    
+    .log-filter__trigger {
+      list-style: none;
+      cursor: pointer;
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--surface-2, #161b22);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-primary);
+      user-select: none;
+    }
+    
+    .log-filter__trigger::-webkit-details-marker {
+      display: none;
+    }
+    
+    .log-filter__chevron {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    
+    .log-filter__panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      background: var(--surface-2, #161b22);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      padding: 10px;
+      min-width: 200px;
+      z-index: 3;
+    }
+    
+    .log-filter[open] .log-filter__panel {
+      display: block;
+    }
+    
+    .log-filter__option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+    
+    .log-filter__option:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .log-filter__option input {
+      accent-color: currentColor;
+    }
+    
+    .log-filter__swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.9;
+    }
+    
+    .log-filter__label {
+      color: var(--text-primary);
     }
     
     .log-body {
@@ -2642,6 +2819,10 @@ body .overlay {
     .log-success .log-message { color: var(--success-color); }
     .log-warning .log-message { color: var(--warning-color); }
     .log-error .log-message { color: var(--error-color); }
+    .log-filter__option.log-info { color: var(--text-primary); }
+    .log-filter__option.log-success { color: var(--success-color); }
+    .log-filter__option.log-warning { color: var(--warning-color); }
+    .log-filter__option.log-error { color: var(--error-color); }
     
     /* Action Buttons */
     .actions-section {

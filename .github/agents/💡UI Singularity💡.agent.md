@@ -125,6 +125,11 @@ Use this format so knowledge gaps are visible in the terminal:
 | Server endpoints | `docs/API_ENDPOINT_REFERENCE.md` | `src/ui/server/*.js` source |
 | Build process | `AGENTS.md` | `package.json` scripts |
 
+### Delegation lab quick workflow
+- Read the delegation notes: [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md) before touching bubbling/capture/selector logic.
+- Run DOM-backed experiments fast: `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,011` (or full suite). Single browser/page, console cleared per run.
+- When adding UI delegation experiments, register them in the runner + manifest so discovery/testing stays one-command.
+
 ---
 
 ## jsgui3 Core Knowledge

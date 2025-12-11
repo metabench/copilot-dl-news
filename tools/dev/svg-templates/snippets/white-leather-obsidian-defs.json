@@ -1,0 +1,133 @@
+{
+  "name": "white-leather-obsidian-defs",
+  "description": "Complete defs block for White Leather × Obsidian Luxe theme - copy directly into SVG",
+  "version": "1.0.0",
+  "theme": "white-leather-obsidian",
+  
+  "usage": "Copy the 'defsBlock' value directly into your SVG as the first child element",
+  
+  "defsBlock": "<defs id=\"definitions\"><linearGradient id=\"bgGradient\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"100%\" stop-color=\"#f0ece4\"/></linearGradient><linearGradient id=\"rubyGem\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"#e74c5e\"/><stop offset=\"50%\" stop-color=\"#c21f32\"/><stop offset=\"100%\" stop-color=\"#8d1424\"/></linearGradient><linearGradient id=\"emeraldGem\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"#2dd4bf\"/><stop offset=\"50%\" stop-color=\"#1a8f4d\"/><stop offset=\"100%\" stop-color=\"#0f5f33\"/></linearGradient><linearGradient id=\"sapphireGem\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"#60a5fa\"/><stop offset=\"50%\" stop-color=\"#1e5aad\"/><stop offset=\"100%\" stop-color=\"#123a74\"/></linearGradient><linearGradient id=\"obsidianFrame\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"#1a1f2e\"/><stop offset=\"100%\" stop-color=\"#0a0d14\"/></linearGradient><linearGradient id=\"brushedMetal\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\"#e5e1d7\"/><stop offset=\"25%\" stop-color=\"#d8cba9\"/><stop offset=\"50%\" stop-color=\"#e5e1d7\"/><stop offset=\"75%\" stop-color=\"#d8cba9\"/><stop offset=\"100%\" stop-color=\"#e5e1d7\"/></linearGradient><filter id=\"dropShadow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\"><feOffset dx=\"0\" dy=\"4\" in=\"SourceAlpha\" result=\"shadowOffset\"/><feGaussianBlur in=\"shadowOffset\" result=\"shadowBlur\" stdDeviation=\"8\"/><feBlend in=\"SourceGraphic\" in2=\"shadowBlur\" mode=\"normal\"/></filter><filter id=\"gemGlow\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feGaussianBlur in=\"SourceGraphic\" result=\"blur\" stdDeviation=\"3\"/><feComposite in=\"blur\" in2=\"SourceGraphic\" operator=\"over\"/></filter></defs>",
+  
+  "gradients": {
+    "bgGradient": {
+      "type": "linearGradient",
+      "direction": "diagonal",
+      "stops": [
+        { "offset": "0%", "color": "#ffffff" },
+        { "offset": "100%", "color": "#f0ece4" }
+      ],
+      "purpose": "White leather background"
+    },
+    "obsidianFrame": {
+      "type": "linearGradient",
+      "direction": "diagonal",
+      "stops": [
+        { "offset": "0%", "color": "#1a1f2e" },
+        { "offset": "100%", "color": "#0a0d14" }
+      ],
+      "purpose": "Dark industrial frames, headers, sidebars"
+    },
+    "brushedMetal": {
+      "type": "linearGradient",
+      "direction": "diagonal",
+      "stops": [
+        { "offset": "0%", "color": "#e5e1d7" },
+        { "offset": "25%", "color": "#d8cba9" },
+        { "offset": "50%", "color": "#e5e1d7" },
+        { "offset": "75%", "color": "#d8cba9" },
+        { "offset": "100%", "color": "#e5e1d7" }
+      ],
+      "purpose": "Brushed white gold/platinum surfaces"
+    },
+    "rubyGem": {
+      "type": "linearGradient",
+      "direction": "diagonal",
+      "stops": [
+        { "offset": "0%", "color": "#e74c5e" },
+        { "offset": "50%", "color": "#c21f32" },
+        { "offset": "100%", "color": "#8d1424" }
+      ],
+      "purpose": "Ruby gemstone buttons - results, destructive actions"
+    },
+    "emeraldGem": {
+      "type": "linearGradient",
+      "direction": "diagonal",
+      "stops": [
+        { "offset": "0%", "color": "#2dd4bf" },
+        { "offset": "50%", "color": "#1a8f4d" },
+        { "offset": "100%", "color": "#0f5f33" }
+      ],
+      "purpose": "Emerald gemstone buttons - decisions, navigation"
+    },
+    "sapphireGem": {
+      "type": "linearGradient",
+      "direction": "diagonal",
+      "stops": [
+        { "offset": "0%", "color": "#60a5fa" },
+        { "offset": "50%", "color": "#1e5aad" },
+        { "offset": "100%", "color": "#123a74" }
+      ],
+      "purpose": "Sapphire gemstone buttons - primary, start actions"
+    }
+  },
+  
+  "filters": {
+    "dropShadow": {
+      "purpose": "Soft shadow for panels and node frames",
+      "settings": { "dy": 4, "blur": 8 }
+    },
+    "gemGlow": {
+      "purpose": "Subtle luminescence for gemstone elements",
+      "settings": { "blur": 3 }
+    }
+  },
+  
+  "colors": {
+    "backgrounds": {
+      "white": "#ffffff",
+      "cream": "#f0ece4",
+      "canvas": "#fdfcfa"
+    },
+    "obsidian": {
+      "light": "#1a1f2e",
+      "deep": "#0a0d14"
+    },
+    "accents": {
+      "brushedGold": "#d8cba9",
+      "ivoryText": "#f0ece4",
+      "mutedGold": "#d8cba9"
+    },
+    "text": {
+      "light": "#f0ece4",
+      "dark": "#1a1f2e",
+      "white": "#ffffff",
+      "muted": "#888888"
+    },
+    "semantic": {
+      "success": "#1a8f4d",
+      "error": "#c21f32"
+    }
+  },
+  
+  "components": {
+    "gemstoneButton": {
+      "description": "3-layer button: frame + gem + label",
+      "template": "<g id=\"{{id}}\" transform=\"translate({{x}}, {{y}})\"><rect fill=\"#1a1f2e\" width=\"{{width}}\" height=\"{{height}}\" rx=\"8\" stroke=\"#d8cba9\" stroke-width=\"2\"/><rect fill=\"url(#{{gem}}Gem)\" filter=\"url(#gemGlow)\" width=\"{{innerWidth}}\" height=\"{{innerHeight}}\" x=\"7\" y=\"7\" rx=\"5\"/><text fill=\"#ffffff\" font-family=\"Arial, sans-serif\" font-size=\"13\" font-weight=\"bold\" text-anchor=\"middle\" x=\"{{textX}}\" y=\"{{textY}}\">{{label}}</text></g>",
+      "sizeMath": {
+        "innerWidth": "width - 14",
+        "innerHeight": "height - 14",
+        "textX": "width / 2",
+        "textY": "height / 2 + 5"
+      }
+    },
+    "decisionNode": {
+      "description": "Tree node with shadow and gem fill",
+      "template": "<g transform=\"translate({{x}}, {{y}})\"><rect fill=\"#1a1f2e\" filter=\"url(#dropShadow)\" width=\"{{width}}\" height=\"{{height}}\" rx=\"10\" stroke=\"#d8cba9\" stroke-width=\"3\"/><rect fill=\"url(#{{gem}}Gem)\" filter=\"url(#gemGlow)\" width=\"{{innerWidth}}\" height=\"{{innerHeight}}\" x=\"7\" y=\"7\" rx=\"6\"/><text fill=\"#ffffff\" font-family=\"Arial, sans-serif\" font-size=\"14\" font-weight=\"bold\" text-anchor=\"middle\" x=\"{{textX}}\" y=\"{{textY}}\">{{label}}</text></g>"
+    },
+    "curvedEdge": {
+      "description": "Bezier curve connecting parent to child",
+      "template": "<path d=\"M {{startX}} {{startY}} C {{startX}} {{controlY1}}, {{endX}} {{controlY2}}, {{endX}} {{endY}}\" fill=\"none\" stroke=\"#1a1f2e\" stroke-width=\"3\"/>",
+      "controlPointFormula": "controlY1 = startY + (distance * 0.4), controlY2 = endY - (distance * 0.3)"
+    }
+  }
+}

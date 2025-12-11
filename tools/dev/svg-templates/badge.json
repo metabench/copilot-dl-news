@@ -1,0 +1,114 @@
+{
+  "name": "badge",
+  "version": "1.0.0",
+  "description": "Rounded rectangle badge with centered text — ideal for status labels, tags, and chips",
+  "category": "label",
+  
+  "parameters": {
+    "text": {
+      "type": "string",
+      "required": true,
+      "description": "Badge label text"
+    },
+    "x": {
+      "type": "number",
+      "required": true,
+      "description": "X position (anchor point)"
+    },
+    "y": {
+      "type": "number",
+      "required": true,
+      "description": "Y position (anchor point)"
+    },
+    "bgColor": {
+      "type": "color",
+      "default": "#4a90d9",
+      "description": "Background fill color"
+    },
+    "textColor": {
+      "type": "color",
+      "default": "#ffffff",
+      "description": "Text fill color"
+    },
+    "width": {
+      "type": "number",
+      "default": 80,
+      "min": 30,
+      "max": 300,
+      "description": "Badge width in pixels"
+    },
+    "height": {
+      "type": "number",
+      "default": 24,
+      "min": 16,
+      "max": 80,
+      "description": "Badge height in pixels"
+    },
+    "cornerRadius": {
+      "type": "number",
+      "default": 4,
+      "min": 0,
+      "max": 20,
+      "description": "Corner radius for rounded rect"
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 12,
+      "min": 8,
+      "max": 24,
+      "description": "Text font size"
+    },
+    "fontFamily": {
+      "type": "string",
+      "default": "system-ui, sans-serif",
+      "description": "Font family for text"
+    },
+    "id": {
+      "type": "string",
+      "description": "Optional element ID"
+    },
+    "class": {
+      "type": "string",
+      "default": "badge",
+      "description": "CSS class name"
+    }
+  },
+  
+  "anchor": {
+    "x": "center",
+    "y": "center",
+    "description": "Position is interpreted as badge center"
+  },
+  
+  "svg": "<g id=\"${id}\" class=\"${class}\" data-template=\"badge\" transform=\"translate(${x - width/2}, ${y - height/2})\">\n  <rect width=\"${width}\" height=\"${height}\" rx=\"${cornerRadius}\" fill=\"${bgColor}\"/>\n  <text x=\"${width/2}\" y=\"${height/2 + fontSize * 0.35}\" text-anchor=\"middle\" font-size=\"${fontSize}\" font-family=\"${fontFamily}\" fill=\"${textColor}\">${text}</text>\n</g>",
+  
+  "bounds": {
+    "width": "${width}",
+    "height": "${height}",
+    "description": "Bounding box equals specified dimensions"
+  },
+  
+  "examples": [
+    {
+      "description": "Simple status badge",
+      "params": { "text": "Active", "x": 100, "y": 50 }
+    },
+    {
+      "description": "Error badge with custom color",
+      "params": { "text": "Error", "x": 200, "y": 50, "bgColor": "#e74c3c" }
+    },
+    {
+      "description": "Wide success badge",
+      "params": { "text": "Completed Successfully", "x": 300, "y": 50, "bgColor": "#27ae60", "width": 150 }
+    }
+  ],
+  
+  "slots": {
+    "icon": {
+      "x": "${width * 0.15}",
+      "y": "${height / 2}",
+      "optional": true,
+      "description": "Optional icon slot at left side"
+    }
+  }
+}

@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs id="definitions">
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0ece4"/>
+    </linearGradient>
+    <linearGradient id="obsidianFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1f2e"/>
+      <stop offset="100%" stop-color="#0a0d14"/>
+    </linearGradient>
+    <linearGradient id="brushedMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e5e1d7"/>
+      <stop offset="25%" stop-color="#d8cba9"/>
+      <stop offset="50%" stop-color="#e5e1d7"/>
+      <stop offset="75%" stop-color="#d8cba9"/>
+      <stop offset="100%" stop-color="#e5e1d7"/>
+    </linearGradient>
+    <linearGradient id="sapphireGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#1e5aad"/>
+      <stop offset="100%" stop-color="#123a74"/>
+    </linearGradient>
+    <linearGradient id="amethystGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="amberGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="emeraldGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="50%" stop-color="#1a8f4d"/>
+      <stop offset="100%" stop-color="#0f5f33"/>
+    </linearGradient>
+    <linearGradient id="rubyGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e74c5e"/>
+      <stop offset="50%" stop-color="#c21f32"/>
+      <stop offset="100%" stop-color="#8d1424"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feOffset dx="0" dy="4" in="SourceAlpha" result="shadowOffset"/>
+      <feGaussianBlur in="shadowOffset" result="shadowBlur" stdDeviation="6"/>
+      <feBlend in="SourceGraphic" in2="shadowBlur" mode="normal"/>
+    </filter>
+    <filter id="gemGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2"/>
+      <feComposite in="blur" in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGradient)"/>
+  
+  <!-- Main panel -->
+  <rect x="15" y="15" width="770" height="470" rx="16" fill="url(#brushedMetal)" filter="url(#dropShadow)"/>
+  <rect x="20" y="20" width="760" height="460" rx="12" fill="#fdfcfa"/>
+  
+  <!-- Header -->
+  <rect x="20" y="20" width="760" height="50" rx="12" fill="url(#obsidianFrame)"/>
+  <rect x="20" y="50" width="760" height="20" fill="url(#obsidianFrame)"/>
+  <text x="400" y="52" text-anchor="middle" fill="#f0ece4" font-family="Playfair Display, Georgia, serif" font-size="20" font-weight="bold">Bézier Curves: The Control Point Intuition</text>
+  
+  <!-- Quadratic Bezier (left) -->
+  <g transform="translate(45, 90)">
+    <rect width="330" height="220" rx="10" fill="#f6f3ee" stroke="#d8cba9" stroke-width="1"/>
+    <text x="165" y="25" text-anchor="middle" fill="#1e5aad" font-family="Playfair Display, Georgia, serif" font-size="14" font-weight="bold">Quadratic (Q) — 1 Control Point</text>
+    
+    <!-- Control point lines -->
+    <line x1="40" y1="180" x2="165" y2="55" stroke="#d8cba9" stroke-width="2" stroke-dasharray="6,4"/>
+    <line x1="165" y1="55" x2="290" y2="180" stroke="#d8cba9" stroke-width="2" stroke-dasharray="6,4"/>
+    
+    <!-- The curve -->
+    <path d="M 40 180 Q 165 55 290 180" fill="none" stroke="#1e5aad" stroke-width="4"/>
+    
+    <!-- Start point -->
+    <circle cx="40" cy="180" r="10" fill="url(#emeraldGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="40" y="202" text-anchor="middle" fill="#1a8f4d" font-family="Inter, sans-serif" font-size="10" font-weight="bold">Start</text>
+    
+    <!-- Control point -->
+    <circle cx="165" cy="55" r="10" fill="url(#amberGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="165" y="42" text-anchor="middle" fill="#f59e0b" font-family="Inter, sans-serif" font-size="10" font-weight="bold">Control</text>
+    
+    <!-- End point -->
+    <circle cx="290" cy="180" r="10" fill="url(#rubyGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="290" y="202" text-anchor="middle" fill="#c21f32" font-family="Inter, sans-serif" font-size="10" font-weight="bold">End</text>
+  </g>
+  
+  <!-- Cubic Bezier (right) -->
+  <g transform="translate(410, 90)">
+    <rect width="350" height="220" rx="10" fill="#f6f3ee" stroke="#d8cba9" stroke-width="1"/>
+    <text x="175" y="25" text-anchor="middle" fill="#7c3aed" font-family="Playfair Display, Georgia, serif" font-size="14" font-weight="bold">Cubic (C) — 2 Control Points</text>
+    
+    <!-- Control point lines -->
+    <line x1="40" y1="180" x2="100" y2="55" stroke="#d8cba9" stroke-width="2" stroke-dasharray="6,4"/>
+    <line x1="250" y1="55" x2="310" y2="180" stroke="#d8cba9" stroke-width="2" stroke-dasharray="6,4"/>
+    
+    <!-- The curve -->
+    <path d="M 40 180 C 100 55 250 55 310 180" fill="none" stroke="#7c3aed" stroke-width="4"/>
+    
+    <!-- Start point -->
+    <circle cx="40" cy="180" r="10" fill="url(#emeraldGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="40" y="202" text-anchor="middle" fill="#1a8f4d" font-family="Inter, sans-serif" font-size="10" font-weight="bold">Start</text>
+    
+    <!-- Control point 1 -->
+    <circle cx="100" cy="55" r="10" fill="url(#amberGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="100" y="42" text-anchor="middle" fill="#f59e0b" font-family="Inter, sans-serif" font-size="10" font-weight="bold">C1</text>
+    
+    <!-- Control point 2 -->
+    <circle cx="250" cy="55" r="10" fill="url(#amberGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="250" y="42" text-anchor="middle" fill="#f59e0b" font-family="Inter, sans-serif" font-size="10" font-weight="bold">C2</text>
+    
+    <!-- End point -->
+    <circle cx="310" cy="180" r="10" fill="url(#rubyGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="310" y="202" text-anchor="middle" fill="#c21f32" font-family="Inter, sans-serif" font-size="10" font-weight="bold">End</text>
+  </g>
+  
+  <!-- Syntax boxes -->
+  <g transform="translate(45, 320)">
+    <rect width="330" height="45" rx="8" fill="url(#obsidianFrame)" stroke="#d8cba9" stroke-width="1"/>
+    <text x="165" y="28" text-anchor="middle" fill="#f0ece4" font-family="JetBrains Mono, monospace" font-size="11">M 30 180 Q 150 40 270 180</text>
+  </g>
+  
+  <g transform="translate(410, 320)">
+    <rect width="350" height="45" rx="8" fill="url(#obsidianFrame)" stroke="#d8cba9" stroke-width="1"/>
+    <text x="175" y="28" text-anchor="middle" fill="#f0ece4" font-family="JetBrains Mono, monospace" font-size="10">M 30 180 C 80 40 260 40 310 180</text>
+  </g>
+  
+  <!-- Key insights panel -->
+  <g transform="translate(45, 380)">
+    <rect width="715" height="90" rx="10" fill="#f6f3ee" stroke="#d8cba9" stroke-width="2"/>
+    <text x="357" y="24" text-anchor="middle" fill="#1a1f2e" font-family="Playfair Display, Georgia, serif" font-size="14" font-weight="bold">Key Insights</text>
+    
+    <circle cx="30" cy="50" r="4" fill="url(#amberGem)"/>
+    <text x="45" y="54" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Control points PULL the curve toward them (like magnets)</text>
+    
+    <circle cx="30" cy="72" r="4" fill="url(#amberGem)"/>
+    <text x="45" y="76" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">The curve does NOT pass through control points</text>
+    
+    <circle cx="400" cy="50" r="4" fill="url(#amberGem)"/>
+    <text x="415" y="54" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Close control = sharp bend</text>
+    
+    <circle cx="400" cy="72" r="4" fill="url(#amberGem)"/>
+    <text x="415" y="76" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Far control = gentle curve</text>
+  </g>
+</svg>

@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs id="definitions">
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0ece4"/>
+    </linearGradient>
+    <linearGradient id="obsidianFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1f2e"/>
+      <stop offset="100%" stop-color="#0a0d14"/>
+    </linearGradient>
+    <linearGradient id="brushedMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e5e1d7"/>
+      <stop offset="25%" stop-color="#d8cba9"/>
+      <stop offset="50%" stop-color="#e5e1d7"/>
+      <stop offset="75%" stop-color="#d8cba9"/>
+      <stop offset="100%" stop-color="#e5e1d7"/>
+    </linearGradient>
+    <linearGradient id="rubyGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e74c5e"/>
+      <stop offset="50%" stop-color="#c21f32"/>
+      <stop offset="100%" stop-color="#8d1424"/>
+    </linearGradient>
+    <linearGradient id="sapphireGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#1e5aad"/>
+      <stop offset="100%" stop-color="#123a74"/>
+    </linearGradient>
+    <linearGradient id="emeraldGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="50%" stop-color="#1a8f4d"/>
+      <stop offset="100%" stop-color="#0f5f33"/>
+    </linearGradient>
+    <linearGradient id="amberGem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feOffset dx="0" dy="4" in="SourceAlpha" result="shadowOffset"/>
+      <feGaussianBlur in="shadowOffset" result="shadowBlur" stdDeviation="6"/>
+      <feBlend in="SourceGraphic" in2="shadowBlur" mode="normal"/>
+    </filter>
+    <filter id="gemGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2"/>
+      <feComposite in="blur" in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGradient)"/>
+  
+  <!-- Main panel -->
+  <rect x="15" y="15" width="770" height="470" rx="16" fill="url(#brushedMetal)" filter="url(#dropShadow)"/>
+  <rect x="20" y="20" width="760" height="460" rx="12" fill="#fdfcfa"/>
+  
+  <!-- Header -->
+  <rect x="20" y="20" width="760" height="50" rx="12" fill="url(#obsidianFrame)"/>
+  <rect x="20" y="50" width="760" height="20" fill="url(#obsidianFrame)"/>
+  <text x="400" y="52" text-anchor="middle" fill="#f0ece4" font-family="Playfair Display, Georgia, serif" font-size="20" font-weight="bold">SVG Layer Order: Painter's Algorithm</text>
+  
+  <text x="400" y="95" text-anchor="middle" fill="#4b5262" font-family="Inter, sans-serif" font-size="12">Elements render in document order — later elements paint over earlier ones</text>
+  
+  <!-- Demo area -->
+  <g transform="translate(60, 115)">
+    <rect width="680" height="195" rx="10" fill="#f6f3ee" stroke="#d8cba9" stroke-width="1"/>
+    
+    <!-- Stacked rectangles showing layer order -->
+    <!-- Layer 1 (bottom) - Ruby -->
+    <rect x="50" y="35" width="200" height="130" rx="8" fill="url(#rubyGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="150" y="100" text-anchor="middle" fill="white" font-family="JetBrains Mono, monospace" font-size="14" font-weight="bold">&lt;rect&gt; 1st</text>
+    <text x="150" y="120" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Inter, sans-serif" font-size="10">BOTTOM</text>
+    
+    <!-- Layer 2 (middle) - Sapphire -->
+    <rect x="150" y="60" width="200" height="130" rx="8" fill="url(#sapphireGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="250" y="125" text-anchor="middle" fill="white" font-family="JetBrains Mono, monospace" font-size="14" font-weight="bold">&lt;rect&gt; 2nd</text>
+    <text x="250" y="145" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Inter, sans-serif" font-size="10">MIDDLE</text>
+    
+    <!-- Layer 3 (top) - Emerald -->
+    <rect x="260" y="30" width="200" height="130" rx="8" fill="url(#emeraldGem)" filter="url(#gemGlow)" stroke="#1a1f2e" stroke-width="2"/>
+    <text x="360" y="95" text-anchor="middle" fill="white" font-family="JetBrains Mono, monospace" font-size="14" font-weight="bold">&lt;rect&gt; 3rd</text>
+    <text x="360" y="115" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="Inter, sans-serif" font-size="10">TOP</text>
+    
+    <!-- Order label -->
+    <g transform="translate(520, 40)">
+      <text x="0" y="0" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="12" font-weight="bold">Render Order:</text>
+      <text x="0" y="25" fill="#c21f32" font-family="JetBrains Mono, monospace" font-size="11">1. Ruby</text>
+      <text x="0" y="45" fill="#1e5aad" font-family="JetBrains Mono, monospace" font-size="11">2. Sapphire</text>
+      <text x="0" y="65" fill="#1a8f4d" font-family="JetBrains Mono, monospace" font-size="11">3. Emerald</text>
+      <text x="0" y="95" fill="#4b5262" font-family="Inter, sans-serif" font-size="10">↑ Later = On Top</text>
+    </g>
+  </g>
+  
+  <!-- Code example -->
+  <g transform="translate(60, 325)">
+    <rect width="330" height="135" rx="10" fill="url(#obsidianFrame)" stroke="#d8cba9" stroke-width="2"/>
+    <text x="165" y="25" text-anchor="middle" fill="#d8cba9" font-family="Playfair Display, Georgia, serif" font-size="13" font-weight="bold">SVG Document Order</text>
+    
+    <text x="20" y="52" fill="#e74c5e" font-family="JetBrains Mono, monospace" font-size="10">&lt;svg&gt;</text>
+    <text x="35" y="70" fill="#888888" font-family="JetBrains Mono, monospace" font-size="10">&lt;!-- First = Bottom layer --&gt;</text>
+    <text x="35" y="87" fill="#e74c5e" font-family="JetBrains Mono, monospace" font-size="10">&lt;rect fill="ruby"   /&gt;</text>
+    <text x="35" y="104" fill="#60a5fa" font-family="JetBrains Mono, monospace" font-size="10">&lt;rect fill="sapphire"/&gt;</text>
+    <text x="35" y="121" fill="#2dd4bf" font-family="JetBrains Mono, monospace" font-size="10">&lt;rect fill="emerald" /&gt;</text>
+    <text x="35" y="135" fill="#888888" font-family="JetBrains Mono, monospace" font-size="9">&lt;!-- Last = Top layer --&gt;</text>
+  </g>
+  
+  <!-- Key insight panel -->
+  <g transform="translate(410, 325)">
+    <rect width="330" height="135" rx="10" fill="#f6f3ee" stroke="#d8cba9" stroke-width="2"/>
+    <text x="165" y="25" text-anchor="middle" fill="#1a1f2e" font-family="Playfair Display, Georgia, serif" font-size="13" font-weight="bold">Key Insight</text>
+    
+    <circle cx="25" cy="55" r="5" fill="url(#amberGem)" filter="url(#gemGlow)"/>
+    <text x="40" y="59" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">No z-index in SVG (unlike CSS)</text>
+    
+    <circle cx="25" cy="80" r="5" fill="url(#amberGem)" filter="url(#gemGlow)"/>
+    <text x="40" y="84" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Reorder elements to change layers</text>
+    
+    <circle cx="25" cy="105" r="5" fill="url(#amberGem)" filter="url(#gemGlow)"/>
+    <text x="40" y="109" fill="#1a1f2e" font-family="Inter, sans-serif" font-size="11">Use &lt;g&gt; groups for logical layers</text>
+    
+    <text x="20" y="130" fill="#4b5262" font-family="Inter, sans-serif" font-size="10">Tip: Background elements first, text last</text>
+  </g>
+</svg>

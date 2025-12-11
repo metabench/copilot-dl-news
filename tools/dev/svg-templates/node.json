@@ -1,0 +1,136 @@
+{
+  "name": "node",
+  "version": "1.0.0",
+  "description": "Graph/flowchart node with label — supports rect, circle, diamond, and cylinder shapes",
+  "category": "shape",
+  
+  "parameters": {
+    "label": {
+      "type": "string",
+      "required": true,
+      "description": "Node label text"
+    },
+    "x": {
+      "type": "number",
+      "required": true,
+      "description": "X position (center)"
+    },
+    "y": {
+      "type": "number",
+      "required": true,
+      "description": "Y position (center)"
+    },
+    "shape": {
+      "type": "string",
+      "default": "rect",
+      "enum": ["rect", "circle", "diamond", "cylinder", "ellipse"],
+      "description": "Node shape type"
+    },
+    "width": {
+      "type": "number",
+      "default": 120,
+      "min": 40,
+      "max": 400,
+      "description": "Node width (for rect/diamond/cylinder)"
+    },
+    "height": {
+      "type": "number",
+      "default": 60,
+      "min": 30,
+      "max": 200,
+      "description": "Node height"
+    },
+    "radius": {
+      "type": "number",
+      "default": 40,
+      "min": 15,
+      "max": 100,
+      "description": "Radius for circle shape"
+    },
+    "fill": {
+      "type": "color",
+      "default": "#ffffff",
+      "description": "Shape fill color"
+    },
+    "stroke": {
+      "type": "color",
+      "default": "#333333",
+      "description": "Shape stroke color"
+    },
+    "strokeWidth": {
+      "type": "number",
+      "default": 2,
+      "min": 0.5,
+      "max": 6,
+      "description": "Stroke width"
+    },
+    "textColor": {
+      "type": "color",
+      "default": "#333333",
+      "description": "Label text color"
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 14,
+      "min": 10,
+      "max": 24,
+      "description": "Label font size"
+    },
+    "cornerRadius": {
+      "type": "number",
+      "default": 8,
+      "description": "Corner radius for rect shape"
+    },
+    "id": {
+      "type": "string",
+      "description": "Element ID (required for edge connections)"
+    },
+    "class": {
+      "type": "string",
+      "default": "node",
+      "description": "CSS class"
+    }
+  },
+  
+  "anchor": {
+    "x": "center",
+    "y": "center"
+  },
+  
+  "shapes": {
+    "rect": "<rect x=\"${-width/2}\" y=\"${-height/2}\" width=\"${width}\" height=\"${height}\" rx=\"${cornerRadius}\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>",
+    "circle": "<circle cx=\"0\" cy=\"0\" r=\"${radius}\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>",
+    "diamond": "<polygon points=\"0,${-height/2} ${width/2},0 0,${height/2} ${-width/2},0\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>",
+    "ellipse": "<ellipse cx=\"0\" cy=\"0\" rx=\"${width/2}\" ry=\"${height/2}\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>",
+    "cylinder": "<g>\n    <ellipse cx=\"0\" cy=\"${-height/2 + 10}\" rx=\"${width/2}\" ry=\"10\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>\n    <rect x=\"${-width/2}\" y=\"${-height/2 + 10}\" width=\"${width}\" height=\"${height - 20}\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>\n    <ellipse cx=\"0\" cy=\"${height/2 - 10}\" rx=\"${width/2}\" ry=\"10\" fill=\"${fill}\" stroke=\"${stroke}\" stroke-width=\"${strokeWidth}\"/>\n  </g>"
+  },
+  
+  "svg": "<g id=\"${id}\" class=\"${class}\" data-template=\"node\" data-shape=\"${shape}\" transform=\"translate(${x}, ${y})\">\n  ${shapes[shape]}\n  <text x=\"0\" y=\"${fontSize * 0.35}\" text-anchor=\"middle\" font-size=\"${fontSize}\" fill=\"${textColor}\">${label}</text>\n</g>",
+  
+  "bounds": {
+    "width": "${shape === 'circle' ? radius * 2 : width}",
+    "height": "${shape === 'circle' ? radius * 2 : height}"
+  },
+  
+  "connectionPoints": {
+    "top": { "x": 0, "y": "${-height/2}" },
+    "bottom": { "x": 0, "y": "${height/2}" },
+    "left": { "x": "${-width/2}", "y": 0 },
+    "right": { "x": "${width/2}", "y": 0 }
+  },
+  
+  "examples": [
+    {
+      "description": "Simple rectangular node",
+      "params": { "id": "node-1", "label": "Process", "x": 200, "y": 100 }
+    },
+    {
+      "description": "Database cylinder",
+      "params": { "id": "db", "label": "Database", "x": 100, "y": 200, "shape": "cylinder", "fill": "#e8f4f8" }
+    },
+    {
+      "description": "Decision diamond",
+      "params": { "id": "decision", "label": "Yes/No?", "x": 300, "y": 200, "shape": "diamond", "fill": "#fff3cd" }
+    }
+  ]
+}

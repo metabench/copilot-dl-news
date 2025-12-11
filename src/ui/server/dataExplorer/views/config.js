@@ -24,7 +24,16 @@ function renderConfigView({ db, relativeDb, now }) {
     key: row.key,
     value: row.value,
     source: "crawler_settings",
-    description: `Last updated: ${formatDateTime(row.updatedAt, true)}`
+    description: `Last updated: ${formatDateTime(row.updatedAt, true)}`,
+    edit: {
+      action: "/api/config",
+      method: "post",
+      keyField: "key",
+      valueField: "value",
+      label: "Save",
+      placeholder: row.value,
+      key: row.key
+    }
   }));
 
   const control = new ConfigMatrixControl({

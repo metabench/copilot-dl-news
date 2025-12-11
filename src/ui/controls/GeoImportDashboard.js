@@ -320,8 +320,12 @@ class LiveLog extends Control {
     this.entries = spec.entries || [];
     this.maxEntries = spec.maxEntries || 100;
     this._logBody = null;
+    this._logLevels = this._resolveLogLevels(this.entries);
+    this._activeLevels = {};
+    this._logLevels.forEach(level => { this._activeLevels[level.id] = true; });
     
     this.add_class('live-log');
+    this._applyLevelAttributes();
     
     if (!spec.el) this.compose();
   }
@@ -329,7 +333,7 @@ class LiveLog extends Control {
   compose() {
     const ctx = this.context;
     
-    this.add(el(ctx, 'div', '📋 Import Log', 'log-header'));
+    this.add(this._buildHeader());
     
     this._logBody = el(ctx, 'div', null, 'log-body');
     this._logBody.dom.attributes['data-log-container'] = 'true';
@@ -344,6 +348,7 @@ class LiveLog extends Control {
     const ctx = this.context;
     const row = el(ctx, 'div', null, 'log-entry');
     row.add_class(`log-${entry.level || 'info'}`);
+    row.dom.attributes['data-log-level'] = entry.level || 'info';
     row.add(el(ctx, 'span', entry.time || new Date().toLocaleTimeString(), 'log-timestamp'));
     row.add(el(ctx, 'span', entry.message, 'log-message'));
     return row;
@@ -352,6 +357,73 @@ class LiveLog extends Control {
   addEntry(entry) {
     this.entries.push(entry);
     if (this.entries.length > this.maxEntries) this.entries.shift();
+  }
+
+  _resolveLogLevels(entries = []) {
+    const defaults = [
+      { id: 'info', label: 'Info' },
+      { id: 'success', label: 'Success' },
+      { id: 'warning', label: 'Warning' },
+      { id: 'error', label: 'Error' }
+    ];
+    const seen = new Set(entries.map(e => (e.level || '').toLowerCase()).filter(Boolean));
+    const merged = [...defaults];
+    seen.forEach(level => {
+      if (!merged.some(l => l.id === level)) {
+        merged.push({ id: level, label: formatLabel(level) });
+      }
+    });
+    return merged;
+  }
+
+  _applyLevelAttributes() {
+    Object.entries(this._activeLevels || {}).forEach(([level, enabled]) => {
+      this.dom.attributes[`data-allow-${level}`] = enabled ? 'true' : 'false';
+    });
+  }
+
+  _buildHeader() {
+    const ctx = this.context;
+    const header = el(ctx, 'div', null, 'log-header');
+
+    const title = el(ctx, 'div', '📋 Import Log', 'log-title');
+    header.add(title);
+
+    const filter = new Control({ context: ctx, tagName: 'details' });
+    filter.add_class('log-filter');
+    const trigger = new Control({ context: ctx, tagName: 'summary' });
+    trigger.add_class('log-filter__trigger');
+    trigger.add(el(ctx, 'span', 'Filter logs', 'log-filter__text'));
+    trigger.add(el(ctx, 'span', '▾', 'log-filter__chevron'));
+    filter.add(trigger);
+
+    const panel = new Control({ context: ctx, tagName: 'div' });
+    panel.add_class('log-filter__panel');
+    this._logLevels.forEach(level => panel.add(this._createFilterOption(level)));
+    filter.add(panel);
+
+    header.add(filter);
+    return header;
+  }
+
+  _createFilterOption(level) {
+    const ctx = this.context;
+    const option = new Control({ context: ctx, tagName: 'label' });
+    option.add_class('log-filter__option');
+    option.add_class(`log-${level.id}`);
+
+    const checkbox = new jsgui.input({ context: ctx });
+    checkbox.dom.attributes.type = 'checkbox';
+    checkbox.dom.attributes.name = 'log-filter';
+    checkbox.dom.attributes.value = level.id;
+    checkbox.dom.attributes['data-log-filter-level'] = level.id;
+    checkbox.dom.attributes.checked = 'checked';
+    option.add(checkbox);
+
+    option.add(el(ctx, 'span', null, 'log-filter__swatch'));
+    option.add(el(ctx, 'span', level.label, 'log-filter__label'));
+
+    return option;
   }
 }
 

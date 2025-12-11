@@ -1,0 +1,124 @@
+{
+  "name": "obsidian",
+  "displayName": "Obsidian Luxe",
+  "description": "Dark luxury palette with gold accent and atmospheric gradients for SVG, HTML, and jsgui3 surfaces.",
+  "aliases": ["obsidian", "luxury-dark"],
+  "origin": "Default svg-gen palette blended with ui themeService default",
+  "colors": {
+    "primary": "#1e293b",
+    "primaryLight": "#334155",
+    "primaryDark": "#0f172a",
+    "accent": "#c9a227",
+    "accentLight": "#d4b348",
+    "accentDark": "#b8931f",
+    "accentHover": "#e0b830",
+    "bg": "#0f172a",
+    "bgAlt": "#1a2332",
+    "surface": "#1e293b",
+    "surfaceElevated": "#283548",
+    "surfaceHover": "#334155",
+    "border": "#334155",
+    "borderLight": "#3f4f63",
+    "text": "#f8fafc",
+    "textSecondary": "#cbd5e1",
+    "textMuted": "#94a3b8",
+    "textSubtle": "#64748b",
+    "success": "#22c55e",
+    "successBg": "#14532d",
+    "warning": "#f59e0b",
+    "warningBg": "#78350f",
+    "error": "#ef4444",
+    "errorBg": "#7f1d1d",
+    "info": "#3b82f6",
+    "infoBg": "#1e3a5f"
+  },
+  "typography": {
+    "fontDisplay": "\"Playfair Display\", Georgia, serif",
+    "fontBody": "\"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+    "fontMono": "\"JetBrains Mono\", \"Fira Code\", Consolas, monospace",
+    "fontSizeBase": "16px",
+    "fontSizeXs": "0.75rem",
+    "fontSizeSm": "0.875rem",
+    "fontSizeMd": "1rem",
+    "fontSizeLg": "1.125rem",
+    "fontSizeXl": "1.25rem",
+    "fontSize2xl": "1.5rem",
+    "fontSize3xl": "2rem",
+    "fontSize4xl": "2.5rem",
+    "fontWeightNormal": "400",
+    "fontWeightMedium": "500",
+    "fontWeightSemibold": "600",
+    "fontWeightBold": "700",
+    "lineHeightTight": "1.2",
+    "lineHeightNormal": "1.5",
+    "lineHeightRelaxed": "1.7",
+    "letterSpacingTight": "-0.02em",
+    "letterSpacingNormal": "0",
+    "letterSpacingWide": "0.05em"
+  },
+  "spacing": {
+    "xs": "4px",
+    "sm": "8px",
+    "md": "16px",
+    "lg": "24px",
+    "xl": "32px",
+    "2xl": "48px",
+    "3xl": "64px"
+  },
+  "radii": {
+    "sm": "6px",
+    "md": "12px",
+    "lg": "20px",
+    "xl": "28px",
+    "full": "9999px"
+  },
+  "shadows": {
+    "sm": "0 2px 8px rgba(0, 0, 0, 0.3)",
+    "md": "0 8px 24px rgba(0, 0, 0, 0.4)",
+    "lg": "0 16px 48px rgba(0, 0, 0, 0.5)",
+    "glow": "0 0 20px rgba(201, 162, 39, 0.3)",
+    "inner": "inset 0 2px 4px rgba(0, 0, 0, 0.2)"
+  },
+  "transitions": {
+    "fast": "0.15s ease",
+    "normal": "0.25s ease",
+    "slow": "0.4s ease"
+  },
+  "svg": {
+    "background": {
+      "primary": "#0a0d14",
+      "secondary": "#050508",
+      "tertiary": "#141824"
+    },
+    "surface": {
+      "card": "#1a1f2e",
+      "cardHover": "#252b3d",
+      "cardBorder": "rgba(255,255,255,0.06)"
+    },
+    "accent": {
+      "gold": "#c9a227",
+      "goldBright": "#ffd700",
+      "goldDark": "#8b7500"
+    },
+    "status": {
+      "active": "#10b981",
+      "planned": "#3b82f6",
+      "research": "#8b5cf6",
+      "complete": "#22c55e",
+      "error": "#e31837",
+      "warning": "#ff9f00"
+    },
+    "text": {
+      "primary": "#f0f4f8",
+      "secondary": "#94a3b8",
+      "tertiary": "#64748b",
+      "muted": "#475569"
+    },
+    "connector": {
+      "default": "#64748b",
+      "highlight": "#c9a227",
+      "success": "#10b981",
+      "error": "#e31837"
+    }
+  }
+}

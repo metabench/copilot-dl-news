@@ -31,6 +31,329 @@
 
 ## Current Session
 
+### Session 2025-12-11: AGENTS: Research Gap Protocol
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add guidance: when unexpected issue occurs, consult existing research and consider a research project to close the gap
+
+**Location**: `docs/sessions/2025-12-11-agents-research-gap-protocol/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-agents-research-gap-protocol/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-agents-research-gap-protocol/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-agents-research-gap-protocol/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-agents-research-gap-protocol/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-agents-research-gap-protocol/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: User-terminated banner for checks
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add a reusable red [USER TERMINATED] banner + clean exit behavior for Node check/test scripts
+
+**Location**: `docs/sessions/2025-12-11-user-terminated-banner/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-user-terminated-banner/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-user-terminated-banner/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-user-terminated-banner/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-user-terminated-banner/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-user-terminated-banner/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Streaming SSR + Virtual Scrolling
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Investigate coupling between streaming SSR and virtual scrolling performance
+
+**Location**: `docs/sessions/2025-12-11-streaming-ssr-virtual-scroll/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-streaming-ssr-virtual-scroll/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-streaming-ssr-virtual-scroll/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-streaming-ssr-virtual-scroll/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-streaming-ssr-virtual-scroll/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-streaming-ssr-virtual-scroll/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Event delegation lab
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Run 10 experiments on delegation and bubbling patterns
+
+**Location**: `docs/sessions/2025-12-11-event-delegation-lab/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-event-delegation-lab/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-event-delegation-lab/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-event-delegation-lab/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-event-delegation-lab/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-event-delegation-lab/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Document mixin storage pattern
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document push/each _store pattern for lab mixins
+
+**Location**: `docs/sessions/2025-12-11-mixin-theme-docs/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-mixin-theme-docs/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-mixin-theme-docs/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-mixin-theme-docs/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-mixin-theme-docs/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-mixin-theme-docs/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: jsgui3 platform helpers via lab
+
+**Duration**: Active
+**Type**: research
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Experiment with jsgui3 platform helpers and document patterns
+
+**Location**: `docs/sessions/2025-12-11-jsgui3-gaps/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-jsgui3-gaps/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-jsgui3-gaps/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-jsgui3-gaps/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-jsgui3-gaps/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-jsgui3-gaps/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Log filter toggles popup
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add popup checkboxes to toggle log types and use existing log color scheme
+
+**Location**: `docs/sessions/2025-12-11-log-filters/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-log-filters/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-log-filters/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-log-filters/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-log-filters/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-log-filters/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Support multiple decision systems
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add DB + UI support to list and switch decision systems in decision tree viewer
+
+**Location**: `docs/sessions/2025-12-11-decision-systems-multi/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-decision-systems-multi/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-decision-systems-multi/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-decision-systems-multi/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-decision-systems-multi/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-decision-systems-multi/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: UI bugs identification and plan
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Identify UI bugs across project and plan fixes
+
+**Location**: `docs/sessions/2025-12-11-ui-bug-audit/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-ui-bug-audit/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-ui-bug-audit/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-ui-bug-audit/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-ui-bug-audit/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-ui-bug-audit/FOLLOW_UPS.md)
+
+
+### Session 2025-12-11: Polish decision tree controls UI
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Audit jsgui3 decision tree controls for presentation issues and SVG curves
+
+**Location**: `docs/sessions/2025-12-11-decision-tree-controls/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-11-decision-tree-controls/INDEX.md)
+- 🗺️ [Plan](./2025-12-11-decision-tree-controls/PLAN.md)
+- 📝 [Working Notes](./2025-12-11-decision-tree-controls/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-11-decision-tree-controls/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-11-decision-tree-controls/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: WLILO aesthetic guidance
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Document WLILO style and propagation for agents
+
+**Location**: `docs/sessions/2025-12-10-wlilo-style/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-wlilo-style/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-wlilo-style/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-wlilo-style/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-wlilo-style/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-wlilo-style/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: SVG/HTML theming workflows
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add MCP + docs for theme storage, retrieval, and generation across SVG/HTML/jsgui3
+
+**Location**: `docs/sessions/2025-12-10-svg-theme-workflows/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-svg-theme-workflows/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-svg-theme-workflows/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-svg-theme-workflows/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-svg-theme-workflows/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-svg-theme-workflows/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: SVG Tooling V2: High-Bandwidth Templates & Recipes
+
+**Duration**: Active
+**Type**: design
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Design dense, guarded, template-based SVG generation and editing system for AI agents
+
+**Location**: `docs/sessions/2025-12-10-svg-tooling-v2/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-svg-tooling-v2/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-svg-tooling-v2/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-svg-tooling-v2/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-svg-tooling-v2/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-svg-tooling-v2/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: Fix HierarchicalPlanner plan fallback
+
+**Duration**: Active
+**Type**: bugfix
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Ensure crawler phase-123 integration tests pass by returning partial plans and robust heuristic sharing
+
+**Location**: `docs/sessions/2025-12-10-phase-123-integration/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-phase-123-integration/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-phase-123-integration/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-phase-123-integration/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-phase-123-integration/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-phase-123-integration/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: Retire deprecated suites
+
+**Duration**: Active
+**Type**: tests
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Formally retire tests flagged as deprecated for 2+ weeks; capture quick wins
+
+**Location**: `docs/sessions/2025-12-10-retire-deprecated-tests/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-retire-deprecated-tests/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-retire-deprecated-tests/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-retire-deprecated-tests/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-retire-deprecated-tests/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-retire-deprecated-tests/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: Test log scanning CLI
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Summarize test failures/passes from logs
+
+**Location**: `docs/sessions/2025-12-10-test-log-tools/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-test-log-tools/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-test-log-tools/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-test-log-tools/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-test-log-tools/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-test-log-tools/FOLLOW_UPS.md)
+
+
+### Session 2025-12-10: SOLID splits for decision config
+
+**Duration**: Active
+**Type**: refactor
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Apply SOLID: extract DecisionConfigSet storage/service and API service layer
+
+**Location**: `docs/sessions/2025-12-10-solid-configsets/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-10-solid-configsets/INDEX.md)
+- 🗺️ [Plan](./2025-12-10-solid-configsets/PLAN.md)
+- 📝 [Working Notes](./2025-12-10-solid-configsets/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-10-solid-configsets/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-10-solid-configsets/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-07: Z-server scan counting
 
 **Duration**: Active

@@ -96,6 +96,8 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   const progressStat = document.querySelector('.progress-stat');
   const progressPhase = document.querySelector('.progress-phase');
   const logBody = document.querySelector('.log-body');
+  const liveLog = document.querySelector('.live-log');
+  const logFilterInputs = Array.from(document.querySelectorAll('[data-log-filter-level]'));
   const startBtn = document.querySelector('[data-action="start-import"]');
   const pauseBtn = document.querySelector('[data-action="pause-import"]');
   const cancelBtn = document.querySelector('[data-action="cancel-import"]');
@@ -109,6 +111,7 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   // State
   let currentState = null;
   let eventSource = null;
+  let logFilterState = null;
   
   // Metrics tracking
   let metricsHistory = [];
@@ -436,12 +439,41 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
       }
     }
   }
+
+  function applyLogFilters() {
+    if (!logBody) return;
+    const hasState = logFilterState && Object.keys(logFilterState).length > 0;
+    logBody.querySelectorAll('.log-entry').forEach(entry => {
+      const level = (entry.dataset.logLevel || '').toLowerCase();
+      if (hasState && logFilterState[level] === false) {
+        entry.style.display = 'none';
+      } else {
+        entry.style.display = '';
+      }
+    });
+  }
+
+  function syncLogFilterState() {
+    if (!logFilterInputs.length) return;
+    logFilterState = {};
+    logFilterInputs.forEach(input => {
+      const level = (input.getAttribute('data-log-filter-level') || '').toLowerCase();
+      const enabled = input.checked !== false;
+      logFilterState[level] = enabled;
+      if (liveLog) {
+        liveLog.setAttribute(`data-allow-${level}`, enabled ? 'true' : 'false');
+      }
+    });
+    applyLogFilters();
+  }
   
   function appendLog(entry) {
     if (!logBody) return;
     
     const row = document.createElement('div');
-    row.className = 'log-entry log-' + (entry.level || 'info');
+    const level = (entry.level || 'info').toLowerCase();
+    row.className = 'log-entry log-' + level;
+    row.dataset.logLevel = level;
     
     const timestamp = document.createElement('span');
     timestamp.className = 'log-timestamp';
@@ -455,6 +487,7 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
     
     logBody.appendChild(row);
     logBody.scrollTop = logBody.scrollHeight;
+    applyLogFilters();
   }
   
   // ─────────────────────────────────────────────────────────────────────────
@@ -620,6 +653,10 @@ console.log('[GeoImport] Layout controls registered:', LAYOUT_CONTROLS.map(c => 
   if (startBtn) startBtn.addEventListener('click', handleStart);
   if (pauseBtn) pauseBtn.addEventListener('click', handlePause);
   if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
+  if (logFilterInputs.length) {
+    logFilterInputs.forEach(input => input.addEventListener('change', syncLogFilterState));
+    syncLogFilterState();
+  }
   
   // Connect SSE
   connectSSE();

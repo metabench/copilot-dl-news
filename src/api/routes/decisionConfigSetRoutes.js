@@ -14,35 +14,126 @@
  */
 
 const express = require('express');
-const router = express.Router();
-const path = require('path');
+const {
+  createDefaultDecisionConfigSetRepository,
+  DecisionConfigSetRepository
+} = require('../../crawler/observatory/DecisionConfigSetRepository');
+const { DecisionConfigPromotionService } = require('../../crawler/observatory/DecisionConfigPromotionService');
+const {
+  loadActiveDecisionConfigSet,
+  setActiveDecisionConfigSlug
+} = require('../../crawler/observatory/DecisionConfigSetState');
 
-// Lazy-load DecisionConfigSet to avoid circular dependencies
-let DecisionConfigSet;
-function getDecisionConfigSet() {
-  if (!DecisionConfigSet) {
-    DecisionConfigSet = require('../../crawler/observatory/DecisionConfigSet').DecisionConfigSet;
-  }
-  return DecisionConfigSet;
-}
+function createDecisionConfigSetRoutes({ repository: providedRepository, promotionService: providedPromotionService, dbPath = null } = {}) {
+  const router = express.Router();
 
-/**
- * GET /api/decision-config-sets
- * List all saved config sets
- */
-router.get('/', async (req, res, next) => {
-  try {
-    const DCS = getDecisionConfigSet();
-    const sets = await DCS.list();
-    res.json({
-      success: true,
-      count: sets.length,
-      sets
-    });
-  } catch (err) {
-    next(err);
+  // Lazy singletons per router instance
+  let repository = providedRepository || null;
+  let promotionService = providedPromotionService || null;
+
+  function getRepository() {
+    if (!repository) {
+      repository = createDefaultDecisionConfigSetRepository();
+    }
+    return repository;
   }
-});
+
+  function getPromotionService() {
+    if (!promotionService) {
+      promotionService = new DecisionConfigPromotionService({ repository: getRepository() });
+    }
+    return promotionService;
+  }
+
+  async function requireDbAvailable(res) {
+    if (!dbPath) {
+      res.status(503).json({ success: false, error: 'Database path not configured for decision config sets' });
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * GET /api/decision-config-sets
+   * List all saved config sets
+   */
+  router.get('/', async (req, res, next) => {
+    try {
+      const repo = getRepository();
+      const sets = await repo.list();
+      res.json({
+        success: true,
+        count: sets.length,
+        sets
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * GET /api/decision-config-sets/active
+   * Return the currently active config set slug (persisted in DB)
+   */
+  router.get('/active', async (req, res, next) => {
+    try {
+      const repo = getRepository();
+      if (!dbPath) {
+        return res.json({ success: true, activeSlug: null, dbAvailable: false, summary: null });
+      }
+
+      const { configSet, slug, source } = await loadActiveDecisionConfigSet({
+        repository: repo,
+        dbPath,
+        fallbackToProduction: false
+      });
+
+      res.json({
+        success: true,
+        activeSlug: slug,
+        dbAvailable: true,
+        source: slug ? source : 'none',
+        summary: configSet?.getSummary ? configSet.getSummary() : null
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * POST /api/decision-config-sets/active
+   * Set the active config set slug in DB (validates existence)
+   */
+  router.post('/active', async (req, res, next) => {
+    try {
+      if (!(await requireDbAvailable(res))) return;
+      const { slug } = req.body || {};
+      if (!slug) {
+        return res.status(400).json({ success: false, error: 'slug is required' });
+      }
+
+      const repo = getRepository();
+      let configSet;
+      try {
+        configSet = await repo.load(slug);
+      } catch (err) {
+        if (err.message.includes('not found')) {
+          return res.status(404).json({ success: false, error: err.message });
+        }
+        throw err;
+      }
+
+      await setActiveDecisionConfigSlug({ dbPath, slug });
+
+      res.json({
+        success: true,
+        activeSlug: slug,
+        summary: configSet?.getSummary ? configSet.getSummary() : configSet?.toJSON?.()
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
 /**
  * GET /api/decision-config-sets/production
@@ -50,8 +141,8 @@ router.get('/', async (req, res, next) => {
  */
 router.get('/production', async (req, res, next) => {
   try {
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.fromProduction('production-snapshot');
+    const repo = getRepository();
+    const configSet = await repo.fromProduction('production-snapshot');
     res.json({
       success: true,
       configSet: configSet.getSummary(),
@@ -68,8 +159,8 @@ router.get('/production', async (req, res, next) => {
  */
 router.get('/:slug', async (req, res, next) => {
   try {
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.load(req.params.slug);
+    const repo = getRepository();
+    const configSet = await repo.load(req.params.slug);
     res.json({
       success: true,
       configSet: configSet.toJSON()
@@ -88,8 +179,8 @@ router.get('/:slug', async (req, res, next) => {
  */
 router.get('/:slug/summary', async (req, res, next) => {
   try {
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.load(req.params.slug);
+    const repo = getRepository();
+    const configSet = await repo.load(req.params.slug);
     res.json({
       success: true,
       summary: configSet.getSummary()
@@ -114,14 +205,14 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Name is required' });
     }
     
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.fromProduction(name);
+    const repo = getRepository();
+    const configSet = await repo.fromProduction(name);
     
     if (description) {
       configSet.description = description;
     }
     
-    const savedPath = await configSet.save();
+    const savedPath = await repo.save(configSet);
     
     res.status(201).json({
       success: true,
@@ -146,15 +237,15 @@ router.post('/:slug/clone', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Name is required' });
     }
     
-    const DCS = getDecisionConfigSet();
-    const original = await DCS.load(req.params.slug);
+    const repo = getRepository();
+    const original = await repo.load(req.params.slug);
     const clone = original.clone(name);
     
     if (description) {
       clone.description = description;
     }
     
-    const savedPath = await clone.save();
+    const savedPath = await repo.save(clone);
     
     res.status(201).json({
       success: true,
@@ -179,8 +270,8 @@ router.patch('/:slug', async (req, res, next) => {
   try {
     const { bonuses, weights, features, description, name } = req.body;
     
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.load(req.params.slug);
+    const repo = getRepository();
+    const configSet = await repo.load(req.params.slug);
     
     // Update metadata
     if (name) configSet.name = name;
@@ -207,7 +298,7 @@ router.patch('/:slug', async (req, res, next) => {
       }
     }
     
-    await configSet.save();
+    await repo.save(configSet);
     
     res.json({
       success: true,
@@ -229,8 +320,8 @@ router.patch('/:slug', async (req, res, next) => {
  */
 router.delete('/:slug', async (req, res, next) => {
   try {
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.load(req.params.slug);
+    const repo = getRepository();
+    const configSet = await repo.load(req.params.slug);
     
     if (configSet.metadata.isProduction) {
       return res.status(403).json({ 
@@ -239,7 +330,7 @@ router.delete('/:slug', async (req, res, next) => {
       });
     }
     
-    await configSet.delete();
+    await repo.delete(configSet);
     
     res.json({
       success: true,
@@ -260,9 +351,9 @@ router.delete('/:slug', async (req, res, next) => {
  */
 router.get('/:slug/diff/:otherSlug', async (req, res, next) => {
   try {
-    const DCS = getDecisionConfigSet();
-    const setA = await DCS.load(req.params.slug);
-    const setB = await DCS.load(req.params.otherSlug);
+    const repo = getRepository();
+    const setA = await repo.load(req.params.slug);
+    const setB = await repo.load(req.params.otherSlug);
     
     const diffs = setA.diff(setB);
     
@@ -291,10 +382,11 @@ router.post('/:slug/promote', async (req, res, next) => {
   try {
     const { backup = true } = req.body;
     
-    const DCS = getDecisionConfigSet();
-    const configSet = await DCS.load(req.params.slug);
-    
-    const result = await configSet.promoteToProduction({ backup });
+    const repo = getRepository();
+    const service = getPromotionService();
+    const configSet = await repo.load(req.params.slug);
+
+    const result = await service.promote(configSet, { backup });
     
     res.json({
       success: true,
@@ -310,15 +402,21 @@ router.post('/:slug/promote', async (req, res, next) => {
   }
 });
 
-/**
- * Error handler
- */
-router.use((err, req, res, next) => {
-  console.error('Decision Config Set API Error:', err);
-  res.status(500).json({
-    success: false,
-    error: err.message
+  /**
+   * Error handler
+   */
+  router.use((err, req, res, next) => {
+    console.error('Decision Config Set API Error:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
   });
-});
 
-module.exports = router;
+  return router;
+}
+
+const decisionConfigSetRoutes = createDecisionConfigSetRoutes();
+
+module.exports = decisionConfigSetRoutes;
+module.exports.createDecisionConfigSetRoutes = createDecisionConfigSetRoutes;

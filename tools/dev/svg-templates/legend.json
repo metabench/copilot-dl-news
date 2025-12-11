@@ -1,0 +1,131 @@
+{
+  "name": "legend",
+  "version": "1.0.0",
+  "description": "Legend box with color-coded items — automatically sizes to content",
+  "category": "container",
+  
+  "parameters": {
+    "x": {
+      "type": "number",
+      "required": true,
+      "description": "X position (top-left corner)"
+    },
+    "y": {
+      "type": "number",
+      "required": true,
+      "description": "Y position (top-left corner)"
+    },
+    "title": {
+      "type": "string",
+      "default": "Legend",
+      "description": "Legend title text"
+    },
+    "items": {
+      "type": "array",
+      "required": true,
+      "description": "Array of {color, label} objects",
+      "itemSchema": {
+        "type": "object",
+        "properties": {
+          "color": { "type": "color", "required": true },
+          "label": { "type": "string", "required": true },
+          "shape": { "type": "string", "enum": ["rect", "circle", "line"], "default": "rect" }
+        }
+      }
+    },
+    "width": {
+      "type": "number",
+      "default": 120,
+      "min": 80,
+      "max": 300,
+      "description": "Legend box width"
+    },
+    "itemHeight": {
+      "type": "number",
+      "default": 20,
+      "description": "Height per legend item"
+    },
+    "padding": {
+      "type": "number",
+      "default": 10,
+      "description": "Internal padding"
+    },
+    "bgColor": {
+      "type": "color",
+      "default": "#ffffff",
+      "description": "Background color"
+    },
+    "borderColor": {
+      "type": "color",
+      "default": "#cccccc",
+      "description": "Border stroke color"
+    },
+    "fontSize": {
+      "type": "number",
+      "default": 12,
+      "description": "Item label font size"
+    },
+    "titleFontSize": {
+      "type": "number",
+      "default": 14,
+      "description": "Title font size"
+    },
+    "swatchSize": {
+      "type": "number",
+      "default": 12,
+      "description": "Color swatch size"
+    },
+    "id": {
+      "type": "string",
+      "default": "legend"
+    },
+    "class": {
+      "type": "string",
+      "default": "legend"
+    }
+  },
+  
+  "anchor": {
+    "x": "left",
+    "y": "top"
+  },
+  
+  "computed": {
+    "totalHeight": "${padding * 2 + titleFontSize + 8 + items.length * itemHeight}"
+  },
+  
+  "svg": "<g id=\"${id}\" class=\"${class}\" data-template=\"legend\" transform=\"translate(${x}, ${y})\">\n  <rect width=\"${width}\" height=\"${computed.totalHeight}\" rx=\"4\" fill=\"${bgColor}\" stroke=\"${borderColor}\" stroke-width=\"1\"/>\n  <text x=\"${padding}\" y=\"${padding + titleFontSize}\" font-size=\"${titleFontSize}\" font-weight=\"bold\" fill=\"#333\">${title}</text>\n  ${items.map((item, i) => `\n  <g transform=\"translate(${padding}, ${padding + titleFontSize + 8 + i * itemHeight})\">\n    <rect width=\"${swatchSize}\" height=\"${swatchSize}\" fill=\"${item.color}\" rx=\"2\"/>\n    <text x=\"${swatchSize + 8}\" y=\"${swatchSize - 2}\" font-size=\"${fontSize}\" fill=\"#333\">${item.label}</text>\n  </g>`).join('')}\n</g>",
+  
+  "bounds": {
+    "width": "${width}",
+    "height": "${computed.totalHeight}"
+  },
+  
+  "examples": [
+    {
+      "description": "Simple two-item legend",
+      "params": {
+        "x": 20,
+        "y": 20,
+        "items": [
+          { "color": "#e74c3c", "label": "Error" },
+          { "color": "#27ae60", "label": "Success" }
+        ]
+      }
+    },
+    {
+      "description": "Status legend with custom title",
+      "params": {
+        "x": 650,
+        "y": 20,
+        "title": "Status",
+        "items": [
+          { "color": "#3498db", "label": "Pending" },
+          { "color": "#f39c12", "label": "In Progress" },
+          { "color": "#27ae60", "label": "Complete" },
+          { "color": "#95a5a6", "label": "Cancelled" }
+        ]
+      }
+    }
+  ]
+}

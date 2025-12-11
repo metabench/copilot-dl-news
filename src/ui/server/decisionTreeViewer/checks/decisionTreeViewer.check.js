@@ -17,6 +17,7 @@ const fs = require("fs");
 const { app, renderPage, createContext } = require("../server");
 const { createExampleTree } = require("../isomorphic/model/DecisionTree");
 const { ConnectionPointType } = require("../isomorphic/controls/ConnectionPointControl");
+const { DecisionTreeControl } = require("../isomorphic/controls/DecisionTreeControl");
 
 const OUTPUT_PATH = path.join(__dirname, "..", "..", "..", "..", "..", "decision-tree-viewer.check.html");
 
@@ -166,6 +167,32 @@ async function runChecks() {
   
   // Client script
   check("Contains client bundle reference", html.includes("decision-tree-client.js"));
+
+  // 2b. Dynamic rerender via tree setter (text fixture)
+  const altTree = createExampleTree();
+  altTree.id = "alt-tree";
+  altTree.name = "Alternate Tree";
+  altTree.root.label = "Alt Root";
+
+  const control = new DecisionTreeControl({ context: createContext(), tree });
+  const firstHtml = control.all_html_render();
+  control.tree = altTree;
+  const secondHtml = control.all_html_render();
+
+  check(
+    "Tree setter re-renders new tree",
+    secondHtml.includes("data-tree-id=\"alt-tree\"")
+  );
+  check("Tree setter output contains connection points", secondHtml.includes("dt_connection_point"));
+
+  // 2c. Multi-tree render (tree list) fixture
+  const treeB = createExampleTree();
+  treeB.id = "alt-tree-b";
+  treeB.name = "Second Tree";
+  const multiHtml = renderPage(createContext(), [tree, treeB]);
+  const listItemMatches = multiHtml.match(/data-jsgui-control="dt_tree_list_item"/g) || [];
+  check("Tree list renders both trees", multiHtml.includes(tree.name) && multiHtml.includes(treeB.name));
+  check("Tree list item count >= 2", listItemMatches.length >= 2);
   
   // 3. Connection Point Verification
   section("Connection Points (Robust System)");

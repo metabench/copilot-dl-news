@@ -19,6 +19,7 @@
 9. [Validators](#validators)
 10. [When to Use Which Pattern](#when-to-use-which-pattern)
 11. [Quick Decision Guide](#quick-decision-guide)
+12. [Platform Helper Shortcuts](#platform-helper-shortcuts)
 
 ---
 
@@ -790,6 +791,16 @@ class MyControl extends Control {
 
 module.exports = { MyControl };
 ```
+
+---
+
+## Platform Helper Shortcuts
+
+- **Style proxy**: `new Control({ size: [20, 30], background: { color: '#ff0000' } })` auto-writes `style.width/height` as `px` values and sets `background-color` in `dom.attrs.style` before activation.
+- **Compositional model (`comp`)**: `new Control({ comp: [TitleControl, ['subtitle', TextSpan, { text: 'world' }]] })` builds children immediately and stores named references in `_ctrl_fields.subtitle` while rendering the composed HTML.
+- **Registration helper**: `register_this_and_subcontrols()` fills `context.map_controls` for the control tree so activation can resolve `dom.el` without manual map wiring.
+- **Persisted fields hydration**: constructing a control with `el` that carries `data-jsgui-fields` JSON hydrates `_persisted_fields` (e.g., `{ foo: 'bar', count: 3 }`) alongside `data-jsgui-id/type` for client pickups.
+- **Validation**: All shortcuts are verified in lab experiment 002 (`src/ui/lab/experiments/002-platform-helpers/check.js`).
 
 ---
 

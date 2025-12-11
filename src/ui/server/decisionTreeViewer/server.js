@@ -32,18 +32,28 @@ const Page_Context = jsgui.Page_Context;
 const { DecisionTreeViewerControl } = require("./isomorphic/controls");
 const { createExampleTree } = require("./isomorphic/model/DecisionTree");
 const { loadAllTrees, loadFromConfigSet } = require("./isomorphic/model/DecisionTreeLoader");
+const {
+  loadActiveDecisionConfigSet,
+  setActiveDecisionConfigSlug
+} = require("../../../../crawler/observatory/DecisionConfigSetState");
 
-// Optional: DecisionConfigSet for loading from saved sets
-let DecisionConfigSet;
+// Optional repository for loading config sets
+let configSetRepository = null;
 try {
-  DecisionConfigSet = require("../../../../crawler/observatory/DecisionConfigSet").DecisionConfigSet;
+  const { createDefaultDecisionConfigSetRepository } = require("../../../../crawler/observatory/DecisionConfigSetRepository");
+  configSetRepository = createDefaultDecisionConfigSetRepository();
 } catch (e) {
-  // DecisionConfigSet not available, will use file-based loading
+  // Repository not available; routes depending on it will 501
 }
+
+const DB_PATH = process.env.DECISION_DB_PATH || path.join(process.cwd(), "data", "news.db");
 
 // Server configuration
 const PORT = process.env.DECISION_TREE_VIEWER_PORT || 3030;
 const app = express();
+
+// JSON body parser (for active config set updates)
+app.use(express.json({ limit: "1mb" }));
 
 // Static files
 app.use("/public", express.static(path.join(__dirname, "public")));
@@ -258,34 +268,61 @@ function renderPage(context, trees) {
 </html>`;
 }
 
-// Routes
-app.get("/", (req, res) => {
-  const context = createContext();
-  
-  // Load real decision trees from config
-  let trees = loadAllTrees();
-  
-  // If no real trees found, use example
-  if (trees.length === 0) {
-    console.log("No decision trees found in config, using example tree");
-    trees = [createExampleTree()];
-  } else {
-    console.log(`Loaded ${trees.length} decision trees from config`);
+async function loadTreesWithFallback() {
+  if (configSetRepository) {
+    try {
+      const { configSet } = await loadActiveDecisionConfigSet({
+        repository: configSetRepository,
+        dbPath: DB_PATH,
+        fallbackToProduction: false
+      });
+
+      if (configSet) {
+        const treesFromSet = loadFromConfigSet(configSet);
+        if (treesFromSet.length) {
+          return { trees: treesFromSet, source: "config-set" };
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load active decision config set:", err.message);
+    }
   }
-  
+
+  const treesFromDir = loadAllTrees();
+  if (treesFromDir.length) {
+    return { trees: treesFromDir, source: "config/decision-trees" };
+  }
+
+  return { trees: [createExampleTree()], source: "example" };
+}
+
+// Routes
+app.get("/", async (req, res) => {
+  const context = createContext();
+
+  const { trees, source } = await loadTreesWithFallback();
+  console.log(`Loaded ${trees.length} decision trees from ${source}`);
+
   const html = renderPage(context, trees);
   res.type("html").send(html);
 });
 
 // Load from a specific config set
 app.get("/set/:slug", async (req, res) => {
-  if (!DecisionConfigSet) {
-    return res.status(501).json({ error: "DecisionConfigSet not available" });
+  if (!configSetRepository) {
+    return res.status(501).json({ error: "DecisionConfigSetRepository not available" });
   }
   
   try {
-    const configSet = await DecisionConfigSet.load(req.params.slug);
+    const configSet = await configSetRepository.load(req.params.slug);
     const trees = loadFromConfigSet(configSet);
+    if (req.query.persist === "1") {
+      try {
+        await setActiveDecisionConfigSlug({ dbPath: DB_PATH, slug: configSet.slug });
+      } catch (err) {
+        console.warn("Failed to persist active decision config set:", err.message);
+      }
+    }
     
     if (trees.length === 0) {
       return res.status(404).json({ error: "No decision trees in config set" });
@@ -301,15 +338,70 @@ app.get("/set/:slug", async (req, res) => {
 
 // API: List available config sets
 app.get("/api/config-sets", async (req, res) => {
-  if (!DecisionConfigSet) {
+  if (!configSetRepository) {
     return res.json({ sets: [], available: false });
   }
   
   try {
-    const sets = await DecisionConfigSet.list();
+    const sets = await configSetRepository.list();
     res.json({ sets, available: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Get or set the active config set slug
+app.get("/api/active-config-set", async (req, res) => {
+  if (!configSetRepository) {
+    return res.json({ success: true, available: false, activeSlug: null, summary: null });
+  }
+
+  try {
+    const { configSet, slug, source } = await loadActiveDecisionConfigSet({
+      repository: configSetRepository,
+      dbPath: DB_PATH,
+      fallbackToProduction: false
+    });
+
+    res.json({
+      success: true,
+      available: true,
+      activeSlug: slug,
+      source: slug ? source : "none",
+      summary: configSet?.getSummary ? configSet.getSummary() : null
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/active-config-set", async (req, res) => {
+  if (!configSetRepository) {
+    return res.status(501).json({ success: false, error: "DecisionConfigSetRepository not available" });
+  }
+
+  if (!DB_PATH) {
+    return res.status(503).json({ success: false, error: "Database path not configured" });
+  }
+
+  const { slug } = req.body || {};
+  if (!slug) {
+    return res.status(400).json({ success: false, error: "slug is required" });
+  }
+
+  try {
+    const configSet = await configSetRepository.load(slug);
+    await setActiveDecisionConfigSlug({ dbPath: DB_PATH, slug });
+    res.json({
+      success: true,
+      activeSlug: slug,
+      summary: configSet?.getSummary ? configSet.getSummary() : configSet?.toJSON?.()
+    });
+  } catch (err) {
+    if (err.message.includes("not found")) {
+      return res.status(404).json({ success: false, error: err.message });
+    }
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

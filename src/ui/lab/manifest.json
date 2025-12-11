@@ -1,0 +1,152 @@
+[
+  {
+    "id": "001",
+    "slug": "color-palette",
+    "name": "Color Palette",
+    "status": "validated",
+    "description": "MVVM patterns for color selection and Art Playground integration",
+    "path": "src/ui/lab/experiments/001-color-palette",
+    "check": "src/ui/lab/experiments/001-color-palette/check.js",
+    "readme": "src/ui/lab/experiments/001-color-palette/README.md"
+  },
+  {
+    "id": "002",
+    "slug": "platform-helpers",
+    "name": "Platform Helpers",
+    "status": "active",
+    "description": "Style proxy px coercion, comp wiring, registration helper, persisted fields",
+    "path": "src/ui/lab/experiments/002-platform-helpers",
+    "check": "src/ui/lab/experiments/002-platform-helpers/check.js",
+    "readme": "src/ui/lab/experiments/002-platform-helpers/README.md"
+  },
+  {
+    "id": "003",
+    "slug": "mixin-composition",
+    "name": "Mixin Composition",
+    "status": "proposed",
+    "description": "Compose multiple control mixins safely (server-path baseline)",
+    "path": "src/ui/lab/experiments/003-mixin-composition",
+    "check": "src/ui/lab/experiments/003-mixin-composition/check.js",
+    "readme": "src/ui/lab/experiments/003-mixin-composition/README.md"
+  },
+  {
+    "id": "004",
+    "slug": "theme-mixin",
+    "name": "Theme Mixin",
+    "status": "proposed",
+    "description": "Custom theme mixin (class + data attr) safe on server path",
+    "path": "src/ui/lab/experiments/004-theme-mixin",
+    "check": "src/ui/lab/experiments/004-theme-mixin/check.js",
+    "readme": "src/ui/lab/experiments/004-theme-mixin/README.md"
+  },
+  {
+    "id": "005",
+    "slug": "delegation-baseline",
+    "name": "Delegation Baseline",
+    "status": "proposed",
+    "description": "Baseline delegated vs direct click listeners (order + counts)",
+    "path": "src/ui/lab/experiments/005-delegation-baseline",
+    "check": "src/ui/lab/experiments/005-delegation-baseline/check.js",
+    "readme": "src/ui/lab/experiments/005-delegation-baseline/README.md"
+  },
+  {
+    "id": "006",
+    "slug": "capture-vs-bubble",
+    "name": "Capture vs Bubble",
+    "status": "proposed",
+    "description": "Compare capture-phase vs bubble-phase delegation ordering",
+    "path": "src/ui/lab/experiments/006-capture-vs-bubble",
+    "check": "src/ui/lab/experiments/006-capture-vs-bubble/check.js",
+    "readme": "src/ui/lab/experiments/006-capture-vs-bubble/README.md"
+  },
+  {
+    "id": "007",
+    "slug": "stop-propagation",
+    "name": "stopPropagation",
+    "status": "proposed",
+    "description": "Trace handler coverage when stopPropagation is invoked",
+    "path": "src/ui/lab/experiments/007-stop-propagation",
+    "check": "src/ui/lab/experiments/007-stop-propagation/check.js",
+    "readme": "src/ui/lab/experiments/007-stop-propagation/README.md"
+  },
+  {
+    "id": "008",
+    "slug": "stop-immediate-propagation",
+    "name": "stopImmediatePropagation",
+    "status": "proposed",
+    "description": "Multi-handler ordering when stopImmediatePropagation is used",
+    "path": "src/ui/lab/experiments/008-stop-immediate-propagation",
+    "check": "src/ui/lab/experiments/008-stop-immediate-propagation/check.js",
+    "readme": "src/ui/lab/experiments/008-stop-immediate-propagation/README.md"
+  },
+  {
+    "id": "009",
+    "slug": "target-vs-current-target",
+    "name": "target vs currentTarget",
+    "status": "proposed",
+    "description": "Log target/currentTarget pairs under delegation",
+    "path": "src/ui/lab/experiments/009-target-vs-current-target",
+    "check": "src/ui/lab/experiments/009-target-vs-current-target/check.js",
+    "readme": "src/ui/lab/experiments/009-target-vs-current-target/README.md"
+  },
+  {
+    "id": "010",
+    "slug": "nested-controls-bubbling",
+    "name": "Nested Controls Bubbling",
+    "status": "proposed",
+    "description": "Bubble paths across deep control chains",
+    "path": "src/ui/lab/experiments/010-nested-controls-bubbling",
+    "check": "src/ui/lab/experiments/010-nested-controls-bubbling/check.js",
+    "readme": "src/ui/lab/experiments/010-nested-controls-bubbling/README.md"
+  },
+  {
+    "id": "011",
+    "slug": "delegated-selector-matching",
+    "name": "Delegated Selector Matching",
+    "status": "proposed",
+    "description": "Selector hit/miss behavior for delegated handlers",
+    "path": "src/ui/lab/experiments/011-delegated-selector-matching",
+    "check": "src/ui/lab/experiments/011-delegated-selector-matching/check.js",
+    "readme": "src/ui/lab/experiments/011-delegated-selector-matching/README.md"
+  },
+  {
+    "id": "012",
+    "slug": "dynamic-children-delegation",
+    "name": "Dynamic Children Delegation",
+    "status": "proposed",
+    "description": "Delegation coverage when children are added/removed post-activation",
+    "path": "src/ui/lab/experiments/012-dynamic-children-delegation",
+    "check": "src/ui/lab/experiments/012-dynamic-children-delegation/check.js",
+    "readme": "src/ui/lab/experiments/012-dynamic-children-delegation/README.md"
+  },
+  {
+    "id": "013",
+    "slug": "custom-events-bubbling",
+    "name": "Custom Events Bubbling",
+    "status": "proposed",
+    "description": "Bubbling behavior of custom events vs native clicks",
+    "path": "src/ui/lab/experiments/013-custom-events-bubbling",
+    "check": "src/ui/lab/experiments/013-custom-events-bubbling/check.js",
+    "readme": "src/ui/lab/experiments/013-custom-events-bubbling/README.md"
+  },
+  {
+    "id": "014",
+    "slug": "delegation-performance-batch",
+    "name": "Delegation Performance Batch",
+    "status": "proposed",
+    "description": "Performance of delegated vs per-node listeners at scale",
+    "path": "src/ui/lab/experiments/014-delegation-performance-batch",
+    "check": "src/ui/lab/experiments/014-delegation-performance-batch/check.js",
+    "readme": "src/ui/lab/experiments/014-delegation-performance-batch/README.md"
+  },
+  {
+    "id": "015",
+    "slug": "streaming-virtual-harness",
+    "name": "Streaming + Virtual Harness",
+    "status": "proposed",
+    "description": "Synthetic 2x2 (streaming on/off, virtual on/off) plus fractal hex virtual-scroll validation",
+    "path": "src/ui/lab/experiments/015-streaming-virtual-harness",
+    "check": "src/ui/lab/experiments/015-streaming-virtual-harness/check.all.js",
+    "readme": null
+  }
+]

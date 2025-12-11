@@ -348,16 +348,23 @@ class DecisionTreeViewerControl extends Control {
     // Create new tree control (client-side dynamic update)
     const canvasEl = this._canvas?.dom?.el;
     if (canvasEl) {
-      // Create new tree control
+      // Dispose previous control to avoid stray observers/renderers
+      this._treeControl?.dispose?.();
+
+      // Clear canvas children/DOM
+      if (this._canvas.remove_all) {
+        this._canvas.remove_all();
+      } else {
+        canvasEl.innerHTML = "";
+      }
+
+      // Create, attach, and activate new control so jsgui3 lifecycle runs
       this._treeControl = new DecisionTreeControl({ 
         context: this.context, 
         tree: tree 
       });
-      
-      // Render and replace
-      canvasEl.innerHTML = this._treeControl.all_html_render();
-      
-      // Activate
+
+      this._canvas.add(this._treeControl);
       this._treeControl.activate?.();
       this._treeControl.on("node-select", ({ node, nodeId }) => {
         this.raise("node-select", { node, nodeId, tree: this._currentTree });

@@ -50,6 +50,11 @@ Research, implement, and verify jsgui3 isomorphic UI flows so that views render 
 - `npm run test:by-path <ui-suite>` or control-specific check scripts.
 - Session tracking under `docs/sessions/<date>-jsgui3-isomorphic/`.
 
+### Delegation experiments (hydrate + SSR parity)
+- Read the current delegation findings before tweaking bubbling/capture logic: [docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md](docs/sessions/2025-12-11-event-delegation-lab/SESSION_SUMMARY.md).
+- Run the DOM-backed suite when event behavior might change: `node src/ui/lab/experiments/run-delegation-suite.js --scenario=005,011` (or full). Single browser/page reused; console cleared per run.
+- Add new experiments to the runner + manifest so discovery workflows can invoke them alongside SSR/hydration checks.
+
 ## Escalation Rules
 - If client/server parity issues trace back to rendering infra (Express routes, data loaders) that require more than trivial tweaks, stop and document a follow-up for a backend-focused agent.
 - When encountering data inconsistencies (missing fields, schema drift), log precise API contracts and sample payloads so the follow-up agent can reproduce easily.

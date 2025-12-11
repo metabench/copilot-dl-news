@@ -1,7 +1,8 @@
-```chatagent
 ---
 description: 'AGI Singularity agent for SVG spatial reasoning — geometry computation, tool development, collision detection, and layout repair'
-tools: ['edit', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'problems', 'changes']
+
+
+tools: ['execute/getTerminalOutput', 'execute/runTask', 'execute/getTaskOutput', 'execute/createAndRunTask', 'execute/runInTerminal', 'read/problems', 'read/readFile', 'read/terminalSelection', 'read/terminalLastCommand', 'edit', 'search', 'docs-memory/*', 'svg-editor/*', 'agent', 'todo']
 ---
 
 # 📐 SVG Spatial Reasoning Specialist 📐
@@ -273,21 +274,44 @@ result=$(node tools/dev/svg-collisions.js diagram.svg --json)
 echo $result | jq '.summary.high'
 ```
 
-### Known Gaps (To Be Implemented)
+### Tooling Gap Status
 
-| Gap | Current State | Priority |
-|-----|---------------|----------|
-| `--positions` flag | Not available | 🔴 P0 |
-| Absolute position in collision output | Not included | 🔴 P0 |
-| `--containment` check | Partial (`text-clipped`) | 🟡 P1 |
-| Repair suggestions | Not available | 🟡 P1 |
-| `--fix` auto-correction mode | Not available | 🟡 P1 |
-| `svg-edit.js` element manipulation | Not available | 🟡 P1 |
-| `--element` query | Not available | 🟢 P2 |
-| Transform chain explanation | Not available | 🟢 P2 |
-| `--auto-layout` intelligent reflow | Not available | 🔵 P3 |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `--positions` flag | ✅ Done | Output absolute positions for all elements |
+| Absolute position in collision output | ✅ Done | Each collision includes element1/element2 absolutePosition |
+| `--containment` check | ✅ Done | `--containment` flag with overflow detection |
+| Repair suggestions | ✅ Done | Each collision includes repair.suggestion & alternatives |
+| `--element` query | ✅ Done | Query specific element by id or selector |
+| Bilingual 简令 mode | ✅ Done | Chinese flags auto-enable terse output |
+| `--fix` auto-correction mode | ✅ Done | `--fix` + `--dry-run` apply/preview repairs |
+| `svg-edit.js` element manipulation | 🟡 P1 | Planned - standalone element editing tool |
+| Transform chain explanation | 🟢 P2 | Planned - show how position was calculated |
+| `--auto-layout` intelligent reflow | 🔵 P3 | Planned - automatic repositioning |
 
-See `docs/designs/SVG_TOOLING_ARCHITECTURE.md` for full gap analysis.
+**CLI Command Reference:**
+```bash
+# Core collision detection
+node tools/dev/svg-collisions.js diagram.svg --strict --json
+
+# Element position query
+node tools/dev/svg-collisions.js diagram.svg --positions --json
+node tools/dev/svg-collisions.js diagram.svg --element "#my-label" --json
+
+# Containment check
+node tools/dev/svg-collisions.js diagram.svg --containment --json
+
+# Batch scan directory  
+node tools/dev/svg-collisions.js --dir docs/diagrams --strict
+
+# Auto-fix collisions
+node tools/dev/svg-collisions.js diagram.svg --fix --dry-run  # Preview
+node tools/dev/svg-collisions.js diagram.svg --fix            # Apply
+
+# 简令 (terse Chinese mode)
+node tools/dev/svg-collisions.js diagram.svg --位 --严
+node tools/dev/svg-collisions.js diagram.svg --修 --试  # Fix + dry-run
+```
 
 ---
 

@@ -1,0 +1,151 @@
+{
+  "name": "add-legend",
+  "version": "1.0.0",
+  "description": "Add a positioned legend to an SVG diagram with collision avoidance",
+  
+  "parameters": {
+    "items": {
+      "type": "array",
+      "required": true,
+      "description": "Array of {color, label} objects for legend entries"
+    },
+    "title": {
+      "type": "string",
+      "default": "Legend",
+      "description": "Legend title text"
+    },
+    "position": {
+      "type": "string",
+      "default": "bottom-right",
+      "enum": ["top-left", "top-right", "bottom-left", "bottom-right"],
+      "description": "Legend position relative to viewBox"
+    },
+    "padding": {
+      "type": "number",
+      "default": 20,
+      "description": "Padding from edges"
+    },
+    "replace": {
+      "type": "boolean",
+      "default": true,
+      "description": "Replace existing legend if found"
+    }
+  },
+  
+  "steps": [
+    {
+      "name": "Get viewBox dimensions",
+      "operation": "svg-validate",
+      "action": "viewbox",
+      "emit": "viewbox",
+      "description": "Read SVG viewBox to calculate legend position"
+    },
+    {
+      "name": "Check for existing legend",
+      "operation": "svg-validate",
+      "action": "find",
+      "selector": ".legend, #legend, [data-template='legend']",
+      "emit": "existingLegend",
+      "onError": "continue",
+      "description": "Look for any existing legend element"
+    },
+    {
+      "name": "Remove existing legend",
+      "condition": "${parameters.replace && step2.existingLegend && step2.existingLegend.found}",
+      "operation": "svg-edit",
+      "action": "delete",
+      "selector": "${step2.existingLegend.selector}",
+      "description": "Remove old legend before adding new one"
+    },
+    {
+      "name": "Calculate legend size",
+      "operation": "compute",
+      "expression": {
+        "width": 120,
+        "height": "${30 + parameters.items.length * 20 + 20}",
+        "itemCount": "${parameters.items.length}"
+      },
+      "emit": "legendSize",
+      "description": "Estimate legend dimensions based on item count"
+    },
+    {
+      "name": "Calculate position",
+      "operation": "compute",
+      "expression": {
+        "x": "${parameters.position.includes('right') ? step1.viewbox.width - step4.legendSize.width - parameters.padding : parameters.padding}",
+        "y": "${parameters.position.includes('bottom') ? step1.viewbox.height - step4.legendSize.height - parameters.padding : parameters.padding}"
+      },
+      "emit": "legendPos",
+      "description": "Compute absolute position based on viewBox and position preference"
+    },
+    {
+      "name": "Insert legend",
+      "operation": "svg-edit",
+      "action": "stamp",
+      "template": "legend",
+      "parent": "svg",
+      "params": {
+        "id": "legend",
+        "x": "${step5.legendPos.x}",
+        "y": "${step5.legendPos.y}",
+        "title": "${parameters.title}",
+        "items": "${parameters.items}",
+        "width": "${step4.legendSize.width}"
+      },
+      "emit": "insertedLegend",
+      "description": "Stamp legend template at calculated position"
+    },
+    {
+      "name": "Verify no collisions",
+      "operation": "svg-collisions",
+      "flags": ["--element", "#legend", "--strict"],
+      "assert": {
+        "high": 0
+      },
+      "onError": "continue",
+      "emit": "collisionCheck",
+      "description": "Check if legend overlaps other elements"
+    },
+    {
+      "name": "Report collision warning",
+      "condition": "${step7.collisionCheck && step7.collisionCheck.summary && step7.collisionCheck.summary.high > 0}",
+      "operation": "report",
+      "level": "warning",
+      "message": "Legend may overlap other elements. Consider adjusting position or diagram layout.",
+      "description": "Warn user if collision detected"
+    }
+  ],
+  
+  "output": {
+    "success": "${!step7.collisionCheck || step7.collisionCheck.summary.high === 0}",
+    "legend": "${step6.insertedLegend}",
+    "position": "${step5.legendPos}",
+    "collisions": "${step7.collisionCheck}"
+  },
+  
+  "examples": [
+    {
+      "description": "Simple two-item legend at bottom-right",
+      "params": {
+        "items": [
+          { "color": "#e74c3c", "label": "Error" },
+          { "color": "#27ae60", "label": "Success" }
+        ]
+      },
+      "command": "node tools/dev/svg-edit.js diagram.svg --recipe svg-recipes/add-legend.json --param 'items=[{\"color\":\"#e74c3c\",\"label\":\"Error\"},{\"color\":\"#27ae60\",\"label\":\"Success\"}]'"
+    },
+    {
+      "description": "Status legend at top-left with custom title",
+      "params": {
+        "title": "Status",
+        "position": "top-left",
+        "items": [
+          { "color": "#3498db", "label": "Pending" },
+          { "color": "#f39c12", "label": "In Progress" },
+          { "color": "#27ae60", "label": "Complete" }
+        ]
+      },
+      "command": "node tools/dev/svg-edit.js diagram.svg --recipe svg-recipes/add-legend.json --param 'title=Status' --param 'position=top-left' --param 'items=[...]'"
+    }
+  ]
+}

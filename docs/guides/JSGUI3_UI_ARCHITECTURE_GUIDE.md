@@ -2593,6 +2593,13 @@ app.activate();
 | `rec_desc_ensure_ctrl_el_refs(el)` | Recursively links `ctrl.dom.el` to DOM elements by `data-jsgui-id` | Without this, `this.dom.el` is null |
 | `_id()` | Returns the control's jsgui id (e.g., `"zserver_app_0"`) | Used to find DOM element |
 
+### Platform helper shortcuts (verified via lab experiment 002)
+
+- Style proxy: `new Control({ size: [20, 30], background: { color: '#ff0000' } })` writes `style.width/height` as `20px/30px` and applies `background-color` to `dom.attrs.style` even before activation.
+- Compositional model: `new Control({ comp: [TitleControl, ['subtitle', TextSpan, { text: 'world' }]], __type_name: 'comp_host' })` creates children immediately, renders their HTML, and exposes named references under `_ctrl_fields` (e.g., `_ctrl_fields.subtitle`).
+- Registration helper: `register_this_and_subcontrols()` populates `context.map_controls` for the control and all descendants so activation lookups succeed without manual bookkeeping.
+- Persisted fields: when constructed with an `el` carrying `data-jsgui-fields` JSON, `Control` hydrates `_persisted_fields` (e.g., `{ foo: 'bar', count: 3 }`) alongside `data-jsgui-id/type` so client-side controls can pick up server-written state.
+
 ### Dynamic Control Updates
 
 When creating new controls after initial render (e.g., populating a list):

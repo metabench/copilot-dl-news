@@ -472,12 +472,25 @@ const URL_COLUMNS = buildColumns();
 
 function renderConfigView({ db, relativeDb, now }) {
   const settings = listConfiguration(db);
-  const properties = settings.map((row) => ({
-    key: row.key,
-    value: row.value,
-    source: "crawler_settings",
-    description: `Last updated: ${formatDateTime(row.updatedAt, true)}`
-  }));
+  const editConfig = {
+    action: "/api/config",
+    method: "post",
+    keyField: "key",
+    valueField: "value",
+    label: "Save"
+  };
+
+  const properties = settings.map((row) => {
+    const formatted = formatDateTime(row.updatedAt, true);
+    const description = formatted && formatted.text ? `Last updated: ${formatted.text}` : "Last updated: —";
+    return {
+      key: row.key,
+      value: row.value,
+      source: "crawler_settings",
+      description,
+      edit: { ...editConfig, key: row.key }
+    };
+  });
 
   const control = new ConfigMatrixControl({
     sections: [
@@ -979,6 +992,8 @@ function renderErrorLogView({ req, db, relativeDb, now }) {
 function createDataExplorerServer(options = {}) {
   ensureClientBundle({ silent: options.quietClientBuild });
   const app = express();
+  app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+  app.use(express.json({ limit: "2mb" }));
   const resolvedDbPath = resolveDbPath(options.dbPath);
   const dbAccess = openNewsDb(resolvedDbPath);
   const projectRoot = findProjectRoot(__dirname);
@@ -1094,6 +1109,39 @@ function createDataExplorerServer(options = {}) {
         basePath: payload.basePath,
         diagnostics
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Config setter for crawler_settings (accepts form or JSON)
+  app.post("/api/config", (req, res, next) => {
+    try {
+      const key = (req.body?.key || "").trim();
+      if (!key) {
+        return res.status(400).json({ success: false, error: "key is required" });
+      }
+
+      const value = req.body?.value ?? "";
+      const settingAccessor =
+        (dbAccess && typeof dbAccess.setSetting === "function" && dbAccess) ||
+        (dbAccess && dbAccess.db && typeof dbAccess.db.setSetting === "function" && dbAccess.db) ||
+        null;
+
+      if (!settingAccessor) {
+        return res.status(503).json({ success: false, error: "settings API unavailable" });
+      }
+
+      const success = settingAccessor.setSetting(key, value);
+
+      const wantsJson = (req.headers.accept || "").includes("json") || req.is("application/json");
+      if (wantsJson) {
+        return res.json({ success, key, value });
+      }
+
+      const referer = req.get("referer") || "";
+      const redirectTo = referer.includes("/config") ? referer : "/config";
+      res.redirect(303, redirectTo);
     } catch (error) {
       next(error);
     }

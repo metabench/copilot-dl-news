@@ -303,27 +303,32 @@ class ConnectionRenderer {
     // Get container rect for relative positioning
     const containerRect = this._container.getBoundingClientRect();
     
-    // Handle both element references and direct position objects
+    const getPointRect = (nodeEl, pointType, pointBranch) => {
+      if (!nodeEl?.querySelector) return null;
+      let selector = `[data-jsgui-control="dt_connection_point"][data-point-type="${pointType}"]`;
+      if (pointBranch) selector += `[data-branch="${pointBranch}"]`;
+      const pointEl = nodeEl.querySelector(selector);
+      return pointEl?.getBoundingClientRect?.() || null;
+    };
+    
+    // Prefer explicit connection points when available for precise geometry
     const fromRect = fromNode.getBoundingClientRect?.() || fromNode;
     const toRect = toNode.getBoundingClientRect?.() || toNode;
-    
     if (!fromRect || !toRect) return null;
     
-    // Calculate start point (bottom of parent, offset by branch)
-    let startX, startY;
+    const fromPoint = getPointRect(fromNode, branch === "yes" ? "output-yes" : "output-no", branch);
+    const toPoint = getPointRect(toNode, "input-top");
     
-    if (branch === "yes") {
-      // YES: exit from bottom-left of diamond
-      startX = fromRect.left + fromRect.width * 0.25 - containerRect.left;
-    } else {
-      // NO: exit from bottom-right of diamond
-      startX = fromRect.left + fromRect.width * 0.75 - containerRect.left;
-    }
-    startY = fromRect.bottom - containerRect.top;
+    const startBox = fromPoint || fromRect;
+    const endBox = toPoint || toRect;
     
-    // Calculate end point (top center of child)
-    const endX = toRect.left + toRect.width / 2 - containerRect.left;
-    const endY = toRect.top - containerRect.top;
+    // Calculate start point (center of explicit connector when present)
+    const startX = startBox.left + startBox.width / 2 - containerRect.left;
+    const startY = startBox.top + startBox.height / 2 - containerRect.top;
+    
+    // Calculate end point (center of input connector or top center)
+    const endX = endBox.left + endBox.width / 2 - containerRect.left;
+    const endY = endBox.top + endBox.height / 2 - containerRect.top;
     
     return {
       start: { x: startX, y: startY },

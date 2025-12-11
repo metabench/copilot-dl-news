@@ -1,32 +1,21 @@
 /**
- * @fileoverview Decision Config Set - A complete, versioned set of decision-making rules
+ * @fileoverview Decision Config Set model (pure, no I/O)
  * 
- * A DecisionConfigSet bundles together ALL the configuration needed for crawl decisions:
+ * Represents a complete, versioned set of decision-making rules:
  * - Priority configuration (bonuses, weights, thresholds)
  * - Decision trees (page classification, URL patterns, hub detection)
  * - Classification patterns (URL regex patterns, content signals)
  * - Feature flags (which intelligent features are enabled)
  * 
- * This allows working on multiple different decision-making strategies simultaneously,
- * saving them as named sets, comparing them, and promoting good ones to production.
+ * Persistence, loading from production, and promotion are handled by
+ * repository/service classes (see DecisionConfigSetRepository and
+ * DecisionConfigPromotionService). This model remains side-effect free.
  * 
  * @example
- * // Save current production config as a baseline
- * const baseline = await DecisionConfigSet.fromProduction('baseline-2025-12-08');
- * await baseline.save();
- * 
- * // Create an experimental variant
- * const experiment = baseline.clone('aggressive-hub-focus');
- * experiment.setPriorityBonus('hub-validated', 25); // Was 3
- * experiment.setFeature('totalPrioritisation', true);
- * await experiment.save();
- * 
- * // Later, promote experiment to production
- * await experiment.promoteToProduction({ backup: true });
+ * const set = new DecisionConfigSet({ name: 'baseline', priorityConfig: {...} });
+ * set.setPriorityBonus('hub-validated', 10);
+ * repository.save(set);
  */
-
-const fs = require('fs');
-const path = require('path');
 
 /**
  * @typedef {Object} DecisionConfigSetSpec
@@ -41,19 +30,7 @@ const path = require('path');
  */
 
 /**
- * Paths to production config files
  */
-const PRODUCTION_PATHS = {
-  priorityConfig: 'config/priority-config.json',
-  decisionTrees: 'config/decision-trees',
-  classificationPatterns: 'config/classification-patterns.json'
-};
-
-/**
- * Storage directory for config sets
- */
-const CONFIG_SETS_DIR = 'config/decision-sets';
-
 class DecisionConfigSet {
   /**
    * @param {DecisionConfigSetSpec} spec
@@ -86,107 +63,6 @@ class DecisionConfigSet {
     // Track changes from parent
     this._changeLog = spec._changeLog || [];
   }
-
-  /**
-   * Load a config set from production files
-   * @param {string} name - Name for this snapshot
-   * @param {string} [rootDir] - Project root directory
-   * @returns {Promise<DecisionConfigSet>}
-   */
-  static async fromProduction(name, rootDir = process.cwd()) {
-    const spec = {
-      name,
-      slug: DecisionConfigSet._slugify(name),
-      description: `Snapshot of production config at ${new Date().toISOString()}`,
-      priorityConfig: {},
-      decisionTrees: {},
-      classificationPatterns: {},
-      metadata: {
-        isProduction: true,
-        createdAt: new Date().toISOString(),
-        notes: ['Loaded from production files']
-      }
-    };
-
-    // Load priority config
-    const priorityPath = path.join(rootDir, PRODUCTION_PATHS.priorityConfig);
-    if (fs.existsSync(priorityPath)) {
-      spec.priorityConfig = JSON.parse(fs.readFileSync(priorityPath, 'utf8'));
-    }
-
-    // Load all decision trees
-    const treesDir = path.join(rootDir, PRODUCTION_PATHS.decisionTrees);
-    if (fs.existsSync(treesDir)) {
-      const treeFiles = fs.readdirSync(treesDir).filter(f => f.endsWith('.json') && !f.includes('schema'));
-      for (const file of treeFiles) {
-        const treeName = path.basename(file, '.json');
-        const treePath = path.join(treesDir, file);
-        spec.decisionTrees[treeName] = JSON.parse(fs.readFileSync(treePath, 'utf8'));
-      }
-    }
-
-    // Load classification patterns if exists
-    const patternsPath = path.join(rootDir, PRODUCTION_PATHS.classificationPatterns);
-    if (fs.existsSync(patternsPath)) {
-      spec.classificationPatterns = JSON.parse(fs.readFileSync(patternsPath, 'utf8'));
-    }
-
-    // Extract features
-    spec.features = spec.priorityConfig.features || {};
-
-    return new DecisionConfigSet(spec);
-  }
-
-  /**
-   * Load a saved config set by slug
-   * @param {string} slug
-   * @param {string} [rootDir]
-   * @returns {Promise<DecisionConfigSet>}
-   */
-  static async load(slug, rootDir = process.cwd()) {
-    const setPath = path.join(rootDir, CONFIG_SETS_DIR, `${slug}.json`);
-    if (!fs.existsSync(setPath)) {
-      throw new Error(`Config set not found: ${slug}`);
-    }
-    
-    const spec = JSON.parse(fs.readFileSync(setPath, 'utf8'));
-    return new DecisionConfigSet(spec);
-  }
-
-  /**
-   * List all saved config sets
-   * @param {string} [rootDir]
-   * @returns {Promise<Array<{slug: string, name: string, createdAt: string, isProduction: boolean}>>}
-   */
-  static async list(rootDir = process.cwd()) {
-    const setsDir = path.join(rootDir, CONFIG_SETS_DIR);
-    if (!fs.existsSync(setsDir)) {
-      return [];
-    }
-
-    const files = fs.readdirSync(setsDir).filter(f => f.endsWith('.json'));
-    const sets = [];
-
-    for (const file of files) {
-      try {
-        const content = JSON.parse(fs.readFileSync(path.join(setsDir, file), 'utf8'));
-        sets.push({
-          slug: content.slug,
-          name: content.name,
-          description: content.description,
-          createdAt: content.metadata?.createdAt,
-          modifiedAt: content.metadata?.modifiedAt,
-          isProduction: content.metadata?.isProduction || false,
-          parentSlug: content.parentSlug
-        });
-      } catch (e) {
-        // Skip invalid files
-      }
-    }
-
-    return sets.sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
-  }
-
   /**
    * Clone this config set with a new name
    * @param {string} name - Name for the clone
@@ -195,7 +71,7 @@ class DecisionConfigSet {
   clone(name) {
     const cloneSpec = {
       name,
-      slug: DecisionConfigSet._slugify(name),
+      slug: DecisionConfigSet.slugify(name),
       description: `Cloned from ${this.name}`,
       parentSlug: this.slug,
       priorityConfig: JSON.parse(JSON.stringify(this.priorityConfig)),
@@ -214,40 +90,6 @@ class DecisionConfigSet {
     };
 
     return new DecisionConfigSet(cloneSpec);
-  }
-
-  /**
-   * Save this config set to disk
-   * @param {string} [rootDir]
-   * @returns {Promise<string>} - Path to saved file
-   */
-  async save(rootDir = process.cwd()) {
-    const setsDir = path.join(rootDir, CONFIG_SETS_DIR);
-    if (!fs.existsSync(setsDir)) {
-      fs.mkdirSync(setsDir, { recursive: true });
-    }
-
-    this.metadata.modifiedAt = new Date().toISOString();
-
-    const setPath = path.join(setsDir, `${this.slug}.json`);
-    fs.writeFileSync(setPath, JSON.stringify(this.toJSON(), null, 2), 'utf8');
-
-    return setPath;
-  }
-
-  /**
-   * Delete this config set from disk
-   * @param {string} [rootDir]
-   */
-  async delete(rootDir = process.cwd()) {
-    if (this.metadata.isProduction) {
-      throw new Error('Cannot delete production config set');
-    }
-
-    const setPath = path.join(rootDir, CONFIG_SETS_DIR, `${this.slug}.json`);
-    if (fs.existsSync(setPath)) {
-      fs.unlinkSync(setPath);
-    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -500,62 +342,6 @@ class DecisionConfigSet {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PRODUCTION PROMOTION
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Promote this config set to production
-   * @param {Object} options
-   * @param {boolean} [options.backup=true] - Create backup of current production
-   * @param {string} [rootDir]
-   * @returns {Promise<{backupPath: string|null}>}
-   */
-  async promoteToProduction({ backup = true } = {}, rootDir = process.cwd()) {
-    let backupPath = null;
-
-    // Create backup if requested
-    if (backup) {
-      const backupDir = path.join(rootDir, 'data/backups/config-snapshots');
-      if (!fs.existsSync(backupDir)) {
-        fs.mkdirSync(backupDir, { recursive: true });
-      }
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      backupPath = path.join(backupDir, `production-backup-${timestamp}.json`);
-      
-      const currentProd = await DecisionConfigSet.fromProduction('backup', rootDir);
-      fs.writeFileSync(backupPath, JSON.stringify(currentProd.toJSON(), null, 2), 'utf8');
-    }
-
-    // Write priority config
-    const priorityPath = path.join(rootDir, PRODUCTION_PATHS.priorityConfig);
-    fs.writeFileSync(priorityPath, JSON.stringify(this.priorityConfig, null, 2), 'utf8');
-
-    // Write decision trees
-    const treesDir = path.join(rootDir, PRODUCTION_PATHS.decisionTrees);
-    if (!fs.existsSync(treesDir)) {
-      fs.mkdirSync(treesDir, { recursive: true });
-    }
-    for (const [treeName, treeConfig] of Object.entries(this.decisionTrees)) {
-      const treePath = path.join(treesDir, `${treeName}.json`);
-      fs.writeFileSync(treePath, JSON.stringify(treeConfig, null, 2), 'utf8');
-    }
-
-    // Write classification patterns if present
-    if (Object.keys(this.classificationPatterns).length > 0) {
-      const patternsPath = path.join(rootDir, PRODUCTION_PATHS.classificationPatterns);
-      fs.writeFileSync(patternsPath, JSON.stringify(this.classificationPatterns, null, 2), 'utf8');
-    }
-
-    // Update this set to mark as production
-    this.metadata.isProduction = true;
-    this.metadata.notes.push(`Promoted to production at ${new Date().toISOString()}`);
-    await this.save(rootDir);
-
-    return { backupPath };
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // SERIALIZATION
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -614,7 +400,7 @@ class DecisionConfigSet {
     return `config-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
   }
 
-  static _slugify(name) {
+  static slugify(name) {
     return name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -641,4 +427,4 @@ class DecisionConfigSet {
   }
 }
 
-module.exports = { DecisionConfigSet, PRODUCTION_PATHS, CONFIG_SETS_DIR };
+module.exports = { DecisionConfigSet };

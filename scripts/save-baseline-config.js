@@ -10,7 +10,7 @@
  */
 
 const path = require('path');
-const { DecisionConfigSet } = require('../src/crawler/observatory/DecisionConfigSet');
+const { DecisionConfigSetRepository } = require('../src/crawler/observatory/DecisionConfigSetRepository');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -28,11 +28,13 @@ async function main() {
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   const rootDir = path.resolve(__dirname, '..');
+  const repository = new DecisionConfigSetRepository({ rootDir });
 
   try {
     // Load from production files
     console.log('Loading from production files...');
-    const baseline = await DecisionConfigSet.fromProduction(name, rootDir);
+    // Load from production files
+    const baseline = await repository.fromProduction(name);
     
     // Get summary before saving
     const summary = baseline.getSummary();
@@ -50,13 +52,13 @@ async function main() {
     }
 
     // Save the config set
-    const savedPath = await baseline.save(rootDir);
+    const savedPath = await repository.save(baseline);
     
     console.log(`\n✅ Saved baseline to: ${savedPath}`);
     console.log('\n═══════════════════════════════════════════════════════════════\n');
 
     // List all saved sets
-    const allSets = await DecisionConfigSet.list(rootDir);
+    const allSets = await repository.list();
     if (allSets.length > 0) {
       console.log('All saved config sets:');
       allSets.forEach(s => {

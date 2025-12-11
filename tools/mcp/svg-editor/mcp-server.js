@@ -56,7 +56,19 @@ const openSvg = (filePath) => {
     const absPath = path.resolve(filePath);
     
     if (openFiles.has(absPath)) {
-        return { success: true, fileId: absPath, cached: true };
+        const entry = openFiles.get(absPath);
+        const doc = entry.dom.window.document;
+        const svg = doc.querySelector("svg");
+        const elementCount = svg ? svg.querySelectorAll("*").length : 0;
+        
+        return { 
+            success: true, 
+            fileId: absPath, 
+            cached: true,
+            fileName: path.basename(absPath),
+            elementCount,
+            hint: `File already open. Use svg_list_elements to inspect, or svg_close to release.`
+        };
     }
     
     if (!fs.existsSync(absPath)) {
@@ -69,7 +81,24 @@ const openSvg = (filePath) => {
     openFiles.set(absPath, { dom, filePath: absPath, modified: false });
     undoStacks.set(absPath, [content]);
     
-    return { success: true, fileId: absPath, cached: false };
+    // Extract basic info for immediate feedback
+    const doc = dom.window.document;
+    const svg = doc.querySelector("svg");
+    const viewBox = svg?.getAttribute("viewBox") || null;
+    const width = svg?.getAttribute("width") || null;
+    const height = svg?.getAttribute("height") || null;
+    const elementCount = svg ? svg.querySelectorAll("*").length : 0;
+    
+    return { 
+        success: true, 
+        fileId: absPath, 
+        cached: false,
+        fileName: path.basename(absPath),
+        viewBox,
+        dimensions: { width, height },
+        elementCount,
+        hint: `Opened with ${elementCount} elements. Use svg_list_elements, svg_detect_collisions, or svg_get_element to inspect.`
+    };
 };
 
 /**
@@ -965,6 +994,12 @@ const runStdioServer = () => {
     let buffer = "";
     process.stdin.setEncoding("utf8");
 
+    // Debug logging (set SVG_MCP_DEBUG=1 to enable)
+    const DEBUG = process.env.SVG_MCP_DEBUG === "1";
+    const debugLog = (msg) => { if (DEBUG) console.error(`[svg-mcp] ${msg}`); };
+    
+    debugLog("Server starting...");
+
     const processBuffer = () => {
         while (true) {
             // Accept both \r\n\r\n and \n\n as header terminators (Copilot uses \n\n)
@@ -982,8 +1017,12 @@ const runStdioServer = () => {
                     try {
                         const request = JSON.parse(trimmed);
                         buffer = "";
+                        debugLog(`Headerless request: ${request.method}, id: ${request.id}`);
                         const response = handleRequest(request);
-                        if (response) sendMessage(response, { headerless: true });
+                        if (response) {
+                            debugLog(`Sending headerless response for id: ${response.id}`);
+                            sendMessage(response, { headerless: true });
+                        }
                         continue;
                     } catch {
                         // Not enough data yet; wait for more.
@@ -994,8 +1033,10 @@ const runStdioServer = () => {
             }
 
             const header = buffer.slice(0, headerEnd);
+            debugLog(`Header: ${header.slice(0, 100)}`);
             const contentLengthMatch = header.match(/Content-Length:\s*(\d+)/i);
             if (!contentLengthMatch) {
+                debugLog("Missing Content-Length header!");
                 sendStdioMessage(createError(null, -32700, "Missing Content-Length header"));
                 buffer = buffer.slice(headerEnd + headerTermLen);
                 continue;
@@ -1003,32 +1044,51 @@ const runStdioServer = () => {
 
             const contentLength = Number(contentLengthMatch[1]);
             const messageEnd = headerEnd + headerTermLen + contentLength;
-            if (buffer.length < messageEnd) return;
+            if (buffer.length < messageEnd) {
+                debugLog(`Waiting for more data: have ${buffer.length}, need ${messageEnd}`);
+                return;
+            }
 
             const message = buffer.slice(headerEnd + headerTermLen, messageEnd);
             buffer = buffer.slice(messageEnd);
+            debugLog(`Message: ${message.slice(0, 200)}`);
 
             let request;
             try {
                 request = JSON.parse(message);
             } catch {
+                debugLog("Parse error");
                 sendMessage(createError(null, -32700, "Parse error"));
                 continue;
             }
 
+            debugLog(`Request method: ${request.method}, id: ${request.id}`);
             const response = handleRequest(request);
             if (response) {
+                debugLog(`Sending framed response for id: ${response.id}`);
                 sendMessage(response, { headerless: false });
+            } else {
+                debugLog("No response (notification)");
             }
         }
     };
 
     process.stdin.on("data", (chunk) => {
+        debugLog(`stdin data: ${chunk.length} bytes`);
         buffer += chunk.toString();
         processBuffer();
     });
 
-    process.stdin.on("end", () => process.exit(0));
+    process.stdin.on("end", () => {
+        debugLog("stdin end - exiting");
+        process.exit(0);
+    });
+    
+    process.stdin.on("error", (err) => {
+        debugLog(`stdin error: ${err.message}`);
+    });
+    
+    debugLog("Server ready, waiting for input");
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
