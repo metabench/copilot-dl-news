@@ -37,7 +37,7 @@ class RetryCoordinator extends EventEmitter {
       baseDelayMs: options.baseDelayMs ?? options.network?.baseDelayMs ?? 1000,
       maxDelayMs: options.maxDelayMs ?? options.network?.maxDelayMs ?? 30000,
       jitterFactor: options.jitterFactor ?? options.network?.jitterFactor ?? 0.25,
-      retryableStatuses: options.retryableStatuses ?? [429, 500, 502, 503, 504]
+      retryableStatuses: options.retryableStatuses ?? options.network?.retryableStatuses ?? [429, 500, 502, 503, 504]
     };
 
     // Host error budget configuration
@@ -384,13 +384,20 @@ class RetryCoordinator extends EventEmitter {
     // Parse Retry-After header if present
     let retryAfter = this.domainConfig.throttleDurationMs;
 
-    if (response?.headers) {
-      const ra = response.headers['retry-after'] || response.headers['Retry-After'];
-      if (ra) {
-        const parsed = parseInt(ra, 10);
-        if (!isNaN(parsed)) {
-          // Could be seconds or a date
-          retryAfter = parsed > 1000000000 ? (parsed * 1000 - Date.now()) : (parsed * 1000);
+    const ra = this._getHeader(response, 'retry-after');
+    if (ra != null) {
+      const raText = String(ra).trim();
+
+      // Per RFC: either delta-seconds OR an HTTP-date.
+      if (/^\d+$/.test(raText)) {
+        const seconds = parseInt(raText, 10);
+        if (!isNaN(seconds)) {
+          retryAfter = seconds * 1000;
+        }
+      } else {
+        const dateMs = Date.parse(raText);
+        if (!Number.isNaN(dateMs)) {
+          retryAfter = Math.max(0, dateMs - Date.now());
         }
       }
     }
@@ -649,6 +656,45 @@ class RetryCoordinator extends EventEmitter {
 
   _sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  _getHeader(response, name) {
+    if (!response || !response.headers || !name) return undefined;
+
+    const headers = response.headers;
+    const lowerName = String(name).toLowerCase();
+
+    // Fetch/undici/node-fetch Headers
+    if (typeof headers.get === 'function') {
+      const v = headers.get(name);
+      if (v != null) return v;
+      const vLower = headers.get(lowerName);
+      if (vLower != null) return vLower;
+      return undefined;
+    }
+
+    // Map-like headers
+    if (headers instanceof Map) {
+      if (headers.has(name)) return headers.get(name);
+      if (headers.has(lowerName)) return headers.get(lowerName);
+
+      for (const [k, v] of headers.entries()) {
+        if (String(k).toLowerCase() === lowerName) return v;
+      }
+      return undefined;
+    }
+
+    // Plain object headers (case-insensitive)
+    if (typeof headers === 'object') {
+      if (headers[name] != null) return headers[name];
+      if (headers[lowerName] != null) return headers[lowerName];
+
+      const keys = Object.keys(headers);
+      const match = keys.find(k => String(k).toLowerCase() === lowerName);
+      if (match) return headers[match];
+    }
+
+    return undefined;
   }
 
   /**

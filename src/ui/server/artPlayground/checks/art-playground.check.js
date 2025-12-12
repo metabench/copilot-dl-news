@@ -110,6 +110,13 @@ section("5. Properties Panel Structure");
   check(html.includes("ap-properties-panel__section"), "Has property sections");
   check(html.includes("ap-properties-panel__input"), "Has input fields");
   check(html.includes("ap-properties-panel__color-swatch"), "Has color swatches");
+  check(html.includes('data-role="ap-fill-palette"'), "Has fill palette UI");
+  check(html.includes('data-role="ap-stroke-palette"'), "Has stroke palette UI");
+  check(html.includes('data-role="ap-color-swatch"'), "Has palette swatch buttons");
+  check(/<div[^>]*data-role="ap-fill-palette"[^>]*role="radiogroup"/i.test(html), "Fill palette has role=radiogroup");
+  check(/<div[^>]*data-role="ap-stroke-palette"[^>]*role="radiogroup"/i.test(html), "Stroke palette has role=radiogroup");
+  check(/<button[^>]*data-role="ap-color-swatch"[^>]*role="radio"/i.test(html), "Swatches have role=radio");
+  check(/<button[^>]*data-role="ap-color-swatch"[^>]*aria-label="(fill|stroke):\s*[^\"]+"/i.test(html), "Swatches have aria-label");
   check(html.includes("ap-layers"), "Has layers container");
 }
 

@@ -671,6 +671,200 @@ describe("Art Playground · Interactive Tests", () => {
 
     await page.close();
   }, 30000);
+
+  test("clicking a fill palette swatch updates SVG and is undoable/redoable", async () => {
+    const page = await browser.newPage();
+    page.on("pageerror", (error) => console.error("[browser-error]", error));
+    await page.goto(serverHandle.baseUrl, { waitUntil: "networkidle0" });
+
+    const firstComponentSelector = "[data-component-id]";
+    const fillPaletteSelector = "[data-jsgui-control='ap_properties_panel'] [data-role='ap-fill-palette']";
+    const undoSelector = "[data-jsgui-control='art_toolbar'] button[data-action='undo']";
+    const redoSelector = "[data-jsgui-control='art_toolbar'] button[data-action='redo']";
+
+    await page.waitForSelector(firstComponentSelector, { timeout: 5000 });
+    await page.waitForSelector(fillPaletteSelector, { timeout: 5000 });
+
+    // Select first component.
+    await page.click(firstComponentSelector);
+    await wait(100);
+
+    const originalFill = await page.$eval(firstComponentSelector, (el) => el.getAttribute("fill"));
+    expect(typeof originalFill).toBe("string");
+
+    // Choose a swatch that differs from the current fill.
+    const newFill = await page.$eval(
+      fillPaletteSelector,
+      (paletteEl, current) => {
+        const currentNorm = String(current || "").trim().toLowerCase();
+        const swatches = Array.from(paletteEl.querySelectorAll('button[data-role="ap-color-swatch"][data-value]'))
+          .map((b) => String(b.getAttribute("data-value") || "").trim())
+          .filter((v) => v && v.toLowerCase() !== "none");
+
+        const pick = swatches.find((v) => v.toLowerCase() !== currentNorm) || swatches[0];
+        return pick;
+      },
+      originalFill
+    );
+
+    expect(typeof newFill).toBe("string");
+    expect(newFill.length).toBeGreaterThan(0);
+
+    // Click the swatch.
+    await page.click(`${fillPaletteSelector} button[data-role='ap-color-swatch'][data-value='${newFill}']`);
+
+    await page.waitForFunction(
+      (sel, expected) => document.querySelector(sel)?.getAttribute("fill") === expected,
+      { timeout: 5000 },
+      firstComponentSelector,
+      newFill
+    );
+
+    // Wait for undo to enable.
+    await page.waitForFunction(
+      (sel) => {
+        const el = document.querySelector(sel);
+        return !!el && !el.disabled;
+      },
+      { timeout: 5000 },
+      undoSelector
+    );
+
+    // Undo should revert fill.
+    await page.click(undoSelector);
+    await page.waitForFunction(
+      (sel, expected) => document.querySelector(sel)?.getAttribute("fill") === expected,
+      { timeout: 5000 },
+      firstComponentSelector,
+      originalFill
+    );
+
+    // Wait for redo to enable.
+    await page.waitForFunction(
+      (sel) => {
+        const el = document.querySelector(sel);
+        return !!el && !el.disabled;
+      },
+      { timeout: 5000 },
+      redoSelector
+    );
+
+    // Redo should re-apply fill.
+    await page.click(redoSelector);
+    await page.waitForFunction(
+      (sel, expected) => document.querySelector(sel)?.getAttribute("fill") === expected,
+      { timeout: 5000 },
+      firstComponentSelector,
+      newFill
+    );
+
+    await page.close();
+  }, 30000);
+
+  test("keyboard: Arrow navigation + Space on fill palette updates SVG and is undoable/redoable", async () => {
+    const page = await browser.newPage();
+    page.on("pageerror", (error) => console.error("[browser-error]", error));
+    await page.goto(serverHandle.baseUrl, { waitUntil: "networkidle0" });
+
+    const firstComponentSelector = "[data-component-id]";
+    const fillInputSelector = "[data-jsgui-control='ap_properties_panel'] input[data-prop='fill']";
+    const fillPaletteSelector = "[data-jsgui-control='ap_properties_panel'] [data-role='ap-fill-palette']";
+    const undoSelector = "[data-jsgui-control='art_toolbar'] button[data-action='undo']";
+    const redoSelector = "[data-jsgui-control='art_toolbar'] button[data-action='redo']";
+
+    await page.waitForSelector(firstComponentSelector, { timeout: 5000 });
+    await page.waitForSelector(fillInputSelector, { timeout: 5000 });
+    await page.waitForSelector(fillPaletteSelector, { timeout: 5000 });
+
+    // Select first component.
+    await page.click(firstComponentSelector);
+    await wait(100);
+
+    const originalFill = await page.$eval(firstComponentSelector, (el) => el.getAttribute("fill"));
+    expect(typeof originalFill).toBe("string");
+
+    // Focus fill input then Tab into the (roving-tabindex) fill palette.
+    await page.click(fillInputSelector);
+    await page.keyboard.press("Tab");
+
+    await page.waitForFunction(
+      () => {
+        const ae = document.activeElement;
+        return !!ae &&
+          ae.matches &&
+          ae.matches("[data-role='ap-fill-palette'] button[data-role='ap-color-swatch']");
+      },
+      { timeout: 5000 }
+    );
+
+    // Move right to a new swatch and activate with Space.
+    await page.keyboard.press("ArrowRight");
+
+    let candidateFill = await page.evaluate(() => {
+      const ae = document.activeElement;
+      return ae?.getAttribute?.("data-value") || "";
+    });
+
+    if (String(candidateFill).trim().toLowerCase() === String(originalFill).trim().toLowerCase()) {
+      await page.keyboard.press("ArrowRight");
+      candidateFill = await page.evaluate(() => {
+        const ae = document.activeElement;
+        return ae?.getAttribute?.("data-value") || "";
+      });
+    }
+
+    expect(typeof candidateFill).toBe("string");
+    expect(candidateFill.length).toBeGreaterThan(0);
+
+    await page.keyboard.press(" ");
+
+    await page.waitForFunction(
+      (sel, expected) => document.querySelector(sel)?.getAttribute("fill") === expected,
+      { timeout: 5000 },
+      firstComponentSelector,
+      candidateFill
+    );
+
+    // Undo should now be enabled.
+    await page.waitForFunction(
+      (sel) => {
+        const el = document.querySelector(sel);
+        return !!el && !el.disabled;
+      },
+      { timeout: 5000 },
+      undoSelector
+    );
+
+    // Undo should revert fill.
+    await page.click(undoSelector);
+    await page.waitForFunction(
+      (sel, expected) => document.querySelector(sel)?.getAttribute("fill") === expected,
+      { timeout: 5000 },
+      firstComponentSelector,
+      originalFill
+    );
+
+    // Redo should now be enabled.
+    await page.waitForFunction(
+      (sel) => {
+        const el = document.querySelector(sel);
+        return !!el && !el.disabled;
+      },
+      { timeout: 5000 },
+      redoSelector
+    );
+
+    // Redo should re-apply fill.
+    await page.click(redoSelector);
+    await page.waitForFunction(
+      (sel, expected) => document.querySelector(sel)?.getAttribute("fill") === expected,
+      { timeout: 5000 },
+      firstComponentSelector,
+      candidateFill
+    );
+
+    await page.close();
+  }, 30000);
 });
 
 /**

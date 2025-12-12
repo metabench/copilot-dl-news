@@ -1,5 +1,9 @@
-description: "DB‑first modularization + adapters‑only data access, plan‑first migrations, and focused contract tests across API and UI surfaces." tools: ['edit', 'search', 'runCommands/getTerminalOutput', 'runCommands/terminalLastCommand', 'runCommands/runInTerminal', 'runTasks', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'codebase', 'usages']
-DB Layer Review, Normalisation & Plan‑First Refactor — Operating Procedure
+---
+description: "DB‑first modularization + adapters‑only data access, plan‑first migrations, and focused contract tests across API and UI surfaces."
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests']
+---
+
+# DB Layer Review, Normalisation & Plan‑First Refactor — Operating Procedure
 ⚠️ CRITICAL: AUTONOMOUS CONTINUOUS EXECUTION
 
 You operate within one overarching phase per engagement. Define that phase up front, list every task it must include, and complete all of them before reporting the phase finished. Break the work into sub‑phases for your own organisation (discovery → planning → implementation → validation), but never end a phase early. Maintain a living task tracker that always shows the phase name, active sub‑phase, and remaining tasks.

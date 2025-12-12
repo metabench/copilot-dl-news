@@ -125,6 +125,38 @@ function injectControlManifestScript(context, body, controlTypes) {
   body.add(script);
 }
 
+/**
+ * Build a simple search form control for SSR pages
+ * @param {Object} context - jsgui Page_Context
+ * @param {Object} options - { action, currentSearch, placeholder }
+ * @returns {jsgui.Control}
+ */
+function buildSearchFormControl(context, options = {}) {
+  const { action = "/", currentSearch = "", placeholder = "Search..." } = options;
+  
+  const form = new jsgui.form({ context });
+  form.dom.attributes.method = "get";
+  form.dom.attributes.action = action;
+  form.add_class("search-form");
+  form.dom.attributes.style = "display: flex; gap: 0.5rem; align-items: center;";
+  
+  const input = new jsgui.input({ context });
+  input.dom.attributes.type = "search";
+  input.dom.attributes.name = "search";
+  input.dom.attributes.placeholder = placeholder;
+  input.dom.attributes.value = currentSearch || "";
+  input.dom.attributes.style = "padding: 0.5rem 0.75rem; border: 1px solid var(--border-color, #d0d0d0); border-radius: 4px; font-size: 0.875rem; min-width: 200px;";
+  form.add(input);
+  
+  const button = new jsgui.button({ context });
+  button.dom.attributes.type = "submit";
+  button.dom.attributes.style = "padding: 0.5rem 1rem; background: var(--primary-color, #4a90d9); color: white; border: none; border-radius: 4px; font-size: 0.875rem; cursor: pointer;";
+  button.add(new StringControl({ context, text: "🔍" }));
+  form.add(button);
+  
+  return form;
+}
+
 function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {}) {
   const normalizedColumns = Array.isArray(columns) ? columns : [];
   const normalizedRows = Array.isArray(rows) ? rows : [];
@@ -136,6 +168,7 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   const navLinks = Array.isArray(options.navLinks) ? options.navLinks : null;
   const breadcrumbs = Array.isArray(options.breadcrumbs) ? options.breadcrumbs : null;
   const filterOptions = options.filterOptions;
+  const searchForm = options.searchForm;
   const homeCards = Array.isArray(options.homeCards) ? options.homeCards : null;
   const listingState = options.listingState || null;
   const layoutMode = typeof options.layoutMode === "string" && options.layoutMode.trim() ? options.layoutMode : "listing";
@@ -214,10 +247,15 @@ function renderHtml({ columns = [], rows = [], meta = {}, title }, options = {})
   if (filterOptions && typeof filterOptions === "object") {
     filterControl = new UrlFilterToggleControl({ context, ...filterOptions });
   }
+  let searchFormControl = null;
+  if (searchForm && typeof searchForm === "object") {
+    searchFormControl = buildSearchFormControl(context, searchForm);
+  }
   hero.add(headingGroup);
-  if (filterControl) {
+  if (filterControl || searchFormControl) {
     const actions = new jsgui.div({ context, class: "page-shell__actions" });
-    actions.add(filterControl);
+    if (searchFormControl) actions.add(searchFormControl);
+    if (filterControl) actions.add(filterControl);
     hero.add(actions);
   }
   header.add(hero);

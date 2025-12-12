@@ -2,6 +2,11 @@
 
 Purpose: fast orientation for crawl.js. Covers commands, override precedence, and verbosity modes. Keep this file short; deeper detail lives in AGENTS.md and source.
 
+## See also
+
+- [Architecture: Crawls vs Background Tasks](../ARCHITECTURE_CRAWLS_VS_BACKGROUND_TASKS.md)
+- [Reliable Crawler Roadmap](../goals/RELIABLE_CRAWLER_ROADMAP.md)
+
 ## Commands
 - Default run (no command): uses config defaults (crawlDefaults) or runner config if provided.
 - availability: show operations and sequences; flags: --all, --operations, --sequences.

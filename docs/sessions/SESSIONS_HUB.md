@@ -31,6 +31,154 @@
 
 ## Current Session
 
+### Session 2025-12-12: Crawler reliability improvements
+
+**Duration**: Active
+**Type**: crawler
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve crawler resilience and observability with focused, tested changes
+
+**Location**: `docs/sessions/2025-12-12-crawler-reliability/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-reliability/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-reliability/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-reliability/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-reliability/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-reliability/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Art Playground swatch palettes accessibility (keyboard + ARIA)
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add roving-tabindex + arrow-key navigation and radio-like ARIA semantics for Fill/Stroke palettes
+
+**Location**: `docs/sessions/2025-12-12-ui-art-playground-palette-a11y/`
+
+**Quick Links**:
+- 🗺️ [Plan](./2025-12-12-ui-art-playground-palette-a11y/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-ui-art-playground-palette-a11y/WORKING_NOTES.md)
+
+### Session 2025-12-12: Art Splayground: color palette + selection
+
+**Duration**: Active
+**Type**: ui
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Improve the art-splayground colour palette and selection UX in a consistent, reusable way
+
+**Location**: `docs/sessions/2025-12-12-art-splayground-palette/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-art-splayground-palette/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-art-splayground-palette/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-art-splayground-palette/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-art-splayground-palette/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-art-splayground-palette/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Fix AGI-Orchestrator agent frontmatter
+
+**Duration**: Active
+**Type**: agents
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Verify and correct AGI-Orchestrator.agent.md parsing/tool metadata while preserving intent
+
+**Location**: `docs/sessions/2025-12-12-fix-agi-orchestrator-agent/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-fix-agi-orchestrator-agent/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-fix-agi-orchestrator-agent/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-fix-agi-orchestrator-agent/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-fix-agi-orchestrator-agent/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-fix-agi-orchestrator-agent/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Fix agent YAML frontmatter for validation
+
+**Duration**: Active
+**Type**: tooling
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make .agent.md frontmatter parse correctly so handoff tooling/validation is reliable
+
+**Location**: `docs/sessions/2025-12-12-agent-frontmatter-validate/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-agent-frontmatter-validate/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-agent-frontmatter-validate/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-agent-frontmatter-validate/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-agent-frontmatter-validate/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-agent-frontmatter-validate/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Fix AGI-Orchestrator Handoff Frontmatter
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Make subagent coordination YAML/frontmatter reliably produce handoff buttons
+
+**Location**: `docs/sessions/2025-12-12-agent-orchestrator-handoffs/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-agent-orchestrator-handoffs/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-agent-orchestrator-handoffs/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-agent-orchestrator-handoffs/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-agent-orchestrator-handoffs/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-agent-orchestrator-handoffs/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Crawler Documentation Coverage & Accuracy
+
+**Duration**: Active
+**Type**: docs
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Audit crawler docs and improve coverage, accuracy, and long-term planning guidance
+
+**Location**: `docs/sessions/2025-12-12-crawler-docs-coverage/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-crawler-docs-coverage/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-crawler-docs-coverage/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-crawler-docs-coverage/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-crawler-docs-coverage/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-crawler-docs-coverage/FOLLOW_UPS.md)
+
+
+### Session 2025-12-12: Data Explorer PR2: URL filters, domains API, DB perf
+
+**Duration**: Active
+**Type**: feature
+**Completion**: 🔄 In progress
+
+**Focus**:
+- Add hostMode/multi-host URL filters, /api/domains with search/sort, and verify UI indexes
+
+**Location**: `docs/sessions/2025-12-12-data-explorer-pr2-filters-domains-perf/`
+
+**Quick Links**:
+- 🧭 [Session Index](./2025-12-12-data-explorer-pr2-filters-domains-perf/INDEX.md)
+- 🗺️ [Plan](./2025-12-12-data-explorer-pr2-filters-domains-perf/PLAN.md)
+- 📝 [Working Notes](./2025-12-12-data-explorer-pr2-filters-domains-perf/WORKING_NOTES.md)
+- 📘 [Session Summary](./2025-12-12-data-explorer-pr2-filters-domains-perf/SESSION_SUMMARY.md)
+- ✅ [Follow Ups](./2025-12-12-data-explorer-pr2-filters-domains-perf/FOLLOW_UPS.md)
+
+
 ### Session 2025-12-12: Telemetry: process handler idempotency
 
 **Duration**: Active

@@ -6,22 +6,26 @@
 
 :root {
   /* Leather whites */
-  --ap-white: #FAFAFA;
-  --ap-cream: #F5F5F0;
-  --ap-leather: #EDE8E0;
+  /* WLILO reference: #faf9f7 → #f5f3ef → #ebe8e2 */
+  --ap-white: #faf9f7;
+  --ap-cream: #f5f3ef;
+  --ap-leather: #ebe8e2;
   
   /* Obsidian blacks */
-  --ap-obsidian: #1A1A1A;
-  --ap-obsidian-soft: #2D2D2D;
+  /* WLILO reference: #2d2d2d → #1a1a1a */
+  --ap-obsidian: #1a1a1a;
+  --ap-obsidian-soft: #2d2d2d;
   --ap-obsidian-mid: #3D3D3D;
   
   /* Gold accents */
-  --ap-gold: #C9A227;
-  --ap-gold-light: #DAA520;
+  /* WLILO reference: #c9a962 → #e8d5a3 */
+  --ap-gold: #c9a962;
+  --ap-gold-light: #e8d5a3;
   
   /* UI colors */
-  --ap-selection: #4A90D9;
-  --ap-selection-light: rgba(74, 144, 217, 0.2);
+  /* WLILO reference cool highlight: #4a9eff → #2d7dd2 */
+  --ap-selection: #4a9eff;
+  --ap-selection-light: rgba(74, 158, 255, 0.2);
   --ap-danger: #D94A4A;
   
   /* === DESIGN TOKENS (Layout) === */
@@ -214,6 +218,10 @@ html, body {
   border: 2px solid var(--ap-selection);
   background: var(--ap-selection-light);
   pointer-events: none;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(250, 249, 247, 0.6),
+    0 0 12px rgba(74, 158, 255, 0.35);
 }
 
 .art-selection__handle {
@@ -222,13 +230,68 @@ html, body {
   height: 8px;
   background: var(--ap-white);
   border: 2px solid var(--ap-selection);
-  border-radius: 2px;
+  border-radius: 3px;
   pointer-events: all;
   z-index: 10;
+  box-shadow:
+    0 0 0 1px rgba(26, 26, 26, 0.25),
+    0 0 10px rgba(74, 158, 255, 0.25);
 }
 
 .art-selection__handle:hover {
   background: var(--ap-selection);
+  border-color: var(--ap-gold);
+}
+
+/* === PROPERTIES: COLOR PALETTES === */
+.ap-color-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 18px);
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.ap-color-palette__swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--ap-obsidian-mid);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+}
+
+.ap-color-palette__swatch:hover {
+  transform: translateY(-1px);
+  border-color: var(--ap-gold);
+  box-shadow: 0 0 0 1px rgba(232, 213, 163, 0.25);
+}
+
+.ap-color-palette__swatch:focus-visible {
+  outline: 2px solid var(--ap-selection);
+  outline-offset: 2px;
+  border-color: var(--ap-selection);
+  box-shadow:
+    0 0 0 1px rgba(250, 249, 247, 0.35),
+    0 0 12px rgba(74, 158, 255, 0.35);
+}
+
+.ap-color-palette__swatch--selected {
+  border-color: var(--ap-gold);
+  box-shadow:
+    0 0 0 1px rgba(232, 213, 163, 0.35),
+    0 0 10px rgba(74, 158, 255, 0.25);
+}
+
+.ap-color-palette__swatch--none {
+  background:
+    linear-gradient(45deg, rgba(250, 249, 247, 0.18) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(250, 249, 247, 0.18) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(250, 249, 247, 0.18) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(250, 249, 247, 0.18) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
 }
 
 /* Handle cursors */

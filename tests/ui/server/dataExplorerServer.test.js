@@ -347,6 +347,90 @@ describe("dataExplorerServer /api/urls filtering", () => {
 
     shutdown();
   });
+
+  test("filters urls by host with hostMode=prefix", async () => {
+    const { app, shutdown } = createServer((db) => {
+      seedUrlOnly(db, { url: "https://news.example.com/a", host: "news.example.com" });
+      seedUrlOnly(db, { url: "https://news.example.org/b", host: "news.example.org" });
+      seedUrlOnly(db, { url: "https://other.com/c", host: "other.com" });
+      return {};
+    });
+
+    const response = await request(app).get("/api/urls?host=news.example&hostMode=prefix");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBe(2);
+    expect(response.body.records.every((r) => r.host.startsWith("news.example"))).toBe(true);
+
+    shutdown();
+  });
+
+  test("filters urls by host with hostMode=contains", async () => {
+    const { app, shutdown } = createServer((db) => {
+      seedUrlOnly(db, { url: "https://sub.example.net/a", host: "sub.example.net" });
+      seedUrlOnly(db, { url: "https://example.com/b", host: "example.com" });
+      seedUrlOnly(db, { url: "https://other.com/c", host: "other.com" });
+      return {};
+    });
+
+    const response = await request(app).get("/api/urls?host=example&hostMode=contains");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBe(2);
+    expect(response.body.records.every((r) => r.host.includes("example"))).toBe(true);
+
+    shutdown();
+  });
+
+  test("filters urls by multiple hosts (comma-separated)", async () => {
+    const { app, shutdown } = createServer((db) => {
+      seedUrlOnly(db, { url: "https://example.com/a", host: "example.com" });
+      seedUrlOnly(db, { url: "https://other.net/b", host: "other.net" });
+      seedUrlOnly(db, { url: "https://third.org/c", host: "third.org" });
+      return {};
+    });
+
+    const response = await request(app).get("/api/urls?hosts=example.com,other.net");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBe(2);
+    const hosts = response.body.records.map((r) => r.host);
+    expect(hosts).toContain("example.com");
+    expect(hosts).toContain("other.net");
+    expect(hosts).not.toContain("third.org");
+
+    shutdown();
+  });
+
+  test("pagination links preserve filter params (hasFetches, hostMode)", async () => {
+    const { app, shutdown } = createServer((db) => {
+      // Seed enough data to trigger pagination
+      for (let i = 0; i < 30; i++) {
+        seedUrlWithFetches(db, { url: `https://news.example.com/article-${i}`, host: "news.example.com" });
+        seedUrlWithFetches(db, { url: `https://other.net/page-${i}`, host: "other.net" });
+      }
+      return {};
+    });
+
+    const response = await request(app).get("/api/urls?host=news.example&hostMode=prefix&hasFetches=1");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.meta).toBeDefined();
+    expect(response.body.meta.pagination).toBeDefined();
+    expect(response.body.meta.pagination.totalPages).toBeGreaterThan(1);
+
+    const { nextHref } = response.body.meta.pagination;
+    expect(nextHref).toBeDefined();
+    expect(nextHref).toContain("hasFetches=1");
+    expect(nextHref).toContain("hostMode=prefix");
+    expect(nextHref).toContain("host=news.example");
+
+    shutdown();
+  });
 });
 
 describe("dataExplorerServer /api/domains/counts", () => {
@@ -396,6 +480,101 @@ describe("dataExplorerServer /api/domains/counts", () => {
 
     expect(callCounts.get).toBe(0);
     expect(callCounts.all).toBe(2);
+
+    shutdown();
+  });
+});
+
+describe("dataExplorerServer /api/domains", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("returns paginated domain listing with url_count and last_seen", async () => {
+    const { app, shutdown } = createServer((db) => {
+      seedUrlOnly(db, { url: "https://example.com/a", host: "example.com" });
+      seedUrlOnly(db, { url: "https://example.com/b", host: "example.com" });
+      seedUrlOnly(db, { url: "https://other.net/c", host: "other.net" });
+      return {};
+    });
+
+    const response = await request(app).get("/api/domains");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records).toBeDefined();
+    expect(response.body.records.length).toBe(2);
+    expect(response.body.meta.pagination).toBeDefined();
+    expect(response.body.meta.pagination.totalRows).toBe(2);
+
+    // Check records have expected fields
+    const exampleDomain = response.body.records.find((r) => r.host === "example.com");
+    expect(exampleDomain).toBeDefined();
+    expect(exampleDomain.url_count).toBe(2);
+
+    shutdown();
+  });
+
+  test("filters domains by search param (case-insensitive contains)", async () => {
+    const { app, shutdown } = createServer((db) => {
+      seedUrlOnly(db, { url: "https://example.com/a", host: "example.com" });
+      seedUrlOnly(db, { url: "https://news.example.com/b", host: "news.example.com" });
+      seedUrlOnly(db, { url: "https://other.net/c", host: "other.net" });
+      return {};
+    });
+
+    const response = await request(app).get("/api/domains?search=example");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBe(2);
+    const hosts = response.body.records.map((r) => r.host);
+    expect(hosts).toContain("example.com");
+    expect(hosts).toContain("news.example.com");
+    expect(hosts).not.toContain("other.net");
+
+    shutdown();
+  });
+
+  test("sorts domains by host ascending", async () => {
+    const { app, shutdown } = createServer((db) => {
+      seedUrlOnly(db, { url: "https://z-last.com/a", host: "z-last.com" });
+      seedUrlOnly(db, { url: "https://a-first.com/b", host: "a-first.com" });
+      seedUrlOnly(db, { url: "https://m-middle.net/c", host: "m-middle.net" });
+      return {};
+    });
+
+    const response = await request(app).get("/api/domains?sortBy=host&sortDir=ASC");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.records.length).toBe(3);
+    expect(response.body.records[0].host).toBe("a-first.com");
+    expect(response.body.records[1].host).toBe("m-middle.net");
+    expect(response.body.records[2].host).toBe("z-last.com");
+
+    shutdown();
+  });
+
+  test("pagination links preserve search and sort params", async () => {
+    const { app, shutdown } = createServer((db) => {
+      for (let i = 0; i < 50; i++) {
+        seedUrlOnly(db, { url: `https://domain${i}.example.com/page`, host: `domain${i}.example.com` });
+      }
+      return {};
+    });
+
+    const response = await request(app).get("/api/domains?search=example&sortBy=host&sortDir=ASC");
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.meta.pagination.totalPages).toBeGreaterThan(1);
+
+    const { nextHref } = response.body.meta.pagination;
+    expect(nextHref).toBeDefined();
+    expect(nextHref).toContain("search=example");
+    expect(nextHref).toContain("sortBy=host");
+    expect(nextHref).toContain("sortDir=ASC");
 
     shutdown();
   });

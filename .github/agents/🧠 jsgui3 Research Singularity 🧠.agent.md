@@ -1,7 +1,7 @@
 ---
 description: 'Self-improving AI research agent for jsgui3 mastery—discovering, documenting, and continuously refining both knowledge and cognitive processes'
 
-tools: ['vscode/getProjectSetupInfo', 'vscode/installExtension', 'vscode/newWorkspace', 'vscode/runCommand', 'vscode/extensions', 'execute', 'read', 'edit', 'search', 'web', 'docs-memory/*', 'agent', 'todo']
+tools: ['edit', 'search', 'runCommands', 'runTasks', 'usages', 'problems', 'changes', 'testFailure', 'fetch', 'githubRepo', 'todos', 'runTests', 'runSubagent']
 ---
 
 # 🧠 jsgui3 Research Singularity 🧠

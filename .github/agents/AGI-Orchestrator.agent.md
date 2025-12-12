@@ -1,24 +1,48 @@
 ---
 description: 'High-level AGI orchestrator that plans work and hands off to refactor, docs, research, and CLI-tooling agents, using /docs/agi as its map.'
 
-tools: ['runCommands', 'edit', 'search', 'usages', 'fetch', 'todos', 'runSubagent']
+# Tools should match the repo’s Copilot agent conventions.
+# Keep this list conservative (orchestrator plans/coordinates; it shouldn’t need full mutation power).
+tools: ['execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'execute/runTests', 'read', 'edit', 'search', 'web', 'docs-memory/*', 'agent', 'todo']
+
+# Handoff buttons for sub-agent coordination.
 handoffs:
+  # Implementation agents
   - label: 'Refactor according to this plan'
-    agent: Careful js-edit Refactor
+    agent: 'Careful js-edit refactor'
     prompt: 'Use the plan above to refactor the codebase. Keep changes scoped and reversible, and update or add tests as needed.'
-    send: false
+  - label: 'Execute these tasks'
+    agent: '🤖 Task Executor 🤖'
+    prompt: 'Execute the well-defined tasks listed above. Follow the plan exactly, report any blockers immediately, and verify each step before proceeding.'
+
+  # Documentation & Research agents  
   - label: 'Document these changes'
-    agent: AGI-Scout
+    agent: 'AGI-Scout'
     prompt: 'Based on the plan and/or completed changes above, update and extend documentation as described (code-level docs, higher-level docs, and /docs/agi where appropriate).'
-    send: false
   - label: 'Research open questions'
-    agent: AGI-Scout
+    agent: 'AGI-Scout'
     prompt: 'Research the open questions and unknowns identified above. Return concise findings with references, plus any implications for the plan.'
-    send: false
+
+  # Tooling agents
   - label: 'Improve CLI tooling for this workflow'
-    agent: Upgrade js-md-scan-edit
+    agent: 'Upgrade js-md-scan-edit'
     prompt: 'Improve js-edit, js-scan, md-edit, md-scan, ts-edit, and ts-scan to better support the workflows and plan described above, focusing on static analysis, code navigation, and safer edits.'
-    send: false
+
+  # Domain-specific agents
+  - label: 'Implement UI changes'
+    agent: '💡UI Singularity💡'
+    prompt: 'Implement the UI changes described above using jsgui3 patterns. Create session, discover dependencies with js-scan, implement controls with proper activation, and ship check scripts.'
+  - label: 'Implement crawler changes'
+    agent: '🕷️ Crawler Singularity 🕷️'
+    prompt: 'Implement the crawler changes described above. Follow the Reliable Crawler Roadmap patterns, ensure observability, and update tests.'
+  - label: 'Implement database changes'
+    agent: 'DB Modular'
+    prompt: 'Implement the database schema or adapter changes described above. Use plan-first migrations, adapters-only data access, and focused contract tests.'
+
+  # Quality agents
+  - label: 'Audit and run tests'
+    agent: 'Jest Test Auditer'
+    prompt: 'Review the test requirements above. Ensure the correct test files are targeted, run focused tests with proper isolation, and update test documentation as needed.'
 ---
 
 # AGI-Orchestrator (Copilot Agent)
